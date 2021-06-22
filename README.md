@@ -34,7 +34,7 @@ FLASK_ENV=development # set to production if in production!
 Run the development server with
 
 ```bash
-poetry run flask run --port 5005
+poetry run flask run
 ```
 
 ### Trying out the Plugin-Runner
@@ -43,21 +43,21 @@ TODO: Update this section after implementation!
 
 #### The API:
 
-<http://localhost:5000/api/>
+<http://localhost:5005/>
 
 #### OpenAPI Documentation:
 
 Configured in `qhana_plugin_runner/util/config/smorest_config.py`.
 
-   * Redoc (view only): <http://localhost:5000/api/redoc>
-   * Rapidoc: <http://localhost:5000/api/rapidoc>
-   * Swagger-UI: <http://localhost:5000/api/swagger-ui>
-   * OpenAPI Spec (JSON): <http://localhost:5000/api/api-spec.json>
+  * Redoc (view only): <http://localhost:5005/redoc>
+  * Rapidoc: <http://localhost:5005/rapidoc>
+  * Swagger-UI: <http://localhost:5005/swagger-ui>
+  * OpenAPI Spec (JSON): <http://localhost:5005/api-spec.json>
 
 #### Debug pages:
 
-  * Index: <http://localhost:5000/debug/>
-  * Registered Routes: <http://localhost:5000/debug/routes>\
+  * Index: <http://localhost:5005/debug/>
+  * Registered Routes: <http://localhost:5005/debug/routes>\
     Useful for looking up which endpoint is served under a route or what routes are available.
 
 

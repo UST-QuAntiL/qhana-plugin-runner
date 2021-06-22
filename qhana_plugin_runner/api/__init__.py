@@ -16,24 +16,26 @@
 
 """Module containing all API related code of the project."""
 
+from http import HTTPStatus
 from typing import Dict
+
+import marshmallow as ma
 from flask import Flask
 from flask.helpers import url_for
 from flask.views import MethodView
-import marshmallow as ma
-from flask_smorest import Api, Blueprint as SmorestBlueprint
-from http import HTTPStatus
-from .util import MaBaseSchema
-from .v1_api import API_V1
+from flask_smorest import Api
+from flask_smorest import Blueprint as SmorestBlueprint
+
 from .jwt import SECURITY_SCHEMES
+from .plugins_api import PLUGINS_API
+from .util import MaBaseSchema
 
 """A single API instance. All api versions should be blueprints."""
-ROOT_API = Api(spec_kwargs={"title": "API Root", "version": "v1"})
+ROOT_API = Api(spec_kwargs={"title": "QHAna plugin runner api.", "version": "v1"})
 
 
 class VersionsRootSchema(MaBaseSchema):
     title = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    v1 = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 ROOT_ENDPOINT = SmorestBlueprint(
@@ -48,10 +50,9 @@ ROOT_ENDPOINT = SmorestBlueprint(
 class RootView(MethodView):
     @ROOT_ENDPOINT.response(HTTPStatus.OK, VersionsRootSchema())
     def get(self) -> Dict[str, str]:
-        """Get the Root API information containing the links to all versions of this api."""
+        """Get the Root API information containing the links other endpoints of this api."""
         return {
             "title": ROOT_API.spec.title,
-            "v1": url_for("api-v1.RootView", _external=True),
         }
 
 
@@ -63,6 +64,8 @@ def register_root_api(app: Flask):
     for name, scheme in SECURITY_SCHEMES.items():
         ROOT_API.spec.components.security_scheme(name, scheme)
 
+    url_prefix: str = app.config.get("OPENAPI_URL_PREFIX", "").rstrip("/")
+
     # register API blueprints (only do this after the API is registered with flask!)
-    ROOT_API.register_blueprint(ROOT_ENDPOINT)
-    ROOT_API.register_blueprint(API_V1)
+    ROOT_API.register_blueprint(ROOT_ENDPOINT, url_prefix=url_prefix)
+    ROOT_API.register_blueprint(PLUGINS_API, url_prefix=f"{url_prefix}/plugins")

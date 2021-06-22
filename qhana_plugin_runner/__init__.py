@@ -16,29 +16,25 @@
 
 """Root module containing the flask app factory."""
 
+from json import load as load_json
+from logging import WARNING, Formatter, Handler, Logger, getLogger
+from logging.config import dictConfig
 from os import environ, makedirs
 from pathlib import Path
 from typing import Any, Dict, Optional, cast
-from logging import Logger, Formatter, Handler, WARNING, getLogger
-from logging.config import dictConfig
-
-from flask.app import Flask
-from flask.config import Config
-from flask.cli import FlaskGroup
-from flask.logging import default_handler
-from flask_cors import CORS
-
-from json import load as load_json
-from toml import load as load_toml
 
 import click
+from flask.app import Flask
+from flask.cli import FlaskGroup
+from flask.config import Config
+from flask.logging import default_handler
+from flask_cors import CORS
+from toml import load as load_toml
 
-from .util.config import ProductionConfig, DebugConfig
-from . import babel
-from . import db
-from . import api
+from . import api, babel, db
 from .api import jwt
-
+from .util.config import DebugConfig, ProductionConfig
+from .util.plugins import register_plugins
 
 # change this to change tha flask app name and the config env var prefix
 # must not contain any spaces!
@@ -122,6 +118,8 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     jwt.register_jwt(app)
     api.register_root_api(app)
+
+    register_plugins(app)
 
     # allow cors requests everywhere (CONFIGURE THIS TO YOUR PROJECTS NEEDS!)
     CORS(app)

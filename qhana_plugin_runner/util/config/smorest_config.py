@@ -17,7 +17,7 @@
 class SmorestProductionConfig:
     OPENAPI_VERSION = "3.0.2"
     OPENAPI_JSON_PATH = "api-spec.json"
-    OPENAPI_URL_PREFIX = "/api"
+    OPENAPI_URL_PREFIX = ""
 
     # OpenAPI Documentation renderers:
     OPENAPI_REDOC_PATH = "/redoc/"
