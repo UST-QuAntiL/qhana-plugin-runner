@@ -1,0 +1,82 @@
+[tool.poetry]
+name = "qhana_plugin_runner"
+version = "0.1.0"
+description = "The runner for QHAna plugins."
+authors = ["QHAna authors"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+flask = { extras = ["dotenv"], version = "^2.0.0" }
+Flask-JWT-Extended = "^4.0.0"
+Flask-Cors = "^3.0.10"
+Flask-SQLAlchemy = "^2.5.1"
+Flask-Migrate = "^3.0.0"
+flask-babel = "^2.0.0"
+flask-smorest = "^0.31.1"
+tomlkit = "^0.7.0"
+
+[tool.poetry.dev-dependencies]
+black = "^21.5b1"
+flake8 = "^3.9.2"
+pytest = "^6.2.4"
+flake8-docstrings = "^1.6.0"
+flake8-bugbear = "^21.4.3"
+Sphinx = "^4.0.0"
+sphinxcontrib-redoc = "^1.6.0"
+sphinx-click = "^3.0.0"
+myst-parser = "^0.15.1"
+
+[tool.poetry.scripts]
+#flask = 'flask.cli:main'
+
+[tool.black]
+target-version = ["py37"]
+line-length = 90
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+reverse_relative = true
+group_by_package = true
+honor_noqa = true
+atomic = true
+
+[tool.sphinx]
+copyright-year = 2021
+enable-autodoc = true
+enable-autosectionlabel = true
+enable-markdown = true
+enable-todo = true
+# update gitignore if you want to edit docs/changelog.md manually!
+include-changelog = true
+# update gitignore if you want to edit docs/readme.md manually!
+include-readme = true
+
+[tool.sphinx.intersphinx-mapping]
+python = ["https://docs.python.org/3"]
+
+[tool.sphinx.myst]
+# create anchors for h1 and h2
+heading_anchors = 2
+# markdown parser; see <https://myst-parser.readthedocs.io/en/latest/syntax/optional.html>
+extensions = [
+    #"amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_admonition",
+    "html_image",
+    #"linkify", # requires installation of linkify-it-py
+    "replacements",
+    "smartquotes",
+    "substitution",
+    "tasklist",
+]
+# substitutions = {"key": "substitution value"}
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
