@@ -15,11 +15,11 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Module containing default config values."""
+from logging import INFO, WARNING
 from os import urandom
-from logging import WARNING, INFO
 
-from .sqlalchemy_config import SQLAchemyProductionConfig, SQLAchemyDebugConfig
-from .smorest_config import SmorestProductionConfig, SmorestDebugConfig
+from .smorest_config import SmorestDebugConfig, SmorestProductionConfig
+from .sqlalchemy_config import SQLAchemyDebugConfig, SQLAchemyProductionConfig
 
 
 class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
@@ -46,3 +46,6 @@ class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
     SECRET_KEY = "debug_secret"  # FIXME make sure this NEVER! gets used in production!!!
 
     DEFAULT_LOG_SEVERITY = INFO
+
+    # TODO allow specifying this as a Environment variable
+    PLUGIN_FOLDERS = ["./plugins"]
