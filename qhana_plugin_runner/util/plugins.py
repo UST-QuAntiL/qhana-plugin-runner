@@ -18,14 +18,21 @@ from pathlib import Path
 from typing import ClassVar, Dict, Optional, Union
 
 from flask import Flask
-from werkzeug.urls import url_quote
+from flask.blueprints import Blueprint
+from packaging.version import LegacyVersion, Version
+from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
 
 
-class QHAnaPluginBase():
+def plugin_identifier(name: str, version: str):
+    return f"{name}@{version}"
+
+
+class QHAnaPluginBase:
 
     name: ClassVar[str]
     version: ClassVar[str]
+    instance: ClassVar[Optional["QHAnaPluginBase"]] = None
 
     __app__: Optional[Flask] = None
     __plugins__: Dict[str, "QHAnaPluginBase"] = {}
@@ -37,10 +44,14 @@ class QHAnaPluginBase():
                 raise ValueError("A plugin must specify a URL-safe! name.")
             if not plugin.version:
                 raise ValueError("A plugin must specify a version.")
-            QHAnaPluginBase.__plugins__[plugin.identifier] = plugin  # TODO better vetting/error checking
+            # TODO better vetting/error checking
+            QHAnaPluginBase.__plugins__[plugin.identifier] = plugin
+            cls.instance = plugin
         except Exception:
             if QHAnaPluginBase.__app__:
-                QHAnaPluginBase.__app__.logger.info("Could not load the plugin class {}!", cls)
+                QHAnaPluginBase.__app__.logger.info(
+                    f"Could not load the plugin class {cls}!"
+                )
             else:
                 print(f"Could not load plugin class {cls}!")
 
@@ -49,7 +60,7 @@ class QHAnaPluginBase():
         self.app: Optional[Flask] = None
         if app:
             self.init_app(app)
-    
+
     def init_app(self, app: Flask):
         self.app = app
 
@@ -59,7 +70,34 @@ class QHAnaPluginBase():
     @cached_property
     def identifier(self) -> str:
         """An url safe identifier based on name and version of the plugin."""
-        return url_quote(f"{self.name}_{self.version}")
+        return plugin_identifier(self.name, self.version)
+
+    @cached_property
+    def parsed_version(self) -> Union[Version, LegacyVersion]:
+        """The parsed version string as a Version that can be compared to other Versions.
+
+        Raises:
+            Warning: if the version does not conform to PEP 440
+
+        Returns:
+            Union[Version, LegacyVersion]: the parsed and comparable version
+        """
+        version = parse_version(self.version)
+        if isinstance(version, LegacyVersion):
+            msg = f"The plugin version {self.version} of the plugin {self.name} does not conform to the PEP 440 versioning scheme!"
+            if self.app:
+                self.app.logger.warning(msg)
+            else:
+                raise Warning(msg)
+        return version
+
+    def get_api_blueprint(self):
+        """Get the api blueprint that bundles the api endpoints of this plugin.
+
+        Raises:
+            NotImplementedError: if the plugin does not provide a blueprint
+        """
+        raise NotImplementedError()
 
 
 def _append_source_path(app: Flask, source_path: Union[str, Path]):
@@ -89,7 +127,10 @@ def _try_load_plugin_file(app: Flask, plugin_file: Path):
         try:
             import_module(plugin_file.stem)
         except ImportError:
-            app.logger.warning("Failed to import '{}' at location '{}'.", plugin_file.name, plugin_file.parent)
+            app.logger.warning(
+                f"Failed to import '{plugin_file.name}' at location '{plugin_file.parent}'.",
+                exc_info=True,
+            )
 
 
 def _try_load_plugin_package(app: Flask, plugin_package: Path):
@@ -102,22 +143,26 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
         plugin_package (Path): the path to the python package (not the directory containing the package!)
     """
     if not (plugin_package / Path("__init__.py")).exists():
-        app.logger.debug("Tried to import a normal folder '{}' as a python package, skipping.", plugin_package)
+        app.logger.debug(
+            f"Tried to import a normal folder '{plugin_package}' as a python package, skipping."
+        )
         return
     try:
         import_module(plugin_package.name)
     except ImportError:
-        app.logger.warning("Failed to import '{}' at location '{}'.", plugin_package.name, plugin_package.parent)
+        app.logger.warning(
+            f"Failed to import '{plugin_package.name}' at location '{plugin_package.parent}'."
+        )
 
 
 def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
     """Load all plugins from a folder path.
 
-    Every importable python module in the folder is considered a plugin and 
+    Every importable python module in the folder is considered a plugin and
     will be automatically imported. The parent path will be added to ``sys.path``
     if not already added.
 
-    If the folder contains a ``__init__.py`` file itself, then the folder is 
+    If the folder contains a ``__init__.py`` file itself, then the folder is
     assumed to be a python package and only that python package is imported.
 
     Args:
@@ -126,13 +171,17 @@ def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
     """
     if isinstance(folder, str):
         folder = Path(folder)
-    
+
     folder = folder.resolve()
 
     if not folder.exists():
-        app.logger.info("Trying to load plugins from '{}' but the folder does not exist.", folder)
+        app.logger.info(
+            f"Trying to load plugins from '{folder}' but the folder does not exist."
+        )
     if not folder.is_dir():
-        app.logger.warning("Trying to load plugins from '{}' but the path is not a directory.", folder)
+        app.logger.warning(
+            f"Trying to load plugins from '{folder}' but the path is not a directory."
+        )
 
     if (folder / Path("__init__.py")).exists():
         _append_source_path(app, folder.parent)
@@ -156,8 +205,19 @@ def register_plugins(app: Flask):
     Args:
         app (Flask): the app instance to register the plugins with
     """
+    from qhana_plugin_runner.api import ROOT_API
+
     QHAnaPluginBase.__app__ = app
     plugin_folders = app.config.get("PLUGIN_FOLDERS", [])
     for folder in plugin_folders:
         _load_plugins_from_folder(app, folder)
 
+    url_prefix: str = app.config.get("OPENAPI_URL_PREFIX", "").rstrip("/")
+
+    # register API blueprints (only do this after the API is registered with flask!)
+    for plugin in QHAnaPluginBase.get_plugins().values():
+        plugin_blueprint: Optional[Blueprint] = plugin.get_api_blueprint()
+        if plugin_blueprint:
+            ROOT_API.register_blueprint(
+                plugin_blueprint, url_prefix=f"{url_prefix}/plugins/{plugin.identifier}/"
+            )

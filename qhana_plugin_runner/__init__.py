@@ -86,7 +86,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         log_format = cast(Optional[str], config.get("DEFAULT_LOG_FORMAT"))
         date_format = cast(Optional[str], config.get("DEFAULT_LOG_DATE_FORMAT"))
         if log_format:
-            formatter = Formatter(log_format, style=log_format_style, datefmt=date_format)
+            formatter = Formatter(log_format, style=log_format_style, datefmt=date_format, validate=True)
             default_logging_handler = cast(Handler, default_handler)
             default_logging_handler.setFormatter(formatter)
             default_logging_handler.setLevel(log_severity)
@@ -119,6 +119,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
     jwt.register_jwt(app)
     api.register_root_api(app)
 
+    # register plugins, AFTER registering the API!
     register_plugins(app)
 
     # allow cors requests everywhere (CONFIGURE THIS TO YOUR PROJECTS NEEDS!)

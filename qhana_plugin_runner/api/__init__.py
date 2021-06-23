@@ -40,7 +40,7 @@ class VersionsRootSchema(MaBaseSchema):
 
 ROOT_ENDPOINT = SmorestBlueprint(
     "api-root",
-    "root",
+    __name__,
     url_prefix="/api",
     description="The API endpoint pointing towards all api versions.",
 )

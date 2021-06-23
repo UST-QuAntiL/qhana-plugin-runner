@@ -18,18 +18,23 @@
 
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import List
+from typing import List, Optional
 
 import marshmallow as ma
 from flask.helpers import url_for
 from flask.views import MethodView
+from flask_smorest import abort
+from werkzeug.utils import redirect
 
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 
 PLUGINS_API = SmorestBlueprint(
-    "plugins-api", "Plugins API", description="Api to request a list of loaded plugins.", url_prefix="/plugins"
+    "plugins-api",
+    __name__,
+    description="Api to request a list of loaded plugins.",
+    url_prefix="/plugins",
 )
 
 
@@ -38,6 +43,7 @@ class PluginData:
     name: str
     version: str
     identifier: str
+    api_root: Optional[str]
 
 
 @dataclass()
@@ -49,6 +55,7 @@ class PluginSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     version = ma.fields.String(required=True, allow_none=False, dump_only=True)
     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    api_root = ma.fields.Url(required=False, allow_none=False, dump_only=True)
 
 
 class PluginCollectionSchema(MaBaseSchema):
@@ -62,5 +69,43 @@ class PluginsView(MethodView):
     @PLUGINS_API.response(HTTPStatus.OK, PluginCollectionSchema())
     def get(self):
         """Get all loaded plugins."""
-        plugins = QHAnaPluginBase.get_plugins().values()
-        return PluginCollectionData(plugins=[PluginData(p.name, p.version, p.identifier) for p in plugins])
+        plugins = sorted(
+            QHAnaPluginBase.get_plugins().values(),
+            key=lambda p: (p.name, p.parsed_version),
+        )
+        return PluginCollectionData(
+            plugins=[
+                PluginData(
+                    p.name,
+                    p.version,
+                    p.identifier,
+                    url_for("plugins-api.PluginView", plugin=p.identifier),
+                )
+                for p in plugins
+            ]
+        )
+
+
+@PLUGINS_API.route("/<string:plugin>/")
+class PluginView(MethodView):
+    """Generic fallback plugins view."""
+
+    @PLUGINS_API.response(HTTPStatus.TEMPORARY_REDIRECT)
+    def get(self, plugin: str):
+        """Redirect to the newest version of a plugin."""
+        plugins = QHAnaPluginBase.get_plugins()
+        if plugin in plugins:
+            abort(
+                HTTPStatus.NOT_FOUND, message="The plugin does not provide a blueprint."
+            )
+        found_plugin: Optional[QHAnaPluginBase] = None
+        for p in plugins.values():
+            if p.name != plugin:
+                continue
+            if found_plugin is None or found_plugin.parsed_version < p.parsed_version:
+                found_plugin = p
+
+        if found_plugin is None:
+            abort(HTTPStatus.NOT_FOUND, message="No plugin registered with that name.")
+
+        return redirect(url_for("plugins-api.PluginView", plugin=found_plugin.identifier))
