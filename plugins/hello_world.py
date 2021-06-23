@@ -2,7 +2,9 @@ from http import HTTPStatus
 from typing import Optional
 
 import marshmallow as ma
+from flask import Response
 from flask.app import Flask
+from flask.templating import render_template
 from flask.views import MethodView
 
 from qhana_plugin_runner.api.util import MaBaseSchema, SecurityBlueprint
@@ -12,7 +14,13 @@ _plugin_name = "hello-world"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
-HELLO_BLP = SecurityBlueprint(_identifier, __name__, description="Demo plugin API.")
+
+HELLO_BLP = SecurityBlueprint(
+    _identifier,
+    __name__,
+    description="Demo plugin API.",
+    template_folder="hello_world_templates",
+)
 
 
 class DemoResponseSchema(MaBaseSchema):
@@ -34,6 +42,30 @@ class PluginsView(MethodView):
             "version": HelloWorld.instance.version,
             "identifier": HelloWorld.instance.identifier,
         }
+
+
+@HELLO_BLP.route("/ui/")
+class MicroFrontend(MethodView):
+    """Micro frontend for the hello world plugin."""
+
+    @HELLO_BLP.doc(
+        responses={
+            f"{HTTPStatus.OK}": {
+                "description": "Micro frontend of the hello world plugin.",
+                "content": {"text/html": {"schema": {"type": "string"}}},
+            }
+        }
+    )
+    @HELLO_BLP.require_jwt("jwt", optional=True)
+    def get(self):
+        """Return the micro frontend."""
+        return Response(
+            render_template(
+                "hello_template.html",
+                name=HelloWorld.instance.name,
+                version=HelloWorld.instance.version,
+            )
+        )
 
 
 class HelloWorld(QHAnaPluginBase):
