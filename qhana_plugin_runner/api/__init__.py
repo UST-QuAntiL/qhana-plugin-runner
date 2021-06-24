@@ -28,6 +28,7 @@ from flask_smorest import Blueprint as SmorestBlueprint
 
 from .jwt import SECURITY_SCHEMES
 from .plugins_api import PLUGINS_API
+from .tasks_api import TASKS_API
 from .util import MaBaseSchema
 
 """A single API instance. All api versions should be blueprints."""
@@ -69,3 +70,4 @@ def register_root_api(app: Flask):
     # register API blueprints (only do this after the API is registered with flask!)
     ROOT_API.register_blueprint(ROOT_ENDPOINT, url_prefix=url_prefix)
     ROOT_API.register_blueprint(PLUGINS_API, url_prefix=f"{url_prefix}/plugins")
+    ROOT_API.register_blueprint(TASKS_API, url_prefix=f"{url_prefix}/tasks")

@@ -39,7 +39,7 @@ poetry run flask run
 
 ### Trying out the Plugin-Runner
 
-TODO: Update this section after implementation!
+<!-- TODO Update this section after implementation! -->
 
 #### The API:
 
@@ -84,7 +84,6 @@ This plugin runner uses the following libraries to build a rest app with a datab
  *  flask-smorest ([documentation](https://flask-smorest.readthedocs.io/en/latest/), [marshmallow documentation](https://marshmallow.readthedocs.io/en/stable/), [apispec documentation](https://apispec.readthedocs.io/en/latest/), [OpenAPI spec](http://spec.openapis.org/oas/v3.0.2))\
     Provides the API code and generates documentation in form of a OpenAPI specification.\
     API: `qhana_plugin_runner/api`\
-    API Models: `qhana_plugin_runner/api/v1_api/models`\
     Config: `qhana_plugin_runner/util/config/smorest_config.py` and `qhana_plugin_runner/api/__init__.py`
  *  Flask-JWT-Extended ([documentation](https://flask-jwt-extended.readthedocs.io/en/stable/))\
     Provides authentication with JWT tokens.\
@@ -92,39 +91,44 @@ This plugin runner uses the following libraries to build a rest app with a datab
  *  Sphinx ([documentation](https://www.sphinx-doc.org/en/master/index.html))\
     The documentation generator.\
     Config: `pyproject.toml` and `docs/conf.py` (toml config input is manually configured in `conf.py`)
- *  sphinxcontrib-redoc ([documantation](https://sphinxcontrib-redoc.readthedocs.io/en/stable/))
-    Renders the OpenAPI spec with redoc in sphinx html output.
+ *  sphinxcontrib-redoc ([documantation](https://sphinxcontrib-redoc.readthedocs.io/en/stable/))\
+    Renders the OpenAPI spec with redoc in sphinx html output.\
     Config: `docs/conf.py` (API title is read from spec)
+ *  Celery ([documentation](https://docs.celeryproject.org/en/stable/index.html))\
+    A task queue for handling asynchrounous background tasks and scheduled/periodic tasks.\
+    Config: `qhana_plugin_runner/config/celery_config.py` and `qhana_plugin_runner/celery.py`\
+    Module to start celery as worker: `qhana_plugin_runner/celery_worker.py` (use `invoke worker` command)
+ *  redis (dependency for Celery)
+ *  packaging ([documentation](https://packaging.pypa.io/en/latest/index.html))\
+    for parsing and sorting PEP 440 version string (the plugin versions)
+ *  invoke ([documentation](http://www.pyinvoke.org))\
+    small cli for easier dev environments
 
 Additional files and folders:
 
  *  `default.nix` and `shell.nix`\
     For use with the [nix](https://nixos.org) ecosystem.
  *  `pyproject.toml`\
-    Poetry package config and config for the [black](https://github.com/psf/black) formatter.
+    Poetry package config and config for the [black](https://github.com/psf/black) formatter (also sphinx and other python tools).
  *  `.flake8`\
     Config for the [flake8](https://flake8.pycqa.org/en/latest/) linter
  *  `.editorconfig`
  *  `tests`\
     Reserved for unit tests.
- *  `instance` (in .gitignore)
+ *  `instance` (in .gitignore)\
+    See <https://flask.palletsprojects.com/en/2.0.x/config/#instance-folders>
  *  `qhana_plugin_runner/templates` and `qhana_plugin_runner/static` (currently empty)\
     Templates and static files of the flask app
  *  `docs`\
     Folder containing a sphinx documentation
  *  `typings`\
     Python typing stubs for libraries that have no type information.
-    Mostly generated with the pylance extension of vscode.
+    Mostly generated with the pylance extension of vscode. (currently empty)
+ *  `tasks.py`\
+    Tasks that can be executed with `invoke` (see [celery background tasks](#Celery-background-tasks))
+ *  `plugins`\
+    A folder to place plugins in during initial development. Mature plugins should be relocated into seperate repositories eventually.
 
-
-Library alternatives or recommendations:
-
- *  Rest API: flask-restx ([documentation](https://flask-restx.readthedocs.io/en/latest/))
- *  For including single page applications: flask-static-digest ([documentation](https://github.com/nickjj/flask-static-digest))
- *  For scripting tasks: invoke ([documentation](http://www.pyinvoke.org))
- *  For hashing passwords: flask-bcrypt ([documentation](https://flask-bcrypt.readthedocs.io/en/latest/))
- *  For Background Task Scheduling: [Celery](https://docs.celeryproject.org/en/latest/getting-started/first-steps-with-celery.html) (See also [Integrating Celery with Flask](https://flask.palletsprojects.com/en/2.0.x/patterns/celery/))
- 
 
 ## Babel
 
@@ -158,6 +162,30 @@ poetry run flask db upgrade
 # help
 poetry run flask db --help
 ```
+
+## Celery background tasks
+
+Use invoke to run celery commands (e.g. to start the celery worker), as it will automatically apply `.flaskenv` and `.env` environment variables.
+
+```bash
+# Start a redis instance in a docker container with
+poetry run invoke start-broker
+
+# start a worker instance
+poetry run invoke worker
+
+# stop redis container
+poetry run invoke stop-broker
+
+# remove existing redis container (e.g. to set a new port)
+poetry run invoke reset-broker
+poetry run invoke start-broker --port="6379"
+
+# get help for available commands
+poetry run invoke --list
+poetry run invoke worker --help
+```
+
 
 ## Compiling the Documentation
 

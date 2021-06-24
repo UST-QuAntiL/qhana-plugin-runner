@@ -64,6 +64,7 @@ class QHAnaPluginBase:
     def init_app(self, app: Flask):
         self.app = app
 
+    @staticmethod
     def get_plugins() -> Dict[str, "QHAnaPluginBase"]:
         return QHAnaPluginBase.__plugins__
 

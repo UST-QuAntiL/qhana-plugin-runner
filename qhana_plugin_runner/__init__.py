@@ -31,7 +31,7 @@ from flask.logging import default_handler
 from flask_cors import CORS
 from toml import load as load_toml
 
-from . import api, babel, db
+from . import api, babel, celery, db
 from .api import jwt
 from .util.config import DebugConfig, ProductionConfig
 from .util.plugins import register_plugins
@@ -86,7 +86,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         log_format = cast(Optional[str], config.get("DEFAULT_LOG_FORMAT"))
         date_format = cast(Optional[str], config.get("DEFAULT_LOG_DATE_FORMAT"))
         if log_format:
-            formatter = Formatter(log_format, style=log_format_style, datefmt=date_format, validate=True)
+            formatter = Formatter(log_format, style=log_format_style, datefmt=date_format)
             default_logging_handler = cast(Handler, default_handler)
             default_logging_handler.setFormatter(formatter)
             default_logging_handler.setLevel(log_severity)
@@ -113,6 +113,8 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
     # Begin loading extensions and routes
 
     babel.register_babel(app)
+
+    celery.register_celery(app)
 
     db.register_db(app)
 

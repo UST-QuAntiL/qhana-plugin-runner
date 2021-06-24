@@ -18,6 +18,7 @@
 from logging import INFO, WARNING
 from os import urandom
 
+from .celery_config import CELERY_DEBUG_CONFIG, CELERY_PRODUCTION_CONFIG
 from .smorest_config import SmorestDebugConfig, SmorestProductionConfig
 from .sqlalchemy_config import SQLAchemyDebugConfig, SQLAchemyProductionConfig
 
@@ -40,12 +41,16 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     DEFAULT_LOG_FORMAT = "{asctime} [{levelname:^7}] [{module:<30}] {message}    <{funcName}, {lineno}; {pathname}>"
     DEFAULT_LOG_DATE_FORMAT = None
 
+    CELERY = CELERY_PRODUCTION_CONFIG
+
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
     DEBUG = True
     SECRET_KEY = "debug_secret"  # FIXME make sure this NEVER! gets used in production!!!
 
     DEFAULT_LOG_SEVERITY = INFO
+
+    CELERY = CELERY_DEBUG_CONFIG
 
     # TODO allow specifying this as a Environment variable
     PLUGIN_FOLDERS = ["./plugins"]
