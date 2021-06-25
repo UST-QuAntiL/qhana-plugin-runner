@@ -13,20 +13,25 @@
 # limitations under the License.
 
 from http import HTTPStatus
+from json import dumps, loads
 from typing import Optional
-from celery.result import AsyncResult
-from flask.helpers import url_for
 
 import marshmallow as ma
+from celery.canvas import chain
+from celery.result import AsyncResult
+from celery.utils.log import get_task_logger
 from flask import Response
 from flask.app import Flask
+from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
-from celery.utils.log import get_task_logger
-
+from sqlalchemy.sql.expression import select
 
 from qhana_plugin_runner.api.util import MaBaseSchema, SecurityBlueprint
 from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import save_task_error, save_task_id, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "hello-world"
@@ -101,7 +106,24 @@ class PluginsView(MethodView):
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Start the demo task."""
-        result: AsyncResult = demo_task.delay("Demo task input.")
+        db_task = ProcessingTask(
+            task_name=demo_task.name,
+            parameters=dumps({"input_str": "Demo task input."}),
+        )
+        db_task.save(commit=True)
+
+        task: chain = (
+            # save task id inside a task to avoid race conditions
+            save_task_id.s(db_task.id)
+            # use si (immutable signature) to ignore None result parameter from previous task
+            | demo_task.si()
+            # save task result to db
+            | save_task_result.s()
+        )
+        # save errors to db
+        task.link_error(save_task_error.s())
+        result: AsyncResult = task.apply_async()
+
         return {
             "name": demo_task.name,
             "task_id": str(result.id),
@@ -116,7 +138,6 @@ class HelloWorld(QHAnaPluginBase):
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
-        print("\nInitialized hello world plugin.\n")
 
     def get_api_blueprint(self):
         return HELLO_BLP
@@ -125,9 +146,17 @@ class HelloWorld(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{HelloWorld.instance.identifier}.demo_task")
-def demo_task(input_str: str) -> str:
-    TASK_LOGGER.info(f"Starting new demo task with input '{input_str}'")
+@CELERY.task(name=f"{HelloWorld.instance.identifier}.demo_task", bind=True)
+def demo_task(self) -> str:
+    task_id = self.request.root_id
+    TASK_LOGGER.info(f"Starting new demo task with task data '{task_id}'")
+    task_data: ProcessingTask = DB.session.execute(
+        select(ProcessingTask).filter_by(task_id=task_id)
+    ).scalar_one()
+    input_str: Optional[str] = loads(task_data.parameters or "{}").get("input_str", None)
+    TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
+    if input_str is None:
+        raise ValueError("No input argument provided!")
     if input_str:
         return input_str.replace("input", "output")
     return ""

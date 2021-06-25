@@ -25,11 +25,14 @@ from celery.result import AsyncResult
 from flask.helpers import url_for
 from flask.views import MethodView
 from flask_smorest import abort
+from sqlalchemy.sql.expression import select
 from werkzeug.utils import redirect
 
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
 from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 TASKS_API = SmorestBlueprint(
     "tasks-api",
@@ -61,12 +64,26 @@ class TaskView(MethodView):
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
     def get(self, task_id: str):
         """Get the current task status."""
-        task_result = AsyncResult(task_id, app=CELERY)
+        task_data: ProcessingTask = DB.session.execute(
+            select(ProcessingTask).filter_by(task_id=task_id)
+        ).scalar_one_or_none()
+        if not task_data:
+            abort(HTTPStatus.NOT_FOUND, message="Task not found.")
+        if task_data.finished_at is None:
+            task_result = AsyncResult(task_id, app=CELERY)
+            return TaskData(
+                name=task_data.task_name,
+                task_id=task_data.task_id,
+                status=task_result.status,
+                # TODO better result handling (store result in db, use db in this endpoint for finished tasks, ...)
+                # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
+                result=task_result.result if task_result.successful() else None,
+            )
         return TaskData(
-            name=task_result.name,
-            task_id=str(task_result.id),
-            status=task_result.status,
-            # TODO better result handling (store result in db, use db in this endpoint for finished tasks, ...)
-            # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
-            result=task_result.result if task_result.successful() else None,
+            name=task_data.task_name,
+            task_id=task_data.task_id,
+            status=task_data.finished_status,
+            result=task_data.task_result,
         )
+
+    # TODO add delete endpoint (and or serve result from different endpoint)

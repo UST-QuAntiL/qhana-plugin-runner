@@ -14,9 +14,10 @@
 
 # originally from <https://github.com/buehlefs/flask-template/>
 
-class SQLAchemyProductionConfig():
+
+class SQLAchemyProductionConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
 class SQLAchemyDebugConfig(SQLAchemyProductionConfig):
-    SQLALCHEMY_ECHO = True
+    SQLALCHEMY_ECHO = False

@@ -16,4 +16,4 @@
 
 """Module containing all SQLalchemy Models."""
 
-from . import example  # noqa
+from . import tasks  # noqa

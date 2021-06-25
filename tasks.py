@@ -65,7 +65,7 @@ def reset_broker(c):
     container_id = environ.get("REDIS_CONTAINER_ID")
     if not container_id:
         return
-    c.run(join([docker_cmd, "rm", container_id]))
+    c.run(join([docker_cmd, "rm", container_id]), echo=True)
     dot_env_path = Path(".env")
     unset_key(dot_env_path, "REDIS_CONTAINER_ID")
 
@@ -93,15 +93,15 @@ def start_broker(c, port=None):
     container_id = environ.get("REDIS_CONTAINER_ID", None)
 
     if container_id:
-        res: Result = c.run(join([docker_cmd, "restart", container_id]))
+        res: Result = c.run(join([docker_cmd, "restart", container_id]), echo=True)
         if res.failed:
             print(f"Failed to start container with id {container_id}.")
         return
 
     if not port:
         port = environ.get("REDIS_PORT", "6379")
-    c.run(join([docker_cmd, "run", "-d", "-p", f"{port}:6379", "redis"]))
-    result: Result = c.run(join([docker_cmd, "ps", "-q", "--latest"]))
+    c.run(join([docker_cmd, "run", "-d", "-p", f"{port}:6379", "redis"]), echo=True)
+    result: Result = c.run(join([docker_cmd, "ps", "-q", "--latest"]), hide=True)
     result_container_id = result.stdout.strip()
     dot_env_path = Path(".env")
     if not dot_env_path.exists():
@@ -121,7 +121,10 @@ def worker(c, dev=False, loglevel="INFO"):
     if dev:
         start_broker(c)
     c = cast(Context, c)
-    c.run(join(["celery", "--app", CELERY_WORKER, "worker", "--loglevel", loglevel]))
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "worker", "--loglevel", loglevel]),
+        echo=True,
+    )
     if dev:
         stop_broker(c)
 
@@ -133,4 +136,113 @@ def celery_status(c):
     Args:
         c (Context): task context
     """
-    c.run(join(["celery", "--app", CELERY_WORKER, "status"]))
+    c = cast(Context, c)
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "status"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task
+def celery_queues(c):
+    """Show the queus of the celery instance.
+
+    Args:
+        c (Context): task context
+    """
+    c = cast(Context, c)
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "list", "bindings"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task(celery_queues)
+def celery_inspect(c):
+    """Show a detailed status report of the running workers and queues.
+
+    Args:
+        c (Context): task context
+    """
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "inspect", "report"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "inspect", "stats"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task
+def celery_enabe_events(c):
+    """Enable celery worker events events.
+
+    Args:
+        c (Context): task context
+    """
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "control", "enable_events"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task
+def celery_disable_events(c):
+    """Disable celery worker events events.
+
+    Args:
+        c (Context): task context
+    """
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "control", "disable_events"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task(pre=(celery_enabe_events,), post=(celery_disable_events,))
+def celery_monitor(c):
+    """Show current events.
+
+    Args:
+        c (Context): task context
+    """
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "events"]),
+        pty=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task
+def purge_task_queues(c):
+    """Purge all task queues. Deletes tasks forever!
+
+    Args:
+        c (Context): task context
+    """
+    answer = input(
+        "This action cannot be undone. Type in 'purge' to purge all task queues:"
+    )
+    if answer != "purge":
+        print("Not purging task queues.")
+        return
+    c.run(
+        join(["celery", "--app", CELERY_WORKER, "purge"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
