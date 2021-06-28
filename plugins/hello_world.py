@@ -40,8 +40,8 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 
 
 HELLO_BLP = SecurityBlueprint(
-    _identifier,
-    __name__,
+    _identifier,  # blueprint name
+    __name__,  # module import name!
     description="Demo plugin API.",
     template_folder="hello_world_templates",
 )
@@ -124,10 +124,14 @@ class PluginsView(MethodView):
         task.link_error(save_task_error.s())
         result: AsyncResult = task.apply_async()
 
+        root: AsyncResult = result
+        while root.parent:
+            root = root.parent
+
         return {
             "name": demo_task.name,
-            "task_id": str(result.id),
-            "task_result_url": url_for("tasks-api.TaskView", task_id=str(result.id)),
+            "task_id": str(root.id),
+            "task_result_url": url_for("tasks-api.TaskView", task_id=str(root.id)),
         }
 
 
