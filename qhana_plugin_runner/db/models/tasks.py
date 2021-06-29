@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from sqlalchemy.sql import sqltypes as sql
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.schema import Column
 
 from ..db import DB, REGISTRY
@@ -63,3 +64,15 @@ class ProcessingTask:
         DB.session.add(self)
         if commit:
             DB.session.commit()
+
+    @classmethod
+    def get_by_id(cls, id_: int) -> Optional["ProcessingTask"]:
+        """Get the object instance by the object id from the database. (None if not found)"""
+        return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
+
+    @classmethod
+    def get_by_task_id(cls, task_id) -> Optional["ProcessingTask"]:
+        """Get the object instance by the task_id from the database. (None if not found)"""
+        return DB.session.execute(
+            select(cls).filter_by(task_id=task_id)
+        ).scalar_one_or_none()

@@ -64,13 +64,12 @@ class TaskView(MethodView):
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
     def get(self, task_id: str):
         """Get the current task status."""
-        task_data: ProcessingTask = DB.session.execute(
-            select(ProcessingTask).filter_by(task_id=task_id)
-        ).scalar_one_or_none()
+        task_data: ProcessingTask = ProcessingTask.get_by_task_id(task_id=task_id)
         if not task_data:
             abort(HTTPStatus.NOT_FOUND, message="Task not found.")
         if task_data.finished_at is None:
             task_result = AsyncResult(task_id, app=CELERY)
+            print("\n\n", task_result.as_list(), task_result.children, "\n\n")
             return TaskData(
                 name=task_data.task_name,
                 task_id=task_data.task_id,

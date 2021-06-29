@@ -31,7 +31,7 @@ from qhana_plugin_runner.api.util import MaBaseSchema, SecurityBlueprint
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_id, save_task_result
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "hello-world"
@@ -112,26 +112,19 @@ class PluginsView(MethodView):
         )
         db_task.save(commit=True)
 
-        task: chain = (
-            # save task id inside a task to avoid race conditions
-            save_task_id.s(db_task.id)
-            # use si (immutable signature) to ignore None result parameter from previous task
-            | demo_task.si()
-            # save task result to db
-            | save_task_result.s()
-        )
+        # all tasks need to know about db id to load the db entry
+        task: chain = demo_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
         # save errors to db
-        task.link_error(save_task_error.s())
+        task.link_error(save_task_error.s(db_id=db_task.id))
         result: AsyncResult = task.apply_async()
 
-        root: AsyncResult = result
-        while root.parent:
-            root = root.parent
+        db_task.task_id = result.id
+        db_task.save(commit=True)
 
         return {
             "name": demo_task.name,
-            "task_id": str(root.id),
-            "task_result_url": url_for("tasks-api.TaskView", task_id=str(root.id)),
+            "task_id": str(result.id),
+            "task_result_url": url_for("tasks-api.TaskView", task_id=str(result.id)),
         }
 
 
@@ -151,12 +144,15 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 @CELERY.task(name=f"{HelloWorld.instance.identifier}.demo_task", bind=True)
-def demo_task(self) -> str:
-    task_id = self.request.root_id
-    TASK_LOGGER.info(f"Starting new demo task with task data '{task_id}'")
-    task_data: ProcessingTask = DB.session.execute(
-        select(ProcessingTask).filter_by(task_id=task_id)
-    ).scalar_one()
+def demo_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting new demo task with db id '{db_id}'")
+    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
     input_str: Optional[str] = loads(task_data.parameters or "{}").get("input_str", None)
     TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
     if input_str is None:
