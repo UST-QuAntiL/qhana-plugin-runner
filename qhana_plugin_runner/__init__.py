@@ -21,7 +21,7 @@ from logging import WARNING, Formatter, Handler, Logger, getLogger
 from logging.config import dictConfig
 from os import environ, makedirs
 from pathlib import Path
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, IO, Mapping, Optional, cast
 
 import click
 from flask.app import Flask
@@ -29,7 +29,7 @@ from flask.cli import FlaskGroup
 from flask.config import Config
 from flask.logging import default_handler
 from flask_cors import CORS
-from toml import load as load_toml
+from tomlkit import parse as parse_toml
 
 from . import api, babel, celery, db
 from .api import jwt
@@ -40,6 +40,10 @@ from .util.plugins import register_plugins
 # must not contain any spaces!
 APP_NAME = __name__
 CONFIG_ENV_VAR_PREFIX = APP_NAME.upper().replace("-", "_").replace(" ", "_")
+
+
+def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
+    return parse_toml("\n".join(file_like.readlines()))
 
 
 def create_app(test_config: Optional[Dict[str, Any]] = None):
