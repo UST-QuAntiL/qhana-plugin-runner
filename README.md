@@ -206,7 +206,7 @@ cd docs
 make html
 
 # export/update requirements.txt from poetry dependencies (for readthedocs build)
-poetry export --format requirements.txt --output docs/requirements.txt
+poetry export --dev --format requirements.txt --output docs/requirements.txt
 ```
 
 
