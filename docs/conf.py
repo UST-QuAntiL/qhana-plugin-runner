@@ -29,12 +29,15 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Mapping, Optional, Tuple, Union, cast
 from os import environ
 from tomlkit import parse
 from pathlib import Path
 from shutil import copyfile
 import subprocess
+from os import environ
+from collections import ChainMap
+from dotenv import dotenv_values
 from json import load
 
 
@@ -54,6 +57,11 @@ if current_path.name == "docs":
 else:
     project_root = current_path
     pyproject_path = current_path / Path("pyproject.toml")
+
+
+flask_environ = cast(
+    Mapping[str, str], ChainMap(dotenv_values(project_root / Path(".flaskenv")), environ)
+)
 
 pyproject_toml: Any
 
@@ -76,10 +84,12 @@ if sphinx_config.get("html-baseurl", None):
 
 # -- update openapi specification -------------------------------------------
 
-subprocess.run(
-    ["poetry", "run", "flask", "openapi", "write", "docs/api.json"],
-    cwd=project_root,
-)
+openapi_command = ["flask", "openapi", "write", "docs/api.json"]
+
+if not ON_READTHEDOCS:
+    openapi_command = ["poetry", "run"] + openapi_command
+
+subprocess.run(openapi_command, cwd=project_root, env=flask_environ)
 
 api_spec_path = project_root / Path("docs/api.json")
 
