@@ -98,7 +98,7 @@ class MicroFrontend(MethodView):
         )
 
 
-@HELLO_BLP.route("/processor/")
+@HELLO_BLP.route("/process/")
 class PluginsView(MethodView):
     """Start a long running processing task."""
 

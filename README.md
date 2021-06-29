@@ -6,6 +6,8 @@
 
 This package uses Poetry ([documentation](https://python-poetry.org/docs/)).
 
+Original template repository: <https://github.com/buehlefs/flask-template/>
+
 ## VSCode
 
 For vscode install the python extension and add the poetry venv path to the folders the python extension searches for venvs.
@@ -24,12 +26,7 @@ On linux:
 
 Run `poetry install` to install dependencies.
 
-Add `.env` file with the following content into the repository root.
-
-```bash
-FLASK_APP=qhana_plugin_runner
-FLASK_ENV=development # set to production if in production!
-```
+If an environment variable specified in `.flaskenv` should be changed locally add a `.env` file with the corresponding variables set.
 
 Run the development server with
 
@@ -37,9 +34,16 @@ Run the development server with
 poetry run flask run
 ```
 
+Start a redis instance in a docker container and start the worker process used for executing background tasks with
+
+```bash
+poetry run invoke start-broker
+poetry run invoke worker  # use strg+c to stop worker
+```
+
 ### Trying out the Plugin-Runner
 
-<!-- TODO Update this section after implementation! -->
+Start the plugin runner using the instructions above.
 
 #### The API:
 
@@ -50,7 +54,7 @@ poetry run flask run
 Configured in `qhana_plugin_runner/util/config/smorest_config.py`.
 
   * Redoc (view only): <http://localhost:5005/redoc>
-  * Rapidoc: <http://localhost:5005/rapidoc>
+  * Rapidoc (recommended): <http://localhost:5005/rapidoc>
   * Swagger-UI: <http://localhost:5005/swagger-ui>
   * OpenAPI Spec (JSON): <http://localhost:5005/api-spec.json>
 
@@ -98,11 +102,13 @@ This plugin runner uses the following libraries to build a rest app with a datab
     A task queue for handling asynchrounous background tasks and scheduled/periodic tasks.\
     Config: `qhana_plugin_runner/config/celery_config.py` and `qhana_plugin_runner/celery.py`\
     Module to start celery as worker: `qhana_plugin_runner/celery_worker.py` (use `invoke worker` command)
- *  redis (dependency for Celery)
+ *  redis (dependency for Celery)\
+    can be started via an invoke task
  *  packaging ([documentation](https://packaging.pypa.io/en/latest/index.html))\
     for parsing and sorting PEP 440 version string (the plugin versions)
  *  invoke ([documentation](http://www.pyinvoke.org))\
     small cli for easier dev environments
+    Tasks: `tasks.py`
 
 Additional files and folders:
 
@@ -110,6 +116,10 @@ Additional files and folders:
     For use with the [nix](https://nixos.org) ecosystem.
  *  `pyproject.toml`\
     Poetry package config and config for the [black](https://github.com/psf/black) formatter (also sphinx and other python tools).
+ *  `.flaskenv`\
+    environment variables used for the python project (no secrets here!)
+ *  `.env`\
+    local environment variable overrides (in `.gitignore`)
  *  `.flake8`\
     Config for the [flake8](https://flake8.pycqa.org/en/latest/) linter
  *  `.editorconfig`
@@ -125,7 +135,7 @@ Additional files and folders:
     Python typing stubs for libraries that have no type information.
     Mostly generated with the pylance extension of vscode. (currently empty)
  *  `tasks.py`\
-    Tasks that can be executed with `invoke` (see [celery background tasks](#Celery-background-tasks))
+    Tasks that can be executed with `invoke` (see [celery background tasks](#celery-background-tasks))
  *  `plugins`\
     A folder to place plugins in during initial development. Mature plugins should be relocated into seperate repositories eventually.
 

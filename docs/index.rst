@@ -7,12 +7,14 @@ Welcome to QHAna-Plugin-Runner's documentation!
 ===============================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
 
-   readme
-   cli
-   changelog
+    readme
+    plugins
+    cli
+    adr/index
+    changelog
 
 `Api documentation <api.html>`_
 

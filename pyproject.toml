@@ -62,6 +62,9 @@ include-readme = true
 [tool.sphinx.intersphinx-mapping]
 python = ["https://docs.python.org/3"]
 
+[tool.sphinx.autosectionlabel]
+prefix-document = true
+
 [tool.sphinx.myst]
 # create anchors for h1 and h2
 heading_anchors = 2
