@@ -76,7 +76,6 @@ class ProcessingResourceMetadataSchema(MaBaseSchema):
         required=True,
         allow_none=False,
         dump_only=True,
-        missing=[],
         metadata={"description": "A list of possible file input sets."},
     )
     file_outputs = ma.fields.List(  # for future use
@@ -151,7 +150,6 @@ class PluginMetadataSchema(MaBaseSchema):
         required=True,
         allow_none=False,
         dump_only=True,
-        missing=[],
         metadata={
             "description": "A list of tags describing the plugin (e.g. classical-algorithm, quantum-algorithm, hybrid-algorithm)."
         },
