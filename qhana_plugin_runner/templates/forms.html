@@ -1,0 +1,42 @@
+
+
+{% macro field_attr(attr, value) -%}
+    {% if value is not none %}{{attr}}="{{value}}"{% endif %}
+{%- endmacro %}
+
+{% macro field_value(type_, value) -%}
+    {% if type_ == "checkbox" %}
+        {{ 'checked' if value else '' }}
+    {% else %}
+        {{ field_attr('value', value) }}
+    {% endif %}
+{%- endmacro %}
+
+
+{% macro render_fields(schema, values=dict(), form_field_class="qhana-form-field", form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
+    {% for key, field in schema.fields.items() %}
+    {% set form_key=field.data_key %}
+    {% set input_type=get_input_type(field) %}
+    <div class="{{form_field_class}}">
+        <label class="{{form_label_class}}" for="{{form_key}}">{{field.metadata.get("label", key)}}</label>
+        {% if input_type %}
+        <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" 
+            {{ field_value(input_type, values.get(form_key)) }} 
+            {{ 'required' if not field.required else ''}} 
+            {{ field_attr('min-length', None) }}>
+        {% else %}
+        <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+{%- endmacro %}
+
+{% macro submit(text, action=None, method=None, class="qhana-form-submit") -%}
+    <button class="{{class}}" type="submit" {{field_attr('formaction', action)}} {{field_attr('formmethod', method)}}>{{text}}</button>
+{%- endmacro %}
+
+{% macro render_form(action="", method="post", class="qhana-form") -%}
+    <form action="{{action}}" method="{{method}}" class="{{class}}">
+        {{ caller() }}
+    </form>
+{%- endmacro %}

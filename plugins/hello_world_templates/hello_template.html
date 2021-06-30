@@ -1,4 +1,12 @@
+{% import 'forms.html' as forms %}
+
 <h1>Micro Frontend Test</h1>
 <p>The micro frontend test page of the {{name}} plugin (version: {{version}}).</p>
 
 {% include 'common_template.html' %}
+
+{% call forms.render_form() %}
+    {{ forms.render_fields(schema, values=values) }}
+    {{ forms.submit("validate")}}
+    {{ forms.submit("submit", action=process)}}
+{% endcall %}
