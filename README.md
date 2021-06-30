@@ -209,6 +209,12 @@ make html
 poetry export --dev --format requirements.txt --output docs/requirements.txt
 ```
 
+Update the python source documentation
+
+```bash
+poetry run sphinx-apidoc --separate --force -o docs/source . ./tasks.py docs plugins migrations
+```
+
 
 
 ## Acknowledgements

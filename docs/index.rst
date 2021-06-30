@@ -14,6 +14,7 @@ Welcome to QHAna-Plugin-Runner's documentation!
     plugins
     cli
     adr/index
+    source/qhana_plugin_runner
     changelog
 
 `Api documentation <api.html>`_
