@@ -25,6 +25,9 @@ from werkzeug.utils import cached_property
 
 
 def plugin_identifier(name: str, version: str):
+    name = name.replace(".", "-")
+    version = version.replace(".", "-")
+
     return f"{name}@{version}"
 
 
