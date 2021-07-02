@@ -17,13 +17,13 @@
 """CLI functions for the db module."""
 
 from typing import cast
-from flask import Flask, Blueprint, current_app
-from flask.cli import with_appcontext, AppGroup
-import click
 
-from ..util.logging import get_logger
+import click
+from flask import Blueprint, Flask, current_app
+from flask.cli import AppGroup, with_appcontext
 
 from .db import DB
+from ..util.logging import get_logger
 
 # make sure all models are imported for CLI to work properly
 from . import models  # noqa
@@ -61,7 +61,7 @@ def drop_db_function(app: Flask):
     get_logger(app, DB_COMMAND_LOGGER).info("Dropped Database.")
 
 
-def register_cli_blueprint(app: Flask):
+def register_db_cli_blueprint(app: Flask):
     """Method to register the DB CLI blueprint."""
     app.register_blueprint(DB_CLI_BLP)
-    app.logger.info("Registered blueprint.")
+    app.logger.info("Registered db cli blueprint.")

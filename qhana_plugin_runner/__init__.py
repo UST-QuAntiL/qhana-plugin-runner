@@ -33,6 +33,7 @@ from tomlkit import parse as parse_toml
 
 from . import api, babel, celery, db
 from .api import jwt
+from .plugins_cli import register_plugin_cli_blueprint
 from .util.config import DebugConfig, ProductionConfig
 from .util.jinja_helpers import register_helpers
 from .util.plugins import register_plugins
@@ -131,6 +132,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     # register plugins, AFTER registering the API!
     register_plugins(app)
+    register_plugin_cli_blueprint(app)
 
     # allow cors requests everywhere (CONFIGURE THIS TO YOUR PROJECTS NEEDS!)
     CORS(app)

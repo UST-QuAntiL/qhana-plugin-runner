@@ -205,6 +205,9 @@ poetry shell
 cd docs
 make html
 
+# list all targets (only available after build!)
+python -m sphinx.ext.intersphinx _build/html/objects.inv
+
 # export/update requirements.txt from poetry dependencies (for readthedocs build)
 poetry export --dev --format requirements.txt --output docs/requirements.txt
 ```

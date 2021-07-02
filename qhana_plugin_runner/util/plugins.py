@@ -95,11 +95,25 @@ class QHAnaPluginBase:
                 raise Warning(msg)
         return version
 
-    def get_api_blueprint(self):
+    def get_api_blueprint(self) -> Blueprint:
         """Get the api blueprint that bundles the api endpoints of this plugin.
 
         Raises:
             NotImplementedError: if the plugin does not provide a blueprint
+
+        Returns:
+            Blueprint: The blueprint that holds the plugin api.
+        """
+        raise NotImplementedError()
+
+    def get_requirements(self) -> str:
+        """Get the plugin dependencies as a string in the requirements.txt format.
+
+        Raises:
+            NotImplementedError: if the plugin has no external dependencies (other than the plugin runner)
+
+        Returns:
+            str: the python dependencies of the plugin
         """
         raise NotImplementedError()
 

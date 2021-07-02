@@ -14,6 +14,12 @@ Cli Documentation of the Flask app
     :nested: full
 
 
+.. click:: qhana_plugin_runner.plugins_cli:PLUGIN_CLI
+    :prog: flask
+    :section-title: Cli commands to manage plugins and their dependencies
+    :nested: full
+
+
 .. click:: flask_migrate.cli:db
     :prog: flask db
     :section-title: DB Cli for Migrations

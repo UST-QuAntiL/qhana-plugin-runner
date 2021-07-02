@@ -77,3 +77,16 @@ The plugin runner contains template macros that can be imported and used to auto
 
 
 
+Plugin Dependencies
+-------------------
+
+Plugins can declare their external python dependencies by implementing the :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_requirements` method.
+The method must return the requirements in the same format as ``requirements.txt`` used by :program:`pip`.
+
+.. seealso:: Requirements.txt format: https://pip.pypa.io/en/stable/cli/pip_install/#requirements-file-format
+
+The plugin requirements of the loaded plugins can be installed using the :any:`plugin cli <cli:install>`.
+
+.. important:: The installation will fail if **any** requirement cannot be satisfied.
+    This includes the pinned requirements of the plugin runner itself!
+
