@@ -25,6 +25,7 @@ from flask.app import Flask
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
+from marshmallow import EXCLUDE
 from sqlalchemy.sql.expression import select
 
 from qhana_plugin_runner.api.util import MaBaseSchema, SecurityBlueprint
@@ -59,6 +60,14 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+class HelloWorldParametersSchema(MaBaseSchema):
+    input_str = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={"label": "Input String", "description": "A simple string input."},
+    )
+
+
 @HELLO_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
@@ -86,30 +95,58 @@ class MicroFrontend(MethodView):
             }
         }
     )
+    @HELLO_BLP.arguments(
+        HelloWorldParametersSchema(partial=True, unknown=EXCLUDE),
+        location="query",
+        required=False,
+    )
     @HELLO_BLP.require_jwt("jwt", optional=True)
-    def get(self):
+    def get(self, arguments):
         """Return the micro frontend."""
+        return self.render(arguments)
+
+    @HELLO_BLP.doc(
+        responses={
+            f"{HTTPStatus.OK}": {
+                "description": "Micro frontend of the hello world plugin.",
+                "content": {"text/html": {"schema": {"type": "string"}}},
+            }
+        }
+    )
+    @HELLO_BLP.arguments(
+        HelloWorldParametersSchema(partial=True, unknown=EXCLUDE),
+        location="form",
+        required=False,
+    )
+    @HELLO_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(arguments)
+
+    def render(self, arguments: dict):
+        schema = HelloWorldParametersSchema()
         return Response(
             render_template(
                 "hello_template.html",
                 name=HelloWorld.instance.name,
                 version=HelloWorld.instance.version,
+                schema=schema,
+                values=schema.dump(arguments),
+                process=url_for(f"{HELLO_BLP.name}.ProcessView"),
             )
         )
 
 
 @HELLO_BLP.route("/process/")
-class PluginsView(MethodView):
+class ProcessView(MethodView):
     """Start a long running processing task."""
 
+    @HELLO_BLP.arguments(HelloWorldParametersSchema(unknown=EXCLUDE), location="form")
     @HELLO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @HELLO_BLP.require_jwt("jwt", optional=True)
-    def get(self):
+    def post(self, arguments):
         """Start the demo task."""
-        db_task = ProcessingTask(
-            task_name=demo_task.name,
-            parameters=dumps({"input_str": "Demo task input."}),
-        )
+        db_task = ProcessingTask(task_name=demo_task.name, parameters=dumps(arguments))
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
@@ -146,7 +183,7 @@ TASK_LOGGER = get_task_logger(__name__)
 @CELERY.task(name=f"{HelloWorld.instance.identifier}.demo_task", bind=True)
 def demo_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new demo task with db id '{db_id}'")
-    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"

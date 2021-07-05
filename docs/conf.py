@@ -22,24 +22,17 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
-from typing import Any, Dict, Mapping, Optional, Tuple, Union, cast
+import subprocess
+import sys
+from collections import ChainMap
+from json import load
 from os import environ
-from tomlkit import parse
 from pathlib import Path
 from shutil import copyfile
-import subprocess
-from os import environ
-from collections import ChainMap
-from dotenv import dotenv_values
-from json import load
+from typing import Any, Dict, Mapping, Optional, Tuple, Union, cast
 
+from dotenv import dotenv_values
+from tomlkit import parse
 
 ON_READTHEDOCS = environ.get("READTHEDOCS") == "True"
 
@@ -58,6 +51,9 @@ else:
     project_root = current_path
     pyproject_path = current_path / Path("pyproject.toml")
 
+
+# insert project root to allow autodoc to find and import modules
+sys.path.insert(0, str(project_root))
 
 flask_environ = cast(
     Mapping[str, str], ChainMap(dotenv_values(project_root / Path(".flaskenv")), environ)
@@ -282,6 +278,7 @@ PATCH_SPHINX_CLICK = True
 
 if PATCH_SPHINX_CLICK:
     from functools import wraps
+
     from docutils import nodes
     from docutils.parsers.rst import directives
     from sphinx_click.ext import ClickDirective

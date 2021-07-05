@@ -21,7 +21,7 @@ from logging import WARNING, Formatter, Handler, Logger, getLogger
 from logging.config import dictConfig
 from os import environ, makedirs
 from pathlib import Path
-from typing import Any, Dict, IO, Mapping, Optional, cast
+from typing import IO, Any, Dict, Mapping, Optional, cast
 
 import click
 from flask.app import Flask
@@ -33,7 +33,9 @@ from tomlkit import parse as parse_toml
 
 from . import api, babel, celery, db
 from .api import jwt
+from .plugins_cli import register_plugin_cli_blueprint
 from .util.config import DebugConfig, ProductionConfig
+from .util.jinja_helpers import register_helpers
 from .util.plugins import register_plugins
 
 # change this to change tha flask app name and the config env var prefix
@@ -125,8 +127,12 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
     jwt.register_jwt(app)
     api.register_root_api(app)
 
+    # register jinja helpers
+    register_helpers(app)
+
     # register plugins, AFTER registering the API!
     register_plugins(app)
+    register_plugin_cli_blueprint(app)
 
     # allow cors requests everywhere (CONFIGURE THIS TO YOUR PROJECTS NEEDS!)
     CORS(app)
@@ -136,6 +142,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         from .util.debug_routes import register_debug_routes
 
         register_debug_routes(app)
+
+        # register jinja debug extension
+        app.jinja_env.add_extension("jinja2.ext.debug")
 
     return app
 

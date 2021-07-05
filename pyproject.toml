@@ -53,6 +53,7 @@ atomic = true
 [tool.sphinx]
 copyright-year = 2021
 enable-autodoc = true
+enable-napoleon = true
 enable-autosectionlabel = true
 enable-markdown = true
 enable-todo = true

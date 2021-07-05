@@ -21,7 +21,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 from .db import DB, MIGRATE
-from .cli import register_cli_blueprint
+from .cli import register_db_cli_blueprint
 
 
 def register_db(app: Flask):
@@ -34,7 +34,7 @@ def register_db(app: Flask):
     DB.init_app(app)
     app.logger.info(f'Connected to db "{app.config["SQLALCHEMY_DATABASE_URI"]}".')
 
-    register_cli_blueprint(app)
+    register_db_cli_blueprint(app)
 
     MIGRATE.init_app(app, DB)
 
