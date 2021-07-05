@@ -43,15 +43,23 @@ PLUGIN_COMMAND_LOGGER = "plugins"
     is_flag=True,
     help="Does not install the requirements but prints them to stdout.",
 )
+@click.option(
+    "--skip-runner-dependencies",
+    "-s",
+    default=False,
+    is_flag=True,
+    help="Only add the requirements of the plugins together skipping the requirements of the plugin runner.",
+)
 @PLUGIN_CLI.command("install")
 @with_appcontext
-def install_plugin_dependencies(dry_run):
+def install_plugin_dependencies(dry_run: bool, skip_runner_dependencies: bool):
     """Gather and install all plugin dependencies."""
     with TemporaryDirectory(prefix="qhana") as temp_dir:
         temp_dir = Path(temp_dir)
         requirements_file = temp_dir / Path("requirements.txt")
         with requirements_file.open(mode="w") as requirements:
-            append_runner_dependencies(current_app, requirements)
+            if not skip_runner_dependencies:
+                append_runner_dependencies(current_app, requirements)
             for plugin in QHAnaPluginBase.get_plugins().values():
                 append_plugin_dependencies(plugin, current_app, requirements)
         if dry_run:

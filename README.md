@@ -66,6 +66,17 @@ Configured in `qhana_plugin_runner/util/config/smorest_config.py`.
     Useful for looking up which endpoint is served under a route or what routes are available.
 
 
+#### Plugins:
+
+Plugin requirements can be installed with the following command:
+
+```bash
+poetry run install # --skip-runner-requirements
+
+# only check generated requirements file:
+poetry run install --dry-run
+```
+
 
 ## What this Repository contains
 
