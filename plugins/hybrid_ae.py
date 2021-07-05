@@ -26,6 +26,7 @@ from flask.app import Flask
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
+from marshmallow import EXCLUDE
 from sqlalchemy.sql.expression import select
 
 from qhana_plugin_runner.api.util import MaBaseSchema, SecurityBlueprint
@@ -77,32 +78,62 @@ class PluginsView(MethodView):
     def get(self):
         """Demo endpoint returning the plugin metadata."""
         return {
-            "name": HybridAutoencoder.instance.name,
-            "version": HybridAutoencoder.instance.version,
-            "identifier": HybridAutoencoder.instance.identifier,
+            "name": HybridAutoencoderPlugin.instance.name,
+            "version": HybridAutoencoderPlugin.instance.version,
+            "identifier": HybridAutoencoderPlugin.instance.identifier,
         }
 
 
 @HA_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the hello world plugin."""
+    """Micro frontend for the hybrid autoencoder plugin."""
 
     @HA_BLP.doc(
         responses={
             f"{HTTPStatus.OK}": {
-                "description": "Micro frontend of the hello world plugin.",
+                "description": "Micro frontend of the hybrid autoencoder plugin.",
                 "content": {"text/html": {"schema": {"type": "string"}}},
             }
         }
     )
+    @HA_BLP.arguments(
+        HybridAutoencoderPennylaneRequestSchema(partial=True, unknown=EXCLUDE),
+        location="query",
+        required=False,
+    )
     @HA_BLP.require_jwt("jwt", optional=True)
-    def get(self):
+    def get(self, arguments):
         """Return the micro frontend."""
+        return self.render(arguments)
+
+    @HA_BLP.doc(
+        responses={
+            f"{HTTPStatus.OK}": {
+                "description": "Micro frontend of the hybrid autoencoder plugin.",
+                "content": {"text/html": {"schema": {"type": "string"}}},
+            }
+        }
+    )
+    @HA_BLP.arguments(
+        HybridAutoencoderPennylaneRequestSchema(partial=True, unknown=EXCLUDE),
+        location="form",
+        required=False,
+    )
+    @HA_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(arguments)
+
+    def render(self, arguments: dict):
+        schema = HybridAutoencoderPennylaneRequestSchema()
         return Response(
             render_template(
-                "hybrid_autoencoder_template.html",
-                name=HybridAutoencoder.instance.name,
-                version=HybridAutoencoder.instance.version,
+                "hello_template.html",
+                name=HybridAutoencoderPlugin.instance.name,
+                version=HybridAutoencoderPlugin.instance.version,
+                schema=schema,
+                values=schema.dump(arguments),
+                process=url_for(f"{HA_BLP.name}.HybridAutoencoderPennylaneAPI"),
             )
         )
 
@@ -112,7 +143,7 @@ class HybridAutoencoderPennylaneAPI(MethodView):
     """Start a long running processing task."""
 
     @HA_BLP.response(HTTPStatus.OK, HybridAutoencoderTaskResponseSchema)
-    @HA_BLP.arguments(HybridAutoencoderPennylaneRequestSchema)
+    @HA_BLP.arguments(HybridAutoencoderPennylaneRequestSchema(unknown=EXCLUDE), location="form")
     @HA_BLP.require_jwt("jwt", optional=True)
     def post(self, req_dict):
         """Start the demo task."""
@@ -138,7 +169,7 @@ class HybridAutoencoderPennylaneAPI(MethodView):
         }
 
 
-class HybridAutoencoder(QHAnaPluginBase):
+class HybridAutoencoderPlugin(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
@@ -156,7 +187,7 @@ class HybridAutoencoder(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{HybridAutoencoder.instance.identifier}.pennylane_hybrid_autoencoder_task", bind=True)
+@CELERY.task(name=f"{HybridAutoencoderPlugin.instance.identifier}.pennylane_hybrid_autoencoder_task", bind=True)
 def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     from hybrid_autoencoders import simple_api
     import numpy as np
