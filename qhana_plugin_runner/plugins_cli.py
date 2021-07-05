@@ -88,7 +88,7 @@ def append_runner_dependencies(app: Flask, requirements: TextIOWrapper):
     )
     requirements.write("# qhana_plugin_runner requirements\n")
     requirements.flush()
-    run(["poetry", "export"], check=True, stdout=requirements)
+    run(["poetry", "export", "--without-hashes"], check=True, stdout=requirements)
     requirements.write("\n\n")
 
 
