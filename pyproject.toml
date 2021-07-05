@@ -19,7 +19,6 @@ tomlkit = "^0.7.0"
 packaging = "^20.9"
 celery = "^5.1.1"
 redis = "^3.5.3"
-hybrid-autoencoders = {git = "git@github.com:UST-QuAntiL/MuseEmbeddings.git", rev = "4c2e7a7428873650eab583008720cc1b466baab8"}
 
 [tool.poetry.dev-dependencies]
 black = "^21.5b1"

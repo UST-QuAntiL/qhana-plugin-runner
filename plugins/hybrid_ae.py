@@ -34,8 +34,6 @@ from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from hybrid_autoencoders import simple_api
-import numpy as np
 
 _plugin_name = "hybrid-autoencoder"
 __version__ = "v0.1.0"
@@ -151,12 +149,18 @@ class HybridAutoencoder(QHAnaPluginBase):
     def get_api_blueprint(self):
         return HA_BLP
 
+    def get_requirements(self) -> str:
+        return "git+ssh://git@github.com/UST-QuAntiL/MuseEmbeddings.git@4c2e7a7428873650eab583008720cc1b466baab8#egg=hybrid_autoencoders"
+
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
 @CELERY.task(name=f"{HybridAutoencoder.instance.identifier}.pennylane_hybrid_autoencoder_task", bind=True)
 def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
+    from hybrid_autoencoders import simple_api
+    import numpy as np
+
     TASK_LOGGER.info(f"Starting new hybrid autoencoder pennylane task with db id '{db_id}'")
     task_data: ProcessingTask = DB.session.execute(
         select(ProcessingTask).filter_by(id=db_id)
