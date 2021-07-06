@@ -90,3 +90,8 @@ The plugin requirements of the loaded plugins can be installed using the :any:`p
 .. important:: The installation will fail if **any** requirement cannot be satisfied.
     This includes the pinned requirements of the plugin runner itself!
 
+
+.. note:: The requirement install mechanism is currently experimental and relies on the :program:`pip` resolver.
+    This means that resolving complex requirement sets can take a very long time.
+    Plugins should therfore minimize their requirements and (whenever possible) only depend on requirements installed by the plugin runner already.
+    Requirements of the plugin runner should not be part of the requirements the plugin specifies itself.
