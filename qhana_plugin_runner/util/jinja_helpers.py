@@ -21,8 +21,6 @@ from marshmallow import fields
 def marshmallow_field_to_input_type(field: fields.Field) -> Optional[str]:
     if field.metadata.get("input_type"):
         return field.metadata.get("input_type")
-    if isinstance(field, fields.String):
-        return "text"  # TODO differentiate better
     if isinstance(field, fields.Email):
         return "email"
     if isinstance(field, fields.Url):
@@ -43,6 +41,8 @@ def marshmallow_field_to_input_type(field: fields.Field) -> Optional[str]:
         return "datetime-local"
     if isinstance(field, fields.Raw):
         return "textarea"
+    if isinstance(field, fields.String):
+        return "text"  # TODO differentiate better
     return None
 
 
