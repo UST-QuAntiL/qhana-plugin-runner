@@ -19,5 +19,5 @@ REQUEST_SESSION = Session()
 
 
 def open_url(url: str, **kwargs) -> Response:
-    """Open an url with request. (see :py:func:`Session.request` for parameters)"""
+    """Open an url with request. (see :py:meth:`~requests.Session.request` for parameters)"""
     return REQUEST_SESSION.get(url, **kwargs)

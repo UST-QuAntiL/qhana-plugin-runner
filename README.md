@@ -104,6 +104,8 @@ This plugin runner uses the following libraries to build a rest app with a datab
  *  Flask-JWT-Extended ([documentation](https://flask-jwt-extended.readthedocs.io/en/stable/))\
     Provides authentication with JWT tokens.\
     Config: `qhana_plugin_runner/util/config/smorest_config.py` and `qhana_plugin_runner/api/jwt.py`
+ *  Requests ([documentation](https://docs.python-requests.org/en/master/))\
+    For interacting with http apis and loading files from URLs.
  *  Sphinx ([documentation](https://www.sphinx-doc.org/en/master/index.html))\
     The documentation generator.\
     Config: `pyproject.toml` and `docs/conf.py` (toml config input is manually configured in `conf.py`)

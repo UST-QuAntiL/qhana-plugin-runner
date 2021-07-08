@@ -19,6 +19,7 @@ Submodules
    qhana_plugin_runner.util.jinja_helpers
    qhana_plugin_runner.util.logging
    qhana_plugin_runner.util.plugins
+   qhana_plugin_runner.util.request_helpers
    qhana_plugin_runner.util.reverse_proxy_fix
 
 Module contents

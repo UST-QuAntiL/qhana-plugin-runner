@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Adapters to load ``file://`` and ``data:`` URLs with :py:module:`requests`"""
+"""Adapters to load ``file://`` and ``data:`` URLs with :py:mod:`requests`"""
 
 from base64 import b64decode
 from http import HTTPStatus
