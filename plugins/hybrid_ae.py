@@ -15,7 +15,7 @@
 from http import HTTPStatus
 from io import StringIO
 from json import dumps, loads
-from typing import Optional, Dict
+from typing import Dict, Optional
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -23,13 +23,18 @@ from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask.app import Flask
+from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from sqlalchemy.sql.expression import select
 
-from qhana_plugin_runner.api.util import MaBaseSchema, SecurityBlueprint
+from qhana_plugin_runner.api.util import (
+    FrontendFormBaseSchema,
+    MaBaseSchema,
+    SecurityBlueprint,
+)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -45,7 +50,7 @@ HA_BLP = SecurityBlueprint(
     _identifier,
     __name__,
     description="Hybrid Autoencoder plugin API.",
-    template_folder="hybrid_autoencoder_templates",
+    template_folder="hybrid_ae_templates",
 )
 
 
@@ -61,7 +66,7 @@ class HybridAutoencoderTaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class HybridAutoencoderPennylaneRequestSchema(MaBaseSchema):
+class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
     input_data = ma.fields.String(required=True, allow_none=False, load_only=True)
     number_of_qubits = ma.fields.Integer(required=True, allow_none=False, load_only=True)
     embedding_size = ma.fields.Integer(required=True, allow_none=False, load_only=True)
@@ -97,14 +102,16 @@ class MicroFrontend(MethodView):
         }
     )
     @HA_BLP.arguments(
-        HybridAutoencoderPennylaneRequestSchema(partial=True, unknown=EXCLUDE),
+        HybridAutoencoderPennylaneRequestSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
         location="query",
         required=False,
     )
     @HA_BLP.require_jwt("jwt", optional=True)
-    def get(self, arguments):
+    def get(self, errors):
         """Return the micro frontend."""
-        return self.render(arguments)
+        return self.render(errors)
 
     @HA_BLP.doc(
         responses={
@@ -115,24 +122,28 @@ class MicroFrontend(MethodView):
         }
     )
     @HA_BLP.arguments(
-        HybridAutoencoderPennylaneRequestSchema(partial=True, unknown=EXCLUDE),
+        HybridAutoencoderPennylaneRequestSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
         location="form",
         required=False,
     )
     @HA_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(arguments)
+        return self.render(errors)
 
-    def render(self, arguments: dict):
+    def render(self, errors: dict):
+        print(">>>", errors)
         schema = HybridAutoencoderPennylaneRequestSchema()
         return Response(
             render_template(
-                "hello_template.html",
+                "hybrid_ae_template.html",
                 name=HybridAutoencoderPlugin.instance.name,
                 version=HybridAutoencoderPlugin.instance.version,
                 schema=schema,
-                values=schema.dump(arguments),
+                values=request.form,
+                errors=errors,
                 process=url_for(f"{HA_BLP.name}.HybridAutoencoderPennylaneAPI"),
             )
         )
@@ -143,7 +154,9 @@ class HybridAutoencoderPennylaneAPI(MethodView):
     """Start a long running processing task."""
 
     @HA_BLP.response(HTTPStatus.OK, HybridAutoencoderTaskResponseSchema)
-    @HA_BLP.arguments(HybridAutoencoderPennylaneRequestSchema(unknown=EXCLUDE), location="form")
+    @HA_BLP.arguments(
+        HybridAutoencoderPennylaneRequestSchema(unknown=EXCLUDE), location="form"
+    )
     @HA_BLP.require_jwt("jwt", optional=True)
     def post(self, req_dict):
         """Start the demo task."""
@@ -154,7 +167,9 @@ class HybridAutoencoderPennylaneAPI(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = hybrid_autoencoder_pennylane_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = hybrid_autoencoder_pennylane_task.s(
+            db_id=db_task.id
+        ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         result: AsyncResult = task.apply_async()
@@ -187,12 +202,17 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{HybridAutoencoderPlugin.instance.identifier}.pennylane_hybrid_autoencoder_task", bind=True)
+@CELERY.task(
+    name=f"{HybridAutoencoderPlugin.instance.identifier}.pennylane_hybrid_autoencoder_task",
+    bind=True,
+)
 def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
-    from hybrid_autoencoders import simple_api
     import numpy as np
+    from hybrid_autoencoders import simple_api
 
-    TASK_LOGGER.info(f"Starting new hybrid autoencoder pennylane task with db id '{db_id}'")
+    TASK_LOGGER.info(
+        f"Starting new hybrid autoencoder pennylane task with db id '{db_id}'"
+    )
     task_data: ProcessingTask = DB.session.execute(
         select(ProcessingTask).filter_by(id=db_id)
     ).scalar_one()
@@ -223,7 +243,9 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     if input_data_arr.ndim == 1:
         input_data_arr = input_data_arr.reshape((1, -1))
 
-    output_arr = simple_api.pennylane_hybrid_autoencoder(input_data_arr, q_num, embedding_size, qnn_name, steps)
+    output_arr = simple_api.pennylane_hybrid_autoencoder(
+        input_data_arr, q_num, embedding_size, qnn_name, steps
+    )
 
     string_buffer = StringIO()
     np.savetxt(string_buffer, output_arr, delimiter=",")

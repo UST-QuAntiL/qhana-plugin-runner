@@ -22,13 +22,18 @@ from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask.app import Flask
+from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from sqlalchemy.sql.expression import select
 
-from qhana_plugin_runner.api.util import MaBaseSchema, SecurityBlueprint
+from qhana_plugin_runner.api.util import (
+    FrontendFormBaseSchema,
+    MaBaseSchema,
+    SecurityBlueprint,
+)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -60,11 +65,15 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class HelloWorldParametersSchema(MaBaseSchema):
+class HelloWorldParametersSchema(FrontendFormBaseSchema):
     input_str = ma.fields.String(
         required=True,
         allow_none=False,
-        metadata={"label": "Input String", "description": "A simple string input."},
+        metadata={
+            "label": "Input String",
+            "description": "A simple string input.",
+            "input_type": "textarea",
+        },
     )
 
 
@@ -96,14 +105,16 @@ class MicroFrontend(MethodView):
         }
     )
     @HELLO_BLP.arguments(
-        HelloWorldParametersSchema(partial=True, unknown=EXCLUDE),
+        HelloWorldParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
         location="query",
         required=False,
     )
     @HELLO_BLP.require_jwt("jwt", optional=True)
-    def get(self, arguments):
+    def get(self, errors):
         """Return the micro frontend."""
-        return self.render(arguments)
+        return self.render(errors)
 
     @HELLO_BLP.doc(
         responses={
@@ -114,16 +125,18 @@ class MicroFrontend(MethodView):
         }
     )
     @HELLO_BLP.arguments(
-        HelloWorldParametersSchema(partial=True, unknown=EXCLUDE),
+        HelloWorldParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
         location="form",
         required=False,
     )
     @HELLO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(arguments)
+        return self.render(errors)
 
-    def render(self, arguments: dict):
+    def render(self, errors: dict):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
@@ -131,7 +144,8 @@ class MicroFrontend(MethodView):
                 name=HelloWorld.instance.name,
                 version=HelloWorld.instance.version,
                 schema=schema,
-                values=schema.dump(arguments),
+                values=request.form,
+                errors=errors,
                 process=url_for(f"{HELLO_BLP.name}.ProcessView"),
             )
         )

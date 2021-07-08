@@ -1,0 +1,28 @@
+.qhana-form {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 45rem;
+}
+
+.qhana-form-field {
+    margin-bottom: 0.5rem;
+}
+
+.qhana-form-label {
+    display: block;
+    font-weight: 600;
+}
+
+.qhana-form-input {
+    padding: 0.3em;
+    width: 100%;
+    max-width: 25em;
+}
+
+.qhana-error-message {
+    margin-top: 0.2rem;
+    margin-bottom: 0px;
+    color: red;
+}

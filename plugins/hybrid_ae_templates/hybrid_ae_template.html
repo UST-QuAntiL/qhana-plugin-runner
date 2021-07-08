@@ -1,12 +1,21 @@
 {% import 'forms.html' as forms %}
 
-<h1>Micro Frontend Test</h1>
-<p>The micro frontend test page of the {{name}} plugin (version: {{version}}).</p>
+<style type="text/css">
+   @import url("{{url_for('static', filename='forms.css')}}");
+</style>
 
-{% include 'common_template.html' %}
+<h1>Hybrid Auto Encoder</h1>
+
+<details>
+    <summary>Help</summary>
+
+    TODO: Detailed description of the form options.
+</details>
 
 {% call forms.render_form() %}
-    {{ forms.render_fields(schema, values=values) }}
+    {{ forms.render_fields(schema, values=values, errors=errors) }}
+    <div class="qhana-form-buttons">
     {{ forms.submit("validate")}}
     {{ forms.submit("submit", action=process)}}
+    </div>
 {% endcall %}
