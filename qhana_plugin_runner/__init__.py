@@ -31,12 +31,13 @@ from flask.logging import default_handler
 from flask_cors import CORS
 from tomlkit import parse as parse_toml
 
-from . import api, babel, celery, db
+from . import api, babel, celery, db, requests
 from .api import jwt
 from .plugins_cli import register_plugin_cli_blueprint
 from .util.config import DebugConfig, ProductionConfig
 from .util.jinja_helpers import register_helpers
 from .util.plugins import register_plugins
+from .util.request_helpers import register_additional_schemas
 
 # change this to change tha flask app name and the config env var prefix
 # must not contain any spaces!
@@ -129,6 +130,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     # register jinja helpers
     register_helpers(app)
+
+    # register request helpers with request session
+    register_additional_schemas(requests.REQUEST_SESSION)
 
     # register plugins, AFTER registering the API!
     register_plugins(app)

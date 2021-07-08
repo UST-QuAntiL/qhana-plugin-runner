@@ -16,20 +16,18 @@
 
 """Module containing utilities for flask smorest APIs."""
 import http
+import re
 from copy import deepcopy
 from functools import wraps
 from typing import Any, Dict, Iterable, Mapping, Optional, Union
+from urllib.parse import urlparse
 
 import marshmallow as ma
-from flask.wrappers import Response
 from flask_smorest import Blueprint
-from flask_smorest.utils import (
-    get_appcontext,
-    remove_none,
-    set_status_and_headers_in_response,
-    unpack_tuple_response,
-)
+from flask_smorest.utils import remove_none
 from marshmallow import types
+from marshmallow.exceptions import ValidationError
+from marshmallow.validate import URL as UrlValidator
 
 from .jwt import JWTMixin
 
@@ -38,7 +36,13 @@ class HtmlResponseMixin:
     """Extend Blueprint to add html response documentation."""
 
     def html_response(
-        self, status_code: Union[int, str, http.HTTPStatus], *, description: str=None, example=None, examples=None, headers: dict=None
+        self,
+        status_code: Union[int, str, http.HTTPStatus],
+        *,
+        description: str = None,
+        example=None,
+        examples=None,
+        headers: dict = None,
     ):
         """Decorator documenting a html response adapted from :py:func:`ResponseMixin.alt_response`.
 
@@ -154,3 +158,56 @@ class FrontendFormBaseSchema(MaBaseSchema):
         if self._validate_errors_as_result:
             return self.validate(data, many=many, partial=partial)
         return super().load(data, many=many, partial=partial, unknown=unknown)
+
+
+class FileUrlValidator(UrlValidator):
+    """Extension of the URL validator that can handle file and data URLs"""
+
+    default_schemes = {"http", "https", "ftp", "ftps", "file", "data"}
+
+    _data_url_regex = re.compile(
+        r"data:(?P<mime>[\w/\-\.+]+)(?P<charset>;charset=[\w/\-\.+]+)?(?P<encoding>;base64)?,.*"
+    )
+
+    def __call__(self, value: str) -> str:
+        if value and value.startswith("file://"):
+            return self._validate_file_url(value)
+        if value and value.startswith("data:"):
+            return self._validate_data_url(value)
+        return super().__call__(value)
+
+    def _validate_file_url(self, value: str) -> str:
+        result = urlparse(value)
+        if result.netloc:
+            if result.netloc != "localhost":
+                raise ValidationError(self._format_error(value))
+        else:
+            pass  # just hope that url is correct...
+        return value
+
+    def _validate_data_url(self, value: str) -> str:
+        if not self._data_url_regex.search(value):
+            raise ValidationError(self._format_error(value))
+        return value
+
+
+class FileUrl(ma.fields.Url):
+    """Extension of the URL field that can handle file and data URLs"""
+
+    def __init__(
+        self,
+        *,
+        relative: bool = False,
+        schemes: Optional[types.StrSequenceOrSet] = None,
+        require_tld: bool = True,
+        **kwargs,
+    ):
+        super().__init__(
+            relative=relative, schemes=schemes, require_tld=require_tld, **kwargs
+        )
+        self.validators[0] = FileUrlValidator(
+            relative=self.relative,
+            schemes=schemes,
+            require_tld=self.require_tld,
+            error=self.error_messages["invalid"],
+        )

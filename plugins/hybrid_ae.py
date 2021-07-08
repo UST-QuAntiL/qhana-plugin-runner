@@ -31,6 +31,7 @@ from marshmallow import EXCLUDE
 from sqlalchemy.sql.expression import select
 
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     MaBaseSchema,
     SecurityBlueprint,
@@ -38,6 +39,7 @@ from qhana_plugin_runner.api.util import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
@@ -67,7 +69,11 @@ class HybridAutoencoderTaskResponseSchema(MaBaseSchema):
 
 
 class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
-    input_data = ma.fields.String(required=True, allow_none=False, load_only=True)
+    input_data = FileUrl(
+        required=True,
+        allow_none=False,
+        load_only=True,
+    )
     number_of_qubits = ma.fields.Integer(required=True, allow_none=False, load_only=True)
     embedding_size = ma.fields.Integer(required=True, allow_none=False, load_only=True)
     qnn_name = ma.fields.String(required=True, allow_none=False, load_only=True)
@@ -213,22 +219,22 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     params: Dict = loads(task_data.parameters or "{}")
-    input_data_str: str = params.get("input_data", None)
+    input_data_url: str = params.get("input_data", None)
     q_num: int = params.get("number_of_qubits", None)
     embedding_size: int = params.get("embedding_size", None)
     qnn_name: str = params.get("qnn_name", None)
     steps: int = params.get("training_steps", None)
 
-    TASK_LOGGER.info(f"input_data: {input_data_str}")
-    TASK_LOGGER.info(f"q_num: {q_num}")
-    TASK_LOGGER.info(f"embedding_size: {embedding_size}")
-    TASK_LOGGER.info(f"qnn_name: {qnn_name}")
-    TASK_LOGGER.info(f"steps: {steps}")
+    TASK_LOGGER.info(
+        f"input_data: {input_data_url}, q_num: {q_num}, embedding_size: {embedding_size}, qnn_name: {qnn_name}, steps: {steps}"
+    )
 
-    if None in [input_data_str, q_num, embedding_size, qnn_name, steps]:
+    if None in [input_data_url, q_num, embedding_size, qnn_name, steps]:
         raise ValueError("Request is missing one or more values.")
 
-    input_data_arr = np.genfromtxt(StringIO(input_data_str), delimiter=",")
+    url_data = open_url(input_data_url, stream=True)
+
+    input_data_arr = np.genfromtxt(url_data.iter_lines(), delimiter=",")
 
     if input_data_arr.ndim == 1:
         input_data_arr = input_data_arr.reshape((1, -1))
