@@ -15,16 +15,70 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Module containing utilities for flask smorest APIs."""
+import http
+from copy import deepcopy
+from functools import wraps
 from typing import Any, Dict, Iterable, Mapping, Optional, Union
 
 import marshmallow as ma
+from flask.wrappers import Response
 from flask_smorest import Blueprint
+from flask_smorest.utils import (
+    get_appcontext,
+    remove_none,
+    set_status_and_headers_in_response,
+    unpack_tuple_response,
+)
 from marshmallow import types
 
 from .jwt import JWTMixin
 
 
-class SecurityBlueprint(Blueprint, JWTMixin):
+class HtmlResponseMixin:
+    """Extend Blueprint to add html response documentation."""
+
+    def html_response(
+        self, status_code: Union[int, str, http.HTTPStatus], *, description: str=None, example=None, examples=None, headers: dict=None
+    ):
+        """Decorator documenting a html response adapted from :py:func:`ResponseMixin.alt_response`.
+
+        Args:
+            status_code (int|str|HTTPStatus): HTTP status code.
+            description (str, optional): Description of the response. Defaults to None.
+            example (dict, optional): Example of response message. Defaults to None.
+            examples (dict, optional): Examples of response message. Defaults to None.
+            headers (dict, optional): Headers returned by the response. Defaults to None.
+        """
+        if description is None:
+            description = http.HTTPStatus(int(status_code)).phrase
+        resp_doc = remove_none(
+            {
+                "content": {"text/html": {"schema": {"type": "string"}}},
+                "description": description,
+                "example": example,
+                "examples": examples,
+                "headers": headers,
+            }
+        )
+
+        def decorator(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                return func(*args, **kwargs)
+
+            # Store doc in wrapper function
+            # The deepcopy avoids modifying the wrapped function doc
+            wrapper._apidoc = deepcopy(getattr(wrapper, "_apidoc", {}))
+            wrapper._apidoc.setdefault("response", {}).setdefault("responses", {})[
+                status_code
+            ] = resp_doc
+
+            return wrapper
+
+        return decorator
+
+
+class SecurityBlueprint(Blueprint, JWTMixin, HtmlResponseMixin):
     """Blueprint that is aware of jwt tokens and how to document them.
 
     Use this Blueprint if you want to document security requirements for your api.

@@ -93,13 +93,8 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the hybrid autoencoder plugin."""
 
-    @HA_BLP.doc(
-        responses={
-            f"{HTTPStatus.OK}": {
-                "description": "Micro frontend of the hybrid autoencoder plugin.",
-                "content": {"text/html": {"schema": {"type": "string"}}},
-            }
-        }
+    @HA_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the hybrid autoencoder plugin."
     )
     @HA_BLP.arguments(
         HybridAutoencoderPennylaneRequestSchema(
@@ -113,13 +108,8 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(errors)
 
-    @HA_BLP.doc(
-        responses={
-            f"{HTTPStatus.OK}": {
-                "description": "Micro frontend of the hybrid autoencoder plugin.",
-                "content": {"text/html": {"schema": {"type": "string"}}},
-            }
-        }
+    @HA_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the hybrid autoencoder plugin."
     )
     @HA_BLP.arguments(
         HybridAutoencoderPennylaneRequestSchema(

@@ -96,13 +96,8 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the hello world plugin."""
 
-    @HELLO_BLP.doc(
-        responses={
-            f"{HTTPStatus.OK}": {
-                "description": "Micro frontend of the hello world plugin.",
-                "content": {"text/html": {"schema": {"type": "string"}}},
-            }
-        }
+    @HELLO_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the hello world plugin."
     )
     @HELLO_BLP.arguments(
         HelloWorldParametersSchema(
@@ -116,13 +111,8 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(errors)
 
-    @HELLO_BLP.doc(
-        responses={
-            f"{HTTPStatus.OK}": {
-                "description": "Micro frontend of the hello world plugin.",
-                "content": {"text/html": {"schema": {"type": "string"}}},
-            }
-        }
+    @HELLO_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the hello world plugin."
     )
     @HELLO_BLP.arguments(
         HelloWorldParametersSchema(
