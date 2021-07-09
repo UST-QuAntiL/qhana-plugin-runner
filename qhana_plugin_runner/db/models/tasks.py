@@ -16,9 +16,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from sqlalchemy.orm import relation, relationship
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import select
-from sqlalchemy.sql.schema import Column
+from sqlalchemy.sql.schema import Column, ForeignKey
 
 from ..db import DB, REGISTRY
 
@@ -44,9 +45,6 @@ class ProcessingTask:
     )
 
     parameters: str = field(default="", metadata={"sa": Column(sql.Text())})
-    input_files: List[Dict[str, str]] = field(
-        default_factory=list, metadata={"sa": Column(sql.JSON())}
-    )
 
     finished_status: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.String(100))}
@@ -55,8 +53,10 @@ class ProcessingTask:
     task_result: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.Text(), nullable=True)}
     )
-    output_files: Optional[List[Dict[str, str]]] = field(
-        default=None, metadata={"sa": Column(sql.JSON(), nullable=True)}
+
+    files: List["TaskFile"] = field(
+        default_factory=list,
+        metadata={"sa": relationship("TaskFile", back_populates="task")},
     )
 
     def save(self, commit: bool = False):
@@ -76,3 +76,44 @@ class ProcessingTask:
         return DB.session.execute(
             select(cls).filter_by(task_id=task_id)
         ).scalar_one_or_none()
+
+
+@REGISTRY.mapped
+@dataclass
+class TaskFile:
+    __tablename__ = "TaskFile"
+
+    __sa_dataclass_metadata_key__ = "sa"
+
+    id: int = field(init=False, metadata={"sa": Column(sql.INTEGER(), primary_key=True)})
+    task: ProcessingTask = field(
+        metadata={"sa": relationship("ProcessingTask", back_populates="files")}
+    )
+    storage_provider: str = field(metadata={"sa": Column(sql.String(64), nullable=False)})
+    file_name: str = field(
+        metadata={"sa": Column(sql.String(500), index=True, nullable=False)}
+    )
+    file_storage_data: str = field(metadata={"sa": Column(sql.Text(), nullable=False)})
+    file_type: Optional[str] = field(
+        default=None, metadata={"sa": Column(sql.String(255), nullable=True)}
+    )
+    mimetype: Optional[str] = field(
+        default=None, metadata={"sa": Column(sql.String(255), nullable=True)}
+    )
+    created_at: datetime = field(
+        default=datetime.utcnow(), metadata={"sa": Column(sql.TIMESTAMP(timezone=True))}
+    )
+    task_id: Optional[int] = field(
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+        hash=False,
+        metadata={"sa": Column(sql.INTEGER(), ForeignKey(ProcessingTask.id))},
+    )
+
+    def save(self, commit: bool = False):
+        """Add this object to the current session and optionally commit the session to persist all objects in the session."""
+        DB.session.add(self)
+        if commit:
+            DB.session.commit()

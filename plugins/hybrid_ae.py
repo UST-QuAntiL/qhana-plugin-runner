@@ -15,6 +15,8 @@
 from http import HTTPStatus
 from io import StringIO
 from json import dumps, loads
+from qhana_plugin_runner.storage import STORE
+from tempfile import SpooledTemporaryFile
 from typing import Dict, Optional
 
 import marshmallow as ma
@@ -243,7 +245,12 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         input_data_arr, q_num, embedding_size, qnn_name, steps
     )
 
-    string_buffer = StringIO()
-    np.savetxt(string_buffer, output_arr, delimiter=",")
-
-    return string_buffer.getvalue()
+    with SpooledTemporaryFile(mode="w") as output:
+        np.savetxt(output, output_arr, delimiter=",")
+        STORE.persist_task_result(
+            db_id, output, "out.csv", "autoencoder-result", "text/csv"
+        )
+        output.seek(
+            0
+        )  # TODO remove separate output if task output is already persisted as file
+        return "".join(output.readlines())

@@ -43,6 +43,8 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
 
     CELERY = CELERY_PRODUCTION_CONFIG
 
+    DEFAULT_FILE_STORE = "local_filesystem"
+
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
     DEBUG = True
