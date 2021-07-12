@@ -229,6 +229,7 @@ Update the python source documentation
 
 ```bash
 poetry run sphinx-apidoc --separate --force -o docs/source . ./tasks.py docs plugins migrations
+rm docs/source/modules.rst  # delete modules file as this repository only contains one module
 ```
 
 

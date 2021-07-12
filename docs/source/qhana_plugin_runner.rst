@@ -22,6 +22,7 @@ Submodules
    qhana_plugin_runner.celery_worker
    qhana_plugin_runner.plugins_cli
    qhana_plugin_runner.requests
+   qhana_plugin_runner.storage
    qhana_plugin_runner.tasks
 
 Module contents

@@ -38,7 +38,13 @@ class _FileStoreInterface:
         raise NotImplementedError()
 
     def persist_task_result(
-        self, task_db_id: int, file_: IO, file_name: str, file_type: str, mimetype: str
+        self,
+        task_db_id: int,
+        file_: IO,
+        file_name: str,
+        file_type: str,
+        mimetype: str,
+        commit: bool = True,
     ) -> TaskFile:
         """Perist a task result file and store the file information in the database.
 
@@ -48,6 +54,7 @@ class _FileStoreInterface:
             file_name (Path): the file name of the result file
             file_type (str): the file type tag
             mimetype (str): the mime type of the file (not optional for result files!)
+            commit (bool): if true commits the current DB transaction. Defaults to True.
 
         Raises:
             KeyError: if the task could not be found in the database
@@ -58,7 +65,12 @@ class _FileStoreInterface:
         raise NotImplementedError()
 
     def persist_task_temp_file(
-        self, task_db_id: int, file_: IO, file_name: str, mimetype: Optional[str] = None
+        self,
+        task_db_id: int,
+        file_: IO,
+        file_name: str,
+        mimetype: Optional[str] = None,
+        commit: bool = True,
     ) -> TaskFile:
         """Perist a temporary task file and store the file information in the database.
 
@@ -70,6 +82,7 @@ class _FileStoreInterface:
             file_ (IO): the file object to persist
             file_name (str): the file name of the result file
             mimetype (Optional[str]): the mime type of the file. Defaults to None.
+            commit (bool): if true commits the current DB transaction. Defaults to True.
 
         Returns:
             TaskFile: the file information stored in the database
@@ -87,7 +100,7 @@ class _FileStoreInterface:
         authorization for at least 2 hours.
 
         Args:
-            file_storage_data (str): the file metadata as defined by the file store or as stored in :py:attr:`TaskFile.file_storage_data`
+            file_storage_data (str): the file metadata as defined by the file store or as stored in :py:attr:`~qhana_plugin_runner.db.models.tasks.TaskFile.file_storage_data`
             external (bool, optional): if the URL should be accessible from outside (for downloading the file). Defaults to True.
 
         Returns:
@@ -98,7 +111,7 @@ class _FileStoreInterface:
     def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
         """Get an URL for a TaskFile object.
 
-        See :py:meth:`_FileStoreBase.get_file_url`
+        See :py:meth:`~qhana_plugin_runner.storage.FileStoreRegistry.get_file_url`
 
         Args:
             file_info (TaskFile): the information of the task file
@@ -110,7 +123,7 @@ class _FileStoreInterface:
 
 
 class FileStore(_FileStoreInterface):
-    """Interface and registry class for file stor implementations."""
+    """Interface class for file stor implementations."""
 
     __store_classes: ClassVar[Dict[str, Type["FileStore"]]] = {}
 
@@ -175,6 +188,7 @@ class FileStore(_FileStoreInterface):
         target: Path,
         file_type: str,
         mimetype: Optional[str],
+        commit: bool = True,
     ) -> TaskFile:
         """Perist a task file and store the file information in the database.
 
@@ -184,6 +198,7 @@ class FileStore(_FileStoreInterface):
             target (Path): the target path
             file_type (str): the file type tag
             mimetype (Optional[str]): the mime type of the file
+            commit (bool): if true commits the current DB transaction. Defaults to True.
 
         Raises:
             KeyError: if the task could not be found in the database
@@ -204,21 +219,39 @@ class FileStore(_FileStoreInterface):
             file_type=file_type,
             mimetype=mimetype,
         )
-        file_info.save(True)
+        file_info.save(commit)
         return file_info
 
     def persist_task_result(
-        self, task_db_id: int, file_: IO, file_name: str, file_type: str, mimetype: str
+        self,
+        task_db_id: int,
+        file_: IO,
+        file_name: str,
+        file_type: str,
+        mimetype: str,
+        commit: bool = True,
     ) -> TaskFile:
         target = Path(f"task_{task_db_id}/out") / Path(file_name)
-        return self._persist_task_file(task_db_id, file_, target, file_type, mimetype)
+        return self._persist_task_file(
+            task_db_id, file_, target, file_type, mimetype, commit
+        )
 
     def persist_task_temp_file(
-        self, task_db_id: int, file_: IO, file_name: str, mimetype: Optional[str] = None
+        self,
+        task_db_id: int,
+        file_: IO,
+        file_name: str,
+        mimetype: Optional[str] = None,
+        commit: bool = True,
     ) -> TaskFile:
         target = Path(f"task_{task_db_id}/tmp") / Path(file_name)
         return self._persist_task_file(
-            task_db_id, file_, target, file_type="temp-file", mimetype=mimetype
+            task_db_id,
+            file_,
+            target,
+            file_type="temp-file",
+            mimetype=mimetype,
+            commit=commit,
         )
 
     def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
@@ -312,7 +345,7 @@ class FileStoreRegistry(_FileStoreInterface):
         and not on file store implementations!
 
         The created file store implementation objects will have this ``FileStore``
-        instance set as their :py:attr:`FileStore._store_registry`.
+        instance set as their :py:attr:`~qhana_plugin_runner.storage.FileStore._store_registry`.
         """
         for name, cls in FileStore._get_registered_store_classes().items():
             self._stores[name] = cls(app=self.app)
@@ -336,7 +369,13 @@ class FileStoreRegistry(_FileStoreInterface):
         self._stores[self._default_store].persist_file(file_, target)
 
     def persist_task_result(
-        self, task_db_id: int, file_: IO, file_name: str, file_type: str, mimetype: str
+        self,
+        task_db_id: int,
+        file_: IO,
+        file_name: str,
+        file_type: str,
+        mimetype: str,
+        commit: bool = True,
     ) -> TaskFile:
         if self._default_store is None:
             raise NotImplementedError()
@@ -345,7 +384,12 @@ class FileStoreRegistry(_FileStoreInterface):
         )
 
     def persist_task_temp_file(
-        self, task_db_id: int, file_: IO, file_name: str, mimetype: Optional[str] = None
+        self,
+        task_db_id: int,
+        file_: IO,
+        file_name: str,
+        mimetype: Optional[str] = None,
+        commit: bool = True,
     ) -> TaskFile:
         if self._default_store is None:
             raise NotImplementedError()

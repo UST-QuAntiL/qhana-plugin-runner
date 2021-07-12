@@ -7,8 +7,8 @@ Plugin API Layout
 
 A plugin should expose the following endpoints with a blueprint:
 
-* ``./`` for links to all the plugin endpoints (format to be specified)
-* ``./metadata/`` for plugin metadata (format to be specified)
+* ``./`` for plugin metadata and links to all the plugin endpoints (format to be specified)
+* ``./metadata/`` <- see ``./`` (moved to plugin root as extra endpoint is not needed)
 * ``./ui/`` for the microfrontend that exposes the plugin parameters
 * ``./process/`` for a processing resource
 
@@ -68,11 +68,14 @@ The plugin runner contains template macros that can be imported and used to auto
 
     {% import 'forms.html' as forms %}
 
-    <!-- process is the url of the processing resource -->
-    {% call forms.render_form(action=process, method='post') %}
+    <!-- process is the url of the processing resource, values the current form data or query data and errors are validation errors from marshmallow -->
+    {% call forms.render_form(method='post') %}
         <!-- schema is the marshmallow schema and values is a dict containing prefilled (and serialized) values -->
-        {{ forms.render_fields(schema, values=values) }}
-        {{ forms.submit("submit")}}
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form-buttons">
+        {{ forms.submit("validate")}}  <!-- validate form by sending it to the ui endpoint (should keep form inputs intact!) -->
+        {{ forms.submit("submit", action=process)}}  <!-- submit data to processing resource -->
+        </div>
     {% endcall %}
 
 
@@ -107,3 +110,20 @@ Plugins should load files from URLs (see ADR :doc:`adr/0009-always-pass-files-as
 The plugin runner provides a utility method (:py:func:`~qhana_plugin_runner.requests.open_url`) for accessing ``http(s)://``, ``file://`` and ``data:`` URLs.
 If the plugin accepts large files then the URL should be opened with ``stream=True`` and the data should be read incrementally if possible.
 This can reduce the memory footprint of the plugin.
+
+
+File Outputs
+------------
+
+Plugins can use the FileStore :py:data:`~qhana_plugin_runner.storage.STORE` to persist intermediate files and result files.
+The storage registry will forward methods to the configured default :py:class:`~qhana_plugin_runner.storage.FileStore`.
+The plugin runner come with a file store implementation that uses the local filesystem as backend.
+
+The final results of a task should be stored in the file store using the :py:meth:`~qhana_plugin_runner.storage.FileStore.persist_task_result` method.
+If a task produces large intermediate results that have to be shared to following tasks then these results should be stored as a file using the :py:meth:`~qhana_plugin_runner.storage.FileStore.persist_task_temp_file` method.
+The :py:class:`~qhana_plugin_runner.db.models.tasks.TaskFile` instance returned by that method should not be shared directly between tasks.
+Instead share the :py:attr:`~qhana_plugin_runner.db.models.tasks.TaskFile.id` attribute and retrieve the task file info with :py:meth:`~qhana_plugin_runner.db.models.tasks.TaskFile.get_by_id`.
+
+The files can be retrieved from the file store by requesting an URL for the file information.
+Use :py:meth:`~qhana_plugin_runner.storage.FileStoreRegistry.get_task_file_url` for task files and :py:meth:`~qhana_plugin_runner.storage.FileStoreRegistry.get_file_url` for other files.
+Tasks can use the internal URLs provided by these methods (set ``external=False``) while file downloads from outside of the plugin runner must use the external URLs.
