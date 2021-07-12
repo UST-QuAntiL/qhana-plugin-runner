@@ -15,9 +15,8 @@
 from http import HTTPStatus
 from io import StringIO
 from json import dumps, loads
-from qhana_plugin_runner.storage import STORE
 from tempfile import SpooledTemporaryFile
-from typing import Dict, Optional
+from typing import Dict, Mapping, Optional
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -42,6 +41,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
@@ -72,14 +72,29 @@ class HybridAutoencoderTaskResponseSchema(MaBaseSchema):
 
 class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
     input_data = FileUrl(
+        required=True, allow_none=False, load_only=True, metadata={"label": "Input Data"}
+    )
+    number_of_qubits = ma.fields.Integer(
         required=True,
         allow_none=False,
         load_only=True,
+        metadata={"label": "Number of Qubits"},
     )
-    number_of_qubits = ma.fields.Integer(required=True, allow_none=False, load_only=True)
-    embedding_size = ma.fields.Integer(required=True, allow_none=False, load_only=True)
-    qnn_name = ma.fields.String(required=True, allow_none=False, load_only=True)
-    training_steps = ma.fields.Integer(required=True, allow_none=False, load_only=True)
+    embedding_size = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        load_only=True,
+        metadata={"label": "Embedding Size"},
+    )
+    qnn_name = ma.fields.String(
+        required=True, allow_none=False, load_only=True, metadata={"label": "QNN Name"}
+    )
+    training_steps = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        load_only=True,
+        metadata={"label": "Training Steps"},
+    )
 
 
 @HA_BLP.route("/")
@@ -101,6 +116,14 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the hybrid autoencoder plugin."""
 
+    example_inputs = {
+        "inputData": "data:text/plain,0,0,0,0,0,0,0,0,0,0",
+        "numberOfQubits": 3,
+        "embeddingSize": 2,
+        "qnnName": "QNN3",
+        "trainingSteps": 100,
+    }
+
     @HA_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hybrid autoencoder plugin."
     )
@@ -114,7 +137,7 @@ class MicroFrontend(MethodView):
     @HA_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(errors)
+        return self.render(request.args, errors)
 
     @HA_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hybrid autoencoder plugin."
@@ -129,9 +152,9 @@ class MicroFrontend(MethodView):
     @HA_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(errors)
+        return self.render(request.form, errors)
 
-    def render(self, errors: dict):
+    def render(self, data: Mapping, errors: dict):
         print(">>>", errors)
         schema = HybridAutoencoderPennylaneRequestSchema()
         return Response(
@@ -140,9 +163,12 @@ class MicroFrontend(MethodView):
                 name=HybridAutoencoderPlugin.instance.name,
                 version=HybridAutoencoderPlugin.instance.version,
                 schema=schema,
-                values=request.form,
+                values=data,
                 errors=errors,
                 process=url_for(f"{HA_BLP.name}.HybridAutoencoderPennylaneAPI"),
+                example_values=url_for(
+                    f"{HA_BLP.name}.MicroFrontend", **self.example_inputs
+                ),
             )
         )
 
@@ -234,9 +260,8 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     if None in [input_data_url, q_num, embedding_size, qnn_name, steps]:
         raise ValueError("Request is missing one or more values.")
 
-    url_data = open_url(input_data_url, stream=True)
-
-    input_data_arr = np.genfromtxt(url_data.iter_lines(), delimiter=",")
+    with open_url(input_data_url, stream=True) as url_data:
+        input_data_arr = np.genfromtxt(url_data.iter_lines(), delimiter=",")
 
     if input_data_arr.ndim == 1:
         input_data_arr = input_data_arr.reshape((1, -1))

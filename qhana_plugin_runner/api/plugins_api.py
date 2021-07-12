@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# originally from <https://github.com/buehlefs/flask-template/>
-
-"""Module containing the root endpoint of the v1 API."""
+"""Module containing the endpoints related to plugins."""
 
 from dataclasses import dataclass
 from http import HTTPStatus

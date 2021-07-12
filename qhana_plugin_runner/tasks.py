@@ -35,7 +35,13 @@ def save_task_result(self, result: str, db_id: int):
 
     task_data.finished_status = "SUCCESS"
     task_data.finished_at = datetime.utcnow()
-    task_data.task_result = result  # TODO type checking!
+    if result is None:
+        # finished tasks must have a result string
+        task_data.task_result = ""
+    elif isinstance(result, str):
+        task_data.task_result = result
+    else:
+        task_data.task_result = repr(result)
 
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save result for task with db id '{db_id}' successful.")

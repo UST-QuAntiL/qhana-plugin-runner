@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List, Optional, Sequence, Union
 
 from sqlalchemy.orm import relation, relationship
 from sqlalchemy.sql import sqltypes as sql
@@ -56,7 +56,7 @@ class ProcessingTask:
 
     files: List["TaskFile"] = field(
         default_factory=list,
-        metadata={"sa": relationship("TaskFile", back_populates="task")},
+        metadata={"sa": relationship("TaskFile", back_populates="task", lazy="select")},
     )
 
     def save(self, commit: bool = False):
@@ -87,8 +87,11 @@ class TaskFile:
 
     id: int = field(init=False, metadata={"sa": Column(sql.INTEGER(), primary_key=True)})
     task: ProcessingTask = field(
-        metadata={"sa": relationship("ProcessingTask", back_populates="files")}
+        metadata={
+            "sa": relationship("ProcessingTask", back_populates="files", lazy="selectin")
+        }
     )
+    security_tag: str = field(metadata={"sa": Column(sql.String(64), nullable=False)})
     storage_provider: str = field(metadata={"sa": Column(sql.String(64), nullable=False)})
     file_name: str = field(
         metadata={"sa": Column(sql.String(500), index=True, nullable=False)}
@@ -117,3 +120,19 @@ class TaskFile:
         DB.session.add(self)
         if commit:
             DB.session.commit()
+
+    @classmethod
+    def get_by_id(cls, id_: int) -> Optional["TaskFile"]:
+        """Get the object instance by the object id from the database. (None if not found)"""
+        return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
+
+    @classmethod
+    def get_task_result_files(
+        cls, task: Union[int, ProcessingTask]
+    ) -> Sequence["TaskFile"]:
+        """Get a sequence of task result files (e.g. all files with a file-type that is not "temp-file")."""
+        filter_ = (
+            cls.file_type != "temp-file",
+            cls.task == task if isinstance(task, ProcessingTask) else cls.task_id == task,
+        )
+        return DB.session.execute(select(cls).filter(*filter_)).scalars().all()

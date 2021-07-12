@@ -14,7 +14,7 @@
 
 from http import HTTPStatus
 from json import dumps, loads
-from typing import Optional
+from typing import Mapping, Optional
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -96,6 +96,10 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the hello world plugin."""
 
+    example_inputs = {
+        "inputStr": "Sample input string.",
+    }
+
     @HELLO_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
     )
@@ -109,7 +113,7 @@ class MicroFrontend(MethodView):
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(errors)
+        return self.render(request.args, errors)
 
     @HELLO_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
@@ -124,9 +128,9 @@ class MicroFrontend(MethodView):
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(errors)
+        return self.render(request.form, errors)
 
-    def render(self, errors: dict):
+    def render(self, data: Mapping, errors: dict):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
@@ -134,9 +138,12 @@ class MicroFrontend(MethodView):
                 name=HelloWorld.instance.name,
                 version=HelloWorld.instance.version,
                 schema=schema,
-                values=request.form,
+                values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_BLP.name}.ProcessView"),
+                example_values=url_for(
+                    f"{HELLO_BLP.name}.MicroFrontend", **self.example_inputs
+                ),
             )
         )
 

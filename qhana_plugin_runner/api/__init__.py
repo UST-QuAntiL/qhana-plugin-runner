@@ -26,6 +26,7 @@ from flask.views import MethodView
 from flask_smorest import Api
 from flask_smorest import Blueprint as SmorestBlueprint
 
+from .files_api import FILES_API
 from .jwt import SECURITY_SCHEMES
 from .plugins_api import PLUGINS_API
 from .tasks_api import TASKS_API
@@ -71,3 +72,4 @@ def register_root_api(app: Flask):
     ROOT_API.register_blueprint(ROOT_ENDPOINT, url_prefix=url_prefix)
     ROOT_API.register_blueprint(PLUGINS_API, url_prefix=f"{url_prefix}/plugins")
     ROOT_API.register_blueprint(TASKS_API, url_prefix=f"{url_prefix}/tasks")
+    ROOT_API.register_blueprint(FILES_API, url_prefix=f"{url_prefix}/files")

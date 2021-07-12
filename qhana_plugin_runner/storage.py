@@ -12,61 +12,147 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Module containing a file store interface with a implementation for the local file system."""
+
 from pathlib import Path
+from secrets import token_urlsafe
 from shutil import copyfileobj
 from typing import IO, BinaryIO, ClassVar, Dict, Optional, TextIO, Type, Union
 
 from flask.app import Flask
+from flask.helpers import url_for
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 
-# TODO add documentation
+
+class _FileStoreInterface:
+    """Base class defining the file store interface."""
+
+    def persist_file(self, file_: IO, target: Union[str, Path]):
+        """Persist a file to the file storage.
+
+        Args:
+            file_ (IO): the file like object to perist to the storage.
+            target (Union[str, Path]): the file path to save the file on the storage including the file name.
+        """
+        raise NotImplementedError()
+
+    def persist_task_result(
+        self, task_db_id: int, file_: IO, file_name: str, file_type: str, mimetype: str
+    ) -> TaskFile:
+        """Perist a task result file and store the file information in the database.
+
+        Args:
+            task_db_id (int): the id of the task in the database
+            file_ (IO): the file object to persist
+            file_name (Path): the file name of the result file
+            file_type (str): the file type tag
+            mimetype (str): the mime type of the file (not optional for result files!)
+
+        Raises:
+            KeyError: if the task could not be found in the database
+
+        Returns:
+            TaskFile: the file information stored in the database
+        """
+        raise NotImplementedError()
+
+    def persist_task_temp_file(
+        self, task_db_id: int, file_: IO, file_name: str, mimetype: Optional[str] = None
+    ) -> TaskFile:
+        """Perist a temporary task file and store the file information in the database.
+
+        Temporary files should only be used during the execution of the task.
+        All temporary files have the file type tag ``"temp-file"``.
+
+        Args:
+            task_db_id (int): the id of the task in the database
+            file_ (IO): the file object to persist
+            file_name (str): the file name of the result file
+            mimetype (Optional[str]): the mime type of the file. Defaults to None.
+
+        Returns:
+            TaskFile: the file information stored in the database
+        """
+        raise NotImplementedError()
+
+    def get_file_url(self, file_storage_data: str, external: bool = True) -> str:
+        """Get a URL to the stored file.
+
+        If ``external`` is ``False`` the file store implementation may return an
+        internal URL that must work with :py:func:`~qhana_plugin_runner.requests.open_url`.
+
+        If ``external`` is ``True`` the URL must be accessible from outside this
+        microservice (e.g. through an API endpoint of this microservice) without
+        authorization for at least 2 hours.
+
+        Args:
+            file_storage_data (str): the file metadata as defined by the file store or as stored in :py:attr:`TaskFile.file_storage_data`
+            external (bool, optional): if the URL should be accessible from outside (for downloading the file). Defaults to True.
+
+        Returns:
+            str: the URL to the file
+        """
+        raise NotImplementedError()
+
+    def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
+        """Get an URL for a TaskFile object.
+
+        See :py:meth:`_FileStoreBase.get_file_url`
+
+        Args:
+            file_info (TaskFile): the information of the task file
+
+        Returns:
+            str: the URL to the file
+        """
+        raise NotImplementedError()
 
 
-class FileStore:
+class FileStore(_FileStoreInterface):
+    """Interface and registry class for file stor implementations."""
 
     __store_classes: ClassVar[Dict[str, Type["FileStore"]]] = {}
 
-    _name: ClassVar[str]
+    name: ClassVar[str]  # populated by the FileStore instance for loaded implementations
 
     def __init_subclass__(cls, name: str, **kwargs) -> None:
-        cls._name = name
+        """Register file store implementation classes by their name."""
+        cls.name = name
         FileStore.__store_classes[name] = cls
 
     def __init__(self, app: Flask = None) -> None:
         super().__init__()
         self.app: Optional[Flask] = None
-        self._default_store: Optional[str] = None
-        self._stores: Dict[str, FileStore] = {}
         if app:
             self.init_app(app)
 
-    def load_registered_stores(self):
-        for name, cls in FileStore.__store_classes.items():
-            self._stores[name] = cls(app=self.app)
-        self._set_default_store_from_config()
+    @staticmethod
+    def _get_registered_store_classes():
+        """Get the dict containing the registered FileStore implementation classes."""
+        return FileStore.__store_classes
 
     def init_app(self, app: Flask):
+        """Init the file store with the Flask app to get access to the flask config."""
         self.app = app
-        self._set_default_store_from_config()
-        for store in self._stores.values():
-            store.init_app(app)
-
-    def _set_default_store_from_config(self):
-        if self.app:
-            self._default_store = self.app.config.get("DEFAULT_FILE_STORE")
-
-    @property
-    def name(self):
-        try:
-            if self._name:
-                return self._name
-        except AttributeError:
-            pass  # all stores (except FileStore) should have their _name attribute set.
-        # assume default store was used
-        return self._default_store
 
     def prepare_path(self, path: Union[str, Path]) -> Path:
+        """Prepare a file path before saving a file.
+
+        The returned path object is always a relative path.
+        If the path is not relative a path relative to the root of that path is returned.
+
+        Mitigates simple path traversal attacs.
+
+        Args:
+            path (Union[str, Path]): The file path to prepare
+
+        Raises:
+            ValueError: If the path contains potentially dangerous parts (e.g. ``./../file-txt``)
+
+        Returns:
+            Path: A relative path
+        """
         if isinstance(path, str):
             path = Path(path)
 
@@ -78,62 +164,93 @@ class FileStore:
             path = path.relative_to(path.root)
         return path
 
-    def _get_file_storage_data(self, target: Path) -> str:
-        assert type(self) == FileStore, "Do not call this method with super()!"
-        if self._default_store is None:
-            raise NotImplementedError()
-        return self._stores[self._default_store]._get_file_storage_data(target)
+    def _get_file_identifier(self, target: Path):
+        """Get the full file identifier (e.g. the absolute path or a UIR/URL to the file)."""
+        raise NotImplementedError()
 
-    def persist_file(self, file_: IO, target: Union[str, Path]):
-        assert type(self) == FileStore, "Do not call this method with super()!"
-        if self._default_store is None:
-            raise NotImplementedError()
-        return self._stores[self._default_store].persist_file(file_, target)
+    def _persist_task_file(
+        self,
+        task_db_id: int,
+        file_: IO,
+        target: Path,
+        file_type: str,
+        mimetype: Optional[str],
+    ) -> TaskFile:
+        """Perist a task file and store the file information in the database.
+
+        Args:
+            task_db_id (int): the id of the task in the database
+            file_ (IO): the file object to persist
+            target (Path): the target path
+            file_type (str): the file type tag
+            mimetype (Optional[str]): the mime type of the file
+
+        Raises:
+            KeyError: if the task could not be found in the database
+
+        Returns:
+            TaskFile: the file information stored in the database
+        """
+        task = ProcessingTask.get_by_id(task_db_id)
+        if not task:
+            raise KeyError(f"No task with database id {task_db_id} found!")
+        self.persist_file(file_, target)
+        file_info = TaskFile(
+            task=task,
+            security_tag=token_urlsafe(32),
+            storage_provider=self.name,
+            file_name=target.name,
+            file_storage_data=self._get_file_identifier(target),
+            file_type=file_type,
+            mimetype=mimetype,
+        )
+        file_info.save(True)
+        return file_info
 
     def persist_task_result(
         self, task_db_id: int, file_: IO, file_name: str, file_type: str, mimetype: str
-    ):
-        task = ProcessingTask.get_by_id(task_db_id)
-        if not task:
-            raise KeyError(f"No task with database id {task_db_id} found!")
+    ) -> TaskFile:
         target = Path(f"task_{task_db_id}/out") / Path(file_name)
-        self.persist_file(file_, target)
-        TaskFile(
-            task=task,
-            storage_provider=self.name,
-            file_name=file_name,
-            file_storage_data=self._get_file_storage_data(target),
-            file_type=file_type,
-            mimetype=mimetype,
-        ).save(True)
+        return self._persist_task_file(task_db_id, file_, target, file_type, mimetype)
 
     def persist_task_temp_file(
         self, task_db_id: int, file_: IO, file_name: str, mimetype: Optional[str] = None
-    ):
-        task = ProcessingTask.get_by_id(task_db_id)
-        if not task:
-            raise KeyError(f"No task with database id {task_db_id} found!")
+    ) -> TaskFile:
         target = Path(f"task_{task_db_id}/tmp") / Path(file_name)
-        self.persist_file(file_, target)
-        TaskFile(
-            task=task,
-            storage_provider=self.name,
-            file_name=file_name,
-            file_storage_data=self._get_file_storage_data(target),
-            file_type="temp-file",
-            mimetype=mimetype,
-        ).save(True)
+        return self._persist_task_file(
+            task_db_id, file_, target, file_type="temp-file", mimetype=mimetype
+        )
+
+    def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
+        return self.get_file_url(file_info.file_storage_data, external=external)
 
 
 class LocalFileStore(FileStore, name="local_filesystem"):
+    """A file store implementation using the local file system."""
+
     def __init__(self, app: Flask) -> None:
         super().__init__(app=app)
+        self._root_path: Optional[Path] = None
 
     def _get_storage_root(self) -> Path:
-        assert self.app is not None
-        return Path(self.app.instance_path) / Path("files")
+        """Get the root path where to store the files at.
 
-    def _get_file_storage_data(self, target: Path) -> str:
+        The root path can be configured with ``"FILE_STORE_ROOT_PATH"`` in the app config.
+
+        A relative path will be interpreted relative to the app inctance folder.
+        """
+        if self._root_path:
+            return self._root_path
+        assert self.app is not None
+        settings_path = Path(self.app.config.get("FILE_STORE_ROOT_PATH", "files"))
+        if settings_path.is_absolute():
+            self._root_path = settings_path
+        else:
+            self._root_path = Path(self.app.instance_path) / settings_path
+        return self._root_path
+
+    def _get_file_identifier(self, target: Path):
+        """Get the full path of the file on disc."""
         return str(self._get_storage_root() / target)
 
     def persist_file(self, file_: IO, target: Union[str, Path]):
@@ -157,10 +274,101 @@ class LocalFileStore(FileStore, name="local_filesystem"):
         with target_path.open(mode=mode) as target_file:
             copyfileobj(file_, target_file)
 
+    def get_file_url(self, file_storage_data: str, external: bool) -> str:
+        if not external:
+            # return an internal file url
+            return "file://" + file_storage_data
+        raise NotImplementedError()  # TODO implement endpoint to download files by file path
 
-STORE: FileStore = FileStore()
+    def get_task_file_url(self, file_info: TaskFile, external: bool) -> str:
+        if not external:
+            return super().get_task_file_url(file_info, external=external)
+        return url_for(
+            "files-api.FileView",
+            file_id=file_info.id,
+            **{"file-id": file_info.security_tag},
+        )
+
+
+class FileStoreRegistry(_FileStoreInterface):
+    """Class acting as a registry for loaded file stores. Forwards calls to the default file store."""
+
+    def __init__(self, app: Flask = None) -> None:
+        super().__init__()
+        self.app: Optional[Flask] = None
+        self._default_store: Optional[str] = None
+        self._stores: Dict[str, FileStore] = {}
+        if app:
+            self.init_app(app)
+
+    def __getitem__(self, item: str):
+        # allow getting specific file stores with file_store[<name>]
+        return self._stores[item]
+
+    def _load_registered_stores(self):
+        """Load and instantiate all registered file store implementations.
+
+        This method must only be called on the generic ``FileStore`` instance
+        and not on file store implementations!
+
+        The created file store implementation objects will have this ``FileStore``
+        instance set as their :py:attr:`FileStore._store_registry`.
+        """
+        for name, cls in FileStore._get_registered_store_classes().items():
+            self._stores[name] = cls(app=self.app)
+        self._set_default_store_from_config()
+
+    def init_app(self, app: Flask):
+        """Init the file store with the Flask app to get access to the flask config."""
+        self.app = app
+        self._set_default_store_from_config()
+        for store in self._stores.values():
+            store.init_app(app)
+
+    def _set_default_store_from_config(self):
+        """Read and set the default store implementation to use from flask config."""
+        if self.app:
+            self._default_store = self.app.config.get("DEFAULT_FILE_STORE")
+
+    def persist_file(self, file_: IO, target: Union[str, Path]):
+        if self._default_store is None:
+            raise NotImplementedError()
+        self._stores[self._default_store].persist_file(file_, target)
+
+    def persist_task_result(
+        self, task_db_id: int, file_: IO, file_name: str, file_type: str, mimetype: str
+    ) -> TaskFile:
+        if self._default_store is None:
+            raise NotImplementedError()
+        return self._stores[self._default_store].persist_task_result(
+            task_db_id, file_, file_name, file_type, mimetype
+        )
+
+    def persist_task_temp_file(
+        self, task_db_id: int, file_: IO, file_name: str, mimetype: Optional[str] = None
+    ) -> TaskFile:
+        if self._default_store is None:
+            raise NotImplementedError()
+        return self._stores[self._default_store].persist_task_temp_file(
+            task_db_id, file_, file_name, mimetype
+        )
+
+    def get_file_url(self, file_storage_data: str, external: bool = True) -> str:
+        if self._default_store is None:
+            raise NotImplementedError()
+        return self._stores[self._default_store].get_file_url(file_storage_data, external)
+
+    def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
+        if self._default_store is None:
+            raise NotImplementedError()
+        return self._stores[self._default_store].get_task_file_url(file_info, external)
+
+
+# The file store registry that should be imported and used
+STORE: FileStoreRegistry = FileStoreRegistry()
 
 
 def register_file_store(app: Flask):
-    STORE.load_registered_stores()
+    """Register the file store instance with the flask app."""
+    STORE._load_registered_stores()
     STORE.init_app(app)

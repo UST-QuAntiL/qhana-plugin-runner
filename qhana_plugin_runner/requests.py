@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Functions for opening files from external URLs."""
+
 from requests import Session
 from requests.models import Response
 
@@ -19,5 +21,13 @@ REQUEST_SESSION = Session()
 
 
 def open_url(url: str, **kwargs) -> Response:
-    """Open an url with request. (see :py:meth:`~requests.Session.request` for parameters)"""
+    """Open an url with request.
+
+    (see :py:meth:`~requests.Session.request` for parameters)
+
+    It is best to use this function in a ``with``-statement to get autoclosing behaviour
+    for the returned response. The returned response acts as a context manager.
+
+    For streaming access set ``stream=True``.
+    """
     return REQUEST_SESSION.get(url, **kwargs)
