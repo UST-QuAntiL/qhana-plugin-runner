@@ -4,6 +4,14 @@ Input Data Model
 QHAna is to be used to analyze the data from the MUSE project.
 The initial data model specified here is derived from the MUSE data model and provides a more generic representation of that data.
 
+Attributes
+----------
+
+An attributes has a name and a value.
+Attribute names are always strings, values can be of any type.
+Attribute with the same name **must** have the same type.
+
+
 Entities
 --------
 
@@ -47,16 +55,84 @@ JSON:
 
 CSV:
 
-.. code-block:: csv
+.. code-block:: text
 
-   id,href,color
-   paintA,example.com/paints/paintA,#8a2be2
+    id,href,color
+    paintA,example.com/paints/paintA,#8a2be2
 
 
 
 Relations
 ---------
 
+Relations can be used to model relations between entities without using entity attributes.
+A relation is always directed and has a ``source`` and a ``target`` attribute.
+They contain the IDs of the source/target entities.
+
+Relations *do not* have an ID or a ``href`` attribute.
+
+Like entites relations can also have additional attributes.
+The same restrictions as for entity attributes apply.
+
+
+Example serializations of relations:
+""""""""""""""""""""""""""""""""""""
+
+JSON:
+
+.. code-block:: json
+
+    {
+        "source": "paintA",
+        "target": "paintB"
+    }
+
+CSV:
+
+.. code-block:: text
+
+    source,target
+    paintA,paintB
 
 
 
+Graphs
+------
+
+A bundle of entities connected with relations can form a graph.
+The graph must contain all entities and relations that make up the graph (e.g. no relation links to an entity that is not in the graph).
+A graph may only reference entitites by their IDs.
+
+A graph can have an ID like an entity.
+The same rules for the ID apply, however the ID of a graph **should** be globally unique.
+
+A graph can have an optional ``type`` attribute.
+The allowed values are ``undirected``, ``directed`` (the default), ``acyclic`` (implies ``directed``) and ``tree``.
+Other values for type have no defined meening and should be ignored.
+This implies that user defined graph types are allowed, but to be future proof user defined types should contain a ``-`` character.
+
+The entities of the graph are stored in an attribute ``entities`` that can contain entity IDs or inline entity definitions.
+Relations are always stored inline in the ``relations`` attribute.
+
+Like entities graphs can also contain additional attributes.
+In fact, leaving out the special ``entities`` and ``relations`` attributes graphs have the same features.
+
+
+Example serializations of a graph:
+""""""""""""""""""""""""""""""""""
+
+JSON:
+
+.. code-block:: json
+
+    {
+        "id": "graphA",
+        "type": "tree",
+        "entities": [
+            "paintA",
+            {"id": "paintB", "href": "example.com/paints/paintA", "color": "#e9322d"}
+        ],
+        "relations": [
+            {"source": "paintA", "target": "paintB"}
+        ]
+    }

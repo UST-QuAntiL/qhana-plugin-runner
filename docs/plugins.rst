@@ -63,7 +63,7 @@ Starting the algorithm with the parameters must be done through a form submit bu
 
 The plugin runner contains template macros that can be imported and used to auto generate form elements from simple marshmallow schemas.
 
-.. code-block:: jinja
+.. code-block:: html+jinja
     :linenos:
 
     {% import 'forms.html' as forms %}
