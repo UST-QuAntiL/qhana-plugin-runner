@@ -65,6 +65,7 @@ include-readme = true
 [tool.sphinx.intersphinx-mapping]
 python = ["https://docs.python.org/3"]
 requests = ["https://docs.python-requests.org/en/master/"]
+celery = ["https://docs.celeryproject.org/en/stable/"]
 
 [tool.sphinx.autosectionlabel]
 prefix-document = true

@@ -2,6 +2,23 @@ Writing Plugins
 ===============
 
 
+Plugin Code
+-----------
+
+A QHAna plugin is a python module or package that contains a class inheriting from :py:class:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase`.
+The plugin must be placed in a folder specified in the ``PLUGIN_FOLDERS`` config variable.
+The plugin runner will import all plugins placed in the specified folders.
+Only the root module of the plugin will be imported by the plugin runner, the plugin is responsible for importing the plugin implementation class and all celery tasks.
+The root modules of plugins must have unique names to avoid problems on import!
+
+A plugin may implement :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_api_blueprint` to provide a set of API endpoints.
+The returned Bluprint must be compatible with the flask smorest library.
+The :py:class:`qhana_plugin_runner.api.util.SecurityBlueprint` is recommended for this purpose.
+
+Plugins may implement :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_requirements` to specify their requirements to the plugin runner (see :ref:`plugins:plugin dependencies`).
+
+
+
 Plugin API Layout
 -----------------
 
@@ -12,10 +29,13 @@ A plugin should expose the following endpoints with a blueprint:
 * ``./ui/`` for the microfrontend that exposes the plugin parameters
 * ``./process/`` for a processing resource
 
+A plugin that does not follow that schema may not be usable from the QHAna UI later.
 
 
 Plugin Metadata
 ---------------
+
+Marshmallow schemas to render the lugin metadata can be found in the module :py:mod:`~qhana_plugin_runner.api.plugin_schemas`.
 
 First draft of example plugin metadata:
 
@@ -49,6 +69,8 @@ First draft of example plugin metadata:
         }
     }
 
+
+.. note:: The metadata format is work in progress and may change any time.
 
 
 Plugin Micro Frontend
@@ -101,6 +123,22 @@ The plugin requirements of the loaded plugins can be installed using the :any:`p
     This means that resolving complex requirement sets can take a very long time.
     Plugins should therfore minimize their requirements and (whenever possible) only depend on requirements installed by the plugin runner already.
     Requirements of the plugin runner should not be part of the requirements the plugin specifies itself.
+
+.. warning:: Plugins must fail gracefully if their dependencies are not yet installed.
+
+    If the plugin does not fail gracefully the plugin runner cannot get the plugin requirements by calling :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_requirements`.
+    This also means that it cannot install the requirements for that plugin!
+
+
+Long Running Tasks
+------------------
+
+Long running tasks can be implemented using :any:`Celery tasks <guide-tasks>`.
+Task names should be unique.
+This can be achieved by using the plugin name as part of the task name.
+
+If a background task is started from a processing resource it must be registered in the database as a processing task (see ``plugins/hello_world.py``).
+There are some utility tasks that can be used in the :py:mod:`~qhana_plugin_runner.tasks` module.
 
 
 File Inputs

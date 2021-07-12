@@ -29,6 +29,18 @@ Run `poetry install` to install dependencies.
 
 If an environment variable specified in `.flaskenv` should be changed locally add a `.env` file with the corresponding variables set.
 
+````{note}
+First start only:
+
+```bash
+# create development database
+poetry run flask run create-db
+
+# install requirements of plugins
+poetry run flask install
+```
+````
+
 Run the development server with
 
 ```bash
@@ -71,10 +83,10 @@ Configured in `qhana_plugin_runner/util/config/smorest_config.py`.
 Plugin requirements can be installed with the following command:
 
 ```bash
-poetry run install # --skip-runner-requirements
+poetry run flask install # --skip-runner-requirements
 
 # only check generated requirements file:
-poetry run install --dry-run
+poetry run flask install --dry-run
 ```
 
 
