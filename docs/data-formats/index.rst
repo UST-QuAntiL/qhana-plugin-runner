@@ -5,6 +5,7 @@ Data Formats defined for QHAna Plugins
     :name: formats-toc
 
     data-model
+    data-loader-formats
 
 
 A collection of data (serialization) formats used by QHAna plugins to exchange data.

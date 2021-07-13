@@ -48,7 +48,7 @@ JSON:
 .. code-block:: json
 
     {
-        "id": "paintA",
+        "ID": "paintA",
         "href": "example.com/paints/paintA",
         "color": "#8a2be2"
     }
@@ -57,7 +57,7 @@ CSV:
 
 .. code-block:: text
 
-    id,href,color
+    ID,href,color
     paintA,example.com/paints/paintA,#8a2be2
 
 
@@ -107,12 +107,14 @@ A graph can have an ID like an entity.
 The same rules for the ID apply, however the ID of a graph **should** be globally unique.
 
 A graph can have an optional ``type`` attribute.
-The allowed values are ``undirected``, ``directed`` (the default), ``acyclic`` (implies ``directed``) and ``tree``.
+The allowed values are ``undirected``, ``directed`` (the default), ``acyclic`` (implies ``directed``), ``tree`` and ``list`` (no relations).
 Other values for type have no defined meening and should be ignored.
 This implies that user defined graph types are allowed, but to be future proof user defined types should contain a ``-`` character.
 
 The entities of the graph are stored in an attribute ``entities`` that can contain entity IDs or inline entity definitions.
 Relations are always stored inline in the ``relations`` attribute.
+Additionally an attribute ``ref-target`` can be specified on the graph to point to a file that contains the referenced entities.
+The ref target attribute should contain the file name of that file.
 
 Like entities graphs can also contain additional attributes.
 In fact, leaving out the special ``entities`` and ``relations`` attributes graphs have the same features.
@@ -130,7 +132,7 @@ JSON:
         "type": "tree",
         "entities": [
             "paintA",
-            {"id": "paintB", "href": "example.com/paints/paintA", "color": "#e9322d"}
+            {"ID": "paintB", "href": "example.com/paints/paintA", "color": "#e9322d"}
         ],
         "relations": [
             {"source": "paintA", "target": "paintB"}
