@@ -22,11 +22,11 @@
         <label class="{{form_label_class}}" for="{{form_key}}">{{field.metadata.get("label", form_key)}}</label>
         {% if input_type == 'textarea' %}
         <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" 
-            {{ 'required' if not field.required else ''}}>{{values.get(form_key, '')}}</textarea>
+            {{ 'required' if field.required else ''}}>{{values.get(form_key, '')}}</textarea>
         {% elif input_type %}
         <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" 
             {{ field_value(input_type, values.get(form_key)) }} 
-            {{ 'required' if not field.required else ''}} 
+            {{ 'required' if field.required else ''}}
             {{ field_attr('min-length', None) }}>
         {% else %}
         <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
