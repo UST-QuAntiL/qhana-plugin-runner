@@ -253,7 +253,15 @@ class MicroFrontend(MethodView):
     """Micro frontend for the costume loader plugin."""
 
     example_inputs = {
-        "inputStr": "Sample input string.",  # TODO: change
+        "aggregator": "mean",
+        "transformer": "squareInverse",
+        "attributes": "dominanteFarbe",
+        "elementComparers": "wuPalmer",
+        "attributeComparers": "symMaxMean",
+        "emptyAttributeActions": "ignore",
+        "filters": "",
+        "amount": 0,
+        "subset": "Subset5"
     }
 
     @COSTUME_LOADER_BLP.html_response(
