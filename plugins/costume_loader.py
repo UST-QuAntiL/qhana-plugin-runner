@@ -133,7 +133,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Aggregator",
             "description": "Aggregator.",
             "input_type": "select",
-            "options": ["mean", "median", "max", "min"]
+            "options": [o.value for o in AggregatorType]
         })
     transformer = EnumField(
         TransformerType,
@@ -142,7 +142,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Transformer",
             "description": "Transformer.",
             "input_type": "select",
-            "options": ["linearInverse", "exponentialInverse", "gaussianInverse", "polynomialInverse", "squareInverse"]
+            "options": [o.value for o in TransformerType]
         })
     attributes = CSVList(
         EnumField(Attribute),
@@ -198,7 +198,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Subset",
             "description": "Subset to load.",
             "input_type": "select",
-            "options": ["Subset5", "Subset10", "Subset20", "Subset40"]
+            "options": [o.value for o in TransformerType]
         })
 
     @post_load
