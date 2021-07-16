@@ -4,12 +4,37 @@ Input Data Model
 QHAna is to be used to analyze the data from the MUSE project.
 The initial data model specified here is derived from the MUSE data model and provides a more generic representation of that data.
 
+
+
 Attributes
 ----------
 
 An attributes has a name and a value.
 Attribute names are always strings, values can be of any type.
 Attribute with the same name **must** have the same type.
+
+
+Reserved Attributes
+"""""""""""""""""""
+
+The data model defines some special attributes.
+These attributes must never be used as additional attributes (their attribute names are reserved).
+This allows to use these attribute names to correctly determine if a given set of attributes is an entity, a relation or a graph.
+
+.. note:: A list of reserved attribute names:
+
+    .. hlist::
+        :columns: 5
+    
+        * ``ID``
+        * ``href``
+        * ``source``
+        * ``target``
+        * ```GRAPH_ID```
+        * ```entities```
+        * ```relations```
+
+
 
 
 Entities
@@ -103,8 +128,8 @@ A bundle of entities connected with relations can form a graph.
 The graph must contain all entities and relations that make up the graph (e.g. no relation links to an entity that is not in the graph).
 A graph may only reference entitites by their IDs.
 
-A graph can have an ID like an entity.
-The same rules for the ID apply, however the ID of a graph **should** be globally unique.
+A graph can have an GRAPH_ID with the same semantic as an entity ID.
+The same rules as for entity IDs apply, however the GRAPH_ID of a graph **should** be globally unique (and not overlap with entity IDs).
 
 A graph can have an optional ``type`` attribute.
 The allowed values are ``undirected``, ``directed`` (the default), ``acyclic`` (implies ``directed``), ``tree`` and ``list`` (no relations).
@@ -128,7 +153,7 @@ JSON:
 .. code-block:: json
 
     {
-        "id": "graphA",
+        "GRAPH_ID": "graphA",
         "type": "tree",
         "entities": [
             "paintA",

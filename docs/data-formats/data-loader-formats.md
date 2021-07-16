@@ -130,7 +130,7 @@ Formats like CSV are unsuitable to serialize graphs as they would need at least 
 
 ```{code-block} json
 {
-    "id": "graphA",
+    "GRAPH_ID": "graphA",
     "type": "tree",
     "ref-target": "example-entities.csv",
     "entities": [
