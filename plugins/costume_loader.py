@@ -92,7 +92,10 @@ class EnumField(fields.Field):
         data: Optional[Mapping[str, Any]],
         **kwargs
     ):
-        return self.enum_type(value)
+        if value == "":
+            return None
+        else:
+            return self.enum_type(value)
 
 
 class CSVList(fields.Field):
@@ -133,7 +136,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Aggregator",
             "description": "Aggregator.",
             "input_type": "select",
-            "options": [o.value for o in AggregatorType]
+            "options": [""] + [o.value for o in AggregatorType]
         })
     transformer = EnumField(
         TransformerType,
@@ -142,7 +145,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Transformer",
             "description": "Transformer.",
             "input_type": "select",
-            "options": [o.value for o in TransformerType]
+            "options": [""] + [o.value for o in TransformerType]
         })
     attributes = CSVList(
         EnumField(Attribute),
@@ -198,7 +201,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Subset",
             "description": "Subset to load.",
             "input_type": "select",
-            "options": [o.value for o in TransformerType]
+            "options": [""] + [o.value for o in Subset]
         })
 
     @post_load
