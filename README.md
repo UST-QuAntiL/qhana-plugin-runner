@@ -34,7 +34,7 @@ First start only:
 
 ```bash
 # create development database
-poetry run flask run create-db
+poetry run flask create-db
 
 # install requirements of plugins
 poetry run flask install
