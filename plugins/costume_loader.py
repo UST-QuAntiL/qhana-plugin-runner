@@ -132,7 +132,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Aggregator",
             "description": "Aggregator.",
-            "input_type": "textarea",
+            "input_type": "select",
+            "options": ["mean", "median", "max", "min"]
         })
     transformer = EnumField(
         TransformerType,
@@ -140,7 +141,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Transformer",
             "description": "Transformer.",
-            "input_type": "textarea",
+            "input_type": "select",
+            "options": ["linearInverse", "exponentialInverse", "gaussianInverse", "polynomialInverse", "squareInverse"]
         })
     attributes = CSVList(
         EnumField(Attribute),
@@ -195,7 +197,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Subset",
             "description": "Subset to load.",
-            "input_type": "textarea",
+            "input_type": "select",
+            "options": ["Subset5", "Subset10", "Subset20", "Subset40"]
         })
 
     @post_load
