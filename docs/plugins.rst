@@ -130,6 +130,69 @@ The plugin requirements of the loaded plugins can be installed using the :any:`p
     This also means that it cannot install the requirements for that plugin!
 
 
+Strategies for Plugins With External Dependecies
+""""""""""""""""""""""""""""""""""""""""""""""""
+
+Plugins with external dependencies must fail gracefully if their dependencies are not installed.
+Otherwise they cannot inform the plugin runner about their dependencies.
+
+Late Imports of Dependencies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Instead of importing dependencies at the top of the module import your dependency locally (i.e. in the celery task instead of in the module).
+This allows the plugin to load while the failing import does not get executed until the task is called.
+
+This method is useful for one-module plugins that rely on external dependencies for specific calculations/functionality.
+
+Catch import Errors
+^^^^^^^^^^^^^^^^^^^
+
+Surround the failing import with ``try``-``except`` and handle cases where the import failed gracefully.
+A failing import can produce ``NameErrors`` when code tries to use the imported names.
+
+This method is useful for one-module plugins that rely on external dependencies for specific calculations/functionality.
+
+Reorganize Code
+^^^^^^^^^^^^^^^
+
+If the external dependency is tightly integrated into your plugin (e.g. through type hints) then it is best to move all code depending on the external functions into its own module or package.
+This means that your plugin should be a python package!
+Then one of the above techniques can be used to import that package.
+
+Import in :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_api_blueprint` method
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is a combination of all the above strategies.
+The import happens late in the :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_api_blueprint` method of the plugin.
+To fail gracefully the import is guarded with a ``try``-``except`` statement.
+The method is allowed to throw a ``NotImplementedError`` when the plugin does not provide a blueprint.
+
+.. code-block:: python
+    :emphasize-lines: 14-20
+
+    from qhana_plugin_runner.util.plugins import QHAnaPluginBase
+
+    ...
+
+    class MyPlugin(QHAnaPluginBase):
+
+        name = "my-plugin"
+        version = "1.0"
+
+        def __init__(self, app: Optional[Flask]) -> None:
+            super().__init__(app)
+
+        def get_api_blueprint(self):
+            try:
+                # late import, code was reorganized into submodule
+                from .code_with_dependencies import MY_PLUGIN_BLP
+                return MY_PLUGIN_BLP
+            except ImportError:
+                # fail gracefully with try-except block
+                raise NotImplementedError("Plugin dependencies not installed.")
+
+
+
 Long Running Tasks
 ------------------
 
@@ -149,6 +212,11 @@ The plugin runner provides a utility method (:py:func:`~qhana_plugin_runner.requ
 If the plugin accepts large files then the URL should be opened with ``stream=True`` and the data should be read incrementally if possible.
 This can reduce the memory footprint of the plugin.
 
+Data formats for input files (especially those used by multiple plugins) should be specified in :doc:`data-formats/index`.
+The plugin runner has builtin support for some formats, e.g. the ones specified in :doc:`data-formats/data-loader-formats`.
+
+.. seealso:: The plugin utils module for marshalling entity data: :py:mod:`qhana_plugin_runner.plugin_utils.entity_marshalling`
+
 
 File Outputs
 ------------
@@ -165,3 +233,10 @@ Instead share the :py:attr:`~qhana_plugin_runner.db.models.tasks.TaskFile.id` at
 The files can be retrieved from the file store by requesting an URL for the file information.
 Use :py:meth:`~qhana_plugin_runner.storage.FileStoreRegistry.get_task_file_url` for task files and :py:meth:`~qhana_plugin_runner.storage.FileStoreRegistry.get_file_url` for other files.
 Tasks can use the internal URLs provided by these methods (set ``external=False``) while file downloads from outside of the plugin runner must use the external URLs.
+
+Data formats for output files should be specified in :doc:`data-formats/index`.
+The plugin runner has builtin support for some formats, e.g. the ones specified in :doc:`data-formats/data-loader-formats`.
+When writing a new plugin that outputs data first consider using an already specified output format before creating your own.
+This will increase the chance that other plugins can work with that data seamlessly.
+
+.. seealso:: The plugin utils module for marshalling entity data: :py:mod:`qhana_plugin_runner.plugin_utils.entity_marshalling`
