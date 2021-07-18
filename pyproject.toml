@@ -20,6 +20,7 @@ packaging = "^20.9"
 celery = "^5.1.1"
 redis = "^3.5.3"
 requests = "^2.25.1"
+typing-extensions = "^3.10.0"
 
 [tool.poetry.dev-dependencies]
 black = "^21.5b1"
@@ -33,6 +34,7 @@ sphinx-click = "^3.0.0"
 myst-parser = "^0.15.1"
 invoke = "^1.5.0"
 sphinx-rtd-theme = "^0.5.2"
+hypothesis = "^6.14.3"
 
 [tool.poetry.scripts]
 #flask = 'flask.cli:main'
