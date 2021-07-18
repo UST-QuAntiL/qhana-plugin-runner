@@ -10,6 +10,11 @@ Entities can be serialized in two different formats (JSON or CSV).
 
 The names of attributes **must** be unique for all attributes from the same data loader.
 
+```{note}
+The plugin runner provides utilities to read and write the entities from file formats specified here.
+The utilities can be found in the module {py:mod}`qhana_plugin_runner.plugin_utils.entity_marshalling`.
+```
+
 The examples here use the following entities:
 
 ```{csv-table}
