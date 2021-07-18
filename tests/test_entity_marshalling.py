@@ -36,8 +36,8 @@ DEFAULT_ENTITY_TUPLE = namedtuple("DefaultEntityTuple", DEFAULT_ATTRIBUTES)
 
 DEFAULT_ENTITY_STRATEGY = st.fixed_dictionaries(
     {
-        "ID": st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS),
-        "href": st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS),
+        "ID": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+        "href": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
         "integer": st.integers(),
         "number": st.floats(allow_infinity=False, allow_nan=False),
         "boolean": st.booleans(),
@@ -46,8 +46,8 @@ DEFAULT_ENTITY_STRATEGY = st.fixed_dictionaries(
 
 DEFAULT_ENTITY_TUPLE_STRATEGY = st.builds(
     DEFAULT_ENTITY_TUPLE,
-    ID=st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS),
-    href=st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS),
+    ID=st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+    href=st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
     integer=st.integers(),
     number=st.floats(allow_infinity=False, allow_nan=False),
     boolean=st.booleans(),
