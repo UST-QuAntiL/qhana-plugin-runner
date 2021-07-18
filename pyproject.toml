@@ -35,6 +35,7 @@ myst-parser = "^0.15.1"
 invoke = "^1.5.0"
 sphinx-rtd-theme = "^0.5.2"
 hypothesis = "^6.14.3"
+pytest-cov = "^2.12.1"
 
 [tool.poetry.scripts]
 #flask = 'flask.cli:main'
@@ -63,6 +64,8 @@ enable-todo = true
 include-changelog = true
 # update gitignore if you want to edit docs/readme.md manually!
 include-readme = true
+# experimental/unstable feature
+python_use_unqualified_type_names = true
 
 [tool.sphinx.intersphinx-mapping]
 python = ["https://docs.python.org/3"]
@@ -90,6 +93,18 @@ extensions = [
     "tasklist",
 ]
 # substitutions = {"key": "substitution value"}
+
+[tool.coverage.report]
+# regexes for lines not to cover
+exclude_lines = [
+    # default coverage pragma
+    "pragma: no cover",
+    # protocol methods with ...
+    "\\s*\\.\\.\\.\\s*",
+    # unreachable code
+    "if False:",
+    "if __name__ == .__main__.:",
+]
 
 [build-system]
 requires = ["poetry>=0.12"]

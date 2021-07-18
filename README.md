@@ -245,6 +245,33 @@ rm docs/source/modules.rst  # delete modules file as this repository only contai
 ```
 
 
+## Unit Tests
+
+The unit tests use [pytest](https://docs.pytest.org/en/latest/contents.html) and [hypothesis](https://hypothesis.readthedocs.io/en/latest/index.html).
+
+```bash
+# Run all unit tests
+poetry run pytest
+
+# Run failed tests
+poetry run pytest --last-failed  # see also --stepwise
+
+# Run new tests
+poetry run pytest --new-first
+
+# List all tests
+poetry run pytest --collect-only
+
+# Run with hypothesis explanations
+poetry run pytest --hypothesis-explain
+
+# Run with coverage
+poetry run pytest -p pytest_cov --cov=qhana_plugin_runner
+
+# With html report (open htmlcov/index.html in browser)
+poetry run pytest -p pytest_cov --cov=qhana_plugin_runner --cov-report=html
+```
+
 
 ## Acknowledgements
 
