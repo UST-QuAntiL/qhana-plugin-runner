@@ -392,4 +392,6 @@ def costume_loading_task(self, db_id: int) -> str:
 
     entity_schema = MuseEntitySchema()
 
-    return entity_schema.dumps(es.allEntities[0])
+    entities = [entity_schema.dump(entity) for entity in es.allEntities]
+
+    return json.dumps(entities)
