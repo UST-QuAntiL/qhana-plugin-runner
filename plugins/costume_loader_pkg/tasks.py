@@ -1,6 +1,7 @@
 import json
 from typing import Optional
 
+import flask
 from celery.utils.log import get_task_logger
 from qhana.backend.database import Database
 from qhana.backend.entityService import EntityService
@@ -35,8 +36,15 @@ def costume_loading_task(self, db_id: int) -> str:
 
     es.add_plan(plan)
 
+    app = flask.current_app
+
     db = Database()
-    db.open("plugins/config.ini")
+    db.open_with_params(
+        host=app.config.get("COSTUME_LOADER_DB_HOST"),
+        user=app.config.get("COSTUME_LOADER_DB_USER"),
+        password=app.config.get("COSTUME_LOADER_DB_PASSWORD"),
+        database=app.config.get("COSTUME_LOADER_DB_DATABASE")
+    )
 
     es.create_subset(input_params.subset, db)
 
