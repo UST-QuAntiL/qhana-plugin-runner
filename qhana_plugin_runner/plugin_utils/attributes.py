@@ -15,6 +15,7 @@
 """Module containing helpers to work with entity attribute data and attribute metadata entities."""
 
 from dataclasses import dataclass, field
+from functools import partial
 from typing import (
     Any,
     Callable,
@@ -26,6 +27,7 @@ from typing import (
     Set,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 
@@ -114,10 +116,42 @@ def parse_bool(value: Union[str, bool]) -> bool:
     raise ValueError(f"Value {value} is not compatible with boolean!")
 
 
+def parse_optional_value(value: str, deserialize: Callable[[str], Any]) -> Any:
+    """Serialize optional values with the given serializer."""
+    if value == "":
+        return None
+    return deserialize(value)
+
+
+T = TypeVar("T")
+
+
+def parse_multi(
+    value: str,
+    deserialize: Callable[[str], Any],
+    separator: str = ";",
+    collection: Type[T] = list,
+) -> T:
+    """Parse a multi value string into a collection of parsed values.
+
+    Args:
+        value (str): the string to parse
+        deserialize (Callable[[str], Any]): the deserialize function to parse single values
+        separator (str, optional): the separator sequence that separates single values. Must not be part of the values! Defaults to ";".
+        collection (Type[T], optional): the collection class to use. Defaults to list.
+
+    Returns:
+        T: the collection of parsed values
+    """
+    if value == "":
+        return collection()
+    return collection(deserialize(val) for val in value.split(separator))
+
+
 def default_serialize(value: Any) -> str:
     """Default value serializer.
 
-    ``None`` -> ``"NULL"``
+    ``None`` -> ``""``
     ``value: Union[bool, int, float, str]`` -> ``str(value)``
     ``value: Any`` -> ``repr(value)``
     """
@@ -126,8 +160,26 @@ def default_serialize(value: Any) -> str:
     if isinstance(value, (bool, int, float)):
         return str(value)
     if value is None:
-        return "NULL"
+        return ""
     return repr(value)
+
+
+def serialize_multi(
+    value: Iterable[Any], serialize: Callable[[Any], str], separator: str = ";"
+) -> str:
+    """Serialize a list or set of values into a string.
+
+    Each value is serialized with the ``serializer`` and the values are joined with the ``separator``.
+
+    Args:
+        value (Iterable[Any]): the list or set of values to serialize
+        serialize (Callable[[Any], str]): the serializer to use for single values
+        separator (str, optional): the seperator to use between values. Must not be part of the serialized values! Defaults to ";".
+
+    Returns:
+        str: the string of serialized items.
+    """
+    return separator.join(serialize(val) for val in value)
 
 
 # Map mapping from attribute metadata attribute type to serializer function
@@ -150,14 +202,40 @@ DESERIALIZER_MAP: Dict[str, Callable[[str], Any]] = {
     "default": lambda x: x,
     "string": lambda x: x,
     "str": lambda x: x,
-    "integer": int,
-    "int": int,
-    "float": float,
-    "double": float,
-    "number": float,
+    "integer": partial(parse_optional_value, deserialize=int),
+    "int": partial(parse_optional_value, deserialize=int),
+    "float": partial(parse_optional_value, deserialize=float),
+    "double": partial(parse_optional_value, deserialize=float),
+    "number": partial(parse_optional_value, deserialize=float),
     "bool": parse_bool,
     "boolean": parse_bool,
 }
+
+
+def _get_serializer(meta: Optional[AttributeMetadata]) -> Callable[[Any], str]:
+    """Get a serializer function from the given attribute metadata."""
+    serializer = None if meta is None else SERIALIZER_MAP.get(meta.attribute_type)
+    if serializer is None:
+        serializer = SERIALIZER_MAP.get("default", repr)
+    if meta and meta.multiple:
+        return partial(serialize_multi, serialize=serializer, separator=meta.separator)
+    return serializer
+
+
+def _get_deserializer(meta: Optional[AttributeMetadata]) -> Callable[[str], Any]:
+    """Get a de-serializer function from the given attribute metadata."""
+    deserializer = None if meta is None else DESERIALIZER_MAP.get(meta.attribute_type)
+    if deserializer is None:
+        deserializer = DESERIALIZER_MAP.get("default", lambda x: x)
+    if meta and meta.multiple:
+        collection = list if meta.ordered else set
+        return partial(
+            parse_multi,
+            deserialize=deserializer,
+            separator=meta.separator,
+            collection=collection,
+        )
+    return deserializer
 
 
 def parse_attribute_metadata(
@@ -190,13 +268,9 @@ def tuple_serializer(
         Callable[[Tuple[Any, ...]], Tuple[str, ...]]: the serializer function
     """
     serializer: List[Callable[[Any], str]] = []
-    default = SERIALIZER_MAP["default"]
     for attr in attributes:
         meta = attribute_metadata.get(attr)
-        if meta is None:
-            serializer.append(default)
-            continue
-        serializer.append(SERIALIZER_MAP.get(meta.attribute_type.lower(), default))
+        serializer.append(_get_serializer(meta))
 
     def _tuple_serializer(entity: Tuple[Any, ...]) -> Tuple[str, ...]:
         return tuple_(ser(attr) for ser, attr in zip(serializer, entity))
@@ -223,13 +297,9 @@ def tuple_deserializer(
         Callable[[Tuple[str, ...]], Tuple[Any, ...]]: the de-serializer function
     """
     deserializer: List[Callable[[str], Any]] = []
-    default = DESERIALIZER_MAP["default"]
     for attr in attributes:
         meta = attribute_metadata.get(attr)
-        if meta is None:
-            deserializer.append(default)
-            continue
-        deserializer.append(DESERIALIZER_MAP.get(meta.attribute_type.lower(), default))
+        deserializer.append(_get_deserializer(meta))
 
     def _tuple_deserializer(entity: Tuple[str, ...]) -> Tuple[Any, ...]:
         return tuple_(ser(attr) for ser, attr in zip(deserializer, entity))
@@ -256,13 +326,9 @@ def dict_serializer(
         Callable[[Dict[str, Any]], Dict[str, str]]: the serializer function
     """
     serializer: Dict[str, Callable[[Any], str]] = {}
-    default = SERIALIZER_MAP["default"]
     for attr in attributes:
         meta = attribute_metadata.get(attr)
-        if meta is None:
-            serializer[attr] = default
-            continue
-        serializer[attr] = SERIALIZER_MAP.get(meta.attribute_type.lower(), default)
+        serializer[attr] = _get_serializer(meta)
 
     if in_place:
 
@@ -301,10 +367,7 @@ def dict_deserializer(
     default = DESERIALIZER_MAP["default"]
     for attr in attributes:
         meta = attribute_metadata.get(attr)
-        if meta is None:
-            deserializer[attr] = default
-            continue
-        deserializer[attr] = DESERIALIZER_MAP.get(meta.attribute_type.lower(), default)
+        deserializer[attr] = _get_deserializer(meta)
 
     if in_place:
 
