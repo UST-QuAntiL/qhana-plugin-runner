@@ -5,7 +5,7 @@ from celery.utils.log import get_task_logger
 from qhana.backend.database import Database
 from qhana.backend.entityService import EntityService
 
-from plugins.costume_loader import CostumeLoader
+from plugins.costume_loader_pkg import CostumeLoader
 from plugins.costume_loader_pkg.schemas import InputParameters, InputParametersSchema, MuseEntitySchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask

@@ -10,7 +10,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.costume_loader import COSTUME_LOADER_BLP, CostumeLoader
+from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import InputParametersSchema, TaskResponseSchema, CostumeLoaderUIResponseSchema
 from plugins.costume_loader_pkg.tasks import costume_loading_task
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
