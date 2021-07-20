@@ -24,9 +24,13 @@ class CSVList(fields.Field):
         self.element_type = resolve_field_instance(element_type)
 
     def _serialize(self, value: List[Any], attr: str, obj: Any, **kwargs) -> str:
-        return ",".join([self.element_type._serialize(v, attr, obj, **kwargs) for v in value])
+        return ",".join(
+            [self.element_type._serialize(v, attr, obj, **kwargs) for v in value]
+        )
 
-    def _deserialize(self, value: str, attr: Optional[str], data: Optional[Mapping[str, Any]], **kwargs):
+    def _deserialize(
+        self, value: str, attr: Optional[str], data: Optional[Mapping[str, Any]], **kwargs
+    ):
         return [self.element_type.deserialize(v) for v in value.split(",")]
 
 
@@ -42,11 +46,7 @@ class EnumField(fields.Field):
         return value.value
 
     def _deserialize(
-        self,
-        value: str,
-        attr: Optional[str],
-        data: Optional[Mapping[str, Any]],
-        **kwargs
+        self, value: str, attr: Optional[str], data: Optional[Mapping[str, Any]], **kwargs
     ):
         if value == "":
             return None
@@ -56,10 +56,17 @@ class EnumField(fields.Field):
 
 class InputParameters:
     def __init__(
-            self, aggregator: AggregatorType, transformer: TransformerType, attributes: List[Attribute],
-            element_comparers: List[ElementComparerType], attribute_comparers: List[AttributeComparerType],
-            empty_attribute_actions: List[EmptyAttributeAction], filters: List[str] = None, amount: int = None,
-            subset: Subset = None):
+        self,
+        aggregator: AggregatorType,
+        transformer: TransformerType,
+        attributes: List[Attribute],
+        element_comparers: List[ElementComparerType],
+        attribute_comparers: List[AttributeComparerType],
+        empty_attribute_actions: List[EmptyAttributeAction],
+        filters: List[str] = None,
+        amount: int = None,
+        subset: Subset = None,
+    ):
         self.aggregator = aggregator
         self.transformer = transformer
         self.attributes = attributes
@@ -80,8 +87,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Aggregator",
             "description": "Aggregator.",
             "input_type": "select",
-            "options": [""] + [o.value for o in AggregatorType]
-        })
+            "options": [""] + [o.value for o in AggregatorType],
+        },
+    )
     transformer = EnumField(
         TransformerType,
         required=True,
@@ -89,8 +97,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Transformer",
             "description": "Transformer.",
             "input_type": "select",
-            "options": [""] + [o.value for o in TransformerType]
-        })
+            "options": [""] + [o.value for o in TransformerType],
+        },
+    )
     attributes = CSVList(
         EnumField(Attribute),
         required=True,
@@ -98,7 +107,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Attributes",
             "description": "List of attributes.",
             "input_type": "textarea",
-        })
+        },
+    )
     element_comparers = CSVList(
         EnumField(ElementComparerType),
         required=True,
@@ -106,7 +116,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Element comparers",
             "description": "List of element comparers.",
             "input_type": "textarea",
-        })
+        },
+    )
     attribute_comparers = CSVList(
         EnumField(AttributeComparerType),
         required=True,
@@ -114,7 +125,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Attribute comparers",
             "description": "A list of attribute comparers.",
             "input_type": "textarea",
-        })
+        },
+    )
     empty_attribute_actions = CSVList(
         EnumField(EmptyAttributeAction),
         required=True,
@@ -122,7 +134,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Empty attribute actions",
             "description": "List of empty attribute actions.",
             "input_type": "textarea",
-        })
+        },
+    )
     filters = CSVList(
         fields.Str(),
         allow_none=True,
@@ -130,14 +143,16 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Filters",
             "description": "List of filters.",
             "input_type": "textarea",
-        })
+        },
+    )
     amount = fields.Int(
         allow_none=True,
         metadata={
             "label": "Amount",
             "description": "Amount of costumes to load.",
             "input_type": "textarea",
-        })
+        },
+    )
     subset = EnumField(
         Subset,
         allow_none=True,
@@ -145,8 +160,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Subset",
             "description": "Subset to load.",
             "input_type": "select",
-            "options": [""] + [o.value for o in Subset]
-        })
+            "options": [""] + [o.value for o in Subset],
+        },
+    )
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:

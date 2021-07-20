@@ -11,7 +11,11 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
-from plugins.costume_loader_pkg.schemas import InputParametersSchema, TaskResponseSchema, CostumeLoaderUIResponseSchema
+from plugins.costume_loader_pkg.schemas import (
+    InputParametersSchema,
+    TaskResponseSchema,
+    CostumeLoaderUIResponseSchema,
+)
 from plugins.costume_loader_pkg.tasks import costume_loading_task
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -45,7 +49,7 @@ class MicroFrontend(MethodView):
         "emptyAttributeActions": "ignore",
         "filters": "",
         "amount": 0,
-        "subset": "Subset5"
+        "subset": "Subset5",
     }
 
     @COSTUME_LOADER_BLP.html_response(
@@ -105,12 +109,16 @@ class ProcessView(MethodView):
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: InputParametersSchema):
         """Start the costume loading task."""
-        db_task = ProcessingTask(task_name=costume_loading_task.name,
-                                 parameters=InputParametersSchema().dumps(arguments))
+        db_task = ProcessingTask(
+            task_name=costume_loading_task.name,
+            parameters=InputParametersSchema().dumps(arguments),
+        )
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = costume_loading_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = costume_loading_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         result: AsyncResult = task.apply_async()

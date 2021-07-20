@@ -7,7 +7,11 @@ from qhana.backend.database import Database
 from qhana.backend.entityService import EntityService
 
 from plugins.costume_loader_pkg import CostumeLoader
-from plugins.costume_loader_pkg.schemas import InputParameters, InputParametersSchema, MuseEntitySchema
+from plugins.costume_loader_pkg.schemas import (
+    InputParameters,
+    InputParametersSchema,
+    MuseEntitySchema,
+)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -27,12 +31,18 @@ def costume_loading_task(self, db_id: int) -> str:
         input_params.aggregator,
         input_params.transformer,
     ]
-    plan.extend([(
-        input_params.attributes[i],
-        input_params.element_comparers[i],
-        input_params.attribute_comparers[i],
-        input_params.empty_attribute_actions[i],
-        input_params.filters[i]) for i in range(len(input_params.attributes))])
+    plan.extend(
+        [
+            (
+                input_params.attributes[i],
+                input_params.element_comparers[i],
+                input_params.attribute_comparers[i],
+                input_params.empty_attribute_actions[i],
+                input_params.filters[i],
+            )
+            for i in range(len(input_params.attributes))
+        ]
+    )
 
     es.add_plan(plan)
 
@@ -43,7 +53,7 @@ def costume_loading_task(self, db_id: int) -> str:
         host=app.config.get("COSTUME_LOADER_DB_HOST"),
         user=app.config.get("COSTUME_LOADER_DB_USER"),
         password=app.config.get("COSTUME_LOADER_DB_PASSWORD"),
-        database=app.config.get("COSTUME_LOADER_DB_DATABASE")
+        database=app.config.get("COSTUME_LOADER_DB_DATABASE"),
     )
 
     es.create_subset(input_params.subset, db)
