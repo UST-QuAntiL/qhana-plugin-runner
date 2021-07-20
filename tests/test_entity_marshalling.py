@@ -16,15 +16,18 @@
 
 from collections import namedtuple
 from json import loads
+from keyword import iskeyword
 from typing import Any, Iterable, Iterator, Sequence, TextIO
 
 from hypothesis import given
 from hypothesis import strategies as st
+from utils import assert_sequence_equals, assert_sequence_partial_equals
 
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     ensure_tuple,
     load_entities,
+    normalize_attribute_name,
     save_entities,
 )
 
@@ -76,42 +79,16 @@ class ReadWriteDummy(TextIO):
         self.data += "".join(lines)
 
 
-def assert_sequence_equals(expected: Sequence[Any], actual: Sequence[Any]):
-    """Assert that two sequences contain matching elements."""
-    assert len(actual) == len(
-        expected
-    ), f"Sequences have different sizes, expected length {len(expected)} but got legth {len(actual)}"
-    for index, pair in enumerate(zip(actual, expected)):
-        actual_item, expected_item = pair
-        assert (
-            actual_item == expected_item
-        ), f"Pair {index} is not equal. Expected {expected_item} but got {actual_item}"
-
-
-def assert_sequence_partial_equals(
-    expected: Sequence[Any], actual: Sequence[Any], attributes_to_test: Sequence[str]
-):
-    """Assert that the elements in a sequence match in all attributes defined by ``attributes_to_test``.
-
-    The elements in the list can be dicts or namedtuples.
-    """
-    assert len(actual) == len(
-        expected
-    ), f"Sequences have different sizes, expected length {len(expected)} but got legth {len(actual)}"
-    for index, pair in enumerate(zip(actual, expected)):
-        actual_item, expected_item = pair
-        for attr in attributes_to_test:
-            if isinstance(actual_item, dict):
-                actual_value = actual_item.get(attr)
-            else:
-                actual_value = getattr(actual_item, attr)
-            if isinstance(expected_item, dict):
-                expected_value = expected_item.get(attr)
-            else:
-                expected_value = getattr(expected_item, attr)
-            assert (
-                expected_value == actual_value
-            ), f"Attribute '{attr}' of pair {index} is not equal ({expected_value}!={actual_value}). Expected {expected_item} but got {actual_item}"
+@given(name=st.text(min_size=1))
+def test_normalize_attribute_name(name):
+    """Test the attribute name normalization."""
+    normalized = normalize_attribute_name(name)
+    assert (
+        normalized.isidentifier()
+    ), f'Attribute "{name}" was not normalized to a valid identifier! (Normalized: "{normalized}")'
+    assert not iskeyword(
+        normalized
+    ), f'Attribute "{name}" was normalized to a python keyword!'
 
 
 @given(start=st.lists(DEFAULT_ENTITY_STRATEGY))

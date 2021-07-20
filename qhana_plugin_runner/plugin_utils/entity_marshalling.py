@@ -18,6 +18,7 @@ from collections import namedtuple
 from csv import QUOTE_ALL, Dialect, reader, register_dialect, writer
 from json import dump, dumps, loads
 from json.decoder import JSONDecoder
+from keyword import iskeyword
 from typing import (
     Any,
     Callable,
@@ -33,10 +34,40 @@ from typing import (
     TextIO,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
+from unicodedata import category, normalize
 
 from typing_extensions import Protocol
+
+_LEGAL_CHARACTER_SETS_FIRST = {"Lu", "Ll", "Lt", "Lm", "Lo", "Nl"}
+_LEGAL_CHARACTER_SETS_CONTINUE = {"Mn", "Mc", "Nd", "Pc"} | _LEGAL_CHARACTER_SETS_FIRST
+
+
+def _illegal_character_filter(index: int, char: str):
+    """Replace illegal characters of identifiers with ``_``."""
+    categories = (
+        _LEGAL_CHARACTER_SETS_FIRST if index == 0 else _LEGAL_CHARACTER_SETS_CONTINUE
+    )
+    if char in {"_"}:
+        return char
+    if category(char) in categories:
+        return char
+    return "_"
+
+
+def normalize_attribute_name(name: str) -> str:
+    """Normalize the attribute name to be used as valid python identifier (e.g. in a namedtuple)."""
+    if name.isidentifier():
+        return name
+    name = "".join(
+        _illegal_character_filter(i, char)
+        for i, char in enumerate(normalize("NFKC", name))
+    )
+    if iskeyword(name):
+        name = name + "_"
+    return name
 
 
 class ResponseLike(Protocol):
@@ -113,14 +144,17 @@ def ensure_dict(
             yield item._asdict()
 
 
+T = TypeVar("T", tuple, Tuple, NamedTuple)
+
+
 def ensure_tuple(
-    items: Iterable[Union[Dict[str, Any], NamedTuple]], tuple_: Type[NamedTuple]
-) -> Generator[NamedTuple, None, None]:
+    items: Iterable[Union[Dict[str, Any], NamedTuple]], tuple_: Callable[..., T]
+) -> Generator[Union[NamedTuple, T], None, None]:
     """Ensure that all entities in an iterable are namedtuples.
 
     Args:
         items (Iterable[Union[Dict[str, Any], NamedTuple]]): the input iterable
-        tuple_ (Type[NamedTuple]): The namedtuple class to construct tuples from dicts with
+        tuple_ (Callable[..., T]): The namedtuple class to construct tuples from dicts with
 
     Yields:
         Generator[NamedTuple, None, None]: the output iterable
@@ -136,8 +170,9 @@ def load_entities(
     file_: ResponseLike,
     mimetype: str,
     csv_dialect: str = "default",
-    tuple_: Optional[Type[NamedTuple]] = None,
-) -> Generator[Union[Dict[str, Any], NamedTuple], None, None]:
+    tuple_: Optional[Callable[[Iterable[Any]], T]] = None,
+    process_csv_header: Optional[Callable[[Sequence[str]], Sequence[str]]] = None,
+) -> Generator[Union[Dict[str, Any], T], None, None]:
     """Load entities from a :py:class:`~requests.Response` like object.
 
     Attributes of entities are either deserialized as json or as strings (csv).
@@ -147,11 +182,17 @@ def load_entities(
     and :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.ensure_tuple`
     to always convert items in the result stream to dicts or tuples.
 
+    For csv files this method produces namedtuples as output.
+    For this to work all column names must be valid python identifiers and will be normalized with :py:func:`normalize_attribute_name`.
+    This behaviour can be overwritten with the ``process_csv_header`` callback.
+    If the callback is set then the header names will not be normalized with :py:func:`normalize_attribute_name`!
+
     Args:
         file_ (ResponseLike): the object to load the entities from
         mimetype (str): the mime type to use for deserialization (supported mimetypes: "application/json", "application/X-lines+json" and "text/csv")
         csv_dialect (str, optional): the csv dialect to use (only used with csv mimetype). Defaults to "default".
         tuple_ (Optional[Type[NamedTuple]], optional): the namedtuple class to use (only used with csv mimetype). Defaults to None.
+        process_csv_header (Optional[Callable[[Sequence[str]], Sequence[str]]]): a callback used to process the csv header. Defaults to None.
 
     Raises:
         ValueError: For unknown mimetypes
@@ -173,9 +214,15 @@ def load_entities(
     elif mimetype == "text/csv":
         csv_reader = reader(file_.iter_lines(decode_unicode=True), csv_dialect)
         header: List[str] = next(csv_reader)
+        if process_csv_header:
+            header = list(process_csv_header(header))
+        else:
+            header = [normalize_attribute_name(attr) for attr in header]
         if tuple_ is None:
-            tuple_ = namedtuple("Entity", header)
-        yield from (tuple_._make(row) for row in csv_reader if row)
+            # convert attribute names to legal python names
+            tuple_ = namedtuple("Entity", header)._make  # type: ignore
+
+        yield from (tuple_(row) for row in csv_reader if row)
     else:
         raise ValueError(f"Loading entities from {mimetype} files is not implemented!")
 
@@ -186,6 +233,7 @@ def save_entities(
     mimetype: str,
     attributes: Optional[Sequence[str]] = None,
     csv_dialect: str = "default",
+    tuple_: Optional[Callable[..., Tuple]] = None,
 ):
     """Write entities to a file.
 
@@ -198,8 +246,9 @@ def save_entities(
         entities (Iterable[Union[Dict[str, Any], NamedTuple]]): an iterable of entities as returned by :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.load_entities`
         file_ (TextIO): the file to write the entities into
         mimetype (str): the mime type to use for serialization (supported mimetypes: "application/json", "application/X-lines+json" and "text/csv")
-        attributes (Optional[Sequence[str]], optional): A list of attributes in the order they should appear in the csv file. All entities must have all attributes specified here! Defaults to None.
+        attributes (Optional[Sequence[str]], optional): A list of attributes in the order they should appear in the csv file. MUST be valid python identifiers! All entities must have all attributes specified here! Defaults to None.
         csv_dialect (str, optional): the csv dialect to use. Defaults to "default".
+        tuple_ (Optional[Type[NamedTuple]], optional): the namedtuple class to use (only used with csv mimetype, passed to ``ensure_tuple``). Defaults to None.
 
     Raises:
         ValueError: if ``mimetype=="text/csv"`` and ``attributes is None``
@@ -218,7 +267,8 @@ def save_entities(
             )
         csv_writer = writer(file_, dialect=csv_dialect)
         csv_writer.writerow(attributes)
-        tuple_ = namedtuple("Entites", attributes)
+        if tuple_ is None:
+            tuple_ = namedtuple("Entites", attributes)
         csv_writer.writerows(ensure_tuple(entities, tuple_=tuple_))
     else:
         raise ValueError(f"Saving entities to {mimetype} files is not implemented!")

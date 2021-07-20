@@ -69,6 +69,11 @@ Example {mimetype}`application/X-lines+json`:
 
 File Type Tag: `attribute-metadata`
 
+```{note}
+The plugin runner provides utilities to read attribute metadata and use it to serialize/de-serialize entity attributes.
+The utilities can be found in the module {py:mod}`qhana_plugin_runner.plugin_utils.attributes`.
+```
+
 The attributes of entities (and relations) can be described by attribute metadata.
 The metadata of an attribute is expressed as an entity with the following attributes:
 
@@ -93,7 +98,7 @@ ordered
 separator
 :   A character sequence that separates the scalar values. (only used in serialization formats that do not natively support lists for attributes e.g. csv)
 
-ref-target
+refTarget
 :   A filename that contains the entities referenced in this attribute (when type is `ref`). If empty all entites must be searched for in all available files.
 
 schema

@@ -37,12 +37,12 @@ _ATTR_MAPPING = (
     ("multiple", "multiple"),
     ("ordered", "ordered"),
     ("separator", "separator"),
-    ("ref_target", "ref_target"),
+    ("ref_target", "refTarget"),
     ("schema", "schema"),
 )
 
 _ATTR_MAPPING_SER = dict(_ATTR_MAPPING)
-_ATTR_MAPPING_DE = dict([[reversed(pair)] for pair in _ATTR_MAPPING])
+_ATTR_MAPPING_DE = dict([pair[::-1] for pair in _ATTR_MAPPING])
 
 CONSIDERED_TRUE: Set[str] = {"1", "true", "t", "yes", "y", "on"}
 CONSIDERED_FALSE: Set[str] = {"0", "false", "f", "no", "n", "off", "null", "nil", "none"}
@@ -68,7 +68,7 @@ class AttributeMetadata:
         """Create a AttributeMetadata instance from an entity dict."""
         mapped = {}
         extra = {}
-        for key, value in metadata:
+        for key, value in metadata.items():
             if key in _ATTR_MAPPING_DE:
                 mapped[_ATTR_MAPPING_DE[key]] = value
             else:
@@ -139,6 +139,7 @@ SERIALIZER_MAP: Dict[str, Callable[[Any], str]] = {
     "int": default_serialize,
     "float": default_serialize,
     "double": default_serialize,
+    "number": default_serialize,
     "bool": default_serialize,
     "boolean": default_serialize,
 }
@@ -153,6 +154,7 @@ DESERIALIZER_MAP: Dict[str, Callable[[str], Any]] = {
     "int": int,
     "float": float,
     "double": float,
+    "number": float,
     "bool": parse_bool,
     "boolean": parse_bool,
 }
@@ -172,14 +174,17 @@ def parse_attribute_metadata(
 def tuple_serializer(
     attributes: Sequence[str],
     attribute_metadata: Dict[str, AttributeMetadata],
-    tuple_: Type[tuple] = tuple,
+    tuple_: Callable[[Iterable], tuple] = tuple,
 ) -> Callable[[Tuple[Any, ...]], Tuple[str, ...]]:
     """Create a tuple serializer that serializes the values of a tuple into strings based on the attribute metadata.
+
+    The returned serializer serializes the attributes of a single entity tuple to a string.
+    It can be used in a list or generator comprehension or with ``map``.
 
     Args:
         attributes (Sequence[str]): the attribute names of the components of the tuple (must be the same for all tuples!)
         attribute_metadata (Dict[str, AttributeMetadata]): the attribute metadata dict (see :py:func:`~qhana_plugin_runner.plugin_utils.attributes.parse_attribute_metadata`)
-        tuple_ (Type[tuple]): the tuple type to use (should be a namedtuple). Defaults to :py:func:`tuple`
+        tuple_ (Callable[[Iterable], tuple]): the tuple type to use (should be a ``namedtuple._make`` function). Defaults to :py:func:`tuple`
 
     Returns:
         Callable[[Tuple[Any, ...]], Tuple[str, ...]]: the serializer function
@@ -191,7 +196,7 @@ def tuple_serializer(
         if meta is None:
             serializer.append(default)
             continue
-        serializer.append(SERIALIZER_MAP.get(meta.attribute_type, default))
+        serializer.append(SERIALIZER_MAP.get(meta.attribute_type.lower(), default))
 
     def _tuple_serializer(entity: Tuple[Any, ...]) -> Tuple[str, ...]:
         return tuple_(ser(attr) for ser, attr in zip(serializer, entity))
@@ -202,14 +207,17 @@ def tuple_serializer(
 def tuple_deserializer(
     attributes: Sequence[str],
     attribute_metadata: Dict[str, AttributeMetadata],
-    tuple_: Type[tuple] = tuple,
+    tuple_: Callable[[Iterable], tuple] = tuple,
 ) -> Callable[[Tuple[str, ...]], Tuple[Any, ...]]:
     """Create a tuple de-serializer that parses the values of a tuple from strings based on the attribute metadata.
+
+    The returned de-serializer parses the attributes of a single entity tuple from their string values.
+    It can be used in a list or generator comprehension or with ``map``.
 
     Args:
         attributes (Sequence[str]): the attribute names of the components of the tuple (must be the same for all tuples!)
         attribute_metadata (Dict[str, AttributeMetadata]): the attribute metadata dict (see :py:func:`~qhana_plugin_runner.plugin_utils.attributes.parse_attribute_metadata`)
-        tuple_ (Type[tuple]): the tuple type to use (should be a namedtuple). Defaults to :py:func:`tuple`
+        tuple_ (Type[tuple]): the tuple type to use (should be a ``namedtuple._make`` function). Defaults to :py:func:`tuple`
 
     Returns:
         Callable[[Tuple[str, ...]], Tuple[Any, ...]]: the de-serializer function
@@ -221,7 +229,7 @@ def tuple_deserializer(
         if meta is None:
             deserializer.append(default)
             continue
-        deserializer.append(DESERIALIZER_MAP.get(meta.attribute_type, default))
+        deserializer.append(DESERIALIZER_MAP.get(meta.attribute_type.lower(), default))
 
     def _tuple_deserializer(entity: Tuple[str, ...]) -> Tuple[Any, ...]:
         return tuple_(ser(attr) for ser, attr in zip(deserializer, entity))
@@ -236,8 +244,11 @@ def dict_serializer(
 ) -> Callable[[Dict[str, Any]], Dict[str, str]]:
     """Create a dict serializer that serializes the values of a dict into strings based on the attribute metadata.
 
+    The returned serializer serializes the attributes of a single entity dict to a string.
+    It can be used in a list or generator comprehension or with ``map``.
+
     Args:
-        attributes (Iterable[str]): the attribute names of the components of the tuple (must be the same for all dicts!)
+        attributes (Iterable[str]): the attribute names of the components of the dict (must be the same for all dicts!)
         attribute_metadata (Dict[str, AttributeMetadata]): the attribute metadata dict (see :py:func:`~qhana_plugin_runner.plugin_utils.attributes.parse_attribute_metadata`)
         in_place (bool, optional): if True the serialized values will replace the old values in the dict, if False a new dict is used. Defaults to True.
 
@@ -251,7 +262,7 @@ def dict_serializer(
         if meta is None:
             serializer[attr] = default
             continue
-        serializer[attr] = SERIALIZER_MAP.get(meta.attribute_type, default)
+        serializer[attr] = SERIALIZER_MAP.get(meta.attribute_type.lower(), default)
 
     if in_place:
 
@@ -275,8 +286,11 @@ def dict_deserializer(
 ) -> Callable[[Dict[str, str]], Dict[str, Any]]:
     """Create a dict de-serializer that parses the values of a dict from strings based on the attribute metadata.
 
+    The returned de-serializer parses the attributes of a single entity dict from their string values.
+    It can be used in a list or generator comprehension or with ``map``.
+
     Args:
-        attributes (Iterable[str]): the attribute names of the components of the tuple (must be the same for all dicts!)
+        attributes (Iterable[str]): the attribute names of the components of the dict (must be the same for all dicts!)
         attribute_metadata (Dict[str, AttributeMetadata]): the attribute metadata dict (see :py:func:`~qhana_plugin_runner.plugin_utils.attributes.parse_attribute_metadata`)
         in_place (bool, optional): if True the de-serialized values will replace the old values in the dict, if False a new dict is used. Defaults to True.
 
@@ -290,7 +304,7 @@ def dict_deserializer(
         if meta is None:
             deserializer[attr] = default
             continue
-        deserializer[attr] = DESERIALIZER_MAP.get(meta.attribute_type, default)
+        deserializer[attr] = DESERIALIZER_MAP.get(meta.attribute_type.lower(), default)
 
     if in_place:
 
