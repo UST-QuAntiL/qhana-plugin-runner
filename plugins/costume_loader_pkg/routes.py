@@ -9,12 +9,17 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+from qhana.backend.aggregator import AggregatorType
+from qhana.backend.attributeComparer import AttributeComparerType
+from qhana.backend.entityComparer import EmptyAttributeAction
+from qhana.backend.entityService import Subset
+from qhana.backend.transformer import TransformerType
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import (
+    CostumeLoaderUIResponseSchema,
     InputParametersSchema,
     TaskResponseSchema,
-    CostumeLoaderUIResponseSchema,
 )
 from plugins.costume_loader_pkg.tasks import costume_loading_task
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -41,15 +46,15 @@ class MicroFrontend(MethodView):
     """Micro frontend for the costume loader plugin."""
 
     example_inputs = {
-        "aggregator": "mean",
-        "transformer": "squareInverse",
+        "aggregator": AggregatorType.mean.name,
+        "transformer": TransformerType.squareInverse.name,
         "attributes": "dominanteFarbe",
         "elementComparers": "wuPalmer",
-        "attributeComparers": "symMaxMean",
-        "emptyAttributeActions": "ignore",
+        "attributeComparers": AttributeComparerType.symMaxMean.name,
+        "emptyAttributeActions": EmptyAttributeAction.ignore.name,
         "filters": "",
         "amount": 0,
-        "subset": "Subset5",
+        "subset": Subset.subset5.name,
     }
 
     @COSTUME_LOADER_BLP.html_response(
