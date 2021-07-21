@@ -16,6 +16,7 @@ from qhana.backend.transformer import TransformerType
 
 from qhana_plugin_runner.api import MaBaseSchema
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
+from qhana_plugin_runner.api.extra_fields import EnumField
 
 
 class CSVList(fields.Field):
@@ -32,26 +33,6 @@ class CSVList(fields.Field):
         self, value: str, attr: Optional[str], data: Optional[Mapping[str, Any]], **kwargs
     ):
         return [self.element_type.deserialize(v) for v in value.split(",")]
-
-
-class EnumField(fields.Field):
-    def __init__(self, enum_type: Type[Enum], **kwargs):
-        super().__init__(**kwargs)
-        self.enum_type: Type[Enum] = enum_type
-
-    def _serialize(self, value: Enum, attr: str, obj, **kwargs):
-        if value is None:
-            return None
-
-        return value.value
-
-    def _deserialize(
-        self, value: str, attr: Optional[str], data: Optional[Mapping[str, Any]], **kwargs
-    ):
-        if value == "":
-            return None
-        else:
-            return self.enum_type(value)
 
 
 class InputParameters:
@@ -87,7 +68,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Aggregator",
             "description": "Aggregator.",
             "input_type": "select",
-            "options": [""] + [o.value for o in AggregatorType],
+            "options": {"": "–"},
         },
     )
     transformer = EnumField(
@@ -97,7 +78,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Transformer",
             "description": "Transformer.",
             "input_type": "select",
-            "options": [""] + [o.value for o in TransformerType],
+            "options": {"": "–"},
         },
     )
     attributes = CSVList(
@@ -160,7 +141,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Subset",
             "description": "Subset to load.",
             "input_type": "select",
-            "options": [""] + [o.value for o in Subset],
+            "options": {"": "–"},
         },
     )
 

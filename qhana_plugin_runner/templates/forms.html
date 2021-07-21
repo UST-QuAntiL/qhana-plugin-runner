@@ -24,15 +24,11 @@
         <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
             {{ 'required' if field.required else ''}}>{{values.get(form_key, '')}}</textarea>
         {% elif input_type == "select" %}
-            <select name="{{ form_key }}" id="{{ key }}" autocomplete="off">
-            {% for option in field.metadata.get("options", []) %}
-                <option value="{{ option }}"
-                {% if option == values.get(form_key) %}
-                    selected
-                {% endif %}
-                >{{ option }}</option>
+        <select class="{{form_input_class}}" name="{{ form_key }}" id="{{ key }}" autocomplete="off">
+            {% for name, value in field.metadata.get("options", {}).items() %}
+            <option value="{{ name }}" {% if name == values.get(form_key) %}selected{% endif %}>{{ value }}</option>
             {% endfor %}
-            </select>
+        </select>
         {% elif input_type %}
         <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
             {{ field_value(input_type, values.get(form_key)) }} 
