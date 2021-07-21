@@ -26,6 +26,7 @@ from flask.views import MethodView
 from flask_smorest import Api
 from flask_smorest import Blueprint as SmorestBlueprint
 
+from .extra_fields import EnumField
 from .files_api import FILES_API
 from .jwt import SECURITY_SCHEMES
 from .plugins_api import PLUGINS_API
@@ -34,6 +35,9 @@ from .util import MaBaseSchema
 
 """A single API instance. All api versions should be blueprints."""
 ROOT_API = Api(spec_kwargs={"title": "QHAna plugin runner api.", "version": "v1"})
+
+
+ROOT_API.register_field(EnumField, "string", None)
 
 
 class VersionsRootSchema(MaBaseSchema):

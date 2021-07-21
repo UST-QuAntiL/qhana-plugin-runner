@@ -20,9 +20,15 @@ from typing import Any, Mapping, Optional, Type
 from warnings import warn
 
 from marshmallow.fields import Field
+from marshmallow.validate import OneOf
 
 
+# field is registered in qhana_plugin_runner.api module
 class EnumField(Field):
+
+    #: Default error messages.
+    default_error_messages = {"invalid": "Not a valid choice."}
+
     def __init__(self, enum_type: Type[Enum], **kwargs):
         metadata = kwargs.pop("metadata", {})
         enum_meta = OrderedDict({e.name: e.value for e in enum_type})
@@ -42,8 +48,18 @@ class EnumField(Field):
             # None option should always be first
             enum_meta.move_to_end("", last=False)
         metadata["options"] = enum_meta
+
         super().__init__(metadata=metadata, **kwargs)
+
         self.enum_type: Type[Enum] = enum_type
+
+        choices, labels = zip(*enum_meta.items())
+        validator = OneOf(
+            choices=choices,
+            labels=labels,
+            error=self.error_messages["invalid"],
+        )
+        self.validators.insert(0, validator)
 
     def _serialize(self, value: Enum, attr: str, obj, **kwargs):
         if value is None:
@@ -56,5 +72,7 @@ class EnumField(Field):
     ):
         if value == "":
             return None
-        else:
+        try:
             return self.enum_type[value]
+        except KeyError as error:
+            raise self.make_error("invalid", input=value) from error
