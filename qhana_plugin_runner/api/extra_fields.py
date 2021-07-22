@@ -16,11 +16,57 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Mapping, Optional, Type
+from typing import Any, Iterable, Mapping, Optional, Set, Type
 from warnings import warn
 
+from marshmallow.exceptions import ValidationError
 from marshmallow.fields import Field
 from marshmallow.validate import OneOf
+
+
+class OneOfEnum(OneOf):
+    """Validator for validating enum based choices.
+
+    Succeeds if a ``value`` is a member of the enumeration.
+
+    If choices contains the empty string ``""`` then ``None`` will also validate.
+
+    Args:
+        enum (Type[Enum]): the enum type the choices are based on
+        choices (Iterable[str]): the names of the enum items that are valid choices (can be a subset of the whole enum; can include ``""``)
+        labels (Optional[Iterable[str]]): the labels for the individual choices
+        error (Optional[str]): Error message to raise in case of a validation error. Can be interpolated with ``{input}``, ``{choices}`` and ``{labels}``.
+
+    Raises:
+        ValueError: if the choices cannot be mapped to the given enum
+    """
+
+    def __init__(
+        self,
+        enum: Type[Enum],
+        choices: Iterable[str],
+        labels: Optional[Iterable[str]],
+        *,
+        error: Optional[str],
+    ):
+        for choice in choices:
+            if choice != "":
+                try:
+                    enum[choice]
+                except KeyError as err:
+                    raise ValueError(
+                        f"Choice {choice} is not a valid enum value of Enum {enum}!"
+                    ) from err
+        super().__init__(choices=choices, labels=labels, error=error)
+        self.enum_choices: Set[Optional[Enum]] = {c for c in enum if c.name in choices}
+        if "" in self.choices:
+            self.enum_choices.add(None)
+
+    def __call__(self, value: Optional[Enum]) -> Optional[Enum]:
+        if value not in self.enum_choices:
+            raise ValidationError(self._format_error(value))
+
+        return value
 
 
 # field is registered in qhana_plugin_runner.api module
@@ -54,7 +100,8 @@ class EnumField(Field):
         self.enum_type: Type[Enum] = enum_type
 
         choices, labels = zip(*enum_meta.items())
-        validator = OneOf(
+        validator = OneOfEnum(
+            enum=enum_type,
             choices=choices,
             labels=labels,
             error=self.error_messages["invalid"],
