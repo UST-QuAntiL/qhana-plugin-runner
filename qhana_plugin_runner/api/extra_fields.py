@@ -53,14 +53,6 @@ class EnumField(Field):
 
         self.enum_type: Type[Enum] = enum_type
 
-        choices, labels = zip(*enum_meta.items())
-        validator = OneOf(
-            choices=choices,
-            labels=labels,
-            error=self.error_messages["invalid"],
-        )
-        self.validators.insert(0, validator)
-
     def _serialize(self, value: Enum, attr: str, obj, **kwargs):
         if value is None:
             return None
