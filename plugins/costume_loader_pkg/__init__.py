@@ -42,7 +42,7 @@ class CostumeLoader(QHAnaPluginBase):
         return COSTUME_LOADER_BLP
 
     def get_requirements(self) -> str:
-        return "git+ssh://git@github.com/UST-QuAntiL/qhana.git@8e46cefed70a566526110b381df1c0c7694d1ce6#egg=qhana"
+        return "git+ssh://git@github.com/UST-QuAntiL/qhana.git@1badcc404babc0901348bc96fabaf3bbfed82b79#egg=qhana"
 
 
 try:

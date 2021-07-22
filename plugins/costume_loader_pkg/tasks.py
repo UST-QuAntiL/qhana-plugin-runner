@@ -56,7 +56,16 @@ def costume_loading_task(self, db_id: int) -> str:
         database=app.config.get("COSTUME_LOADER_DB_DATABASE"),
     )
 
-    es.create_subset(input_params.subset, db)
+    if input_params.subset is None:
+        filter_rules = {
+            attr: [filter_rule]
+            for attr, filter_rule in zip(input_params.attributes, input_params.filters)
+        }
+
+        print("Filter rules:", filter_rules)
+        es.create_entities(db, input_params.amount, filter_rules)
+    else:
+        es.create_subset(input_params.subset, db)
 
     entity_schema = MuseEntitySchema()
 
