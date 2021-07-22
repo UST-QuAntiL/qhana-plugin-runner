@@ -3,6 +3,7 @@ from typing import Optional
 
 import flask
 from celery.utils.log import get_task_logger
+from qhana.backend.attribute import Attribute
 from qhana.backend.database import Database
 from qhana.backend.entityService import EntityService
 
@@ -16,6 +17,19 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 TASK_LOGGER = get_task_logger(__name__)
+
+basiselement_attrs = [
+    Attribute.basiselement,
+    Attribute.design,
+    Attribute.form,
+    Attribute.trageweise,
+    Attribute.zustand,
+    Attribute.funktion,
+    Attribute.material,
+    Attribute.materialeindruck,
+    Attribute.farbe,
+    Attribute.farbeindruck,
+]
 
 
 @CELERY.task(name=f"{CostumeLoader.instance.identifier}.costume_loading_task", bind=True)
@@ -65,6 +79,13 @@ def costume_loading_task(self, db_id: int) -> str:
         print("Filter rules:", filter_rules)
         es.create_entities(db, input_params.amount, filter_rules)
     else:
+        for attr in input_params.attributes:
+            if attr in basiselement_attrs:
+                raise ValueError(
+                    "When a subset is selected you cannot load basiselement attributes such as: "
+                    + attr.name
+                )
+
         es.create_subset(input_params.subset, db)
 
     entity_schema = MuseEntitySchema()
