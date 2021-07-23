@@ -9,11 +9,11 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from qhana.backend.aggregator import AggregatorType
-from qhana.backend.attributeComparer import AttributeComparerType
-from qhana.backend.entityComparer import EmptyAttributeAction
-from qhana.backend.entityService import Subset
-from qhana.backend.transformer import TransformerType
+from plugins.costume_loader_pkg.backend.aggregator import AggregatorType
+from plugins.costume_loader_pkg.backend.attributeComparer import AttributeComparerType
+from plugins.costume_loader_pkg.backend.entityComparer import EmptyAttributeAction
+from plugins.costume_loader_pkg.backend.entityService import Subset
+from plugins.costume_loader_pkg.backend.transformer import TransformerType
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import (

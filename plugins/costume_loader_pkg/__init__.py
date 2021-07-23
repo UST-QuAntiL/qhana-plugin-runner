@@ -42,7 +42,7 @@ class CostumeLoader(QHAnaPluginBase):
         return COSTUME_LOADER_BLP
 
     def get_requirements(self) -> str:
-        return "git+ssh://git@github.com/UST-QuAntiL/qhana.git@1badcc404babc0901348bc96fabaf3bbfed82b79#egg=qhana"
+        return "networkx == 2.* \n simplejson == 3.* \n mysql-connector-python == 8.* \n numpy == 1.*"
 
 
 try:

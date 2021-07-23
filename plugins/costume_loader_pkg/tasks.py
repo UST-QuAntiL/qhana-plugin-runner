@@ -3,9 +3,9 @@ from typing import Optional
 
 import flask
 from celery.utils.log import get_task_logger
-from qhana.backend.attribute import Attribute
-from qhana.backend.database import Database
-from qhana.backend.entityService import EntityService
+from plugins.costume_loader_pkg.backend.attribute import Attribute
+from plugins.costume_loader_pkg.backend.database import Database
+from plugins.costume_loader_pkg.backend.entityService import EntityService
 
 from plugins.costume_loader_pkg import CostumeLoader
 from plugins.costume_loader_pkg.schemas import (

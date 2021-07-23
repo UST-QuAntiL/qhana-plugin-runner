@@ -5,14 +5,14 @@ import marshmallow as ma
 from marshmallow import fields, post_load
 from marshmallow.utils import resolve_field_instance
 
-from qhana.backend.aggregator import AggregatorType
-from qhana.backend.attribute import Attribute
-from qhana.backend.attributeComparer import AttributeComparerType
-from qhana.backend.elementComparer import ElementComparerType
-from qhana.backend.entity import Entity
-from qhana.backend.entityComparer import EmptyAttributeAction
-from qhana.backend.entityService import Subset
-from qhana.backend.transformer import TransformerType
+from plugins.costume_loader_pkg.backend.aggregator import AggregatorType
+from plugins.costume_loader_pkg.backend.attribute import Attribute
+from plugins.costume_loader_pkg.backend.attributeComparer import AttributeComparerType
+from plugins.costume_loader_pkg.backend.elementComparer import ElementComparerType
+from plugins.costume_loader_pkg.backend.entity import Entity
+from plugins.costume_loader_pkg.backend.entityComparer import EmptyAttributeAction
+from plugins.costume_loader_pkg.backend.entityService import Subset
+from plugins.costume_loader_pkg.backend.transformer import TransformerType
 
 from qhana_plugin_runner.api import MaBaseSchema
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
