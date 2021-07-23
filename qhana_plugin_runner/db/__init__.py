@@ -20,8 +20,8 @@ from flask import Flask
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
-from .db import DB, MIGRATE
 from .cli import register_db_cli_blueprint
+from .db import DB, MIGRATE
 
 
 def register_db(app: Flask):
@@ -40,10 +40,26 @@ def register_db(app: Flask):
 
     # Apply additional config for Sqlite databases
     if app.config.get("SQLALCHEMY_DATABASE_URI", "").startswith("sqlite://"):
+        from sqlite3 import Connection as SQLiteConnectionClass
+
+        from sqlalchemy.dialects.sqlite.base import SQLiteDialect
 
         @event.listens_for(Engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):
-            if app.config.get("SQLITE_FOREIGN_KEYS", True):
+            is_sqlite: bool = False
+
+            try:
+                # Try to get dialect from the private pool (use manual name Wrangling)
+                pool = connection_record._ConnectionRecord__pool
+                # Test if dialect is SQLite
+                is_sqlite = isinstance(pool._dialect, SQLiteDialect)
+            except AttributeError:
+                pass
+
+            if isinstance(dbapi_connection, SQLiteConnectionClass):
+                is_sqlite = True
+
+            if is_sqlite and app.config.get("SQLITE_FOREIGN_KEYS", True):
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
