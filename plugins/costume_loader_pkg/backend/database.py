@@ -2,6 +2,12 @@ import logging
 
 from mysql.connector import MySQLConnection
 from configparser import ConfigParser
+
+from sqlalchemy import create_engine, table, column
+from sqlalchemy.engine import Engine
+from sqlalchemy.ext.automap import automap_base, AutomapBase
+from sqlalchemy.orm import Session
+
 from plugins.costume_loader_pkg.backend.singleton import Singleton
 import os
 
@@ -23,6 +29,10 @@ class Database(Singleton):
         self.__connection = None
         self.__cursor = None
         self.connected = False
+        self.session: Session = None
+        self.base: AutomapBase = None
+        self.other_tables = {}
+
         return
 
     def __del__(self) -> None:
@@ -78,6 +88,79 @@ class Database(Singleton):
         if self.__connection.is_connected():
             self.connected = True
             logging.debug("Successfully connected to database")
+
+        engine: Engine = create_engine(
+            "mysql+mysqlconnector://"
+            + user
+            + ":"
+            + password
+            + "@"
+            + host
+            + "/"
+            + database
+        )
+
+        Base: AutomapBase = automap_base()
+        Base.prepare(engine, reflect=True)
+        self.base = Base
+
+        self.session = Session(engine)
+
+        self.other_tables["FilmFarbkonzept"] = table(
+            "FilmFarbkonzept", column("FilmID"), column("Farbkonzept")
+        )
+        self.other_tables["RolleDominanteCharaktereigenschaft"] = table(
+            "RolleDominanteCharaktereigenschaft",
+            column("RollenID"),
+            column("FilmID"),
+            column("DominanteCharaktereigenschaft"),
+        )
+        self.other_tables["FilmGenre"] = table(
+            "FilmGenre", column("FilmID"), column("Genre")
+        )
+        self.other_tables["KostuemTageszeit"] = table(
+            "KostuemTageszeit",
+            column("KostuemID"),
+            column("RollenID"),
+            column("FilmID"),
+            column("Tageszeit"),
+        )
+        self.other_tables["KostuemKoerpermodifikation"] = table(
+            "KostuemKoerpermodifikation",
+            column("KostuemID"),
+            column("RollenID"),
+            column("FilmID"),
+            column("Koerpermodifikationname"),
+        )
+        self.other_tables["KostuemCharaktereigenschaft"] = table(
+            "KostuemCharaktereigenschaft",
+            column("KostuemID"),
+            column("RollenID"),
+            column("FilmID"),
+            column("Charaktereigenschaft"),
+        )
+        self.other_tables["KostuemBasiselement"] = table(
+            "KostuemBasiselement",
+            column("KostuemID"),
+            column("RollenID"),
+            column("FilmID"),
+            column("BasiselementID"),
+        )
+        self.other_tables["BasiselementDesign"] = table(
+            "BasiselementDesign", column("BasiselementID"), column("Designname")
+        )
+        self.other_tables["BasiselementForm"] = table(
+            "BasiselementForm", column("BasiselementID"), column("Formname")
+        )
+        self.other_tables["BasiselementTrageweise"] = table(
+            "BasiselementTrageweise", column("BasiselementID"), column("Trageweisename")
+        )
+        self.other_tables["BasiselementZustand"] = table(
+            "BasiselementZustand", column("BasiselementID"), column("Zustandsname")
+        )
+        self.other_tables["BasiselementFunktion"] = table(
+            "BasiselementFunktion", column("BasiselementID"), column("Funktionsname")
+        )
 
     def close(self) -> None:
         """

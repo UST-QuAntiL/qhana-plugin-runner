@@ -1,9 +1,12 @@
 import logging
 from typing import Any, Dict
 from typing import List
+
+from sqlalchemy import select, tuple_, and_
+
 from plugins.costume_loader_pkg.backend.database import Database
 from plugins.costume_loader_pkg.backend.taxonomy import Taxonomie
-from datetime import datetime
+from datetime import datetime, timedelta
 from plugins.costume_loader_pkg.backend.attribute import Attribute
 import copy
 
@@ -286,37 +289,27 @@ class EntityFactory:
         invalid_entries = 0
         cursor = database.get_cursor()
 
-        # Get KostuemTable
-        query_costume = (
-            "SELECT "
-            + "KostuemID, RollenID, FilmID, "
-            + "Ortsbegebenheit, DominanteFarbe, "
-            + "StereotypRelevant, DominanteFunktion, "
-            + "DominanterZustand FROM Kostuem"
+        kostuem_table = database.base.classes.Kostuem
+
+        query_costume = select(
+            kostuem_table.KostuemID,
+            kostuem_table.RollenID,
+            kostuem_table.FilmID,
+            kostuem_table.Ortsbegebenheit,
+            kostuem_table.DominanteFarbe,
+            kostuem_table.StereotypRelevant,
+            kostuem_table.DominanteFunktion,
+            kostuem_table.DominanterZustand,
         )
 
         if keys is not None:
-            keysString = "("
-            for i in range(0, len(keys)):
-                keysString = (
-                    keysString
-                    + "("
-                    + str(keys[i][0])
-                    + ","
-                    + str(keys[i][1])
-                    + ","
-                    + str(keys[i][2])
-                    + "),"
-                )
-
-            keysString = keysString[:-1] + ")"
-
-            query_costume = (
-                query_costume + " WHERE (KostuemID, RollenID, FilmID) in " + keysString
+            query_costume = query_costume.where(
+                tuple_(
+                    kostuem_table.KostuemID, kostuem_table.RollenID, kostuem_table.FilmID
+                ).in_(keys)
             )
 
-        cursor.execute(query_costume)
-        rows_costume = cursor.fetchall()
+        rows_costume = database.session.execute(query_costume).all()
 
         # i.e. print 10 steps of loading
         printMod = 10
@@ -374,9 +367,9 @@ class EntityFactory:
             kostuemId = row_costume[0]
             rollenId = row_costume[1]
             filmId = row_costume[2]
-            ortsbegebenheit = row_costume[3]
+            ortsbegebenheit = row_costume[3].pop()
             dominanteFarbe = row_costume[4]
-            stereotypRelevant = row_costume[5]
+            stereotypRelevant = row_costume[5].pop()
             dominanteFunktion = row_costume[6]
             dominanterZustand = row_costume[7]
 
@@ -418,10 +411,12 @@ class EntityFactory:
 
             # load farbkonzept if needed
             if Attribute.farbkonzept in attributes:
-                query = "SELECT Farbkonzept FROM FilmFarbkonzept "
-                query += "WHERE FilmID = %s"
-                cursor.execute(query % row_costume[2])
-                rows = cursor.fetchall()
+                query = select(
+                    database.other_tables["FilmFarbkonzept"].c.Farbkonzept
+                ).where(
+                    database.other_tables["FilmFarbkonzept"].c.FilmID == row_costume[2]
+                )
+                rows = database.session.execute(query).all()
 
                 if len(rows) == 0:
                     invalid_entries += 1
@@ -442,10 +437,23 @@ class EntityFactory:
 
             # load dominanteCharaktereigenschaft if needed
             if Attribute.dominanteCharaktereigenschaft in attributes:
-                query_trait = "SELECT DominanteCharaktereigenschaft FROM RolleDominanteCharaktereigenschaft "
-                query_trait += "WHERE RollenID = %s AND FilmID = %s"
-                cursor.execute(query_trait, (row_costume[1], row_costume[2]))
-                rows_trait = cursor.fetchall()
+                query = select(
+                    database.other_tables[
+                        "RolleDominanteCharaktereigenschaft"
+                    ].c.DominanteCharaktereigenschaft
+                ).where(
+                    and_(
+                        database.other_tables[
+                            "RolleDominanteCharaktereigenschaft"
+                        ].c.RollenID
+                        == row_costume[1],
+                        database.other_tables[
+                            "RolleDominanteCharaktereigenschaft"
+                        ].c.FilmID
+                        == row_costume[2],
+                    )
+                )
+                rows_trait = database.session.execute(query).all()
 
                 if len(rows_trait) == 0:
                     invalid_entries += 1
@@ -471,9 +479,13 @@ class EntityFactory:
 
             # load stereotypes if needed
             if Attribute.stereotyp in attributes:
-                query_stereotype = "SELECT Stereotyp FROM RolleStereotyp WHERE RollenID = %s AND FilmID = %s"
-                cursor.execute(query_stereotype, (row_costume[1], row_costume[2]))
-                rows_stereotype = cursor.fetchall()
+                query = select(database.base.classes.RolleStereotyp.Stereotyp).where(
+                    and_(
+                        database.base.classes.RolleStereotyp.RollenID == row_costume[1],
+                        database.base.classes.RolleStereotyp.FilmID == row_costume[2],
+                    )
+                )
+                rows_stereotype = database.session.execute(query).all()
 
                 if len(rows_stereotype) == 0:
                     invalid_entries += 1
@@ -503,16 +515,22 @@ class EntityFactory:
                 or Attribute.dominanterAlterseindruck in attributes
                 or Attribute.dominantesAlter in attributes
             ):
+                role_table = database.base.classes.Rolle
 
-                query_gender_age = (
-                    "SELECT "
-                    + "Rollenberuf, Geschlecht, "
-                    + "DominanterAlterseindruck, DominantesAlter,"
-                    + "Rollenrelevanz FROM Rolle WHERE "
-                    + "RollenID = %s AND FilmID = %s"
+                query = select(
+                    role_table.Rollenberuf,
+                    role_table.Geschlecht,
+                    role_table.DominanterAlterseindruck,
+                    role_table.DominantesAlter,
+                    role_table.Rollenrelevanz,
+                ).where(
+                    and_(
+                        role_table.RollenID == row_costume[1],
+                        role_table.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(query_gender_age, (row_costume[1], row_costume[2]))
-                rows_gender_age = cursor.fetchall()
+
+                rows_gender_age = database.session.execute(query).all()
 
                 if len(rows_gender_age) == 0:
                     invalid_entries += 1
@@ -619,9 +637,12 @@ class EntityFactory:
 
             # load genre if needed
             if Attribute.genre in attributes:
-                query_genre = "SELECT Genre FROM FilmGenre WHERE FilmID = %s"
-                cursor.execute(query_genre, (row_costume[2],))
-                rows_genre = cursor.fetchall()
+                genre_table = database.other_tables["FilmGenre"]
+
+                query = select(genre_table.c.Genre).where(
+                    genre_table.c.FilmID == row_costume[2]
+                )
+                rows_genre = database.session.execute(query).all()
 
                 if len(rows_genre) == 0:
                     invalid_entries += 1
@@ -642,14 +663,17 @@ class EntityFactory:
 
             # load spielzeit if needed
             if Attribute.spielzeit in attributes:
-                query_spielzeit = (
-                    "SELECT Spielzeit FROM KostuemSpielzeit "
-                    + "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
+                costume_playtime_table = database.base.classes.KostuemSpielzeit
+
+                query = select(costume_playtime_table.Spielzeit).where(
+                    and_(
+                        costume_playtime_table.KostuemID == row_costume[0],
+                        costume_playtime_table.RollenID == row_costume[1],
+                        costume_playtime_table.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(
-                    query_spielzeit, (row_costume[0], row_costume[1], row_costume[2])
-                )
-                rows_spielzeit = cursor.fetchall()
+
+                rows_spielzeit = database.session.execute(query).all()
 
                 entity.add_attribute(Attribute.spielzeit)
 
@@ -674,14 +698,17 @@ class EntityFactory:
 
             # load tageszeit if needed
             if Attribute.tageszeit in attributes:
-                query_tageszeit = (
-                    "SELECT Tageszeit FROM KostuemTageszeit "
-                    + "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
+                costume_daytime_table = database.other_tables["KostuemTageszeit"]
+
+                query = select(costume_daytime_table.c.Tageszeit).where(
+                    and_(
+                        costume_daytime_table.c.KostuemID == row_costume[0],
+                        costume_daytime_table.c.RollenID == row_costume[1],
+                        costume_daytime_table.c.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(
-                    query_tageszeit, (row_costume[0], row_costume[1], row_costume[2])
-                )
-                rows_tageszeit = cursor.fetchall()
+
+                rows_tageszeit = database.session.execute(query).all()
 
                 entity.add_attribute(Attribute.tageszeit)
 
@@ -706,12 +733,19 @@ class EntityFactory:
 
             # load koerpermodifikation if needed
             if Attribute.koerpermodifikation in attributes:
-                query = (
-                    "SELECT Koerpermodifikationname FROM Kostuemkoerpermodifikation "
-                    + "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
+                body_modification_table = database.other_tables[
+                    "KostuemKoerpermodifikation"
+                ]
+
+                query = select(body_modification_table.c.Koerpermodifikationname).where(
+                    and_(
+                        body_modification_table.c.KostuemID == row_costume[0],
+                        body_modification_table.c.RollenID == row_costume[1],
+                        body_modification_table.c.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(query, (row_costume[0], row_costume[1], row_costume[2]))
-                rows = cursor.fetchall()
+
+                rows = database.session.execute(query).all()
 
                 entity.add_attribute(Attribute.koerpermodifikation)
 
@@ -736,12 +770,31 @@ class EntityFactory:
 
             # load kostuemZeit if needed
             if Attribute.kostuemZeit in attributes:
-                query = (
-                    "SELECT Timecodeanfang, Timecodeende FROM Kostuemtimecode "
-                    + "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
+                timecode_table = database.base.classes.KostuemTimecode
+
+                query = select(
+                    timecode_table.Timecodeanfang, timecode_table.Timecodeende
+                ).where(
+                    and_(
+                        timecode_table.KostuemID == row_costume[0],
+                        timecode_table.RollenID == row_costume[1],
+                        timecode_table.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(query, (row_costume[0], row_costume[1], row_costume[2]))
-                rows = cursor.fetchall()
+
+                rows = database.session.execute(query).all()
+                # convert time objects to timedelta objects to allow mathematical operations
+                rows = [
+                    (
+                        timedelta(
+                            hours=start.hour,
+                            minutes=start.minute,
+                            seconds=start.second,
+                        ),
+                        timedelta(hours=end.hour, minutes=end.minute, seconds=end.second),
+                    )
+                    for start, end in rows
+                ]
 
                 entity.add_attribute(Attribute.kostuemZeit)
 
@@ -776,12 +829,16 @@ class EntityFactory:
 
             # load familienstand if needed
             if Attribute.familienstand in attributes:
-                query = (
-                    "SELECT Familienstand FROM RolleFamilienstand "
-                    + "WHERE RollenID = %s AND FilmID = %s"
+                status_table = database.base.classes.RolleFamilienstand
+
+                query = select(status_table.Familienstand).where(
+                    and_(
+                        status_table.RollenID == row_costume[1],
+                        status_table.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(query, (row_costume[1], row_costume[2]))
-                rows = cursor.fetchall()
+
+                rows = database.session.execute(query).all()
 
                 entity.add_attribute(Attribute.familienstand)
 
@@ -808,12 +865,17 @@ class EntityFactory:
 
             # load charakterEigenschaft if needed
             if Attribute.charaktereigenschaft in attributes:
-                query = (
-                    "SELECT Charaktereigenschaft FROM KostuemCharaktereigenschaft "
-                    + "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
+                trait_table = database.other_tables["KostuemCharaktereigenschaft"]
+
+                query = select(trait_table.c.Charaktereigenschaft).where(
+                    and_(
+                        trait_table.c.KostuemID == row_costume[0],
+                        trait_table.c.RollenID == row_costume[1],
+                        trait_table.c.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(query, (row_costume[0], row_costume[1], row_costume[2]))
-                rows = cursor.fetchall()
+
+                rows = database.session.execute(query).all()
 
                 entity.add_attribute(Attribute.charaktereigenschaft)
 
@@ -842,13 +904,19 @@ class EntityFactory:
 
             # load spielort or spielortDetail if needed
             if Attribute.spielort in attributes or Attribute.spielortDetail in attributes:
+                location_table = database.base.classes.KostuemSpielort
 
-                query = (
-                    "SELECT Spielort, SpielortDetail FROM KostuemSpielort "
-                    + "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
+                query = select(
+                    location_table.Spielort, location_table.SpielortDetail
+                ).where(
+                    and_(
+                        location_table.KostuemID == row_costume[0],
+                        location_table.RollenID == row_costume[1],
+                        location_table.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(query, (row_costume[0], row_costume[1], row_costume[2]))
-                rows = cursor.fetchall()
+
+                rows = database.session.execute(query).all()
 
                 if len(rows) == 0:
                     invalid_entries += 1
@@ -890,13 +958,19 @@ class EntityFactory:
 
             # load alterseindruck or alter if needed
             if Attribute.alterseindruck in attributes or Attribute.alter in attributes:
+                age_impression_table = database.base.classes.KostuemAlterseindruck
 
-                query = (
-                    "SELECT Alterseindruck, NumAlter FROM KostuemAlterseindruck "
-                    + "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
+                query = select(
+                    age_impression_table.Alterseindruck, age_impression_table.NumAlter
+                ).where(
+                    and_(
+                        age_impression_table.KostuemID == row_costume[0],
+                        age_impression_table.RollenID == row_costume[1],
+                        age_impression_table.FilmID == row_costume[2],
+                    )
                 )
-                cursor.execute(query, (row_costume[0], row_costume[1], row_costume[2]))
-                rows = cursor.fetchall()
+
+                rows = database.session.execute(query).all()
 
                 if len(rows) == 0:
                     invalid_entries += 1
@@ -951,14 +1025,18 @@ class EntityFactory:
                 or Attribute.farbe in attributes
                 or Attribute.farbeindruck in attributes
             ):
-
                 be_basiselement = True
-                query_trait = "SELECT BasiselementID FROM KostuemBasiselement "
-                query_trait += "WHERE KostuemID = %s AND RollenID = %s AND FilmID = %s"
-                cursor.execute(
-                    query_trait, (row_costume[0], row_costume[1], row_costume[2])
+                base_element_table = database.other_tables["KostuemBasiselement"]
+
+                query = select(base_element_table.c.BasiselementID).where(
+                    and_(
+                        base_element_table.c.KostuemID == row_costume[0],
+                        base_element_table.c.RollenID == row_costume[1],
+                        base_element_table.c.FilmID == row_costume[2],
+                    )
                 )
-                rows_basiselement = cursor.fetchall()
+
+                rows_basiselement = database.session.execute(query).all()
 
                 if len(rows_basiselement) == 0:
                     invalid_entries += 1
@@ -990,10 +1068,13 @@ class EntityFactory:
 
                     # load basiselementName if needed
                     if Attribute.basiselement in attributes:
-                        query_trait = "SELECT Basiselementname FROM Basiselement "
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        base_element_table = database.base.classes.Basiselement
+
+                        query = select(base_element_table.Basiselementname).where(
+                            base_element_table.BasiselementID == basiselementID
+                        )
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
@@ -1028,10 +1109,13 @@ class EntityFactory:
 
                     # load design if needed
                     if Attribute.design in attributes:
-                        query_trait = "SELECT Designname FROM BasiselementDesign "
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        design_table = database.other_tables["BasiselementDesign"]
+
+                        query = select(design_table.c.Designname).where(
+                            design_table.c.BasiselementID == basiselementID
+                        )
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
@@ -1064,10 +1148,13 @@ class EntityFactory:
 
                     # load form if needed
                     if Attribute.form in attributes:
-                        query_trait = "SELECT Formname FROM BasiselementForm "
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        form_table = database.other_tables["BasiselementForm"]
+
+                        query = select(form_table.c.Formname).where(
+                            form_table.c.BasiselementID == basiselementID
+                        )
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
@@ -1100,10 +1187,13 @@ class EntityFactory:
 
                     # load trageweise if needed
                     if Attribute.trageweise in attributes:
-                        query_trait = "SELECT Trageweisename FROM BasiselementTrageweise "
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        table = database.other_tables["BasiselementTrageweise"]
+
+                        query = select(table.c.Trageweisename).where(
+                            table.c.BasiselementID == basiselementID
+                        )
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
@@ -1136,10 +1226,13 @@ class EntityFactory:
 
                     # load zustand if needed
                     if Attribute.zustand in attributes:
-                        query_trait = "SELECT Zustandsname FROM BasiselementZustand "
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        condition_table = database.other_tables["BasiselementZustand"]
+
+                        query = select(condition_table.c.Zustandsname).where(
+                            condition_table.c.BasiselementID == basiselementID
+                        )
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
@@ -1172,10 +1265,13 @@ class EntityFactory:
 
                     # load funktion if needed
                     if Attribute.funktion in attributes:
-                        query_trait = "SELECT Funktionsname FROM BasiselementFunktion "
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        function_table = database.other_tables["BasiselementFunktion"]
+
+                        query = select(function_table.c.Funktionsname).where(
+                            function_table.c.BasiselementID == basiselementID
+                        )
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
@@ -1211,10 +1307,13 @@ class EntityFactory:
                         Attribute.material in attributes
                         or Attribute.materialeindruck in attributes
                     ):
-                        query_trait = "SELECT Materialname, Materialeindruck FROM BasiselementMaterial "
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        material_table = database.base.classes.BasiselementMaterial
+
+                        query = select(
+                            material_table.Materialname, material_table.Materialeindruck
+                        ).where(material_table.BasiselementID == basiselementID)
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
@@ -1261,12 +1360,13 @@ class EntityFactory:
                         Attribute.farbe in attributes
                         or Attribute.farbeindruck in attributes
                     ):
-                        query_trait = (
-                            "SELECT Farbname, Farbeindruck FROM BasiselementFarbe "
-                        )
-                        query_trait += "WHERE BasiselementID = %s"
-                        cursor.execute(query_trait % basiselementID)
-                        rows = cursor.fetchall()
+                        color_table = database.base.classes.BasiselementFarbe
+
+                        query = select(
+                            color_table.Farbname, color_table.Farbeindruck
+                        ).where(color_table.BasiselementID == basiselementID)
+
+                        rows = database.session.execute(query).all()
 
                         if len(rows) == 0:
                             invalid_entries += 1
