@@ -39,6 +39,9 @@ from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from tempfile import SpooledTemporaryFile
+from qhana_plugin_runner.storage import STORE
+from flask import redirect
 
 _plugin_name = "hello-world"
 __version__ = "v0.1.0"
@@ -169,11 +172,9 @@ class ProcessView(MethodView):
         db_task.task_id = result.id
         db_task.save(commit=True)
 
-        return {
-            "name": demo_task.name,
-            "task_id": str(result.id),
-            "task_result_url": url_for("tasks-api.TaskView", task_id=str(result.id)),
-        }
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+        )
 
 
 class HelloWorld(QHAnaPluginBase):
@@ -206,5 +207,11 @@ def demo_task(self, db_id: int) -> str:
     if input_str is None:
         raise ValueError("No input argument provided!")
     if input_str:
-        return input_str.replace("input", "output")
-    return ""
+        out_str = input_str.replace("input", "output")
+        with SpooledTemporaryFile(mode="w") as output:
+            output.write(out_str)
+            STORE.persist_task_result(
+                db_id, output, "out.txt", "hello-world-output", "plain/text"
+            )
+        return "result: " + repr(out_str)
+    return "Empty input string, no output could be generated!"
