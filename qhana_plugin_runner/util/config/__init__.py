@@ -31,7 +31,7 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     DEBUG = False
     TESTING = False
 
-    JSON_SORT_KEYS = False
+    JSON_SORT_KEYS = True
     JSONIFY_PRETTYPRINT_REGULAR = False
 
     LOG_CONFIG = None  # if set this is preferred

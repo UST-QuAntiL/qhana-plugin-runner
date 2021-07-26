@@ -77,7 +77,7 @@ class PluginsView(MethodView):
                     p.name,
                     p.version,
                     p.identifier,
-                    url_for("plugins-api.PluginView", plugin=p.identifier),
+                    url_for("plugins-api.PluginView", plugin=p.identifier, _external=True),
                 )
                 for p in plugins
             ]

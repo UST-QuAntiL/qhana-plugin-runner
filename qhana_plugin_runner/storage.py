@@ -320,6 +320,7 @@ class LocalFileStore(FileStore, name="local_filesystem"):
             "files-api.FileView",
             file_id=file_info.id,
             **{"file-id": file_info.security_tag},
+            _external=True,
         )
 
 

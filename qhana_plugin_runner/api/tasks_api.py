@@ -24,8 +24,8 @@ from flask.views import MethodView
 from flask_smorest import abort
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    ConcreteFileMetadataSchema,
-    FileMetadata,
+    ConcreteOutputMetadataSchema,
+    OutputMetadata,
 )
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
@@ -46,17 +46,17 @@ class TaskData:
     name: str
     task_id: str
     status: str
-    result: Optional[str] = None
-    files: Sequence[FileMetadata] = field(default_factory=list)
+    task_log: Optional[str] = None
+    outputs: Sequence[OutputMetadata] = field(default_factory=list)
 
 
 class TaskStatusSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
     status = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    result = ma.fields.String(required=False, allow_none=True, dump_only=True)
-    files = ma.fields.List(
-        ma.fields.Nested(ConcreteFileMetadataSchema()),
+    task_log = ma.fields.String(required=False, allow_none=True, dump_only=True)
+    outputs = ma.fields.List(
+        ma.fields.Nested(ConcreteOutputMetadataSchema()),
         required=False,
         allow_none=True,
         dump_only=True,
@@ -65,9 +65,9 @@ class TaskStatusSchema(MaBaseSchema):
     @ma.post_dump()
     def remove_empty_attributes(self, data: Dict[str, Any], **kwargs):
         """Remove result attributes from serialized tasks that have not finished."""
-        if data["result"] == None:
-            del data["result"]
-            del data["files"]
+        if data["taskLog"] == None:
+            del data["taskLog"]
+            del data["outputs"]
         return data
 
 
@@ -89,27 +89,33 @@ class TaskView(MethodView):
             task_data.task_id is not None
         ), "If this is None then get_task_by_id is faulty."  # assertion for type checker
 
-        if task_data.finished_at is None or task_data.finished_status is None:
+        if not task_data.is_finished:
             task_result = AsyncResult(task_id, app=CELERY)
+            if task_result:
+                return TaskData(
+                    name=task_data.task_name,
+                    task_id=task_data.task_id,
+                    status=task_result.status,
+                    # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
+                    task_log=None,  # only return a result if task is marked finished in db
+                )
             return TaskData(
                 name=task_data.task_name,
                 task_id=task_data.task_id,
-                status=task_result.status,
-                # TODO better result handling (store result in db, use db in this endpoint for finished tasks, ...)
-                # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
-                result=None,  # only return a result if task is marked finished in db
+                status=task_data.status,
+                task_log=None,
             )
 
-        files: List[FileMetadata] = []
+        outputs: List[OutputMetadata] = []
 
         for file_ in TaskFile.get_task_result_files(task_data):
             if file_.file_type is None or file_.mimetype is None:
                 continue  # result files must have file and mime type set
-            files.append(
-                FileMetadata(
-                    file_type=file_.file_type,
-                    mimetype=file_.mimetype,
-                    filename=file_.file_name,
+            outputs.append(
+                OutputMetadata(
+                    output_type=file_.file_type,
+                    content_type=file_.mimetype,
+                    name=file_.file_name,
                     href=STORE.get_task_file_url(file_),
                 )
             )
@@ -117,9 +123,9 @@ class TaskView(MethodView):
         return TaskData(
             name=task_data.task_name,
             task_id=task_data.task_id,
-            status=task_data.finished_status,
-            result=task_data.task_result,
-            files=files,
+            status=task_data.status,
+            task_log=task_data.task_log,
+            outputs=outputs,
         )
 
     # TODO add delete endpoint (and maybe serve result from different endpoint)

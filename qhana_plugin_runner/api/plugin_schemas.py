@@ -22,37 +22,39 @@ import marshmallow as ma
 from qhana_plugin_runner.api.util import MaBaseSchema
 
 
-class FileMetadataSchema(MaBaseSchema):
-    file_type = ma.fields.String(
+class OutputMetadataSchema(MaBaseSchema):
+    output_type = ma.fields.String(
         required=True,
         allow_none=False,
-        metadata={"description": "The type of the file (e.g. distance-matrix)."},
+        metadata={"description": "The type of the output (e.g. distance-matrix)."},
     )
-    mimetype = ma.fields.String(
+    content_type = ma.fields.String(
         required=True,
         allow_none=False,
-        metadata={"description": "The mime type of the file (e.g. application/json)."},
+        metadata={
+            "description": "The media type (mime type) of the output data (e.g. application/json)."
+        },
     )
-    filename = ma.fields.String(
+    name = ma.fields.String(
         required=False,
         allow_none=True,
-        metadata={"description": "The (default) file name."},
+        metadata={"description": "The (default) name of the output data."},
     )
 
 
-class ConcreteFileMetadataSchema(FileMetadataSchema):
+class ConcreteOutputMetadataSchema(OutputMetadataSchema):
     href = ma.fields.Url(
         required=True,
         allow_none=False,
-        metadata={"description": "URL of the concrete file."},
+        metadata={"description": "URL of the concrete output data."},
     )
 
 
 @dataclass
-class FileMetadata:
-    file_type: str
-    mimetype: str
-    filename: Optional[str] = None
+class OutputMetadata:
+    output_type: str
+    content_type: str
+    name: Optional[str] = None
     href: Optional[str] = None
 
 
@@ -71,15 +73,15 @@ class ProcessingResourceMetadataSchema(MaBaseSchema):
             "description": "URL of the micro frontend for the processing resource of the plugin."
         },
     )
-    file_inputs = ma.fields.List(
-        ma.fields.List(ma.fields.Nested(FileMetadataSchema())),
+    inputs = ma.fields.List(
+        ma.fields.List(ma.fields.Nested(OutputMetadataSchema())),
         required=True,
         allow_none=False,
         dump_only=True,
         metadata={"description": "A list of possible file input sets."},
     )
-    file_outputs = ma.fields.List(  # for future use
-        ma.fields.List(ma.fields.Nested(FileMetadataSchema())),
+    outputs = ma.fields.List(  # for future use
+        ma.fields.List(ma.fields.Nested(OutputMetadataSchema())),
         required=False,
         allow_none=False,
         dump_only=True,
@@ -94,8 +96,8 @@ class ProcessingResourceMetadataSchema(MaBaseSchema):
 class ProcessingResourceMetadata:
     href: str
     ui_href: Optional[str]
-    file_inputs: List[List[FileMetadata]] = field(default_factory=list)
-    file_outputs: List[FileMetadata] = field(default_factory=list)
+    inputs: List[List[OutputMetadata]] = field(default_factory=list)
+    outputs: List[OutputMetadata] = field(default_factory=list)
 
 
 class PluginMetadataSchema(MaBaseSchema):

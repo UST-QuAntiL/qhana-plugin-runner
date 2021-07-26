@@ -27,6 +27,20 @@ from ..db import DB, REGISTRY
 @REGISTRY.mapped
 @dataclass
 class ProcessingTask:
+    """Dataclass for persisting (logical) task information.
+
+    Attributes:
+        id (int, optional): automatically generated database id. Use the id to fetch this information from the database.
+        task_name (str): the name of the (logical) task corresponding to this information object
+        task_id (Optional[str], optional): the final celery task id to wait for to declare this task finished. If not supplied this task will never be marked as finished.
+        started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
+        finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
+        parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
+        finished_status (Optional[str], optional): the status string with witch the celery task with the ``task_id`` finished. If set then ``task_id`` may not be checked.
+        task_log (Optional[str], optional): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
+        outputs (List[TaskFile], optional): the output data (files) of the task
+    """
+
     __tablename__ = "ProcessingTask"
 
     __sa_dataclass_metadata_key__ = "sa"
@@ -50,14 +64,42 @@ class ProcessingTask:
         default=None, metadata={"sa": Column(sql.String(100))}
     )
 
-    task_result: Optional[str] = field(
+    task_log: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.Text(), nullable=True)}
     )
 
-    files: List["TaskFile"] = field(
+    outputs: List["TaskFile"] = field(
         default_factory=list,
         metadata={"sa": relationship("TaskFile", back_populates="task", lazy="select")},
     )
+
+    @property
+    def is_finished(self) -> bool:
+        """Return true if the task has finished either successfully or with an error."""
+        return self.finished_at is not None
+
+    @property
+    def is_ok(self) -> bool:
+        """Return true if the task has finished successfully."""
+        return self.finished_status == "SUCCESS"
+
+    @property
+    def status(self) -> str:
+        """Return the finished status of the task.
+
+        If the task is finished but no finished_status was set returns ``"UNKNOWN"``.
+
+        If the task is not finished returns ``"PENDING"``.
+
+        Returns:
+            str: ``self.finished_status`` | ``"UNKNOWN"`` | ``"PENDING"``
+        """
+        if self.is_finished:
+            if self.finished_status:
+                return self.finished_status
+            else:
+                return "UNKNOWN"
+        return "PENDING"
 
     def save(self, commit: bool = False):
         """Add this object to the current session and optionally commit the session to persist all objects in the session."""
@@ -88,7 +130,9 @@ class TaskFile:
     id: int = field(init=False, metadata={"sa": Column(sql.INTEGER(), primary_key=True)})
     task: ProcessingTask = field(
         metadata={
-            "sa": relationship("ProcessingTask", back_populates="files", lazy="selectin")
+            "sa": relationship(
+                "ProcessingTask", back_populates="outputs", lazy="selectin"
+            )
         }
     )
     security_tag: str = field(metadata={"sa": Column(sql.String(64), nullable=False)})
