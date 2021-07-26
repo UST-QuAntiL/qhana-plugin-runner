@@ -348,21 +348,26 @@ class EntityFactory:
                     "Found entry with FilmID = None. This entry will be skipped."
                 )
                 continue
-            if row_costume[3] == None:
+            if row_costume[3] == None or len(row_costume[3]) == 0:
                 invalid_entries += 1
-                logging.warning("Found entry with Ortsbegebenheit = None.")
+                logging.warning("Found entry with Ortsbegebenheit = None or ''.")
+                continue
             if row_costume[4] == None:
                 invalid_entries += 1
                 logging.warning("Found entry with DominanteFarbe = None.")
-            if row_costume[5] == None:
+                continue
+            if row_costume[5] == None or len(row_costume[5]) == 0:
                 invalid_entries += 1
-                logging.warning("Found entry with StereotypRelevant = None.")
+                logging.warning("Found entry with StereotypRelevant = None or ''.")
+                continue
             if row_costume[6] == None:
                 invalid_entries += 1
                 logging.warning("Found entry with DominanteFunktion = None.")
+                continue
             if row_costume[7] == None:
                 invalid_entries += 1
                 logging.warning("Found entry with DominanterZustand = None.")
+                continue
 
             kostuemId = row_costume[0]
             rollenId = row_costume[1]
