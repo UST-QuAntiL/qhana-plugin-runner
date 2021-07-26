@@ -3,7 +3,7 @@ from typing import Mapping
 
 from celery.canvas import chain
 from celery.result import AsyncResult
-from flask import Response
+from flask import Response, redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -131,8 +131,6 @@ class ProcessView(MethodView):
         db_task.task_id = result.id
         db_task.save(commit=True)
 
-        return {
-            "name": costume_loading_task.name,
-            "task_id": str(result.id),
-            "task_result_url": url_for("tasks-api.TaskView", task_id=str(result.id)),
-        }
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+        )

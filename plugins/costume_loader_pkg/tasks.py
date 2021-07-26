@@ -1,4 +1,5 @@
 import json
+from tempfile import SpooledTemporaryFile
 from typing import Optional
 
 import flask
@@ -15,6 +16,7 @@ from plugins.costume_loader_pkg.schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -92,4 +94,12 @@ def costume_loading_task(self, db_id: int) -> str:
 
     entities = [entity_schema.dump(entity) for entity in es.allEntities]
 
-    return json.dumps(entities)
+    entities_json = json.dumps(entities)
+
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(entities_json)
+        STORE.persist_task_result(
+            db_id, output, "entities.json", "costume-loader-output", "application/json"
+        )
+
+    return "result: " + entities_json
