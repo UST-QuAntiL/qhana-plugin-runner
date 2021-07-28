@@ -1,9 +1,10 @@
 import logging
+from typing import Any
 
 from mysql.connector import MySQLConnection
 from configparser import ConfigParser
 
-from sqlalchemy import create_engine, table, column
+from sqlalchemy import create_engine, table, column, select, func
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.automap import automap_base, AutomapBase
 from sqlalchemy.orm import Session
@@ -177,3 +178,41 @@ class Database(Singleton):
         Returns a cursor to the database.
         """
         return self.__connection.cursor()
+
+    def get_group_column_cte(
+        self, table, group_column: str, table_type: str, separator="|"
+    ):
+        table_columns: Any
+        if isinstance(table, self.base):
+            table_columns = table
+        else:
+            table_columns = table.c
+        if table_type not in ("film", "role", "costume"):
+            raise ValueError("Wrong table type.")
+        group_by_rows = [getattr(table_columns, "FilmID")]
+        if table_type in ("role", "costume"):
+            group_by_rows.append(getattr(table_columns, "RollenID"))
+        if table_type == "costume":
+            group_by_rows.append(getattr(table_columns, "KostuemID"))
+        return (
+            select(
+                *group_by_rows,
+                func.group_concat(
+                    getattr(table_columns, group_column),
+                    separator,
+                ).label(group_column),
+            )
+            .group_by(*group_by_rows)
+            .cte(f"{table.name}CTE")
+        )
+
+    def get_film_cte(self, table, group_column, separator="|"):
+        return self.get_group_column_cte(table, group_column, "film", separator=separator)
+
+    def get_role_cte(self, table, group_column, separator="|"):
+        return self.get_group_column_cte(table, group_column, "role", separator=separator)
+
+    def get_costume_cte(self, table, group_column, separator="|"):
+        return self.get_group_column_cte(
+            table, group_column, "costume", separator=separator
+        )

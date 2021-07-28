@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict
 from typing import List
 
-from sqlalchemy import select, tuple_, and_
+from sqlalchemy import select, tuple_, and_, join
 
 from plugins.costume_loader_pkg.backend.database import Database
 from plugins.costume_loader_pkg.backend.taxonomy import Taxonomie
@@ -287,34 +287,10 @@ class EntityFactory:
 
         entities = []
         invalid_entries = 0
-        cursor = database.get_cursor()
 
-        kostuem_table = database.base.classes.Kostuem
-
-        query_costume = select(
-            kostuem_table.KostuemID,
-            kostuem_table.RollenID,
-            kostuem_table.FilmID,
-            kostuem_table.Ortsbegebenheit,
-            kostuem_table.DominanteFarbe,
-            kostuem_table.StereotypRelevant,
-            kostuem_table.DominanteFunktion,
-            kostuem_table.DominanterZustand,
-        )
-
-        if keys is not None:
-            query_costume = query_costume.where(
-                tuple_(
-                    kostuem_table.KostuemID, kostuem_table.RollenID, kostuem_table.FilmID
-                ).in_(keys)
-            )
-
-        rows_costume = database.session.execute(query_costume).all()
-
-        # i.e. print 10 steps of loading
-        printMod = 10
-
-        count = 0
+        columns_to_select = []
+        tables_to_join = set()
+        join_on = {}
 
         # First, run as we are just collecting
         # costumes. If there is an attribute set
@@ -323,1130 +299,333 @@ class EntityFactory:
         # entities will be trated as basiselements.
         be_basiselement = False
 
-        # flag that indicates if we break after
-        # reaching the required amount of
-        # basiselements insteadof
-        # using costumes
-        finished = False
-
-        for row_costume in rows_costume:
-            if row_costume[0] == None:
-                invalid_entries += 1
-                logging.warning(
-                    "Found entry with KostuemID = None. This entry will be skipped."
-                )
-                continue
-            if row_costume[1] == None:
-                invalid_entries += 1
-                logging.warning(
-                    "Found entry with RollenID = None. This entry will be skipped."
-                )
-                continue
-            if row_costume[2] == None:
-                invalid_entries += 1
-                logging.warning(
-                    "Found entry with FilmID = None. This entry will be skipped."
-                )
-                continue
-            if row_costume[3] == None or len(row_costume[3]) == 0:
-                invalid_entries += 1
-                logging.warning("Found entry with Ortsbegebenheit = None or ''.")
-                continue
-            if row_costume[4] == None:
-                invalid_entries += 1
-                logging.warning("Found entry with DominanteFarbe = None.")
-                continue
-            if row_costume[5] == None or len(row_costume[5]) == 0:
-                invalid_entries += 1
-                logging.warning("Found entry with StereotypRelevant = None or ''.")
-                continue
-            if row_costume[6] == None:
-                invalid_entries += 1
-                logging.warning("Found entry with DominanteFunktion = None.")
-                continue
-            if row_costume[7] == None:
-                invalid_entries += 1
-                logging.warning("Found entry with DominanterZustand = None.")
-                continue
-
-            kostuemId = row_costume[0]
-            rollenId = row_costume[1]
-            filmId = row_costume[2]
-            ortsbegebenheit = row_costume[3].pop()
-            dominanteFarbe = row_costume[4]
-            stereotypRelevant = row_costume[5].pop()
-            dominanteFunktion = row_costume[6]
-            dominanterZustand = row_costume[7]
-
-            entity = Entity("Entity")
-            entity.set_film_id(filmId)
-            entity.set_rollen_id(rollenId)
-            entity.set_kostuem_id(kostuemId)
-
-            if Attribute.ortsbegebenheit in attributes:
-                entity.add_attribute(Attribute.ortsbegebenheit)
-                if ortsbegebenheit is None:
-                    entity.add_value(Attribute.ortsbegebenheit, [])
-                else:
-                    entity.add_value(Attribute.ortsbegebenheit, list(ortsbegebenheit))
-            if Attribute.dominanteFarbe in attributes:
-                entity.add_attribute(Attribute.dominanteFarbe)
-                if dominanteFarbe is None:
-                    entity.add_value(Attribute.dominanteFarbe, [])
-                else:
-                    entity.add_value(Attribute.dominanteFarbe, [dominanteFarbe])
-            if Attribute.stereotypRelevant in attributes:
-                entity.add_attribute(Attribute.stereotypRelevant)
-                if stereotypRelevant is None:
-                    entity.add_value(Attribute.stereotypRelevant, [])
-                else:
-                    entity.add_value(Attribute.stereotypRelevant, list(stereotypRelevant))
-            if Attribute.dominanteFunktion in attributes:
-                entity.add_attribute(Attribute.dominanteFunktion)
-                if dominanteFunktion is None:
-                    entity.add_value(Attribute.dominanteFunktion, [])
-                else:
-                    entity.add_value(Attribute.dominanteFunktion, [dominanteFunktion])
-            if Attribute.dominanterZustand in attributes:
-                entity.add_attribute(Attribute.dominanterZustand)
-                if dominanterZustand is None:
-                    entity.add_value(Attribute.dominanterZustand, [])
-                else:
-                    entity.add_value(Attribute.dominanterZustand, [dominanterZustand])
-
-            # load farbkonzept if needed
-            if Attribute.farbkonzept in attributes:
-                query = select(
-                    database.other_tables["FilmFarbkonzept"].c.Farbkonzept
-                ).where(
-                    database.other_tables["FilmFarbkonzept"].c.FilmID == row_costume[2]
-                )
-                rows = database.session.execute(query).all()
-
-                if len(rows) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Farbkonzept. Associated entries are: "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-
-                farbkonzepte = set()
-
-                for row in rows:
-                    farbkonzepte.add(row[0])
-
-                entity.add_attribute(Attribute.farbkonzept)
-                entity.add_value(Attribute.farbkonzept, list(farbkonzepte))
-
-            # load dominanteCharaktereigenschaft if needed
-            if Attribute.dominanteCharaktereigenschaft in attributes:
-                query = select(
-                    database.other_tables[
-                        "RolleDominanteCharaktereigenschaft"
-                    ].c.DominanteCharaktereigenschaft
-                ).where(
-                    and_(
-                        database.other_tables[
-                            "RolleDominanteCharaktereigenschaft"
-                        ].c.RollenID
-                        == row_costume[1],
-                        database.other_tables[
-                            "RolleDominanteCharaktereigenschaft"
-                        ].c.FilmID
-                        == row_costume[2],
-                    )
-                )
-                rows_trait = database.session.execute(query).all()
-
-                if len(rows_trait) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no DominanteCharaktereigenschaft. Associated entries are: "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-
-                dominanteCharaktereigenschaft = []
-
-                for row_trait in rows_trait:
-                    dominanteCharaktereigenschaft.append(row_trait[0])
-
-                entity.add_attribute(Attribute.dominanteCharaktereigenschaft)
-                entity.add_value(
-                    Attribute.dominanteCharaktereigenschaft, dominanteCharaktereigenschaft
-                )
-
-            # load stereotypes if needed
-            if Attribute.stereotyp in attributes:
-                query = select(database.base.classes.RolleStereotyp.Stereotyp).where(
-                    and_(
-                        database.base.classes.RolleStereotyp.RollenID == row_costume[1],
-                        database.base.classes.RolleStereotyp.FilmID == row_costume[2],
-                    )
-                )
-                rows_stereotype = database.session.execute(query).all()
-
-                if len(rows_stereotype) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Stereotyp. Associated entries are: "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-
-                stereotyp = []
-
-                for row_stereotype in rows_stereotype:
-                    stereotyp.append(row_stereotype[0])
-
-                entity.add_attribute(Attribute.stereotyp)
-                entity.add_value(Attribute.stereotyp, stereotyp)
-
-            # load rollenberuf, geschlecht, dominanterAlterseindruck
-            # or dominantesAlter if needed
-            if (
-                Attribute.rollenberuf in attributes
-                or Attribute.geschlecht in attributes
-                or Attribute.dominanterAlterseindruck in attributes
-                or Attribute.dominantesAlter in attributes
-            ):
-                role_table = database.base.classes.Rolle
-
-                query = select(
-                    role_table.Rollenberuf,
-                    role_table.Geschlecht,
-                    role_table.DominanterAlterseindruck,
-                    role_table.DominantesAlter,
-                    role_table.Rollenrelevanz,
-                ).where(
-                    and_(
-                        role_table.RollenID == row_costume[1],
-                        role_table.FilmID == row_costume[2],
-                    )
-                )
-
-                rows_gender_age = database.session.execute(query).all()
-
-                if len(rows_gender_age) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Geschlecht, DominanterAlterseindruck "
-                        + "DominantesAlter and Rollenrelevanz. "
-                        + "Associated entries are: "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-
-                for row_gender_age in rows_gender_age:
-                    if Attribute.rollenberuf in attributes:
-                        if row_gender_age[0] == None:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Geschlecht. Associated entries are: "
-                                + "RollenID = "
-                                + str(row_costume[1])
-                                + ", "
-                                + "FilmID = "
-                                + str(row_costume[2])
-                                + ". "
-                            )
-                    if Attribute.geschlecht in attributes:
-                        if row_gender_age[1] == None:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no DominanterAlterseindruck. Associated entries are: "
-                                + "RollenID = "
-                                + str(row_costume[1])
-                                + ", "
-                                + "FilmID = "
-                                + str(row_costume[2])
-                                + ". "
-                            )
-                    if Attribute.dominanterAlterseindruck in attributes:
-                        if row_gender_age[2] == None:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no DominantesAlter. Associated entries are: "
-                                + "RollenID = "
-                                + str(row_costume[1])
-                                + ", "
-                                + "FilmID = "
-                                + str(row_costume[2])
-                                + ". "
-                            )
-                    if Attribute.dominantesAlter in attributes:
-                        if row_gender_age[3] == None:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Rollenrelevanz. Associated entries are: "
-                                + "RollenID = "
-                                + str(row_costume[1])
-                                + ", "
-                                + "FilmID = "
-                                + str(row_costume[2])
-                                + ". "
-                            )
-
-                rollenberuf = row_gender_age[0]
-                geschlecht = row_gender_age[1]
-                dominanterAlterseindruck = row_gender_age[2]
-                dominantesAlter = row_gender_age[3]
-                rollenrelevanz = row_gender_age[4]
-
-                if Attribute.rollenberuf in attributes:
-                    entity.add_attribute(Attribute.rollenberuf)
-                    if rollenberuf is None:
-                        entity.add_value(Attribute.rollenberuf, [])
-                    else:
-                        entity.add_value(Attribute.rollenberuf, [rollenberuf])
-                if Attribute.geschlecht in attributes:
-                    entity.add_attribute(Attribute.geschlecht)
-                    if geschlecht is None:
-                        entity.add_value(Attribute.geschlecht, [])
-                    else:
-                        entity.add_value(Attribute.geschlecht, list(geschlecht))
-                if Attribute.dominanterAlterseindruck in attributes:
-                    entity.add_attribute(Attribute.dominanterAlterseindruck)
-                    if dominanterAlterseindruck is None:
-                        entity.add_value(Attribute.dominanterAlterseindruck, [])
-                    else:
-                        entity.add_value(
-                            Attribute.dominanterAlterseindruck, [dominanterAlterseindruck]
-                        )
-                if Attribute.dominantesAlter in attributes:
-                    entity.add_attribute(Attribute.dominantesAlter)
-                    if dominantesAlter is None:
-                        entity.add_value(Attribute.dominantesAlter, [])
-                    else:
-                        entity.add_value(Attribute.dominantesAlter, [dominantesAlter])
-                if Attribute.rollenrelevanz in attributes:
-                    entity.add_attribute(Attribute.rollenrelevanz)
-                    if rollenrelevanz is None:
-                        entity.add_value(Attribute.rollenrelevanz, [])
-                    else:
-                        entity.add_value(Attribute.rollenrelevanz, list(rollenrelevanz))
-
-            # load genre if needed
-            if Attribute.genre in attributes:
-                genre_table = database.other_tables["FilmGenre"]
-
-                query = select(genre_table.c.Genre).where(
-                    genre_table.c.FilmID == row_costume[2]
-                )
-                rows_genre = database.session.execute(query).all()
-
-                if len(rows_genre) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Genre. Associated entry is: "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-
-                genre = []
-
-                for row_genre in rows_genre:
-                    genre.append(row_genre[0])
-
-                entity.add_attribute(Attribute.genre)
-                entity.add_value(Attribute.genre, genre)
-
-            # load spielzeit if needed
-            if Attribute.spielzeit in attributes:
-                costume_playtime_table = database.base.classes.KostuemSpielzeit
-
-                query = select(costume_playtime_table.Spielzeit).where(
-                    and_(
-                        costume_playtime_table.KostuemID == row_costume[0],
-                        costume_playtime_table.RollenID == row_costume[1],
-                        costume_playtime_table.FilmID == row_costume[2],
-                    )
-                )
-
-                rows_spielzeit = database.session.execute(query).all()
-
-                entity.add_attribute(Attribute.spielzeit)
-
-                if len(rows_spielzeit) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no KostuemSpielzeit. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    entity.add_value(Attribute.spielzeit, [])
-                else:
-                    spielzeit = rows_spielzeit[0][0]
-                    entity.add_value(Attribute.spielzeit, [spielzeit])
-
-            # load tageszeit if needed
-            if Attribute.tageszeit in attributes:
-                costume_daytime_table = database.other_tables["KostuemTageszeit"]
-
-                query = select(costume_daytime_table.c.Tageszeit).where(
-                    and_(
-                        costume_daytime_table.c.KostuemID == row_costume[0],
-                        costume_daytime_table.c.RollenID == row_costume[1],
-                        costume_daytime_table.c.FilmID == row_costume[2],
-                    )
-                )
-
-                rows_tageszeit = database.session.execute(query).all()
-
-                entity.add_attribute(Attribute.tageszeit)
-
-                if len(rows_tageszeit) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no KostuemTageszeit. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    entity.add_value(Attribute.tageszeit, [])
-                else:
-                    tageszeit = rows_tageszeit[0][0]
-                    entity.add_value(Attribute.tageszeit, [tageszeit])
-
-            # load koerpermodifikation if needed
-            if Attribute.koerpermodifikation in attributes:
-                body_modification_table = database.other_tables[
-                    "KostuemKoerpermodifikation"
-                ]
-
-                query = select(body_modification_table.c.Koerpermodifikationname).where(
-                    and_(
-                        body_modification_table.c.KostuemID == row_costume[0],
-                        body_modification_table.c.RollenID == row_costume[1],
-                        body_modification_table.c.FilmID == row_costume[2],
-                    )
-                )
-
-                rows = database.session.execute(query).all()
-
-                entity.add_attribute(Attribute.koerpermodifikation)
-
-                if len(rows) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Koerpermodifikationname. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    entity.add_value(Attribute.koerpermodifikation, [])
-                else:
-                    koerpermodifikation = rows[0][0]
-                    entity.add_value(Attribute.koerpermodifikation, [koerpermodifikation])
-
-            # load kostuemZeit if needed
-            if Attribute.kostuemZeit in attributes:
-                timecode_table = database.base.classes.KostuemTimecode
-
-                query = select(
-                    timecode_table.Timecodeanfang, timecode_table.Timecodeende
-                ).where(
-                    and_(
-                        timecode_table.KostuemID == row_costume[0],
-                        timecode_table.RollenID == row_costume[1],
-                        timecode_table.FilmID == row_costume[2],
-                    )
-                )
-
-                rows = database.session.execute(query).all()
-                # convert time objects to timedelta objects to allow mathematical operations
-                rows = [
-                    (
-                        timedelta(
-                            hours=start.hour,
-                            minutes=start.minute,
-                            seconds=start.second,
-                        ),
-                        timedelta(hours=end.hour, minutes=end.minute, seconds=end.second),
-                    )
-                    for start, end in rows
-                ]
-
-                entity.add_attribute(Attribute.kostuemZeit)
-
-                if len(rows) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Timecodeanfang and Timecodeende. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    entity.add_value(Attribute.kostuemZeit, [])
-                else:
-                    # in seconds
-                    kostuemZeit = 0
-
-                    for row in rows:
-                        timecodeende = row[1]
-                        timecodeanfang = row[0]
-
-                        kostuemZeit += int(
-                            (timecodeende - timecodeanfang).total_seconds()
-                        )
-
-                    entity.add_value(Attribute.kostuemZeit, [kostuemZeit])
-
-            # load familienstand if needed
-            if Attribute.familienstand in attributes:
-                status_table = database.base.classes.RolleFamilienstand
-
-                query = select(status_table.Familienstand).where(
-                    and_(
-                        status_table.RollenID == row_costume[1],
-                        status_table.FilmID == row_costume[2],
-                    )
-                )
-
-                rows = database.session.execute(query).all()
-
-                entity.add_attribute(Attribute.familienstand)
-
-                if len(rows) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Familienstand. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    entity.add_value(Attribute.familienstand, [])
-                else:
-                    familienstaende = []
-                    for familienstand in rows[0][0]:
-                        familienstaende.append(familienstand)
-                    entity.add_value(Attribute.familienstand, familienstaende)
-
-            # load charakterEigenschaft if needed
-            if Attribute.charaktereigenschaft in attributes:
-                trait_table = database.other_tables["KostuemCharaktereigenschaft"]
-
-                query = select(trait_table.c.Charaktereigenschaft).where(
-                    and_(
-                        trait_table.c.KostuemID == row_costume[0],
-                        trait_table.c.RollenID == row_costume[1],
-                        trait_table.c.FilmID == row_costume[2],
-                    )
-                )
-
-                rows = database.session.execute(query).all()
-
-                entity.add_attribute(Attribute.charaktereigenschaft)
-
-                if len(rows) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Charaktereigenschaft. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    entity.add_value(Attribute.charaktereigenschaft, [])
-                else:
-                    charaktereigenschaften = []
-                    for charaktereigenschaft in rows:
-                        charaktereigenschaften.append(charaktereigenschaft[0])
-                    entity.add_value(
-                        Attribute.charaktereigenschaft, charaktereigenschaften
-                    )
-
-            # load spielort or spielortDetail if needed
-            if Attribute.spielort in attributes or Attribute.spielortDetail in attributes:
-                location_table = database.base.classes.KostuemSpielort
-
-                query = select(
-                    location_table.Spielort, location_table.SpielortDetail
-                ).where(
-                    and_(
-                        location_table.KostuemID == row_costume[0],
-                        location_table.RollenID == row_costume[1],
-                        location_table.FilmID == row_costume[2],
-                    )
-                )
-
-                rows = database.session.execute(query).all()
-
-                if len(rows) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Spielort or SpielortDetail. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    if Attribute.spielort in attributes:
-                        entity.add_attribute(Attribute.spielort)
-                        entity.add_value(Attribute.spielort, [])
-
-                    if Attribute.spielortDetail in attributes:
-                        entity.add_attribute(Attribute.spielortDetail)
-                        entity.add_value(Attribute.spielortDetail, [])
-                else:
-                    # use set to avoid duplicates
-                    spielorte = set()
-                    spielortdetails = set()
-
-                    for row in rows:
-                        spielorte.add(row[0])
-                        spielortdetails.add(row[1])
-
-                    if Attribute.spielort in attributes:
-                        entity.add_attribute(Attribute.spielort)
-                        entity.add_value(Attribute.spielort, list(spielorte))
-
-                    if Attribute.spielortDetail in attributes:
-                        entity.add_attribute(Attribute.spielortDetail)
-                        entity.add_value(Attribute.spielortDetail, list(spielortdetails))
-
-            # load alterseindruck or alter if needed
-            if Attribute.alterseindruck in attributes or Attribute.alter in attributes:
-                age_impression_table = database.base.classes.KostuemAlterseindruck
-
-                query = select(
-                    age_impression_table.Alterseindruck, age_impression_table.NumAlter
-                ).where(
-                    and_(
-                        age_impression_table.KostuemID == row_costume[0],
-                        age_impression_table.RollenID == row_costume[1],
-                        age_impression_table.FilmID == row_costume[2],
-                    )
-                )
-
-                rows = database.session.execute(query).all()
-
-                if len(rows) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Spielort or SpielortDetail. Associated entry is: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-                    if Attribute.alterseindruck in attributes:
-                        entity.add_attribute(Attribute.alterseindruck)
-                        entity.add_value(Attribute.alterseindruck, [])
-
-                    if Attribute.alter in attributes:
-                        entity.add_attribute(Attribute.alter)
-                        entity.add_value(Attribute.alter, [])
-                else:
-                    # use set to avoid duplicates
-                    alterseindrucke = set()
-                    alters = set()
-
-                    for row in rows:
-                        alterseindrucke.add(row[0])
-                        alters.add(row[1])
-
-                    if Attribute.alterseindruck in attributes:
-                        entity.add_attribute(Attribute.alterseindruck)
-                        entity.add_value(Attribute.alterseindruck, list(alterseindrucke))
-
-                    if Attribute.alter in attributes:
-                        entity.add_attribute(Attribute.alter)
-                        entity.add_value(Attribute.alter, list(alters))
-
-            # load basiselement if needed
-            # this also means that we are now treat
-            # each datapoint as a basiselement
-            if (
-                Attribute.basiselement in attributes
-                or Attribute.design in attributes
-                or Attribute.form in attributes
-                or Attribute.trageweise in attributes
-                or Attribute.zustand in attributes
-                or Attribute.funktion in attributes
-                or Attribute.material in attributes
-                or Attribute.materialeindruck in attributes
-                or Attribute.farbe in attributes
-                or Attribute.farbeindruck in attributes
-            ):
-                be_basiselement = True
-                base_element_table = database.other_tables["KostuemBasiselement"]
-
-                query = select(base_element_table.c.BasiselementID).where(
-                    and_(
-                        base_element_table.c.KostuemID == row_costume[0],
-                        base_element_table.c.RollenID == row_costume[1],
-                        base_element_table.c.FilmID == row_costume[2],
-                    )
-                )
-
-                rows_basiselement = database.session.execute(query).all()
-
-                if len(rows_basiselement) == 0:
-                    invalid_entries += 1
-                    logging.warning(
-                        "Found entry with no Basiselement. Associated entries are: "
-                        + "KostuemID = "
-                        + str(row_costume[0])
-                        + ", "
-                        + "RollenID = "
-                        + str(row_costume[1])
-                        + ", "
-                        + "FilmID = "
-                        + str(row_costume[2])
-                        + ". "
-                    )
-
-                kostuemID = row_costume[0]
-                rollenID = row_costume[1]
-                filmID = row_costume[2]
-
-                for row_basiselement in rows_basiselement:
-                    # copy entity because every basiselement
-                    # will now be an own entity
-                    entity_basis = copy.deepcopy(entity)
-
-                    basiselementID = row_basiselement[0]
-
-                    entity_basis.set_basiselement_id(basiselementID)
-
-                    # load basiselementName if needed
-                    if Attribute.basiselement in attributes:
-                        base_element_table = database.base.classes.Basiselement
-
-                        query = select(base_element_table.Basiselementname).where(
-                            base_element_table.BasiselementID == basiselementID
-                        )
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Basiselementname. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.basiselement)
-                            entity_basis.add_value(Attribute.basiselement, [])
-
-                        # use set to avoid duplicates
-                        basiselementNames = set()
-
-                        for row in rows:
-                            basiselementNames.add(row[0])
-
-                        entity_basis.add_attribute(Attribute.basiselement)
-                        entity_basis.add_value(
-                            Attribute.basiselement, list(basiselementNames)
-                        )
-
-                    # load design if needed
-                    if Attribute.design in attributes:
-                        design_table = database.other_tables["BasiselementDesign"]
-
-                        query = select(design_table.c.Designname).where(
-                            design_table.c.BasiselementID == basiselementID
-                        )
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Designname. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.design)
-                            entity_basis.add_value(Attribute.design, [])
-
-                        # use set to avoid duplicates
-                        designs = set()
-
-                        for row in rows:
-                            designs.add(row[0])
-
-                        entity_basis.add_attribute(Attribute.design)
-                        entity_basis.add_value(Attribute.design, list(designs))
-
-                    # load form if needed
-                    if Attribute.form in attributes:
-                        form_table = database.other_tables["BasiselementForm"]
-
-                        query = select(form_table.c.Formname).where(
-                            form_table.c.BasiselementID == basiselementID
-                        )
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Formname. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.form)
-                            entity_basis.add_value(Attribute.form, [])
-
-                        # use set to avoid duplicates
-                        forms = set()
-
-                        for row in rows:
-                            forms.add(row[0])
-
-                        entity_basis.add_attribute(Attribute.form)
-                        entity_basis.add_value(Attribute.form, list(forms))
-
-                    # load trageweise if needed
-                    if Attribute.trageweise in attributes:
-                        table = database.other_tables["BasiselementTrageweise"]
-
-                        query = select(table.c.Trageweisename).where(
-                            table.c.BasiselementID == basiselementID
-                        )
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Trageweisename. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.trageweise)
-                            entity_basis.add_value(Attribute.trageweise, [])
-
-                        # use set to avoid duplicates
-                        trageweisen = set()
-
-                        for row in rows:
-                            trageweisen.add(row[0])
-
-                        entity_basis.add_attribute(Attribute.trageweise)
-                        entity_basis.add_value(Attribute.trageweise, list(trageweisen))
-
-                    # load zustand if needed
-                    if Attribute.zustand in attributes:
-                        condition_table = database.other_tables["BasiselementZustand"]
-
-                        query = select(condition_table.c.Zustandsname).where(
-                            condition_table.c.BasiselementID == basiselementID
-                        )
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Zustandsname. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.zustand)
-                            entity_basis.add_value(Attribute.zustand, [])
-
-                        # use set to avoid duplicates
-                        zustande = set()
-
-                        for row in rows:
-                            zustande.add(row[0])
-
-                        entity_basis.add_attribute(Attribute.zustand)
-                        entity_basis.add_value(Attribute.zustand, list(zustande))
-
-                    # load funktion if needed
-                    if Attribute.funktion in attributes:
-                        function_table = database.other_tables["BasiselementFunktion"]
-
-                        query = select(function_table.c.Funktionsname).where(
-                            function_table.c.BasiselementID == basiselementID
-                        )
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Funktionsname. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.funktion)
-                            entity_basis.add_value(Attribute.funktion, [])
-
-                        # use set to avoid duplicates
-                        funktionen = set()
-
-                        for row in rows:
-                            funktionen.add(row[0])
-
-                        entity_basis.add_attribute(Attribute.funktion)
-                        entity_basis.add_value(Attribute.funktion, list(funktionen))
-
-                    # load materialName and materialEindruck if needed
-                    if (
-                        Attribute.material in attributes
-                        or Attribute.materialeindruck in attributes
-                    ):
-                        material_table = database.base.classes.BasiselementMaterial
-
-                        query = select(
-                            material_table.Materialname, material_table.Materialeindruck
-                        ).where(material_table.BasiselementID == basiselementID)
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Materialname and Materialeindruck. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.material)
-                            entity_basis.add_value(Attribute.material, [])
-                            entity_basis.add_attribute(Attribute.materialeindruck)
-                            entity_basis.add_value(Attribute.materialeindruck, [])
-
-                        # use set to avoid duplicates
-                        materialien = set()
-                        materialEindrucke = set()
-
-                        for row in rows:
-                            materialien.add(row[0])
-                            materialEindrucke.add(row[1])
-
-                        if Attribute.material in attributes:
-                            entity_basis.add_attribute(Attribute.material)
-                            entity_basis.add_value(Attribute.material, list(materialien))
-
-                        if Attribute.materialeindruck in attributes:
-                            entity_basis.add_attribute(Attribute.materialeindruck)
-                            entity_basis.add_value(
-                                Attribute.materialeindruck, list(materialEindrucke)
-                            )
-
-                    # load farbName and farbEindruck if needed
-                    if (
-                        Attribute.farbe in attributes
-                        or Attribute.farbeindruck in attributes
-                    ):
-                        color_table = database.base.classes.BasiselementFarbe
-
-                        query = select(
-                            color_table.Farbname, color_table.Farbeindruck
-                        ).where(color_table.BasiselementID == basiselementID)
-
-                        rows = database.session.execute(query).all()
-
-                        if len(rows) == 0:
-                            invalid_entries += 1
-                            logging.warning(
-                                "Found entry with no Farbname and Farbeindruck. Associated entries are: "
-                                + "BasiselementID = "
-                                + str(basiselementID)
-                                + ", "
-                                + "KostuemID = "
-                                + str(kostuemID)
-                                + ", "
-                                + "RollenID = "
-                                + str(rollenID)
-                                + ", "
-                                + "FilmID = "
-                                + str(filmID)
-                                + ". "
-                            )
-                            entity_basis.add_attribute(Attribute.farbe)
-                            entity_basis.add_value(Attribute.farbe, [])
-                            entity_basis.add_attribute(Attribute.farbeindruck)
-                            entity_basis.add_value(Attribute.farbeindruck, [])
-
-                        # use set to avoid duplicates
-                        farben = set()
-                        farbeindrucke = set()
-
-                        for row in rows:
-                            farben.add(row[0])
-                            farbeindrucke.add(row[1])
-
-                        if Attribute.farbe in attributes:
-                            entity_basis.add_attribute(Attribute.farbe)
-                            entity_basis.add_value(Attribute.farbe, list(farben))
-
-                        if Attribute.farbeindruck in attributes:
-                            entity_basis.add_attribute(Attribute.farbeindruck)
-                            entity_basis.add_value(
-                                Attribute.farbeindruck, list(farbeindrucke)
-                            )
-
-                    if EntityFactory._is_accepted_by_filter(
-                        entity_basis, filter_rules, database
-                    ):
-                        entity_basis.set_id(count)
-                        entities.append(entity_basis)
-                        count += 1
-                        if count % printMod == 0:
-                            logging.info(
-                                str(count) + " / " + str(amount) + " entities loaded"
-                            )
-                        if count >= amount:
-                            finished = True
-                            break
-
-            if finished:
-                break
-
-            if (not be_basiselement) and EntityFactory._is_accepted_by_filter(
-                entity, filter_rules, database
-            ):
-                entity.set_id(count)
-                entities.append(entity)
-                count += 1
-                if count % printMod == 0:
-                    logging.info(str(count) + " / " + str(amount) + " entities loaded")
-                if count >= amount:
-                    break
-
-        logging.info(
-            str(count)
-            + " entities loaded with "
-            + str(invalid_entries)
-            + " being invalid."
+        costume_table = database.base.classes.Kostuem
+        join_on[costume_table] = and_(
+            costume_table.KostuemID == costume_table.KostuemID,
+            costume_table.RollenID == costume_table.RollenID,
+            costume_table.FilmID == costume_table.FilmID,
         )
+
+        if Attribute.ortsbegebenheit in attributes:
+            columns_to_select.append(costume_table.Ortsbegebenheit)
+        if Attribute.dominanteFarbe in attributes:
+            columns_to_select.append(costume_table.DominanteFarbe)
+        if Attribute.stereotypRelevant in attributes:
+            columns_to_select.append(costume_table.StereotypRelevant)
+        if Attribute.dominanteFunktion in attributes:
+            columns_to_select.append(costume_table.DominanteFunktion)
+        if Attribute.dominanterZustand in attributes:
+            columns_to_select.append(costume_table.DominanterZustand)
+
+        color_concept_table = database.other_tables["FilmFarbkonzept"]
+        join_on[color_concept_table] = and_(
+            costume_table.FilmID == color_concept_table.c.FilmID
+        )
+
+        if Attribute.farbkonzept in attributes:
+            columns_to_select.append(color_concept_table.c.Farbkonzept)
+            tables_to_join.add(color_concept_table)
+
+        dominant_character_trait_table = database.other_tables[
+            "RolleDominanteCharaktereigenschaft"
+        ]
+        join_on[dominant_character_trait_table] = and_(
+            costume_table.RollenID == dominant_character_trait_table.c.RollenID,
+            costume_table.FilmID == dominant_character_trait_table.c.FilmID,
+        )
+
+        if Attribute.dominanteCharaktereigenschaft in attributes:
+            columns_to_select.append(
+                dominant_character_trait_table.c.DominanteCharaktereigenschaft
+            )
+            tables_to_join.add(dominant_character_trait_table)
+
+        role_stereotype_table = database.base.classes.RolleStereotyp
+        join_on[role_stereotype_table] = and_(
+            costume_table.RollenID == role_stereotype_table.RollenID,
+            costume_table.FilmID == role_stereotype_table.FilmID,
+        )
+
+        if Attribute.stereotyp in attributes:
+            columns_to_select.append(role_stereotype_table.Stereotyp)
+            tables_to_join.add(role_stereotype_table)
+
+        role_table = database.base.classes.Rolle
+        join_on[role_table] = and_(
+            costume_table.RollenID == role_table.RollenID,
+            costume_table.FilmID == role_table.FilmID,
+        )
+
+        if Attribute.rollenberuf in attributes:
+            columns_to_select.append(role_table.Rollenberuf)
+            tables_to_join.add(role_table)
+        if Attribute.geschlecht in attributes:
+            columns_to_select.append(role_table.Geschlecht)
+            tables_to_join.add(role_table)
+        if Attribute.dominanterAlterseindruck in attributes:
+            columns_to_select.append(role_table.DominanterAlterseindruck)
+            tables_to_join.add(role_table)
+        if Attribute.dominantesAlter in attributes:
+            columns_to_select.append(role_table.DominantesAlter)
+            tables_to_join.add(role_table)
+        if Attribute.rollenrelevanz in attributes:
+            columns_to_select.append(role_table.Rollenrelevanz)
+            tables_to_join.add(role_table)
+
+        genre_table = database.other_tables["FilmGenre"]
+        join_on[genre_table] = and_(costume_table.FilmID == genre_table.c.FilmID)
+
+        if Attribute.genre in attributes:
+            columns_to_select.append(genre_table.c.Genre)
+            tables_to_join.add(genre_table)
+
+        costume_playtime_table = database.base.classes.KostuemSpielzeit
+        join_on[costume_playtime_table] = and_(
+            costume_table.KostuemID == costume_playtime_table.KostuemID,
+            costume_table.RollenID == costume_playtime_table.RollenID,
+            costume_table.FilmID == costume_playtime_table.FilmID,
+        )
+
+        if Attribute.spielzeit in attributes:
+            columns_to_select.append(costume_playtime_table.Spielzeit)
+            tables_to_join.add(costume_playtime_table)
+
+        costume_daytime_table = database.other_tables["KostuemTageszeit"]
+        join_on[costume_daytime_table] = and_(
+            costume_table.KostuemID == costume_daytime_table.c.KostuemID,
+            costume_table.RollenID == costume_daytime_table.c.RollenID,
+            costume_table.FilmID == costume_daytime_table.c.FilmID,
+        )
+
+        if Attribute.tageszeit in attributes:
+            columns_to_select.append(costume_daytime_table.c.Tageszeit)
+            tables_to_join.add(costume_daytime_table)
+
+        body_modification_table = database.other_tables["KostuemKoerpermodifikation"]
+        join_on[body_modification_table] = and_(
+            costume_table.KostuemID == body_modification_table.c.KostuemID,
+            costume_table.RollenID == body_modification_table.c.RollenID,
+            costume_table.FilmID == body_modification_table.c.FilmID,
+        )
+
+        if Attribute.koerpermodifikation in attributes:
+            columns_to_select.append(body_modification_table.c.Koerpermodifikationname)
+            tables_to_join.add(body_modification_table)
+
+        timecode_table = database.base.classes.KostuemTimecode
+        join_on[timecode_table] = and_(
+            costume_table.KostuemID == timecode_table.KostuemID,
+            costume_table.RollenID == timecode_table.RollenID,
+            costume_table.FilmID == timecode_table.FilmID,
+        )
+
+        if Attribute.kostuemZeit in attributes:
+            columns_to_select.append(timecode_table.Timecodeanfang)
+            columns_to_select.append(timecode_table.Timecodeende)
+            tables_to_join.add(timecode_table)
+
+        status_table = database.base.classes.RolleFamilienstand
+        join_on[status_table] = and_(
+            costume_table.RollenID == status_table.RollenID,
+            costume_table.FilmID == status_table.FilmID,
+        )
+
+        if Attribute.familienstand in attributes:
+            columns_to_select.append(status_table.Familienstand)
+            tables_to_join.add(status_table)
+
+        trait_table = database.other_tables["KostuemCharaktereigenschaft"]
+        join_on[trait_table] = and_(
+            costume_table.KostuemID == trait_table.c.KostuemID,
+            costume_table.RollenID == trait_table.c.RollenID,
+            costume_table.FilmID == trait_table.c.FilmID,
+        )
+
+        if Attribute.charaktereigenschaft in attributes:
+            columns_to_select.append(trait_table.c.Charaktereigenschaft)
+            tables_to_join.add(trait_table)
+
+        location_table = database.base.classes.KostuemSpielort
+        join_on[location_table] = and_(
+            costume_table.KostuemID == trait_table.c.KostuemID,
+            costume_table.RollenID == trait_table.c.RollenID,
+            costume_table.FilmID == trait_table.c.FilmID,
+        )
+
+        if Attribute.spielort in attributes:
+            columns_to_select.append(location_table.Spielort)
+            tables_to_join.add(location_table)
+        if Attribute.spielortDetail in attributes:
+            columns_to_select.append(location_table.SpielortDetail)
+            tables_to_join.add(location_table)
+
+        age_impression_table = database.base.classes.KostuemAlterseindruck
+        join_on[age_impression_table] = and_(
+            costume_table.KostuemID == age_impression_table.KostuemID,
+            costume_table.RollenID == age_impression_table.RollenID,
+            costume_table.FilmID == age_impression_table.FilmID,
+        )
+
+        if Attribute.alterseindruck in attributes:
+            columns_to_select.append(age_impression_table.Alterseindruck)
+            tables_to_join.add(age_impression_table)
+        if Attribute.alter in attributes:
+            columns_to_select.append(age_impression_table.NumAlter)
+            tables_to_join.add(age_impression_table)
+
+        ############################
+        # basis element attributes #
+        ############################
+
+        is_basiselement = False
+
+        # load basiselement if needed
+        # this also means that we are now treat
+        # each datapoint as a basiselement
+        if (
+            Attribute.basiselement in attributes
+            or Attribute.design in attributes
+            or Attribute.form in attributes
+            or Attribute.trageweise in attributes
+            or Attribute.zustand in attributes
+            or Attribute.funktion in attributes
+            or Attribute.material in attributes
+            or Attribute.materialeindruck in attributes
+            or Attribute.farbe in attributes
+            or Attribute.farbeindruck in attributes
+        ):
+            is_basiselement = True
+            costume_base_element_table = database.other_tables["KostuemBasiselement"]
+            join_on[costume_base_element_table] = and_(
+                costume_table.KostuemID == costume_base_element_table.c.KostuemID,
+                costume_table.RollenID == costume_base_element_table.c.RollenID,
+                costume_table.FilmID == costume_base_element_table.c.FilmID,
+            )
+
+            base_element_table = database.base.classes.Basiselement
+            join_on[base_element_table] = and_(
+                costume_base_element_table.c.BasiselementID
+                == base_element_table.BasiselementID
+            )
+
+            if Attribute.basiselement in attributes:
+                columns_to_select.append(base_element_table.Basiselementname)
+                tables_to_join.add(base_element_table)
+
+            design_table = database.other_tables["BasiselementDesign"]
+            join_on[design_table] = and_(
+                costume_base_element_table.c.BasiselementID
+                == design_table.c.BasiselementID
+            )
+
+            if Attribute.design in attributes:
+                columns_to_select.append(design_table.c.Designname)
+                tables_to_join.add(design_table)
+
+            form_table = database.other_tables["BasiselementForm"]
+            join_on[form_table] = and_(
+                costume_base_element_table.c.BasiselementID == form_table.c.BasiselementID
+            )
+
+            if Attribute.form in attributes:
+                columns_to_select.append(form_table.c.Formname)
+                tables_to_join.add(form_table)
+
+            wear_table = database.other_tables["BasiselementTrageweise"]
+            join_on[wear_table] = and_(
+                costume_base_element_table.c.BasiselementID == wear_table.c.BasiselementID
+            )
+
+            if Attribute.trageweise in attributes:
+                columns_to_select.append(wear_table.c.Trageweisename)
+                tables_to_join.add(wear_table)
+
+            condition_table = database.other_tables["BasiselementZustand"]
+            join_on[condition_table] = and_(
+                costume_base_element_table.c.BasiselementID
+                == condition_table.c.BasiselementID
+            )
+
+            if Attribute.zustand in attributes:
+                columns_to_select.append(condition_table.c.Zustandsname)
+                tables_to_join.add(condition_table)
+
+            function_table = database.other_tables["BasiselementFunktion"]
+            join_on[function_table] = and_(
+                costume_base_element_table.c.BasiselementID
+                == function_table.c.BasiselementID
+            )
+
+            if Attribute.funktion in attributes:
+                columns_to_select.append(function_table.c.Funktionsname)
+                tables_to_join.add(function_table)
+
+            material_table = database.base.classes.BasiselementMaterial
+            join_on[material_table] = and_(
+                costume_base_element_table.c.BasiselementID
+                == material_table.BasiselementID
+            )
+
+            if Attribute.material in attributes:
+                columns_to_select.append(material_table.Materialname)
+                tables_to_join.add(material_table)
+            if Attribute.materialeindruck in attributes:
+                columns_to_select.append(material_table.Materialeindruck)
+                tables_to_join.add(material_table)
+
+            color_table = database.base.classes.BasiselementFarbe
+            join_on[color_table] = and_(
+                costume_base_element_table.c.BasiselementID == color_table.BasiselementID
+            )
+
+            if Attribute.farbe in attributes:
+                columns_to_select.append(color_table.Farbname)
+                tables_to_join.add(color_table)
+            if Attribute.farbeindruck in attributes:
+                columns_to_select.append(color_table.Farbeindruck)
+                tables_to_join.add(color_table)
+
+        if is_basiselement:
+            columns_to_select = [
+                costume_base_element_table.c.BasiselementID
+            ] + columns_to_select
+
+        columns_to_select = [
+            costume_table.KostuemID,
+            costume_table.RollenID,
+            costume_table.FilmID,
+        ] + columns_to_select
+
+        query = select(*columns_to_select)
+
+        if is_basiselement:
+            j = join(
+                costume_table,
+                costume_base_element_table,
+                join_on[costume_base_element_table],
+            )
+        else:
+            j = None
+
+        for table in tables_to_join:
+            if j is None:
+                j = join(costume_table, table, join_on[table])
+            else:
+                j = j.join(table, join_on[table])
+
+        query = query.select_from(j)
+        query = query.order_by(
+            costume_table.FilmID,
+            costume_table.RollenID,
+            costume_table.KostuemID,
+        )
+
+        if is_basiselement:
+            query = query.order_by(
+                costume_base_element_table.c.BasiselementID,
+            )
+
+        result = database.session.execute(query).all()
 
         return entities
 
