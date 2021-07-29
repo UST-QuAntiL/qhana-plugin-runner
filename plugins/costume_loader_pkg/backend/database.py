@@ -187,13 +187,19 @@ class Database(Singleton):
             table_columns = table
         else:
             table_columns = table.c
-        if table_type not in ("film", "role", "costume"):
+        if table_type not in ("film", "role", "costume", "base_element"):
             raise ValueError("Wrong table type.")
-        group_by_rows = [getattr(table_columns, "FilmID")]
-        if table_type in ("role", "costume"):
-            group_by_rows.append(getattr(table_columns, "RollenID"))
-        if table_type == "costume":
-            group_by_rows.append(getattr(table_columns, "KostuemID"))
+
+        if table_type in ["film", "role", "costume"]:
+            group_by_rows = [getattr(table_columns, "FilmID")]
+
+            if table_type in ("role", "costume"):
+                group_by_rows.append(getattr(table_columns, "RollenID"))
+            if table_type == "costume":
+                group_by_rows.append(getattr(table_columns, "KostuemID"))
+
+        if table_type == "base_element":
+            group_by_rows = [getattr(table_columns, "BasiselementID")]
 
         name = (
             getattr(table, "name", getattr(table, "__name__", ""))
@@ -221,3 +227,6 @@ class Database(Singleton):
 
     def get_costume_cte(self, table, group_column: str, name_suffix: str = ""):
         return self.get_group_column_cte(table, group_column, "costume", name_suffix)
+
+    def get_base_element_cte(self, table, group_column: str, name_suffix: str = ""):
+        return self.get_group_column_cte(table, group_column, "base_element", name_suffix)

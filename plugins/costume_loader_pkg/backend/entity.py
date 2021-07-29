@@ -521,8 +521,6 @@ class EntityFactory:
         # basis element attributes #
         ############################
 
-        # TODO: CTE
-        # TODO: one row per basiselement
         is_basiselement = False
 
         # load basiselement if needed
@@ -558,7 +556,9 @@ class EntityFactory:
                 columns_to_select.append(base_element_table.Basiselementname)
                 tables_to_join.add(base_element_table)
 
-            design_table = database.other_tables["BasiselementDesign"]
+            design_table = db.get_base_element_cte(
+                database.other_tables["BasiselementDesign"], "Designname"
+            )
             join_on[design_table] = and_(
                 costume_base_element_table.c.BasiselementID
                 == design_table.c.BasiselementID
@@ -568,7 +568,9 @@ class EntityFactory:
                 columns_to_select.append(design_table.c.Designname)
                 tables_to_join.add(design_table)
 
-            form_table = database.other_tables["BasiselementForm"]
+            form_table = db.get_base_element_cte(
+                database.other_tables["BasiselementForm"], "Formname"
+            )
             join_on[form_table] = and_(
                 costume_base_element_table.c.BasiselementID == form_table.c.BasiselementID
             )
@@ -577,7 +579,9 @@ class EntityFactory:
                 columns_to_select.append(form_table.c.Formname)
                 tables_to_join.add(form_table)
 
-            wear_table = database.other_tables["BasiselementTrageweise"]
+            wear_table = db.get_base_element_cte(
+                database.other_tables["BasiselementTrageweise"], "Trageweisename"
+            )
             join_on[wear_table] = and_(
                 costume_base_element_table.c.BasiselementID == wear_table.c.BasiselementID
             )
@@ -586,7 +590,9 @@ class EntityFactory:
                 columns_to_select.append(wear_table.c.Trageweisename)
                 tables_to_join.add(wear_table)
 
-            condition_table = database.other_tables["BasiselementZustand"]
+            condition_table = db.get_base_element_cte(
+                database.other_tables["BasiselementZustand"], "Zustandsname"
+            )
             join_on[condition_table] = and_(
                 costume_base_element_table.c.BasiselementID
                 == condition_table.c.BasiselementID
@@ -596,7 +602,9 @@ class EntityFactory:
                 columns_to_select.append(condition_table.c.Zustandsname)
                 tables_to_join.add(condition_table)
 
-            function_table = database.other_tables["BasiselementFunktion"]
+            function_table = db.get_base_element_cte(
+                database.other_tables["BasiselementFunktion"], "Funktionsname"
+            )
             join_on[function_table] = and_(
                 costume_base_element_table.c.BasiselementID
                 == function_table.c.BasiselementID
@@ -607,30 +615,43 @@ class EntityFactory:
                 tables_to_join.add(function_table)
 
             material_table = database.base.classes.BasiselementMaterial
-            join_on[material_table] = and_(
+            material_cte = select(
+                material_table.BasiselementID,
+                (
+                    material_table.Materialname + "|" + material_table.Materialeindruck
+                ).label("Material"),
+            ).cte("MaterialCTE")
+
+            merged_material_table = db.get_base_element_cte(material_cte, "Material")
+            join_on[merged_material_table] = and_(
                 costume_base_element_table.c.BasiselementID
-                == material_table.BasiselementID
+                == merged_material_table.c.BasiselementID
             )
 
-            if Attribute.material in attributes:
-                columns_to_select.append(material_table.Materialname)
-                tables_to_join.add(material_table)
-            if Attribute.materialeindruck in attributes:
-                columns_to_select.append(material_table.Materialeindruck)
-                tables_to_join.add(material_table)
+            if (
+                Attribute.material in attributes
+                or Attribute.materialeindruck in attributes
+            ):
+                columns_to_select.append(merged_material_table.c.Material)
+                tables_to_join.add(merged_material_table)
 
             color_table = database.base.classes.BasiselementFarbe
-            join_on[color_table] = and_(
-                costume_base_element_table.c.BasiselementID == color_table.BasiselementID
+            color_cte = select(
+                color_table.BasiselementID,
+                (color_table.Farbname + "|" + color_table.Farbeindruck).label("Farbe"),
+            ).cte("FarbeCTE")
+
+            merged_color_table = db.get_base_element_cte(color_cte, "Farbe")
+            join_on[merged_color_table] = and_(
+                costume_base_element_table.c.BasiselementID
+                == merged_color_table.c.BasiselementID
             )
 
-            if Attribute.farbe in attributes:
-                columns_to_select.append(color_table.Farbname)
-                tables_to_join.add(color_table)
-            if Attribute.farbeindruck in attributes:
-                columns_to_select.append(color_table.Farbeindruck)
-                tables_to_join.add(color_table)
+            if Attribute.farbe in attributes or Attribute.farbeindruck:
+                columns_to_select.append(merged_color_table.c.Farbe)
+                tables_to_join.add(merged_color_table)
 
+        # add base element id if base elements need to be loaded
         if is_basiselement:
             columns_to_select = [
                 costume_base_element_table.c.BasiselementID
