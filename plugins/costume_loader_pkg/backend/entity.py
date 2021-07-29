@@ -2,7 +2,8 @@ import logging
 from typing import Any, Dict
 from typing import List
 
-from sqlalchemy import select, tuple_, and_, join
+from sqlalchemy import select, tuple_, and_, join, cast, String
+from sqlalchemy.orm import Bundle
 
 from plugins.costume_loader_pkg.backend.database import Database
 from plugins.costume_loader_pkg.backend.taxonomy import Taxonomie
@@ -317,7 +318,9 @@ class EntityFactory:
         if Attribute.dominanterZustand in attributes:
             columns_to_select.append(costume_table.DominanterZustand)
 
-        color_concept_table = database.other_tables["FilmFarbkonzept"]
+        color_concept_table = db.get_film_cte(
+            database.other_tables["FilmFarbkonzept"], "Farbkonzept"
+        )
         join_on[color_concept_table] = and_(
             costume_table.FilmID == color_concept_table.c.FilmID
         )
@@ -326,9 +329,10 @@ class EntityFactory:
             columns_to_select.append(color_concept_table.c.Farbkonzept)
             tables_to_join.add(color_concept_table)
 
-        dominant_character_trait_table = database.other_tables[
-            "RolleDominanteCharaktereigenschaft"
-        ]
+        dominant_character_trait_table = db.get_role_cte(
+            database.other_tables["RolleDominanteCharaktereigenschaft"],
+            "DominanteCharaktereigenschaft",
+        )
         join_on[dominant_character_trait_table] = and_(
             costume_table.RollenID == dominant_character_trait_table.c.RollenID,
             costume_table.FilmID == dominant_character_trait_table.c.FilmID,
@@ -340,14 +344,16 @@ class EntityFactory:
             )
             tables_to_join.add(dominant_character_trait_table)
 
-        role_stereotype_table = database.base.classes.RolleStereotyp
+        role_stereotype_table = db.get_role_cte(
+            database.base.classes.RolleStereotyp, "Stereotyp"
+        )
         join_on[role_stereotype_table] = and_(
-            costume_table.RollenID == role_stereotype_table.RollenID,
-            costume_table.FilmID == role_stereotype_table.FilmID,
+            costume_table.RollenID == role_stereotype_table.c.RollenID,
+            costume_table.FilmID == role_stereotype_table.c.FilmID,
         )
 
         if Attribute.stereotyp in attributes:
-            columns_to_select.append(role_stereotype_table.Stereotyp)
+            columns_to_select.append(role_stereotype_table.c.Stereotyp)
             tables_to_join.add(role_stereotype_table)
 
         role_table = database.base.classes.Rolle
@@ -372,25 +378,29 @@ class EntityFactory:
             columns_to_select.append(role_table.Rollenrelevanz)
             tables_to_join.add(role_table)
 
-        genre_table = database.other_tables["FilmGenre"]
+        genre_table = db.get_film_cte(database.other_tables["FilmGenre"], "Genre")
         join_on[genre_table] = and_(costume_table.FilmID == genre_table.c.FilmID)
 
         if Attribute.genre in attributes:
             columns_to_select.append(genre_table.c.Genre)
             tables_to_join.add(genre_table)
 
-        costume_playtime_table = database.base.classes.KostuemSpielzeit
+        costume_playtime_table = db.get_costume_cte(
+            database.base.classes.KostuemSpielzeit, "Spielzeit"
+        )
         join_on[costume_playtime_table] = and_(
-            costume_table.KostuemID == costume_playtime_table.KostuemID,
-            costume_table.RollenID == costume_playtime_table.RollenID,
-            costume_table.FilmID == costume_playtime_table.FilmID,
+            costume_table.KostuemID == costume_playtime_table.c.KostuemID,
+            costume_table.RollenID == costume_playtime_table.c.RollenID,
+            costume_table.FilmID == costume_playtime_table.c.FilmID,
         )
 
         if Attribute.spielzeit in attributes:
-            columns_to_select.append(costume_playtime_table.Spielzeit)
+            columns_to_select.append(costume_playtime_table.c.Spielzeit)
             tables_to_join.add(costume_playtime_table)
 
-        costume_daytime_table = database.other_tables["KostuemTageszeit"]
+        costume_daytime_table = db.get_costume_cte(
+            database.other_tables["KostuemTageszeit"], "Tageszeit"
+        )
         join_on[costume_daytime_table] = and_(
             costume_table.KostuemID == costume_daytime_table.c.KostuemID,
             costume_table.RollenID == costume_daytime_table.c.RollenID,
@@ -401,7 +411,9 @@ class EntityFactory:
             columns_to_select.append(costume_daytime_table.c.Tageszeit)
             tables_to_join.add(costume_daytime_table)
 
-        body_modification_table = database.other_tables["KostuemKoerpermodifikation"]
+        body_modification_table = db.get_costume_cte(
+            database.other_tables["KostuemKoerpermodifikation"], "Koerpermodifikationname"
+        )
         join_on[body_modification_table] = and_(
             costume_table.KostuemID == body_modification_table.c.KostuemID,
             costume_table.RollenID == body_modification_table.c.RollenID,
@@ -413,28 +425,43 @@ class EntityFactory:
             tables_to_join.add(body_modification_table)
 
         timecode_table = database.base.classes.KostuemTimecode
-        join_on[timecode_table] = and_(
-            costume_table.KostuemID == timecode_table.KostuemID,
-            costume_table.RollenID == timecode_table.RollenID,
-            costume_table.FilmID == timecode_table.FilmID,
+        timecode_cte = select(
+            timecode_table.KostuemID,
+            timecode_table.RollenID,
+            timecode_table.FilmID,
+            (
+                cast(timecode_table.Timecodeanfang, String)
+                + "|"
+                + cast(timecode_table.Timecodeende, String)
+            ).label("Zeiten"),
+        ).cte("TimecodeCTE")
+
+        merged_timecode_table = db.get_costume_cte(timecode_cte, "Zeiten")
+        join_on[merged_timecode_table] = and_(
+            costume_table.KostuemID == merged_timecode_table.c.KostuemID,
+            costume_table.RollenID == merged_timecode_table.c.RollenID,
+            costume_table.FilmID == merged_timecode_table.c.FilmID,
         )
 
         if Attribute.kostuemZeit in attributes:
-            columns_to_select.append(timecode_table.Timecodeanfang)
-            columns_to_select.append(timecode_table.Timecodeende)
-            tables_to_join.add(timecode_table)
+            columns_to_select.append(merged_timecode_table.c.Zeiten)
+            tables_to_join.add(merged_timecode_table)
 
-        status_table = database.base.classes.RolleFamilienstand
+        status_table = db.get_role_cte(
+            database.base.classes.RolleFamilienstand, "Familienstand"
+        )
         join_on[status_table] = and_(
-            costume_table.RollenID == status_table.RollenID,
-            costume_table.FilmID == status_table.FilmID,
+            costume_table.RollenID == status_table.c.RollenID,
+            costume_table.FilmID == status_table.c.FilmID,
         )
 
         if Attribute.familienstand in attributes:
-            columns_to_select.append(status_table.Familienstand)
+            columns_to_select.append(status_table.c.Familienstand)
             tables_to_join.add(status_table)
 
-        trait_table = database.other_tables["KostuemCharaktereigenschaft"]
+        trait_table = db.get_costume_cte(
+            database.other_tables["KostuemCharaktereigenschaft"], "Charaktereigenschaft"
+        )
         join_on[trait_table] = and_(
             costume_table.KostuemID == trait_table.c.KostuemID,
             costume_table.RollenID == trait_table.c.RollenID,
@@ -446,37 +473,56 @@ class EntityFactory:
             tables_to_join.add(trait_table)
 
         location_table = database.base.classes.KostuemSpielort
-        join_on[location_table] = and_(
-            costume_table.KostuemID == trait_table.c.KostuemID,
-            costume_table.RollenID == trait_table.c.RollenID,
-            costume_table.FilmID == trait_table.c.FilmID,
+        location_cte = select(
+            location_table.KostuemID,
+            location_table.RollenID,
+            location_table.FilmID,
+            (location_table.Spielort + "|" + location_table.SpielortDetail).label(
+                "Spielort"
+            ),
+        ).cte("SpielortCTE")
+
+        merged_location_table = db.get_costume_cte(location_cte, "Spielort")
+        join_on[merged_location_table] = and_(
+            costume_table.KostuemID == merged_location_table.c.KostuemID,
+            costume_table.RollenID == merged_location_table.c.RollenID,
+            costume_table.FilmID == merged_location_table.c.FilmID,
         )
 
-        if Attribute.spielort in attributes:
-            columns_to_select.append(location_table.Spielort)
-            tables_to_join.add(location_table)
-        if Attribute.spielortDetail in attributes:
-            columns_to_select.append(location_table.SpielortDetail)
-            tables_to_join.add(location_table)
+        if Attribute.spielort in attributes or Attribute.spielortDetail in attributes:
+            columns_to_select.append(merged_location_table.c.Spielort)
+            tables_to_join.add(merged_location_table)
 
-        age_impression_table = database.base.classes.KostuemAlterseindruck
-        join_on[age_impression_table] = and_(
-            costume_table.KostuemID == age_impression_table.KostuemID,
-            costume_table.RollenID == age_impression_table.RollenID,
-            costume_table.FilmID == age_impression_table.FilmID,
+        age_impression_table1 = db.get_costume_cte(
+            database.base.classes.KostuemAlterseindruck, "Alterseindruck", "1"
+        )
+        join_on[age_impression_table1] = and_(
+            costume_table.KostuemID == age_impression_table1.c.KostuemID,
+            costume_table.RollenID == age_impression_table1.c.RollenID,
+            costume_table.FilmID == age_impression_table1.c.FilmID,
+        )
+        age_impression_table2 = db.get_costume_cte(
+            database.base.classes.KostuemAlterseindruck, "NumAlter", "2"
+        )
+        join_on[age_impression_table2] = and_(
+            costume_table.KostuemID == age_impression_table2.c.KostuemID,
+            costume_table.RollenID == age_impression_table2.c.RollenID,
+            costume_table.FilmID == age_impression_table2.c.FilmID,
         )
 
         if Attribute.alterseindruck in attributes:
-            columns_to_select.append(age_impression_table.Alterseindruck)
-            tables_to_join.add(age_impression_table)
+            columns_to_select.append(age_impression_table1.c.Alterseindruck)
+            tables_to_join.add(age_impression_table1)
         if Attribute.alter in attributes:
-            columns_to_select.append(age_impression_table.NumAlter)
-            tables_to_join.add(age_impression_table)
+            columns_to_select.append(age_impression_table2.c.NumAlter)
+            tables_to_join.add(age_impression_table2)
 
         ############################
         # basis element attributes #
         ############################
 
+        # TODO: CTE
+        # TODO: one row per basiselement
         is_basiselement = False
 
         # load basiselement if needed

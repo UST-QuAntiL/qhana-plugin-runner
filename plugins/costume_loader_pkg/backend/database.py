@@ -7,7 +7,7 @@ from configparser import ConfigParser
 from sqlalchemy import create_engine, table, column, select, func
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.automap import automap_base, AutomapBase
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, DeclarativeMeta
 
 from plugins.costume_loader_pkg.backend.singleton import Singleton
 import os
@@ -180,10 +180,10 @@ class Database(Singleton):
         return self.__connection.cursor()
 
     def get_group_column_cte(
-        self, table, group_column: str, table_type: str, separator="|"
+        self, table, group_column: str, table_type: str, name_suffix: str = ""
     ):
         table_columns: Any
-        if isinstance(table, self.base):
+        if isinstance(table, DeclarativeMeta):
             table_columns = table
         else:
             table_columns = table.c
@@ -194,25 +194,30 @@ class Database(Singleton):
             group_by_rows.append(getattr(table_columns, "RollenID"))
         if table_type == "costume":
             group_by_rows.append(getattr(table_columns, "KostuemID"))
+
+        name = (
+            getattr(table, "name", getattr(table, "__name__", ""))
+            + "_"
+            + name_suffix
+            + "_CTE"
+        )
+
         return (
             select(
                 *group_by_rows,
-                func.group_concat(
-                    getattr(table_columns, group_column),
-                    separator,
-                ).label(group_column),
+                func.group_concat(getattr(table_columns, group_column)).label(
+                    group_column
+                ),
             )
             .group_by(*group_by_rows)
-            .cte(f"{table.name}CTE")
+            .cte(name)
         )
 
-    def get_film_cte(self, table, group_column, separator="|"):
-        return self.get_group_column_cte(table, group_column, "film", separator=separator)
+    def get_film_cte(self, table, group_column: str, name_suffix: str = ""):
+        return self.get_group_column_cte(table, group_column, "film", name_suffix)
 
-    def get_role_cte(self, table, group_column, separator="|"):
-        return self.get_group_column_cte(table, group_column, "role", separator=separator)
+    def get_role_cte(self, table, group_column: str, name_suffix: str = ""):
+        return self.get_group_column_cte(table, group_column, "role", name_suffix)
 
-    def get_costume_cte(self, table, group_column, separator="|"):
-        return self.get_group_column_cte(
-            table, group_column, "costume", separator=separator
-        )
+    def get_costume_cte(self, table, group_column: str, name_suffix: str = ""):
+        return self.get_group_column_cte(table, group_column, "costume", name_suffix)
