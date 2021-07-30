@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any, Dict
 from typing import List
 
@@ -692,7 +693,44 @@ class EntityFactory:
                 costume_base_element_table.c.BasiselementID,
             )
 
-        result = database.session.execute(query).all()
+        query_result = database.session.execute(query).all()
+
+        #########################################################
+        # Convert the result of the query into entity instances #
+        #########################################################
+
+        if not is_basiselement:
+            for row in query_result:
+                entity = Entity("Entity")
+
+                costumeID = row[0]
+                roleID = row[1]
+                filmID = row[2]
+
+                entity.set_kostuem_id(costumeID)
+                entity.set_rollen_id(roleID)
+                entity.set_film_id(filmID)
+
+                is_invalid = False
+
+                for i, attr in enumerate(attributes):
+                    value: str = row[i + 3]
+
+                    if value is None or value == "":
+                        invalid_entries += 1
+                        is_invalid = True
+                        logging.warning(
+                            "Found entry with " + attr.value + ' = None or = ""'
+                        )
+                        break
+
+                    entity.add_attribute(attr)
+                    entity.add_value(attr, value.split(","))
+
+                if is_invalid:
+                    continue
+
+                entities.append(entity)
 
         return entities
 
