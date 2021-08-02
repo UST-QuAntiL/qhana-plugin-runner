@@ -194,61 +194,8 @@ class EntityService:
     The default for amount is int max which returns all founded entities.
     """
 
-    def create_entities(
-        self,
-        database: Database,
-        amount: int = 2147483646,
-        filter_rules: Dict[Attribute, List[str]] = {},
-    ) -> List[Entity]:
-        self.allEntities = EntityFactory.create(
-            self.attributes.keys(), database, amount, filter_rules=filter_rules
-        )
-
-    def create_subset_from_file(
-        self, database: Database, positiveCsvFile: str, negativeCsvFile: str
-    ):
-        kostuemIDs = []
-        rollenIDs = []
-        filmIDs = []
-
-        with open(positiveCsvFile, "r") as f:
-            for row in f:
-                kostuemId = row.split(",")[1]
-                if kostuemId.isdigit():
-                    kostuemIDs.append(row.split(",")[1])
-                    rollenIDs.append(row.split(",")[2])
-                    filmIDs.append(row.split(",")[3])
-
-        with open(negativeCsvFile, "r") as f:
-            for row in f:
-                kostuemId = row.split(",")[1]
-                if kostuemId.isdigit():
-                    kostuemIDs.append(row.split(",")[1])
-                    rollenIDs.append(row.split(",")[2])
-                    filmIDs.append(row.split(",")[3])
-
-        keys = []
-        for i in range(0, len(kostuemIDs)):
-            keys.append((kostuemIDs[i], rollenIDs[i], filmIDs[i]))
-
-        unsortedEntities = EntityFactory.create(
-            self.attributes.keys(), database, len(kostuemIDs), keys
-        )
-        sortedEntities = []
-        # sort the subset accordingly to the csv file
-        for i in range(0, len(kostuemIDs)):
-            elem = self.get_costume_with(
-                unsortedEntities, keys[i][0], keys[i][1], keys[i][2]
-            )
-            sortedEntities.append(elem)
-            # if elem is None:
-            #    print("ERROR!")
-            # print("kostuem = " + str(keys[i][0]) + " rolle = " + str(keys[i][1]) + " film = " + str(keys[i][2]))
-
-        for i in range(0, len(sortedEntities)):
-            sortedEntities[i].set_id(i)
-
-        self.allEntities = sortedEntities
+    def create_entities(self, database: Database):
+        self.allEntities = EntityFactory.create(list(self.attributes.keys()), database)
 
     def get_costume_with(self, costumes, kostuemId, rollenId, filmId):
         for elem in costumes:
@@ -259,27 +206,6 @@ class EntityService:
             ):
                 return elem
         return None
-
-    # TODO: use for dataloader
-    def create_subset(self, subsetEnum: Subset, database: Database) -> List[Entity]:
-        if subsetEnum == Subset.subset5:
-            self.create_subset_from_file(
-                database, Subset5PositiveFileName, Subset5NegativeFileName
-            )
-        elif subsetEnum == Subset.subset10:
-            self.create_subset_from_file(
-                database, Subset10PositiveFileName, Subset10NegativeFileName
-            )
-        elif subsetEnum == Subset.subset25:
-            self.create_subset_from_file(
-                database, Subset25PositiveFileName, Subset25NegativeFileName
-            )
-        elif subsetEnum == Subset.subset40:
-            self.create_subset_from_file(
-                database, Subset40PositiveFileName, Subset40NegativeFileName
-            )
-        else:
-            logging.error("You took a wrong value for subset.")
 
     """
     Creates the components, i.e. aggregator, transformer, attribute comparer and
