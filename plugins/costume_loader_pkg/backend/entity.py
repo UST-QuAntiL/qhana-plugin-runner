@@ -280,8 +280,6 @@ class EntityFactory:
 
     @staticmethod
     def create(attributes: List[Attribute], database: Database) -> List[Entity]:
-
-        entities = []
         invalid_entries = 0
 
         columns_to_select = []
@@ -687,9 +685,18 @@ class EntityFactory:
 
         query_result = database.session.execute(query).all()
 
-        #########################################################
-        # Convert the result of the query into entity instances #
-        #########################################################
+        # Convert the result of the query into entity instances
+        entities = EntityFactory._entities_from_query_result(
+            attributes, invalid_entries, is_base_element, query_result
+        )
+
+        return entities
+
+    @staticmethod
+    def _entities_from_query_result(
+        attributes, invalid_entries, is_base_element, query_result
+    ) -> List[Entity]:
+        entities = []
 
         for row in query_result:
             entity = Entity("Entity")
