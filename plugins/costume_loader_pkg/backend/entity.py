@@ -716,26 +716,45 @@ class EntityFactory:
             for i, attr in enumerate(attributes):
                 value: str = row[i + offset]
 
-                if (
-                    attr == Attribute.spielort
-                    or attr == Attribute.alterseindruck
-                    or attr == Attribute.material
-                    or attr == Attribute.farbe
-                ):
-                    value = ",".join(
-                        [elem.split("|")[0] for elem in value.split(",")]
-                    )  # TODO: remove merged tables, remove this
-                if (
-                    attr == Attribute.spielortDetail
-                    or attr == Attribute.alter
-                    or attr == Attribute.materialeindruck
-                    or attr == Attribute.farbeindruck
-                ):
-                    value = ",".join(
-                        [elem.split("|")[1] for elem in value.split(",")]
-                    )  # TODO: remove merged tables, remove this
+                if attr in [
+                    Attribute.spielort,
+                    Attribute.alterseindruck,
+                    Attribute.material,
+                    Attribute.farbe,
+                ]:
+                    value = ",".join([elem.split("|")[0] for elem in value.split(",")])
+                if attr in [
+                    Attribute.spielortDetail,
+                    Attribute.alter,
+                    Attribute.materialeindruck,
+                    Attribute.farbeindruck,
+                ]:
+                    value = ",".join([elem.split("|")[1] for elem in value.split(",")])
 
-                # TODO: calculate costume time
+                if attr == Attribute.kostuemZeit:
+                    costume_time = 0
+
+                    for time_pair in value.split(","):
+                        start_time = time_pair.split("|")[0].split(":")
+                        end_time = time_pair.split("|")[1].split(":")
+
+                        start_time_delta = timedelta(
+                            hours=int(start_time[0]),
+                            minutes=int(start_time[1]),
+                            seconds=int(start_time[2]),
+                        )
+
+                        end_time_delta = timedelta(
+                            hours=int(end_time[0]),
+                            minutes=int(end_time[1]),
+                            seconds=int(end_time[2]),
+                        )
+
+                        costume_time += (
+                            end_time_delta - start_time_delta
+                        ).total_seconds()
+
+                    value = str(costume_time)
 
                 if value is None or value == "":
                     invalid_entries += 1
@@ -1198,8 +1217,9 @@ if __name__ == "__main__":
         [
             Attribute.genre,
             Attribute.dominanteFarbe,
-            Attribute.farbe,
-            Attribute.farbeindruck,
+            # Attribute.farbe,
+            # Attribute.farbeindruck,
+            Attribute.kostuemZeit,
             # Attribute.alter,
             # Attribute.alterseindruck,
         ],
