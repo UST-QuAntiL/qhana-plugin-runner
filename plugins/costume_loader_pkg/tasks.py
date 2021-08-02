@@ -79,7 +79,7 @@ def costume_loading_task(self, db_id: int) -> str:
         }
 
         print("Filter rules:", filter_rules)
-        es.create_entities(db, input_params.amount, filter_rules)
+        es.create_entities(db)
     else:
         for attr in input_params.attributes:
             if attr in basiselement_attrs:

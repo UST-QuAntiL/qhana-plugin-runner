@@ -302,14 +302,14 @@ class EntityFactory:
             costume_table.FilmID == costume_table.FilmID,
         )
 
-        color_concept_table = db.get_film_cte(
+        color_concept_table = database.get_film_cte(
             database.other_tables["FilmFarbkonzept"], "Farbkonzept"
         )
         join_on[color_concept_table] = and_(
             costume_table.FilmID == color_concept_table.c.FilmID
         )
 
-        dominant_character_trait_table = db.get_role_cte(
+        dominant_character_trait_table = database.get_role_cte(
             database.other_tables["RolleDominanteCharaktereigenschaft"],
             "DominanteCharaktereigenschaft",
         )
@@ -318,7 +318,7 @@ class EntityFactory:
             costume_table.FilmID == dominant_character_trait_table.c.FilmID,
         )
 
-        role_stereotype_table = db.get_role_cte(
+        role_stereotype_table = database.get_role_cte(
             database.base.classes.RolleStereotyp, "Stereotyp"
         )
         join_on[role_stereotype_table] = and_(
@@ -332,10 +332,10 @@ class EntityFactory:
             costume_table.FilmID == role_table.FilmID,
         )
 
-        genre_table = db.get_film_cte(database.other_tables["FilmGenre"], "Genre")
+        genre_table = database.get_film_cte(database.other_tables["FilmGenre"], "Genre")
         join_on[genre_table] = and_(costume_table.FilmID == genre_table.c.FilmID)
 
-        costume_playtime_table = db.get_costume_cte(
+        costume_playtime_table = database.get_costume_cte(
             database.base.classes.KostuemSpielzeit, "Spielzeit"
         )
         join_on[costume_playtime_table] = and_(
@@ -344,7 +344,7 @@ class EntityFactory:
             costume_table.FilmID == costume_playtime_table.c.FilmID,
         )
 
-        costume_daytime_table = db.get_costume_cte(
+        costume_daytime_table = database.get_costume_cte(
             database.other_tables["KostuemTageszeit"], "Tageszeit"
         )
         join_on[costume_daytime_table] = and_(
@@ -353,7 +353,7 @@ class EntityFactory:
             costume_table.FilmID == costume_daytime_table.c.FilmID,
         )
 
-        body_modification_table = db.get_costume_cte(
+        body_modification_table = database.get_costume_cte(
             database.other_tables["KostuemKoerpermodifikation"], "Koerpermodifikationname"
         )
         join_on[body_modification_table] = and_(
@@ -374,14 +374,14 @@ class EntityFactory:
             ).label("Zeiten"),
         ).cte("TimecodeCTE")
 
-        merged_timecode_table = db.get_costume_cte(timecode_cte, "Zeiten")
+        merged_timecode_table = database.get_costume_cte(timecode_cte, "Zeiten")
         join_on[merged_timecode_table] = and_(
             costume_table.KostuemID == merged_timecode_table.c.KostuemID,
             costume_table.RollenID == merged_timecode_table.c.RollenID,
             costume_table.FilmID == merged_timecode_table.c.FilmID,
         )
 
-        status_table = db.get_role_cte(
+        status_table = database.get_role_cte(
             database.base.classes.RolleFamilienstand, "Familienstand"
         )
         join_on[status_table] = and_(
@@ -389,7 +389,7 @@ class EntityFactory:
             costume_table.FilmID == status_table.c.FilmID,
         )
 
-        trait_table = db.get_costume_cte(
+        trait_table = database.get_costume_cte(
             database.other_tables["KostuemCharaktereigenschaft"], "Charaktereigenschaft"
         )
         join_on[trait_table] = and_(
@@ -407,7 +407,7 @@ class EntityFactory:
                 "Spielort"
             ),
         ).cte("SpielortCTE")
-        merged_location_table = db.get_costume_cte(location_cte, "Spielort")
+        merged_location_table = database.get_costume_cte(location_cte, "Spielort")
         join_on[merged_location_table] = and_(
             costume_table.KostuemID == merged_location_table.c.KostuemID,
             costume_table.RollenID == merged_location_table.c.RollenID,
@@ -423,7 +423,9 @@ class EntityFactory:
                 age_impression_table.Alterseindruck + "|" + age_impression_table.NumAlter
             ).label("Alter"),
         ).cte("AlterCTE")
-        merged_age_impression_table = db.get_costume_cte(age_impression_cte, "Alter")
+        merged_age_impression_table = database.get_costume_cte(
+            age_impression_cte, "Alter"
+        )
         join_on[merged_age_impression_table] = and_(
             costume_table.KostuemID == merged_age_impression_table.c.KostuemID,
             costume_table.RollenID == merged_age_impression_table.c.RollenID,
@@ -443,28 +445,28 @@ class EntityFactory:
             == base_element_table.BasiselementID
         )
 
-        design_table = db.get_base_element_cte(
+        design_table = database.get_base_element_cte(
             database.other_tables["BasiselementDesign"], "Designname"
         )
         join_on[design_table] = and_(
             costume_base_element_table.c.BasiselementID == design_table.c.BasiselementID
         )
 
-        form_table = db.get_base_element_cte(
+        form_table = database.get_base_element_cte(
             database.other_tables["BasiselementForm"], "Formname"
         )
         join_on[form_table] = and_(
             costume_base_element_table.c.BasiselementID == form_table.c.BasiselementID
         )
 
-        wear_table = db.get_base_element_cte(
+        wear_table = database.get_base_element_cte(
             database.other_tables["BasiselementTrageweise"], "Trageweisename"
         )
         join_on[wear_table] = and_(
             costume_base_element_table.c.BasiselementID == wear_table.c.BasiselementID
         )
 
-        condition_table = db.get_base_element_cte(
+        condition_table = database.get_base_element_cte(
             database.other_tables["BasiselementZustand"], "Zustandsname"
         )
         join_on[condition_table] = and_(
@@ -472,7 +474,7 @@ class EntityFactory:
             == condition_table.c.BasiselementID
         )
 
-        function_table = db.get_base_element_cte(
+        function_table = database.get_base_element_cte(
             database.other_tables["BasiselementFunktion"], "Funktionsname"
         )
         join_on[function_table] = and_(
@@ -487,7 +489,7 @@ class EntityFactory:
             ),
         ).cte("MaterialCTE")
 
-        merged_material_table = db.get_base_element_cte(material_cte, "Material")
+        merged_material_table = database.get_base_element_cte(material_cte, "Material")
         join_on[merged_material_table] = and_(
             costume_base_element_table.c.BasiselementID
             == merged_material_table.c.BasiselementID
@@ -499,7 +501,7 @@ class EntityFactory:
             (color_table.Farbname + "|" + color_table.Farbeindruck).label("Farbe"),
         ).cte("FarbeCTE")
 
-        merged_color_table = db.get_base_element_cte(color_cte, "Farbe")
+        merged_color_table = database.get_base_element_cte(color_cte, "Farbe")
         join_on[merged_color_table] = and_(
             costume_base_element_table.c.BasiselementID
             == merged_color_table.c.BasiselementID
@@ -669,7 +671,9 @@ class EntityFactory:
             else:
                 j = j.join(table, join_on[table])
 
-        query = query.select_from(j)
+        if j is not None:
+            query = query.select_from(j)
+
         query = query.order_by(
             costume_table.FilmID,
             costume_table.RollenID,
@@ -767,7 +771,7 @@ class EntityFactory:
         return entities
 
 
-if __name__ == "__main__":
+def main():
     db = Database()
     db.open_with_params(
         host="localhost",
@@ -794,3 +798,7 @@ if __name__ == "__main__":
     time2 = time.time()
 
     print(time2 - time1)
+
+
+if __name__ == "__main__":
+    main()
