@@ -3,29 +3,24 @@ import time
 from typing import Any, Dict, Tuple
 from typing import List
 
-from sqlalchemy import select, tuple_, and_, join, cast, String
-from sqlalchemy.orm import Bundle
+from sqlalchemy import select, and_, join, cast, String
 
 from plugins.costume_loader_pkg.backend.database import Database
-from plugins.costume_loader_pkg.backend.taxonomy import Taxonomie
-from datetime import datetime, timedelta
+from datetime import timedelta
 from plugins.costume_loader_pkg.backend.attribute import Attribute
-import copy
 
 MUSE_URL = "http://129.69.214.108/"
 
 
-"""
-This class represents a entity such as a costume or a basic element.
-"""
-
-
 class Entity:
     """
-    Initializes the entity object.
+    This class represents a entity such as a costume or a basic element.
     """
 
     def __init__(self, name: str) -> None:
+        """
+        Initializes the entity object.
+        """
         self.name = name
         self.id = 0
         self.kostuemId = 0
@@ -38,149 +33,61 @@ class Entity:
 
         return
 
-    """
-    Sets the id of the entity.
-    """
-
-    def set_id(self, id: int) -> None:
-        self.id = id
-        return
-
-    """
-    Gets the id of the entity.
-    """
-
-    def get_id(self) -> int:
-        return self.id
-
-    """
-    Sets the basiselementId of the entity.
-    """
-
-    def set_basiselement_id(self, basiselementId: int) -> None:
-        self.basiselementId = basiselementId
-        return
-
-    """
-    Gets the basiselementId of the entity.
-    """
-
-    def get_basiselement_id(self) -> int:
-        return self.basiselementId
-
-    """
-    Sets the kostuemId of the entity.
-    """
-
-    def set_kostuem_id(self, kostuemId: int) -> None:
-        self.kostuemId = kostuemId
-        return
-
-    """
-    Gets the kostuemId of the entity.
-    """
-
-    def get_kostuem_id(self) -> int:
-        return self.kostuemId
-
-    """
-    Sets the rollenId of the entity.
-    """
-
-    def set_rollen_id(self, rollenId: int) -> None:
-        self.rollenId = rollenId
-        return
-
-    """
-    Gets the rollenId of the entity.
-    """
-
-    def get_rollen_id(self) -> int:
-        return self.rollenId
-
-    """
-    Sets the filmId of the entity.
-    """
-
-    def set_film_id(self, filmId: int) -> None:
-        self.filmId = filmId
-        return
-
-    """
-    Gets the filmid of the entity.
-    """
-
-    def get_film_id(self) -> int:
-        return self.filmId
-
-    """
-    Gets the film url of the entity.
-    """
-
     def get_film_url(self) -> str:
-        return MUSE_URL + "#/filme/" + str(self.get_film_id())
-
-    """
-    Gets the rollen url of the entity.
-    """
+        """
+        Gets the film url of the entity.
+        """
+        return MUSE_URL + "#/filme/" + str(self.id)
 
     def get_rollen_url(self) -> str:
-        return self.get_film_url() + "/rollen/" + str(self.get_rollen_id())
-
-    """
-    Gets the kostuem url of the entity.
-    """
+        """
+        Gets the rollen url of the entity.
+        """
+        return self.get_film_url() + "/rollen/" + str(self.rollenId)
 
     def get_kostuem_url(self) -> str:
-        return self.get_rollen_url() + "/kostueme/" + str(self.get_kostuem_id())
+        """
+        Gets the kostuem url of the entity.
+        """
+        return self.get_rollen_url() + "/kostueme/" + str(self.kostuemId)
 
-    """
-    Adds an attribute to the attributes list.
-    """
-
-    def add_attribute(self, attribute: Attribute) -> None:
+    def add_attribute(self, attribute: Attribute):
+        """
+        Adds an attribute to the attributes list.
+        """
         self.attributes[attribute] = None
-        return
 
-    """
-    Adds a value to the values list. If the associated
-    attribute is not added yet, it will be added.
-    """
-
-    def add_value(self, attribute: Attribute, value: Any) -> None:
+    def add_value(self, attribute: Attribute, value: Any):
+        """
+        Adds a value to the values list. If the associated
+        attribute is not added yet, it will be added.
+        """
         if attribute not in self.attributes:
             self.add_attribute(attribute)
         self.values[attribute] = value
-        return
-
-    """
-    Gets the value of the given attribute.
-    """
 
     def get_value(self, attribute: Attribute):
+        """
+        Gets the value of the given attribute.
+        """
         return self.values[attribute]
 
-    """
-    Removes an attribute from the attributes list.
-    """
-
-    def remove_attribute(self, attribute: Attribute) -> None:
+    def remove_attribute(self, attribute: Attribute):
+        """
+        Removes an attribute from the attributes list.
+        """
         del self.attributes[attribute]
-        return
 
-    """
-    Removes a value from the values list.
-    """
-
-    def remove_attribute(self, attribute: Attribute) -> None:
+    def remove_value(self, attribute: Attribute):
+        """
+        Removes a value from the values list.
+        """
         del self.values[attribute]
-        return
-
-    """
-    Returns the entity in a single string.
-    """
 
     def __str__(self) -> str:
+        """
+        Returns the entity in a single string.
+        """
         output = "name: " + self.name + ", id: " + str(self.id) + ", "
         output += " kostuemId: " + str(self.kostuemId) + ", "
         output += " rollenId: " + str(self.rollenId) + ", "
@@ -195,88 +102,10 @@ class Entity:
         return output[:-2]
 
 
-"""
-This class creats entities based on the given attributes.
-"""
-
-
 class EntityFactory:
     """
-    Creates a entity based on the given list of attributes.
-    The default for amount is max int, all entities that are found will be returned.
-    A filter for the keys can be specified which is a set with the format
-    { (KostuemID, RollenID, FilmID) , ... }
+    This class creates entities based on the given attributes.
     """
-
-    @staticmethod
-    def _is_value_in_list_of_values(v: str, lv: List[str]) -> bool:
-        for v2 in lv:
-            if v.lower() == v2.lower():
-                return True
-
-        return False
-
-    @staticmethod
-    def _expand_filter_term(
-        attribute: Attribute, filter_term: str, db: Database
-    ) -> List[str]:
-        if filter_term.startswith("*"):
-            value = filter_term[1:].lower()
-            taxonomy_type = Attribute.get_taxonomie_type(attribute)
-            taxonomy = Taxonomie.create_from_db(taxonomy_type, db)
-
-            lowercase_adj = {}
-
-            k: str
-            v: Dict
-
-            for k, v in taxonomy.graph.adj.items():
-                lowercase_adj[k.lower()] = [item.lower() for item in v.keys()]
-
-            processed_nodes = []
-            new_nodes = [value]
-
-            while len(new_nodes) > 0:
-                current_node = new_nodes.pop()
-
-                new_nodes.extend(lowercase_adj[current_node])
-                processed_nodes.append(current_node)
-
-            return processed_nodes
-        else:
-            return [filter_term]
-
-    @staticmethod
-    def _is_accepted_by_filter(
-        entity: Entity, filter_rules: Dict[Attribute, List[str]], db: Database
-    ) -> bool:
-        """
-        Tests if the entity is accepted by the provided filter rules or if it should be filtered out.
-        :param entity: entity
-        :param filter_rules: filter rules
-        :return: True if accepted, false if not.
-        """
-        for attribute in filter_rules:
-            attr_accepted = False
-            expanded_rules = [
-                new_term
-                for term in filter_rules[attribute]
-                for new_term in EntityFactory._expand_filter_term(attribute, term, db)
-            ]
-
-            for value in expanded_rules:
-                if (
-                    EntityFactory._is_value_in_list_of_values(
-                        value, entity.get_value(attribute)
-                    )
-                    or value == ""
-                ):
-                    attr_accepted = True
-
-            if not attr_accepted:
-                return False
-
-        return True
 
     @staticmethod
     def _create_table_column_dicts(
@@ -684,6 +513,9 @@ class EntityFactory:
 
     @staticmethod
     def create(attributes: List[Attribute], database: Database) -> List[Entity]:
+        """
+        Creates a entity based on the given list of attributes.
+        """
         invalid_entries = 0
 
         columns_to_select = []
@@ -704,9 +536,6 @@ class EntityFactory:
             if attr in tables:
                 tables_to_join.add(tables[attr])
 
-            # load base element if needed
-            # this also means that we are now treating
-            # each datapoint as a base element
             is_base_element = is_base_element or attr in [
                 Attribute.basiselement,
                 Attribute.design,
