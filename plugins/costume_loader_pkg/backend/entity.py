@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 from typing import List
 
 from sqlalchemy import select, tuple_, and_, join, cast, String
@@ -279,12 +279,12 @@ class EntityFactory:
         return True
 
     @staticmethod
-    def create(attributes: List[Attribute], database: Database) -> List[Entity]:
-        invalid_entries = 0
-
-        columns_to_select = []
-        tables_to_join = set()
-        join_on = {}
+    def _create_table_column_dicts(
+        database: Database,
+    ) -> Tuple[
+        Dict[Attribute, Any], Dict[Attribute, Any], Dict[Attribute, Any], Any, Any
+    ]:
+        join_on: Dict[Attribute, Any] = {}
         tables: Dict[Attribute, Any] = {}
         columns: Dict[Attribute, Any] = {}
 
@@ -679,6 +679,22 @@ class EntityFactory:
 
         tables[Attribute.farbeindruck] = merged_color_table
         columns[Attribute.farbeindruck] = merged_color_table.c.Farbe
+
+        return tables, columns, join_on, costume_table, costume_base_element_table
+
+    @staticmethod
+    def create(attributes: List[Attribute], database: Database) -> List[Entity]:
+        invalid_entries = 0
+
+        columns_to_select = []
+        tables_to_join = set()
+        (
+            tables,
+            columns,
+            join_on,
+            costume_table,
+            costume_base_element_table,
+        ) = EntityFactory._create_table_column_dicts(database)
 
         is_base_element = False
 
