@@ -285,13 +285,12 @@ class EntityFactory:
         columns_to_select = []
         tables_to_join = set()
         join_on = {}
+        tables: Dict[Attribute, Any] = {}
+        columns: Dict[Attribute, Any] = {}
 
-        # First, run as we are just collecting
-        # costumes. If there is an attribute set
-        # that is just part of a basiselement,
-        # this flag will be changed and all
-        # entities will be trated as basiselements.
-        be_basiselement = False
+        #################
+        # Kostuem table #
+        #################
 
         costume_table = database.base.classes.Kostuem
         join_on[costume_table] = and_(
@@ -300,12 +299,29 @@ class EntityFactory:
             costume_table.FilmID == costume_table.FilmID,
         )
 
+        columns[Attribute.ortsbegebenheit] = costume_table.Ortsbegebenheit
+        columns[Attribute.dominanteFarbe] = costume_table.DominanteFarbe
+        columns[Attribute.stereotypRelevant] = costume_table.StereotypRelevant
+        columns[Attribute.dominanteFunktion] = costume_table.DominanteFunktion
+        columns[Attribute.dominanterZustand] = costume_table.DominanterZustand
+
+        #########################
+        # FilmFarbkonzept table #
+        #########################
+
         color_concept_table = database.get_film_cte(
             database.other_tables["FilmFarbkonzept"], "Farbkonzept"
         )
         join_on[color_concept_table] = and_(
             costume_table.FilmID == color_concept_table.c.FilmID
         )
+
+        tables[Attribute.farbkonzept] = color_concept_table
+        columns[Attribute.farbkonzept] = color_concept_table.c.Farbkonzept
+
+        ############################################
+        # RolleDominanteCharaktereigenschaft table #
+        ############################################
 
         dominant_character_trait_table = database.get_role_cte(
             database.other_tables["RolleDominanteCharaktereigenschaft"],
@@ -316,6 +332,15 @@ class EntityFactory:
             costume_table.FilmID == dominant_character_trait_table.c.FilmID,
         )
 
+        tables[Attribute.dominanteCharaktereigenschaft] = dominant_character_trait_table
+        columns[
+            Attribute.dominanteCharaktereigenschaft
+        ] = dominant_character_trait_table.c.DominanteCharaktereigenschaft
+
+        ###################
+        # Stereotyp table #
+        ###################
+
         role_stereotype_table = database.get_role_cte(
             database.base.classes.RolleStereotyp, "Stereotyp"
         )
@@ -324,14 +349,38 @@ class EntityFactory:
             costume_table.FilmID == role_stereotype_table.c.FilmID,
         )
 
+        tables[Attribute.stereotyp] = role_stereotype_table
+        columns[Attribute.stereotyp] = role_stereotype_table.c.Stereotyp
+
+        ###############
+        # Rolle table #
+        ###############
+
         role_table = database.base.classes.Rolle
         join_on[role_table] = and_(
             costume_table.RollenID == role_table.RollenID,
             costume_table.FilmID == role_table.FilmID,
         )
 
+        tables[Attribute.rollenberuf] = role_table
+        columns[Attribute.rollenberuf] = role_table.Rollenberuf
+
+        tables[Attribute.geschlecht] = role_table
+        columns[Attribute.geschlecht] = role_table.Geschlecht
+
+        ###################
+        # FilmGenre table #
+        ###################
+
         genre_table = database.get_film_cte(database.other_tables["FilmGenre"], "Genre")
         join_on[genre_table] = and_(costume_table.FilmID == genre_table.c.FilmID)
+
+        tables[Attribute.genre] = genre_table
+        columns[Attribute.genre] = genre_table.c.Genre
+
+        ###################
+        # KostuemSpielzeit table #
+        ###################
 
         costume_playtime_table = database.get_costume_cte(
             database.base.classes.KostuemSpielzeit, "Spielzeit"
@@ -342,6 +391,13 @@ class EntityFactory:
             costume_table.FilmID == costume_playtime_table.c.FilmID,
         )
 
+        tables[Attribute.spielzeit] = costume_playtime_table
+        columns[Attribute.spielzeit] = costume_playtime_table.c.Spielzeit
+
+        ##########################
+        # KostuemTageszeit table #
+        ##########################
+
         costume_daytime_table = database.get_costume_cte(
             database.other_tables["KostuemTageszeit"], "Tageszeit"
         )
@@ -351,6 +407,13 @@ class EntityFactory:
             costume_table.FilmID == costume_daytime_table.c.FilmID,
         )
 
+        tables[Attribute.tageszeit] = costume_daytime_table
+        columns[Attribute.tageszeit] = costume_daytime_table.c.Tageszeit
+
+        ####################################
+        # KostuemKoerpermodifikation table #
+        ####################################
+
         body_modification_table = database.get_costume_cte(
             database.other_tables["KostuemKoerpermodifikation"], "Koerpermodifikationname"
         )
@@ -359,6 +422,15 @@ class EntityFactory:
             costume_table.RollenID == body_modification_table.c.RollenID,
             costume_table.FilmID == body_modification_table.c.FilmID,
         )
+
+        tables[Attribute.koerpermodifikation] = body_modification_table
+        columns[
+            Attribute.koerpermodifikation
+        ] = body_modification_table.c.Koerpermodifikationname
+
+        #########################
+        # KostuemTimecode table #
+        #########################
 
         timecode_table = database.base.classes.KostuemTimecode
         timecode_cte = select(
@@ -379,6 +451,13 @@ class EntityFactory:
             costume_table.FilmID == merged_timecode_table.c.FilmID,
         )
 
+        tables[Attribute.kostuemZeit] = merged_timecode_table
+        columns[Attribute.kostuemZeit] = merged_timecode_table.c.Zeiten
+
+        ############################
+        # RolleFamilienstand table #
+        ############################
+
         status_table = database.get_role_cte(
             database.base.classes.RolleFamilienstand, "Familienstand"
         )
@@ -386,6 +465,13 @@ class EntityFactory:
             costume_table.RollenID == status_table.c.RollenID,
             costume_table.FilmID == status_table.c.FilmID,
         )
+
+        tables[Attribute.familienstand] = status_table
+        columns[Attribute.familienstand] = status_table.c.Familienstand
+
+        #####################################
+        # KostuemCharaktereigenschaft table #
+        #####################################
 
         trait_table = database.get_costume_cte(
             database.other_tables["KostuemCharaktereigenschaft"], "Charaktereigenschaft"
@@ -395,6 +481,13 @@ class EntityFactory:
             costume_table.RollenID == trait_table.c.RollenID,
             costume_table.FilmID == trait_table.c.FilmID,
         )
+
+        tables[Attribute.charaktereigenschaft] = trait_table
+        columns[Attribute.charaktereigenschaft] = trait_table.c.Charaktereigenschaft
+
+        #########################
+        # KostuemSpielort table #
+        #########################
 
         location_table = database.base.classes.KostuemSpielort
         location_cte = select(
@@ -411,6 +504,16 @@ class EntityFactory:
             costume_table.RollenID == merged_location_table.c.RollenID,
             costume_table.FilmID == merged_location_table.c.FilmID,
         )
+
+        tables[Attribute.spielort] = merged_location_table
+        columns[Attribute.spielort] = merged_location_table.c.Spielort
+
+        tables[Attribute.spielortDetail] = merged_location_table
+        columns[Attribute.spielortDetail] = merged_location_table.c.Spielort
+
+        ###############################
+        # KostuemAlterseindruck table #
+        ###############################
 
         age_impression_table = database.base.classes.KostuemAlterseindruck
         age_impression_cte = select(
@@ -430,6 +533,16 @@ class EntityFactory:
             costume_table.FilmID == merged_age_impression_table.c.FilmID,
         )
 
+        tables[Attribute.alterseindruck] = merged_age_impression_table
+        columns[Attribute.alterseindruck] = merged_age_impression_table.c.Alter
+
+        tables[Attribute.alter] = merged_age_impression_table
+        columns[Attribute.alter] = merged_age_impression_table.c.Alter
+
+        #############################
+        # KostuemBasiselement table #
+        #############################
+
         costume_base_element_table = database.other_tables["KostuemBasiselement"]
         join_on[costume_base_element_table] = and_(
             costume_table.KostuemID == costume_base_element_table.c.KostuemID,
@@ -437,11 +550,22 @@ class EntityFactory:
             costume_table.FilmID == costume_base_element_table.c.FilmID,
         )
 
+        ######################
+        # Basiselement table #
+        ######################
+
         base_element_table = database.base.classes.Basiselement
         join_on[base_element_table] = and_(
             costume_base_element_table.c.BasiselementID
             == base_element_table.BasiselementID
         )
+
+        tables[Attribute.basiselement] = base_element_table
+        columns[Attribute.basiselement] = base_element_table.Basiselementname
+
+        ############################
+        # BasiselementDesign table #
+        ############################
 
         design_table = database.get_base_element_cte(
             database.other_tables["BasiselementDesign"], "Designname"
@@ -450,6 +574,13 @@ class EntityFactory:
             costume_base_element_table.c.BasiselementID == design_table.c.BasiselementID
         )
 
+        tables[Attribute.design] = design_table
+        columns[Attribute.design] = design_table.c.Designname
+
+        ##########################
+        # BasiselementForm table #
+        ##########################
+
         form_table = database.get_base_element_cte(
             database.other_tables["BasiselementForm"], "Formname"
         )
@@ -457,12 +588,26 @@ class EntityFactory:
             costume_base_element_table.c.BasiselementID == form_table.c.BasiselementID
         )
 
+        tables[Attribute.form] = form_table
+        columns[Attribute.form] = form_table.c.Formname
+
+        ##########################
+        # BasiselementTrageweise #
+        ##########################
+
         wear_table = database.get_base_element_cte(
             database.other_tables["BasiselementTrageweise"], "Trageweisename"
         )
         join_on[wear_table] = and_(
             costume_base_element_table.c.BasiselementID == wear_table.c.BasiselementID
         )
+
+        tables[Attribute.trageweise] = wear_table
+        columns[Attribute.trageweise] = wear_table.c.Trageweisename
+
+        #############################
+        # BasiselementZustand table #
+        #############################
 
         condition_table = database.get_base_element_cte(
             database.other_tables["BasiselementZustand"], "Zustandsname"
@@ -472,12 +617,26 @@ class EntityFactory:
             == condition_table.c.BasiselementID
         )
 
+        tables[Attribute.zustand] = condition_table
+        columns[Attribute.zustand] = condition_table.c.Zustandsname
+
+        ##############################
+        # BasiselementFunktion table #
+        ##############################
+
         function_table = database.get_base_element_cte(
             database.other_tables["BasiselementFunktion"], "Funktionsname"
         )
         join_on[function_table] = and_(
             costume_base_element_table.c.BasiselementID == function_table.c.BasiselementID
         )
+
+        tables[Attribute.funktion] = function_table
+        columns[Attribute.funktion] = function_table.c.Funktionsname
+
+        ##############################
+        # BasiselementMaterial table #
+        ##############################
 
         material_table = database.base.classes.BasiselementMaterial
         material_cte = select(
@@ -493,6 +652,16 @@ class EntityFactory:
             == merged_material_table.c.BasiselementID
         )
 
+        tables[Attribute.material] = merged_material_table
+        columns[Attribute.material] = merged_material_table.c.Material
+
+        tables[Attribute.materialeindruck] = merged_material_table
+        columns[Attribute.materialeindruck] = merged_material_table.c.Material
+
+        ###########################
+        # BasiselementFarbe table #
+        ###########################
+
         color_table = database.base.classes.BasiselementFarbe
         color_cte = select(
             color_table.BasiselementID,
@@ -505,96 +674,24 @@ class EntityFactory:
             == merged_color_table.c.BasiselementID
         )
 
+        tables[Attribute.farbe] = merged_color_table
+        columns[Attribute.farbe] = merged_color_table.c.Farbe
+
+        tables[Attribute.farbeindruck] = merged_color_table
+        columns[Attribute.farbeindruck] = merged_color_table.c.Farbe
+
         is_base_element = False
 
         for attr in attributes:
-            if attr == Attribute.ortsbegebenheit:
-                columns_to_select.append(costume_table.Ortsbegebenheit)
-            if attr == Attribute.dominanteFarbe:
-                columns_to_select.append(costume_table.DominanteFarbe)
-            if attr == Attribute.stereotypRelevant:
-                columns_to_select.append(costume_table.StereotypRelevant)
-            if attr == Attribute.dominanteFunktion:
-                columns_to_select.append(costume_table.DominanteFunktion)
-            if attr == Attribute.dominanterZustand:
-                columns_to_select.append(costume_table.DominanterZustand)
+            columns_to_select.append(columns[attr])
 
-            if attr == Attribute.farbkonzept:
-                columns_to_select.append(color_concept_table.c.Farbkonzept)
-                tables_to_join.add(color_concept_table)
+            if attr in tables:
+                tables_to_join.add(tables[attr])
 
-            if attr == Attribute.dominanteCharaktereigenschaft:
-                columns_to_select.append(
-                    dominant_character_trait_table.c.DominanteCharaktereigenschaft
-                )
-                tables_to_join.add(dominant_character_trait_table)
-
-            if attr == Attribute.stereotyp:
-                columns_to_select.append(role_stereotype_table.c.Stereotyp)
-                tables_to_join.add(role_stereotype_table)
-
-            if attr == Attribute.rollenberuf:
-                columns_to_select.append(role_table.Rollenberuf)
-                tables_to_join.add(role_table)
-            if attr == Attribute.geschlecht:
-                columns_to_select.append(role_table.Geschlecht)
-                tables_to_join.add(role_table)
-            if attr == Attribute.dominanterAlterseindruck:
-                columns_to_select.append(role_table.DominanterAlterseindruck)
-                tables_to_join.add(role_table)
-            if attr == Attribute.dominantesAlter:
-                columns_to_select.append(role_table.DominantesAlter)
-                tables_to_join.add(role_table)
-            if attr == Attribute.rollenrelevanz:
-                columns_to_select.append(role_table.Rollenrelevanz)
-                tables_to_join.add(role_table)
-
-            if attr == Attribute.genre:
-                columns_to_select.append(genre_table.c.Genre)
-                tables_to_join.add(genre_table)
-
-            if attr == Attribute.spielzeit:
-                columns_to_select.append(costume_playtime_table.c.Spielzeit)
-                tables_to_join.add(costume_playtime_table)
-
-            if attr == Attribute.tageszeit:
-                columns_to_select.append(costume_daytime_table.c.Tageszeit)
-                tables_to_join.add(costume_daytime_table)
-
-            if attr == Attribute.koerpermodifikation:
-                columns_to_select.append(
-                    body_modification_table.c.Koerpermodifikationname
-                )
-                tables_to_join.add(body_modification_table)
-
-            if attr == Attribute.kostuemZeit:
-                columns_to_select.append(merged_timecode_table.c.Zeiten)
-                tables_to_join.add(merged_timecode_table)
-
-            if attr == Attribute.familienstand:
-                columns_to_select.append(status_table.c.Familienstand)
-                tables_to_join.add(status_table)
-
-            if attr == Attribute.charaktereigenschaft:
-                columns_to_select.append(trait_table.c.Charaktereigenschaft)
-                tables_to_join.add(trait_table)
-
-            if attr == Attribute.spielort or attr == Attribute.spielortDetail:
-                columns_to_select.append(merged_location_table.c.Spielort)
-                tables_to_join.add(merged_location_table)
-
-            if attr == Attribute.alterseindruck or attr == Attribute.alter:
-                columns_to_select.append(merged_age_impression_table.c.Alter)
-                tables_to_join.add(merged_age_impression_table)
-
-            ############################
-            # basis element attributes #
-            ############################
-
-            # load basiselement if needed
-            # this also means that we are now treat
-            # each datapoint as a basiselement
-            if attr in [
+            # load base element if needed
+            # this also means that we are now treating
+            # each datapoint as a base element
+            is_base_element = is_base_element or attr in [
                 Attribute.basiselement,
                 Attribute.design,
                 Attribute.form,
@@ -605,40 +702,7 @@ class EntityFactory:
                 Attribute.materialeindruck,
                 Attribute.farbe,
                 Attribute.farbeindruck,
-            ]:
-                is_base_element = True
-
-                if attr == Attribute.basiselement:
-                    columns_to_select.append(base_element_table.Basiselementname)
-                    tables_to_join.add(base_element_table)
-
-                if attr == Attribute.design:
-                    columns_to_select.append(design_table.c.Designname)
-                    tables_to_join.add(design_table)
-
-                if attr == Attribute.form:
-                    columns_to_select.append(form_table.c.Formname)
-                    tables_to_join.add(form_table)
-
-                if attr == Attribute.trageweise:
-                    columns_to_select.append(wear_table.c.Trageweisename)
-                    tables_to_join.add(wear_table)
-
-                if attr == Attribute.zustand:
-                    columns_to_select.append(condition_table.c.Zustandsname)
-                    tables_to_join.add(condition_table)
-
-                if attr == Attribute.funktion:
-                    columns_to_select.append(function_table.c.Funktionsname)
-                    tables_to_join.add(function_table)
-
-                if attr == Attribute.material or attr == Attribute.materialeindruck:
-                    columns_to_select.append(merged_material_table.c.Material)
-                    tables_to_join.add(merged_material_table)
-
-                if attr == Attribute.farbe or attr == Attribute.farbeindruck:
-                    columns_to_select.append(merged_color_table.c.Farbe)
-                    tables_to_join.add(merged_color_table)
+            ]
 
         # add base element id if base elements need to be loaded
         if is_base_element:
