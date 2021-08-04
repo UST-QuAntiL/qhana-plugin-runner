@@ -3,7 +3,7 @@ import time
 from typing import Any, Dict, Tuple
 from typing import List
 
-from sqlalchemy import select, and_, join, cast, String
+from sqlalchemy import select, and_, join, cast, String, func
 
 from plugins.costume_loader_pkg.backend.database import Database
 from datetime import timedelta
@@ -263,26 +263,33 @@ class EntityFactory:
         #########################
 
         timecode_table = database.base.classes.KostuemTimecode
-        timecode_cte = select(
-            timecode_table.KostuemID,
-            timecode_table.RollenID,
-            timecode_table.FilmID,
-            (
-                cast(timecode_table.Timecodeanfang, String)
-                + "|"
-                + cast(timecode_table.Timecodeende, String)
-            ).label("Zeiten"),
-        ).cte("TimecodeCTE")
 
-        merged_timecode_table = database.get_costume_cte(timecode_cte, "Zeiten")
-        join_on[merged_timecode_table] = and_(
-            costume_table.KostuemID == merged_timecode_table.c.KostuemID,
-            costume_table.RollenID == merged_timecode_table.c.RollenID,
-            costume_table.FilmID == merged_timecode_table.c.FilmID,
+        duration_table = (
+            select(
+                timecode_table.KostuemID,
+                timecode_table.RollenID,
+                timecode_table.FilmID,
+                func.sum(
+                    func.time_to_sec(
+                        func.timediff(
+                            timecode_table.Timecodeende, timecode_table.Timecodeanfang
+                        )
+                    )
+                ).label("Duration"),
+            )
+            .group_by(
+                timecode_table.FilmID, timecode_table.RollenID, timecode_table.KostuemID
+            )
+            .cte("DurationCTE")
+        )
+        join_on[duration_table] = and_(
+            costume_table.KostuemID == duration_table.c.KostuemID,
+            costume_table.RollenID == duration_table.c.RollenID,
+            costume_table.FilmID == duration_table.c.FilmID,
         )
 
-        tables[Attribute.kostuemZeit] = merged_timecode_table
-        columns[Attribute.kostuemZeit] = merged_timecode_table.c.Zeiten
+        tables[Attribute.kostuemZeit] = duration_table
+        columns[Attribute.kostuemZeit] = duration_table.c.Duration
 
         ############################
         # RolleFamilienstand table #
@@ -646,31 +653,6 @@ class EntityFactory:
                 ]:
                     value = ",".join([elem.split("|")[1] for elem in value.split(",")])
 
-                if attr == Attribute.kostuemZeit:
-                    costume_time = 0
-
-                    for time_pair in value.split(","):
-                        start_time = time_pair.split("|")[0].split(":")
-                        end_time = time_pair.split("|")[1].split(":")
-
-                        start_time_delta = timedelta(
-                            hours=int(start_time[0]),
-                            minutes=int(start_time[1]),
-                            seconds=int(start_time[2]),
-                        )
-
-                        end_time_delta = timedelta(
-                            hours=int(end_time[0]),
-                            minutes=int(end_time[1]),
-                            seconds=int(end_time[2]),
-                        )
-
-                        costume_time += (
-                            end_time_delta - start_time_delta
-                        ).total_seconds()
-
-                    value = str(costume_time)
-
                 if value is None or value == "":
                     invalid_entries += 1
                     is_invalid = True
@@ -678,7 +660,11 @@ class EntityFactory:
                     break
 
                 entity.add_attribute(attr)
-                entity.add_value(attr, value.split(","))
+
+                if isinstance(value, str):
+                    entity.add_value(attr, value.split(","))
+                else:
+                    entity.add_value(attr, value)
 
             if is_invalid:
                 continue
