@@ -23,6 +23,7 @@ class Entity:
         """
         self.name = name
         self.id = 0
+        self.basiselementID = 0
         self.kostuemId = 0
         self.rollenId = 0
         self.filmId = 0
@@ -614,15 +615,15 @@ class EntityFactory:
             role_id = row[1]
             film_id = row[2]
 
-            entity.set_kostuem_id(costume_id)
-            entity.set_rollen_id(role_id)
-            entity.set_film_id(film_id)
+            entity.kostuemId = costume_id
+            entity.rollenId = role_id
+            entity.filmId = film_id
 
             offset = 3
 
             if is_base_element:
                 base_element_id = row[3]
-                entity.set_basiselement_id(base_element_id)
+                entity.basiselementID = base_element_id
                 offset = 4
 
             is_invalid = False
