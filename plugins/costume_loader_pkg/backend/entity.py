@@ -1,13 +1,15 @@
 import logging
 import time
+from enum import Enum, auto
 from typing import Any, Dict, Tuple
 from typing import List
 
-from sqlalchemy import select, and_, join, cast, String, func
+from sqlalchemy import select, and_, join, func
+from sqlalchemy.orm import DeclarativeMeta
+from sqlalchemy.sql import expression
 
-from plugins.costume_loader_pkg.backend.database import Database
-from datetime import timedelta
 from plugins.costume_loader_pkg.backend.attribute import Attribute
+from plugins.costume_loader_pkg.backend.database import Database
 
 MUSE_URL = "http://129.69.214.108/"
 
@@ -17,7 +19,7 @@ class Entity:
     This class represents a entity such as a costume or a basic element.
     """
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str):
         """
         Initializes the entity object.
         """
@@ -31,8 +33,6 @@ class Entity:
         self.attributes = {}
         # format: (attribute, value)
         self.values = {}
-
-        return
 
     def get_film_url(self) -> str:
         """
@@ -90,6 +90,7 @@ class Entity:
         Returns the entity in a single string.
         """
         output = "name: " + self.name + ", id: " + str(self.id) + ", "
+        output += " basiselementID: " + str(self.basiselementID) + ", "
         output += " kostuemId: " + str(self.kostuemId) + ", "
         output += " rollenId: " + str(self.rollenId) + ", "
         output += " filmId: " + str(self.filmId) + ", "
@@ -103,10 +104,52 @@ class Entity:
         return output[:-2]
 
 
+class TableType(Enum):
+    FILM = 0
+    ROLE = 1
+    COSTUME = 2
+    BASE_ELEMENT = 3
+
+
 class EntityFactory:
     """
     This class creates entities based on the given attributes.
     """
+
+    @staticmethod
+    def _create_and_expression(
+        costume_table: Any,
+        costume_base_element_table: Any,
+        table_to_join: Any,
+        table_type: TableType,
+    ) -> expression:
+        if isinstance(table_to_join, DeclarativeMeta):
+            table_columns = table_to_join
+        else:
+            table_columns = table_to_join.c
+
+        columns_to_join_on = []
+
+        if table_type in [TableType.FILM, TableType.ROLE, TableType.COSTUME]:
+            columns_to_join_on.append(costume_table.FilmID == table_columns.FilmID)
+
+            if table_type in [TableType.ROLE, TableType.COSTUME]:
+                columns_to_join_on.append(
+                    costume_table.RollenID == table_columns.RollenID
+                )
+
+                if table_type == TableType.COSTUME:
+                    columns_to_join_on.append(
+                        costume_table.KostuemID == table_columns.KostuemID
+                    )
+
+        if table_type == TableType.BASE_ELEMENT:
+            columns_to_join_on = [
+                costume_base_element_table.c.BasiselementID
+                == table_columns.BasiselementID
+            ]
+
+        return and_(*columns_to_join_on)
 
     @staticmethod
     def _create_table_column_dicts(
@@ -123,10 +166,8 @@ class EntityFactory:
         #################
 
         costume_table = database.base.classes.Kostuem
-        join_on[costume_table] = and_(
-            costume_table.KostuemID == costume_table.KostuemID,
-            costume_table.RollenID == costume_table.RollenID,
-            costume_table.FilmID == costume_table.FilmID,
+        join_on[costume_table] = EntityFactory._create_and_expression(
+            costume_table, None, costume_table, TableType.COSTUME
         )
 
         columns[Attribute.ortsbegebenheit] = costume_table.Ortsbegebenheit
@@ -142,8 +183,8 @@ class EntityFactory:
         color_concept_table = database.get_film_cte(
             database.other_tables["FilmFarbkonzept"], "Farbkonzept"
         )
-        join_on[color_concept_table] = and_(
-            costume_table.FilmID == color_concept_table.c.FilmID
+        join_on[color_concept_table] = EntityFactory._create_and_expression(
+            costume_table, None, color_concept_table, TableType.FILM
         )
 
         tables[Attribute.farbkonzept] = color_concept_table
@@ -157,9 +198,8 @@ class EntityFactory:
             database.other_tables["RolleDominanteCharaktereigenschaft"],
             "DominanteCharaktereigenschaft",
         )
-        join_on[dominant_character_trait_table] = and_(
-            costume_table.RollenID == dominant_character_trait_table.c.RollenID,
-            costume_table.FilmID == dominant_character_trait_table.c.FilmID,
+        join_on[dominant_character_trait_table] = EntityFactory._create_and_expression(
+            costume_table, None, dominant_character_trait_table, TableType.ROLE
         )
 
         tables[Attribute.dominanteCharaktereigenschaft] = dominant_character_trait_table
@@ -174,9 +214,8 @@ class EntityFactory:
         role_stereotype_table = database.get_role_cte(
             database.base.classes.RolleStereotyp, "Stereotyp"
         )
-        join_on[role_stereotype_table] = and_(
-            costume_table.RollenID == role_stereotype_table.c.RollenID,
-            costume_table.FilmID == role_stereotype_table.c.FilmID,
+        join_on[role_stereotype_table] = EntityFactory._create_and_expression(
+            costume_table, None, role_stereotype_table, TableType.ROLE
         )
 
         tables[Attribute.stereotyp] = role_stereotype_table
@@ -187,9 +226,8 @@ class EntityFactory:
         ###############
 
         role_table = database.base.classes.Rolle
-        join_on[role_table] = and_(
-            costume_table.RollenID == role_table.RollenID,
-            costume_table.FilmID == role_table.FilmID,
+        join_on[role_table] = EntityFactory._create_and_expression(
+            costume_table, None, role_table, TableType.ROLE
         )
 
         tables[Attribute.rollenberuf] = role_table
@@ -198,12 +236,23 @@ class EntityFactory:
         tables[Attribute.geschlecht] = role_table
         columns[Attribute.geschlecht] = role_table.Geschlecht
 
+        tables[Attribute.dominanterAlterseindruck] = role_table
+        columns[Attribute.dominanterAlterseindruck] = role_table.DominanterAlterseindruck
+
+        tables[Attribute.dominantesAlter] = role_table
+        columns[Attribute.dominantesAlter] = role_table.DominantesAlter
+
+        tables[Attribute.rollenrelevanz] = role_table
+        columns[Attribute.rollenrelevanz] = role_table.Rollenrelevanz
+
         ###################
         # FilmGenre table #
         ###################
 
         genre_table = database.get_film_cte(database.other_tables["FilmGenre"], "Genre")
-        join_on[genre_table] = and_(costume_table.FilmID == genre_table.c.FilmID)
+        join_on[genre_table] = EntityFactory._create_and_expression(
+            costume_table, None, genre_table, TableType.FILM
+        )
 
         tables[Attribute.genre] = genre_table
         columns[Attribute.genre] = genre_table.c.Genre
@@ -215,10 +264,8 @@ class EntityFactory:
         costume_playtime_table = database.get_costume_cte(
             database.base.classes.KostuemSpielzeit, "Spielzeit"
         )
-        join_on[costume_playtime_table] = and_(
-            costume_table.KostuemID == costume_playtime_table.c.KostuemID,
-            costume_table.RollenID == costume_playtime_table.c.RollenID,
-            costume_table.FilmID == costume_playtime_table.c.FilmID,
+        join_on[costume_playtime_table] = EntityFactory._create_and_expression(
+            costume_table, None, costume_playtime_table, TableType.COSTUME
         )
 
         tables[Attribute.spielzeit] = costume_playtime_table
@@ -231,10 +278,8 @@ class EntityFactory:
         costume_daytime_table = database.get_costume_cte(
             database.other_tables["KostuemTageszeit"], "Tageszeit"
         )
-        join_on[costume_daytime_table] = and_(
-            costume_table.KostuemID == costume_daytime_table.c.KostuemID,
-            costume_table.RollenID == costume_daytime_table.c.RollenID,
-            costume_table.FilmID == costume_daytime_table.c.FilmID,
+        join_on[costume_daytime_table] = EntityFactory._create_and_expression(
+            costume_table, None, costume_daytime_table, TableType.COSTUME
         )
 
         tables[Attribute.tageszeit] = costume_daytime_table
@@ -247,10 +292,8 @@ class EntityFactory:
         body_modification_table = database.get_costume_cte(
             database.other_tables["KostuemKoerpermodifikation"], "Koerpermodifikationname"
         )
-        join_on[body_modification_table] = and_(
-            costume_table.KostuemID == body_modification_table.c.KostuemID,
-            costume_table.RollenID == body_modification_table.c.RollenID,
-            costume_table.FilmID == body_modification_table.c.FilmID,
+        join_on[body_modification_table] = EntityFactory._create_and_expression(
+            costume_table, None, body_modification_table, TableType.COSTUME
         )
 
         tables[Attribute.koerpermodifikation] = body_modification_table
@@ -282,10 +325,8 @@ class EntityFactory:
             )
             .cte("DurationCTE")
         )
-        join_on[duration_table] = and_(
-            costume_table.KostuemID == duration_table.c.KostuemID,
-            costume_table.RollenID == duration_table.c.RollenID,
-            costume_table.FilmID == duration_table.c.FilmID,
+        join_on[duration_table] = EntityFactory._create_and_expression(
+            costume_table, None, duration_table, TableType.COSTUME
         )
 
         tables[Attribute.kostuemZeit] = duration_table
@@ -298,9 +339,8 @@ class EntityFactory:
         status_table = database.get_role_cte(
             database.base.classes.RolleFamilienstand, "Familienstand"
         )
-        join_on[status_table] = and_(
-            costume_table.RollenID == status_table.c.RollenID,
-            costume_table.FilmID == status_table.c.FilmID,
+        join_on[status_table] = EntityFactory._create_and_expression(
+            costume_table, None, status_table, TableType.ROLE
         )
 
         tables[Attribute.familienstand] = status_table
@@ -313,10 +353,8 @@ class EntityFactory:
         trait_table = database.get_costume_cte(
             database.other_tables["KostuemCharaktereigenschaft"], "Charaktereigenschaft"
         )
-        join_on[trait_table] = and_(
-            costume_table.KostuemID == trait_table.c.KostuemID,
-            costume_table.RollenID == trait_table.c.RollenID,
-            costume_table.FilmID == trait_table.c.FilmID,
+        join_on[trait_table] = EntityFactory._create_and_expression(
+            costume_table, None, trait_table, TableType.COSTUME
         )
 
         tables[Attribute.charaktereigenschaft] = trait_table
@@ -336,10 +374,8 @@ class EntityFactory:
             ),
         ).cte("SpielortCTE")
         merged_location_table = database.get_costume_cte(location_cte, "Spielort")
-        join_on[merged_location_table] = and_(
-            costume_table.KostuemID == merged_location_table.c.KostuemID,
-            costume_table.RollenID == merged_location_table.c.RollenID,
-            costume_table.FilmID == merged_location_table.c.FilmID,
+        join_on[merged_location_table] = EntityFactory._create_and_expression(
+            costume_table, None, merged_location_table, TableType.COSTUME
         )
 
         tables[Attribute.spielort] = merged_location_table
@@ -364,10 +400,8 @@ class EntityFactory:
         merged_age_impression_table = database.get_costume_cte(
             age_impression_cte, "Alter"
         )
-        join_on[merged_age_impression_table] = and_(
-            costume_table.KostuemID == merged_age_impression_table.c.KostuemID,
-            costume_table.RollenID == merged_age_impression_table.c.RollenID,
-            costume_table.FilmID == merged_age_impression_table.c.FilmID,
+        join_on[merged_age_impression_table] = EntityFactory._create_and_expression(
+            costume_table, None, merged_age_impression_table, TableType.COSTUME
         )
 
         tables[Attribute.alterseindruck] = merged_age_impression_table
@@ -381,10 +415,8 @@ class EntityFactory:
         #############################
 
         costume_base_element_table = database.other_tables["KostuemBasiselement"]
-        join_on[costume_base_element_table] = and_(
-            costume_table.KostuemID == costume_base_element_table.c.KostuemID,
-            costume_table.RollenID == costume_base_element_table.c.RollenID,
-            costume_table.FilmID == costume_base_element_table.c.FilmID,
+        join_on[costume_base_element_table] = EntityFactory._create_and_expression(
+            costume_table, None, costume_base_element_table, TableType.COSTUME
         )
 
         ######################
@@ -392,9 +424,11 @@ class EntityFactory:
         ######################
 
         base_element_table = database.base.classes.Basiselement
-        join_on[base_element_table] = and_(
-            costume_base_element_table.c.BasiselementID
-            == base_element_table.BasiselementID
+        join_on[base_element_table] = EntityFactory._create_and_expression(
+            costume_table,
+            costume_base_element_table,
+            base_element_table,
+            TableType.BASE_ELEMENT,
         )
 
         tables[Attribute.basiselement] = base_element_table
@@ -407,8 +441,11 @@ class EntityFactory:
         design_table = database.get_base_element_cte(
             database.other_tables["BasiselementDesign"], "Designname"
         )
-        join_on[design_table] = and_(
-            costume_base_element_table.c.BasiselementID == design_table.c.BasiselementID
+        join_on[design_table] = EntityFactory._create_and_expression(
+            costume_table,
+            costume_base_element_table,
+            design_table,
+            TableType.BASE_ELEMENT,
         )
 
         tables[Attribute.design] = design_table
@@ -421,8 +458,8 @@ class EntityFactory:
         form_table = database.get_base_element_cte(
             database.other_tables["BasiselementForm"], "Formname"
         )
-        join_on[form_table] = and_(
-            costume_base_element_table.c.BasiselementID == form_table.c.BasiselementID
+        join_on[form_table] = EntityFactory._create_and_expression(
+            costume_table, costume_base_element_table, form_table, TableType.BASE_ELEMENT
         )
 
         tables[Attribute.form] = form_table
@@ -435,8 +472,8 @@ class EntityFactory:
         wear_table = database.get_base_element_cte(
             database.other_tables["BasiselementTrageweise"], "Trageweisename"
         )
-        join_on[wear_table] = and_(
-            costume_base_element_table.c.BasiselementID == wear_table.c.BasiselementID
+        join_on[wear_table] = EntityFactory._create_and_expression(
+            costume_table, costume_base_element_table, wear_table, TableType.BASE_ELEMENT
         )
 
         tables[Attribute.trageweise] = wear_table
@@ -449,9 +486,11 @@ class EntityFactory:
         condition_table = database.get_base_element_cte(
             database.other_tables["BasiselementZustand"], "Zustandsname"
         )
-        join_on[condition_table] = and_(
-            costume_base_element_table.c.BasiselementID
-            == condition_table.c.BasiselementID
+        join_on[condition_table] = EntityFactory._create_and_expression(
+            costume_table,
+            costume_base_element_table,
+            condition_table,
+            TableType.BASE_ELEMENT,
         )
 
         tables[Attribute.zustand] = condition_table
@@ -464,8 +503,11 @@ class EntityFactory:
         function_table = database.get_base_element_cte(
             database.other_tables["BasiselementFunktion"], "Funktionsname"
         )
-        join_on[function_table] = and_(
-            costume_base_element_table.c.BasiselementID == function_table.c.BasiselementID
+        join_on[function_table] = EntityFactory._create_and_expression(
+            costume_table,
+            costume_base_element_table,
+            function_table,
+            TableType.BASE_ELEMENT,
         )
 
         tables[Attribute.funktion] = function_table
@@ -484,9 +526,11 @@ class EntityFactory:
         ).cte("MaterialCTE")
 
         merged_material_table = database.get_base_element_cte(material_cte, "Material")
-        join_on[merged_material_table] = and_(
-            costume_base_element_table.c.BasiselementID
-            == merged_material_table.c.BasiselementID
+        join_on[merged_material_table] = EntityFactory._create_and_expression(
+            costume_table,
+            costume_base_element_table,
+            merged_material_table,
+            TableType.BASE_ELEMENT,
         )
 
         tables[Attribute.material] = merged_material_table
@@ -506,9 +550,11 @@ class EntityFactory:
         ).cte("FarbeCTE")
 
         merged_color_table = database.get_base_element_cte(color_cte, "Farbe")
-        join_on[merged_color_table] = and_(
-            costume_base_element_table.c.BasiselementID
-            == merged_color_table.c.BasiselementID
+        join_on[merged_color_table] = EntityFactory._create_and_expression(
+            costume_table,
+            costume_base_element_table,
+            merged_color_table,
+            TableType.BASE_ELEMENT,
         )
 
         tables[Attribute.farbe] = merged_color_table
@@ -687,13 +733,61 @@ def main():
 
     EntityFactory.create(
         [
-            Attribute.genre,
+            Attribute.ortsbegebenheit,
             Attribute.dominanteFarbe,
+            Attribute.stereotypRelevant,
+            Attribute.dominanteFunktion,
+            Attribute.dominanterZustand,
+            #
+            Attribute.farbkonzept,
+            #
+            Attribute.dominanteCharaktereigenschaft,
+            #
+            Attribute.stereotyp,
+            #
+            Attribute.rollenberuf,
+            Attribute.geschlecht,
+            Attribute.dominanterAlterseindruck,
+            Attribute.dominantesAlter,
+            Attribute.rollenrelevanz,
+            #
+            Attribute.genre,
+            #
+            Attribute.spielzeit,
+            #
+            Attribute.tageszeit,
+            #
+            Attribute.koerpermodifikation,
+            #
+            Attribute.kostuemZeit,
+            #
+            # Attribute.familienstand,
+            #
+            # Attribute.charaktereigenschaft,
+            #
+            # Attribute.spielort,
+            # Attribute.spielortDetail,
+            #
+            # Attribute.alterseindruck,
+            # Attribute.alter,
+            #
+            # Attribute.basiselement,
+            #
+            # Attribute.design,
+            #
+            # Attribute.form,
+            #
+            # Attribute.trageweise,
+            #
+            # Attribute.zustand,
+            #
+            # Attribute.funktion,
+            #
+            # Attribute.material,
+            # Attribute.materialeindruck,
+            #
             # Attribute.farbe,
             # Attribute.farbeindruck,
-            Attribute.kostuemZeit,
-            # Attribute.alter,
-            # Attribute.alterseindruck,
         ],
         db,
     )
