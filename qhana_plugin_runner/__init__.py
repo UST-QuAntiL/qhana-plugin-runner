@@ -43,7 +43,7 @@ from .util.request_helpers import register_additional_schemas
 # change this to change tha flask app name and the config env var prefix
 # must not contain any spaces!
 APP_NAME = __name__
-CONFIG_ENV_VAR_PREFIX = APP_NAME.upper().replace("-", "_").replace(" ", "_")
+ENV_VAR_PREFIX = APP_NAME.upper().replace("-", "_").replace(" ", "_")
 
 
 def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
@@ -52,8 +52,15 @@ def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
 
 def create_app(test_config: Optional[Dict[str, Any]] = None):
     """Flask app factory."""
+
+    instance_folder_env_var = f"{ENV_VAR_PREFIX}_INSTANCE_FOLDER"
+
     # create and configure the app
-    app = Flask(APP_NAME, instance_relative_config=True)
+    app = Flask(
+        APP_NAME,
+        instance_relative_config=True,
+        instance_path=environ.get(instance_folder_env_var, None),
+    )
 
     # Start Loading config #################
 
@@ -73,7 +80,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         # also try to load toml config
         config.from_file("config.toml", load=load_toml, silent=True)
         # load config from file specified in env var
-        config.from_envvar(f"{CONFIG_ENV_VAR_PREFIX}_SETTINGS", silent=True)
+        config.from_envvar(f"{ENV_VAR_PREFIX}_SETTINGS", silent=True)
         # TODO load some config keys directly from env vars
     else:
         # load the test config if passed in
@@ -104,7 +111,10 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     logger: Logger = app.logger
     logger.info(
-        f"Configuration loaded. Possible config locations are: 'config.py', 'config.json', Environment: '{CONFIG_ENV_VAR_PREFIX}_SETTINGS'"
+        f"Configuration loaded. Instance folder is at path '{app.instance_path}' (can be changed by setting the {instance_folder_env_var} environmen variable)."
+    )
+    logger.info(
+        f"Possible config locations are: 'config.py', 'config.json', Environment: '{ENV_VAR_PREFIX}_SETTINGS'"
     )
 
     if config.get("SECRET_KEY") == "debug_secret":
