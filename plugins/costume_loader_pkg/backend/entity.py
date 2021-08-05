@@ -545,8 +545,6 @@ class EntityFactory:
         """
         Creates a entity based on the given list of attributes.
         """
-        invalid_entries = 0
-
         columns_to_select = []
         tables_to_join = set()
         (
@@ -625,14 +623,14 @@ class EntityFactory:
 
         # Convert the result of the query into entity instances
         entities = EntityFactory._entities_from_query_result(
-            attributes, invalid_entries, is_base_element, query_result
+            attributes, is_base_element, query_result
         )
 
         return entities
 
     @staticmethod
     def _entities_from_query_result(
-        attributes, invalid_entries, is_base_element, query_result
+        attributes, is_base_element, query_result
     ) -> List[Entity]:
         entities = []
 
@@ -654,14 +652,11 @@ class EntityFactory:
                 entity.basiselementID = base_element_id
                 offset = 4
 
-            is_invalid = False
-
             for i, attr in enumerate(attributes):
                 value: str = row[i + offset]
 
                 if value is None or value == "":
-                    invalid_entries += 1
-                    is_invalid = True
+                    entity.add_value(attr, None)
                     logging.warning("Found entry with " + attr.value + ' = None or = ""')
                     break
 
@@ -671,9 +666,6 @@ class EntityFactory:
                     entity.add_value(attr, value.split(","))
                 else:
                     entity.add_value(attr, value)
-
-            if is_invalid:
-                continue
 
             entities.append(entity)
 
@@ -728,8 +720,8 @@ def main():
             # Attribute.spielort,
             # Attribute.spielortDetail,
             #
-            # Attribute.alterseindruck,
-            # Attribute.alter,
+            Attribute.alterseindruck,
+            Attribute.alter,
             #
             # Attribute.basiselement,
             #
@@ -746,8 +738,8 @@ def main():
             # Attribute.material,
             # Attribute.materialeindruck,
             #
-            Attribute.farbe,
-            Attribute.farbeindruck,
+            # Attribute.farbe,
+            # Attribute.farbeindruck,
         ],
         db,
     )
