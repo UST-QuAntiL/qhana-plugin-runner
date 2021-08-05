@@ -645,15 +645,15 @@ class EntityFactory:
             entity.rollenId = role_id
             entity.filmId = film_id
 
-            offset = 3
-
             if is_base_element:
                 base_element_id = row[3]
                 entity.basiselementID = base_element_id
-                offset = 4
+                row = row[4:]
+            else:
+                row = row[3:]
 
             for i, attr in enumerate(attributes):
-                value: str = row[i + offset]
+                value: str = row[i]
 
                 if value is None or value == "":
                     entity.add_value(attr, None)
