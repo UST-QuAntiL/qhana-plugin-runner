@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Union, List
 
 from mysql.connector import MySQLConnection
 from configparser import ConfigParser
@@ -179,8 +179,12 @@ class Database(Singleton):
         """
         return self.__connection.cursor()
 
-    def get_group_column_cte(
-        self, table, group_column: str, table_type: str, name_suffix: str = ""
+    def _get_group_column_cte(
+        self,
+        table,
+        group_columns: Union[str, List[str]],
+        table_type: str,
+        name_suffix: str = "",
     ):
         table_columns: Any
         if isinstance(table, DeclarativeMeta):
@@ -189,6 +193,8 @@ class Database(Singleton):
             table_columns = table.c
         if table_type not in ("film", "role", "costume", "base_element"):
             raise ValueError("Wrong table type.")
+
+        group_by_rows = []
 
         if table_type in ["film", "role", "costume"]:
             group_by_rows = [getattr(table_columns, "FilmID")]
@@ -208,25 +214,42 @@ class Database(Singleton):
             + "_CTE"
         )
 
-        return (
-            select(
-                *group_by_rows,
-                func.group_concat(getattr(table_columns, group_column)).label(
-                    group_column
-                ),
+        concats = []
+
+        if isinstance(group_columns, str):
+            concats.append(
+                func.group_concat(getattr(table_columns, group_columns)).label(
+                    group_columns
+                )
             )
-            .group_by(*group_by_rows)
-            .cte(name)
+        elif isinstance(group_columns, list):
+            for group_column in group_columns:
+                concats.append(
+                    func.group_concat(getattr(table_columns, group_column)).label(
+                        group_column
+                    )
+                )
+
+        return select(*group_by_rows, *concats).group_by(*group_by_rows).cte(name)
+
+    def get_film_cte(
+        self, table, group_columns: Union[str, List[str]], name_suffix: str = ""
+    ):
+        return self._get_group_column_cte(table, group_columns, "film", name_suffix)
+
+    def get_role_cte(
+        self, table, group_columns: Union[str, List[str]], name_suffix: str = ""
+    ):
+        return self._get_group_column_cte(table, group_columns, "role", name_suffix)
+
+    def get_costume_cte(
+        self, table, group_columns: Union[str, List[str]], name_suffix: str = ""
+    ):
+        return self._get_group_column_cte(table, group_columns, "costume", name_suffix)
+
+    def get_base_element_cte(
+        self, table, group_columns: Union[str, List[str]], name_suffix: str = ""
+    ):
+        return self._get_group_column_cte(
+            table, group_columns, "base_element", name_suffix
         )
-
-    def get_film_cte(self, table, group_column: str, name_suffix: str = ""):
-        return self.get_group_column_cte(table, group_column, "film", name_suffix)
-
-    def get_role_cte(self, table, group_column: str, name_suffix: str = ""):
-        return self.get_group_column_cte(table, group_column, "role", name_suffix)
-
-    def get_costume_cte(self, table, group_column: str, name_suffix: str = ""):
-        return self.get_group_column_cte(table, group_column, "costume", name_suffix)
-
-    def get_base_element_cte(self, table, group_column: str, name_suffix: str = ""):
-        return self.get_group_column_cte(table, group_column, "base_element", name_suffix)

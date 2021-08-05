@@ -364,51 +364,35 @@ class EntityFactory:
         # KostuemSpielort table #
         #########################
 
-        location_table = database.base.classes.KostuemSpielort
-        location_cte = select(
-            location_table.KostuemID,
-            location_table.RollenID,
-            location_table.FilmID,
-            (location_table.Spielort + "|" + location_table.SpielortDetail).label(
-                "Spielort"
-            ),
-        ).cte("SpielortCTE")
-        merged_location_table = database.get_costume_cte(location_cte, "Spielort")
-        join_on[merged_location_table] = EntityFactory._create_and_expression(
-            costume_table, None, merged_location_table, TableType.COSTUME
+        location_table = database.get_costume_cte(
+            database.base.classes.KostuemSpielort, ["Spielort", "SpielortDetail"]
+        )
+        join_on[location_table] = EntityFactory._create_and_expression(
+            costume_table, None, location_table, TableType.COSTUME
         )
 
-        tables[Attribute.spielort] = merged_location_table
-        columns[Attribute.spielort] = merged_location_table.c.Spielort
+        tables[Attribute.spielort] = location_table
+        columns[Attribute.spielort] = location_table.c.Spielort
 
-        tables[Attribute.spielortDetail] = merged_location_table
-        columns[Attribute.spielortDetail] = merged_location_table.c.Spielort
+        tables[Attribute.spielortDetail] = location_table
+        columns[Attribute.spielortDetail] = location_table.c.SpielortDetail
 
         ###############################
         # KostuemAlterseindruck table #
         ###############################
 
-        age_impression_table = database.base.classes.KostuemAlterseindruck
-        age_impression_cte = select(
-            age_impression_table.KostuemID,
-            age_impression_table.RollenID,
-            age_impression_table.FilmID,
-            (
-                age_impression_table.Alterseindruck + "|" + age_impression_table.NumAlter
-            ).label("Alter"),
-        ).cte("AlterCTE")
-        merged_age_impression_table = database.get_costume_cte(
-            age_impression_cte, "Alter"
+        age_impression_table = database.get_costume_cte(
+            database.base.classes.KostuemAlterseindruck, ["Alterseindruck", "NumAlter"]
         )
-        join_on[merged_age_impression_table] = EntityFactory._create_and_expression(
-            costume_table, None, merged_age_impression_table, TableType.COSTUME
+        join_on[age_impression_table] = EntityFactory._create_and_expression(
+            costume_table, None, age_impression_table, TableType.COSTUME
         )
 
-        tables[Attribute.alterseindruck] = merged_age_impression_table
-        columns[Attribute.alterseindruck] = merged_age_impression_table.c.Alter
+        tables[Attribute.alterseindruck] = age_impression_table
+        columns[Attribute.alterseindruck] = age_impression_table.c.Alterseindruck
 
-        tables[Attribute.alter] = merged_age_impression_table
-        columns[Attribute.alter] = merged_age_impression_table.c.Alter
+        tables[Attribute.alter] = age_impression_table
+        columns[Attribute.alter] = age_impression_table.c.NumAlter
 
         #############################
         # KostuemBasiselement table #
@@ -517,51 +501,42 @@ class EntityFactory:
         # BasiselementMaterial table #
         ##############################
 
-        material_table = database.base.classes.BasiselementMaterial
-        material_cte = select(
-            material_table.BasiselementID,
-            (material_table.Materialname + "|" + material_table.Materialeindruck).label(
-                "Material"
-            ),
-        ).cte("MaterialCTE")
-
-        merged_material_table = database.get_base_element_cte(material_cte, "Material")
-        join_on[merged_material_table] = EntityFactory._create_and_expression(
+        material_table = database.get_base_element_cte(
+            database.base.classes.BasiselementMaterial,
+            ["Materialname", "Materialeindruck"],
+        )
+        join_on[material_table] = EntityFactory._create_and_expression(
             costume_table,
             costume_base_element_table,
-            merged_material_table,
+            material_table,
             TableType.BASE_ELEMENT,
         )
 
-        tables[Attribute.material] = merged_material_table
-        columns[Attribute.material] = merged_material_table.c.Material
+        tables[Attribute.material] = material_table
+        columns[Attribute.material] = material_table.c.Materialname
 
-        tables[Attribute.materialeindruck] = merged_material_table
-        columns[Attribute.materialeindruck] = merged_material_table.c.Material
+        tables[Attribute.materialeindruck] = material_table
+        columns[Attribute.materialeindruck] = material_table.c.Materialeindruck
 
         ###########################
         # BasiselementFarbe table #
         ###########################
 
-        color_table = database.base.classes.BasiselementFarbe
-        color_cte = select(
-            color_table.BasiselementID,
-            (color_table.Farbname + "|" + color_table.Farbeindruck).label("Farbe"),
-        ).cte("FarbeCTE")
-
-        merged_color_table = database.get_base_element_cte(color_cte, "Farbe")
-        join_on[merged_color_table] = EntityFactory._create_and_expression(
+        color_table = database.get_base_element_cte(
+            database.base.classes.BasiselementFarbe, ["Farbname", "Farbeindruck"]
+        )
+        join_on[color_table] = EntityFactory._create_and_expression(
             costume_table,
             costume_base_element_table,
-            merged_color_table,
+            color_table,
             TableType.BASE_ELEMENT,
         )
 
-        tables[Attribute.farbe] = merged_color_table
-        columns[Attribute.farbe] = merged_color_table.c.Farbe
+        tables[Attribute.farbe] = color_table
+        columns[Attribute.farbe] = color_table.c.Farbname
 
-        tables[Attribute.farbeindruck] = merged_color_table
-        columns[Attribute.farbeindruck] = merged_color_table.c.Farbe
+        tables[Attribute.farbeindruck] = color_table
+        columns[Attribute.farbeindruck] = color_table.c.Farbeindruck
 
         return tables, columns, join_on, costume_table, costume_base_element_table
 
@@ -684,21 +659,6 @@ class EntityFactory:
             for i, attr in enumerate(attributes):
                 value: str = row[i + offset]
 
-                if attr in [
-                    Attribute.spielort,
-                    Attribute.alterseindruck,
-                    Attribute.material,
-                    Attribute.farbe,
-                ]:
-                    value = ",".join([elem.split("|")[0] for elem in value.split(",")])
-                if attr in [
-                    Attribute.spielortDetail,
-                    Attribute.alter,
-                    Attribute.materialeindruck,
-                    Attribute.farbeindruck,
-                ]:
-                    value = ",".join([elem.split("|")[1] for elem in value.split(",")])
-
                 if value is None or value == "":
                     invalid_entries += 1
                     is_invalid = True
@@ -733,33 +693,33 @@ def main():
 
     EntityFactory.create(
         [
-            Attribute.ortsbegebenheit,
-            Attribute.dominanteFarbe,
-            Attribute.stereotypRelevant,
-            Attribute.dominanteFunktion,
-            Attribute.dominanterZustand,
+            # Attribute.ortsbegebenheit,
+            # Attribute.dominanteFarbe,
+            # Attribute.stereotypRelevant,
+            # Attribute.dominanteFunktion,
+            # Attribute.dominanterZustand,
             #
-            Attribute.farbkonzept,
+            # Attribute.farbkonzept,
             #
-            Attribute.dominanteCharaktereigenschaft,
+            # Attribute.dominanteCharaktereigenschaft,
             #
-            Attribute.stereotyp,
+            # Attribute.stereotyp,
             #
-            Attribute.rollenberuf,
-            Attribute.geschlecht,
-            Attribute.dominanterAlterseindruck,
-            Attribute.dominantesAlter,
-            Attribute.rollenrelevanz,
+            # Attribute.rollenberuf,
+            # Attribute.geschlecht,
+            # Attribute.dominanterAlterseindruck,
+            # Attribute.dominantesAlter,
+            # Attribute.rollenrelevanz,
             #
-            Attribute.genre,
+            # Attribute.genre,
             #
-            Attribute.spielzeit,
+            # Attribute.spielzeit,
             #
-            Attribute.tageszeit,
+            # Attribute.tageszeit,
             #
-            Attribute.koerpermodifikation,
+            # Attribute.koerpermodifikation,
             #
-            Attribute.kostuemZeit,
+            # Attribute.kostuemZeit,
             #
             # Attribute.familienstand,
             #
@@ -786,8 +746,8 @@ def main():
             # Attribute.material,
             # Attribute.materialeindruck,
             #
-            # Attribute.farbe,
-            # Attribute.farbeindruck,
+            Attribute.farbe,
+            Attribute.farbeindruck,
         ],
         db,
     )
