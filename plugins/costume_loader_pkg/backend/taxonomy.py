@@ -1,26 +1,23 @@
 import logging
-from typing import Any, Optional
-from typing import List
-from typing import Tuple
-import networkx as nx
-from networkx import Graph
-from plugins.costume_loader_pkg.backend.database import Database
-import subprocess
-import os
-from networkx.readwrite import json_graph
-import simplejson as json
 from enum import Enum
+from typing import List, Dict
+from typing import Tuple
 
-"""
-Represents a taxonomie type, i.e. all possible
-taxonomies in the database. This should not be
-confused with the Attribute, which describes
-any special property of an entity with which
-is comparable.
-"""
+from sqlalchemy import text
+from sqlalchemy.sql.elements import TextClause
+
+from plugins.costume_loader_pkg.backend.database import Database
 
 
-class TaxonomieType(Enum):
+class TaxonomyType(Enum):
+    """
+    Represents a taxonomy type, i.e. all possible
+    taxonomies in the database. This should not be
+    confused with the Attribute, which describes
+    any special property of an entity with which
+    is comparable.
+    """
+
     alterseindruck = "alterseindruck"
     basiselement = "basiselement"
     charaktereigenschaft = "charaktereigenschaft"
@@ -54,445 +51,214 @@ class TaxonomieType(Enum):
     familienstand = "familienstand"
 
     @staticmethod
-    def get_name(taxonomieType) -> str:
-        if taxonomieType == taxonomieType.alterseindruck:
+    def get_name(taxonomy_type) -> str:
+        if taxonomy_type == TaxonomyType.alterseindruck:
             return "Alterseindruck"
-        elif taxonomieType == taxonomieType.basiselement:
+        elif taxonomy_type == TaxonomyType.basiselement:
             return "Basiselement"
-        elif taxonomieType == taxonomieType.charaktereigenschaft:
+        elif taxonomy_type == TaxonomyType.charaktereigenschaft:
             return "Charaktereigenschaft"
-        elif taxonomieType == taxonomieType.design:
+        elif taxonomy_type == TaxonomyType.design:
             return "Design"
-        elif taxonomieType == taxonomieType.farbeindruck:
+        elif taxonomy_type == TaxonomyType.farbeindruck:
             return "Farbeindruck"
-        elif taxonomieType == taxonomieType.farbe:
+        elif taxonomy_type == TaxonomyType.farbe:
             return "Farbe"
-        elif taxonomieType == taxonomieType.farbkonzept:
+        elif taxonomy_type == TaxonomyType.farbkonzept:
             return "Farbkonzept"
-        elif taxonomieType == taxonomieType.form:
+        elif taxonomy_type == TaxonomyType.form:
             return "Form"
-        elif taxonomieType == taxonomieType.funktion:
+        elif taxonomy_type == TaxonomyType.funktion:
             return "Funktion"
-        elif taxonomieType == taxonomieType.genre:
+        elif taxonomy_type == TaxonomyType.genre:
             return "Genre"
-        elif taxonomieType == taxonomieType.koerpermodifikation:
+        elif taxonomy_type == TaxonomyType.koerpermodifikation:
             return "Körpermodifikation"
-        elif taxonomieType == taxonomieType.koerperteil:
+        elif taxonomy_type == TaxonomyType.koerperteil:
             return "Köerperteil"
-        elif taxonomieType == taxonomieType.material:
+        elif taxonomy_type == TaxonomyType.material:
             return "Material"
-        elif taxonomieType == taxonomieType.materialeindruck:
+        elif taxonomy_type == TaxonomyType.materialeindruck:
             return "Materialeindruck"
-        elif taxonomieType == taxonomieType.operator:
+        elif taxonomy_type == TaxonomyType.operator:
             return "Operator"
-        elif taxonomieType == taxonomieType.produktionsort:
+        elif taxonomy_type == TaxonomyType.produktionsort:
             return "Produktionsort"
-        elif taxonomieType == taxonomieType.rollenberuf:
+        elif taxonomy_type == TaxonomyType.rollenberuf:
             return "Rollenberuf"
-        elif taxonomieType == taxonomieType.spielortDetail:
+        elif taxonomy_type == TaxonomyType.spielortDetail:
             return "SpielortDetail"
-        elif taxonomieType == taxonomieType.spielort:
+        elif taxonomy_type == TaxonomyType.spielort:
             return "Spielort"
-        elif taxonomieType == taxonomieType.spielzeit:
+        elif taxonomy_type == TaxonomyType.spielzeit:
             return "Spielzeit"
-        elif taxonomieType == taxonomieType.stereotyp:
+        elif taxonomy_type == TaxonomyType.stereotyp:
             return "Stereotyp"
-        elif taxonomieType == taxonomieType.tageszeit:
+        elif taxonomy_type == TaxonomyType.tageszeit:
             return "Tageszeit"
-        elif taxonomieType == taxonomieType.teilelement:
+        elif taxonomy_type == TaxonomyType.teilelement:
             return "Teilelement"
-        elif taxonomieType == taxonomieType.trageweise:
+        elif taxonomy_type == TaxonomyType.trageweise:
             return "Trageweise"
-        elif taxonomieType == taxonomieType.typus:
+        elif taxonomy_type == TaxonomyType.typus:
             return "Typus"
-        elif taxonomieType == taxonomieType.zustand:
+        elif taxonomy_type == TaxonomyType.zustand:
             return "Zustand"
-        elif taxonomieType == taxonomieType.geschlecht:
+        elif taxonomy_type == TaxonomyType.geschlecht:
             return "Geschlecht"
-        elif taxonomieType == taxonomieType.ortsbegebenheit:
+        elif taxonomy_type == TaxonomyType.ortsbegebenheit:
             return "Ortsbegebenheit"
-        elif taxonomieType == taxonomieType.stereotypRelevant:
+        elif taxonomy_type == TaxonomyType.stereotypRelevant:
             return "StereotypRelevant"
-        elif taxonomieType == taxonomieType.rollenrelevanz:
+        elif taxonomy_type == TaxonomyType.rollenrelevanz:
             return "Rollenrelevanz"
-        elif taxonomieType == taxonomieType.familienstand:
+        elif taxonomy_type == TaxonomyType.familienstand:
             return "Familienstand"
         else:
             logging.error(
-                'No name for taxonomieType "' + str(taxonomieType) + '" specified'
+                'No name for taxonomyType "' + str(taxonomy_type) + '" specified'
             )
             raise ValueError(
-                'No name for taxonomieType "' + str(taxonomieType) + '" specified'
+                'No name for taxonomyType "' + str(taxonomy_type) + '" specified'
             )
-        return
 
     @staticmethod
-    def get_database_table_name(taxonomieType) -> str:
-        if taxonomieType == taxonomieType.alterseindruck:
+    def get_database_table_name(taxonomy_type) -> str:
+        if taxonomy_type == taxonomy_type.alterseindruck:
             return "AlterseindruckDomaene"
-        elif taxonomieType == taxonomieType.basiselement:
+        elif taxonomy_type == taxonomy_type.basiselement:
             return "BasiselementDomaene"
-        elif taxonomieType == taxonomieType.charaktereigenschaft:
+        elif taxonomy_type == taxonomy_type.charaktereigenschaft:
             return "CharaktereigenschaftsDomaene"
-        elif taxonomieType == taxonomieType.design:
+        elif taxonomy_type == taxonomy_type.design:
             return "DesignDomaene"
-        elif taxonomieType == taxonomieType.farbeindruck:
+        elif taxonomy_type == taxonomy_type.farbeindruck:
             return None
-        elif taxonomieType == taxonomieType.farbe:
+        elif taxonomy_type == taxonomy_type.farbe:
             return "FarbenDomaene"
-        elif taxonomieType == taxonomieType.farbkonzept:
+        elif taxonomy_type == taxonomy_type.farbkonzept:
             return "FarbkonzeptDomaene"
-        elif taxonomieType == taxonomieType.form:
+        elif taxonomy_type == taxonomy_type.form:
             return "FormenDomaene"
-        elif taxonomieType == taxonomieType.funktion:
+        elif taxonomy_type == taxonomy_type.funktion:
             return "FunktionsDomaene"
-        elif taxonomieType == taxonomieType.genre:
+        elif taxonomy_type == taxonomy_type.genre:
             return "GenreDomaene"
-        elif taxonomieType == taxonomieType.koerpermodifikation:
+        elif taxonomy_type == taxonomy_type.koerpermodifikation:
             return "KoerpermodifikationsDomaene"
-        elif taxonomieType == taxonomieType.koerperteil:
+        elif taxonomy_type == taxonomy_type.koerperteil:
             return None
-        elif taxonomieType == taxonomieType.material:
+        elif taxonomy_type == taxonomy_type.material:
             return "MaterialDomaene"
-        elif taxonomieType == taxonomieType.materialeindruck:
+        elif taxonomy_type == taxonomy_type.materialeindruck:
             return None
-        elif taxonomieType == taxonomieType.operator:
+        elif taxonomy_type == taxonomy_type.operator:
             return "OperatorDomaene"
-        elif taxonomieType == taxonomieType.produktionsort:
+        elif taxonomy_type == taxonomy_type.produktionsort:
             return "ProduktionsortDomaene"
-        elif taxonomieType == taxonomieType.rollenberuf:
+        elif taxonomy_type == taxonomy_type.rollenberuf:
             return "RollenberufDomaene"
-        elif taxonomieType == taxonomieType.spielortDetail:
+        elif taxonomy_type == taxonomy_type.spielortDetail:
             return "SpielortDetailDomaene"
-        elif taxonomieType == taxonomieType.spielort:
+        elif taxonomy_type == taxonomy_type.spielort:
             return "SpielortDomaene"
-        elif taxonomieType == taxonomieType.spielzeit:
+        elif taxonomy_type == taxonomy_type.spielzeit:
             return "SpielzeitDomaene"
-        elif taxonomieType == taxonomieType.stereotyp:
+        elif taxonomy_type == taxonomy_type.stereotyp:
             return "StereotypDomaene"
-        elif taxonomieType == taxonomieType.tageszeit:
+        elif taxonomy_type == taxonomy_type.tageszeit:
             return "TageszeitDomaene"
-        elif taxonomieType == taxonomieType.teilelement:
+        elif taxonomy_type == taxonomy_type.teilelement:
             return "TeilelementDomaene"
-        elif taxonomieType == taxonomieType.trageweise:
+        elif taxonomy_type == taxonomy_type.trageweise:
             return "TrageweisenDomaene"
-        elif taxonomieType == taxonomieType.typus:
+        elif taxonomy_type == taxonomy_type.typus:
             return "TypusDomaene"
-        elif taxonomieType == taxonomieType.zustand:
+        elif taxonomy_type == taxonomy_type.zustand:
             return "ZustandsDomaene"
-        elif taxonomieType == taxonomieType.geschlecht:
+        elif taxonomy_type == taxonomy_type.geschlecht:
             return None
-        elif taxonomieType == taxonomieType.ortsbegebenheit:
+        elif taxonomy_type == taxonomy_type.ortsbegebenheit:
             return None
-        elif taxonomieType == taxonomieType.stereotypRelevant:
+        elif taxonomy_type == taxonomy_type.stereotypRelevant:
             return None
-        elif taxonomieType == taxonomieType.rollenrelevanz:
+        elif taxonomy_type == taxonomy_type.rollenrelevanz:
             return None
-        elif taxonomieType == taxonomieType.familienstand:
+        elif taxonomy_type == taxonomy_type.familienstand:
             return None
         else:
             logging.error(
-                'No name for taxonomieType "' + str(taxonomieType) + '" specified'
+                'No name for taxonomy_type "' + str(taxonomy_type) + '" specified'
             )
             raise ValueError(
-                'No name for taxonomieType "' + str(taxonomieType) + '" specified'
+                'No name for taxonomy_type "' + str(taxonomy_type) + '" specified'
             )
-        return
 
 
-"""
-Represents a taxonomie
-"""
-
-
-class Taxonomie:
-    """
-    Static taxonomie pool to not create taxonomies everytime.
-    This dictionary has the format (TaxonomieType, Taxonomie)
-    """
-
-    taxonomiePool = {}
-
-    """
-    Initializes the taxonomie given the taxonomieType and the graph
-    """
-
-    def __init__(self, taxonomieType: TaxonomieType, graph: Graph) -> None:
-        self.taxonomieType = taxonomieType
-        self.graph = graph
-        self.name = TaxonomieType.get_name(taxonomieType)
-        return
-
-    """
-    Creates a taxonomie object from the database given the taxonomieType.
-    If the taxonomie is already in the pool, it will be used from there instead.
-    """
-
+class Taxonomy:
     @staticmethod
-    def create_from_db(taxonomieType: TaxonomieType, db: Optional[Database] = None):
-        if taxonomieType in Taxonomie.taxonomiePool:
-            return Taxonomie.taxonomiePool[taxonomieType]
+    def create_from_db(taxonomy_type: TaxonomyType, db: Database) -> Dict:
+        """
+        Returns the entities and relations,
+        given the name of the taxonomy table
+        """
+        name = taxonomy_type.get_database_table_name(taxonomy_type)
 
-        if db is None:
-            db = Database()
-            db.open()
-
-        # take the values from database if available
-        if TaxonomieType.get_database_table_name(taxonomieType) is not None:
-            graph = Taxonomie.__get_graph(
-                taxonomieType.get_database_table_name(taxonomieType), db
-            )
-        # if not, create the graph here
-        else:
-            graph = nx.DiGraph()
-            if taxonomieType == taxonomieType.geschlecht:
-                graph.add_node("Geschlecht")
-                graph.add_node("weiblich")
-                graph.add_node("weiblich")
-                graph.add_edge("Geschlecht", "weiblich")
-                graph.add_edge("Geschlecht", "männlich")
-            elif taxonomieType == taxonomieType.ortsbegebenheit:
-                graph.add_node("Ortsbegebenheit")
-                graph.add_node("drinnen")
-                graph.add_node("draußen")
-                graph.add_node("drinnen und draußen")
-                graph.add_edge("Ortsbegebenheit", "drinnen")
-                graph.add_edge("Ortsbegebenheit", "draußen")
-                graph.add_edge("Ortsbegebenheit", "drinnen und draußen")
-            elif taxonomieType == taxonomieType.farbeindruck:
-                graph.add_node("Farbeindruck")
-                graph.add_node("glänzend")
-                graph.add_node("kräftig")
-                graph.add_node("neon")
-                graph.add_node("normal")
-                graph.add_node("pastellig")
-                graph.add_node("stumpf")
-                graph.add_node("transparent")
-                graph.add_edge("Farbeindruck", "glänzend")
-                graph.add_edge("Farbeindruck", "kräftig")
-                graph.add_edge("Farbeindruck", "neon")
-                graph.add_edge("Farbeindruck", "normal")
-                graph.add_edge("Farbeindruck", "pastellig")
-                graph.add_edge("Farbeindruck", "pastellig")
-                graph.add_edge("Farbeindruck", "stumpf")
-                graph.add_edge("Farbeindruck", "transparent")
-            elif taxonomieType == taxonomieType.koerperteil:
-                graph.add_node("Körperteil")
-                graph.add_node("Bein")
-                graph.add_node("Fuß")
-                graph.add_node("Ganzkörper")
-                graph.add_node("Hals")
-                graph.add_node("Hand")
-                graph.add_node("Kopf")
-                graph.add_node("Oberkörper")
-                graph.add_node("Taille")
-                graph.add_edge("Körperteil", "Bein")
-                graph.add_edge("Körperteil", "Fuß")
-                graph.add_edge("Körperteil", "Ganzkörper")
-                graph.add_edge("Körperteil", "Hals")
-                graph.add_edge("Körperteil", "Hand")
-                graph.add_edge("Körperteil", "Kopf")
-                graph.add_edge("Körperteil", "Oberkörper")
-                graph.add_edge("Körperteil", "Taille")
-            elif taxonomieType == taxonomieType.materialeindruck:
-                graph.add_node("Materialeindruck")
-                graph.add_node("anschmiegsam")
-                graph.add_node("fest")
-                graph.add_node("flauschig")
-                graph.add_node("fließend")
-                graph.add_node("künstlich")
-                graph.add_node("leicht")
-                graph.add_node("natürlich")
-                graph.add_node("normal")
-                graph.add_node("schwer")
-                graph.add_node("steif")
-                graph.add_node("weich")
-                graph.add_edge("Materialeindruck", "anschmiegsam")
-                graph.add_edge("Materialeindruck", "fest")
-                graph.add_edge("Materialeindruck", "flauschig")
-                graph.add_edge("Materialeindruck", "fließend")
-                graph.add_edge("Materialeindruck", "künstlich")
-                graph.add_edge("Materialeindruck", "leicht")
-                graph.add_edge("Materialeindruck", "natürlich")
-                graph.add_edge("Materialeindruck", "normal")
-                graph.add_edge("Materialeindruck", "schwer")
-                graph.add_edge("Materialeindruck", "steif")
-                graph.add_edge("Materialeindruck", "weich")
-            elif taxonomieType == taxonomieType.stereotypRelevant:
-                graph.add_node("StereotypRelevant")
-                graph.add_node("ja")
-                graph.add_node("nein")
-                graph.add_edge("StereotypRelevant", "ja")
-                graph.add_edge("StereotypRelevant", "nein")
-            elif taxonomieType == taxonomieType.rollenrelevanz:
-                graph.add_node("Rollenrelevanz")
-                graph.add_node("Hauptrolle")
-                graph.add_node("Nebenrolle")
-                graph.add_node("Statist")
-                graph.add_edge("Rollenrelevanz", "Hauptrolle")
-                graph.add_edge("Rollenrelevanz", "Nebenrolle")
-                graph.add_edge("Rollenrelevanz", "Statist")
-            elif taxonomieType == taxonomieType.familienstand:
-                graph.add_node("Familienstand")
-                graph.add_node("ledig")
-                graph.add_node("verheiratet")
-                graph.add_node("geschieden")
-                graph.add_node("verwitwet")
-                graph.add_edge("Familienstand", "ledig")
-                graph.add_edge("Familienstand", "verheiratet")
-                graph.add_edge("Familienstand", "geschieden")
-                graph.add_edge("Familienstand", "verwitwet")
-            else:
-                logging.error('"' + str(taxonomieType) + '" is a unknown taxonomieType')
-
-        taxonomie = Taxonomie(taxonomieType, graph)
-
-        Taxonomie.taxonomiePool[taxonomieType] = taxonomie
-
-        return taxonomie
-
-    """
-    Creates a taxonomie object from the database given the taxonomieType.
-    If file or directory is None, the default will be used.
-    If the taxonomie is already in the pool, it will be used from there instead.
-    """
-
-    @staticmethod
-    def create_from_json(
-        taxonomieType: TaxonomieType, directory: str = "taxonomies", file: str = None
-    ):
-        if taxonomieType in Taxonomie.taxonomiePool:
-            return Taxonomie.taxonomiePool[taxonomieType]
-
-        name_with_extension = (
-            (taxonomieType.get_name(taxonomieType) + ".json") if file is None else file
-        )
-        file_name = directory + "/" + name_with_extension
-
-        with open(file_name) as file_object:
-            graph_json = json.load(file_object)
-
-        graph = json_graph.node_link_graph(graph_json)
-
-        return Taxonomie(taxonomieType, graph)
-
-    """
-    Returns the table of a taxonomie.
-    In the kostuemrepo a taxonomie table is a "domaene" table with
-    the structure "Child", "Parent"
-    """
-
-    @staticmethod
-    def __get_taxonomie_table(name: str, database: Database) -> List[Tuple[str, str]]:
-        rows: List[Tuple[str, str]] = []
-        cursor = database.get_cursor()
-        cursor.execute("SELECT * FROM " + name)
-        rows = cursor.fetchall()
-        cursor.close()
-        return rows
-
-    """
-    Returns the graph object, i.e. the root node,
-    given the name of the taxonomie table
-    """
-
-    @staticmethod
-    def __get_graph(name: str, database: Database) -> Graph:
-        nodes = {}
+        entities = set()
+        relations = []
         # Format is (child, parent)
-        rows = Taxonomie.__get_taxonomie_table(name, database)
+        rows = Taxonomy.__get_taxonomy_table(name, db)
 
-        graph = nx.DiGraph()
         root_node = None
 
         for row in rows:
             child = row[0]
             parent = row[1]
 
+            entities.add(child)
+
             # If parent is none, this is the root node
             if parent is None or parent == "":
                 root_node = child
-                nodes[child] = root_node
-                continue
-
-            child_node = nodes.get(child, None)
-            if child_node is None:
-                child_node = child
-                nodes[child] = child_node
-
-            parent_node = nodes.get(parent, None)
-            if parent_node is None:
-                parent_node = parent
-                nodes[parent] = parent_node
-
-            graph.add_node(parent)
-            graph.add_node(child)
-            graph.add_edge(parent, child)
+            else:
+                relations.append({"source": parent, "target": child})
 
         if root_node is None:
-            logging.error("No root node found in taxonomie")
-            raise Exception("No root node found in taxonomie")
+            logging.error("No root node found in taxonomy")
+            raise Exception("No root node found in taxonomy")
 
-        if nx.algorithms.tree.recognition.is_tree(graph) == False:
-            logging.warning(name + " do not correspond to a tree")
+        return {
+            "GRAPH_ID": "",
+            "type": "tree",
+            "ref-target": "",
+            "entities": list(entities),
+            "relations": relations,
+        }
 
-        return graph
+    @staticmethod
+    def __get_taxonomy_table(name: str, database: Database) -> List[Tuple[str, str]]:
+        """
+        Returns the table of a taxonomy.
+        In the kostuemrepo a taxonomie table is a "domaene" table with
+        the structure "Child", "Parent"
+        """
+        query: TextClause = text("SELECT * FROM " + name)
+        rows: List[Tuple[str, str]] = database.session.execute(query).fetchall()
 
-    """ 
-    Safe the json representing the taxonomie
-    if no name is specified, the name of the
-    taxonomie will be used
-    """
+        return rows
 
-    def save_json(self, directory: str = "taxonomies", file: str = None) -> None:
-        if os.path.isdir(directory) == False:
-            os.mkdir(directory)
 
-        file_name = (self.name + ".json") if file is None else file
-        file_path = directory + "/" + file_name
-        graph_json = json_graph.node_link_data(self.graph)
-        json.dump(graph_json, open(file_path, "w"), indent=2)
+def main():
+    db = Database()
+    db.open_with_params(
+        host="localhost",
+        user="test",
+        password="test",
+        database="KostuemRepo",
+    )
 
-        return
+    taxonomy = Taxonomy.create_from_db(TaxonomyType.farbe, db)
 
-    """
-    Safe the svg and dot representing the taxonomie
-    if no name is specified, the name of the
-    taxonomie will be used
-    """
 
-    def save_plot(
-        self, directory: str = "taxonomies", name: str = None, display: bool = False
-    ) -> None:
-        if os.path.isdir(directory) == False:
-            os.mkdir(directory)
-
-        file_name = self.name if name is None else name
-        file_path_without_extension = directory + "/" + file_name
-        file_path_svg = file_path_without_extension + ".svg"
-        file_path_dot = file_path_without_extension + ".dot"
-
-        nx.nx_agraph.write_dot(self.graph, file_path_dot)
-
-        subprocess.call(["dot", "-Tsvg", file_path_dot, "-o", file_path_svg])
-
-        absolute_file_path_svg = os.getcwd() + "/" + file_path_svg
-
-        if display == True:
-            os.startfile(absolute_file_path_svg, "open")
-
-        return
-
-    """
-    Check if element is in the taxonomie graph
-    """
-
-    def contains(self, element: Any) -> bool:
-        return self.graph.has_node(element)
-
-    """
-    Gets the root of the given graph (tree)
-    """
-
-    def get_root(self, taxonomieType: TaxonomieType) -> str:
-        return [n for n, d in self.graph.in_degree() if d == 0][0]
+if __name__ == "__main__":
+    main()
