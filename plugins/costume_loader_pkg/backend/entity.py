@@ -545,8 +545,6 @@ class EntityFactory:
         """
         Creates a entity based on the given list of attributes.
         """
-        columns_to_select = []
-        tables_to_join = set()
         (
             tables,
             columns,
@@ -554,122 +552,140 @@ class EntityFactory:
             costume_table,
             costume_base_element_table,
         ) = EntityFactory._create_table_column_dicts(database)
+        entities: Dict[Tuple[int, ...], Entity] = {}
 
-        is_base_element = False
+        is_base_element = (
+            len(
+                set(attributes).intersection(
+                    {
+                        Attribute.basiselement,
+                        Attribute.design,
+                        Attribute.form,
+                        Attribute.trageweise,
+                        Attribute.zustand,
+                        Attribute.funktion,
+                        Attribute.material,
+                        Attribute.materialeindruck,
+                        Attribute.farbe,
+                        Attribute.farbeindruck,
+                    }
+                )
+            )
+            > 0
+        )
 
         for attr in attributes:
-            columns_to_select.append(columns[attr])
+            if is_base_element:
+                columns_to_select = [
+                    costume_table.KostuemID,
+                    costume_table.RollenID,
+                    costume_table.FilmID,
+                    costume_base_element_table.c.BasiselementID,
+                    columns[attr],
+                ]
+                order_by_columns = [
+                    costume_table.FilmID,
+                    costume_table.RollenID,
+                    costume_table.KostuemID,
+                    costume_base_element_table.c.BasiselementID,
+                ]
+            else:
+                columns_to_select = [
+                    costume_table.KostuemID,
+                    costume_table.RollenID,
+                    costume_table.FilmID,
+                    columns[attr],
+                ]
+                order_by_columns = [
+                    costume_table.FilmID,
+                    costume_table.RollenID,
+                    costume_table.KostuemID,
+                ]
 
             if attr in tables:
-                tables_to_join.add(tables[attr])
-
-            is_base_element = is_base_element or attr in [
-                Attribute.basiselement,
-                Attribute.design,
-                Attribute.form,
-                Attribute.trageweise,
-                Attribute.zustand,
-                Attribute.funktion,
-                Attribute.material,
-                Attribute.materialeindruck,
-                Attribute.farbe,
-                Attribute.farbeindruck,
-            ]
-
-        # add base element id if base elements need to be loaded
-        if is_base_element:
-            columns_to_select = [
-                costume_base_element_table.c.BasiselementID
-            ] + columns_to_select
-
-        columns_to_select = [
-            costume_table.KostuemID,
-            costume_table.RollenID,
-            costume_table.FilmID,
-        ] + columns_to_select
-
-        query = select(*columns_to_select)
-
-        if is_base_element:
-            j = join(
-                costume_table,
-                costume_base_element_table,
-                join_on[costume_base_element_table],
-            )
-        else:
-            j = None
-
-        for table in tables_to_join:
-            if j is None:
-                j = join(costume_table, table, join_on[table])
+                if is_base_element:
+                    j = join(
+                        costume_table,
+                        costume_base_element_table,
+                        join_on[costume_base_element_table],
+                    )
+                    j = j.join(
+                        tables[attr],
+                        join_on[tables[attr]],
+                    )
+                else:
+                    j = join(costume_table, tables[attr], join_on[tables[attr]])
             else:
-                j = j.join(table, join_on[table])
+                j = costume_table
 
-        if j is not None:
-            query = query.select_from(j)
+                if is_base_element:
+                    j = join(
+                        costume_table,
+                        costume_base_element_table,
+                        join_on[costume_base_element_table],
+                    )
 
-        query = query.order_by(
-            costume_table.FilmID,
-            costume_table.RollenID,
-            costume_table.KostuemID,
-        )
+            query = select(*columns_to_select).select_from(j).order_by(*order_by_columns)
+            query_result = database.session.execute(query).all()
 
-        if is_base_element:
-            query = query.order_by(
-                costume_base_element_table.c.BasiselementID,
+            EntityFactory._add_attribute_to_entities_from_query_result(
+                attr, is_base_element, query_result, entities
             )
 
-        query_result = database.session.execute(query).all()
-
-        # Convert the result of the query into entity instances
-        entities = EntityFactory._entities_from_query_result(
-            attributes, is_base_element, query_result
-        )
-
-        return entities
+        return list(entities.values())
 
     @staticmethod
-    def _entities_from_query_result(
-        attributes, is_base_element, query_result
-    ) -> List[Entity]:
-        entities = []
-
+    def _add_attribute_to_entities_from_query_result(
+        attribute: Attribute,
+        is_base_element: bool,
+        query_result: List,
+        entities: Dict[Tuple[int, ...], Entity],
+    ):
         for row in query_result:
-            entity = Entity("Entity")
-
             costume_id = row[0]
             role_id = row[1]
             film_id = row[2]
 
-            entity.kostuemId = costume_id
-            entity.rollenId = role_id
-            entity.filmId = film_id
-
             if is_base_element:
                 base_element_id = row[3]
-                entity.basiselementID = base_element_id
-                row = row[4:]
-            else:
-                row = row[3:]
 
-            for i, attr in enumerate(attributes):
-                value: str = row[i]
-
-                if value is None or value == "":
-                    entity.add_value(attr, None)
-                    logging.warning("Found entry with " + attr.value + ' = None or = ""')
-                    break
-
-                entity.add_attribute(attr)
-
-                if isinstance(value, str):
-                    entity.add_value(attr, value.split(","))
+                if (film_id, role_id, costume_id, base_element_id) in entities:
+                    entity = entities[(film_id, role_id, costume_id, base_element_id)]
                 else:
-                    entity.add_value(attr, value)
+                    entity = Entity("Entity")
+                    entity.kostuemId = costume_id
+                    entity.rollenId = role_id
+                    entity.filmId = film_id
+                    entity.basiselementID = base_element_id
 
-            entities.append(entity)
+                value: str = row[4]
+            else:
+                if (film_id, role_id, costume_id) in entities:
+                    entity = entities[(film_id, role_id, costume_id)]
+                else:
+                    entity = Entity("Entity")
+                    entity.kostuemId = costume_id
+                    entity.rollenId = role_id
+                    entity.filmId = film_id
 
-        return entities
+                value: str = row[3]
+
+            if value is None or value == "":
+                entity.add_value(attribute, None)
+                logging.warning("Found entry with " + attribute.value + ' = None or = ""')
+                break
+
+            entity.add_attribute(attribute)
+
+            if isinstance(value, str):
+                entity.add_value(attribute, value.split(","))
+            else:
+                entity.add_value(attribute, value)
+
+            if is_base_element:
+                entities[(film_id, role_id, costume_id, entity.basiselementID)] = entity
+            else:
+                entities[(film_id, role_id, costume_id)] = entity
 
 
 def main():
@@ -685,61 +701,61 @@ def main():
 
     EntityFactory.create(
         [
-            # Attribute.ortsbegebenheit,
-            # Attribute.dominanteFarbe,
-            # Attribute.stereotypRelevant,
-            # Attribute.dominanteFunktion,
-            # Attribute.dominanterZustand,
+            Attribute.ortsbegebenheit,
+            Attribute.dominanteFarbe,
+            Attribute.stereotypRelevant,
+            Attribute.dominanteFunktion,
+            Attribute.dominanterZustand,
             #
-            # Attribute.farbkonzept,
+            Attribute.farbkonzept,
             #
-            # Attribute.dominanteCharaktereigenschaft,
+            Attribute.dominanteCharaktereigenschaft,
             #
-            # Attribute.stereotyp,
+            Attribute.stereotyp,
             #
-            # Attribute.rollenberuf,
-            # Attribute.geschlecht,
-            # Attribute.dominanterAlterseindruck,
-            # Attribute.dominantesAlter,
-            # Attribute.rollenrelevanz,
+            Attribute.rollenberuf,
+            Attribute.geschlecht,
+            Attribute.dominanterAlterseindruck,
+            Attribute.dominantesAlter,
+            Attribute.rollenrelevanz,
             #
-            # Attribute.genre,
+            Attribute.genre,
             #
-            # Attribute.spielzeit,
+            Attribute.spielzeit,
             #
-            # Attribute.tageszeit,
+            Attribute.tageszeit,
             #
-            # Attribute.koerpermodifikation,
+            Attribute.koerpermodifikation,
             #
-            # Attribute.kostuemZeit,
+            Attribute.kostuemZeit,
             #
-            # Attribute.familienstand,
+            Attribute.familienstand,
             #
-            # Attribute.charaktereigenschaft,
+            Attribute.charaktereigenschaft,
             #
-            # Attribute.spielort,
-            # Attribute.spielortDetail,
+            Attribute.spielort,
+            Attribute.spielortDetail,
             #
             Attribute.alterseindruck,
             Attribute.alter,
             #
-            # Attribute.basiselement,
+            Attribute.basiselement,
             #
-            # Attribute.design,
+            Attribute.design,
             #
-            # Attribute.form,
+            Attribute.form,
             #
-            # Attribute.trageweise,
+            Attribute.trageweise,
             #
-            # Attribute.zustand,
+            Attribute.zustand,
             #
-            # Attribute.funktion,
+            Attribute.funktion,
             #
-            # Attribute.material,
-            # Attribute.materialeindruck,
+            Attribute.material,
+            Attribute.materialeindruck,
             #
-            # Attribute.farbe,
-            # Attribute.farbeindruck,
+            Attribute.farbe,
+            Attribute.farbeindruck,
         ],
         db,
     )
