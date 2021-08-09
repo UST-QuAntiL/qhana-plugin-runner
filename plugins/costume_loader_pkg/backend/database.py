@@ -1,8 +1,4 @@
-import logging
 from typing import Any, Union, List
-
-from mysql.connector import MySQLConnection
-from configparser import ConfigParser
 
 from sqlalchemy import create_engine, table, column, select, func
 from sqlalchemy.engine import Engine
@@ -10,7 +6,6 @@ from sqlalchemy.ext.automap import automap_base, AutomapBase
 from sqlalchemy.orm import Session, DeclarativeMeta
 
 from plugins.costume_loader_pkg.backend.singleton import Singleton
-import os
 
 
 class Database(Singleton):
@@ -23,73 +18,16 @@ class Database(Singleton):
     Specifies the default for the config file
     """
 
-    def __init__(self) -> None:
+    def __init__(self):
         """
         Initializes the database singleton.
         """
-        self.__connection = None
-        self.__cursor = None
         self.connected = False
         self.session: Session = None
         self.base: AutomapBase = None
         self.other_tables = {}
 
-        return
-
-    def __del__(self) -> None:
-        """
-        Deletes the database singleton.
-        """
-        self.close()
-        return
-
-    def open(self, filename=None) -> None:
-        """
-        Opens the database using the config file.
-        """
-
-        # if already connected do nothing
-        if self.__connection is not None and self.__connection.is_connected():
-            return
-
-        if filename is None:
-            filename = Database.config_file_default
-
-        if not os.path.exists(filename):
-            logging.error("Couldn't find config file for database connection.")
-
-        section = "mysql"
-        parser = ConfigParser()
-        parser.read(filename)
-        connection_string = {}
-
-        if parser.has_section(section):
-            items = parser.items(section)
-            for item in items:
-                connection_string[item[0]] = item[1]
-        else:
-            logging.error("{0} not found in the {1} file".format(section, filename))
-            raise Exception("{0} not found in the {1} file".format(section, filename))
-
-        self.databaseName = parser.get(section, "database")
-        self.user = parser.get(section, "user")
-        self.host = parser.get(section, "host")
-
-        self.__connection = MySQLConnection(**connection_string)
-
-        if self.__connection.is_connected():
-            self.connected = True
-            logging.debug("Successfully connected to database")
-
     def open_with_params(self, host: str, user: str, password: str, database: str):
-        self.__connection = MySQLConnection(
-            host=host, user=user, password=password, database=database
-        )
-
-        if self.__connection.is_connected():
-            self.connected = True
-            logging.debug("Successfully connected to database")
-
         engine: Engine = create_engine(
             "mysql+mysqlconnector://"
             + user
@@ -100,6 +38,8 @@ class Database(Singleton):
             + "/"
             + database
         )
+
+        self.connected = True
 
         Base: AutomapBase = automap_base()
         Base.prepare(engine, reflect=True)
@@ -162,22 +102,6 @@ class Database(Singleton):
         self.other_tables["BasiselementFunktion"] = table(
             "BasiselementFunktion", column("BasiselementID"), column("Funktionsname")
         )
-
-    def close(self) -> None:
-        """
-        Closes the database connection.
-        """
-        if self.__connection is not None and self.__connection.is_connected():
-            self.__connection.close()
-            self.__cursor = None
-            self.connected = False
-            logging.debug("Successfully disconnected from database")
-
-    def get_cursor(self):
-        """
-        Returns a cursor to the database.
-        """
-        return self.__connection.cursor()
 
     def _get_group_column_cte(
         self,
