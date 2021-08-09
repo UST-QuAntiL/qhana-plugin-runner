@@ -1,7 +1,7 @@
 import enum
 import logging
 from typing import Any, Optional
-from plugins.costume_loader_pkg.backend.taxonomy import Taxonomie, TaxonomieType
+from plugins.costume_loader_pkg.backend.taxonomy import Taxonomy, TaxonomyType
 
 """
 This class is an enum for all attributes.
@@ -9,7 +9,7 @@ An attribute is a special property that is used
 to describe one characteristic of an entity.
 For example, a costume has the attribute
 "Dominante Farbe". The attribute should not be
-confused with TaxonomieType, which is the enum
+confused with TaxonomyType, which is the enum
 for all possible taxonomies in the database.
 """
 
@@ -205,91 +205,90 @@ class Attribute(enum.Enum):
         else:
             logging.error('No name for attribute "' + str(attribute) + '" specified')
             raise ValueError('No name for attribute "' + str(attribute) + '" specified')
-        return
 
     """
-    Returns the corresponding taxonomie type
+    Returns the corresponding taxonomy type
     this attribute is used for.
-    Note, that an attribute has only one taxonomie type,
-    while a taxonomie type can be used by multiple attributes.
+    Note, that an attribute has only one taxonomy type,
+    while a taxonomy type can be used by multiple attributes.
     """
 
     @staticmethod
-    def get_taxonomie_type(attribute) -> Optional[TaxonomieType]:
+    def get_taxonomy_type(attribute) -> Optional[TaxonomyType]:
         if attribute == Attribute.ortsbegebenheit:
-            return TaxonomieType.ortsbegebenheit
+            return TaxonomyType.ortsbegebenheit
         elif attribute == Attribute.dominanteFarbe:
-            return TaxonomieType.farbe
+            return TaxonomyType.farbe
         elif attribute == Attribute.stereotypRelevant:
-            return TaxonomieType.stereotypRelevant
+            return TaxonomyType.stereotypRelevant
         elif attribute == Attribute.dominanteFunktion:
-            return TaxonomieType.funktion
+            return TaxonomyType.funktion
         elif attribute == Attribute.dominanterZustand:
-            return TaxonomieType.zustand
+            return TaxonomyType.zustand
         elif attribute == Attribute.dominanteCharaktereigenschaft:
-            return TaxonomieType.typus
+            return TaxonomyType.typus
         elif attribute == Attribute.stereotyp:
-            return TaxonomieType.stereotyp
+            return TaxonomyType.stereotyp
         elif attribute == Attribute.geschlecht:
-            return TaxonomieType.geschlecht
+            return TaxonomyType.geschlecht
         elif attribute == Attribute.dominanterAlterseindruck:
-            return TaxonomieType.alterseindruck
+            return TaxonomyType.alterseindruck
         elif attribute == Attribute.genre:
-            return TaxonomieType.genre
+            return TaxonomyType.genre
         elif attribute == Attribute.rollenberuf:
-            return TaxonomieType.rollenberuf
+            return TaxonomyType.rollenberuf
         elif attribute == Attribute.dominantesAlter:
             return None
         elif attribute == Attribute.rollenrelevanz:
-            return TaxonomieType.rollenrelevanz
+            return TaxonomyType.rollenrelevanz
         elif attribute == Attribute.spielzeit:
-            return TaxonomieType.spielzeit
+            return TaxonomyType.spielzeit
         elif attribute == Attribute.tageszeit:
-            return TaxonomieType.tageszeit
+            return TaxonomyType.tageszeit
         elif attribute == Attribute.koerpermodifikation:
-            return TaxonomieType.koerpermodifikation
+            return TaxonomyType.koerpermodifikation
         elif attribute == Attribute.kostuemZeit:
             return None
         elif attribute == Attribute.familienstand:
-            return TaxonomieType.familienstand
+            return TaxonomyType.familienstand
         elif attribute == Attribute.charaktereigenschaft:
-            return TaxonomieType.charaktereigenschaft
+            return TaxonomyType.charaktereigenschaft
         elif attribute == Attribute.spielort:
-            return TaxonomieType.spielort
+            return TaxonomyType.spielort
         elif attribute == Attribute.spielortDetail:
-            return TaxonomieType.spielortDetail
+            return TaxonomyType.spielortDetail
         elif attribute == Attribute.alterseindruck:
-            return TaxonomieType.alterseindruck
+            return TaxonomyType.alterseindruck
         elif attribute == Attribute.alter:
             return None
         elif attribute == Attribute.basiselement:
-            return TaxonomieType.basiselement
+            return TaxonomyType.basiselement
         elif attribute == Attribute.design:
-            return TaxonomieType.design
+            return TaxonomyType.design
         elif attribute == Attribute.form:
-            return TaxonomieType.form
+            return TaxonomyType.form
         elif attribute == Attribute.trageweise:
-            return TaxonomieType.trageweise
+            return TaxonomyType.trageweise
         elif attribute == Attribute.zustand:
-            return TaxonomieType.zustand
+            return TaxonomyType.zustand
         elif attribute == Attribute.funktion:
-            return TaxonomieType.funktion
+            return TaxonomyType.funktion
         elif attribute == Attribute.material:
-            return TaxonomieType.material
+            return TaxonomyType.material
         elif attribute == Attribute.materialeindruck:
-            return TaxonomieType.materialeindruck
+            return TaxonomyType.materialeindruck
         elif attribute == Attribute.farbe:
-            return TaxonomieType.farbe
+            return TaxonomyType.farbe
         elif attribute == Attribute.farbeindruck:
-            return TaxonomieType.farbeindruck
+            return TaxonomyType.farbeindruck
         elif attribute == Attribute.farbkonzept:
-            return TaxonomieType.farbkonzept
+            return TaxonomyType.farbkonzept
         else:
             logging.error(
-                'No taxonomie type for attribute "' + str(attribute) + '" specified'
+                'No taxonomy type for attribute "' + str(attribute) + '" specified'
             )
             raise ValueError(
-                'No taxonomie type for attribute "' + str(attribute) + '" specified'
+                'No taxonomy type for attribute "' + str(attribute) + '" specified'
             )
 
     """
@@ -305,4 +304,4 @@ class Attribute(enum.Enum):
             return None
         elif attribute == Attribute.alter:
             return None
-        return Taxonomie.create_from_db(Attribute.get_taxonomie_type(attribute))
+        return Taxonomy.create_from_db(Attribute.get_taxonomy_type(attribute))
