@@ -62,10 +62,14 @@ base_element_attrs = [
 ]
 
 
-@CELERY.task(name=f"{CostumeLoader.instance.identifier}.costume_loading_task", bind=True)
-def costume_loading_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(f"Starting new costume loading task with db id '{db_id}'")
+@CELERY.task(name=f"{CostumeLoader.instance.identifier}.loading_task", bind=True)
+def loading_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting new loading task with db id '{db_id}'")
     app = flask.current_app
+
+    #################
+    # load costumes #
+    #################
 
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     param_schema = InputParametersSchema()
@@ -94,21 +98,9 @@ def costume_loading_task(self, db_id: int) -> str:
             db_id, output, "entities.json", "costume-loader-output", "application/json"
         )
 
-    return "result: " + entities_json
-
-
-@CELERY.task(name=f"{CostumeLoader.instance.identifier}.taxonomy_loading_task", bind=True)
-def taxonomy_loading_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(f"Starting new taxnomoy loading task with db id '{db_id}'")
-    app = flask.current_app
-
-    db = Database()
-    db.open_with_params(
-        host=app.config.get("COSTUME_LOADER_DB_HOST"),
-        user=app.config.get("COSTUME_LOADER_DB_USER"),
-        password=app.config.get("COSTUME_LOADER_DB_PASSWORD"),
-        database=app.config.get("COSTUME_LOADER_DB_DATABASE"),
-    )
+    ###################
+    # load taxonomies #
+    ###################
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     zip_file = ZipFile(tmp_zip_file, "w")
@@ -130,4 +122,4 @@ def taxonomy_loading_task(self, db_id: int) -> str:
         "application/zip",
     )
 
-    return "result stored in zip file"
+    return "result stored in output files"
