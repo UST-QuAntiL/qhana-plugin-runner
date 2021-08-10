@@ -1,5 +1,6 @@
 import json
 from tempfile import SpooledTemporaryFile
+from typing import Optional
 from zipfile import ZipFile
 
 import flask
@@ -10,10 +11,42 @@ from plugins.costume_loader_pkg.backend.entity import EntityFactory
 
 from plugins.costume_loader_pkg import CostumeLoader
 from plugins.costume_loader_pkg.backend.taxonomy import Taxonomy, TaxonomyType
+from plugins.costume_loader_pkg.schemas import (
+    InputParametersSchema,
+    InputParameters,
+    CostumeType,
+)
 from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
+
+costume_attrs = [
+    Attribute.ortsbegebenheit,
+    Attribute.dominanteFarbe,
+    Attribute.stereotypRelevant,
+    Attribute.dominanteFunktion,
+    Attribute.dominanterZustand,
+    Attribute.dominanteCharaktereigenschaft,
+    Attribute.stereotyp,
+    Attribute.geschlecht,
+    Attribute.dominanterAlterseindruck,
+    Attribute.genre,
+    Attribute.rollenberuf,
+    Attribute.dominantesAlter,
+    Attribute.rollenrelevanz,
+    Attribute.spielzeit,
+    Attribute.tageszeit,
+    Attribute.koerpermodifikation,
+    Attribute.kostuemZeit,
+    Attribute.familienstand,
+    Attribute.charaktereigenschaft,
+    Attribute.spielort,
+    Attribute.spielortDetail,
+    Attribute.alterseindruck,
+    Attribute.alter,
+]
 
 base_element_attrs = [
     Attribute.basiselement,
@@ -34,6 +67,10 @@ def costume_loading_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new costume loading task with db id '{db_id}'")
     app = flask.current_app
 
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    param_schema = InputParametersSchema()
+    input_params: InputParameters = param_schema.loads(task_data.parameters)
+
     db = Database()
     db.open_with_params(
         host=app.config.get("COSTUME_LOADER_DB_HOST"),
@@ -42,7 +79,10 @@ def costume_loading_task(self, db_id: int) -> str:
         database=app.config.get("COSTUME_LOADER_DB_DATABASE"),
     )
 
-    entity_list = EntityFactory.create(list(Attribute), db)
+    if input_params.costume_type == CostumeType.WITHOUT_BASE_ELEMENTS:
+        entity_list = EntityFactory.create(costume_attrs, db)
+    else:
+        entity_list = EntityFactory.create(list(Attribute), db)
 
     entities = [entity.to_dataloader_dict() for entity in entity_list]
 

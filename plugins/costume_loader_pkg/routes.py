@@ -8,11 +8,14 @@ from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
+from marshmallow import EXCLUDE
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import (
     CostumeLoaderUIResponseSchema,
     TaskResponseSchema,
+    InputParametersSchema,
+    InputParameters,
 )
 from plugins.costume_loader_pkg.tasks import costume_loading_task, taxonomy_loading_task
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
@@ -42,16 +45,23 @@ class MicroFrontend(MethodView):
     @COSTUME_LOADER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the costume loader plugin."
     )
+    @COSTUME_LOADER_BLP.arguments(
+        InputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
-    def get(self):
+    def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, {})
+        return self.render(request.args, errors)
 
     @COSTUME_LOADER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the costume loader plugin."
     )
     @COSTUME_LOADER_BLP.arguments(
-        FrontendFormBaseSchema(),
+        InputParametersSchema(),
         location="form",
         required=False,
     )
@@ -66,7 +76,7 @@ class MicroFrontend(MethodView):
                 "costume_loader_template.html",
                 name=CostumeLoader.instance.name,
                 version=CostumeLoader.instance.version,
-                schema=FrontendFormBaseSchema(),
+                schema=InputParametersSchema(),
                 values=data,
                 errors=errors,
                 process=url_for(f"{COSTUME_LOADER_BLP.name}.CostumeLoadingView"),
@@ -78,12 +88,14 @@ class MicroFrontend(MethodView):
 class CostumeLoadingView(MethodView):
     """Start a long running processing task."""
 
+    @COSTUME_LOADER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
     @COSTUME_LOADER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
-    def post(self):
+    def post(self, input_params: InputParameters):
         """Start the costume loading task."""
         db_task = ProcessingTask(
             task_name=costume_loading_task.name,
+            parameters=InputParametersSchema().dumps(input_params),
         )
         db_task.save(commit=True)
 
