@@ -1,6 +1,5 @@
 import json
 from tempfile import SpooledTemporaryFile
-from typing import Optional
 from zipfile import ZipFile
 
 import flask
@@ -11,13 +10,7 @@ from plugins.costume_loader_pkg.backend.entity import EntityFactory
 
 from plugins.costume_loader_pkg import CostumeLoader
 from plugins.costume_loader_pkg.backend.taxonomy import Taxonomy, TaxonomyType
-from plugins.costume_loader_pkg.schemas import (
-    InputParameters,
-    InputParametersSchema,
-    MuseEntitySchema,
-)
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -39,12 +32,6 @@ base_element_attrs = [
 @CELERY.task(name=f"{CostumeLoader.instance.identifier}.costume_loading_task", bind=True)
 def costume_loading_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new costume loading task with db id '{db_id}'")
-    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-    param_schema = InputParametersSchema()
-    input_params: InputParameters = param_schema.loads(task_data.parameters)
-
-    attributes = input_params.attributes
-
     app = flask.current_app
 
     db = Database()
@@ -55,11 +42,9 @@ def costume_loading_task(self, db_id: int) -> str:
         database=app.config.get("COSTUME_LOADER_DB_DATABASE"),
     )
 
-    entity_schema = MuseEntitySchema()
+    entity_list = EntityFactory.create(list(Attribute), db)
 
-    entities = [
-        entity_schema.dump(entity) for entity in EntityFactory.create(attributes, db)
-    ]
+    entities = [entity.to_dataloader_dict() for entity in entity_list]
 
     entities_json = json.dumps(entities)
 

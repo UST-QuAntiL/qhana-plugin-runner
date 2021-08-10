@@ -1,6 +1,7 @@
 import logging
 import time
-from enum import Enum, auto
+from decimal import Decimal
+from enum import Enum
 from typing import Any, Dict, Tuple
 from typing import List
 
@@ -25,14 +26,14 @@ class Entity:
         """
         self.name = name
         self.id = 0
-        self.basiselementID = 0
+        self.basiselementID = -1
         self.kostuemId = 0
         self.rollenId = 0
         self.filmId = 0
         # format: (attribute, None)
         self.attributes = {}
         # format: (attribute, value)
-        self.values = {}
+        self.values: Dict[Attribute, Any] = {}
 
     def get_film_url(self) -> str:
         """
@@ -84,6 +85,19 @@ class Entity:
         Removes a value from the values list.
         """
         del self.values[attribute]
+
+    def to_dataloader_dict(self):
+        id_str = "_".join((str(self.filmId), str(self.rollenId), str(self.kostuemId)))
+
+        if self.basiselementID >= 0:
+            id_str += "_" + str(self.basiselementID)
+
+        data_dict = {"ID": id_str, "href": ""}
+
+        for k, v in self.values.items():
+            data_dict[k.value] = v
+
+        return data_dict
 
     def __str__(self) -> str:
         """
@@ -679,6 +693,10 @@ class EntityFactory:
 
             if isinstance(value, str):
                 entity.add_value(attribute, value.split(","))
+            elif isinstance(value, set):
+                entity.add_value(attribute, list(value))
+            elif isinstance(value, Decimal):
+                entity.add_value(attribute, float(value))
             else:
                 entity.add_value(attribute, value)
 

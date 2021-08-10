@@ -8,15 +8,14 @@ from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
-from marshmallow import EXCLUDE
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import (
     CostumeLoaderUIResponseSchema,
-    InputParametersSchema,
     TaskResponseSchema,
 )
 from plugins.costume_loader_pkg.tasks import costume_loading_task, taxonomy_loading_task
+from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -40,32 +39,19 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the costume loader plugin."""
 
-    example_inputs = {
-        "attributes": "dominanteFarbe",
-    }
-
     @COSTUME_LOADER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the costume loader plugin."
-    )
-    @COSTUME_LOADER_BLP.arguments(
-        InputParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="query",
-        required=False,
     )
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors):
+    def get(self):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, {})
 
     @COSTUME_LOADER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the costume loader plugin."
     )
     @COSTUME_LOADER_BLP.arguments(
-        InputParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
+        FrontendFormBaseSchema(),
         location="form",
         required=False,
     )
@@ -75,19 +61,15 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        schema = InputParametersSchema()
         return Response(
             render_template(
                 "costume_loader_template.html",
                 name=CostumeLoader.instance.name,
                 version=CostumeLoader.instance.version,
-                schema=schema,
+                schema=FrontendFormBaseSchema(),
                 values=data,
                 errors=errors,
-                process=url_for(f"{COSTUME_LOADER_BLP.name}.ProcessView"),
-                example_values=url_for(
-                    f"{COSTUME_LOADER_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
+                process=url_for(f"{COSTUME_LOADER_BLP.name}.CostumeLoadingView"),
             )
         )
 
@@ -96,14 +78,12 @@ class MicroFrontend(MethodView):
 class CostumeLoadingView(MethodView):
     """Start a long running processing task."""
 
-    @COSTUME_LOADER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
     @COSTUME_LOADER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: InputParametersSchema):
+    def post(self):
         """Start the costume loading task."""
         db_task = ProcessingTask(
             task_name=costume_loading_task.name,
-            parameters=InputParametersSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 
