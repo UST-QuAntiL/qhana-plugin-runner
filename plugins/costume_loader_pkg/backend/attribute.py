@@ -50,10 +50,6 @@ class Attribute(enum.Enum):
     farbeindruck = "farbeindruck"
     farbkonzept = "farbkonzept"
 
-    """
-    Returns the human representable name for the
-    given Attribute.
-    """
     # German names for attributes
     """
     @staticmethod
@@ -134,6 +130,10 @@ class Attribute(enum.Enum):
     # englisch names for attributes
     @staticmethod
     def get_name(attribute) -> str:
+        """
+        Returns the human representable name for the
+        given Attribute.
+        """
         if attribute == Attribute.ortsbegebenheit:
             return "Location"
         elif attribute == Attribute.dominanteFarbe:
@@ -206,15 +206,14 @@ class Attribute(enum.Enum):
             logging.error('No name for attribute "' + str(attribute) + '" specified')
             raise ValueError('No name for attribute "' + str(attribute) + '" specified')
 
-    """
-    Returns the corresponding taxonomy type
-    this attribute is used for.
-    Note, that an attribute has only one taxonomy type,
-    while a taxonomy type can be used by multiple attributes.
-    """
-
     @staticmethod
     def get_taxonomy_type(attribute) -> Optional[TaxonomyType]:
+        """
+        Returns the corresponding taxonomy type
+        this attribute is used for.
+        Note, that an attribute has only one taxonomy type,
+        while a taxonomy type can be used by multiple attributes.
+        """
         if attribute == Attribute.ortsbegebenheit:
             return TaxonomyType.ortsbegebenheit
         elif attribute == Attribute.dominanteFarbe:
@@ -290,18 +289,3 @@ class Attribute(enum.Enum):
             raise ValueError(
                 'No taxonomy type for attribute "' + str(attribute) + '" specified'
             )
-
-    """
-    Gets the base on which this attribute can be compared
-    with others.
-    """
-
-    @staticmethod
-    def get_base(attribute) -> Any:
-        if attribute == Attribute.dominantesAlter:
-            return None
-        elif attribute == Attribute.kostuemZeit:
-            return None
-        elif attribute == Attribute.alter:
-            return None
-        return Taxonomy.create_from_db(Attribute.get_taxonomy_type(attribute))

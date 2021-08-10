@@ -22,7 +22,7 @@ from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
 
-basiselement_attrs = [
+base_element_attrs = [
     Attribute.basiselement,
     Attribute.design,
     Attribute.form,
