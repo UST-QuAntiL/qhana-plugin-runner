@@ -16,7 +16,7 @@ from plugins.costume_loader_pkg.schemas import (
     InputParametersSchema,
     TaskResponseSchema,
 )
-from plugins.costume_loader_pkg.tasks import costume_loading_task
+from plugins.costume_loader_pkg.tasks import costume_loading_task, taxonomy_loading_task
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -92,8 +92,8 @@ class MicroFrontend(MethodView):
         )
 
 
-@COSTUME_LOADER_BLP.route("/process/")
-class ProcessView(MethodView):
+@COSTUME_LOADER_BLP.route("/load_costumes/")
+class CostumeLoadingView(MethodView):
     """Start a long running processing task."""
 
     @COSTUME_LOADER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
@@ -109,6 +109,33 @@ class ProcessView(MethodView):
 
         # all tasks need to know about db id to load the db entry
         task: chain = costume_loading_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        result: AsyncResult = task.apply_async()
+
+        db_task.task_id = result.id
+        db_task.save(commit=True)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@COSTUME_LOADER_BLP.route("/load_taxonomy/")
+class TaxonomyLoadingView(MethodView):
+    """Start a long running processing task."""
+
+    @COSTUME_LOADER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
+    def post(self):
+        """Start the taxonomy loading task."""
+        db_task = ProcessingTask(task_name=taxonomy_loading_task.name)
+        db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = taxonomy_loading_task.s(db_id=db_task.id) | save_task_result.s(
             db_id=db_task.id
         )
         # save errors to db
