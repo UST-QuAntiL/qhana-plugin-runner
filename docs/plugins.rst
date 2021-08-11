@@ -35,7 +35,7 @@ A plugin that does not follow that schema may not be usable from the QHAna UI la
 Plugin Metadata
 ---------------
 
-Marshmallow schemas to render the lugin metadata can be found in the module :py:mod:`~qhana_plugin_runner.api.plugin_schemas`.
+Marshmallow schemas to render the plugin metadata can be found in the module :py:mod:`~qhana_plugin_runner.api.plugin_schemas`.
 
 First draft of example plugin metadata:
 
