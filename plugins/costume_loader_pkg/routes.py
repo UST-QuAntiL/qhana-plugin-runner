@@ -60,7 +60,9 @@ class MicroFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of the costume loader plugin."
     )
     @COSTUME_LOADER_BLP.arguments(
-        InputParametersSchema(),
+        InputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
         location="form",
         required=False,
     )
