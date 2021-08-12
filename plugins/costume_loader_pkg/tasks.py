@@ -95,7 +95,7 @@ def loading_task(self, db_id: int) -> str:
     with SpooledTemporaryFile(mode="w") as output:
         output.write(entities_json)
         STORE.persist_task_result(
-            db_id, output, "entities.json", "costume-loader-output", "application/json"
+            db_id, output, "entities.json", "raw", "application/json"
         )
 
     ###################
@@ -118,7 +118,7 @@ def loading_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "taxonomies.zip",
-        "taxonomy-output",
+        "graphs",
         "application/zip",
     )
 
