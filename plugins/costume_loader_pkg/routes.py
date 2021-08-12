@@ -42,15 +42,7 @@ class PluginsView(MethodView):
             "processing_resource_metadata": {
                 "href": url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
                 "ui_href": url_for(f"{COSTUME_LOADER_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "enum",
-                            "content_type": "str",
-                            "name": "Costumes or base elements",
-                        }
-                    ]
-                ],
+                "inputs": [],
                 "outputs": [
                     [
                         {
