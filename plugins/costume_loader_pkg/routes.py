@@ -12,12 +12,12 @@ from marshmallow import EXCLUDE
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import (
-    CostumeLoaderUIResponseSchema,
     TaskResponseSchema,
     InputParametersSchema,
     InputParameters,
 )
 from plugins.costume_loader_pkg.tasks import loading_task
+from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -26,7 +26,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @COSTUME_LOADER_BLP.response(HTTPStatus.OK, CostumeLoaderUIResponseSchema())
+    @COSTUME_LOADER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Plugin loader endpoint returning the plugin metadata."""
@@ -34,6 +34,38 @@ class PluginsView(MethodView):
             "name": CostumeLoader.instance.name,
             "version": CostumeLoader.instance.version,
             "identifier": CostumeLoader.instance.identifier,
+            "root_href": url_for(f"{COSTUME_LOADER_BLP.name}.PluginsView"),
+            "title": "Costume loader",
+            "description": "Loads all the costumes or base elements from the MUSE database.",
+            "plugin_type": "data-loader",
+            "tags": ["data:loading"],
+            "processing_resource_metadata": {
+                "href": url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
+                "ui_href": url_for(f"{COSTUME_LOADER_BLP.name}.MicroFrontend"),
+                "inputs": [
+                    [
+                        {
+                            "output_type": "enum",
+                            "content_type": "str",
+                            "name": "Costumes or base elements",
+                        }
+                    ]
+                ],
+                "outputs": [
+                    [
+                        {
+                            "output_type": "raw",
+                            "content_type": "application/json",
+                            "name": "Raw costume data",
+                        },
+                        {
+                            "output_type": "graphs",
+                            "content_type": "application/zip",
+                            "name": "Taxonomies",
+                        },
+                    ]
+                ],
+            },
         }
 
 
