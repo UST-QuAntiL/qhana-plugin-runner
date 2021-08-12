@@ -9,19 +9,15 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from plugins.costume_loader_pkg.backend.aggregator import AggregatorType
-from plugins.costume_loader_pkg.backend.attributeComparer import AttributeComparerType
-from plugins.costume_loader_pkg.backend.entityComparer import EmptyAttributeAction
-from plugins.costume_loader_pkg.backend.entityService import Subset
-from plugins.costume_loader_pkg.backend.transformer import TransformerType
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import (
-    CostumeLoaderUIResponseSchema,
-    InputParametersSchema,
     TaskResponseSchema,
+    InputParametersSchema,
+    InputParameters,
 )
-from plugins.costume_loader_pkg.tasks import costume_loading_task
+from plugins.costume_loader_pkg.tasks import loading_task
+from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -30,7 +26,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @COSTUME_LOADER_BLP.response(HTTPStatus.OK, CostumeLoaderUIResponseSchema())
+    @COSTUME_LOADER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Plugin loader endpoint returning the plugin metadata."""
@@ -38,24 +34,44 @@ class PluginsView(MethodView):
             "name": CostumeLoader.instance.name,
             "version": CostumeLoader.instance.version,
             "identifier": CostumeLoader.instance.identifier,
+            "root_href": url_for(f"{COSTUME_LOADER_BLP.name}.PluginsView"),
+            "title": "Costume loader",
+            "description": "Loads all the costumes or base elements from the MUSE database.",
+            "plugin_type": "data-loader",
+            "tags": ["data:loading"],
+            "processing_resource_metadata": {
+                "href": url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
+                "ui_href": url_for(f"{COSTUME_LOADER_BLP.name}.MicroFrontend"),
+                "inputs": [
+                    [
+                        {
+                            "output_type": "enum",
+                            "content_type": "str",
+                            "name": "Costumes or base elements",
+                        }
+                    ]
+                ],
+                "outputs": [
+                    [
+                        {
+                            "output_type": "raw",
+                            "content_type": "application/json",
+                            "name": "Raw costume data",
+                        },
+                        {
+                            "output_type": "graphs",
+                            "content_type": "application/zip",
+                            "name": "Taxonomies",
+                        },
+                    ]
+                ],
+            },
         }
 
 
 @COSTUME_LOADER_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the costume loader plugin."""
-
-    example_inputs = {
-        "aggregator": AggregatorType.mean.name,
-        "transformer": TransformerType.squareInverse.name,
-        "attributes": "dominanteFarbe",
-        "elementComparers": "wuPalmer",
-        "attributeComparers": AttributeComparerType.symMaxMean.name,
-        "emptyAttributeActions": EmptyAttributeAction.ignore.name,
-        "filters": "",
-        "amount": 0,
-        "subset": Subset.subset5.name,
-    }
 
     @COSTUME_LOADER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the costume loader plugin."
@@ -88,40 +104,36 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        schema = InputParametersSchema()
         return Response(
             render_template(
                 "costume_loader_template.html",
                 name=CostumeLoader.instance.name,
                 version=CostumeLoader.instance.version,
-                schema=schema,
+                schema=InputParametersSchema(),
                 values=data,
                 errors=errors,
-                process=url_for(f"{COSTUME_LOADER_BLP.name}.ProcessView"),
-                example_values=url_for(
-                    f"{COSTUME_LOADER_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
+                process=url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
             )
         )
 
 
-@COSTUME_LOADER_BLP.route("/process/")
-class ProcessView(MethodView):
+@COSTUME_LOADER_BLP.route("/load_costumes_and_taxonomies/")
+class LoadingView(MethodView):
     """Start a long running processing task."""
 
     @COSTUME_LOADER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
     @COSTUME_LOADER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: InputParametersSchema):
+    def post(self, input_params: InputParameters):
         """Start the costume loading task."""
         db_task = ProcessingTask(
-            task_name=costume_loading_task.name,
-            parameters=InputParametersSchema().dumps(arguments),
+            task_name=loading_task.name,
+            parameters=InputParametersSchema().dumps(input_params),
         )
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = costume_loading_task.s(db_id=db_task.id) | save_task_result.s(
+        task: chain = loading_task.s(db_id=db_task.id) | save_task_result.s(
             db_id=db_task.id
         )
         # save errors to db
