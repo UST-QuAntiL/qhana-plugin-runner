@@ -87,7 +87,7 @@ class AttributeMetadata:
         mapped = {}
         # early update as actual data should overwrite erroneous extra attributes
         mapped.update(self.extra)
-        for attr, mapped_attr in _ATTR_MAPPING_SER:
+        for attr, mapped_attr in _ATTR_MAPPING_SER.items():
             mapped[mapped_attr] = getattr(self, attr)
         return mapped
 
