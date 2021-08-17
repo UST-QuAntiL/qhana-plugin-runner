@@ -94,7 +94,7 @@ class PluginsView(MethodView):
             "root_href": url_for(f"{WU_PALMER_BLP.name}.PluginsView"),
             "title": "Wu-Palmer element comparer",
             "description": "Compares elements and returns similarity values based on a taxonomy.",
-            "plugin_type": "data-loader",
+            "plugin_type": "similarity-cache-generation",
             "tags": ["data:loading"],
             "processing_resource_metadata": {
                 "href": url_for(f"{WU_PALMER_BLP.name}.CalcSimilarityView"),
