@@ -102,16 +102,6 @@ class PluginsView(MethodView):
                 "inputs": [
                     [
                         {
-                            "output_type": "raw",
-                            "content_type": "application/json",
-                            "name": "Raw costume data",
-                        },
-                        {
-                            "output_type": "attribute-metadata",
-                            "content_type": "application/json",
-                            "name": "Attribute metadata for the costume data",
-                        },
-                        {
                             "output_type": "graphs",
                             "content_type": "application/zip",
                             "name": "Taxonomies",
