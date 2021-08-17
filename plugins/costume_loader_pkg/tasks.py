@@ -18,6 +18,8 @@ from plugins.costume_loader_pkg.schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -96,6 +98,38 @@ def loading_task(self, db_id: int) -> str:
         output.write(entities_json)
         STORE.persist_task_result(
             db_id, output, "entities.json", "raw", "application/json"
+        )
+
+    #############################
+    # create attribute metadata #
+    #############################
+
+    attribute_metadata = []
+
+    for attr in Attribute:
+        attr_type = (
+            "integer" if attr in [Attribute.kostuemZeit, Attribute.alter] else "string"
+        )
+
+        metadata = AttributeMetadata(
+            attr.value,
+            attr_type,
+            attr.value,
+            extra={
+                "taxonomy_name": getattr(Attribute.get_taxonomy_type(attr), "value", None)
+            },
+        )
+
+        attribute_metadata.append(metadata.to_dict())
+
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(attribute_metadata, output, "application/json")
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "attribute_metadata.json",
+            "attribute-metadata",
+            "application/json",
         )
 
     ###################
