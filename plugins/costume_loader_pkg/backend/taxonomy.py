@@ -220,8 +220,8 @@ class Taxonomy:
             # If parent is none, this is the root node
             if parent is None or parent == "":
                 root_node = child
-            else:
-                relations.append({"source": parent, "target": child})
+
+            relations.append({"source": parent, "target": child})
 
         if root_node is None:
             logging.error("No root node found in taxonomy")
