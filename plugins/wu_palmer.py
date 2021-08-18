@@ -111,7 +111,7 @@ class PluginsView(MethodView):
                 "outputs": [
                     [
                         {
-                            "output_type": "element_similarities",
+                            "output_type": "element-similarities",
                             "content_type": "application/zip",
                             "name": "Similarity values for the elements of the taxonomies",
                         }
@@ -350,7 +350,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "similarities.zip",
-        "element_similarities",
+        "element-similarities",
         "application/zip",
     )
 

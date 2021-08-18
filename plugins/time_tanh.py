@@ -132,7 +132,7 @@ class PluginsView(MethodView):
                 "outputs": [
                     [
                         {
-                            "output_type": "element_similarities",
+                            "output_type": "element-similarities",
                             "content_type": "application/zip",
                             "name": "Similarity values for the elements ",
                         }
