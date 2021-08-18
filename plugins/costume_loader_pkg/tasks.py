@@ -105,16 +105,25 @@ def loading_task(self, db_id: int) -> str:
     #############################
 
     attribute_metadata = []
+    attrs_to_consider = (
+        costume_attrs
+        if input_params.costume_type == CostumeType.WITHOUT_BASE_ELEMENTS
+        else list(Attribute)
+    )
 
-    for attr in Attribute:
+    for attr in attrs_to_consider:
         attr_type = (
             "integer" if attr in [Attribute.kostuemZeit, Attribute.alter] else "string"
         )
+        multiple = attr != Attribute.kostuemZeit
 
         metadata = AttributeMetadata(
             attr.value,
             attr_type,
             attr.value,
+            multiple=multiple,
+            separator=";",
+            ref_target="entities.json",
             extra={
                 "taxonomy_name": getattr(Attribute.get_taxonomy_type(attr), "value", None)
             },
