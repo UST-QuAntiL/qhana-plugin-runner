@@ -672,6 +672,8 @@ class EntityFactory:
                     entity.filmId = film_id
                     entity.basiselementID = base_element_id
 
+                    entities[(film_id, role_id, costume_id, base_element_id)] = entity
+
                 value: str = row[4]
             else:
                 if (film_id, role_id, costume_id) in entities:
@@ -682,28 +684,24 @@ class EntityFactory:
                     entity.rollenId = role_id
                     entity.filmId = film_id
 
+                    entities[(film_id, role_id, costume_id)] = entity
+
                 value: str = row[3]
 
             if value is None or value == "":
                 entity.add_value(attribute, None)
                 logging.warning("Found entry with " + attribute.value + ' = None or = ""')
-                break
-
-            entity.add_attribute(attribute)
-
-            if isinstance(value, str):
-                entity.add_value(attribute, value.split(","))
-            elif isinstance(value, set):
-                entity.add_value(attribute, list(value))
-            elif isinstance(value, Decimal):
-                entity.add_value(attribute, float(value))
             else:
-                entity.add_value(attribute, value)
+                entity.add_attribute(attribute)
 
-            if is_base_element:
-                entities[(film_id, role_id, costume_id, entity.basiselementID)] = entity
-            else:
-                entities[(film_id, role_id, costume_id)] = entity
+                if isinstance(value, str):
+                    entity.add_value(attribute, value.split(","))
+                elif isinstance(value, set):
+                    entity.add_value(attribute, list(value))
+                elif isinstance(value, Decimal):
+                    entity.add_value(attribute, float(value))
+                else:
+                    entity.add_value(attribute, value)
 
 
 def main():
