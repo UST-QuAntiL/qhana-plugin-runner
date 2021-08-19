@@ -48,16 +48,16 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "wu-palmer"
+_plugin_name = "wu-palmer-cache"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-WU_PALMER_BLP = SecurityBlueprint(
+WU_PALMER_CACHE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Wu-Palmer plugin API.",
-    template_folder="wu_palmer_templates",
+    description="Wu-Palmer cache plugin API.",
+    template_folder="wu_palmer_cache_templates",
 )
 
 
@@ -79,26 +79,26 @@ class CalcSimilarityParametersSchema(FrontendFormBaseSchema):
     )
 
 
-@WU_PALMER_BLP.route("/")
+@WU_PALMER_CACHE_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @WU_PALMER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
-    @WU_PALMER_BLP.require_jwt("jwt", optional=True)
+    @WU_PALMER_CACHE_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
+    @WU_PALMER_CACHE_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        """Wu Palmer endpoint returning the plugin metadata."""
+        """Wu Palmer cache endpoint returning the plugin metadata."""
         return {
-            "name": WuPalmer.instance.name,
-            "version": WuPalmer.instance.version,
-            "identifier": WuPalmer.instance.identifier,
-            "root_href": url_for(f"{WU_PALMER_BLP.name}.PluginsView"),
-            "title": "Wu-Palmer element comparer",
-            "description": "Compares elements and returns similarity values based on a taxonomy.",
+            "name": WuPalmerCache.instance.name,
+            "version": WuPalmerCache.instance.version,
+            "identifier": WuPalmerCache.instance.identifier,
+            "root_href": url_for(f"{WU_PALMER_CACHE_BLP.name}.PluginsView"),
+            "title": "Wu-Palmer cache generator",
+            "description": "Generates a cache of similarity values based on a taxonomy.",
             "plugin_type": "similarity-cache-generation",
-            "tags": ["data:loading"],
+            "tags": [],
             "processing_resource_metadata": {
-                "href": url_for(f"{WU_PALMER_BLP.name}.CalcSimilarityView"),
-                "ui_href": url_for(f"{WU_PALMER_BLP.name}.MicroFrontend"),
+                "href": url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
+                "ui_href": url_for(f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend"),
                 "inputs": [
                     [
                         {
@@ -111,9 +111,9 @@ class PluginsView(MethodView):
                 "outputs": [
                     [
                         {
-                            "output_type": "element-similarities",
+                            "output_type": "wu-palmer-cache",
                             "content_type": "application/zip",
-                            "name": "Similarity values for the elements of the taxonomies",
+                            "name": "Cache for Wu Palmer",
                         }
                     ]
                 ],
@@ -121,40 +121,40 @@ class PluginsView(MethodView):
         }
 
 
-@WU_PALMER_BLP.route("/ui/")
+@WU_PALMER_CACHE_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the Wu Palmer plugin."""
+    """Micro frontend for the Wu Palmer cache plugin."""
 
     example_inputs = {
         "inputStr": "Sample input string.",
     }
 
-    @WU_PALMER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the Wu Palmer plugin."
+    @WU_PALMER_CACHE_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the Wu Palmer cache plugin."
     )
-    @WU_PALMER_BLP.arguments(
+    @WU_PALMER_CACHE_BLP.arguments(
         CalcSimilarityParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @WU_PALMER_BLP.require_jwt("jwt", optional=True)
+    @WU_PALMER_CACHE_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @WU_PALMER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the Wu Palmer plugin."
+    @WU_PALMER_CACHE_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the Wu Palmer cache plugin."
     )
-    @WU_PALMER_BLP.arguments(
+    @WU_PALMER_CACHE_BLP.arguments(
         CalcSimilarityParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @WU_PALMER_BLP.require_jwt("jwt", optional=True)
+    @WU_PALMER_CACHE_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors)
@@ -163,29 +163,29 @@ class MicroFrontend(MethodView):
         schema = CalcSimilarityParametersSchema()
         return Response(
             render_template(
-                "wu_palmer_template.html",
-                name=WuPalmer.instance.name,
-                version=WuPalmer.instance.version,
+                "wu_palmer_cache_template.html",
+                name=WuPalmerCache.instance.name,
+                version=WuPalmerCache.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(f"{WU_PALMER_BLP.name}.CalcSimilarityView"),
+                process=url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
                 example_values=url_for(
-                    f"{WU_PALMER_BLP.name}.MicroFrontend", **self.example_inputs
+                    f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
             )
         )
 
 
-@WU_PALMER_BLP.route("/process/")
+@WU_PALMER_CACHE_BLP.route("/process/")
 class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
-    @WU_PALMER_BLP.arguments(
+    @WU_PALMER_CACHE_BLP.arguments(
         CalcSimilarityParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @WU_PALMER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @WU_PALMER_BLP.require_jwt("jwt", optional=True)
+    @WU_PALMER_CACHE_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @WU_PALMER_CACHE_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
         db_task = ProcessingTask(
@@ -209,7 +209,7 @@ class CalcSimilarityView(MethodView):
         )
 
 
-class WuPalmer(QHAnaPluginBase):
+class WuPalmerCache(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
@@ -218,7 +218,7 @@ class WuPalmer(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return WU_PALMER_BLP
+        return WU_PALMER_CACHE_BLP
 
     def get_requirements(self) -> str:
         return "networkx~=2.5.1"
@@ -261,7 +261,7 @@ def compare_inner(first: str, second: str, graph: nx.DiGraph) -> float:
     return 2 * d3 / (d1 + d2 + 2 * d3)
 
 
-@CELERY.task(name=f"{WuPalmer.instance.identifier}.calculation_task", bind=True)
+@CELERY.task(name=f"{WuPalmerCache.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
@@ -349,8 +349,8 @@ def calculation_task(self, db_id: int) -> str:
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "similarities.zip",
-        "element-similarities",
+        "wu_palmer_cache.zip",
+        "wu-palmer-cache",
         "application/zip",
     )
 
