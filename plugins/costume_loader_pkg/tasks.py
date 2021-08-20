@@ -113,9 +113,11 @@ def loading_task(self, db_id: int) -> str:
 
     for attr in attrs_to_consider:
         attr_type = (
-            "integer" if attr in [Attribute.kostuemZeit, Attribute.alter] else "string"
+            "integer" if attr in [Attribute.kostuemZeit, Attribute.alter] else "ref"
         )
         multiple = attr != Attribute.kostuemZeit
+        tax_name = getattr(Attribute.get_taxonomy_type(attr), "value", None)
+        ref_target = None if tax_name is None else "taxonomies.zip:" + tax_name + ".json"
 
         metadata = AttributeMetadata(
             attr.value,
@@ -123,10 +125,8 @@ def loading_task(self, db_id: int) -> str:
             attr.value,
             multiple=multiple,
             separator=";",
-            ref_target="entities.json",
-            extra={
-                "taxonomy_name": getattr(Attribute.get_taxonomy_type(attr), "value", None)
-            },
+            ref_target=ref_target,
+            extra={"taxonomy_name": tax_name},
         )
 
         attribute_metadata.append(metadata.to_dict())
