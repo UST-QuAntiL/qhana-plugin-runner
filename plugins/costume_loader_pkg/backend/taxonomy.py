@@ -228,9 +228,9 @@ class Taxonomy:
             raise Exception("No root node found in taxonomy")
 
         return {
-            "GRAPH_ID": "",
+            "GRAPH_ID": "tax_" + name,
             "type": "tree",
-            "ref-target": "",
+            "ref-target": "entities.json",
             "entities": list(entities),
             "relations": relations,
         }
