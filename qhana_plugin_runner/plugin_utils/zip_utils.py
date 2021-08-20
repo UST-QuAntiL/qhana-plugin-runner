@@ -3,7 +3,6 @@ from io import BytesIO, TextIOWrapper, BufferedIOBase
 from typing import Any, Tuple
 from zipfile import ZipFile
 
-from qhana_plugin_runner import register_additional_schemas, requests
 from qhana_plugin_runner.requests import open_url
 
 
