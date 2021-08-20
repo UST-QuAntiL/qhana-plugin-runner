@@ -115,7 +115,20 @@ def loading_task(self, db_id: int) -> str:
         attr_type = (
             "integer" if attr in [Attribute.kostuemZeit, Attribute.alter] else "ref"
         )
-        multiple = attr != Attribute.kostuemZeit
+        multiple = attr not in [
+            Attribute.ortsbegebenheit,
+            Attribute.dominanteFarbe,
+            Attribute.stereotypRelevant,
+            Attribute.dominanteFunktion,
+            Attribute.dominanterZustand,
+            Attribute.basiselement,
+            Attribute.rollenberuf,
+            Attribute.geschlecht,
+            Attribute.dominanterAlterseindruck,
+            Attribute.dominantesAlter,
+            Attribute.rollenrelevanz,
+            Attribute.kostuemZeit,
+        ]
         tax_name = getattr(Attribute.get_taxonomy_type(attr), "value", None)
         ref_target = None if tax_name is None else "taxonomies.zip:" + tax_name + ".json"
 

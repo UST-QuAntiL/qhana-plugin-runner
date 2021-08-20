@@ -686,7 +686,7 @@ class EntityFactory:
 
                     entities[(film_id, role_id, costume_id)] = entity
 
-                value: str = row[3]
+                value = row[3]
 
             if value is None or value == "":
                 entity.add_value(attribute, None)
@@ -694,7 +694,33 @@ class EntityFactory:
             else:
                 entity.add_attribute(attribute)
 
-                if isinstance(value, str):
+                if attribute in [
+                    Attribute.ortsbegebenheit,
+                    Attribute.dominanteFarbe,
+                    Attribute.stereotypRelevant,
+                    Attribute.dominanteFunktion,
+                    Attribute.dominanterZustand,
+                    Attribute.basiselement,
+                    Attribute.rollenberuf,
+                    Attribute.geschlecht,
+                    Attribute.dominanterAlterseindruck,
+                    Attribute.dominantesAlter,
+                    Attribute.rollenrelevanz,
+                ]:
+                    # attribute can only have on value
+                    if isinstance(value, set):
+                        if len(value) == 0:
+                            entity.add_value(attribute, None)
+                        elif len(value) == 1:
+                            entity.add_value(attribute, value.pop())
+                        else:
+                            raise ValueError("Unexpected number of elements in set")
+                    elif isinstance(value, Decimal):
+                        entity.add_value(attribute, float(value))
+                    else:
+                        entity.add_value(attribute, value)
+                elif isinstance(value, str):
+                    # attribute can have multiple values
                     entity.add_value(attribute, value.split(","))
                 elif isinstance(value, set):
                     entity.add_value(attribute, list(value))
