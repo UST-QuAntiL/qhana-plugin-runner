@@ -74,7 +74,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
     entities_metadata_url = ma.fields.String(
@@ -83,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entities Attribute Metadata URL",
             "description": "URL to a file with the attribute metadata for the entities.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
     wu_palmer_cache_url = ma.fields.String(
@@ -92,7 +92,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Cache URL",
             "description": "URL to a file with the Wu Palmer cache.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
     attribute = ma.fields.String(
