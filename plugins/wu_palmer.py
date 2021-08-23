@@ -281,13 +281,13 @@ def calculation_task(self, db_id: int) -> str:
         "entities_metadata_url", None
     )
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: entities_url='{entities_metadata_url}'"
+        f"Loaded input parameters from db: entities_metadata_url='{entities_metadata_url}'"
     )
     wu_palmer_cache_url: Optional[str] = loads(task_data.parameters or "{}").get(
         "wu_palmer_cache_url", None
     )
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: attribute='{wu_palmer_cache_url}'"
+        f"Loaded input parameters from db: wu_palmer_cache_url='{wu_palmer_cache_url}'"
     )
     attribute: Optional[str] = loads(task_data.parameters or "{}").get("attribute", None)
     TASK_LOGGER.info(f"Loaded input parameters from db: attribute='{attribute}'")
