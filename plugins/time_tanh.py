@@ -77,7 +77,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
     attribute = ma.fields.String(
@@ -86,7 +86,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Attribute",
             "description": "Attribute for which the similarity shall be computed.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
     factor = ma.fields.Float(
@@ -95,7 +95,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Factor",
             "description": "Difference of values will be multiplied with this factor.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
 
