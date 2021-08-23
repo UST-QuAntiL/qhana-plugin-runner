@@ -13,9 +13,11 @@
 # limitations under the License.
 import json
 from http import HTTPStatus
+from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional
+from typing import Mapping, Optional, List
+from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -95,12 +97,12 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    attribute = ma.fields.String(
+    attributes = ma.fields.String(
         required=True,
         allow_none=False,
         metadata={
-            "label": "Attribute",
-            "description": "Attribute for which the similarity shall be computed.",
+            "label": "Attributes",
+            "description": "Attributes for which the similarity shall be computed.",
             "input_type": "textarea",
         },
     )
@@ -289,8 +291,11 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(
         f"Loaded input parameters from db: wu_palmer_cache_url='{wu_palmer_cache_url}'"
     )
-    attribute: Optional[str] = loads(task_data.parameters or "{}").get("attribute", None)
-    TASK_LOGGER.info(f"Loaded input parameters from db: attribute='{attribute}'")
+    attributes: Optional[str] = loads(task_data.parameters or "{}").get(
+        "attributes", None
+    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes}'")
+    attributes: List[str] = attributes.splitlines()
 
     # load data from file
 
@@ -312,56 +317,79 @@ def calculation_task(self, db_id: int) -> str:
 
     # calculate similarity values for all possible value pairs
 
-    similarities = {}
+    tmp_zip_file = SpooledTemporaryFile(mode="wb")
+    zip_file = ZipFile(tmp_zip_file, "w")
 
-    for i in range(len(entities)):
-        for j in range(i, len(entities)):
-            ent1 = entities[i]
-            ent2 = entities[j]
+    for attribute in attributes:
+        similarities = {}
 
-            if attribute in ent1 and attribute in ent2:
-                val1 = ent1[attribute]
-                val2 = ent2[attribute]
+        for i in range(len(entities)):
+            for j in range(i, len(entities)):
+                ent1 = entities[i]
+                ent2 = entities[j]
 
-                # extract taxonomy name from refTarget
-                taxonomy: str = entities_metadata[attribute]["refTarget"].split(":")[1][
-                    :-5
-                ]
-                tax_sims = cached_similarities[taxonomy]
+                if attribute in ent1 and attribute in ent2:
+                    values1 = ent1[attribute]
+                    values2 = ent2[attribute]
 
-                if val1 is None or val2 is None:
-                    sim = None
-                else:
-                    if str(val1) + "__" + str(val2) in tax_sims:
-                        sim = tax_sims[str(val1) + "__" + str(val2)]["similarity"]
-                    elif str(val2) + "__" + str(val1) in tax_sims:
-                        sim = tax_sims[str(val2) + "__" + str(val1)]["similarity"]
-                    else:
-                        raise ValueError(
-                            "No similarity value cached for the values "
-                            + str(val1)
-                            + " and "
-                            + str(val2)
-                        )
+                    # extract taxonomy name from refTarget
+                    taxonomy: str = entities_metadata[attribute]["refTarget"].split(":")[
+                        1
+                    ][:-5]
+                    tax_sims = cached_similarities[taxonomy]
 
-                if (val1, val2) not in similarities and (val2, val1) not in similarities:
-                    similarities[(val1, val2)] = {
-                        "ID": str(val1) + "_" + str(val2),
-                        "href": "",
-                        "value_1": val1,
-                        "value_2": val2,
-                        "similarity": sim,
-                    }
+                    if not isinstance(values1, list):
+                        values1 = [values1]
 
-    with SpooledTemporaryFile(mode="w") as file:
-        save_entities(similarities.values(), file, "application/json")
+                    if not isinstance(values2, list):
+                        values2 = [values2]
 
-        STORE.persist_task_result(
-            db_id,
-            file,
-            "similarities.json",
-            "element_similarities",
-            "application/json",
-        )
+                    for val1 in values1:
+                        for val2 in values2:
+                            if val1 is None or val2 is None:
+                                sim = None
+                            else:
+                                if str(val1) + "__" + str(val2) in tax_sims:
+                                    sim = tax_sims[str(val1) + "__" + str(val2)][
+                                        "similarity"
+                                    ]
+                                elif str(val2) + "__" + str(val1) in tax_sims:
+                                    sim = tax_sims[str(val2) + "__" + str(val1)][
+                                        "similarity"
+                                    ]
+                                else:
+                                    raise ValueError(
+                                        "No similarity value cached for the values "
+                                        + str(val1)
+                                        + " and "
+                                        + str(val2)
+                                    )
+
+                            if (val1, val2) not in similarities and (
+                                val2,
+                                val1,
+                            ) not in similarities:
+                                similarities[(val1, val2)] = {
+                                    "ID": str(val1) + "_" + str(val2),
+                                    "href": "",
+                                    "value_1": val1,
+                                    "value_2": val2,
+                                    "similarity": sim,
+                                }
+
+        with StringIO() as file:
+            save_entities(similarities.values(), file, "application/json")
+            file.seek(0)
+            zip_file.writestr(attribute + ".json", file.read())
+
+    zip_file.close()
+
+    STORE.persist_task_result(
+        db_id,
+        tmp_zip_file,
+        "wu_palmer.zip",
+        "element_similarities",
+        "application/zip",
+    )
 
     return "Result stored in file"
