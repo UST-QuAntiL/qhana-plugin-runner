@@ -17,7 +17,7 @@ from http import HTTPStatus
 from io import BytesIO, StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional
+from typing import Mapping, Optional, List
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -80,13 +80,13 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    attribute = ma.fields.String(
+    attributes = ma.fields.String(
         required=True,
         allow_none=False,
         metadata={
             "label": "Attribute",
             "description": "Attribute for which the similarity shall be computed.",
-            "input_type": "text",
+            "input_type": "textarea",
         },
     )
     factor = ma.fields.Float(
@@ -262,8 +262,13 @@ def calculation_task(self, db_id: int) -> str:
         "entities_url", None
     )
     TASK_LOGGER.info(f"Loaded input parameters from db: entities_url='{entities_url}'")
-    attribute: Optional[str] = loads(task_data.parameters or "{}").get("attribute", None)
-    TASK_LOGGER.info(f"Loaded input parameters from db: attribute='{attribute}'")
+
+    attributes: Optional[str] = loads(task_data.parameters or "{}").get(
+        "attributes", None
+    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes}'")
+    attributes: List[str] = attributes.splitlines()
+
     factor: Optional[float] = loads(task_data.parameters or "{}").get("factor", None)
     TASK_LOGGER.info(f"Loaded input parameters from db: factor='{factor}'")
 
@@ -274,37 +279,61 @@ def calculation_task(self, db_id: int) -> str:
 
     # calculate similarity values for all possible value pairs
 
-    similarities = {}
+    tmp_zip_file = SpooledTemporaryFile(mode="wb")
+    zip_file = ZipFile(tmp_zip_file, "w")
 
-    for i in range(len(entities)):
-        for j in range(i, len(entities)):
-            ent1 = entities[i]
-            ent2 = entities[j]
+    for attribute in attributes:
+        similarities = {}
 
-            if attribute in ent1 and attribute in ent2:
-                val1 = int(ent1[attribute])
-                val2 = int(ent2[attribute])
+        for i in range(len(entities)):
+            for j in range(i, len(entities)):
+                ent1 = entities[i]
+                ent2 = entities[j]
 
-                sim = 1 - math.tanh(math.fabs((val1 - val2)) * factor)
+                if attribute in ent1 and attribute in ent2:
+                    val1 = ent1[attribute]
+                    val2 = ent2[attribute]
 
-                if (val1, val2) not in similarities and (val2, val1) not in similarities:
-                    similarities[(val1, val2)] = {
-                        "ID": str(val1) + "_" + str(val2),
-                        "href": "",
-                        "value_1": val1,
-                        "value_2": val2,
-                        "similarity": sim,
-                    }
+                    if val1 is None or val2 is None:
+                        sim = None
+                    else:
+                        try:
+                            val1 = int(val1)
+                            val2 = int(val2)
 
-    with SpooledTemporaryFile(mode="w") as file:
-        save_entities(similarities.values(), file, "application/json")
+                            sim = 1 - math.tanh(math.fabs((val1 - val2)) * factor)
+                        except ValueError as e:
+                            TASK_LOGGER.info(
+                                "Found value that could not be converted to an integer: "
+                                + str(e)
+                            )
+                            sim = None
 
-        STORE.persist_task_result(
-            db_id,
-            file,
-            "similarities.json",
-            "element_similarities",
-            "application/json",
-        )
+                    if (val1, val2) not in similarities and (
+                        val2,
+                        val1,
+                    ) not in similarities:
+                        similarities[(val1, val2)] = {
+                            "ID": str(val1) + "_" + str(val2),
+                            "href": "",
+                            "value_1": val1,
+                            "value_2": val2,
+                            "similarity": sim,
+                        }
+
+        with StringIO() as file:
+            save_entities(similarities.values(), file, "application/json")
+            file.seek(0)
+            zip_file.writestr(attribute + ".json", file.read())
+
+    zip_file.close()
+
+    STORE.persist_task_result(
+        db_id,
+        tmp_zip_file,
+        "time_tanh.zip",
+        "element_similarities",
+        "application/zip",
+    )
 
     return "Result stored in file"
