@@ -14,13 +14,14 @@
 
 from http import HTTPStatus
 from json import dumps, loads
+from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
 import marshmallow as ma
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
-from flask import Response
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -37,11 +38,9 @@ from qhana_plugin_runner.api.util import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from tempfile import SpooledTemporaryFile
-from qhana_plugin_runner.storage import STORE
-from flask import redirect
 
 _plugin_name = "hello-world"
 __version__ = "v0.1.0"
@@ -211,7 +210,7 @@ def demo_task(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "out.txt", "hello-world-output", "plain/text"
+                db_id, output, "out.txt", "hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"
