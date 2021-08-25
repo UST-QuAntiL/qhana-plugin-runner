@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, Sequence, Union
 
 from flask import Flask
 from marshmallow import fields
@@ -46,5 +46,16 @@ def marshmallow_field_to_input_type(field: fields.Field) -> Optional[str]:
     return None
 
 
+def space_delimited_list(
+    items: Union[Sequence[Union[str, float, int, bool, None]], str, float, int, bool]
+) -> Optional[str]:
+    if not isinstance(items, (list, tuple)):
+        if items is None:
+            return None
+        return str(items)
+    return " ".join(str(i) for i in items)
+
+
 def register_helpers(app: Flask):
     app.jinja_env.globals["get_input_type"] = marshmallow_field_to_input_type
+    app.jinja_env.globals["space_delimited_list"] = space_delimited_list

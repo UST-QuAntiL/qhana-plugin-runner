@@ -19,7 +19,7 @@ import http
 import re
 from copy import deepcopy
 from functools import wraps
-from typing import Any, Dict, Iterable, Mapping, Optional, Union
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Union
 from urllib.parse import urlparse
 
 import marshmallow as ma
@@ -200,11 +200,17 @@ class FileUrl(ma.fields.Url):
         relative: bool = False,
         schemes: Optional[types.StrSequenceOrSet] = None,
         require_tld: bool = True,
+        data_input_type: Optional[str] = None,
+        data_content_types: Optional[Union[Sequence[str], str]] = None,
         **kwargs,
     ):
         super().__init__(
             relative=relative, schemes=schemes, require_tld=require_tld, **kwargs
         )
+        if data_input_type is not None:
+            self.metadata["data_input_type"] = data_input_type
+        if data_content_types:
+            self.metadata["data_content_types"] = data_content_types
         self.validators[0] = FileUrlValidator(
             relative=self.relative,
             schemes=schemes,
