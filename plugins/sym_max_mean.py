@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     SecurityBlueprint,
+    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -70,18 +71,22 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
-    entities_url = ma.fields.String(
+    entities_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="entities",
+        data_content_types="application/json",
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
             "input_type": "text",
         },
     )
-    element_similarities_url = ma.fields.String(
+    element_similarities_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="element-similarities",
+        data_content_types="application/zip",
         metadata={
             "label": "Element similarities URL",
             "description": "URL to a zip file with the element similarities for the entities.",

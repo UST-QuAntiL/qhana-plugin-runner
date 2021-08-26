@@ -39,6 +39,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     SecurityBlueprint,
+    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -68,9 +69,11 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class CalcSimilarityParametersSchema(FrontendFormBaseSchema):
-    taxonomies_zip_url = ma.fields.String(
+    taxonomies_zip_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="taxonomy",
+        data_content_types="application/zip",
         metadata={
             "label": "Taxonomies URL",
             "description": "URL to zip file with taxonomies.",
@@ -102,7 +105,7 @@ class PluginsView(MethodView):
                 "inputs": [
                     [
                         {
-                            "output_type": "graphs",
+                            "output_type": "taxonomy",
                             "content_type": "application/zip",
                             "name": "Taxonomies",
                         },

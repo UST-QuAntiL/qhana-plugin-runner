@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     SecurityBlueprint,
+    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -70,18 +71,22 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
-    zip1_url = ma.fields.String(
+    zip1_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="any",
+        data_content_types="application/zip",
         metadata={
             "label": "Zip 1 URL",
             "description": "URL to the first zip file.",
             "input_type": "text",
         },
     )
-    zip2_url = ma.fields.String(
+    zip2_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="any",
+        data_content_types="application/zip",
         metadata={
             "label": "Zip 2 URL",
             "description": "URL to the second zip file.",

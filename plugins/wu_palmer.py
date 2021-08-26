@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     SecurityBlueprint,
+    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -70,27 +71,33 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
-    entities_url = ma.fields.String(
+    entities_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="entities",
+        data_content_types="application/json",
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
             "input_type": "text",
         },
     )
-    entities_metadata_url = ma.fields.String(
+    entities_metadata_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="attribute-metadata",
+        data_content_types="application/json",
         metadata={
             "label": "Entities Attribute Metadata URL",
             "description": "URL to a file with the attribute metadata for the entities.",
             "input_type": "text",
         },
     )
-    wu_palmer_cache_url = ma.fields.String(
+    wu_palmer_cache_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="wu-palmer-cache",
+        data_content_types="application/zip",
         metadata={
             "label": "Cache URL",
             "description": "URL to a file with the Wu Palmer cache.",
@@ -388,7 +395,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "wu_palmer.zip",
-        "element_similarities",
+        "element-similarities",
         "application/zip",
     )
 
