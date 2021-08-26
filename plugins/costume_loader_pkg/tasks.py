@@ -79,10 +79,10 @@ def loading_task(self, db_id: int) -> str:
 
     db = Database()
     db.open_with_params(
-        host=app.config.get("COSTUME_LOADER_DB_HOST"),
-        user=app.config.get("COSTUME_LOADER_DB_USER"),
-        password=app.config.get("COSTUME_LOADER_DB_PASSWORD"),
-        database=app.config.get("COSTUME_LOADER_DB_DATABASE"),
+        host=input_params.db_host,
+        user=input_params.db_user,
+        password=input_params.db_password,
+        database=input_params.db_database,
     )
 
     if input_params.costume_type == CostumeType.WITHOUT_BASE_ELEMENTS:

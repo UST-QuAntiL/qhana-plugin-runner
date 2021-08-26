@@ -32,8 +32,19 @@ class CostumeType(Enum):
 
 
 class InputParameters:
-    def __init__(self, costume_type: CostumeType):
+    def __init__(
+        self,
+        costume_type: CostumeType,
+        db_host: str,
+        db_user: str,
+        db_password: str,
+        db_database: str,
+    ):
         self.costume_type = costume_type
+        self.db_host = db_host
+        self.db_user = db_user
+        self.db_password = db_password
+        self.db_database = db_database
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -44,6 +55,46 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Costume Type",
             "description": "Load costumes as one costume per entity or one base element per entity.",
             "input_type": "select",
+        },
+    )
+
+    db_host = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "DB host",
+            "description": "Host of the mysql database.",
+            "input_type": "text",
+        },
+    )
+
+    db_user = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "DB user name",
+            "description": "A user name for the mysql database.",
+            "input_type": "text",
+        },
+    )
+
+    db_password = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "DB password",
+            "description": "Password for the database user.",
+            "input_type": "password",
+        },
+    )
+
+    db_database = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "DB database",
+            "description": "Name of the mysql database.",
+            "input_type": "text",
         },
     )
 

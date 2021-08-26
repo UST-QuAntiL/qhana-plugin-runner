@@ -1,6 +1,7 @@
 from http import HTTPStatus
 from typing import Mapping
 
+import flask
 from celery.canvas import chain
 from celery.result import AsyncResult
 from flask import Response, redirect
@@ -101,13 +102,29 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
+        data_dict = dict(data)
+        app = flask.current_app
+        fields = InputParametersSchema().fields
+
+        # define default values
+        default_values = {
+            fields["db_host"].data_key: app.config.get("COSTUME_LOADER_DB_HOST"),
+            fields["db_user"].data_key: app.config.get("COSTUME_LOADER_DB_USER"),
+            fields["db_password"].data_key: app.config.get("COSTUME_LOADER_DB_PASSWORD"),
+            fields["db_database"].data_key: app.config.get("COSTUME_LOADER_DB_DATABASE"),
+        }
+
+        # overwrite default values with other values if possible
+        default_values.update(data_dict)
+        data_dict = default_values
+
         return Response(
             render_template(
                 "costume_loader_template.html",
                 name=CostumeLoader.instance.name,
                 version=CostumeLoader.instance.version,
                 schema=InputParametersSchema(),
-                values=data,
+                values=data_dict,
                 errors=errors,
                 process=url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
             )
