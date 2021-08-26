@@ -60,7 +60,7 @@ ZIP_MERGER_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Zip merger plugin API.",
-    template_folder="zip_merger_templates",
+    template_folder="simple_template",
 )
 
 
@@ -184,7 +184,7 @@ class MicroFrontend(MethodView):
         schema = InputParametersSchema()
         return Response(
             render_template(
-                "zip_merger_template.html",
+                "simple_template.html",
                 name=ZipMerger.instance.name,
                 version=ZipMerger.instance.version,
                 schema=schema,

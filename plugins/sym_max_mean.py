@@ -60,7 +60,7 @@ SYM_MAX_MEAN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Sym Max Mean plugin API.",
-    template_folder="sym_max_mean_templates",
+    template_folder="simple_template",
 )
 
 
@@ -193,7 +193,7 @@ class MicroFrontend(MethodView):
         schema = InputParametersSchema()
         return Response(
             render_template(
-                "sym_max_mean_template.html",
+                "simple_template.html",
                 name=SymMaxMean.instance.name,
                 version=SymMaxMean.instance.version,
                 schema=schema,

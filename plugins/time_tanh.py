@@ -61,7 +61,7 @@ TIME_TANH_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Time tanh plugin API.",
-    template_folder="time_tanh_templates",
+    template_folder="simple_template",
 )
 
 
@@ -187,7 +187,7 @@ class MicroFrontend(MethodView):
         schema = InputParametersSchema()
         return Response(
             render_template(
-                "time_tanh_template.html",
+                "simple_template.html",
                 name=TimeTanh.instance.name,
                 version=TimeTanh.instance.version,
                 schema=schema,

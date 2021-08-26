@@ -60,7 +60,7 @@ WU_PALMER_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Wu Palmer plugin API.",
-    template_folder="wu_palmer_templates",
+    template_folder="simple_template",
 )
 
 
@@ -209,7 +209,7 @@ class MicroFrontend(MethodView):
         schema = InputParametersSchema()
         return Response(
             render_template(
-                "wu_palmer_template.html",
+                "simple_template.html",
                 name=WuPalmer.instance.name,
                 version=WuPalmer.instance.version,
                 schema=schema,

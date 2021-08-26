@@ -58,7 +58,7 @@ WU_PALMER_CACHE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Wu-Palmer cache plugin API.",
-    template_folder="wu_palmer_cache_templates",
+    template_folder="simple_template",
 )
 
 
@@ -166,7 +166,7 @@ class MicroFrontend(MethodView):
         schema = CalcSimilarityParametersSchema()
         return Response(
             render_template(
-                "wu_palmer_cache_template.html",
+                "simple_template.html",
                 name=WuPalmerCache.instance.name,
                 version=WuPalmerCache.instance.version,
                 schema=schema,
