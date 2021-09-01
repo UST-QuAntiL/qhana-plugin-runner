@@ -371,6 +371,8 @@ def calculation_task(self, db_id: int) -> str:
                 attribute_similarities.append(
                     {
                         "ID": ent1["ID"] + "__" + ent2["ID"] + "__" + attribute,
+                        "entity_1_ID": ent1["ID"],
+                        "entity_2_ID": ent2["ID"],
                         "href": "",
                         "similarity": sym_max_mean,
                     }
