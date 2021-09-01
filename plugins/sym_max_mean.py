@@ -285,11 +285,12 @@ def calculation_task(self, db_id: int) -> str:
         "element_similarities_url", None
     )
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: entities_metadata_url='{element_similarities_url}'"
+        f"Loaded input parameters from db: entities_similarities_url='{element_similarities_url}'"
     )
     attributes: Optional[str] = loads(task_data.parameters or "{}").get(
         "attributes", None
     )
+    TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes}'")
     attributes: List[str] = attributes.splitlines()
 
     # load data from file
