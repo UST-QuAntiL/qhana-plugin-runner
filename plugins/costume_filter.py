@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
+import mimetypes
+from plugins.costume_loader_pkg.schemas import InputParameters
+import random
 from http import HTTPStatus
-from json import dumps, loads
+from json import dumps, loads, JSONEncoder
 from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict, load_entities, save_entities
 from qhana_plugin_runner.requests import open_url
 from typing import Dict, Mapping, Optional
 
 import marshmallow as ma
+from qhana_plugin_runner.api.extra_fields import EnumField
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
@@ -71,30 +76,48 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+class AttributeType(Enum):
+    ALLOWLIST = "Allowlist"
+    BLOCKLIST = "Blocklist"
+
+
+class RowSamplingType(Enum):
+    RANDOM = "Randomly"
+    FIRST_N = "First n (Number of Rows)"
+
+
+class EnumEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        return JSONEncoder.default(self, obj)
+
+
 class CostumeFilterParametersSchema(FrontendFormBaseSchema):
-    # TODO: validation
     input_file_url = FileUrl(
         required=True, allow_none=False, load_only=True, metadata={"label": "Input Data"}
     )
+
     attributes = ma.fields.String( # TODO: maybe via ma.fields.List(ma.fields.String(),
         required=False,
         allow_none=True,
         metadata={
             "label": "Attribute List",
-            "description": "List of attributes in allowlist/blocklist.", # TODO: also how to validate?
+            "description": "List of attributes in allowlist/blocklist.", 
             "input_type": "textarea",
         }, # TODO: validation comma separated list => Phillip fragen... nur gegen input_data 
     )
-    attributes_setting = ma.fields.String( # TODO: change to choice or enum field -> select, als validator in fields... FileUrl anschauen, EnumField in api/extra_fields => enum machen, dann enum field
+
+    attributes_setting = EnumField(
+        AttributeType,
         required=True,
-        allow_none=False,
         metadata={
             "label": "Attributes Setting",
             "description": "Specify attribute list as allowlist or blocklist.", 
-            "options": {"allowlist": "Allowlist", "blocklist": "Blocklist"},
             "input_type": "select",
         },
     )
+
     n_rows = ma.fields.Integer(
         required=False, 
         allow_none=True,
@@ -104,22 +127,25 @@ class CostumeFilterParametersSchema(FrontendFormBaseSchema):
             "input_type": "textfield",
         },
     )
-    row_sampling = ma.fields.String( 
+    
+    row_sampling = EnumField( 
+        RowSamplingType,
         required=True,
-        allow_none=False,
         metadata={
             "label": "Row Sampling",
-            "description": "Specify if rows are chosen randomly or first n in case that Number of Rows is set and ID list smaller than Number of Rows.",
-            "options": {"random": "Randomly", "first_n": "First n (Number of Rows)"},
+            "description": "Specify if rows are chosen randomly or first n in case that Number \
+                of Rows is set and ID list smaller than Number of Rows.",
             "input_type": "select",
         },
     )
+
     id_list = ma.fields.String( 
         required=False,
         allow_none=True,
         metadata={
             "label": "ID List",
-            "description": "Comma separated list of ID's that should be kept. If number is smaller than Number of Rows, remaining rows are chosen according to Row Choice.",
+            "description": "Comma separated list of ID's that should be kept. If number is \
+                smaller than Number of Rows, remaining rows are chosen according to Row Choice.",
             "input_type": "textarea",
         },
     )
@@ -162,7 +188,7 @@ class PluginsView(MethodView):
                 ],
                 "outputs": [
                     [
-                        { # TODO: file handle to filtered file
+                        { # TODO: file handle to filtered file, could be json or csv...
                             "output_type": "raw",
                             "content_type": "application/json",
                             "name": "Filtered raw costume data",
@@ -237,9 +263,11 @@ class ProcessView(MethodView):
     @COSTUME_FILTER_BLP.arguments(CostumeFilterParametersSchema(unknown=EXCLUDE), location="form")
     @COSTUME_FILTER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @COSTUME_FILTER_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, input_params : InputParameters):
         """Start the costume filter task."""
-        db_task = ProcessingTask(task_name=costume_filter_task.name, parameters=dumps(arguments))
+        db_task = ProcessingTask(
+            task_name=costume_filter_task.name, 
+            parameters=dumps(input_params, cls=EnumEncoder))
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
@@ -302,7 +330,7 @@ def costume_filter_task(self, db_id: int) -> str:
     if not attributes: # empty string or None
         attributes = []
     else:
-        attributes = [a.strip() for a in attributes.split(',')]
+        attributes = [a.strip() for a in attributes.split(',')] # TODO: raise exception if format not correct?
         
     if n_rows is None and not id_list:
         raise ValueError("Row number argument not provided!")
@@ -310,7 +338,7 @@ def costume_filter_task(self, db_id: int) -> str:
         id_list = []
         n_sampled_rows = n_rows
     else:
-        id_list = [id.strip() for id in attributes.split(',')]
+        id_list = [id.strip() for id in id_list.split(',')]
         if n_rows is None:
             n_rows = len(id_list)
         n_sampled_rows = max(0, n_rows - len(id_list)) 
@@ -325,96 +353,73 @@ def costume_filter_task(self, db_id: int) -> str:
         raise ValueError("Attribute setting not specified!")
     
     # Filter rows: get requested entities from input file 
-    output_entities = []
-    mimetype = None
+    output_entities_id_list = []
+    # Random sampling as in https://math.stackexchange.com/questions/846036/can-i-uniformly-sample-from-n-distinct-elements-where-n-is-unknown-but-fini
+    output_entities_random_rows = []
+    sampling_counter = 0
+    mimetype = mimetypes.MimeTypes().guess_type(input_file_url)[0]
     with open_url(input_file_url, stream=True) as url_data:
-        # TODO: how to determine mimetype??? Does url_data.mimetype work? in Response -> mit debugger reingehen
-        mimetype = "text/csv" 
-        n_entities = 0
-        if len(id_list) > 0:
-            # find entities in id_list 
-            for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
-                n_entities += 1
-                if entity["ID"] in id_list:
-                    # TODO: filter entity and add to output stream
-                    output_entities.append(entity) # TODO
-                    id_list.remove(entity["ID"])
-            
-            if not id_list: # not all ID's in file
-                raise ValueError(f"The following ID's could not be found: {str(id_list)}")
-                # TODO: do sth else?
-        else:
-            if n_sampled_rows > 0:
-                # Count entities in input file for sampling
-                for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
-                    n_entities += 1
-                # TODO: determine n_entities in input file more efficiently?
+        for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
+            if entity["ID"] in id_list:
+                # find entities in id_list if id_list not empty
+                output_entities_id_list.append(entity) # TODO
+                id_list.remove(entity["ID"])
+
+            elif n_sampled_rows > 0:
+                # sample rows to fill up remaining rows according to row sampling
+                if row_sampling == RowSamplingType.RANDOM.value:
+                    if sampling_counter < n_sampled_rows:
+                        # add first n
+                        output_entities_random_rows.append(entity)
+                        sampling_counter += 1
+                    else:
+                        # add with prob n/(n+1) at random index
+                        if random.random() < n_sampled_rows/(sampling_counter + 1):
+                            
+                            index = random.randrange(n_sampled_rows)
+                            TASK_LOGGER.info(n_sampled_rows/(sampling_counter + 1))
+                            TASK_LOGGER.info("Index: " + str(index) + ", ID: " + entity["ID"])
+                            output_entities_random_rows[index] = entity
+                        sampling_counter += 1
+                elif row_sampling == RowSamplingType.FIRST_N.value:
+                    if sampling_counter < n_sampled_rows:
+                        output_entities_random_rows.append(entity)
+                        sampling_counter += 1
+                else:
+                    raise ValueError("Invalid argument for Row Sampling!")
+
+        if id_list: # not all ID's in file
+            raise ValueError(f"The following ID's could not be found: {str(id_list)}")
+            # TODO: do sth else?
+
+    output_entities = output_entities_id_list + output_entities_random_rows
+    if len(output_entities) != n_rows:
+        raise ValueError("Number of rows requested is greater than number of rows in input file!")
         
-        # TODO: search for how to sample csv randomly efficiently/random sampling from stream of unknown lenght...
-        # eventuell mit Buffer versuchen -> uniform sampling? aber in O(n)
-
-        if n_entities < n_rows:
-            raise ValueError("Number of rows requested is greater than number of rows in input file!")
-
-        if n_sampled_rows > 0:
-            if row_sampling == "random":
-                import random # TODO move import
-                random_list = sorted(random.sample(range(0, n_entities), n_sampled_rows))
-                counter = 0
-                index = 0
-                for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
-                    if random_list[index] == counter:
-                        if entity not in output_entities: # TODO: more efficient method needed?
-                            output_entities.append(entity)
-                            index += 1
-                        else: # collision 
-                            # try to add next one, loss of randomness negligible 
-                            random_list[index] = counter + 1 
-                        
-                    counter += 1
-                if index < n_sampled_rows: # due to collissions we may be short some entities
-                    # just add some in the beginning
-                    n_needed = n_sampled_rows - index
-                    for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
-                        if entity not in output_entities: # TODO: more efficient method needed?
-                            output_entities.append(entity)
-                            n_needed -= 1
-                        if n_needed < 1:
-                            break
-            elif row_sampling == "first_n":
-                n_needed = n_sampled_rows
-                for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
-                    if n_needed < 1:
-                        break
-                    if entity not in output_entities: # TODO: more efficient method needed?
-                        output_entities.append(entity)
-                        n_needed -= 1
-            else:
-                raise ValueError("Invalid argument for Row Sampling!")
-            
-        if len(output_entities) < n_rows:
-            raise RuntimeError("Bug... Number of output entities produces is smaller than requested!")
-    
     # Filter columns
-    # check that attributes are valid
-    all_attributes = set(output_entities[0].keys())
-    for attr in attributes:
-        if not attr in all_attributes:
-            raise ValueError(f"Invalid attribute in Attribute List (does not match attribute in input file): {attr}")
-
-    # create blacklist, make sure that "ID" is not lost
-    if attributes_setting == "allowlist":
-        attributes_blocklist = (all_attributes - set(attributes)) - {"ID"}
-    elif attributes_setting == "blocklist":
-        attributes_blocklist = set(attributes) - {"ID"}
+    # make sure that "ID" is not deleted
+    if attributes_setting == AttributeType.ALLOWLIST.value:
+        attributes = attributes + ["ID"]
+    elif attributes_setting == AttributeType.BLOCKLIST.value:
+        if "ID" in attributes:
+            attributes = attributes.remove("ID")
     else:
         raise ValueError("Invalid argument for Attribute Setting!")
 
     # remove columns that are not in allowlist
     for entity in output_entities:
-        for attr in attributes_blocklist:
-            del entity[attr]
+        if attributes_setting == AttributeType.ALLOWLIST.value:
+            for attr in entity.copy().keys():
+                if attr not in attributes:
+                    del entity[attr]
+        else: # Blocklist
+            for attr in entity.copy().keys():
+                if attr in attributes:
+                    del entity[attr]
+
+        TASK_LOGGER.info(str(entity))
     
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entities=output, file_=output, mimetype=mimetype) # TODO: check
 
@@ -425,5 +430,5 @@ def costume_filter_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id, output, "filtered_costumes" + file_type, "costume_filter_output", mimetype
         ) # TODO: check
-    return "result: " + repr("out_str") # TODO
+    return "Filter successful." # TODO
     
