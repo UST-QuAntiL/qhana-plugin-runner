@@ -1,6 +1,5 @@
-from collections import Generator
-from io import BytesIO, TextIOWrapper, BufferedIOBase
-from typing import Any, Tuple
+from io import BytesIO, TextIOWrapper
+from typing import IO, Any, Text, Tuple, Generator, Union
 from zipfile import ZipFile
 
 from qhana_plugin_runner.requests import open_url
@@ -8,7 +7,7 @@ from qhana_plugin_runner.requests import open_url
 
 def get_files_from_zip_url(
     url: str, mode="t"
-) -> Generator[Tuple[BufferedIOBase, str], Any, None]:
+) -> Generator[Tuple[Union[IO[bytes], IO[Text]], str], Any, None]:
     with open_url(url) as taxonomy_data:
         zip_bytes = taxonomy_data.content
         # SpooledTemporaryFile cannot be used here because of https://bugs.python.org/issue26175
