@@ -60,7 +60,6 @@ WU_PALMER_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Wu Palmer plugin API.",
-    template_folder="simple_template",
 )
 
 

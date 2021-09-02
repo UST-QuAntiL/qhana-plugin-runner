@@ -60,7 +60,6 @@ SYM_MAX_MEAN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Sym Max Mean plugin API.",
-    template_folder="simple_template",
 )
 
 

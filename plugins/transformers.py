@@ -63,7 +63,6 @@ TRANSFORMERS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Similarity to distance transformers plugin API.",
-    template_folder="simple_template",
 )
 
 
