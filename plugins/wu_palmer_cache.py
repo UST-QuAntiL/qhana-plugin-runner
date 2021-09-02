@@ -58,7 +58,6 @@ WU_PALMER_CACHE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Wu-Palmer cache plugin API.",
-    template_folder="simple_template",
 )
 
 

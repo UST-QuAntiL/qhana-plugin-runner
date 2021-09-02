@@ -60,7 +60,6 @@ ZIP_MERGER_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Zip merger plugin API.",
-    template_folder="simple_template",
 )
 
 

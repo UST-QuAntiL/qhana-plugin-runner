@@ -60,7 +60,6 @@ SYM_MAX_MEAN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Sym Max Mean plugin API.",
-    template_folder="simple_template",
 )
 
 
@@ -285,11 +284,12 @@ def calculation_task(self, db_id: int) -> str:
         "element_similarities_url", None
     )
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: entities_metadata_url='{element_similarities_url}'"
+        f"Loaded input parameters from db: entities_similarities_url='{element_similarities_url}'"
     )
     attributes: Optional[str] = loads(task_data.parameters or "{}").get(
         "attributes", None
     )
+    TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes}'")
     attributes: List[str] = attributes.splitlines()
 
     # load data from file
@@ -371,6 +371,8 @@ def calculation_task(self, db_id: int) -> str:
                 attribute_similarities.append(
                     {
                         "ID": ent1["ID"] + "__" + ent2["ID"] + "__" + attribute,
+                        "entity_1_ID": ent1["ID"],
+                        "entity_2_ID": ent2["ID"],
                         "href": "",
                         "similarity": sym_max_mean,
                     }

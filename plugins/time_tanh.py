@@ -61,7 +61,6 @@ TIME_TANH_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Time tanh plugin API.",
-    template_folder="simple_template",
 )
 
 
