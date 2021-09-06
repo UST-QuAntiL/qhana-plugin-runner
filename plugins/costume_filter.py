@@ -204,8 +204,7 @@ class MicroFrontend(MethodView):
     """Micro frontend for the costume filter plugin."""
 
     example_inputs = {
-        "n_rows": 20,
-        "row_choice": "random",
+        "input_file_url": "file:///home/nico/test/entities.json",
     }
 
     @COSTUME_FILTER_BLP.html_response(
@@ -325,7 +324,7 @@ def costume_filter_task(self, db_id: int) -> str:
         row_sampling='{row_sampling}', id_list='{id_list}'")
 
     if input_file_url is None or not input_file_url:
-        raise ValueError("No input file URL provided!")
+        raise ValueError("No input file URL provided!") # TODO: how to check if url correct?
    
     if not attributes: # empty string or None
         attributes = []
@@ -377,7 +376,7 @@ def costume_filter_task(self, db_id: int) -> str:
                         if random.random() < n_sampled_rows/(sampling_counter + 1):
                             
                             index = random.randrange(n_sampled_rows)
-                            TASK_LOGGER.info(n_sampled_rows/(sampling_counter + 1))
+                            # TODO: remove log
                             TASK_LOGGER.info("Index: " + str(index) + ", ID: " + entity["ID"])
                             output_entities_random_rows[index] = entity
                         sampling_counter += 1
@@ -413,15 +412,16 @@ def costume_filter_task(self, db_id: int) -> str:
                 if attr not in attributes:
                     del entity[attr]
         else: # Blocklist
-            for attr in entity.copy().keys():
-                if attr in attributes:
-                    del entity[attr]
+            if attributes: # nothing to do if empty
+                for attr in entity.copy().keys():
+                    if attr in attributes:
+                        del entity[attr]
 
         TASK_LOGGER.info(str(entity))
     
 
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(entities=output, file_=output, mimetype=mimetype) # TODO: check
+        save_entities(entities=output, file_=output, mimetype=mimetype) 
 
         if mimetype == "application/json":
             file_type = ".json"
@@ -429,6 +429,6 @@ def costume_filter_task(self, db_id: int) -> str:
             file_type = ".csv"
         STORE.persist_task_result(
             db_id, output, "filtered_costumes" + file_type, "costume_filter_output", mimetype
-        ) # TODO: check
+        ) 
     return "Filter successful." # TODO
     
