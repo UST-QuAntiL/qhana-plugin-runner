@@ -1,8 +1,8 @@
 # Complex Plugin Interactions
 
-* Status: [proposed]
+* Status: [accepted]
 * Deciders: [Fabian Bühler]
-* Date: [2021-09-01]
+* Date: [2021-09-03]
 
 ## Context and Problem Statement
 
@@ -11,7 +11,7 @@ However, a plugin can only directly expose one processing resource to the QHAna 
 This limits the possible interactions with a plugin.
 Plugins cannot cooperate with other plugins or ask for user input in a multi step process.
 
-## Decision Drivers <!-- optional -->
+## Decision Drivers
 
 * We want to enable plugin cooperation (e.g. an optimizer plugin optimizing any optimizable quantum circuit)
 * We want to enable multi step processes where the user may be required to input data at every step
@@ -24,11 +24,22 @@ Plugins cannot cooperate with other plugins or ask for user input in a multi ste
 
 ## Decision Outcome
 
-TBD
+Chosen option: "Multi step micro frontends", because it is easy to implement and allows very complex interaction patterns with plugins.
 
-<!-- Chosen option: "[option 1]", because [justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force force | … | comes out best (see below)]. -->
+### Positive Consequences
 
-## Pros and Cons of the Options <!-- optional -->
+* Complex plugin interactions will be possible
+* Complex interactions must not be hardcoded (like in option "Hardcoded multi-plugin templates")
+* Allows creation of meta plugins that compose multiple plugins into one functionality
+* Easy to implement
+
+### Negative Consequences
+
+* Meta plugins are not real workflows
+* Creating more and more complex micro frontends is neccessary to take advantage of this feature
+
+
+## Pros and Cons of the Options
 
 ### Implement Workflows or integrate a Workflow Tool (like Camunda) + Engine
 
@@ -55,6 +66,7 @@ Plugins provide metadata (e.g. tags describing what type of plugin they are) tha
 
 Instead of directly producing data a plugin could return a link to a new micro frontend.
 This new micro frontend would then be presented to the user who could input the required data.
+This can be repeated until a final result can be presented by the plugin.
 
 * Good, because it allows for many complex interaction patterns with one or multiple plugins
 * Good, because it is easy to implement in the frontend
