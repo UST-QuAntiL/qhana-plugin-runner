@@ -101,7 +101,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity-distances",
-        data_content_types="application/zip",
+        data_content_types="application/json",
         metadata={
             "label": "Entity distances URL",
             "description": "URL to a json file with the entity distances.",
