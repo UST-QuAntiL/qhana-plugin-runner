@@ -14,6 +14,8 @@
 
 from enum import Enum
 import mimetypes
+
+import requests
 from plugins.costume_loader_pkg.schemas import InputParameters
 import random
 from http import HTTPStatus
@@ -204,7 +206,9 @@ class MicroFrontend(MethodView):
     """Micro frontend for the costume filter plugin."""
 
     example_inputs = {
-        "input_file_url": "file:///home/nico/test/entities.json",
+        "inputFileUrl": "file:///home/nico/entities.json", # TODO: remove/put sth else in there
+        "nRows": 5,
+        "attributes": "ID"
     }
 
     @COSTUME_FILTER_BLP.html_response(
@@ -324,7 +328,7 @@ def costume_filter_task(self, db_id: int) -> str:
         row_sampling='{row_sampling}', id_list='{id_list}'")
 
     if input_file_url is None or not input_file_url:
-        raise ValueError("No input file URL provided!") # TODO: how to check if url correct?
+        raise ValueError("No input file URL provided!") 
    
     if not attributes: # empty string or None
         attributes = []
