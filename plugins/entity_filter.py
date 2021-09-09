@@ -53,16 +53,16 @@ from tempfile import SpooledTemporaryFile
 from qhana_plugin_runner.storage import STORE
 from flask import redirect
 
-_plugin_name = "costume-filter"
+_plugin_name = "entity-filter"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-COSTUME_FILTER_BLP = SecurityBlueprint(
+ENTITY_FILTER_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Costume filter API.",
-    template_folder="costume_filter_templates",
+    description="Entity filter API.",
+    template_folder="entity_filter_templates",
 )
 
 
@@ -95,7 +95,7 @@ class EnumEncoder(JSONEncoder):
         return JSONEncoder.default(self, obj)
 
 
-class CostumeFilterParametersSchema(FrontendFormBaseSchema):
+class EntityFilterParametersSchema(FrontendFormBaseSchema):
     input_file_url = FileUrl(
         required=True, allow_none=False, load_only=True, metadata={"label": "Input Data"}
     )
@@ -155,37 +155,37 @@ class CostumeFilterParametersSchema(FrontendFormBaseSchema):
     )
 
 
-@COSTUME_FILTER_BLP.route("/")
+@ENTITY_FILTER_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @COSTUME_FILTER_BLP.response(HTTPStatus.OK, ResponseSchema())
-    @COSTUME_FILTER_BLP.require_jwt("jwt", optional=True)
+    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, ResponseSchema())
+    @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        """Costume filter endpoint returning the plugin metadata."""
+        """Entity filter endpoint returning the plugin metadata."""
         return {
-            "name": CostumeFilter.instance.name,
-            "version": CostumeFilter.instance.version,
-            "identifier": CostumeFilter.instance.identifier,
-            "root_href": url_for(f"{COSTUME_FILTER_BLP.name}.PluginsView"),
-            "title": "Costume loader",
+            "name": EntityFilter.instance.name,
+            "version": EntityFilter.instance.version,
+            "identifier": EntityFilter.instance.identifier,
+            "root_href": url_for(f"{ENTITY_FILTER_BLP.name}.PluginsView"),
+            "title": "Entity loader",
             "description": "Filters data sets from the MUSE database.",
             "plugin_type": "data-loader",
             "tags": ["data:loading"],
             "processing_resource_metadata": {
-                "href": url_for(f"{COSTUME_FILTER_BLP.name}.ProcessView"),
-                "ui_href": url_for(f"{COSTUME_FILTER_BLP.name}.MicroFrontend"),
+                "href": url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
+                "ui_href": url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
                 "inputs": [ # TODO: only file input (entities...)
                     [
                         {
                             "output_type": "raw", 
                             "content_type": "application/json",
-                            "name": "Raw costume data",
+                            "name": "Raw entity data",
                         },
                         {
                             "output_type": "raw",
                             "content_type": "text/csv",
-                            "name": "Raw costume data",
+                            "name": "Raw entity data",
                         },
                         # TODO: OR -> json, csv... scatch, not finalized yet
                     ]
@@ -195,7 +195,7 @@ class PluginsView(MethodView):
                         { # TODO: file handle to filtered file, could be json or csv...
                             "output_type": "raw",
                             "content_type": "application/json",
-                            "name": "Filtered raw costume data",
+                            "name": "Filtered raw entity data",
                         },
                     ]
                 ],
@@ -203,9 +203,9 @@ class PluginsView(MethodView):
         }
 
 
-@COSTUME_FILTER_BLP.route("/ui/")
+@ENTITY_FILTER_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the costume filter plugin."""
+    """Micro frontend for the entity filter plugin."""
 
     example_inputs = {
         "inputFileUrl": "file:///<path_to_file>/entities.json",
@@ -213,70 +213,70 @@ class MicroFrontend(MethodView):
         "attributes": "ID"
     }
 
-    @COSTUME_FILTER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the costume filter plugin."
+    @ENTITY_FILTER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the entity filter plugin."
     )
-    @COSTUME_FILTER_BLP.arguments(
-        CostumeFilterParametersSchema(
+    @ENTITY_FILTER_BLP.arguments(
+        EntityFilterParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @COSTUME_FILTER_BLP.require_jwt("jwt", optional=True)
+    @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @COSTUME_FILTER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the costume filter plugin."
+    @ENTITY_FILTER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the entity filter plugin."
     )
-    @COSTUME_FILTER_BLP.arguments(
-        CostumeFilterParametersSchema(
+    @ENTITY_FILTER_BLP.arguments(
+        EntityFilterParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @COSTUME_FILTER_BLP.require_jwt("jwt", optional=True)
+    @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        schema = CostumeFilterParametersSchema()
+        schema = EntityFilterParametersSchema()
         return Response(
             render_template(
-                "costume_filter_template.html",
-                name=CostumeFilter.instance.name,
-                version=CostumeFilter.instance.version,
+                "entity_filter_template.html",
+                name=EntityFilter.instance.name,
+                version=EntityFilter.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(f"{COSTUME_FILTER_BLP.name}.ProcessView"),
+                process=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 example_values=url_for(
-                    f"{COSTUME_FILTER_BLP.name}.MicroFrontend", **self.example_inputs
+                    f"{ENTITY_FILTER_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
             )
         )
 
 
-@COSTUME_FILTER_BLP.route("/process/")
+@ENTITY_FILTER_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @COSTUME_FILTER_BLP.arguments(CostumeFilterParametersSchema(unknown=EXCLUDE), location="form")
-    @COSTUME_FILTER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @COSTUME_FILTER_BLP.require_jwt("jwt", optional=True)
+    @ENTITY_FILTER_BLP.arguments(EntityFilterParametersSchema(unknown=EXCLUDE), location="form")
+    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params : InputParameters):
-        """Start the costume filter task."""
+        """Start the entity filter task."""
         db_task = ProcessingTask(
-            task_name=costume_filter_task.name, 
+            task_name=entity_filter_task.name, 
             parameters=dumps(input_params, cls=EnumEncoder))
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = costume_filter_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = entity_filter_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         result: AsyncResult = task.apply_async()
@@ -289,7 +289,7 @@ class ProcessView(MethodView):
         )
 
 
-class CostumeFilter(QHAnaPluginBase):
+class EntityFilter(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
@@ -298,7 +298,7 @@ class CostumeFilter(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return COSTUME_FILTER_BLP
+        return ENTITY_FILTER_BLP
     
     def get_requirements(self) -> str:
         return ""
@@ -307,9 +307,9 @@ class CostumeFilter(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{CostumeFilter.instance.identifier}.costume_filter_task", bind=True)
-def costume_filter_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(f"Starting new costume filter task with db id '{db_id}'")
+@CELERY.task(name=f"{EntityFilter.instance.identifier}.entity_filter_task", bind=True)
+def entity_filter_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting new entity filter task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -426,7 +426,7 @@ def costume_filter_task(self, db_id: int) -> str:
         else:
             file_type = ".csv"
         STORE.persist_task_result(
-            db_id, output, "filtered_costumes" + file_type, "costume_filter_output", mimetype
+            db_id, output, "filtered_entities" + file_type, "entity_filter_output", mimetype
         ) 
     return "Filter successful." # TODO
     
