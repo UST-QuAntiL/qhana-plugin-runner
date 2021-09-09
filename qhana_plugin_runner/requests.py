@@ -20,7 +20,7 @@ from requests.models import Response
 REQUEST_SESSION = Session()
 
 
-def open_url(url: str, **kwargs) -> Response:
+def open_url(url: str, raise_on_error_status=True, **kwargs) -> Response:
     """Open an url with request.
 
     (see :py:meth:`~requests.Session.request` for parameters)
@@ -28,6 +28,11 @@ def open_url(url: str, **kwargs) -> Response:
     It is best to use this function in a ``with``-statement to get autoclosing behaviour
     for the returned response. The returned response acts as a context manager.
 
-    For streaming access set ``stream=True``.
+    For streaming access set ``stream=True``. 
+
+    An appropriate exception is raised for an error status. To ignore an error status set ``raise_on_error_status=False``.
     """
-    return REQUEST_SESSION.get(url, **kwargs)
+    url_data = REQUEST_SESSION.get(url, **kwargs)
+    if raise_on_error_status:
+        url_data.raise_for_status()
+    return url_data

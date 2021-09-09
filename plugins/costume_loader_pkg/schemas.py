@@ -7,23 +7,7 @@ from marshmallow.utils import resolve_field_instance
 
 from qhana_plugin_runner.api import MaBaseSchema
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
-from qhana_plugin_runner.api.extra_fields import EnumField
-
-
-class CSVList(fields.Field):
-    def __init__(self, element_type: fields.Field, **kwargs):
-        super().__init__(**kwargs)
-        self.element_type = resolve_field_instance(element_type)
-
-    def _serialize(self, value: List[Any], attr: str, obj: Any, **kwargs) -> str:
-        return ",".join(
-            [self.element_type._serialize(v, attr, obj, **kwargs) for v in value]
-        )
-
-    def _deserialize(
-        self, value: str, attr: Optional[str], data: Optional[Mapping[str, Any]], **kwargs
-    ):
-        return [self.element_type.deserialize(v) for v in value.split(",")]
+from qhana_plugin_runner.api.extra_fields import EnumField, CSVList
 
 
 class CostumeType(Enum):

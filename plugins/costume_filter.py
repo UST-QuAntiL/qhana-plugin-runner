@@ -25,7 +25,7 @@ from qhana_plugin_runner.requests import open_url
 from typing import Dict, Mapping, Optional
 
 import marshmallow as ma
-from qhana_plugin_runner.api.extra_fields import EnumField
+from qhana_plugin_runner.api.extra_fields import CSVList, EnumField
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
@@ -100,14 +100,15 @@ class CostumeFilterParametersSchema(FrontendFormBaseSchema):
         required=True, allow_none=False, load_only=True, metadata={"label": "Input Data"}
     )
 
-    attributes = ma.fields.String( # TODO: maybe via ma.fields.List(ma.fields.String(),
+    attributes = CSVList( # TODO: maybe via ma.fields.List(ma.fields.String(),
         required=False,
         allow_none=True,
+        element_type=ma.fields.String,
         metadata={
             "label": "Attribute List",
             "description": "List of attributes in allowlist/blocklist.", 
             "input_type": "textarea",
-        }, # TODO: validation comma separated list => Phillip fragen... nur gegen input_data 
+        },
     )
 
     attributes_setting = EnumField(
@@ -141,9 +142,10 @@ class CostumeFilterParametersSchema(FrontendFormBaseSchema):
         },
     )
 
-    id_list = ma.fields.String( 
+    id_list = CSVList( 
         required=False,
         allow_none=True,
+        element_type=ma.fields.String,
         metadata={
             "label": "ID List",
             "description": "Comma separated list of ID's that should be kept. If number is \
@@ -206,7 +208,7 @@ class MicroFrontend(MethodView):
     """Micro frontend for the costume filter plugin."""
 
     example_inputs = {
-        "inputFileUrl": "file:///home/nico/entities.json", # TODO: remove/put sth else in there
+        "inputFileUrl": "file:///<path_to_file>/entities.json",
         "nRows": 5,
         "attributes": "ID"
     }
@@ -332,8 +334,6 @@ def costume_filter_task(self, db_id: int) -> str:
    
     if not attributes: # empty string or None
         attributes = []
-    else:
-        attributes = [a.strip() for a in attributes.split(',')] # TODO: raise exception if format not correct?
         
     if n_rows is None and not id_list:
         raise ValueError("Row number argument not provided!")
@@ -341,7 +341,6 @@ def costume_filter_task(self, db_id: int) -> str:
         id_list = []
         n_sampled_rows = n_rows
     else:
-        id_list = [id.strip() for id in id_list.split(',')]
         if n_rows is None:
             n_rows = len(id_list)
         n_sampled_rows = max(0, n_rows - len(id_list)) 
@@ -380,8 +379,6 @@ def costume_filter_task(self, db_id: int) -> str:
                         if random.random() < n_sampled_rows/(sampling_counter + 1):
                             
                             index = random.randrange(n_sampled_rows)
-                            # TODO: remove log
-                            TASK_LOGGER.info("Index: " + str(index) + ", ID: " + entity["ID"])
                             output_entities_random_rows[index] = entity
                         sampling_counter += 1
                 elif row_sampling == RowSamplingType.FIRST_N.value:
@@ -419,10 +416,7 @@ def costume_filter_task(self, db_id: int) -> str:
             if attributes: # nothing to do if empty
                 for attr in entity.copy().keys():
                     if attr in attributes:
-                        del entity[attr]
-
-        TASK_LOGGER.info(str(entity))
-    
+                        del entity[attr]    
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entities=output, file_=output, mimetype=mimetype) 
