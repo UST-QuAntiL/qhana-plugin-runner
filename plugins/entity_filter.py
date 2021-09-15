@@ -20,9 +20,9 @@ from plugins.costume_loader_pkg.schemas import InputParameters
 import random
 from http import HTTPStatus
 from json import dumps, loads, JSONEncoder
-from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict, load_entities, save_entities
+from qhana_plugin_runner.plugin_utils.entity_marshalling import ResponseLike, ensure_dict, load_entities, save_entities
 from qhana_plugin_runner.requests import open_url
-from typing import Dict, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Set
 
 import marshmallow as ma
 from qhana_plugin_runner.api.extra_fields import CSVList, EnumField
@@ -304,6 +304,68 @@ class EntityFilter(QHAnaPluginBase):
         return ""
 
 
+def filter_rows(url_data : ResponseLike, mimetype : str, id_list : Set[str], n_sampled_rows : int, row_sampling : str) -> List[Dict[str, Any]]:
+    """Filters rows of ``url_data``.
+    
+    Iterates over entities in ``url_data``. 
+    If "ID" of entity is in ``id_list``, the entity is added to output list. 
+    If not and ``n_sampled_rows > 0``, row sampling is applied according to the strategy specified in ``row_sampling``. 
+    Random row sampling is done as in `Uniformly sampling from N elements <https://math.stackexchange.com/questions/846036/can-i-uniformly-sample-from-n-distinct-elements-where-n-is-unknown-but-fini>`_.
+    
+    Args:
+        url_data (ResponseLike): input file with entities
+        mimetype (str): mimetype of input file
+        id_list (Set[str]): list of entity ID's 
+        n_sampled_rows (int): number of rows that are to be sampled randomly
+        row_sampling (str): strategy for sampling (value of :class:`RowSamplingType`)
+
+    Raises:
+        ValueError: if invalid value for ``row_sampling``
+        ValueError: if some ID's in ``id_list`` cannot be found
+
+    Returns:
+        [type]: [description]
+    """
+    # list of output entities with ID in id_list
+    output_entities_id_list : Dict[str, Any] = []
+    # list of sampled output entities,
+    output_entities_random_rows : Dict[str, Any] = []
+    # counts number of sampled entities
+    sampling_counter = 0
+    for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
+        if entity["ID"] in id_list:
+            # find entities in id_list if id_list not empty
+            output_entities_id_list.append(entity) # TODO
+            id_list.remove(entity["ID"])
+
+        elif n_sampled_rows > 0:
+            # sample rows to fill up remaining rows according to row sampling
+            if row_sampling == RowSamplingType.RANDOM.value:
+                if sampling_counter < n_sampled_rows:
+                    # add first n
+                    output_entities_random_rows.append(entity)
+                    sampling_counter += 1
+                else:
+                    # add with prob n/(n+k+1) at random index, k is counter
+                    if random.random() < n_sampled_rows/(sampling_counter + 1):
+                        
+                        index = random.randrange(n_sampled_rows)
+                        output_entities_random_rows[index] = entity
+                    sampling_counter += 1
+            elif row_sampling == RowSamplingType.FIRST_N.value:
+                if sampling_counter < n_sampled_rows:
+                    output_entities_random_rows.append(entity)
+                    sampling_counter += 1
+            else:
+                raise ValueError("Invalid argument for Row Sampling!")
+
+    if id_list: # not all ID's in file
+        raise ValueError(f"The following ID's could not be found: {str(id_list)}")
+        # TODO: do sth else?
+    
+    return output_entities_id_list + output_entities_random_rows
+
+
 TASK_LOGGER = get_task_logger(__name__)
 
 
@@ -319,10 +381,15 @@ def entity_filter_task(self, db_id: int) -> str:
 
     params : Dict = loads(task_data.parameters or "{}")
     input_file_url: Optional[str] = params.get("input_file_url", None)
+    # list of attributes
     attributes: Optional[str] = params.get("attributes", None)
+    # choice for attributes (can be either allowlist or blocklist)
     attributes_setting: Optional[str] = params.get("attributes_setting", None)
+    # number of requested output rows
     n_rows: Optional[int] = params.get("n_rows", None)
+    # type of sampling (random or first n)
     row_sampling : Optional[str] = params.get("row_sampling", None)
+    # list of id's, later converted to set
     id_list: Optional[str] = params.get("id_list", None)
     
     TASK_LOGGER.info(f"Loaded input parameters from db: input_file_url='{input_file_url}', \
@@ -334,13 +401,18 @@ def entity_filter_task(self, db_id: int) -> str:
    
     if not attributes: # empty string or None
         attributes = []
-        
+    
+    # number of rows to be sampled
+    n_sampled_rows : int = 0
     if n_rows is None and not id_list:
-        raise ValueError("Row number argument not provided!")
+        # only filter columns
+        id_list = {}
+        n_rows = -1
     if not id_list:
-        id_list = []
+        id_list = {}
         n_sampled_rows = n_rows
     else:
+        id_list = set(id_list)
         if n_rows is None:
             n_rows = len(id_list)
         n_sampled_rows = max(0, n_rows - len(id_list)) 
@@ -355,46 +427,28 @@ def entity_filter_task(self, db_id: int) -> str:
         raise ValueError("Attribute setting not specified!")
     
     # Filter rows: get requested entities from input file 
-    output_entities_id_list = []
-    # Random sampling as in https://math.stackexchange.com/questions/846036/can-i-uniformly-sample-from-n-distinct-elements-where-n-is-unknown-but-fini
-    output_entities_random_rows = []
-    sampling_counter = 0
-    mimetype = mimetypes.MimeTypes().guess_type(input_file_url)[0]
-    with open_url(input_file_url, stream=True) as url_data:
-        for entity in ensure_dict(load_entities(file_=url_data, mimetype=mimetype)):
-            if entity["ID"] in id_list:
-                # find entities in id_list if id_list not empty
-                output_entities_id_list.append(entity) # TODO
-                id_list.remove(entity["ID"])
+    
+    
+    # mimetype of input and output file
+    mimetype : str = None
+    # list of output entities
+    output_entities : Dict[str, Any] = {}
+    if n_rows > 0:
+        with open_url(input_file_url, stream=True) as url_data:
+            try:
+                mimetype = url_data.headers['Content-Type']
+            except:
+                mimetype = mimetypes.MimeTypes().guess_type(input_file_url)[0]
 
-            elif n_sampled_rows > 0:
-                # sample rows to fill up remaining rows according to row sampling
-                if row_sampling == RowSamplingType.RANDOM.value:
-                    if sampling_counter < n_sampled_rows:
-                        # add first n
-                        output_entities_random_rows.append(entity)
-                        sampling_counter += 1
-                    else:
-                        # add with prob n/(n+1) at random index
-                        if random.random() < n_sampled_rows/(sampling_counter + 1):
-                            
-                            index = random.randrange(n_sampled_rows)
-                            output_entities_random_rows[index] = entity
-                        sampling_counter += 1
-                elif row_sampling == RowSamplingType.FIRST_N.value:
-                    if sampling_counter < n_sampled_rows:
-                        output_entities_random_rows.append(entity)
-                        sampling_counter += 1
-                else:
-                    raise ValueError("Invalid argument for Row Sampling!")
+            output_entities = filter_rows(url_data=url_data, mimetype=mimetype, id_list=id_list, 
+                                          n_sampled_rows=n_sampled_rows, row_sampling=row_sampling)
+            if len(output_entities) != n_rows:
+                raise ValueError("Number of rows requested is greater than number of rows in input file!")
+                # TODO: maybe log an error instead of exception
 
-        if id_list: # not all ID's in file
-            raise ValueError(f"The following ID's could not be found: {str(id_list)}")
-            # TODO: do sth else?
-
-    output_entities = output_entities_id_list + output_entities_random_rows
-    if len(output_entities) != n_rows:
-        raise ValueError("Number of rows requested is greater than number of rows in input file!")
+    else:
+        # TODO take all rows
+        pass
         
     # Filter columns
     # make sure that "ID" is not deleted
