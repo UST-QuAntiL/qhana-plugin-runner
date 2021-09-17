@@ -54,6 +54,26 @@ poetry run invoke start-broker
 poetry run invoke worker  # use strg+c to stop worker
 ```
 
+### Running the Plugin-Runner with Docker Compose
+
+As a prerequisite you need to have a docker image called muse-db with a MySQL or MariaDB database that contains the MUSE dataset.
+If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:
+```
+docker buildx build --load -t qhana-plugin-runner --platform linux/amd64 --no-cache .
+```
+
+Start the docker compose with:
+```
+docker-compose up
+```
+
+Delete the containers with:
+```
+docker-compose down
+```
+
+To also delete the volume containing the output files add the flag `-v`.
+
 ### Trying out the Plugin-Runner
 
 Start the plugin runner using the instructions above.

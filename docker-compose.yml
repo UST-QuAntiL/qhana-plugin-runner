@@ -1,0 +1,42 @@
+services:
+  qhana-plugin-runner.de:  # TODO: remove .de
+    build: .
+    image: qhana-plugin-runner
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "5005:5005"
+    volumes:
+      - instance:/app/instance
+    environment:
+      BROKER_URL: redis://redis:6379
+      RESULT_BACKEND: redis://redis:6379
+      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
+    entrypoint: ["/app/start.sh"]
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+  postgres:
+    image: "postgres:latest"
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      POSTGRES_DB: default_db
+  muse-db:
+    image: "muse-db"
+  worker:
+    build: .
+    image: qhana-plugin-runner
+    depends_on:
+      - qhana-plugin-runner.de
+    volumes:
+      - instance:/app/instance
+    environment:
+      BROKER_URL: redis://redis:6379
+      RESULT_BACKEND: redis://redis:6379
+      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
+    entrypoint: ["poetry", "run", "invoke", "worker"]
+volumes:
+  instance:
