@@ -56,7 +56,8 @@ poetry run invoke worker  # use strg+c to stop worker
 
 ### Running the Plugin-Runner with Docker Compose
 
-As a prerequisite you need to have a docker image called muse-db with a MySQL or MariaDB database that contains the MUSE dataset.
+As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder.
+
 If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:
 ```
 docker buildx build --load -t qhana-plugin-runner --platform linux/amd64 --no-cache .
