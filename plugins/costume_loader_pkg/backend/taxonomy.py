@@ -224,8 +224,8 @@ class Taxonomy:
             relations.append({"source": parent, "target": child})
 
         if root_node is None:
-            logging.error("No root node found in taxonomy")
-            raise Exception("No root node found in taxonomy")
+            logging.error("No root node found in taxonomy " + name)
+            raise Exception("No root node found in taxonomy " + name)
 
         return {
             "GRAPH_ID": "tax_" + name,
