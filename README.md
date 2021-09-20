@@ -56,7 +56,7 @@ poetry run invoke worker  # use strg+c to stop worker
 
 ### Running the Plugin-Runner with Docker Compose
 
-As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder.
+As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder `docker build -t muse-db plugins/costume_loader_pkg/db_container`.
 
 If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:
 ```
