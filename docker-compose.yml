@@ -1,5 +1,5 @@
 services:
-  qhana-plugin-runner.de:  # TODO: remove .de
+  qhana-plugin-runner:
     build: .
     image: qhana-plugin-runner
     depends_on:
@@ -30,7 +30,7 @@ services:
     build: .
     image: qhana-plugin-runner
     depends_on:
-      - qhana-plugin-runner.de
+      - qhana-plugin-runner
     volumes:
       - instance:/app/instance
     environment:
