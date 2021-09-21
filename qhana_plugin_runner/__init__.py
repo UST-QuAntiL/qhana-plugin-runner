@@ -15,7 +15,7 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Root module containing the flask app factory."""
-
+import os
 from json import load as load_json
 from logging import WARNING, Formatter, Handler, Logger, getLogger
 from logging.config import dictConfig
@@ -82,6 +82,17 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         # load config from file specified in env var
         config.from_envvar(f"{ENV_VAR_PREFIX}_SETTINGS", silent=True)
         # TODO load some config keys directly from env vars
+
+        # load Redis URLs from env vars
+        if "BROKER_URL" in os.environ and "RESULT_BACKEND" in os.environ:
+            config["CELERY"] = {
+                "broker_url": os.environ["BROKER_URL"],
+                "result_backend": os.environ["RESULT_BACKEND"],
+            }
+
+        # load database URI from env vars
+        if "SQLALCHEMY_DATABASE_URI" in os.environ:
+            config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLALCHEMY_DATABASE_URI"]
     else:
         # load the test config if passed in
         config.from_mapping(test_config)

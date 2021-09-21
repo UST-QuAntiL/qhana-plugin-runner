@@ -17,8 +17,6 @@ from typing import Mapping, Optional
 
 import flask
 import marshmallow as ma
-import pandas as pd
-import plotly.express as px
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
@@ -267,6 +265,9 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{VIS.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
+    import pandas as pd
+    import plotly.express as px
+
     # get parameters
 
     TASK_LOGGER.info(f"Starting new MDS calculation task with db id '{db_id}'")

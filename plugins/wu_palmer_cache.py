@@ -21,7 +21,6 @@ from typing import Mapping, Optional
 from zipfile import ZipFile
 
 import marshmallow as ma
-import networkx as nx
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
@@ -229,42 +228,45 @@ class WuPalmerCache(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def compare_inner(first: str, second: str, graph: nx.DiGraph) -> float:
-    """
-    Applies wu palmer similarity measure on two taxonomie elements
-    """
-
-    # Get undirected graph
-    ud_graph = graph.to_undirected()
-
-    # Get lowest reachable node from both
-    lowest_common_ancestor = nx.algorithms.lowest_common_ancestors.lowest_common_ancestor(
-        graph, first, second
-    )
-
-    # Get root of graph
-    root = [n for n, d in graph.in_degree() if d == 0][0]
-
-    # Count edges - weight is 1 per default
-    d1 = nx.algorithms.shortest_paths.generic.shortest_path_length(
-        ud_graph, first, lowest_common_ancestor
-    )
-    d2 = nx.algorithms.shortest_paths.generic.shortest_path_length(
-        ud_graph, second, lowest_common_ancestor
-    )
-    d3 = nx.algorithms.shortest_paths.generic.shortest_path_length(
-        ud_graph, lowest_common_ancestor, root
-    )
-
-    # if first and second, both is the root
-    if d1 + d2 + 2 * d3 == 0.0:
-        return 0.0
-
-    return 2 * d3 / (d1 + d2 + 2 * d3)
-
-
 @CELERY.task(name=f"{WuPalmerCache.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
+    import networkx as nx
+
+    def compare_inner(first: str, second: str, graph: nx.DiGraph) -> float:
+        """
+        Applies wu palmer similarity measure on two taxonomie elements
+        """
+
+        # Get undirected graph
+        ud_graph = graph.to_undirected()
+
+        # Get lowest reachable node from both
+        lowest_common_ancestor = (
+            nx.algorithms.lowest_common_ancestors.lowest_common_ancestor(
+                graph, first, second
+            )
+        )
+
+        # Get root of graph
+        root = [n for n, d in graph.in_degree() if d == 0][0]
+
+        # Count edges - weight is 1 per default
+        d1 = nx.algorithms.shortest_paths.generic.shortest_path_length(
+            ud_graph, first, lowest_common_ancestor
+        )
+        d2 = nx.algorithms.shortest_paths.generic.shortest_path_length(
+            ud_graph, second, lowest_common_ancestor
+        )
+        d3 = nx.algorithms.shortest_paths.generic.shortest_path_length(
+            ud_graph, lowest_common_ancestor, root
+        )
+
+        # if first and second, both is the root
+        if d1 + d2 + 2 * d3 == 0.0:
+            return 0.0
+
+        return 2 * d3 / (d1 + d2 + 2 * d3)
+
     # get parameters
 
     TASK_LOGGER.info(f"Starting new Wu Palmer calculation task with db id '{db_id}'")

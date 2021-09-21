@@ -21,7 +21,6 @@ from typing import Mapping, Optional, List
 from zipfile import ZipFile
 
 import marshmallow as ma
-import networkx as nx
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger

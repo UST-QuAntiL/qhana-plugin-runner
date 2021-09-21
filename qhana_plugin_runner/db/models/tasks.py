@@ -48,7 +48,7 @@ class ProcessingTask:
     id: int = field(init=False, metadata={"sa": Column(sql.INTEGER(), primary_key=True)})
     task_name: str = field(metadata={"sa": Column(sql.String(500))})
     task_id: Optional[str] = field(
-        default=None, metadata={"sa": Column(sql.String(32), index=True, nullable=True)}
+        default=None, metadata={"sa": Column(sql.String(64), index=True, nullable=True)}
     )
 
     started_at: datetime = field(

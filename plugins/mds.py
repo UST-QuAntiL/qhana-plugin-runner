@@ -11,15 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
-import math
 from enum import Enum
 from http import HTTPStatus
-from io import StringIO
-from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict
-from zipfile import ZipFile
+from typing import Mapping, Optional
 
 import flask
 import marshmallow as ma
@@ -34,8 +29,6 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
-import numpy as np
-from sklearn import manifold
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
@@ -49,9 +42,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
-    load_entities,
 )
-from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -316,6 +307,9 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{MDS.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
+    import numpy as np
+    from sklearn import manifold
+
     # get parameters
 
     TASK_LOGGER.info(f"Starting new MDS calculation task with db id '{db_id}'")

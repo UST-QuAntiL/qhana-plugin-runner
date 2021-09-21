@@ -54,6 +54,27 @@ poetry run invoke start-broker
 poetry run invoke worker  # use strg+c to stop worker
 ```
 
+### Running the Plugin-Runner with Docker Compose
+
+As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder `docker build -t muse-db plugins/costume_loader_pkg/db_container`.
+
+If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:
+```
+docker buildx build --load -t qhana-plugin-runner --platform linux/amd64 --no-cache .
+```
+
+Start the docker compose with:
+```
+docker-compose up
+```
+
+Delete the containers with:
+```
+docker-compose down
+```
+
+To also delete the volume containing the output files add the flag `-v`.
+
 ### Trying out the Plugin-Runner
 
 Start the plugin runner using the instructions above.

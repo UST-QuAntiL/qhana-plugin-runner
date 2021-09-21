@@ -174,6 +174,9 @@ class FileUrlValidator(UrlValidator):
             return self._validate_file_url(value)
         if value and value.startswith("data:"):
             return self._validate_data_url(value)
+
+        super().__init__(require_tld=False)
+
         return super().__call__(value)
 
     def _validate_file_url(self, value: str) -> str:

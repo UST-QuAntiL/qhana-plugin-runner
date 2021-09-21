@@ -220,7 +220,8 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
         return HA_BLP
 
     def get_requirements(self) -> str:
-        return "git+ssh://git@github.com/UST-QuAntiL/MuseEmbeddings.git@6cc2f18fdd6b9483d5aaa68d12f8e01cb6329dde#egg=hybrid_autoencoders"
+        # return "git+ssh://git@github.com/UST-QuAntiL/MuseEmbeddings.git@6cc2f18fdd6b9483d5aaa68d12f8e01cb6329dde#egg=hybrid_autoencoders"
+        return ""
 
 
 TASK_LOGGER = get_task_logger(__name__)
