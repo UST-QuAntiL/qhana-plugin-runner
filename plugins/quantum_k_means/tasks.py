@@ -1,3 +1,4 @@
+import os
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
@@ -54,6 +55,24 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: clusters='{clusters_cnt}'")
     variant = input_params.variant
     TASK_LOGGER.info(f"Loaded input parameters from db: variant='{variant}'")
+    backend = input_params.backend
+    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
+    ibmq_token = input_params.ibmq_token
+    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+
+    if ibmq_token == "****":
+        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+
+        if "IBMQ_TOKEN" in os.environ:
+            ibmq_token = os.environ["IBMQ_TOKEN"]
+            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
+        else:
+            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+
+    custom_backend = input_params.custom_backend
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
+    )
 
     # load data from file
 
@@ -80,15 +99,33 @@ def calculation_task(self, db_id: int) -> str:
     algo: Clustering
 
     if variant == VariantEnum.negative_rotation:
-        algo = NegativeRotationQuantumKMeansClustering(number_of_clusters=clusters_cnt)
+        algo = NegativeRotationQuantumKMeansClustering(
+            number_of_clusters=clusters_cnt,
+            backend=backend,
+            ibmq_token=ibmq_token,
+            ibmq_custom_backend=custom_backend,
+        )
     elif variant == VariantEnum.destructive_interference:
         algo = DestructiveInterferenceQuantumKMeansClustering(
-            number_of_clusters=clusters_cnt
+            number_of_clusters=clusters_cnt,
+            backend=backend,
+            ibmq_token=ibmq_token,
+            ibmq_custom_backend=custom_backend,
         )
     elif variant == VariantEnum.state_preparation:
-        algo = StatePreparationQuantumKMeansClustering(number_of_clusters=clusters_cnt)
+        algo = StatePreparationQuantumKMeansClustering(
+            number_of_clusters=clusters_cnt,
+            backend=backend,
+            ibmq_token=ibmq_token,
+            ibmq_custom_backend=custom_backend,
+        )
     elif variant == VariantEnum.positive_correlation:
-        algo = PositiveCorrelationQuantumKMeansClustering(number_of_clusters=clusters_cnt)
+        algo = PositiveCorrelationQuantumKMeansClustering(
+            number_of_clusters=clusters_cnt,
+            backend=backend,
+            ibmq_token=ibmq_token,
+            ibmq_custom_backend=custom_backend,
+        )
     else:
         raise ValueError("Unknown variant.")
 
