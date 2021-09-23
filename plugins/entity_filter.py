@@ -14,6 +14,7 @@
 
 from enum import Enum
 import mimetypes
+from celery.app.task import Task
 
 import requests
 from plugins.costume_loader_pkg.schemas import InputParameters
@@ -98,7 +99,7 @@ class EnumEncoder(JSONEncoder):
 
 class EntityFilterParametersSchema(FrontendFormBaseSchema):
     input_file_url = FileUrl(
-        required=True, allow_none=False, load_only=True, metadata={"label": "Input Data"}
+        required=True, allow_none=False, load_only=True, metadata={"label": "Entities URL"}
     )
 
     attributes = CSVList( # TODO: maybe via ma.fields.List(ma.fields.String(),
@@ -106,7 +107,7 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         element_type=ma.fields.String,
         metadata={
-            "label": "Attribute List",
+            "label": "Attributes",
             "description": "List of attributes in allowlist/blocklist.", 
             "input_type": "textarea",
         },
@@ -116,7 +117,7 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
         AttributeFilterType,
         required=True,
         metadata={
-            "label": "Attribute Filter Strategy",
+            "label": "Attribute Filter Setting",
             "description": "Specify attribute list as allowlist or blocklist.", 
             "input_type": "select",
         },
@@ -363,11 +364,14 @@ def filter_rows(
                     output_entities_random_rows.append(entity)
                     sampling_counter += 1
             else:
-                raise ValueError("Invalid argument for Row Sampling!")
+                msg = "Invalid argument for Row Sampling!"
+                TASK_LOGGER.error(msg)
+                raise ValueError(msg)
 
     if id_set: # not all ID's in file
-        raise ValueError(f"The following ID's could not be found: {str(id_set)}")
-        # TODO: do sth else?
+        msg = f"The following ID's could not be found: {str(id_set)}"
+        TASK_LOGGER.error(msg)
+        raise ValueError(msg)
     
     return output_entities_id_list + output_entities_random_rows
 
@@ -399,7 +403,9 @@ def filter_cols(
         if "ID" in attributes:
             attributes.remove("ID")
     else:
-        raise ValueError("Invalid argument for Attribute Filter Strategy!")
+        msg = "Invalid argument for Attribute Filter Strategy!"
+        TASK_LOGGER.error(msg)
+        raise ValueError(msg)
 
     # remove columns that are not in allowlist
     for entity in input_entities:
@@ -412,7 +418,7 @@ def filter_cols(
                 for attr in entity.copy().keys():
                     if attr in attributes:
                         del entity[attr]   
-        yield entity
+        yield entity    
 
 
 @CELERY.task(name=f"{EntityFilter.instance.identifier}.entity_filter_task", bind=True)
@@ -444,7 +450,9 @@ def entity_filter_task(self, db_id: int) -> str:
 
     ## Check parameter validity ##
     if input_file_url is None or not input_file_url:
-        raise ValueError("No input file URL provided!") 
+        msg = "No input file URL provided!"
+        TASK_LOGGER.error(msg)
+        raise ValueError(msg)
    
     # number of rows to be sampled
     n_sampled_rows : int = 0
@@ -459,13 +467,21 @@ def entity_filter_task(self, db_id: int) -> str:
             n_rows = len(id_set)
         n_sampled_rows = max(0, n_rows - len(id_set)) 
         if len(id_set) > n_rows:
-            raise ValueError("Length of ID list greater than number of rows!")
+            msg = "Length of ID list greater than number of rows!"
+            TASK_LOGGER.error(msg)
+            raise ValueError(msg)
 
     if row_sampling is None and n_sampled_rows > 0:
-        raise ValueError("Row sampling not specified!")
+        msg = "Row sampling not specified!"
+        TASK_LOGGER.error(msg)
+        raise ValueError(msg)
 
     if attribute_filter_strategy is None:
-        raise ValueError("Attribute setting not specified!")
+        msg = "Attribute filter strategy not specified!"
+        TASK_LOGGER.error(msg)
+        raise ValueError(msg)
+
+    raise ValueError("Test")
 
     ## Filtering ##
     with open_url(input_file_url, stream=True) as url_data:
@@ -483,8 +499,9 @@ def entity_filter_task(self, db_id: int) -> str:
                 n_sampled_rows=n_sampled_rows, row_sampling=row_sampling)
             
             if len(r_filtered_entities) != n_rows:
-                raise ValueError("Number of rows requested is greater than number of rows in input file!")
-                # TODO: maybe log an error instead of exception
+                msg = "Number of rows requested is greater than number of rows in input file!"
+                TASK_LOGGER.error(msg)
+                raise ValueError(msg)
         else:  
             r_filtered_entities = input_entities
 
