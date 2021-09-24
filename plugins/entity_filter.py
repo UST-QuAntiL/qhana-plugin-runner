@@ -481,8 +481,6 @@ def entity_filter_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise ValueError(msg)
 
-    raise ValueError("Test")
-
     ## Filtering ##
     with open_url(input_file_url, stream=True) as url_data:
         r_filtered_entities : Union[List[Dict[str, Any]], Generator[Dict[str, Any], None, None]] = []
