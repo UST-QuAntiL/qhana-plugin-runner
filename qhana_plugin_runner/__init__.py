@@ -90,6 +90,11 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
                 "result_backend": os.environ["RESULT_BACKEND"],
             }
 
+        if "PLUGIN_FOLDERS" in os.environ:
+            config["PLUGIN_FOLDERS"] = [
+                folder for folder in os.environ["PLUGIN_FOLDERS"].split(":") if folder
+            ]
+
         # load database URI from env vars
         if "SQLALCHEMY_DATABASE_URI" in os.environ:
             config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLALCHEMY_DATABASE_URI"]
