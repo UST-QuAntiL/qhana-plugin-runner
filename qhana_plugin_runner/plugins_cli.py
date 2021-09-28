@@ -98,13 +98,8 @@ def append_runner_dependencies(app: Flask, requirements: TextIOWrapper):
     requirements.flush()
     try:
         process = run(["poetry", "export", "--without-hashes"], check=True, stdout=PIPE)
-        if process.returncode != 0:
-            get_logger(app, PLUGIN_COMMAND_LOGGER).info(
-                "Could not load QHAna plugin runner dependencies, skipping."
-            )
-        else:
-            requirements.write(process.stdout.decode())
-    except OSError:
+        requirements.write(process.stdout.decode())
+    except OSError or CalledProcessError:
         get_logger(app, PLUGIN_COMMAND_LOGGER).info(
             "Could not load QHAna plugin runner dependencies, skipping."
         )
