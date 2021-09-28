@@ -72,7 +72,7 @@ def install_plugin_dependencies(dry_run: bool, skip_runner_dependencies: bool):
         try:
             run(
                 [
-                    "python",
+                    sys.executable,
                     "-m",
                     "pip",
                     "install",
