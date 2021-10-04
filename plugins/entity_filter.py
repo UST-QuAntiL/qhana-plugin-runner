@@ -427,12 +427,12 @@ def filter_cols(
             attribute_filter_strategy == AttributeFilterType.ALLOWLIST.value
             and attributes
         ):
-            for attr in entity.copy().keys():
+            for attr in tuple(entity.keys()):
                 if attr not in attributes:
                     del entity[attr]
         else:  # Blocklist
             if attributes:  # nothing to do if empty
-                for attr in entity.copy().keys():
+                for attr in tuple(entity.keys()):
                     if attr in attributes:
                         del entity[attr]
         yield entity
