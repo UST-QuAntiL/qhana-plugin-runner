@@ -32,14 +32,13 @@ class QuantumBackends(enum.Enum):
     aer_statevector_simulator = "aer_statevector_simulator"
     aer_qasm_simulator = "aer_qasm_simulator"
     ibmq_qasm_simulator = "ibmq_qasm_simulator"
-    ibmq_16_melbourne = "ibmq_16_melbourne"
-    ibmq_armonk = "ibmq_armonk"
-    ibmq_5_yorktown = "ibmq_5_yorktown"
-    ibmq_ourense = "ibmq_ourense"
-    ibmq_vigo = "ibmq_vigo"
-    ibmq_valencia = "ibmq_valencia"
-    ibmq_athens = "ibmq_athens"
     ibmq_santiago = "ibmq_santiago"
+    ibmq_manila = "ibmq_manila"
+    ibmq_bogota = "ibmq_bogota"
+    ibmq_quito = "ibmq_quito"
+    ibmq_belem = "ibmq_belem"
+    ibmq_lima = "ibmq_lima"
+    ibmq_armonk = "ibmq_armonk"
 
     @staticmethod
     def get_pennylane_backend(

@@ -17,7 +17,7 @@
 import sys
 from io import TextIOWrapper
 from pathlib import Path
-from subprocess import CalledProcessError, run
+from subprocess import PIPE, CalledProcessError, run
 from tempfile import TemporaryDirectory
 from typing import cast
 
@@ -72,7 +72,7 @@ def install_plugin_dependencies(dry_run: bool, skip_runner_dependencies: bool):
         try:
             run(
                 [
-                    "python",
+                    sys.executable,
                     "-m",
                     "pip",
                     "install",
@@ -96,7 +96,13 @@ def append_runner_dependencies(app: Flask, requirements: TextIOWrapper):
     )
     requirements.write("# qhana_plugin_runner requirements\n")
     requirements.flush()
-    run(["poetry", "export", "--without-hashes"], check=True, stdout=requirements)
+    try:
+        process = run(["poetry", "export", "--without-hashes"], check=True, stdout=PIPE)
+        requirements.write(process.stdout.decode())
+    except (OSError, CalledProcessError):
+        get_logger(app, PLUGIN_COMMAND_LOGGER).info(
+            "Could not load QHAna plugin runner dependencies, skipping."
+        )
     requirements.write("\n\n")
 
 
