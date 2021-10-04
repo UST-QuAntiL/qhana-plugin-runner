@@ -1,3 +1,4 @@
+import os
 from http import HTTPStatus
 from typing import Mapping
 
@@ -12,6 +13,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from plugins.quantum_k_means import QKMEANS_BLP, QKMeans
+from plugins.quantum_k_means.backend.clustering import QuantumBackends
 from plugins.quantum_k_means.schemas import InputParametersSchema, TaskResponseSchema
 from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -107,7 +109,16 @@ class MicroFrontend(MethodView):
         fields = InputParametersSchema().fields
 
         # define default values
-        default_values = {fields["clusters_cnt"].data_key: 2}
+        default_values = {
+            fields["clusters_cnt"].data_key: 2,
+            fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+        }
+
+        if "IBMQ_BACKEND" in os.environ:
+            default_values[fields["backend"].data_key] = os.environ["IBMQ_BACKEND"]
+
+        if "IBMQ_TOKEN" in os.environ:
+            default_values[fields["ibmq_token"].data_key] = "****"
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)
