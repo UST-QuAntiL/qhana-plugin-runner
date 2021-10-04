@@ -65,15 +65,17 @@ class FileAdapter(BaseAdapter):
                 resp.status_code = HTTPStatus.OK
 
                 # set mimetype in response if guessable
-                mimetype = mimetypes.MimeTypes().guess_type(url=file_path)[0]
+                mimetype = mimetypes.MimeTypes().guess_type(url=file_path)
                 if mimetype:
-                    resp.headers["Content-Type"] = mimetype
-                
+                    resp.headers["Content-Type"] = mimetype[0]
+
             except IOError:
                 resp.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
 
         if resp.status_code != HTTPStatus.OK:
-            body = resp.status_code.description.encode()  # only works with HTTPStatus instances!
+            body = (
+                resp.status_code.description.encode()
+            )  # only works with HTTPStatus instances!
             resp.raw = BytesIO(body)
             resp.headers["Content-Length"] = str(len(body))
 
