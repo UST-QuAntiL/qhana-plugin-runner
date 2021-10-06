@@ -4,7 +4,7 @@ Data loaders load data and metadata from different sources in a specified data f
 
 ## Loading Entities
 
-File Type Tag: `entity`/`entity-list`
+File Type Tag: `entity`/`entity/list`
 
 Entities can be serialized in two different formats (JSON or CSV).
 
