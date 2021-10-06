@@ -17,6 +17,7 @@
 from base64 import b64decode
 from http import HTTPStatus
 from io import BytesIO
+import mimetypes
 from pathlib import Path
 from typing import Container, Mapping, Optional, Text, Tuple, Union
 from urllib.parse import unquote_to_bytes, urlparse
@@ -63,12 +64,18 @@ class FileAdapter(BaseAdapter):
                 resp.headers["Content-Length"] = str(file_path.stat().st_size)
                 resp.status_code = HTTPStatus.OK
 
-                # TODO set mimetype in response?
+                # set mimetype in response if guessable
+                mimetype = mimetypes.MimeTypes().guess_type(url=file_path)
+                if mimetype:
+                    resp.headers["Content-Type"] = mimetype[0]
+
             except IOError:
                 resp.status_code = HTTPStatus.INTERNAL_SERVER_ERROR
 
         if resp.status_code != HTTPStatus.OK:
-            body = resp.status_code.description.encode()  # only works with HTTPStatus instances!
+            body = (
+                resp.status_code.description.encode()
+            )  # only works with HTTPStatus instances!
             resp.raw = BytesIO(body)
             resp.headers["Content-Length"] = str(len(body))
 

@@ -16,11 +16,12 @@
 
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Iterable, Mapping, Optional, Set, Type
+from typing import Any, Iterable, List, Mapping, Optional, Set, Type
 from warnings import warn
 
 from marshmallow.exceptions import ValidationError
 from marshmallow.fields import Field
+from marshmallow.utils import resolve_field_instance
 from marshmallow.validate import OneOf
 
 
@@ -123,3 +124,30 @@ class EnumField(Field):
             return self.enum_type[value]
         except KeyError as error:
             raise self.make_error("invalid", input=value) from error
+
+
+class CSVList(Field):
+    """Validator for validating comma separated lists.
+
+    Args:
+        element_type (Type[Field]): the field type of list elements
+
+    Raises:
+        ValueError: if fields are of an invalid type
+    """
+
+    def __init__(self, element_type: Field, **kwargs):
+        super().__init__(**kwargs)
+        self.element_type = resolve_field_instance(element_type)
+
+    def _serialize(self, value: List[Any], attr: str, obj: Any, **kwargs) -> str:
+        return ",".join(
+            [self.element_type._serialize(v, attr, obj, **kwargs) for v in value]
+        )
+
+    def _deserialize(
+        self, value: str, attr: Optional[str], data: Optional[Mapping[str, Any]], **kwargs
+    ):
+        if not value:
+            return []
+        return [self.element_type.deserialize(v) for v in value.split(",")]
