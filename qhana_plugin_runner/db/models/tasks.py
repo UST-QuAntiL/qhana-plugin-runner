@@ -17,17 +17,49 @@ from datetime import datetime
 from typing import List, Optional, Sequence, Union
 
 from sqlalchemy.orm import relation, relationship
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import select
-from sqlalchemy.sql.schema import Column, ForeignKey
+from sqlalchemy.sql.schema import (
+    Column,
+    ForeignKey,
+    ForeignKeyConstraint,
+    PrimaryKeyConstraint,
+)
+from sqlalchemy.ext.associationproxy import association_proxy
 
 from ..db import DB, REGISTRY
 
 
 @REGISTRY.mapped
 @dataclass
+class TaskData:
+    """Dataclass for key-value store of :class:`ProcessingTask`
+
+    Attributes:
+        id (int, optional): automatically generated database id. Use the id to fetch this information from the database.
+        key (str, optional): a key in dict
+        value (str, optional): a corresponding value in dict
+    """
+
+    __tablename__ = "TaskData"
+
+    __sa_dataclass_metadata_key__ = "sa"
+
+    id: int = field(
+        init=False,
+        metadata={"sa": Column(ForeignKey("ProcessingTask.id"), primary_key=True)},
+    )
+    key: str = field(metadata={"sa": Column(sql.String(100), primary_key=True)})
+    value: Optional[str] = field(metadata={"sa": Column(sql.Text(1000), nullable=True)})
+
+
+@REGISTRY.mapped
+@dataclass
 class ProcessingTask:
     """Dataclass for persisting (logical) task information.
+
+    Implements dict-like functionality. Key-value pairs can be specified and accessed as in a dict.
 
     Attributes:
         id (int, optional): automatically generated database id. Use the id to fetch this information from the database.
@@ -36,6 +68,7 @@ class ProcessingTask:
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
+        data (Optional[dict]): key-value store for additional lightweight task data
         finished_status (Optional[str], optional): the status string with witch the celery task with the ``task_id`` finished. If set then ``task_id`` may not be checked.
         task_log (Optional[str], optional): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
         outputs (List[TaskFile], optional): the output data (files) of the task
@@ -59,6 +92,29 @@ class ProcessingTask:
     )
 
     parameters: str = field(default="", metadata={"sa": Column(sql.Text())})
+
+    _data: dict = field(
+        default_factory=dict,
+        metadata={
+            "sa": relationship(
+                "TaskData",
+                collection_class=attribute_mapped_collection("key"),
+                cascade="all, delete-orphan",
+            )
+        },
+    )
+
+    data = association_proxy(
+        "_data", "value", creator=lambda key, value: TaskData(key=key, value=value)
+    )
+
+    ui_base_endpoint_url: Optional[str] = field(
+        default=None, metadata={"sa": Column(sql.String(200))}
+    )
+
+    ui_endpoint_url: Optional[str] = field(  # TODO: maybe rename
+        default=None, metadata={"sa": Column(sql.String(200))}
+    )
 
     finished_status: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.String(100))}
