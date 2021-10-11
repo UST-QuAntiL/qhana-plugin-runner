@@ -17,7 +17,6 @@ import mimetypes
 from celery.app.task import Task
 
 import requests
-from plugins.costume_loader_pkg.schemas import InputParameters
 import random
 from http import HTTPStatus
 from json import dumps, loads, JSONEncoder
@@ -280,7 +279,7 @@ class ProcessView(MethodView):
     )
     @ENTITY_FILTER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_params: InputParameters):
+    def post(self, input_params: EntityFilterParametersSchema):
         """Start the entity filter task."""
         db_task = ProcessingTask(
             task_name=entity_filter_task.name,
