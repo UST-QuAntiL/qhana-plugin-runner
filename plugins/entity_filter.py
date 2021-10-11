@@ -17,11 +17,15 @@ import mimetypes
 from celery.app.task import Task
 
 import requests
-from plugins.costume_loader_pkg.schemas import InputParameters
 import random
 from http import HTTPStatus
 from json import dumps, loads, JSONEncoder
-from qhana_plugin_runner.plugin_utils.entity_marshalling import ResponseLike, ensure_dict, load_entities, save_entities
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ResponseLike,
+    ensure_dict,
+    load_entities,
+    save_entities,
+)
 from qhana_plugin_runner.requests import open_url
 from typing import Any, Dict, Generator, List, Mapping, Optional, Set, Union
 
@@ -99,16 +103,19 @@ class EnumEncoder(JSONEncoder):
 
 class EntityFilterParametersSchema(FrontendFormBaseSchema):
     input_file_url = FileUrl(
-        required=True, allow_none=False, load_only=True, metadata={"label": "Entities URL"}
+        required=True,
+        allow_none=False,
+        load_only=True,
+        metadata={"label": "Entities URL"},
     )
 
-    attributes = CSVList( # TODO: maybe via ma.fields.List(ma.fields.String(),
+    attributes = CSVList(  # TODO: maybe via ma.fields.List(ma.fields.String(),
         required=False,
         allow_none=True,
         element_type=ma.fields.String,
         metadata={
             "label": "Attributes",
-            "description": "List of attributes in allowlist/blocklist.", 
+            "description": "List of attributes in allowlist/blocklist.",
             "input_type": "textarea",
         },
     )
@@ -118,13 +125,13 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
         required=True,
         metadata={
             "label": "Attribute Filter Setting",
-            "description": "Specify attribute list as allowlist or blocklist.", 
+            "description": "Specify attribute list as allowlist or blocklist.",
             "input_type": "select",
         },
     )
 
     n_rows = ma.fields.Integer(
-        required=False, 
+        required=False,
         allow_none=True,
         metadata={
             "label": "Number of Rows",
@@ -132,8 +139,8 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
             "input_type": "textfield",
         },
     )
-    
-    row_sampling = EnumField( 
+
+    row_sampling = EnumField(
         RowSamplingType,
         required=True,
         metadata={
@@ -144,7 +151,7 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
         },
     )
 
-    id_list = CSVList( 
+    id_list = CSVList(
         required=False,
         allow_none=True,
         element_type=ma.fields.String,
@@ -177,10 +184,10 @@ class PluginsView(MethodView):
             "processing_resource_metadata": {
                 "href": url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 "ui_href": url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
-                "inputs": [ # TODO: only file input (entities...)
+                "inputs": [  # TODO: only file input (entities...)
                     [
                         {
-                            "output_type": "raw", 
+                            "output_type": "raw",
                             "content_type": "application/json",
                             "name": "Raw entity data",
                         },
@@ -194,7 +201,7 @@ class PluginsView(MethodView):
                 ],
                 "outputs": [
                     [
-                        { # TODO: file handle to filtered file, could be json or csv...
+                        {  # TODO: file handle to filtered file, could be json or csv...
                             "output_type": "raw",
                             "content_type": "application/json",
                             "name": "Filtered raw entity data",
@@ -212,7 +219,7 @@ class MicroFrontend(MethodView):
     example_inputs = {
         "inputFileUrl": "file:///<path_to_file>/entities.json",
         "nRows": 5,
-        "attributes": "ID"
+        "attributes": "ID",
     }
 
     @ENTITY_FILTER_BLP.html_response(
@@ -267,18 +274,23 @@ class MicroFrontend(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @ENTITY_FILTER_BLP.arguments(EntityFilterParametersSchema(unknown=EXCLUDE), location="form")
+    @ENTITY_FILTER_BLP.arguments(
+        EntityFilterParametersSchema(unknown=EXCLUDE), location="form"
+    )
     @ENTITY_FILTER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_params : InputParameters):
+    def post(self, input_params: EntityFilterParametersSchema):
         """Start the entity filter task."""
         db_task = ProcessingTask(
-            task_name=entity_filter_task.name, 
-            parameters=dumps(input_params, cls=EnumEncoder))
+            task_name=entity_filter_task.name,
+            parameters=dumps(input_params, cls=EnumEncoder),
+        )
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = entity_filter_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = entity_filter_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         result: AsyncResult = task.apply_async()
@@ -301,7 +313,7 @@ class EntityFilter(QHAnaPluginBase):
 
     def get_api_blueprint(self):
         return ENTITY_FILTER_BLP
-    
+
     def get_requirements(self) -> str:
         return ""
 
@@ -310,20 +322,21 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def filter_rows(
-    input_entities : Generator[Dict[str, Any], None, None], 
-    id_set : Set[str], 
-    n_sampled_rows : int, row_sampling : str
+    input_entities: Generator[Dict[str, Any], None, None],
+    id_set: Set[str],
+    n_sampled_rows: int,
+    row_sampling: str,
 ) -> List[Dict[str, Any]]:
     """Filters rows of ``input_entities``.
-    
-    Iterates over entities in ``input_entities``. 
-    If "ID" of entity is in ``id_set``, the entity is added to output list. 
-    If not and ``n_sampled_rows > 0``, row sampling is applied according to the strategy specified in ``row_sampling``. 
+
+    Iterates over entities in ``input_entities``.
+    If "ID" of entity is in ``id_set``, the entity is added to output list.
+    If not and ``n_sampled_rows > 0``, row sampling is applied according to the strategy specified in ``row_sampling``.
     Random row sampling is done as in `Uniformly sampling from N elements <https://math.stackexchange.com/questions/846036/can-i-uniformly-sample-from-n-distinct-elements-where-n-is-unknown-but-fini>`_.
-    
+
     Args:
         input_entities (Generator[Dict[str, Any], None, None]): input entities to be filtered
-        id_set (Set[str]): list of entity ID's 
+        id_set (Set[str]): list of entity ID's
         n_sampled_rows (int): number of rows that are to be sampled randomly
         row_sampling (str): strategy for sampling (value of :class:`RowSamplingType`)
 
@@ -335,15 +348,15 @@ def filter_rows(
         List[Dict[str, Any]]: filtered entities
     """
     # list of output entities with ID in id_set
-    output_entities_id_list : List[Dict[str, Any]] = []
+    output_entities_id_list: List[Dict[str, Any]] = []
     # list of sampled output entities,
-    output_entities_random_rows : List[Dict[str, Any]] = []
+    output_entities_random_rows: List[Dict[str, Any]] = []
     # counts number of sampled entities
     sampling_counter = 0
     for entity in input_entities:
         if entity["ID"] in id_set:
             # find entities in id_set if id_set not empty
-            output_entities_id_list.append(entity) # TODO
+            output_entities_id_list.append(entity)  # TODO
             id_set.remove(entity["ID"])
 
         elif n_sampled_rows > 0:
@@ -355,7 +368,7 @@ def filter_rows(
                     sampling_counter += 1
                 else:
                     # add with prob n/(n+k+1) at random index, k is counter
-                    if random.random() < n_sampled_rows/(sampling_counter + 1):
+                    if random.random() < n_sampled_rows / (sampling_counter + 1):
                         index = random.randrange(n_sampled_rows)
                         output_entities_random_rows[index] = entity
                     sampling_counter += 1
@@ -368,18 +381,18 @@ def filter_rows(
                 TASK_LOGGER.error(msg)
                 raise ValueError(msg)
 
-    if id_set: # not all ID's in file
+    if id_set:  # not all ID's in file
         msg = f"The following ID's could not be found: {str(id_set)}"
         TASK_LOGGER.error(msg)
         raise ValueError(msg)
-    
+
     return output_entities_id_list + output_entities_random_rows
 
 
 def filter_cols(
-    input_entities : Union[List[Dict[str, Any]], Generator[Dict[str, Any], None, None]], 
-    attribute_filter_strategy : Optional[str],
-    attributes : Set[str]
+    input_entities: Union[List[Dict[str, Any]], Generator[Dict[str, Any], None, None]],
+    attribute_filter_strategy: Optional[str],
+    attributes: Set[str],
 ) -> Generator[Dict[str, Any], None, None]:
     """Filters colums of ``input_entities``.
 
@@ -409,16 +422,19 @@ def filter_cols(
 
     # remove columns that are not in allowlist
     for entity in input_entities:
-        if attribute_filter_strategy == AttributeFilterType.ALLOWLIST.value and attributes:
-            for attr in entity.copy().keys():
+        if (
+            attribute_filter_strategy == AttributeFilterType.ALLOWLIST.value
+            and attributes
+        ):
+            for attr in tuple(entity.keys()):
                 if attr not in attributes:
                     del entity[attr]
-        else: # Blocklist
-            if attributes: # nothing to do if empty
-                for attr in entity.copy().keys():
+        else:  # Blocklist
+            if attributes:  # nothing to do if empty
+                for attr in tuple(entity.keys()):
                     if attr in attributes:
-                        del entity[attr]   
-        yield entity    
+                        del entity[attr]
+        yield entity
 
 
 @CELERY.task(name=f"{EntityFilter.instance.identifier}.entity_filter_task", bind=True)
@@ -431,32 +447,36 @@ def entity_filter_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    params : Dict = loads(task_data.parameters or "{}")
+    params: Dict = loads(task_data.parameters or "{}")
     input_file_url: Optional[str] = params.get("input_file_url", None)
     # list of attributes
     attributes: Set[str] = set(params.get("attributes", []))
     # choice for attributes (can be either allowlist or blocklist)
-    attribute_filter_strategy: Optional[str] = params.get("attribute_filter_strategy", None)
+    attribute_filter_strategy: Optional[str] = params.get(
+        "attribute_filter_strategy", None
+    )
     # number of requested output rows
     n_rows: Optional[int] = params.get("n_rows", None)
     # type of sampling (random or first n)
-    row_sampling : Optional[str] = params.get("row_sampling", None)
+    row_sampling: Optional[str] = params.get("row_sampling", None)
     # set of id's
     id_set: Set[str] = set(params.get("id_list", []))
-    
-    TASK_LOGGER.info(f"Loaded input parameters from db: input_file_url='{input_file_url}', \
+
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: input_file_url='{input_file_url}', \
         attributes='{attributes}', attribute_filter_strategy='{attribute_filter_strategy}', n_rows='{n_rows}', \
-        row_sampling='{row_sampling}', id_list='{id_set}'")
+        row_sampling='{row_sampling}', id_list='{id_set}'"
+    )
 
     ## Check parameter validity ##
     if input_file_url is None or not input_file_url:
         msg = "No input file URL provided!"
         TASK_LOGGER.error(msg)
         raise ValueError(msg)
-   
+
     # number of rows to be sampled
-    n_sampled_rows : int = 0
-    
+    n_sampled_rows: int = 0
+
     if (n_rows is None and not id_set) or row_sampling == RowSamplingType.ALL_ROWS.value:
         # only filter columns
         n_rows = INFINITY
@@ -465,7 +485,7 @@ def entity_filter_task(self, db_id: int) -> str:
     else:
         if n_rows is None:
             n_rows = len(id_set)
-        n_sampled_rows = max(0, n_rows - len(id_set)) 
+        n_sampled_rows = max(0, n_rows - len(id_set))
         if len(id_set) > n_rows:
             msg = "Length of ID list greater than number of rows!"
             TASK_LOGGER.error(msg)
@@ -483,42 +503,51 @@ def entity_filter_task(self, db_id: int) -> str:
 
     ## Filtering ##
     with open_url(input_file_url, stream=True) as url_data:
-        r_filtered_entities : Union[List[Dict[str, Any]], Generator[Dict[str, Any], None, None]] = []
+        r_filtered_entities: Union[
+            List[Dict[str, Any]], Generator[Dict[str, Any], None, None]
+        ] = []
         try:
-            mimetype = url_data.headers['Content-Type']
+            mimetype = url_data.headers["Content-Type"]
         except KeyError:
             mimetype = mimetypes.MimeTypes().guess_type(url=input_file_url)[0]
         input_entities = ensure_dict(load_entities(file_=url_data, mimetype=mimetype))
-        
+
         # Filter rows
         if n_rows != INFINITY:
             r_filtered_entities = filter_rows(
-                input_entities=input_entities, id_set=id_set, 
-                n_sampled_rows=n_sampled_rows, row_sampling=row_sampling)
-            
+                input_entities=input_entities,
+                id_set=id_set,
+                n_sampled_rows=n_sampled_rows,
+                row_sampling=row_sampling,
+            )
+
             if len(r_filtered_entities) != n_rows:
                 msg = "Number of rows requested is greater than number of rows in input file!"
                 TASK_LOGGER.error(msg)
                 raise ValueError(msg)
-        else:  
+        else:
             r_filtered_entities = input_entities
 
         # Filter cols
         output_entities = filter_cols(
-            input_entities=r_filtered_entities, 
+            input_entities=r_filtered_entities,
             attribute_filter_strategy=attribute_filter_strategy,
-            attributes=attributes)
-        
+            attributes=attributes,
+        )
+
         # Write to output file
         with SpooledTemporaryFile(mode="w") as output:
-            save_entities(entities=output_entities, file_=output, mimetype=mimetype) 
+            save_entities(entities=output_entities, file_=output, mimetype=mimetype)
 
             if mimetype == "application/json":
                 file_type = ".json"
             else:
                 file_type = ".csv"
             STORE.persist_task_result(
-                db_id, output, "filtered_entities" + file_type, "entity_filter_output", mimetype
-            ) 
-    return "Filter successful." # TODO
-    
+                db_id,
+                output,
+                "filtered_entities" + file_type,
+                "entity_filter_output",
+                mimetype,
+            )
+    return "Filter successful."  # TODO
