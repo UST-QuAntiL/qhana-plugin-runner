@@ -29,7 +29,7 @@ from marshmallow import types
 from marshmallow.exceptions import ValidationError
 from marshmallow.validate import URL as UrlValidator
 
-from .jwt import JWTMixin
+from .jwt_helper import JWTMixin
 
 
 class HtmlResponseMixin:
