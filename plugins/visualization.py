@@ -29,7 +29,13 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -108,43 +114,32 @@ class PluginsView(MethodView):
     @VIS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Visualization endpoint returning the plugin metadata."""
-        return {
-            "name": VIS.instance.name,
-            "version": VIS.instance.version,
-            "identifier": VIS.instance.identifier,
-            "root_href": url_for(f"{VIS_BLP.name}.PluginsView"),
-            "title": "Visualization",
-            "description": "Plots points with cluster information.",
-            "plugin_type": "visualization",
-            "tags": [],
-            "processing_resource_metadata": {
-                "href": url_for(f"{VIS_BLP.name}.CalcView"),
-                "ui_href": url_for(f"{VIS_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "entity-points",
-                            "content_type": "application/json",
-                            "name": "Entity points",
-                        },
-                        {
-                            "output_type": "clusters",
-                            "content_type": "application/json",
-                            "name": "Clusters",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Visualization",
+            description="Plots points with cluster information.",
+            name=VIS.instance.identifier,
+            version=VIS.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{VIS_BLP.name}.CalcView"),
+                ui_href=url_for(f"{VIS_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="entity-points",
+                        content_type=["application/json"],
+                        required=True,
+                    )
                 ],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "plot",
-                            "content_type": "text/html",
-                            "name": "Plot",
-                        }
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="clusters",
+                        content_type=["application/json"],
+                        required=True,
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["visualization"],
+        )
 
 
 @VIS_BLP.route("/ui/")

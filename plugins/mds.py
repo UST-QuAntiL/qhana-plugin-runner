@@ -31,7 +31,13 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api import EnumField
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -150,38 +156,32 @@ class PluginsView(MethodView):
     @MDS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """MDS endpoint returning the plugin metadata."""
-        return {
-            "name": MDS.instance.name,
-            "version": MDS.instance.version,
-            "identifier": MDS.instance.identifier,
-            "root_href": url_for(f"{MDS_BLP.name}.PluginsView"),
-            "title": "Multidimensional Scaling (MDS)",
-            "description": "Converts distance values (distance matrix) to points in a space.",
-            "plugin_type": "dist-to-points",
-            "tags": [],
-            "processing_resource_metadata": {
-                "href": url_for(f"{MDS_BLP.name}.CalcView"),
-                "ui_href": url_for(f"{MDS_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "entity-distances",
-                            "content_type": "application/json",
-                            "name": "Entity distances",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Multidimensional Scaling (MDS)",
+            description="Converts distance values (distance matrix) to points in a space.",
+            name=MDS.instance.identifier,
+            version=MDS.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{MDS_BLP.name}.CalcView"),
+                ui_href=url_for(f"{MDS_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="entity-distances",
+                        content_type=["application/json"],
+                        required=True,
+                    )
                 ],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "entity-points",
-                            "content_type": "application/json",
-                            "name": "Entity points",
-                        }
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="entity-points",
+                        content_type=["application/json"],
+                        required=True,
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["dist-to-points"],
+        )
 
 
 @MDS_BLP.route("/ui/")

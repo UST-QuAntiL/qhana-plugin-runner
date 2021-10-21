@@ -23,15 +23,11 @@ from celery.result import AsyncResult
 from flask.views import MethodView
 from flask_smorest import abort
 
-from qhana_plugin_runner.api.plugin_schemas import (
-    ConcreteOutputMetadataSchema,
-    OutputMetadata,
-)
+from qhana_plugin_runner.api.plugin_schemas import DataMetadata, DataMetadataSchema
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-from qhana_plugin_runner.storage import STORE
 
 TASKS_API = SmorestBlueprint(
     "tasks-api",
@@ -47,7 +43,7 @@ class TaskData:
     task_id: str
     status: str
     task_log: Optional[str] = None
-    outputs: Sequence[OutputMetadata] = field(default_factory=list)
+    outputs: Sequence[DataMetadata] = field(default_factory=list)
 
 
 class TaskStatusSchema(MaBaseSchema):
@@ -56,7 +52,7 @@ class TaskStatusSchema(MaBaseSchema):
     status = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_log = ma.fields.String(required=False, allow_none=True, dump_only=True)
     outputs = ma.fields.List(
-        ma.fields.Nested(ConcreteOutputMetadataSchema()),
+        ma.fields.Nested(DataMetadataSchema()),
         required=False,
         allow_none=True,
         dump_only=True,
@@ -106,17 +102,16 @@ class TaskView(MethodView):
                 task_log=None,
             )
 
-        outputs: List[OutputMetadata] = []
+        outputs: List[DataMetadata] = []
 
         for file_ in TaskFile.get_task_result_files(task_data):
             if file_.file_type is None or file_.mimetype is None:
                 continue  # result files must have file and mime type set
             outputs.append(
-                OutputMetadata(
-                    output_type=file_.file_type,
-                    content_type=file_.mimetype,
-                    name=file_.file_name,
-                    href=STORE.get_task_file_url(file_),
+                DataMetadata(
+                    data_type=file_.file_type,
+                    content_type=[file_.mimetype],
+                    required=True,  # TODO: use correct value
                 )
             )
 
