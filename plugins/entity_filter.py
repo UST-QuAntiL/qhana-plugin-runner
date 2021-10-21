@@ -24,6 +24,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    PluginMetadataSchema,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
@@ -71,12 +72,6 @@ ENTITY_FILTER_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Entity filter API.",
 )
-
-
-class ResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -170,7 +165,7 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, ResponseSchema())
+    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Entity filter endpoint returning the plugin metadata."""
