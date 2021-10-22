@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Dict, Mapping, Optional
@@ -22,7 +21,7 @@ import marshmallow as ma
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
-from flask import Response
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -31,6 +30,13 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 from sqlalchemy.sql.expression import select
 
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+)
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
@@ -58,12 +64,6 @@ HA_BLP = SecurityBlueprint(
 )
 
 
-class HybridAutoencoderResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
-
-
 class HybridAutoencoderTaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
@@ -72,28 +72,54 @@ class HybridAutoencoderTaskResponseSchema(MaBaseSchema):
 
 class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
     input_data = FileUrl(
-        required=True, allow_none=False, load_only=True, metadata={"label": "Input Data"}
+        required=True,
+        allow_none=False,
+        load_only=True,
+        metadata={
+            "label": "Input Data",
+            "description": "URL to the input data.",
+            "input_type": "text",
+        },
     )
     number_of_qubits = ma.fields.Integer(
         required=True,
         allow_none=False,
         load_only=True,
-        metadata={"label": "Number of Qubits"},
+        metadata={
+            "label": "Number of Qubits",
+            "description": "Number of qubits that will be used.",
+            "input_type": "text",
+        },
     )
     embedding_size = ma.fields.Integer(
         required=True,
         allow_none=False,
         load_only=True,
-        metadata={"label": "Embedding Size"},
+        metadata={
+            "label": "Embedding Size",
+            "description": "Size the embeddings will have (number of values).",
+            "input_type": "text",
+        },
     )
     qnn_name = ma.fields.String(
-        required=True, allow_none=False, load_only=True, metadata={"label": "QNN Name"}
+        required=True,
+        allow_none=False,
+        load_only=True,
+        metadata={
+            "label": "QNN Name",
+            "description": "Name of the QNN that will be used.",
+            "input_type": "text",
+        },
     )
     training_steps = ma.fields.Integer(
         required=True,
         allow_none=False,
         load_only=True,
-        metadata={"label": "Training Steps"},
+        metadata={
+            "label": "Training Steps",
+            "description": "Number of training steps",
+            "input_type": "text",
+        },
     )
 
 
@@ -101,15 +127,36 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @HA_BLP.response(HTTPStatus.OK, HybridAutoencoderResponseSchema())
+    @HA_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @HA_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Demo endpoint returning the plugin metadata."""
-        return {
-            "name": HybridAutoencoderPlugin.instance.name,
-            "version": HybridAutoencoderPlugin.instance.version,
-            "identifier": HybridAutoencoderPlugin.instance.identifier,
-        }
+        return PluginMetadata(
+            title="Hybrid Autoencoder",
+            description="Reduces the dimensionality of a given dataset with a combination of classical and quantum neural networks.",
+            name=HybridAutoencoderPlugin.instance.identifier,
+            version=HybridAutoencoderPlugin.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{HA_BLP.name}.HybridAutoencoderPennylaneAPI"),
+                ui_href=url_for(f"{HA_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="real-valued-entities",
+                        content_type=["application/json"],
+                        required=True,
+                    )
+                ],
+                data_output=[
+                    DataMetadata(
+                        data_type="real-valued-entities",
+                        content_type=["application/json"],
+                        required=True,
+                    )
+                ],
+            ),
+            tags=["dimensionality-reduction"],
+        )
 
 
 @HA_BLP.route("/ui/")
@@ -201,11 +248,9 @@ class HybridAutoencoderPennylaneAPI(MethodView):
         db_task.task_id = result.id
         db_task.save(commit=True)
 
-        return {
-            "name": hybrid_autoencoder_pennylane_task.name,
-            "task_id": str(result.id),
-            "task_result_url": url_for("tasks-api.TaskView", task_id=str(result.id)),
-        }
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+        )
 
 
 class HybridAutoencoderPlugin(QHAnaPluginBase):
@@ -221,6 +266,7 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         # return "git+ssh://git@github.com/UST-QuAntiL/MuseEmbeddings.git@6cc2f18fdd6b9483d5aaa68d12f8e01cb6329dde#egg=hybrid_autoencoders"
+        # TODO: remove dependency on the MuseEmbeddings project
         return ""
 
 
