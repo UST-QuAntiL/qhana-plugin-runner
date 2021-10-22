@@ -22,7 +22,7 @@ TASK_LOGGER = get_task_logger(__name__)
 )
 def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     import numpy as np
-    from hybrid_autoencoders import simple_api
+    from plugins.hybrid_ae_pkg.backend import simple_api
 
     TASK_LOGGER.info(
         f"Starting new hybrid autoencoder pennylane task with db id '{db_id}'"
