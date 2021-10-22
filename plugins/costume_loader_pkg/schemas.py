@@ -1,13 +1,11 @@
 from enum import Enum
-from typing import List, Any, Optional, Mapping
 
 import marshmallow as ma
-from marshmallow import fields, post_load
-from marshmallow.utils import resolve_field_instance
+from marshmallow import post_load
 
 from qhana_plugin_runner.api import MaBaseSchema
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
-from qhana_plugin_runner.api.extra_fields import EnumField, CSVList
+from qhana_plugin_runner.api.extra_fields import EnumField
 
 
 class CostumeType(Enum):
