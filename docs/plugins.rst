@@ -204,13 +204,13 @@ Example of a plugin result:
         },
         "steps": [
             {
-                "href": ".../<UUID>/step1",
+                "href": ".../<UUID>/step1-process",
                 "uiHref": ".../<UUID>/step1-ui",
                 "stepId": "step1",
                 "cleared": true
             },
             {
-                "href": ".../<UUID>/step2b",
+                "href": ".../<UUID>/step2b-process",
                 "uiHref": ".../<UUID>/step2b-ui",
                 "stepId": "step1.step2b",
                 "cleared": true
