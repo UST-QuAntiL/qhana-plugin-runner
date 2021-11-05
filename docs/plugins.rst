@@ -24,10 +24,7 @@ Plugin API Layout
 
 A plugin should expose the following endpoints with a blueprint:
 
-* ``./`` for plugin metadata and links to all the plugin endpoints (format to be specified)
-* ``./metadata/`` <- see ``./`` (moved to plugin root as extra endpoint is not needed)
-* ``./ui/`` for the microfrontend that exposes the plugin parameters
-* ``./process/`` for a processing resource
+* ``./`` for plugin metadata and links to all the plugin endpoints
 
 A plugin that does not follow that schema may not be usable from the QHAna UI later.
 
@@ -37,7 +34,7 @@ Plugin Metadata
 
 Marshmallow schemas to render the plugin metadata can be found in the module :py:mod:`~qhana_plugin_runner.api.plugin_schemas`.
 
-First draft of example plugin metadata:
+Example of plugin metadata:
 
 .. code-block:: json
     :linenos:
@@ -49,28 +46,80 @@ First draft of example plugin metadata:
         "version": "0.0.1",
         "type": "data-processor",
         "tags": [
-            "namespace:example-tag",
-            "ml:preprocessing",
-            "q:quantum-algorithm"
+            "example-tag",
+            "preprocessing",
+            "quantum-algorithm"
         ],
-        "processingResourceMetadata": {
+        "entryPoint": {
             "href": "./process/",
             "uiHref": "./ui/",
-            "fileInputs": [
-                [
-                    {"type": "point-list", "content-type": "application/json", "schema": "..."}, 
-                    {"type": "label-list", "content-type": "application/json", "schema": "..."}
-                ],
-                [{"type": "labeled-points", "content-type": "application/json", "schema": "..."}]
+            "dataInput": [
+                {"dataType": "some-data-type", "contentType": ["application/json", "text/csv"], "required": true},
+                {"dataType": "some-other-type", "contentType": ["*"]},
+                {"dataType": "third-type", "contentType": ["text/*"]}
             ],
-            "fileOutputs": [
-                {"type": "trained-model-parameters", "content-type": "application/json", "schema": "..."}
+            "dataOutput": [
+                {"dataType": "output-type", "contentType": ["application/json"], "required": true}
             ]
         }
     }
 
 
-.. note:: The metadata format is work in progress and may change any time.
+.. list-table:: Plugin Metadata
+    :header-rows: 1
+    :widths: 25 30 45
+
+    * - Name
+      - Example
+      - Description
+    * - Title
+      - My Awesome Plugin
+      - Human readable title
+    * - Description
+      - Does something great
+      - Human readable description
+    * - Name
+      - my-awesome-plugin
+      - Stable machine readable name of the plugin. Must be URL-safe!
+    * - Version
+      - 0.0.1
+      - A version conforming to <https://www.python.org/dev/peps/pep-0440/#public-version-identifiers>
+    * - Type
+      - ``simple`` | ``complex`` | ``TBD…``
+      - A plugin can be ``simple`` (exactly one processing endpoint) or ``complex`` (one entry point but complex interaction).
+    * - Tags
+      - ``["data-loader", "MUSE"]``
+      - A list of tags describing the plugin. Unknown tags must be ignored while parsing this list. 
+        Tags specific to a certain plugin(-family) should be prefixed consistently to avoid name collisions.
+    * - Entry Point
+      - ``{…}``
+      - The entry point of the plugin. Contains a link to the REST entry point and to the corresponding micro frontend.
+    * - href
+      - ./process/
+      - The URL of the REST entry point resource.
+    * - UI href
+      - ./ui/
+      - The URL of the micro frontend that corresponds to the REST entry point resource.
+    * - Data Input
+      - ``[…]``
+      - A list of possible data inputs. Required data inputs must be provided other inputs are optional.
+        The plugin should be selectable once all required data inputs can be provided from the experiment data store.
+    * - Data Output
+      - ``[…]``
+      - A list of possible data outputs. Required data outputs will always be produced by the plugin.
+    * - Data Type
+      - entity/list
+      - The data type tag associated with the data. Like content-type but for the data semantic.
+    * - Content Type
+      - ``["application/json"]``
+      - Content type (or mimetype) of the data. Describes the encoding of the data.
+        Exactly one of the given content types must match the actual content type of the data.
+
+When specifying the accepted content or data type of a file input (or output) the following rules should be applied to match the specified type with the actual type:
+
+  * ``something``, ``something/``, ``something/*`` are equivalent and only match anything before the ``/``
+  * ``*`` matches anything
+  * ``application/json`` is an exact match
 
 
 Plugin Micro Frontend
@@ -100,6 +149,193 @@ The plugin runner contains template macros that can be imported and used to auto
         </div>
     {% endcall %}
 
+
+Custom Attributes used in Micro Frontends
+"""""""""""""""""""""""""""""""""""""""""
+
+The Micro Frontend can use a number of custom html attributes to mark some inputs for the QHAna frontend to be enhanced.
+This can be used to mark data input fields for the QHAna frontend.
+
+.. list-table:: Custom Attributes
+    :header-rows: 1
+    :widths: 25 30 45
+
+    * - Attribute
+      - Example
+      - Description
+    * - ``data-input``
+      - entity
+      - Mark an input field as data input. The QHAna UI can choose to instrument the input with a datalist of possible data entries or with a data selection dialog.
+    * - ``data-content-type``
+      - ``application/json text/csv``
+      - A list of acceptable content types seperated by a space.
+    * - ``data-submit``
+      - ``validate`` | ``submit``
+      - Mark a submit button (or input) as validating or submitting.
+        A validating button must point to a resource returning a validated micro frontend (possibly with extra error messages).
+        A submitting button must point to the REST resource corresponding to the micro frontend.
+        If this attribute is missing or unspecified a heuristic should be used to determine the type of the submit button.
+    * - ``data-token``
+      - ``ibmq``
+      - Mark a password input as an API token input. The value specifies for which API the token will be used.
+    * - ``data-private``
+      - 
+      - Mark an input as private. Values of private inputs must never be stored in permanent storage by QHAna. Password inputs are considered private by default.
+
+
+Plugin Results
+--------------
+
+The REST entry point of a plugin must return (or forward to) a valid plugin result value.
+
+Example of a plugin result:
+
+.. code-block:: json
+    :linenos:
+
+    {
+        "status": "PENDING",
+        "log": "…",
+        "progress": {
+            "value": 100,
+            "start": 0,
+            "target": 100,
+            "unit": "%"
+        },
+        "steps": [
+            {
+                "href": ".../<UUID>/step1",
+                "uiHref": ".../<UUID>/step1-ui",
+                "stepId": "step1",
+                "cleared": true
+            },
+            {
+                "href": ".../<UUID>/step2b",
+                "uiHref": ".../<UUID>/step2b-ui",
+                "stepId": "step1.step2b",
+                "cleared": true
+            }
+        ],
+        "data": [
+            {
+                "href": ".../<UUID>/data/1",
+                "dataType": "entity/list",
+                "contentType": "application/json",
+                "name": "EntityList"
+            }
+        ]
+    }
+
+
+.. list-table:: Result Attributes
+    :header-rows: 1
+    :widths: 25 30 45
+
+    * - Name
+      - Example
+      - Description
+    * - Status
+      - ``PENDING`` | ``SUCCESS`` | ``ERROR``
+      - The current state of the result. ``PENDING`` is for unfinished results that can be finished in the future.
+        ``SUCCESS`` and ``ERROR`` are for finsihed results that were calculated successfully or produced an error.
+    * - Log
+      - Step 1: Finished processing 125 entities in 1.2 seconds.
+      - Some human readable log of the result calculation. Use this field to convey errors that happened during the result calculation.
+    * - Progress (optional)
+      - ``{…}``
+      - An object describing the current progress of the result calculation.
+    * - Steps (optional)
+      - ``[…]``
+      - A (growing) list of sub-steps that need new (user-) input before the final result can be computed.
+        Only the last step in the list can be marked with ``clear: false`` to indicate that the step is awaiting some input.
+    * - Data
+      - ``[…]``
+      - The list of data that was produced for this result. Must only be present on ``SUCCESS`` or ``ERROR`` results.
+
+Result Progress
+"""""""""""""""
+
+The result progress object can be used to indicate the current progress of a pending result.
+If no progress object is given the progress is assumed to be indeterminate (e.g. a progress spinner should be displayed).
+If a progress object is given then the progress can be displayed to the user (e.g. in form of a progress bar or a ``x/100 %`` counter).
+
+.. list-table:: Result Progress
+    :header-rows: 1
+    :widths: 25 20 55
+
+    * - Name
+      - Example
+      - Description
+    * - Value
+      - 70
+      - The current progress value. Must be a number between ``start`` and ``target``.
+    * - Start
+      - 0
+      - The starting progress value. Defines the point of no progress. Must be a number.
+        If ``start`` is greater than ``target`` then the progress should be treated as a countdown type progress.
+        By default progress counts up. Defaults to ``0`` if omitted.
+    * - Target
+      - 100
+      - The target progress value that defines all work beeing finished. Must be a number. Defaults to ``100``.
+    * - Unit (optional)
+      - %
+      - The unit the progress is given in. Can be used to display the progress to the user. Defaults to ``""``.
+
+Result Steps
+""""""""""""
+
+Result steps are intermediate steps where additional input is required to continue the result computation.
+The list of result steps should only grow with new steps added on the end of the list.
+Only the last step should be active (e.g. not marked as cleared).
+
+.. list-table:: Result Steps
+    :header-rows: 1
+    :widths: 25 30 45
+
+    * - Name
+      - Example
+      - Description
+    * - href
+      - .../<UUID>/step1
+      - A link to the REST resource accepting the input data for the step.
+    * - UI href
+      - .../<UUID>/ui-step1
+      - A link to the micro frontend corresponding to the REST resource accepting the input data for the step.
+    * - Step ID (optional)
+      - step1.step2b
+      - A stable id corresponding to the current branch of the result computation. 
+        The same choices in previous steps with the same data should always produce the same step id.
+        The step id may be completely independent from the input data.
+        The step id may be used to reliably repeat a recorded plugin interaction (or detect when the recorded interaction deviates from the current one).
+    * - Cleared
+      - ``true``
+      - A flag indicating that the step has already accepted input and can be considered as cleared. Defaults to ``false`` if not specified.
+
+Result Data
+"""""""""""
+
+The final result data is represented by a list of links to the data element.
+The list must not be present until the result is completed.
+
+.. list-table:: Result Data
+    :header-rows: 1
+    :widths: 25 30 45
+
+    * - Name
+      - Example
+      - Description
+    * - href
+      - .../<UUID>/data/1
+      - The URL where the (raw) data can be accessed.
+    * - Name
+      - FilteredEntityList
+      - A human readable name given to the output data by the plugin. Should fit the data content.
+    * - Content Type
+      - application/json
+      - The content type (mimetype) of the data. Describes how the data is encoded.
+    * - Data Type
+      - entity/list
+      - The data type tag associated with the data. Describes what kind of data is encoded. Must not contain wildcards (``*``).
 
 
 Plugin Dependencies

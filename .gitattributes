@@ -1,0 +1,2 @@
+# make sure that all line endings of shell scripts are "lf" to avoid "file not found" errors on linux and in docker containers
+*.sh text eol=lf

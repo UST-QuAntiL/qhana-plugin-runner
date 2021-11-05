@@ -26,6 +26,8 @@ services:
       POSTGRES_DB: default_db
   muse-db:
     image: "muse-db"
+    profiles:
+      - with_db
   worker:
     build: .
     image: qhana-plugin-runner
