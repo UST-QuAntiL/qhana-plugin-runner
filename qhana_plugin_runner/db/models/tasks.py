@@ -33,12 +33,39 @@ from ..db import DB, REGISTRY
 
 @REGISTRY.mapped
 @dataclass
+class Steps:
+    """Steps for multi-step plugins
+
+    Attributes:
+        id (int, optional): ID of corresponding :class:`ProcessingTask` entry. Use the id to fetch this information from the database.
+        step_id (str): ID of step, e.g., ``"step1"`` or ``"step1.step2b"``.
+        href (str): The URL of the REST entry point resource.
+        ui_href (str): The URL of the micro frontend that corresponds to the REST entry point resource.
+        cleared (bool): ``false`` if step is awaiting input, only last step in list can be marked as ``false``
+    """
+
+    __tablename__ = "Steps"
+
+    __sa_dataclass_metadata_key__ = "sa"
+
+    id: int = field(
+        metadata={"sa": Column(ForeignKey("ProcessingTask.id"), primary_key=True)},
+    )
+    step_id: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
+    counter: int = field(metadata={"sa": Column(sql.Integer())})
+    href: str = field(metadata={"sa": Column(sql.String(200))})
+    ui_href: str = field(metadata={"sa": Column(sql.String(200))})
+    cleared: bool = field(metadata={"sa": Column(sql.Boolean())}, default=False)
+
+
+@REGISTRY.mapped
+@dataclass
 class TaskData:
     """Dataclass for key-value store of :class:`ProcessingTask`
 
     Attributes:
-        id (int, optional): automatically generated database id. Use the id to fetch this information from the database.
-        key (str, optional): a key in dict
+        id (int): ID of corresponding :class:`ProcessingTask` entry. Use the id to fetch this information from the database.
+        key (str): a key in dict
         value (str, optional): a corresponding value in dict
     """
 
@@ -47,8 +74,11 @@ class TaskData:
     __sa_dataclass_metadata_key__ = "sa"
 
     id: int = field(
-        init=False,
-        metadata={"sa": Column(ForeignKey("ProcessingTask.id"), primary_key=True)},
+        metadata={
+            "sa": Column(
+                ForeignKey("ProcessingTask.id"), primary_key=True, nullable=False
+            )
+        },
     )
     key: str = field(metadata={"sa": Column(sql.String(100), primary_key=True)})
     value: Optional[str] = field(metadata={"sa": Column(sql.Text(1000), nullable=True)})
@@ -64,7 +94,7 @@ class ProcessingTask:
     Attributes:
         id (int, optional): automatically generated database id. Use the id to fetch this information from the database.
         task_name (str): the name of the (logical) task corresponding to this information object
-        task_id (Optional[str], optional): the final celery task id to wait for to declare this task finished. If not supplied this task will never be marked as finished.
+        task_id (Optional[str], optional): the final celery task id to wait for to declare this task finished. If not supplied this task will never be marked as finished. In multi-step plugins, this attribute is also used for intermediate task results. Only needed to check task status of :py:func:`qhana-plugin-runner.qhana_plugin_runner.tasks.save_task_result`.
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
@@ -73,6 +103,8 @@ class ProcessingTask:
         task_log (Optional[str], optional): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
         outputs (List[TaskFile], optional): the output data (files) of the task
     """
+
+    # TODO: update docstring
 
     __tablename__ = "ProcessingTask"
 
@@ -105,20 +137,47 @@ class ProcessingTask:
     )
 
     data = association_proxy(
-        "_data", "value", creator=lambda key, value: TaskData(key=key, value=value)
+        "_data", "value", creator=lambda key, value: TaskData(id=id, key=key, value=value)
     )
 
-    ui_base_endpoint_url: Optional[str] = field(
-        default=None, metadata={"sa": Column(sql.String(200))}
+    steps: dict = field(
+        default_factory=dict,
+        metadata={
+            "sa": relationship(
+                "Steps",
+                collection_class=attribute_mapped_collection("counter"),
+                cascade="all, delete-orphan",
+            )
+        },
     )
 
-    ui_endpoint_url: Optional[str] = field(  # TODO: maybe rename
-        default=None, metadata={"sa": Column(sql.String(200))}
-    )
+    counter: int = field(default=0, metadata={"sa": Column(sql.Integer())})
+    current_step: str = field(default="", metadata={"sa": Column(sql.String(500))})
+
+    href: Optional[str] = field(default=None, metadata={"sa": Column(sql.String(200))})
+
+    ui_href: Optional[str] = field(default=None, metadata={"sa": Column(sql.String(200))})
 
     finished_status: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.String(100))}
     )
+
+    multi_step: bool = field(default=False, metadata={"sa": Column(sql.Boolean())})
+
+    step_finished_status: Optional[str] = field(
+        default=None, metadata={"sa": Column(sql.String(100))}
+    )
+
+    step_finished_at: Optional[datetime] = field(
+        default=None, metadata={"sa": Column(sql.TIMESTAMP(timezone=True), nullable=True)}
+    )
+
+    step_log: Optional[str] = field(
+        default=None, metadata={"sa": Column(sql.Text(), nullable=True)}
+    )
+
+    # TODO: add corresponding methods for step in tasks.py
+    # TODO: change task_api.py
 
     task_log: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.Text(), nullable=True)}
@@ -156,6 +215,64 @@ class ProcessingTask:
             else:
                 return "UNKNOWN"
         return "PENDING"
+
+    @property
+    def step_is_finished(self) -> bool:
+        """Return true if the current step task has finished either successfully or with an error."""
+        return self.step_finished_at is not None
+
+    @property
+    def step_is_ok(self) -> bool:
+        """Return true if the current step has finished successfully."""
+        return self.finished_status == "SUCCESS"
+
+    @property
+    def step_status(self) -> str:
+        """Return the finished status of the current step.
+
+        If the task is finished but no finished_status was set returns ``"UNKNOWN"``.
+
+        If the task is not finished returns ``"PENDING"``.
+
+        Returns:
+            str: ``self.finished_status`` | ``"UNKNOWN"`` | ``"PENDING"``
+        """
+        if self.is_finished:
+            if self.finished_status:
+                return self.finished_status
+            else:
+                return "UNKNOWN"
+        return "PENDING"
+
+    def clear_previous_step(self):
+        """Set ``"cleared"`` of previous step to ``true``. Note: call before calling add_next_step."""
+        self.steps[self.counter - 1].cleared = True
+
+    def add_next_step(self, href: str, ui_href: str, step_id: str):
+        """Adds new step for multi-step plugin.
+
+        Args:
+            href (str): The URL of the REST entry point resource.
+            ui_href (str): The URL of the micro frontend that corresponds to the REST entry point resource.
+            step_id (str): ID of step, e.g., ``"step1"`` or ``"step2b"``, is automatically appended to previous step
+        """
+        self.current_step = self.current_step + "." + step_id
+        self.steps[self.counter] = Steps(
+            counter=self.counter, id=self.id, step_id=step_id, href=href, ui_href=ui_href
+        )
+        self.counter += 1
+        self.multi_step = True
+
+    @property
+    def get_ordered_steps(self):
+        steps = []
+        for i in range(self.counter):
+            steps.append(self.steps[i])
+        return steps
+
+    @property
+    def get_current_step(self):
+        return self.steps[self.counter - 1]
 
     def save(self, commit: bool = False):
         """Add this object to the current session and optionally commit the session to persist all objects in the session."""
