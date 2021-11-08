@@ -108,7 +108,7 @@ def save_step_result(self, task_log: str, db_id: int):
 
 
 @CELERY.task(name=f"{_name}.save-step-error", bind=True, ignore_result=True)
-def save_task_error(self, failing_task_id: str, db_id: int):
+def save_step_error(self, failing_task_id: str, db_id: int):
     """Save the error as the result of the root task in the database."""
     result = AsyncResult(failing_task_id, app=CELERY)
     exc = result.result
