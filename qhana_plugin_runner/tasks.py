@@ -15,6 +15,56 @@ TASK_LOGGER = get_task_logger(_name)
 
 
 # TODO add periodic cleanup task to remove old results from the database!
+@CELERY.task(name=f"{_name}.add-step", bind=True, ignore_result=True)
+def add_step(
+    self,
+    task_log: str,
+    db_id: int,
+    step_id: str,
+    href: str,
+    ui_href: str,
+    prog_value: int,
+    prog_start: int = 0,
+    prog_target: int = 100,
+    prog_unit: str = "%",
+):
+    """Add next step in a multi-step plugin to the database.
+
+    Attributes:
+        step_id (str): ID of step, e.g., ``"step1"`` or ``"step1.step2b"``.
+        href (str): The URL of the REST entry point resource.
+        ui_href (str): The URL of the micro frontend that corresponds to the REST entry point resource.
+        prog_value (int): progress value.
+        prog_start (int): progress start value.
+        prog_target (int): progress target value.
+        prog_unit (str): progress unit(default: "%").
+    """
+    if not isinstance(task_log, str):
+        raise TypeError(
+            f"The task log / task metadata must be of type str to be stored in the database! (expected str but got {type(task_log)})"
+        )
+
+    TASK_LOGGER.debug(f"Adding next step with db id '{db_id}'")
+    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
+    if task_data is None:
+        # TODO use better fitting error
+        raise KeyError(f"Could not find db entry for id {db_id}, add_step failed!")
+
+    task_data.progress_start = prog_start
+    task_data.progress_target = prog_target
+    task_data.progress_unit = prog_unit
+    task_data.progress_value = prog_value
+    task_data.add_next_step(href=href, ui_href=ui_href, step_id=step_id, commit=True)
+
+    if isinstance(task_log, str):
+        task_data.task_log = task_log
+    else:
+        task_data.task_log = repr(task_log)
+
+    task_data.save(commit=True)
+    TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
+
+    AsyncResult(self.request.parent_id, app=CELERY).forget()
 
 
 @CELERY.task(name=f"{_name}.save-result", bind=True, ignore_result=True)
@@ -30,6 +80,9 @@ def save_task_result(self, task_log: str, db_id: int):
     if task_data is None:
         # TODO use better fitting error
         raise KeyError(f"Could not find db entry for id {db_id}, saving task log failed!")
+
+    if task_data.multi_step:
+        task_data.progress_value = task_data.progress_target
 
     task_data.finished_status = "SUCCESS"
     task_data.finished_at = datetime.utcnow()
@@ -75,47 +128,15 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     result.forget()
 
 
-@CELERY.task(name=f"{_name}.save-step-result", bind=True, ignore_result=True)
-def save_step_result(self, task_log: str, db_id: int):
-    """Save the intermediate step task log in the database and update the final task status of the database task."""
-    if not isinstance(task_log, str):
-        raise TypeError(
-            f"The task log / task metadata must be of type str to be stored in the database! (expected str but got {type(task_log)})"
-        )
-
-    TASK_LOGGER.debug(f"Saving result for intermediate step task with db id '{db_id}'")
-    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
-    if task_data is None:
-        # TODO use better fitting error
-        raise KeyError(f"Could not find db entry for id {db_id}, saving task log failed!")
-
-    task_data.step_finished_status = "SUCCESS"
-    task_data.step_finished_at = datetime.utcnow()
-    if task_log is None:
-        # finished tasks must have a result string
-        task_data.step_log += ""
-    elif isinstance(task_log, str):
-        task_data.task_log += "\n" + task_log
-    else:
-        task_data.task_log += "\n" + repr(task_log)
-
-    task_data.save(commit=True)
-    TASK_LOGGER.debug(
-        f"Save task log for intermediate step task with db id '{db_id}' successful."
-    )
-
-    AsyncResult(self.request.parent_id, app=CELERY).forget()
-
-
-@CELERY.task(name=f"{_name}.save-step-error", bind=True, ignore_result=True)
-def save_step_error(self, failing_task_id: str, db_id: int):
+@CELERY.task(name=f"{_name}.step-error", bind=True, ignore_result=True)
+def step_error(self, failing_task_id: str, db_id: int):
     """Save the error as the result of the root task in the database."""
     result = AsyncResult(failing_task_id, app=CELERY)
     exc = result.result
     traceback = result.traceback
 
     TASK_LOGGER.error(
-        f"Sub-Task {failing_task_id} of Task with db id {db_id} raised exception: {exc!r}\n{traceback}"
+        f"Step {failing_task_id} of multi-step plugin with db id {db_id} raised exception: {exc!r}\n{traceback}"
     )
 
     task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
@@ -126,10 +147,9 @@ def save_step_error(self, failing_task_id: str, db_id: int):
         )
         return  # TODO start new error logging task or save to extra db table
 
-    task_data.step_finished_status = result.state
-    task_data.step_finished_at = datetime.utcnow()
-    task_data.step_log += "\n" f"{exc!r}\n\n{traceback}"
+    task_data.task_log += "\n" f"{exc!r}\n\n{traceback}"
 
     task_data.save(commit=True)
+    # TODO: what to do in case of step error? cancel plugin execution?
 
     result.forget()
