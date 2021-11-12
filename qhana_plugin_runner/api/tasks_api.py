@@ -26,6 +26,10 @@ from flask_smorest import abort
 from qhana_plugin_runner.api.plugin_schemas import (
     ConcreteOutputMetadataSchema,
     OutputMetadata,
+    ProgressMetadata,
+    ProgressMetadataSchema,
+    StepMetadata,
+    StepMetadataSchema,
 )
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
@@ -43,18 +47,25 @@ TASKS_API = SmorestBlueprint(
 
 @dataclass()
 class TaskData:
-    name: str
-    task_id: str
     status: str
-    task_log: Optional[str] = None
+    log: Optional[str] = None
+    progress: ProgressMetadata = None
+    steps: Sequence[StepMetadata] = field(default_factory=list)
     outputs: Sequence[OutputMetadata] = field(default_factory=list)
 
 
 class TaskStatusSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
     status = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_log = ma.fields.String(required=False, allow_none=True, dump_only=True)
+    log = ma.fields.String(required=False, allow_none=True, dump_only=True)
+    progress = ma.fields.Nested(
+        ProgressMetadataSchema, required=False, allow_none=True, dump_only=True
+    )
+    steps = ma.fields.List(
+        ma.fields.Nested(StepMetadataSchema),
+        required=False,
+        allow_none=True,
+        dump_only=True,
+    )
     outputs = ma.fields.List(
         ma.fields.Nested(ConcreteOutputMetadataSchema()),
         required=False,
@@ -65,22 +76,23 @@ class TaskStatusSchema(MaBaseSchema):
     @ma.post_dump()
     def remove_empty_attributes(self, data: Dict[str, Any], **kwargs):
         """Remove result attributes from serialized tasks that have not finished."""
-        if data["taskLog"] == None:
-            del data["taskLog"]
+        if data["log"] == None:
+            del data["log"]
             del data["outputs"]
+        if data["steps"] == None:
+            del data["steps"]
+            del data["progress"]
         return data
 
 
-@TASKS_API.route("/<string:task_id>/")
+@TASKS_API.route("/<string:db_id>/")
 class TaskView(MethodView):
     """Task status resource."""
 
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
-    def get(self, task_id: str):
+    def get(self, db_id: str):
         """Get the current task status."""
-        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_task_id(
-            task_id=task_id
-        )
+        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if task_data is None:
             abort(HTTPStatus.NOT_FOUND, message="Task not found.")
             return  # return for type checker, abort raises exception
@@ -89,19 +101,39 @@ class TaskView(MethodView):
             task_data.task_id is not None
         ), "If this is None then get_task_by_id is faulty."  # assertion for type checker
 
+        progress = None
+        steps = None
+        if task_data.multi_step:
+            progress = {
+                "value": task_data.progress_value,
+                "start": task_data.progress_start,
+                "target": task_data.progress_target,
+                "unit": task_data.progress_unit,
+            }
+            steps: List[StepMetadata] = []
+            for step in task_data.steps:
+                steps.append(
+                    StepMetadata(
+                        href=step.href,
+                        uiHref=step.ui_href,
+                        stepId=step.step_id,
+                        cleared=step.cleared,
+                    )
+                )
+
         if not task_data.is_finished:
-            task_result = AsyncResult(task_id, app=CELERY)
+            task_result = AsyncResult(task_data.task_id, app=CELERY)
             if task_result:
                 return TaskData(
-                    name=task_data.task_name,
-                    task_id=task_data.task_id,
                     status=task_result.status,
                     # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
-                    task_log=None,  # only return a result if task is marked finished in db
+                    log=None,  # only return a result if task is marked finished in db
+                    progress=progress,
+                    steps=steps,
                 )
             return TaskData(
-                name=task_data.task_name,
-                task_id=task_data.task_id,
+                progress=progress,
+                steps=steps,
                 status=task_data.status,
                 task_log=None,
             )
@@ -121,10 +153,10 @@ class TaskView(MethodView):
             )
 
         return TaskData(
-            name=task_data.task_name,
-            task_id=task_data.task_id,
+            progress=progress,
+            steps=steps,
             status=task_data.status,
-            task_log=task_data.task_log,
+            log=task_data.task_log,
             outputs=outputs,
         )
 
