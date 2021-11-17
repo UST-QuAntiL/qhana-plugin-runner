@@ -83,6 +83,7 @@ def training_loop(
     for i in range(start_epoch, steps):
         # training on the training dataset
         error_sum = 0
+        shadow_model_error_sum = 0
         batch_cnt = 0
 
         for batch_input, batch_target in train_dataloader:
@@ -94,11 +95,11 @@ def training_loop(
             loss = loss_func(model(batch_input), batch_target)
             loss.backward()
 
-            with torch.no_grad():
-                # execute shadow model
-                shadow_model_loss = loss_func(
-                    shadow_model(batch_input), batch_target
-                )  # TODO: return this value
+            if shadow_model is not None:
+                with torch.no_grad():
+                    # execute shadow model
+                    shadow_model_loss = loss_func(shadow_model(batch_input), batch_target)
+                    shadow_model_error_sum += shadow_model_loss.item()
 
             for opt in grad_optis:
                 opt.step()
@@ -111,9 +112,18 @@ def training_loop(
         error_mean = error_sum / batch_cnt
         print("Step:", i, "Training MSE:", error_mean)
 
+        if shadow_model is not None:
+            print(
+                "Step:",
+                i,
+                "Shadow model training MSE:",
+                shadow_model_error_sum / batch_cnt,
+            )
+
         if test_data_available:
             # calculating the error on the test dataset
             error_sum = 0
+            shadow_model_error_sum = 0
             batch_cnt = 0
 
             for batch_input, batch_target in test_dataloader:
@@ -121,14 +131,24 @@ def training_loop(
                     loss = loss_func(model(batch_input), batch_target)
                     error_sum += loss.item()
 
-                    shadow_model_loss = loss_func(
-                        shadow_model(batch_input), batch_target
-                    )  # TODO: do something with this value
+                    if shadow_model is not None:
+                        shadow_model_loss = loss_func(
+                            shadow_model(batch_input), batch_target
+                        )
+                        shadow_model_error_sum += shadow_model_loss.item()
 
                     batch_cnt += 1
 
             error_mean = error_sum / batch_cnt
             print("Step:", i, "Test MSE:", error_mean)
+
+            if shadow_model is not None:
+                print(
+                    "Step:",
+                    i,
+                    "Shadow model test MSE:",
+                    shadow_model_error_sum / batch_cnt,
+                )
 
         # test if the model has an "embed" function and use it to generate embeddings and save them
         embed_func = getattr(model, "embed", None)
