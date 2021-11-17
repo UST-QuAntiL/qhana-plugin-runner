@@ -1,9 +1,9 @@
-import os
+from typing import Tuple
 
 import numpy as np
 import pennylane as qml
 import torch
-from torch.optim import Adam
+from torch.optim import Adam, Optimizer
 from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 from plugins.hybrid_ae_pkg.backend.main import train_nn as training_loop
@@ -25,9 +25,7 @@ from plugins.hybrid_ae_pkg.backend.quantum.qiskit.hybrid import (
 
 def pennylane_hybrid_autoencoder(
     input_data: np.ndarray, q_num: int, embedding_size: int, qnn_name: str, steps: int
-) -> np.ndarray:
-    os.environ["use_mlflow"] = "false"  # disable logging with MLflow
-
+) -> Tuple[np.ndarray, PLHybridAutoencoder, Optimizer, Optimizer]:
     dev = qml.device("default.qubit", wires=q_num, shots=500)
     # dev = qml.device("forest.qvm", device="3q-qvm")
     # dev = qml.device("braket.local.qubit", wires=3)
@@ -37,21 +35,27 @@ def pennylane_hybrid_autoencoder(
 
     input_tensor = torch.tensor(input_data, dtype=torch.float32)
     pl_training_loop(
-        model,
-        input_tensor,
-        input_tensor,
-        None,
-        None,
-        None,
-        None,
-        [c_optim, q_optim],
-        steps,
+        model=model,
+        shadow_model=None,
+        train_input=input_tensor,
+        train_target=input_tensor,
+        train_label=None,
+        test_input=None,
+        test_target=None,
+        test_label=None,
+        grad_optis=[c_optim, q_optim],
+        grad_free_opt=None,
+        grad_free_opt_args=None,
+        steps=steps,
         batch_size=1,
+        checkpoint=None,
+        save_checkpoints=False,
+        db_id=None,
     )
 
     embeddings = model.embed(input_tensor)
 
-    return embeddings.detach().numpy()
+    return embeddings.detach().numpy(), model, c_optim, q_optim
 
 
 def qiskit_pytorch_autoencoder(
@@ -62,8 +66,6 @@ def qiskit_pytorch_autoencoder(
     steps_q: int,
     elements_per_iteration: int,
 ) -> np.ndarray:
-    os.environ["use_mlflow"] = "false"  # disable logging with MLflow
-
     # train classical layers
     outer_cae = QKClassicalAutoEncoder(input_data.shape[1], q_num)
     optim = Adam(outer_cae.parameters())

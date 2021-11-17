@@ -1,6 +1,7 @@
 from itertools import chain
 from math import pi
-from typing import Iterator
+from os import PathLike
+from typing import Iterator, Dict, List, Union, BinaryIO, IO
 
 import torch
 import pennylane as qml
@@ -73,3 +74,17 @@ class HybridAutoencoder(torch.nn.Module):
 
     def get_quantum_parameters(self) -> Iterator[torch.nn.parameter.Parameter]:
         return chain(self.q_layer1.parameters(), self.q_layer2.parameters())
+
+    def save_model_parameters(self, file_path: Union[str, PathLike, BinaryIO, IO[bytes]]):
+        torch.save(self.state_dict(), file_path)
+
+    def load_model_parameters(self, file_path: Union[str, PathLike, BinaryIO, IO[bytes]]):
+        self.load_state_dict(torch.load(file_path))
+
+    def get_model_parameters_as_dict(self) -> Dict[str, List]:
+        param_dict: Dict[str, List] = {}
+
+        for k, v in self.state_dict().items():
+            param_dict[k] = v.tolist()
+
+        return param_dict
