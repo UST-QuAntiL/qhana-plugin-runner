@@ -30,6 +30,13 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 from sqlalchemy.sql.expression import select
 
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+    PluginMetadataSchema,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -39,7 +46,12 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
+from qhana_plugin_runner.tasks import (
+    add_step,
+    save_step_error,
+    save_task_error,
+    save_task_result,
+)
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "hello-world-multi-step"
@@ -102,11 +114,13 @@ class PluginsView(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Demo endpoint returning the plugin metadata."""
-        return {
-            "name": HelloWorld.instance.name,
-            "version": HelloWorld.instance.version,
-            "identifier": HelloWorld.instance.identifier,
-        }
+        return PluginMetadata(
+            title="Hello World Multi-Step Plugin",
+            description="Simple multi-step plugin.",
+            name=HelloWorld.instance.name,
+            version=HelloWorld.instance.version,
+            type=PluginType.complex,
+        )
 
 
 @HELLO_MULTI_BLP.route("/ui/")
@@ -197,9 +211,9 @@ class ProcessView(MethodView):
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         result: AsyncResult = task.apply_async()
+
         # note that task_id has to be updated in each step
         db_task.task_id = result.id
-
         db_task.save(commit=True)
 
         # TODO: change multi-step ui to include progress data
