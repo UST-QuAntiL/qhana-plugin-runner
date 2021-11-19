@@ -24,8 +24,6 @@ from flask.views import MethodView
 from flask_smorest import abort
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    ConcreteOutputMetadataSchema,
-    OutputMetadata,
     ProgressMetadata,
     ProgressMetadataSchema,
     StepMetadata,
@@ -36,7 +34,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, Step, TaskFile
 
 TASKS_API = SmorestBlueprint(
     "tasks-api",
@@ -112,6 +110,7 @@ class TaskView(MethodView):
                 "unit": task_data.progress_unit,
             }
             steps: List[StepMetadata] = []
+            step: Step
             for step in task_data.steps:
                 steps.append(
                     StepMetadata(
