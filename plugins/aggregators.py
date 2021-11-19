@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import math
 from enum import Enum
 from http import HTTPStatus
-from io import StringIO
-from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict
-from zipfile import ZipFile
+from typing import Mapping, Optional
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -35,7 +31,13 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api import EnumField
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -46,10 +48,8 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
-    load_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -125,38 +125,32 @@ class PluginsView(MethodView):
     @AGGREGATOR_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Aggregators endpoint returning the plugin metadata."""
-        return {
-            "name": Aggregator.instance.name,
-            "version": Aggregator.instance.version,
-            "identifier": Aggregator.instance.identifier,
-            "root_href": url_for(f"{AGGREGATOR_BLP.name}.PluginsView"),
-            "title": "Aggregators",
-            "description": "Aggregates attribute distances to entity distances.",
-            "plugin_type": "aggregator",
-            "tags": [],
-            "processing_resource_metadata": {
-                "href": url_for(f"{AGGREGATOR_BLP.name}.CalcSimilarityView"),
-                "ui_href": url_for(f"{AGGREGATOR_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "attribute-distances",
-                            "content_type": "application/zip",
-                            "name": "Attribute distances",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Aggregators",
+            description="Aggregates attribute distances to entity distances.",
+            name=Aggregator.instance.identifier,
+            version=Aggregator.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{AGGREGATOR_BLP.name}.CalcSimilarityView"),
+                ui_href=url_for(f"{AGGREGATOR_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="attribute-distances",
+                        content_type=["application/zip"],
+                        required=True,
+                    )
                 ],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "entity-distances",
-                            "content_type": "application/zip",
-                            "name": "Distance values for the entities",
-                        }
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="entity-distances",
+                        content_type=["application/zip"],
+                        required=True,
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["aggregator"],
+        )
 
 
 @AGGREGATOR_BLP.route("/ui/")

@@ -28,15 +28,19 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from sqlalchemy.sql.expression import select
 
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -83,15 +87,21 @@ class HelloWorldParametersSchema(FrontendFormBaseSchema):
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @HELLO_BLP.response(HTTPStatus.OK, DemoResponseSchema())
+    @HELLO_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        """Demo endpoint returning the plugin metadata."""
-        return {
-            "name": HelloWorld.instance.name,
-            "version": HelloWorld.instance.version,
-            "identifier": HelloWorld.instance.identifier,
-        }
+        """Endpoint returning the plugin metadata."""
+        return PluginMetadata(
+            title=HelloWorld.instance.name,
+            description=HELLO_BLP.description,
+            name=HelloWorld.instance.identifier,
+            version=HelloWorld.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href="./process/", ui_href="./ui/", data_input=[], data_output=[]
+            ),
+            tags=[],
+        )
 
 
 @HELLO_BLP.route("/ui/")

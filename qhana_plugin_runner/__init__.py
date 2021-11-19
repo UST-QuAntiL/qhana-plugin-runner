@@ -32,7 +32,7 @@ from flask_cors import CORS
 from tomlkit import parse as parse_toml
 
 from . import api, babel, celery, db, requests
-from .api import jwt
+from .api import jwt_helper
 from .plugins_cli import register_plugin_cli_blueprint
 from .storage import register_file_store
 from .util.config import DebugConfig, ProductionConfig
@@ -152,7 +152,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     db.register_db(app)
 
-    jwt.register_jwt(app)
+    jwt_helper.register_jwt(app)
     api.register_root_api(app)
 
     # register jinja helpers

@@ -15,38 +15,40 @@
 """Module containing schemas to be used by plugins."""
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from enum import Enum
+from typing import List
 
 import marshmallow as ma
 
+from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import MaBaseSchema
 
 
-class OutputMetadataSchema(MaBaseSchema):
-    output_type = ma.fields.String(
+@dataclass
+class DataMetadata:
+    data_type: str
+    content_type: List[str]
+    required: bool
+
+
+class DataMetadataSchema(MaBaseSchema):
+    data_type = ma.fields.String(
         required=True,
         allow_none=False,
         metadata={"description": "The type of the output (e.g. distance-matrix)."},
     )
-    content_type = ma.fields.String(
+    content_type = ma.fields.List(
+        ma.fields.String,
         required=True,
         allow_none=False,
         metadata={
             "description": "The media type (mime type) of the output data (e.g. application/json)."
         },
     )
-    name = ma.fields.String(
-        required=False,
-        allow_none=True,
-        metadata={"description": "The (default) name of the output data."},
-    )
-
-
-class ConcreteOutputMetadataSchema(OutputMetadataSchema):
-    href = ma.fields.Url(
+    required = ma.fields.Boolean(
         required=True,
         allow_none=False,
-        metadata={"description": "URL of the concrete output data."},
+        metadata={"description": "If the data is required or not."},
     )
 
 
@@ -101,11 +103,11 @@ class StepMetadataSchema(MaBaseSchema):
 
 
 @dataclass
-class OutputMetadata:
-    output_type: str
-    content_type: str
-    name: Optional[str] = None
-    href: Optional[str] = None
+class EntryPoint:
+    href: str
+    ui_href: str
+    data_input: List[DataMetadata] = field(default_factory=list)
+    data_output: List[DataMetadata] = field(default_factory=list)
 
 
 @dataclass
@@ -124,75 +126,54 @@ class StepMetadata:
     cleared: bool = False
 
 
-class ProcessingResourceMetadataSchema(MaBaseSchema):
+class EntryPointSchema(MaBaseSchema):
     href = ma.fields.Url(
         required=True,
         allow_none=False,
-        dump_only=True,
-        metadata={"description": "URL of the processing resource of the plugin."},
+        metadata={"description": "The URL of the REST entry point resource."},
     )
     ui_href = ma.fields.Url(
-        required=False,
-        allow_none=False,
-        dump_only=True,
-        metadata={
-            "description": "URL of the micro frontend for the processing resource of the plugin."
-        },
-    )
-    inputs = ma.fields.List(
-        ma.fields.List(ma.fields.Nested(OutputMetadataSchema())),
         required=True,
         allow_none=False,
-        dump_only=True,
-        metadata={"description": "A list of possible file input sets."},
-    )
-    outputs = ma.fields.List(  # for future use
-        ma.fields.List(ma.fields.Nested(OutputMetadataSchema())),
-        required=False,
-        allow_none=False,
-        dump_only=True,
-        missing=[],
         metadata={
-            "description": "A list of guaranteed output files (independent from which input file types were provided and which parameters are set)."
+            "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
     )
+    data_input = ma.fields.List(
+        ma.fields.Nested(
+            DataMetadataSchema,
+            required=True,
+            allow_none=False,
+            metadata={"description": "A list of possible data inputs."},
+        )
+    )
+    data_output = ma.fields.List(
+        ma.fields.Nested(
+            DataMetadataSchema,
+            required=True,
+            allow_none=False,
+            metadata={"description": "A list of possible data outputs."},
+        )
+    )
+
+
+class PluginType(Enum):
+    simple = "simple"
+    complex = "complex"
 
 
 @dataclass
-class ProcessingResourceMetadata:
-    href: str
-    ui_href: Optional[str]
-    inputs: List[List[OutputMetadata]] = field(default_factory=list)
-    outputs: List[OutputMetadata] = field(default_factory=list)
+class PluginMetadata:
+    title: str
+    description: str
+    name: str
+    version: str
+    type: PluginType
+    entry_point: EntryPoint
+    tags: List[str] = field(default_factory=list)
 
 
 class PluginMetadataSchema(MaBaseSchema):
-    name = ma.fields.String(
-        required=True,
-        allow_none=False,
-        dump_only=True,
-        metadata={"description": "Unique name of the plugin."},
-    )
-    version = ma.fields.String(
-        required=True,
-        allow_none=False,
-        dump_only=True,
-        metadata={"description": "Version of the plugin."},
-    )
-    identifier = ma.fields.String(
-        required=True,
-        allow_none=False,
-        dump_only=True,
-        metadata={
-            "description": "Unique identifier of the plugin (derived from name and version)."
-        },
-    )
-    root_href = ma.fields.Url(
-        required=False,
-        allow_none=False,
-        dump_only=True,
-        metadata={"description": "URL of the api root of the plugin."},
-    )
     title = ma.fields.String(
         required=True,
         allow_none=False,
@@ -205,13 +186,31 @@ class PluginMetadataSchema(MaBaseSchema):
         dump_only=True,
         metadata={"description": "Human readable plugin description."},
     )
-    plugin_type = ma.fields.String(
+    name = ma.fields.String(
         required=True,
         allow_none=False,
         dump_only=True,
-        metadata={
-            "description": "Type of the plugin (e.g. data-loader, data-processor, data-visualizer)."
-        },
+        metadata={"description": "Unique name of the plugin."},
+    )
+    version = ma.fields.String(
+        required=True,
+        allow_none=False,
+        dump_only=True,
+        metadata={"description": "Version of the plugin."},
+    )
+    type = EnumField(
+        PluginType,
+        required=True,
+        allow_none=False,
+        dump_only=True,
+        metadata={"description": "Type of the plugin"},
+    )
+    entry_point = ma.fields.Nested(
+        EntryPointSchema,
+        required=True,
+        allow_none=False,
+        dump_only=True,
+        metadata={"description": "The entry point of the plugin"},
     )
     tags = ma.fields.List(
         ma.fields.String(),
@@ -222,28 +221,3 @@ class PluginMetadataSchema(MaBaseSchema):
             "description": "A list of tags describing the plugin (e.g. classical-algorithm, quantum-algorithm, hybrid-algorithm)."
         },
     )
-
-
-class DataProcessingPluginMetadataSchema(MaBaseSchema):
-    processing_resource_metadata = ma.fields.Nested(
-        ProcessingResourceMetadataSchema(),
-        required=True,
-        allow_none=False,
-        dump_only=True,
-        metadata={
-            "description": "Metadata for the data processing resource of the plugin."
-        },
-    )
-
-
-@dataclass
-class PluginMetadata:
-    name: str
-    version: str
-    identifier: str
-    root_href: str
-    title: str
-    description: str
-    plugin_type: str
-    tags: List[str] = field(default_factory=list)
-    processing_resource_metadata: Optional[ProcessingResourceMetadata] = None
