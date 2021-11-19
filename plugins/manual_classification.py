@@ -54,7 +54,13 @@ from qhana_plugin_runner.api.util import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import (
+    add_step,
+    save_step_result,
+    save_task_error,
+    save_task_result,
+    step_error,
+)
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from tempfile import SpooledTemporaryFile
 from qhana_plugin_runner.storage import STORE
@@ -107,56 +113,48 @@ class PluginsView(MethodView):
     def get(self):
         """Entity filter endpoint returning the plugin metadata."""
         return {
+            "title": "Manual Classification",
+            "description": "Manually annotate classes for data sets from MUSE database.",
             "name": ManualClassification.instance.name,
             "version": ManualClassification.instance.version,
-            "identifier": ManualClassification.instance.identifier,
-            "root_href": url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.PluginsView"),
-            "title": "Entity loader",
-            "description": "Filters data sets from the MUSE database.",
-            "plugin_type": "data-loader",
-            "tags": ["data:loading"],
+            "type": "complex",
+            "tags": ["preprocessing", "classification"],
             "processing_resource_metadata": {
                 "href": url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.ProcessView"),
-                "ui_href": url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"),
-                "inputs": [  # TODO: only file input (entities...)
-                    [
-                        {
-                            "output_type": "raw",
-                            "content_type": "application/json",
-                            "name": "Raw entity data",
-                        },
-                        {
-                            "output_type": "raw",
-                            "content_type": "text/csv",
-                            "name": "Raw entity data",
-                        },
-                        # TODO: OR -> json, csv... scatch, not finalized yet
-                    ]
+                "uiHref": url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"),
+                "dataInput": [
+                    {
+                        "dataType": "entity",
+                        "contentType": ["application/json", "text/csv"],
+                        "required": True,
+                    },
+                    {"dataType": "some-other-type", "contentType": ["*"]},  # TODO
+                    {"dataType": "third-type", "contentType": ["text/*"]},
                 ],
-                "outputs": [
-                    [
-                        {  # TODO: file handle to filtered file, could be json or csv...
-                            "output_type": "raw",
-                            "content_type": "application/json",
-                            "name": "Filtered raw entity data",
-                        },
-                    ]
+                "dataOutput": [
+                    {
+                        "dataType": "output-type",  # TODO: probably multiple
+                        "contentType": ["application/json"],
+                        "required": True,
+                    }
                 ],
             },
         }
 
 
-@MANUAL_CLASSIFICATION_BLP.route("/ui/", defaults={"task_id": None})
-@MANUAL_CLASSIFICATION_BLP.route("/ui/<string:task_id>/")
+###### Data loading #####
+
+
+@MANUAL_CLASSIFICATION_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the entity filter plugin."""
+    """Micro frontend for the manual classification plugin."""
 
     example_inputs = {
         "inputFileUrl": "file:///<path_to_file>/entities.json",
     }
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the entity filter plugin."
+        HTTPStatus.OK, description="Micro frontend of the manual classification plugin."
     )
     @MANUAL_CLASSIFICATION_BLP.arguments(
         ManualClassificationParametersSchema(
@@ -166,12 +164,12 @@ class MicroFrontend(MethodView):
         required=False,
     )
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
-    def get(self, task_id: str, errors):
+    def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, task_id, errors)
+        return self.render(request.args, errors)
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the entity filter plugin."
+        HTTPStatus.OK, description="Micro frontend of the manual classification plugin."
     )
     @MANUAL_CLASSIFICATION_BLP.arguments(
         ManualClassificationParametersSchema(
@@ -181,62 +179,33 @@ class MicroFrontend(MethodView):
         required=False,
     )
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
-    def post(self, task_id: str, errors):
+    def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, task_id, errors)
+        return self.render(request.form, errors)
 
-    def render(self, data: Mapping, task_id: str, errors: dict):
-        if task_id is None:
-            schema = ManualClassificationParametersSchema()
-            return Response(
-                render_template(
-                    "simple_template.html",
-                    name=ManualClassification.instance.name,
-                    version=ManualClassification.instance.version,
-                    schema=schema,
-                    values=data,
-                    errors=errors,
-                    process=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
-                    example_values=url_for(
-                        f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend",
-                        **self.example_inputs,
-                    ),
-                )
+    def render(self, data: Mapping, errors: dict):
+
+        schema = ManualClassificationParametersSchema()
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=ManualClassification.instance.name,
+                version=ManualClassification.instance.version,
+                schema=schema,
+                values=data,
+                errors=errors,
+                process=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
+                example_values=url_for(
+                    f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend",
+                    **self.example_inputs,
+                ),
             )
-        else:
-            return self.render_selection_step(data, task_id, errors)
-
-    def render_selection_step(self, data: Mapping, task_id: str, errors: dict):
-        """Get the current task status."""
-        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_task_id(
-            task_id=task_id
         )
-        if task_data is None:
-            abort(HTTPStatus.NOT_FOUND, message="Task not found.")
-
-        if not task_data.is_finished:
-            # Case 1: task result not ready => some waiting view
-            return Response(
-                render_template(
-                    "manual_classification_waiting.html",
-                    name=ManualClassification.instance.name,
-                    version=ManualClassification.instance.version,
-                    schema=WaitingSchema(),
-                )
-            )
-
-        else:
-            # Case 2: task result ready => selection view
-            self._render_selection_step(data, task_id, errors)
-
-    def _render_selection_step(self, data: Mapping, task_id: str, errors: dict):
-        # get
-        pass
 
 
 @MANUAL_CLASSIFICATION_BLP.route("/load/")
 class LoadView(MethodView):
-    """Start a long running processing task."""
+    """Start a data preprocessing task."""
 
     @MANUAL_CLASSIFICATION_BLP.arguments(
         ManualClassificationParametersSchema(unknown=EXCLUDE), location="form"
@@ -244,25 +213,30 @@ class LoadView(MethodView):
     @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params: InputParameters):
-        """Start the entity filter task."""
+        """Start the data preprocessing task."""
         db_task = ProcessingTask(
             task_name=pre_render_classification.name, parameters=dumps(input_params)
         )
         db_task.save(commit=True)
 
+        # set previous step to cleared
+        # nothing to do (no previous step)
+
+        # next step
+        step_id = "classification"
+        href = url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.ClassificationView")
+        ui_href = url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontendClassification")
+
         # all tasks need to know about db id to load the db entry
-        task: chain = pre_render_classification.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
+        task: chain = pre_render_classification.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
         )
+
         # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.link_error(step_error.s(db_id=db_task.id))
         result: AsyncResult = task.apply_async()
 
-        db_task.ui_base_endpoint_url = url_for(
-            f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"
-        )
-        db_task.ui_endpoint_url = url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView")
-        db_task.task_id = result.id
+        db_task.task_id = result.id  # TODO: change to db_id
         db_task.save(commit=True)
 
         return redirect(
@@ -335,3 +309,104 @@ def pre_render_classification(self, db_id: int) -> str:
     task_data.save(commit=True)
 
     return "Classification pre-rendering successful."
+
+
+###### Classification step #####
+
+
+@MANUAL_CLASSIFICATION_BLP.route("/<str:db_id>/classification-ui/")
+class MicroFrontendClassification(MethodView):
+    """Micro frontend for the classification step of the manual classification plugin."""
+
+    @MANUAL_CLASSIFICATION_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend for the classification step of the manual classification plugin.",
+    )
+    @MANUAL_CLASSIFICATION_BLP.arguments(
+        ManualClassificationParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: str):
+        """Return the micro frontend."""
+        return self.render(request.args, errors, db_id)
+
+    @MANUAL_CLASSIFICATION_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend for the classification step of the manual classification plugin.",
+    )
+    @MANUAL_CLASSIFICATION_BLP.arguments(
+        ManualClassificationParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: str):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors, db_id)
+
+    def render(self, data: Mapping, errors: dict, db_id: str):
+        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if task_data is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        # TODO: build frontend
+        schema = ManualClassificationParametersSchema()
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=ManualClassification.instance.name,
+                version=ManualClassification.instance.version,
+                schema=schema,
+                values=data,
+                errors=errors,
+                process=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
+                example_values=url_for(
+                    f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend",
+                    **self.example_inputs,
+                ),
+            )
+        )
+
+
+@MANUAL_CLASSIFICATION_BLP.route("/classify/")
+class ClassificationView(MethodView):
+    """Start a classification processing task."""
+
+    @MANUAL_CLASSIFICATION_BLP.arguments(
+        ManualClassificationParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
+    def post(self, input_params: InputParameters):
+        """Start the classification task."""
+        db_task = ProcessingTask(
+            task_name=pre_render_classification.name, parameters=dumps(input_params)
+        )
+        db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = pre_render_classification.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        result: AsyncResult = task.apply_async()
+
+        db_task.ui_base_endpoint_url = url_for(
+            f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"
+        )
+        db_task.ui_endpoint_url = url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView")
+        db_task.task_id = result.id
+        db_task.save(commit=True)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+        )
