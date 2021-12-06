@@ -54,12 +54,12 @@ def add_step(
     task_data.progress_target = prog_target
     task_data.progress_unit = prog_unit
     task_data.progress_value = prog_value
-    task_data.add_next_step(href=href, ui_href=ui_href, step_id=step_id, commit=True)
+    task_data.add_next_step(href=href, ui_href=ui_href, step_id=step_id)
 
     if isinstance(task_log, str):
-        task_data.task_log = task_log
+        task_data.add_task_log_entry(task_log)
     else:
-        task_data.task_log = repr(task_log)
+        task_data.add_task_log_entry(repr(task_log))
 
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
@@ -81,18 +81,18 @@ def save_task_result(self, task_log: str, db_id: int):
         # TODO use better fitting error
         raise KeyError(f"Could not find db entry for id {db_id}, saving task log failed!")
 
-    if task_data.multi_step:
+    if task_data.multi_step:  # TODO
         task_data.progress_value = task_data.progress_target
 
     task_data.finished_status = "SUCCESS"
     task_data.finished_at = datetime.utcnow()
     if task_log is None:
         # finished tasks must have a result string
-        task_data.task_log = ""
+        task_data.add_task_log_entry("")
     elif isinstance(task_log, str):
-        task_data.task_log = task_log
+        task_data.add_task_log_entry(task_log)
     else:
-        task_data.task_log = repr(task_log)
+        task_data.add_task_log_entry(repr(task_log))
 
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
@@ -121,7 +121,7 @@ def save_task_error(self, failing_task_id: str, db_id: int):
 
     task_data.finished_status = result.state
     task_data.finished_at = datetime.utcnow()
-    task_data.task_log = f"{exc!r}\n\n{traceback}"
+    task_data.add_task_log_entry(f"{exc!r}\n\n{traceback}")
 
     task_data.save(commit=True)
 
@@ -148,7 +148,7 @@ def save_step_error(self, failing_task_id: str, db_id: int):
         )
         return  # TODO start new error logging task or save to extra db table
 
-    task_data.task_log += "\n" f"{exc!r}\n\n{traceback}"
+    task_data.add_task_log_entry("\n" f"{exc!r}\n\n{traceback}")
 
     task_data.save(commit=True)
     # TODO: what to do in case of step error? cancel plugin execution?

@@ -57,21 +57,19 @@ class ProgressMetadataSchema(MaBaseSchema):
         required=True, allow_none=False, metadata={"description": "The progress value."}
     )
     start = ma.fields.Integer(
-        required=True,
+        required=False,
         allow_none=False,
         metadata={"description": "The progress start value."},
     )
     target = ma.fields.Integer(
-        required=True,
+        required=False,
         allow_none=False,
         metadata={"description": "The progress target value."},
     )
     unit = ma.fields.String(
-        required=True,
+        required=False,
         allow_none=False,
-        metadata={
-            "description": "The progress unit."
-        },  # TODO: only allow limited choice, e.g., %
+        metadata={"description": "The progress unit."},
     )
 
 
@@ -90,12 +88,12 @@ class StepMetadataSchema(MaBaseSchema):
     )
     stepId = ma.fields.String(
         required=False,
-        allow_none=True,
+        allow_none=False,
         metadata={"description": 'ID of step, e.g., ``"step1"`` or ``"step1.step2b"``.'},
     )
     cleared = ma.fields.Boolean(
         required=False,
-        allow_none=True,
+        allow_none=False,
         metadata={
             "description": "``false`` if step is awaiting input, only last step in list can be marked as ``false``."
         },
@@ -113,9 +111,9 @@ class EntryPoint:
 @dataclass
 class ProgressMetadata:
     value: int
-    start: int
-    target: int
-    unit: str
+    start: int = 0
+    target: int = 100
+    unit: str = "%"
 
 
 @dataclass

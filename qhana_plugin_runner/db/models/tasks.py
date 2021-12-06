@@ -20,7 +20,7 @@ from sqlalchemy.orm import relation, relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.sql import sqltypes as sql
-from sqlalchemy.sql.expression import select
+from sqlalchemy.sql.expression import null, select
 from sqlalchemy.sql.schema import (
     Column,
     ForeignKey,
@@ -56,8 +56,8 @@ class Step:
     number: int = field(
         init=False, metadata={"sa": Column(sql.Integer(), primary_key=True)}
     )
-    href: str = field(metadata={"sa": Column(sql.String(200))})
-    ui_href: str = field(metadata={"sa": Column(sql.String(200))})
+    href: str = field(metadata={"sa": Column(sql.String(500))})
+    ui_href: str = field(metadata={"sa": Column(sql.String(500))})
     cleared: bool = field(metadata={"sa": Column(sql.Boolean())}, default=False)
 
 
@@ -83,8 +83,8 @@ class TaskData:
             )
         },
     )
-    key: str = field(metadata={"sa": Column(sql.String(100), primary_key=True)})
-    value: Optional[str] = field(metadata={"sa": Column(sql.Text(1000), nullable=True)})
+    key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
+    value: dict = field(metadata={"sa": Column(sql.JSON())})
 
 
 @REGISTRY.mapped
@@ -95,19 +95,17 @@ class ProcessingTask:
     Attributes:
         id (int, optional): automatically generated database id. Use the id to fetch this information from the database.
         task_name (str): the name of the (logical) task corresponding to this information object
-        task_id (Optional[str], optional): the final celery task id to wait for to declare this task finished. If not supplied this task will never be marked as finished. In multi-step plugins, this attribute is also used for intermediate task results. Only needed to check task status of :py:func:`qhana-plugin-runner.qhana_plugin_runner.tasks.save_task_result`.
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
         data (dict): dict-like key-value store for additional lightweight task data. New elements of type :class:`TaskData` can be added or retrieved as in a dict using ``key`` as key.
-        multi_step (bool): set to ``True`` if task data is used for a multi-step plugin.
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
-        progress_value (int): progress value in multi-step plugins.
-        progress_start (int): progress start value in multi-step plugins.
-        progress_target (int): progress target value in multi-step plugins.
-        progress_unit (str): progress unit in multi-step plugins (default: "%").
-        finished_status (Optional[str], optional): the status string with witch the celery task with the ``task_id`` finished. If set then ``task_id`` may not be checked.
+        progress_value (int): progress value. ``None`` by default.
+        progress_start (int): progress start value.
+        progress_target (int): progress target value.
+        progress_unit (str): progress unit (default: "%").
+        finished_status (Optional[str], optional): the status string of the plugin execution
         task_log (Optional[str], optional): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
         outputs (List[TaskFile], optional): the output data (files) of the task
     """
@@ -118,9 +116,6 @@ class ProcessingTask:
 
     id: int = field(init=False, metadata={"sa": Column(sql.INTEGER(), primary_key=True)})
     task_name: str = field(metadata={"sa": Column(sql.String(500))})
-    task_id: Optional[str] = field(
-        default=None, metadata={"sa": Column(sql.String(64), index=True, nullable=True)}
-    )
 
     started_at: datetime = field(
         default=datetime.utcnow(), metadata={"sa": Column(sql.TIMESTAMP(timezone=True))}
@@ -162,10 +157,12 @@ class ProcessingTask:
 
     current_step: int = field(default=-1, metadata={"sa": Column(sql.Integer())})
 
-    progress_value: int = field(default=0, metadata={"sa": Column(sql.Integer())})
+    progress_value: int = field(
+        default=None, metadata={"sa": Column(sql.Integer(), nullable=True)}
+    )
     progress_start: int = field(default=0, metadata={"sa": Column(sql.Integer())})
     progress_target: int = field(default=100, metadata={"sa": Column(sql.Integer())})
-    progress_unit: str = field(default="%", metadata={"sa": Column(sql.String(20))})
+    progress_unit: str = field(default="%", metadata={"sa": Column(sql.String(100))})
 
     finished_status: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.String(100))}
@@ -223,10 +220,13 @@ class ProcessingTask:
             href (str): The URL of the REST entry point resource.
             ui_href (str): The URL of the micro frontend that corresponds to the REST entry point resource.
             step_id (str): ID of step, e.g., ``"step1"`` or ``"step2b"``, is automatically appended to previous step
+
+        Raises:
+            AssertionError: raised in case the previous step was not cleared before this method is called.
         """
         if self.current_step >= 0:
             if not self.steps[self.current_step].cleared:
-                raise ValueError(
+                raise AssertionError(
                     "Previous step must be cleared first before adding a new step!"
                 )
             step_id = self.steps[self.current_step].step_id + "." + step_id
@@ -247,6 +247,22 @@ class ProcessingTask:
         if commit:
             DB.session.commit()
 
+    def add_task_log_entry(self, task_log: str, commit: bool = False):
+        """Appends ``task_log`` separated by a new line.
+
+        Args:
+            task_log (str): new entry to be added
+        """
+        if self.task_log:
+            if not task_log == "":
+                self.task_log += "\n" + task_log
+        else:
+            self.task_log = task_log
+
+        DB.session.add(self)
+        if commit:
+            DB.session.commit()
+
     def save(self, commit: bool = False):
         """Add this object to the current session and optionally commit the session to persist all objects in the session."""
         DB.session.add(self)
@@ -257,13 +273,6 @@ class ProcessingTask:
     def get_by_id(cls, id_: int) -> Optional["ProcessingTask"]:
         """Get the object instance by the object id from the database. (None if not found)"""
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
-
-    @classmethod
-    def get_by_task_id(cls, task_id) -> Optional["ProcessingTask"]:
-        """Get the object instance by the task_id from the database. (None if not found)"""
-        return DB.session.execute(
-            select(cls).filter_by(task_id=task_id)
-        ).scalar_one_or_none()
 
 
 @REGISTRY.mapped

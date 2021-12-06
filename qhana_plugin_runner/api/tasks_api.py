@@ -80,35 +80,34 @@ class TaskStatusSchema(MaBaseSchema):
             del data["outputs"]
         if data["steps"] == None:
             del data["steps"]
+        if data["progress"] == None:
             del data["progress"]
         return data
 
 
-@TASKS_API.route("/<string:db_id>/")
+@TASKS_API.route("/<string:task_id>/")
 class TaskView(MethodView):
     """Task status resource."""
 
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
-    def get(self, db_id: str):
+    def get(self, task_id: str):
         """Get the current task status."""
-        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=task_id)
         if task_data is None:
             abort(HTTPStatus.NOT_FOUND, message="Task not found.")
             return  # return for type checker, abort raises exception
 
-        assert (
-            task_data.task_id is not None
-        ), "If this is None then get_task_by_id is faulty."  # assertion for type checker
-
         progress = None
-        steps = None
-        if task_data.multi_step:
-            progress = {
+        if task_data.progress_value:
+            progress = progress = {
                 "value": task_data.progress_value,
                 "start": task_data.progress_start,
                 "target": task_data.progress_target,
                 "unit": task_data.progress_unit,
             }
+
+        steps = None
+        if task_data.multi_step:
             steps: List[StepMetadata] = []
             step: Step
             for step in task_data.steps:
@@ -122,20 +121,11 @@ class TaskView(MethodView):
                 )
 
         if not task_data.is_finished:
-            task_result = AsyncResult(task_data.task_id, app=CELERY)
-            if task_result:
-                return TaskData(
-                    status=task_result.status,
-                    # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
-                    log=None,  # only return a result if task is marked finished in db
-                    progress=progress,
-                    steps=steps,
-                )
             return TaskData(
                 progress=progress,
                 steps=steps,
                 status=task_data.status,
-                task_log=None,
+                log=task_data.task_log,
             )
 
         outputs: List[DataMetadata] = []
