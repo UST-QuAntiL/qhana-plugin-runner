@@ -30,6 +30,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
     PluginMetadataSchema,
     PluginMetadata,
     PluginType,
@@ -98,7 +99,16 @@ class PluginsView(MethodView):
             version=HelloWorld.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
-                href="./process/", ui_href="./ui/", data_input=[], data_output=[]
+                href="./process/",
+                ui_href="./ui/",
+                data_input=[],
+                data_output=[
+                    DataMetadata(
+                        data_type="txt",
+                        content_type=["text/plain"],
+                        required=True,
+                    )
+                ],
             ),
             tags=[],
         )

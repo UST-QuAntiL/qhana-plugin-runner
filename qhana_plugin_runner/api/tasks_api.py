@@ -99,7 +99,7 @@ class TaskView(MethodView):
 
         progress = None
         if task_data.progress_value:
-            progress = progress = {
+            progress = {
                 "value": task_data.progress_value,
                 "start": task_data.progress_start,
                 "target": task_data.progress_target,
@@ -107,7 +107,7 @@ class TaskView(MethodView):
             }
 
         steps = None
-        if task_data.multi_step:
+        if len(task_data.steps) > 0:
             steps: List[StepMetadata] = []
             step: Step
             for step in task_data.steps:

@@ -84,7 +84,9 @@ class TaskData:
         },
     )
     key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
-    value: dict = field(metadata={"sa": Column(sql.JSON())})
+    value: Union[dict, list, str, float, int, bool, None] = field(
+        metadata={"sa": Column(sql.JSON())}
+    )
 
 
 @REGISTRY.mapped
@@ -101,12 +103,12 @@ class ProcessingTask:
         data (dict): dict-like key-value store for additional lightweight task data. New elements of type :class:`TaskData` can be added or retrieved as in a dict using ``key`` as key.
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
-        progress_value (int): progress value. ``None`` by default.
+        progress_value (float): current progress value. ``None`` by default.
         progress_start (int): progress start value.
         progress_target (int): progress target value.
         progress_unit (str): progress unit (default: "%").
-        finished_status (Optional[str], optional): the status string of the plugin execution
-        task_log (Optional[str], optional): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
+        task_status (Optional[str], optional): the status string of the plugin execution, can only be ``PENDING``, ``SUCCESS``, or ``ERROR``.
+        task_log (str): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
         outputs (List[TaskFile], optional): the output data (files) of the task
     """
 
@@ -157,20 +159,18 @@ class ProcessingTask:
 
     current_step: int = field(default=-1, metadata={"sa": Column(sql.Integer())})
 
-    progress_value: int = field(
-        default=None, metadata={"sa": Column(sql.Integer(), nullable=True)}
+    progress_value: float = field(
+        default=None, metadata={"sa": Column(sql.Float(), nullable=True)}
     )
     progress_start: int = field(default=0, metadata={"sa": Column(sql.Integer())})
     progress_target: int = field(default=100, metadata={"sa": Column(sql.Integer())})
     progress_unit: str = field(default="%", metadata={"sa": Column(sql.String(100))})
 
-    finished_status: Optional[str] = field(
+    task_status: Optional[str] = field(
         default=None, metadata={"sa": Column(sql.String(100))}
     )
 
-    task_log: Optional[str] = field(
-        default=None, metadata={"sa": Column(sql.Text(), nullable=True)}
-    )
+    task_log: str = field(default="", metadata={"sa": Column(sql.Text(), nullable=False)})
 
     outputs: List["TaskFile"] = field(
         default_factory=list,
@@ -185,22 +185,22 @@ class ProcessingTask:
     @property
     def is_ok(self) -> bool:
         """Return true if the task has finished successfully."""
-        return self.finished_status == "SUCCESS"
+        return self.task_status == "SUCCESS"
 
     @property
     def status(self) -> str:
         """Return the finished status of the task.
 
-        If the task is finished but no finished_status was set returns ``"UNKNOWN"``.
+        If the task is finished but no task_status was set returns ``"UNKNOWN"``.
 
         If the task is not finished returns ``"PENDING"``.
 
         Returns:
-            str: ``self.finished_status`` | ``"UNKNOWN"`` | ``"PENDING"``
+            str: ``self.task_status`` | ``"UNKNOWN"`` | ``"PENDING"``
         """
         if self.is_finished:
-            if self.finished_status:
-                return self.finished_status
+            if self.task_status:
+                return self.task_status
             else:
                 return "UNKNOWN"
         return "PENDING"
@@ -229,7 +229,7 @@ class ProcessingTask:
                 raise AssertionError(
                     "Previous step must be cleared first before adding a new step!"
                 )
-            step_id = self.steps[self.current_step].step_id + "." + step_id
+            step_id = step_id
         else:
             self.multi_step = True
 
@@ -254,8 +254,7 @@ class ProcessingTask:
             task_log (str): new entry to be added
         """
         if self.task_log:
-            if not task_log == "":
-                self.task_log += "\n" + task_log
+            self.task_log += "\n" + task_log
         else:
             self.task_log = task_log
 
