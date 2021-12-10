@@ -135,7 +135,26 @@ function instrumentForm() {
             } else {
                 dataInputs.add(name);
             }
-            // TODO instrument data inputs
+        });
+        form.querySelectorAll('button.qhana-choose-file-button').forEach(chooseButton => {
+            var inputId = chooseButton.getAttribute("data-input-id");
+            var dataType = chooseButton.getAttribute("data-input-type") ?? "*";
+            var contentTypes = chooseButton.getAttribute("data-content-type");
+            if (contentTypes == null) {
+                contentTypes = ["*"];
+            } else {
+                contentTypes = contentTypes.split();
+            }
+            chooseButton.addEventListener("click", (event) => {
+                event.preventDefault();
+                sendMessage({
+                    type: "request-data-url",
+                    inputKey: inputId,
+                    acceptedInputType: dataType,
+                    acceptedContentTypes: contentTypes,
+                });
+            });
+            chooseButton.removeAttribute("hidden");
         });
         form.addEventListener("submit", (event) => {
             onFormSubmit(event, dataInputs, privateInputs)
@@ -148,6 +167,7 @@ function onFormSubmit(event, dataInputs, privateInputs) {
     const submitter = event.submitter;
     let submitTarget = submitter.getAttribute("data-target") || form.getAttribute("data-target");
     if (submitTarget === "microfrontend") {
+        sendMessage("ui-loading");
         return; // will just be replaced with another micro frontend, nothing to do
     }
     if (submitTarget === "api") {
@@ -161,6 +181,7 @@ function onFormSubmit(event, dataInputs, privateInputs) {
         }
         formMethod = formMethod || "post";
         const submitUrl = formAction.toString();
+        sendMessage("ui-loading");
         submitFormData(formData, formAction, formMethod)
             .then(
                 (response) => {

@@ -21,14 +21,38 @@
 
 .qhana-form-input {
     padding: 0.3em;
-    width: 100%;
     max-width: 25em;
+    flex-grow: 1;
+}
+
+.qhana-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
 }
 
 .qhana-error-message {
     margin-top: 0.2rem;
     margin-bottom: 0px;
     color: red;
+}
+
+.qhana-input-data-chooser[hidden] {
+    display: none;
+}
+
+.qhana-input-data-chooser {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    align-items: center;
+    gap: 1rem;
+}
+
+.qhana-input-data-chooser .selected-file-hint {
+    flex-grow: 1;
 }
 
 code.example {

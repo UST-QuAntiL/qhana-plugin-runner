@@ -20,25 +20,35 @@
     {% set input_type=get_input_type(field) %}
     <div class="{{form_field_class}}">
         <label class="{{form_label_class}}" for="{{form_key}}">{{field.metadata.get("label", form_key)}}</label>
-      {% if input_type == 'textarea' %}
-        <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
-            {{ 'required' if field.required else ''}}>{{values.get(form_key, '')}}</textarea>
-      {% elif input_type == "select" %}
-        <select class="{{form_input_class}}" name="{{ form_key }}" id="{{ key }}" autocomplete="off">
-            {% for name, value in field.metadata.get("options", {}).items() %}
-            <option value="{{ name }}" {% if name == values.get(form_key) %}selected{% endif %}>{{ value }}</option>
-            {% endfor %}
-        </select>
-      {% elif input_type %}
-        <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
-            {{ field_value(input_type, values.get(form_key)) }} 
-            {{ 'required' if field.required else ''}}
-            {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
-            {{ field_attr('data-content-type', space_delimited_list(field.metadata.get('data_content_types'))) }}
-            {{ field_attr('min-length', None) }}>
-      {% else %}
-        <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
-      {% endif %}
+
+        <div class="qhana-input-wrapper">
+          {% if input_type == 'textarea' %}
+            <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
+                {{ 'required' if field.required else ''}}>{{values.get(form_key, '')}}</textarea>
+          {% elif input_type == "select" %}
+            <select class="{{form_input_class}}" name="{{ form_key }}" id="{{ key }}" autocomplete="off">
+                {% for name, value in field.metadata.get("options", {}).items() %}
+                <option value="{{ name }}" {% if name == values.get(form_key) %}selected{% endif %}>{{ value }}</option>
+                {% endfor %}
+            </select>
+          {% elif input_type %}
+            <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
+                {{ field_value(input_type, values.get(form_key)) }} 
+                {{ 'required' if field.required else ''}}
+                {{ field_attr('min-length', None) }}>
+          {% else %}
+            <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
+          {% endif %}
+
+
+          {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types')  %}
+            <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden
+                    {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
+                    {{ field_attr('data-content-type', space_delimited_list(field.metadata.get('data_content_types'))) }}>
+                choose file
+            </button>
+          {% endif %}
+        </div>
 
       {% if error %}
         <p class="qhana-error-message">
@@ -46,6 +56,14 @@
             <span>{{message}}</span>
             {% endfor %}
         </p>
+      {% endif %}
+
+      {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
+        <div class="qhana-input-data-chooser" data-input-id="{{key}}" hidden>
+            <p class="selected-file-hint">
+                Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
+            </p>
+        </div>
       {% endif %}
     </div>
     {% endfor %}
