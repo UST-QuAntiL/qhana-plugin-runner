@@ -58,6 +58,31 @@ class OutputMetadata:
     href: Optional[str] = None
 
 
+class DelegateMetadataSchema(MaBaseSchema):
+    name = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={"description": "The name of the delegate plugin."},
+    )
+    version = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={"description": "The version of the delegate plugin."}
+    )
+    url = ma.fields.Url(
+        required=True,
+        allow_none=False,
+        metadata={"description": "URL of the delegate plugin."}
+    )
+
+
+@dataclass
+class DelegateMetadata:
+    name: str
+    version: str
+    url: str
+
+
 class ProcessingResourceMetadataSchema(MaBaseSchema):
     href = ma.fields.Url(
         required=True,

@@ -25,7 +25,7 @@ from flask_smorest import abort
 
 from qhana_plugin_runner.api.plugin_schemas import (
     ConcreteOutputMetadataSchema,
-    OutputMetadata,
+    OutputMetadata, DelegateMetadataSchema, DelegateMetadata,
 )
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
@@ -47,6 +47,7 @@ class TaskData:
     task_id: str
     status: str
     task_log: Optional[str] = None
+    delegate: Optional[DelegateMetadata] = None
     outputs: Sequence[OutputMetadata] = field(default_factory=list)
 
 
@@ -55,6 +56,7 @@ class TaskStatusSchema(MaBaseSchema):
     task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
     status = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_log = ma.fields.String(required=False, allow_none=True, dump_only=True)
+    delegate = ma.fields.Nested(DelegateMetadataSchema(), required=False, allow_none=True, dump_only=True)
     outputs = ma.fields.List(
         ma.fields.Nested(ConcreteOutputMetadataSchema()),
         required=False,
@@ -65,9 +67,11 @@ class TaskStatusSchema(MaBaseSchema):
     @ma.post_dump()
     def remove_empty_attributes(self, data: Dict[str, Any], **kwargs):
         """Remove result attributes from serialized tasks that have not finished."""
-        if data["taskLog"] == None:
+        if data["taskLog"] is None:
             del data["taskLog"]
             del data["outputs"]
+        if data["delegate"] is None:
+            del data["delegate"]
         return data
 
 
@@ -76,7 +80,7 @@ class TaskView(MethodView):
     """Task status resource."""
 
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
-    def get(self, task_id: str):
+    def get(self, task_id: str, delegate: Dict = None):
         """Get the current task status."""
         task_data: Optional[ProcessingTask] = ProcessingTask.get_by_task_id(
             task_id=task_id
@@ -98,6 +102,18 @@ class TaskView(MethodView):
                     status=task_result.status,
                     # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
                     task_log=None,  # only return a result if task is marked finished in db
+                )
+            if delegate is not None:
+                return TaskData(
+                    name=task_data.task_name,
+                    task_id=task_data.task_id,
+                    status=task_data.status,
+                    task_log=None,
+                    delegate=DelegateMetadata(
+                        name=delegate["name"],
+                        version=delegate["version"],
+                        url=delegate["url"],
+                    )
                 )
             return TaskData(
                 name=task_data.task_name,
