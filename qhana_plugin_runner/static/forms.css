@@ -39,22 +39,6 @@
     color: red;
 }
 
-.qhana-input-data-chooser[hidden] {
-    display: none;
-}
-
-.qhana-input-data-chooser {
-    display: flex;
-    flex-wrap: wrap;
-    width: 100%;
-    align-items: center;
-    gap: 1rem;
-}
-
-.qhana-input-data-chooser .selected-file-hint {
-    flex-grow: 1;
-}
-
 code.example {
     padding-block: 0.1rem;
     padding-inline: 0.2rem;

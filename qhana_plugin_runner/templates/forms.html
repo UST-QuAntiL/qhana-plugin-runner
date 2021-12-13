@@ -1,80 +1,77 @@
-
-
 {% macro field_attr(attr, value) -%}
-    {% if value is not none %}{{attr}}="{{value}}"{% endif %}
+{% if value is not none %}{{attr}}="{{value}}"{% endif %}
 {%- endmacro %}
 
 {% macro field_value(type_, value) -%}
-    {% if type_ == "checkbox" %}
-        {{ 'checked' if value else '' }}
-    {% else %}
-        {{ field_attr('value', value) }}
-    {% endif %}
+{% if type_ == "checkbox" %}
+{{ 'checked' if value else '' }}
+{% else %}
+{{ field_attr('value', value) }}
+{% endif %}
 {%- endmacro %}
 
 
-{% macro render_fields(schema, values=dict(), errors=dict(), form_field_class="qhana-form-field", form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
-    {% for key, field in schema.fields.items() %}
-    {% set form_key=field.data_key %}
-    {% set error=errors.get(form_key) %}
-    {% set input_type=get_input_type(field) %}
-    <div class="{{form_field_class}}">
-        <label class="{{form_label_class}}" for="{{form_key}}">{{field.metadata.get("label", form_key)}}</label>
+{% macro render_fields(schema, values=dict(), errors=dict(), form_field_class="qhana-form-field",
+form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
+{% for key, field in schema.fields.items() %}
+{% set form_key=field.data_key %}
+{% set error=errors.get(form_key) %}
+{% set input_type=get_input_type(field) %}
+<div class="{{form_field_class}}">
+  <label class="{{form_label_class}}" for="{{form_key}}">{{field.metadata.get("label", form_key)}}</label>
 
-        <div class="qhana-input-wrapper">
-          {% if input_type == 'textarea' %}
-            <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
-                {{ 'required' if field.required else ''}}>{{values.get(form_key, '')}}</textarea>
-          {% elif input_type == "select" %}
-            <select class="{{form_input_class}}" name="{{ form_key }}" id="{{ key }}" autocomplete="off">
-                {% for name, value in field.metadata.get("options", {}).items() %}
-                <option value="{{ name }}" {% if name == values.get(form_key) %}selected{% endif %}>{{ value }}</option>
-                {% endfor %}
-            </select>
-          {% elif input_type %}
-            <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
-                {{ field_value(input_type, values.get(form_key)) }} 
-                {{ 'required' if field.required else ''}}
-                {{ field_attr('min-length', None) }}>
-          {% else %}
-            <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
-          {% endif %}
+  <div class="qhana-input-wrapper">
+    {% if input_type == 'textarea' %}
+    <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off" {{ 'required' if
+      field.required else '' }}>{{values.get(form_key, '')}}</textarea>
+    {% elif input_type == "select" %}
+    <select class="{{form_input_class}}" name="{{ form_key }}" id="{{ key }}" autocomplete="off">
+      {% for name, value in field.metadata.get("options", {}).items() %}
+      <option value="{{ name }}" {% if name==values.get(form_key) %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+    {% elif input_type %}
+    <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off" {{
+      field_value(input_type, values.get(form_key)) }} {{ 'required' if field.required else '' }} {{
+      field_attr('min-length', None) }}>
+    {% else %}
+    <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
+    {% endif %}
 
 
-          {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types')  %}
-            <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden
-                    {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
-                    {{ field_attr('data-content-type', space_delimited_list(field.metadata.get('data_content_types'))) }}>
-                choose file
-            </button>
-          {% endif %}
-        </div>
+    {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
+    <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden {{ field_attr('data-input',
+      field.metadata.get('data_input_type')) }} {{ field_attr('data-content-type',
+      space_delimited_list(field.metadata.get('data_content_types'))) }}>
+      choose file
+    </button>
+    {% endif %}
+  </div>
 
-      {% if error %}
-        <p class="qhana-error-message">
-            {% for message in error %}
-            <span>{{message}}</span>
-            {% endfor %}
-        </p>
-      {% endif %}
-
-      {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-        <div class="qhana-input-data-chooser" data-input-id="{{key}}" hidden>
-            <p class="selected-file-hint">
-                Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
-            </p>
-        </div>
-      {% endif %}
-    </div>
+  {% if error %}
+  <p class="qhana-error-message">
+    {% for message in error %}
+    <span>{{message}}</span>
     {% endfor %}
+  </p>
+  {% endif %}
+
+  {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
+  <p class="selected-file-hint" data-input-id="{{key}}" hidden>
+    Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
+  </p>
+  {% endif %}
+</div>
+{% endfor %}
 {%- endmacro %}
 
 {% macro submit(text, action=None, target="api", method=None, class="qhana-form-submit") -%}
-    <button class="{{class}}" type="submit" data-target="{{target}}" {{field_attr('formaction', action)}} {{field_attr('formmethod', method)}}>{{text}}</button>
+<button class="{{class}}" type="submit" data-target="{{target}}" {{field_attr('formaction', action)}}
+  {{field_attr('formmethod', method)}}>{{text}}</button>
 {%- endmacro %}
 
 {% macro render_form(action="", method="post", target="api", class="qhana-form") -%}
-    <form action="{{action}}" method="{{method}}" data-target="{{target}}" class="{{class}}">
-        {{ caller() }}
-    </form>
+<form action="{{action}}" method="{{method}}" data-target="{{target}}" class="{{class}}">
+  {{ caller() }}
+</form>
 {%- endmacro %}

@@ -33,6 +33,9 @@ function registerMessageListener() {
             if (data != null && data.type === "load-css") {
                 onLoadCssMessage(data, state);
             }
+            if (data != null && data.type === "data-url-response") {
+                onDataUrlResponseMessage(data, state);
+            }
         }
     });
 }
@@ -53,6 +56,27 @@ function onLoadCssMessage(data, state) {
     });
     state.heightUnchangedCount = 0;
     monitorHeightChanges(state);
+}
+
+/**
+ * Handle css load messages that request the micro frontend to load additional css files.
+ *
+ * @param {{type: 'data-url-response', inputKey: string, href: string, dataType?: string, contentType?: string, filename?: string, version?: number}} data 
+ * @param {{lastHeight: number, heightUnchangedCount: number}} state 
+ */
+function onDataUrlResponseMessage(data) {
+    var input = document.querySelector(`input#${data.inputKey}`);
+    if (input != null) {
+        input.value = data.href;
+        var filenameSpan = document.querySelector(`.selected-file-name[data-input-id=${data.inputKey}]`);
+        if (filenameSpan != null) {
+            filenameSpan.textContent = `${data.filename || "unknown"} (v${data.version || "?"}) ${data.dataType || "*"} – ${data.contentType || "*"}`;
+            if (filenameSpan.parentNode.hasAttribute("hidden")) {
+                filenameSpan.parentNode.removeAttribute("hidden");
+                monitorHeightChanges(state);
+            }
+        }
+    }
 }
 
 /**
