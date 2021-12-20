@@ -104,8 +104,8 @@ class ProcessingTask:
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
         progress_value (float): current progress value. ``None`` by default.
-        progress_start (int): progress start value.
-        progress_target (int): progress target value.
+        progress_start (float): progress start value.
+        progress_target (float): progress target value.
         progress_unit (str): progress unit (default: "%").
         task_status (Optional[str], optional): the status string of the plugin execution, can only be ``PENDING``, ``SUCCESS``, or ``ERROR``.
         task_log (str): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
@@ -162,8 +162,8 @@ class ProcessingTask:
     progress_value: float = field(
         default=None, metadata={"sa": Column(sql.Float(), nullable=True)}
     )
-    progress_start: int = field(default=0, metadata={"sa": Column(sql.Integer())})
-    progress_target: int = field(default=100, metadata={"sa": Column(sql.Integer())})
+    progress_start: float = field(default=0, metadata={"sa": Column(sql.Float())})
+    progress_target: float = field(default=100, metadata={"sa": Column(sql.Float())})
     progress_unit: str = field(default="%", metadata={"sa": Column(sql.String(100))})
 
     task_status: Optional[str] = field(
