@@ -52,12 +52,76 @@ class DataMetadataSchema(MaBaseSchema):
     )
 
 
+class ProgressMetadataSchema(MaBaseSchema):
+    value = ma.fields.Integer(
+        required=True, allow_none=False, metadata={"description": "The progress value."}
+    )
+    start = ma.fields.Integer(
+        required=False,
+        allow_none=False,
+        metadata={"description": "The progress start value."},
+    )
+    target = ma.fields.Integer(
+        required=False,
+        allow_none=False,
+        metadata={"description": "The progress target value."},
+    )
+    unit = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={"description": "The progress unit."},
+    )
+
+
+class StepMetadataSchema(MaBaseSchema):
+    href = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={"description": "The URL of the REST entry point resource."},
+    )
+    uiHref = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
+        },
+    )
+    stepId = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={"description": 'ID of step, e.g., ``"step1"`` or ``"step1.step2b"``.'},
+    )
+    cleared = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "description": "``false`` if step is awaiting input, only last step in list can be marked as ``false``."
+        },
+    )
+
+
 @dataclass
 class EntryPoint:
     href: str
     ui_href: str
     data_input: List[DataMetadata] = field(default_factory=list)
     data_output: List[DataMetadata] = field(default_factory=list)
+
+
+@dataclass
+class ProgressMetadata:
+    value: int
+    start: int = 0
+    target: int = 100
+    unit: str = "%"
+
+
+@dataclass
+class StepMetadata:
+    href: str
+    uiHref: str
+    stepId: str
+    cleared: bool = False
 
 
 class EntryPointSchema(MaBaseSchema):

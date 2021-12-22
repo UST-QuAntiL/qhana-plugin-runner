@@ -33,7 +33,7 @@ CELERY_WORKER = f"{MODULE_NAME}.celery_worker:CELERY"
 def stop_broker(c):
     """Stop the previously started redis broker container with docker or podman.
 
-    Discovers the conteiner id from the environment variable REDIS_CONTAINER_ID.
+    Discovers the container id from the environment variable REDIS_CONTAINER_ID.
     If the variable is not set ``--latest`` is used (this assumes that the latest
     created container is the broker!).
 
@@ -52,7 +52,7 @@ def stop_broker(c):
 def reset_broker(c):
     """Remove the current redis container and unset the REDIS_CONTAINER_ID variable.
 
-    Discovers the conteiner id from the environment variable REDIS_CONTAINER_ID.
+    Discovers the container id from the environment variable REDIS_CONTAINER_ID.
     If the variable is not set this task does nothing.
 
     To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
@@ -78,7 +78,7 @@ def start_broker(c, port=None):
     The reused container ignores the port option!
     Sets the environemnt variable in the .env file if a new container is created.
 
-    Redis port is optionally red from REDIS_PORT environment variable. Use the
+    Redis port is optionally read from REDIS_PORT environment variable. Use the
     ``reset-broker`` task to remove the old container to create a new container
     with a different port.
 

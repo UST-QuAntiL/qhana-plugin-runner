@@ -30,6 +30,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
     PluginMetadataSchema,
     PluginMetadata,
     PluginType,
@@ -98,7 +99,16 @@ class PluginsView(MethodView):
             version=HelloWorld.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
-                href="./process/", ui_href="./ui/", data_input=[], data_output=[]
+                href="./process/",
+                ui_href="./ui/",
+                data_input=[],
+                data_output=[
+                    DataMetadata(
+                        data_type="txt",
+                        content_type=["text/plain"],
+                        required=True,
+                    )
+                ],
             ),
             tags=[],
         )
@@ -176,13 +186,12 @@ class ProcessView(MethodView):
         task: chain = demo_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        result: AsyncResult = task.apply_async()
+        task.apply_async()
 
-        db_task.task_id = result.id
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 
