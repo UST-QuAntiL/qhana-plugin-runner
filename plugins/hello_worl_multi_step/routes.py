@@ -11,33 +11,27 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
-)
-
 from plugins.hello_worl_multi_step import HELLO_MULTI_BLP, HelloWorldMultiStep
 from plugins.hello_worl_multi_step.schemas import (
-    DemoResponseSchema,
     HelloWorldParametersSchema,
     TaskResponseSchema,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import (
-    add_step,
-    save_task_error,
-    save_task_result,
-)
-
 from plugins.hello_worl_multi_step.tasks import preprocessing_task, processing_task
+from qhana_plugin_runner.api.plugin_schemas import (
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 
 @HELLO_MULTI_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, DemoResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
@@ -46,7 +40,7 @@ class PluginsView(MethodView):
             description=HELLO_MULTI_BLP.description,
             name=HelloWorldMultiStep.instance.identifier,
             version=HelloWorldMultiStep.instance.version,
-            type=PluginType.simple,
+            type=PluginType.complex,
             entry_point=EntryPoint(
                 href="./process/", ui_href="./ui/", data_input=[], data_output=[]
             ),
