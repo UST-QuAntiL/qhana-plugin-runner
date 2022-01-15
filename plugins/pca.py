@@ -79,12 +79,12 @@ class SolverEnum(Enum):
 
 class InputParameters:
     def __init__(
-        self, entity_points_url: str, dimensions: int, solver: SolverEnum, scale=False
+        self, entity_points_url: str, dimensions: int, solver: SolverEnum, minmaxscale=False
     ):
         self.entity_points_url = entity_points_url
         self.dimensions = dimensions
         self.solver = solver
-        self.scale = scale
+        self.minmaxscale = minmaxscale
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -118,11 +118,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    scale = ma.fields.Boolean(
+    minmaxscale = ma.fields.Boolean(
         required=False,
         allow_none=False,
         metadata={
-            "label": "Scale features",
+            "label": "MinMax scaling features",
             "description": "Tells, if features should be scaled to be between 0 and 1 or not",
             "input_type": "checkbox",
         },
@@ -212,7 +212,7 @@ class MicroFrontend(MethodView):
         default_values = {
             fields["dimensions"].data_key: 0,
             fields["solver"].data_key: SolverEnum.auto,
-            fields["scale"].data_key: False,
+            fields["minmaxscale"].data_key: False,
         }
 
         # overwrite default values with other values if possible
@@ -311,6 +311,7 @@ def load_from_url(entity_point_url):
 @CELERY.task(name=f"{PCA.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     from sklearn.decomposition import PCA
+    from sklearn.preprocessing import MinMaxScaler
 
     # get parameters
     TASK_LOGGER.info(f"Starting new PCA calculation task with db id '{db_id}'")
@@ -331,45 +332,40 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: dimensions='{dimensions}'")
     solver = input_params.solver.value
     TASK_LOGGER.info(f"Loaded input parameters from db: solver='{solver}'")
-    scale = input_params.scale
-    TASK_LOGGER.info(f"Loaded input parameters from db: scale='{scale}'")
+    minmaxscale = input_params.minmaxscale
+    TASK_LOGGER.info(f"Loaded input parameters from db: minmaxscale='{minmaxscale}'")
 
     # load data from file
     (entity_points, id_to_idx) = load_from_url(entity_points_url)
+
+    # scale features
+    scaler = MinMaxScaler()
+    if minmaxscale:
+        entity_points = scaler.fit_transform(entity_points)
 
     # execute PCA
     if dimensions <= 0:
         dimensions = "mle"
     pca = PCA(n_components=dimensions, svd_solver=solver)
-    scaling_factors = []
-    if scale:
-        entity_points_scaled = entity_points.copy()
-        for i in range(entity_points_scaled.shape[1]):
-            scaling_factors.append(1.0 / entity_points_scaled[:, i].max())
-            entity_points_scaled[:, i] = (
-                entity_points_scaled[:, i] / entity_points_scaled[:, i].max()
-            )
-        pca.fit(entity_points_scaled)
-        transformed_points = pca.transform(entity_points)
-    else:
-        transformed_points = pca.fit_transform(entity_points)
+    transformed_points = pca.fit_transform(entity_points)
 
     # prepare output
     entity_points = []
-    for ID, i in id_to_idx.items():
-        entity_points.append({"ID": ID, "href": "", "point": list(transformed_points[i])})
-    if scale:
+    if minmaxscale:
         entity_points.append(
             {
                 "pcaComponents": pca.components_.tolist(),
                 "pcaMean": pca.mean_.tolist(),
-                "pcaScalingFactors": scaling_factors,
+                "pcaScalingMin": scaler.min_.tolist(),
+                "pcaScalingFactors": scaler.scale_.tolist()
             }
         )
     else:
         entity_points.append(
             {"pcaComponents": pca.components_.tolist(), "pcaMean": pca.mean_.tolist()}
         )
+    for ID, i in id_to_idx.items():
+        entity_points.append({"ID": ID, "href": "", "point": list(transformed_points[i])})
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
