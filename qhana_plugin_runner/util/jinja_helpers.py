@@ -46,6 +46,14 @@ def marshmallow_field_to_input_type(field: fields.Field) -> Optional[str]:
     return None
 
 
+def marshmallow_field_to_step_attr(field: fields.Field) -> Optional[str]:
+    if field.metadata.get("step") is not None:
+        return field.metadata.get("step")
+    if isinstance(field, fields.Decimal) or isinstance(field, fields.Float):
+        return "any"
+    return None
+
+
 def space_delimited_list(
     items: Union[Sequence[Union[str, float, int, bool, None]], str, float, int, bool]
 ) -> Optional[str]:
@@ -58,4 +66,5 @@ def space_delimited_list(
 
 def register_helpers(app: Flask):
     app.jinja_env.globals["get_input_type"] = marshmallow_field_to_input_type
+    app.jinja_env.globals["get_input_attr_step"] = marshmallow_field_to_step_attr
     app.jinja_env.globals["space_delimited_list"] = space_delimited_list
