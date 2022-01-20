@@ -6,7 +6,7 @@ from typing import Iterator, Dict, List, Union, BinaryIO, IO
 import torch
 import pennylane as qml
 
-from plugins.hybrid_ae_pkg.backend.quantum.pl.pytorch.models.common_functions import (
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pl.qlayer import (
     create_qlayer,
     qnn_constructors,
 )

@@ -3,7 +3,9 @@ from typing import Tuple, Callable, List
 import pennylane as qml
 import pennylane.numpy as np
 
-from plugins.hybrid_ae_pkg.backend.quantum.pl.TwoQubitGate import add_two_qubit_gate
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pl.TwoQubitGate import (
+    add_two_qubit_gate,
+)
 
 
 def constructor(q_num: int) -> Tuple[Callable, int]:

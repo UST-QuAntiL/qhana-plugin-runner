@@ -7,10 +7,10 @@ from torch.optim import Adam, Optimizer
 from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 from plugins.hybrid_ae_pkg.backend.main import train_nn as training_loop
-from plugins.hybrid_ae_pkg.backend.quantum.pl.pytorch.models.hybrid import (
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch.model import (
     HybridAutoencoder as PLHybridAutoencoder,
 )
-from plugins.hybrid_ae_pkg.backend.quantum.pl.pytorch.training import (
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch.training import (
     training_loop as pl_training_loop,
 )
 from plugins.hybrid_ae_pkg.backend.quantum.qiskit.autoencoder import (
@@ -112,4 +112,4 @@ def qiskit_pytorch_autoencoder(
 
 if __name__ == "__main__":
     pennylane_hybrid_autoencoder(np.zeros((1, 10)), 3, 2, "QNN3", 100)
-    qiskit_pytorch_autoencoder(np.zeros((5, 10)), 3, 2, 1000, 10, 5)
+    # qiskit_pytorch_autoencoder(np.zeros((5, 10)), 3, 2, 1000, 10, 5)
