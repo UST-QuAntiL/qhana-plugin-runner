@@ -296,11 +296,13 @@ Only the last step should be active (e.g. not marked as cleared).
       - Example
       - Description
     * - href
-      - .../<UUID>/step1
+      - http(s)://.../<UUID>/step1
       - A link to the REST resource accepting the input data for the step.
+        This URL must be an absolute URL containing schema and host!
     * - UI href
-      - .../<UUID>/ui-step1
+      - http(s)://.../<UUID>/ui-step1
       - A link to the micro frontend corresponding to the REST resource accepting the input data for the step.
+        This URL must be an absolute URL containing schema and host!
     * - Step ID (optional)
       - step1.step2b
       - A stable id corresponding to the current branch of the result computation. 
