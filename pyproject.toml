@@ -37,6 +37,7 @@ invoke = "^1.5.0"
 sphinx-rtd-theme = "^0.5.2"
 hypothesis = "^6.14.3"
 pytest-cov = "^2.12.1"
+pip-licenses = "^3.5.3"
 
 [tool.poetry.scripts]
 #flask = 'flask.cli:main'

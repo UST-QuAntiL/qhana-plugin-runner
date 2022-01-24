@@ -273,6 +273,19 @@ rm docs/source/modules.rst  # delete modules file as this repository only contai
 ```
 
 
+## Updating the Third-Party Licenses
+
+```bash
+# list all licenses
+poetry run invoke list-licenses
+
+# update licenses in repository
+poetry run invoke update-licenses
+```
+
+The third party licenses will be stored in the `qhana_plugin_runner/templates/licenses.html` file.
+
+
 ## Unit Tests
 
 The unit tests use [pytest](https://docs.pytest.org/en/latest/contents.html) and [hypothesis](https://hypothesis.readthedocs.io/en/latest/index.html).
