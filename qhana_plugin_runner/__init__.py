@@ -32,6 +32,7 @@ from tomlkit.api import parse as parse_toml
 
 from . import api, babel, celery, db, requests
 from .api import jwt_helper
+from .markdown import register_markdown_filter
 from .licenses import register_licenses
 from .plugins_cli import register_plugin_cli_blueprint
 from .storage import register_file_store
@@ -157,6 +158,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     # register jinja helpers
     register_helpers(app)
+    register_markdown_filter(app)
 
     # register request helpers with request session
     register_additional_schemas(requests.REQUEST_SESSION)

@@ -365,3 +365,28 @@ def update_licenses(c, include_installed=False):
         hide="err",
         warn=True,
     )
+
+
+@task(update_licenses)
+def update_dependencies(c):
+    """Update dependencies that are derived from the pyproject.toml dependencies (e.g. doc dependencies and licenses).
+
+    Args:
+        c (Context): task context
+    """
+    c.run(
+        join(
+            [
+                "poetry",
+                "export",
+                "--dev",
+                "--format",
+                "requirements.txt",
+                "--output",
+                str(Path("./docs/requirements.txt")),
+            ]
+        ),
+        echo=True,
+        hide="err",
+        warn=True,
+    )

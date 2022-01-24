@@ -31,9 +31,10 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
       {% endfor %}
     </select>
     {% elif input_type %}
-    <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off" {{
-      field_value(input_type, values.get(form_key)) }} {{ 'required' if field.required else '' }} {{
-      field_attr('min-length', None) }} {{field_attr('step', get_input_attr_step(field))}}>
+    <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off" 
+      aria-describedby="{{key}}-description"
+      {{ field_value(input_type, values.get(form_key)) }} {{ 'required' if field.required else '' }} 
+      {{ field_attr('min-length', None) }} {{field_attr('step', get_input_attr_step(field))}}>
     {% else %}
     <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
     {% endif %}
@@ -48,13 +49,20 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     {% endif %}
   </div>
 
-  {% if error %}
-  <p class="qhana-error-message">
-    {% for message in error %}
-    <span>{{message}}</span>
-    {% endfor %}
-  </p>
-  {% endif %}
+  <div id="{{key}}-description" class="qhana-input-description">
+      {% if error %}
+      <p class="qhana-error-message">
+        {% for message in error %}
+        <span>{{message}}</span>
+        {% endfor %}
+      </p>
+      {% endif %}
+
+      {% autoescape false %}
+      {{field.metadata.get("description", "") | markdown}}
+      {% endautoescape %}
+  </div>
+
 
   {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
   <p class="selected-file-hint" data-input-id="{{key}}" hidden>
