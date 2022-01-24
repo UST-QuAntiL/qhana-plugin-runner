@@ -17,13 +17,6 @@
  * Register the main message event listener on the current window.
  */
 function registerMessageListener() {
-    // state that will be available for listeners in their closure
-    var state = {
-        href: window.location.href,
-        lastHeight: 0,
-        heightUnchangedCount: 0,
-    }
-
     // main event listener, delegates events to dedicated listeners
     window.addEventListener("message", (event) => {
         var data = event.data;
@@ -31,10 +24,10 @@ function registerMessageListener() {
             // string message
         } else {
             if (data != null && data.type === "load-css") {
-                onLoadCssMessage(data, state);
+                onLoadCssMessage(data, window._qhana_microfrontend_state);
             }
             if (data != null && data.type === "data-url-response") {
-                onDataUrlResponseMessage(data, state);
+                onDataUrlResponseMessage(data, window._qhana_microfrontend_state);
             }
         }
     });
@@ -206,26 +199,38 @@ function onFormSubmit(event, dataInputs, privateInputs) {
         formMethod = formMethod || "post";
         const submitUrl = formAction.toString();
         sendMessage("ui-loading");
+
+        const inputDataUrls = new Set();
+        const processedFormData = new FormData();
+        formData.forEach((entry, key) => {
+            if (privateInputs.has(key)) {
+                // censor private values
+                processedFormData.append(key, '***');
+                return;
+            }
+            // add all other values unchanged
+            processedFormData.append(key, entry);
+            // add data inputs to extra list
+            if (dataInputs.has(key) && (typeof entry === 'string')) {
+                inputDataUrls.add(entry);
+            }
+        });
+
+        if (window._qhana_microfrontend_state.preventSubmit) {
+            sendMessage({
+                type: "form-submit",
+                formData: (new URLSearchParams(processedFormData)).toString(),
+                formDataType: "application/x-www-form-urlencoded",
+                dataInputs: new Array(...inputDataUrls),
+                submitUrl: submitUrl,
+            });
+            return;
+        }
+
         submitFormData(formData, formAction, formMethod)
             .then(
                 (response) => {
                     if (response.status === 200) {
-
-                        const inputDataUrls = new Set();
-                        const processedFormData = new FormData();
-                        formData.forEach((entry, key) => {
-                            if (privateInputs.has(key)) {
-                                // censor private values
-                                processedFormData.append(key, '***');
-                                return;
-                            }
-                            // add all other values unchanged
-                            processedFormData.append(key, entry);
-                            // add data inputs to extra list
-                            if (dataInputs.has(key) && (typeof entry === 'string')) {
-                                inputDataUrls.add(entry);
-                            }
-                        });
                         sendMessage({
                             type: "form-submit",
                             formData: (new URLSearchParams(processedFormData)).toString(),
@@ -286,7 +291,15 @@ function submitFormData(formData, formAction, formMethod) {
 
 // only execute functions if loaded from a parent window (e.g. inside an iframe)
 if (window.top !== window.self) {
-    instrumentForm();
-    registerMessageListener();
-    notifyParentWindowOnLoad();
+    if (window._qhana_microfrontend_state == null) {
+        window._qhana_microfrontend_state = {
+            href: window.location.href,
+            lastHeight: 0,
+            heightUnchangedCount: 0,
+            preventSubmit: false,
+        }
+        instrumentForm();
+        registerMessageListener();
+        notifyParentWindowOnLoad();
+    }
 }
