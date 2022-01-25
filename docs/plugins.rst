@@ -150,8 +150,23 @@ The plugin runner contains template macros that can be imported and used to auto
     {% endcall %}
 
 
+Communication With the Pluin Host
+"""""""""""""""""""""""""""""""""
+
+The Micro Frontends are loaded inside iframes.
+This means that they are sandboxed from the parent window and need to communicate via messaging.
+For this purpose a generic `microfrontend.js` is included in the static folder that is also part of the simple template.
+Plugins that want to use this script should use the attributes described in the next section. 
+
+The messages that can be exchanged with the plugin host are documented in an `AsyncAPI <https://www.asyncapi.com>`_ document.
+The document can be found here :download:`asyncapi.json <asyncapi.json>`.
+To view the document use the `AsyncAPI studio <https://studio.asyncapi.com/>`_.
+
+
 Custom Attributes used in Micro Frontends
-"""""""""""""""""""""""""""""""""""""""""
+'''''''''''''''''''''''''''''''''''''''''
+
+.. TODO: remove / rewrite this section
 
 The Micro Frontend can use a number of custom html attributes to mark some inputs for the QHAna frontend to be enhanced.
 This can be used to mark data input fields for the QHAna frontend.
