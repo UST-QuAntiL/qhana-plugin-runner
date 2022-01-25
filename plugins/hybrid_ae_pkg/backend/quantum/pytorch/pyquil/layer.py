@@ -27,7 +27,7 @@ class PyquilFunction(Function):
         ctx.shift = shift
         ctx.save_for_backward(input_data, params)
 
-        return PyquilLayer._calc_output(
+        return PyquilFunction._calc_output(
             program, qc, input_data, input_region_name, params, params_region_name
         )
 
@@ -56,7 +56,7 @@ class PyquilFunction(Function):
                 left_shift[j] -= shift
 
                 shifted_input = torch.stack([right_shift, left_shift], dim=0)
-                output = PyquilLayer._calc_output(
+                output = PyquilFunction._calc_output(
                     program,
                     qc,
                     shifted_input,
@@ -87,7 +87,7 @@ class PyquilFunction(Function):
             (params.shape[0], 1)
         )
         stacked_params = torch.stack(shifted_params, dim=0)
-        output = PyquilLayer._calc_output(
+        output = PyquilFunction._calc_output(
             program,
             qc,
             extended_input_values,
