@@ -94,8 +94,8 @@ def get_minmax_scaler(entity_points_url: str):
     scale_min = np.array(ent["point"])
     scale_max = np.array(ent["point"])
     for ent in entity_generator:
-        scale_min = np.minimum(scale_min, ent)  # Takes minimum for each dimension separately
-        scale_max = np.maximum(scale_max, ent)  # Takes maximum for each dimension separately
+        scale_min = np.minimum(scale_min, ent["point"])  # Takes minimum for each dimension separately
+        scale_max = np.maximum(scale_max, ent["point"])  # Takes maximum for each dimension separately
     return scale_min, (scale_max - scale_min)
 
 
@@ -234,8 +234,8 @@ def calculation_task(self, db_id: int) -> str:
     # Prepare output for pca file
     pca_output = {"components": pca.components_.tolist(), "mean": pca.mean_.tolist()}
     if minmax_scale:
-        pca_output["scalingMin"] = scale_min.toList()
-        pca_output["scalingMax"] = scale_max.toList()
+        pca_output["scalingMin"] = scale_min.tolist()
+        pca_output["scalingMax"] = scale_max.tolist()
     pca_output["ref-transormed"] = "transformed_entity_points"
     pca_output = [pca_output]
 
