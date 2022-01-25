@@ -206,12 +206,15 @@ class ProcessingTask:
         return "PENDING"
 
     def clear_previous_step(self, commit: bool = False):
-        """Set ``"cleared"`` of previous step to ``true``. Note: call before calling add_next_step."""
-        step: Step = self.steps[self.current_step]
-        step.cleared = True
-        DB.session.add(step)
-        if commit:
-            DB.session.commit()
+        """Set ``"cleared"`` of previous step to ``true`` if available. Note: call before calling add_next_step."""
+        try:
+            step: Step = self.steps[self.current_step]
+            step.cleared = True
+            DB.session.add(step)
+            if commit:
+                DB.session.commit()
+        except:
+            pass
 
     def add_next_step(self, href: str, ui_href: str, step_id: str, commit: bool = False):
         """Adds new step for multi-step plugin.

@@ -85,6 +85,7 @@ def save_task_result(self, task_log: str, db_id: int):
         task_data.progress_value = task_data.progress_target
 
     task_data.task_status = "SUCCESS"
+    task_data.clear_previous_step()
     task_data.finished_at = datetime.utcnow()
     if isinstance(task_log, str):
         task_data.add_task_log_entry(task_log)
