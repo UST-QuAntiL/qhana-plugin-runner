@@ -25,14 +25,16 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off" {{ 'required' if
       field.required else '' }}>{{values.get(form_key, '')}}</textarea>
     {% elif input_type == "select" %}
-    <select class="{{form_input_class}}" name="{{ form_key }}" id="{{ key }}" autocomplete="off">
+    <select class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off">
       {% for name, value in field.metadata.get("options", {}).items() %}
       <option value="{{ name }}" {% if name==values.get(form_key) %}selected{% endif %}>{{ value }}</option>
       {% endfor %}
     </select>
     {% elif input_type %}
     <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off" 
-      aria-describedby="{{key}}-description"
+      aria-describedby="{{key}}-description" 
+      {{ 'data-input-type=data' if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') else '' }}
+      {{ 'data-input-type=plugin' if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') else '' }}
       {{ field_value(input_type, values.get(form_key)) }} {{ 'required' if field.required else '' }} 
       {{ field_attr('min-length', None) }} {{field_attr('step', get_input_attr_step(field))}}>
     {% else %}
@@ -47,14 +49,33 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
       choose file
     </button>
     {% endif %}
+    {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
+    <button class="qhana-choose-plugin-button" data-input-id="{{key}}" hidden 
+      {{ field_attr('data-plugin-tags', space_delimited_list(field.metadata.get('plugin_tags', []))) }} 
+      {{ field_attr('data-plugin-name', field.metadata.get('plugin_name')) }}
+      {{ field_attr('data-plugin-version', field.metadata.get('plugin_version')) }}>
+      choose file
+    </button>
+    {% endif %}
   </div>
 
   <div id="{{key}}-description" class="qhana-input-description">
       {% if error %}
-      <p class="qhana-error-message">
+      <p class="qhana-error-message" aria-live="assertive">
         {% for message in error %}
         <span>{{message}}</span>
         {% endfor %}
+      </p>
+      {% endif %}
+
+      {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
+      <p class="selected-file-hint" data-input-id="{{key}}" aria-live="off" hidden>
+        Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
+      </p>
+      {% endif %}
+      {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
+      <p class="selected-plugin-hint" data-input-id="{{key}}" aria-live="off" hidden>
+        Selected Plugin: <span class="selected-plugin-name" data-input-id="{{key}}"></span>
       </p>
       {% endif %}
 
@@ -64,11 +85,6 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
   </div>
 
 
-  {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-  <p class="selected-file-hint" data-input-id="{{key}}" hidden>
-    Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
-  </p>
-  {% endif %}
 </div>
 {% endfor %}
 {%- endmacro %}

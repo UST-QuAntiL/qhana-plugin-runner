@@ -21,13 +21,26 @@ function registerMessageListener() {
     window.addEventListener("message", (event) => {
         var data = event.data;
         if (typeof data === "string") {
-            // string message
+            if (data === "ui-prevent-submit") {
+                window._qhana_microfrontend_state.preventSubmit = true;
+                sendSubmitStatus();
+            }
+            if (data === "ui-allow-submit") {
+                window._qhana_microfrontend_state.preventSubmit = false;
+                sendSubmitStatus();
+            }
+            if (data === "ui-submit-status") {
+                sendSubmitStatus();
+            }
         } else {
             if (data != null && data.type === "load-css") {
                 onLoadCssMessage(data, window._qhana_microfrontend_state);
             }
             if (data != null && data.type === "data-url-response") {
                 onDataUrlResponseMessage(data, window._qhana_microfrontend_state);
+            }
+            if (data != null && data.type === "plugin-url-response") {
+                onPluginUrlResponseMessage(data, window._qhana_microfrontend_state);
             }
         }
     });
@@ -52,7 +65,7 @@ function onLoadCssMessage(data, state) {
 }
 
 /**
- * Handle css load messages that request the micro frontend to load additional css files.
+ * Handle a data-url-response message containing a data URL for a specific form input.
  *
  * @param {{type: 'data-url-response', inputKey: string, href: string, dataType?: string, contentType?: string, filename?: string, version?: number}} data 
  * @param {{lastHeight: number, heightUnchangedCount: number}} state 
@@ -66,10 +79,43 @@ function onDataUrlResponseMessage(data) {
             filenameSpan.textContent = `${data.filename || "unknown"} (v${data.version || "?"}) ${data.dataType || "*"} – ${data.contentType || "*"}`;
             if (filenameSpan.parentNode.hasAttribute("hidden")) {
                 filenameSpan.parentNode.removeAttribute("hidden");
-                monitorHeightChanges(state);
+                filenameSpan.parentNode.setAttribute("aria-live", "polite");
+                monitorHeightChanges(window._qhana_microfrontend_state);
             }
         }
     }
+}
+
+/**
+ * Handle a plugin-url-response message containing a plugin URL for a specific form input.
+ *
+ * @param {{type: 'plugin-url-response', inputKey: string, pluginUrl: string, pluginName?: string, pluginVersion?: string}} data 
+ * @param {{lastHeight: number, heightUnchangedCount: number}} state 
+ */
+function onPluginUrlResponseMessage(data) {
+    var input = document.querySelector(`input#${data.inputKey}`);
+    if (input != null) {
+        input.value = data.pluginUrl;
+        var pluginNameSpan = document.querySelector(`.selected-plugin-name[data-input-id=${data.inputKey}]`);
+        if (pluginNameSpan != null) {
+            pluginNameSpan.textContent = `${data.pluginName || "unknown"} (v${data.pluginVersion || "?"})`;
+            if (pluginNameSpan.parentNode.hasAttribute("hidden")) {
+                pluginNameSpan.parentNode.removeAttribute("hidden");
+                pluginNameSpan.parentNode.setAttribute("aria-live", "polite");
+                monitorHeightChanges(window._qhana_microfrontend_state);
+            }
+        }
+    }
+}
+
+/**
+ * Send the current submit status to the plugin host.
+ */
+function sendSubmitStatus() {
+    sendMessage({
+        type: "ui-submit-status",
+        isAllowedToSubmit: !window._qhana_microfrontend_state.preventSubmit,
+    });
 }
 
 /**
@@ -145,12 +191,35 @@ function instrumentForm() {
                 privateInputs.add(name);
             }
         });
-        form.querySelectorAll('input[data-input]').forEach(inputElement => {
+        form.querySelectorAll('input[data-input-type=data]').forEach(inputElement => {
+            console.log("DATA INPUT:", inputElement)
             const name = inputElement.getAttribute('name');
             if (name == null) {
                 console.warn('Input has no specified name but is marked as data input!', inputElement);
             } else {
                 dataInputs.add(name);
+                // TODO request-data-url-info
+            }
+            var dataInputId = inputElement.getAttribute("id");
+            var dataInputValue = inputElement.value;
+            if (dataInputId && dataInputValue) {
+                sendMessage({
+                    type: "request-data-url-info",
+                    inputKey: dataInputId,
+                    dataUrl: dataInputValue,
+                });
+            }
+        });
+        form.querySelectorAll('input[data-input-type=plugin]').forEach(inputElement => {
+            console.log("PLUGIN INPUT:", inputElement)
+            var pluginInputId = inputElement.getAttribute("id");
+            var pluginInputValue = inputElement.value;
+            if (pluginInputId && pluginInputValue) {
+                sendMessage({
+                    type: "request-plugin-url-info",
+                    inputKey: pluginInputId,
+                    pluginUrl: pluginInputValue,
+                });
             }
         });
         form.querySelectorAll('button.qhana-choose-file-button').forEach(chooseButton => {
@@ -170,6 +239,33 @@ function instrumentForm() {
                     acceptedInputType: dataType,
                     acceptedContentTypes: contentTypes,
                 });
+            });
+            chooseButton.removeAttribute("hidden");
+        });
+        form.querySelectorAll('button.qhana-choose-plugin-button').forEach(chooseButton => {
+            var inputId = chooseButton.getAttribute("data-input-id");
+            var pluginName = chooseButton.getAttribute("data-plugin-name") ?? null;
+            var pluginVersion = chooseButton.getAttribute("data-plugin-version") ?? null;
+            var pluginTags = chooseButton.getAttribute("data-plugin-tags") ?? "";
+            if (pluginTags == null) {
+                pluginTags = [];
+            } else {
+                pluginTags = pluginTags.split();
+            }
+            var requestMessage = {
+                type: "request-plugin-url",
+                inputKey: inputId,
+                pluginTags: pluginTags,
+            };
+            if (pluginName) {
+                requestMessage.pluginName = pluginName;
+            }
+            if (pluginVersion) {
+                requestMessage.pluginVersion = pluginVersion;
+            }
+            chooseButton.addEventListener("click", (event) => {
+                event.preventDefault();
+                sendMessage(requestMessage);
             });
             chooseButton.removeAttribute("hidden");
         });
@@ -292,6 +388,7 @@ function submitFormData(formData, formAction, formMethod) {
 // only execute functions if loaded from a parent window (e.g. inside an iframe)
 if (window.top !== window.self) {
     if (window._qhana_microfrontend_state == null) {
+        // prevent double execution if script is already loaded in the current window
         window._qhana_microfrontend_state = {
             href: window.location.href,
             lastHeight: 0,
