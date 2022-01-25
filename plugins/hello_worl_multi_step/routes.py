@@ -100,7 +100,7 @@ class MicroFrontend(MethodView):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
-                "hello_template.html",
+                "simple_template.html",
                 name=HelloWorldMultiStep.instance.name,
                 version=HelloWorldMultiStep.instance.version,
                 schema=schema,
@@ -199,7 +199,7 @@ class Step1Frontend(MethodView):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
-                "hello_template.html",
+                "simple_template.html",
                 name=HelloWorldMultiStep.instance.name,
                 version=HelloWorldMultiStep.instance.version,
                 schema=schema,

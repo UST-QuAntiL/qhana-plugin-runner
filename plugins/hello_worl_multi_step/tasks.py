@@ -43,7 +43,7 @@ def preprocessing_task(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "out.txt", "hello-world-output", "text/plain"
+                db_id, output, "output1.txt", "hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"
@@ -70,7 +70,7 @@ def processing_task(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "out.txt", "hello-world-output", "text/plain"
+                db_id, output, "output2.txt", "hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"
