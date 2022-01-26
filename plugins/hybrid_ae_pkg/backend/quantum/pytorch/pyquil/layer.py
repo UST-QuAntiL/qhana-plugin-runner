@@ -1,11 +1,14 @@
+import time
 from typing import Any, Tuple
 
-from pyquil import Program
+from pyquil import Program, get_qc
 from pyquil.api import QuantumComputer
 import torch
 from torch import Tensor
 from torch.autograd import Function
 import numpy as np
+
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pyquil import QNN1
 
 
 class PyquilFunction(Function):
@@ -121,11 +124,74 @@ class PyquilFunction(Function):
 
         # TODO: parallel execution of circuits
         for i in range(input_data.shape[0]):
-            program.write_memory(region_name=input_region_name, value=input_data[i])
-            program.write_memory(region_name=params_region_name, value=params[i])
+            program.write_memory(
+                region_name=input_region_name, value=input_data[i].tolist()
+            )
+            program.write_memory(region_name=params_region_name, value=params[i].tolist())
 
             qc.run(program)
             bit_strings = qc.run(program).readout_data.get("ro")
             output_arrays.append(np.mean(bit_strings, 0))
 
         return torch.tensor(np.stack(output_arrays), dtype=torch.float32)
+
+
+class PyQuilLayer(torch.nn.Module):
+    def __init__(
+        self,
+        program: Program,
+        qc: QuantumComputer,
+        input_region_name: str,
+        params_region_name: str,
+        params_num: int,
+        shift: float,
+    ):
+        super(PyQuilLayer, self).__init__()
+        self.program = program
+        self.qc = qc
+        self.input_region_name = input_region_name
+        self.params_region_name = params_region_name
+        self.params_num = params_num
+        self.shift = shift
+
+        self.params = torch.nn.Parameter(torch.rand(self.params_num) * 2 * np.pi)
+
+    def forward(self, input_data: Tensor) -> Tensor:
+        return PyquilFunction.apply(
+            self.program,
+            self.qc,
+            input_data,
+            self.input_region_name,
+            self.params,
+            self.params_region_name,
+            self.shift,
+        )
+
+
+if __name__ == "__main__":
+    program, params_num = QNN1.create_circuit(2)
+    program.wrap_in_numshots_loop(1000)
+    qc = get_qc("4q-qvm")
+    executable = qc.compile(program)
+
+    training_input = torch.tensor([[0.0, 1.0]])
+    training_target = torch.tensor([[1.0, 0.0]])
+    model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1)
+
+    loss_fn = torch.nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+
+    model.train()
+
+    for i in range(100):
+        time1 = time.time()
+        pred = model(training_input)
+        loss = loss_fn(pred, training_target)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        time2 = time.time()
+
+        print(f"loss: {loss.item():>7f} output: {pred} time: {time2 - time1}")
