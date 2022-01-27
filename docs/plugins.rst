@@ -135,7 +135,7 @@ The accepted data type can be indicated by specifying a required dataInput.
 A visualization plugin must have exactly one required data input or exactly one data input (that is implicitly assumed as required).
 A visualization plugin **must not** produce any new data and **must not** list any data outputs.
 
-.. note:: The specification type of plugin is WIP and will be finished later.
+.. note:: The specification of visualization plugins is WIP and will be finished later.
 
 
 Processing Plugin Micro Frontend
@@ -376,7 +376,7 @@ Conversion Plugins
 Conversion plugins are special processing plugins.
 The intended purpose of conversion plugins is to allow automatic conversion between different serialization formats.
 
-.. note:: The specification type of plugin is WIP and will be finished later.
+.. note:: The specification of conversion plugins is WIP and will be finished later.
 
 
 Plugin Dependencies
