@@ -31,8 +31,15 @@ class PyquilFunction(Function):
         ctx.shift = shift
         ctx.save_for_backward(input_data, params)
 
+        params_extended = params.reshape((1, -1)).repeat(input_data.shape[0], 1)
+
         return PyquilFunction._calc_output(
-            program, qc, input_data, input_region_name, params, params_region_name
+            program,
+            qc,
+            input_data,
+            input_region_name,
+            params_extended,
+            params_region_name,
         )
 
     @staticmethod
@@ -190,12 +197,12 @@ if __name__ == "__main__":
     qc = get_qc("4q-qvm")
     executable = qc.compile(program)
 
-    training_input = torch.tensor([[0.0, 1.0]])
-    training_target = torch.tensor([[1.0, 0.0]])
+    training_input = torch.tensor([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])
+    training_target = torch.tensor([[0.0, 0.0], [1.0, 0.0], [1.0, 0.0], [0.0, 0.0]])
     model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1)
 
     loss_fn = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
     model.train()
 
