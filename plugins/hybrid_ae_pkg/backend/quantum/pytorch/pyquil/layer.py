@@ -1,5 +1,6 @@
 import time
-from typing import Any, Tuple
+from multiprocessing.pool import ThreadPool
+from typing import Any, Tuple, List
 
 from pyquil import Program, get_qc
 from pyquil.api import QuantumComputer
@@ -120,18 +121,33 @@ class PyquilFunction(Function):
         params: Tensor,
         params_region_name: str,
     ) -> Tensor:
-        output_arrays = []
+        programs = [program.copy() for _ in range(input_data.shape[0])]
+        inputs = [input_data[i].tolist() for i in range(input_data.shape[0])]
 
-        # TODO: parallel execution of circuits
-        for i in range(input_data.shape[0]):
-            program.write_memory(
-                region_name=input_region_name, value=input_data[i].tolist()
+        if params.dim() == 1:
+            params = params.reshape((1, -1))
+
+        params_ = [params[i].tolist() for i in range(input_data.shape[0])]
+
+        def run(
+            program_instance: Program,
+            single_input: List[float],
+            single_parameters: List[float],
+        ):
+            program_instance.write_memory(
+                region_name=input_region_name, value=single_input
             )
-            program.write_memory(region_name=params_region_name, value=params[i].tolist())
+            program_instance.write_memory(
+                region_name=params_region_name, value=single_parameters
+            )
 
-            qc.run(program)
-            bit_strings = qc.run(program).readout_data.get("ro")
-            output_arrays.append(np.mean(bit_strings, 0))
+            qc.run(program_instance)
+            bit_strings = qc.run(program_instance).readout_data.get("ro")
+
+            return np.mean(bit_strings, 0)
+
+        with ThreadPool(2) as pool:
+            output_arrays = pool.starmap(run, zip(programs, inputs, params_))
 
         return torch.tensor(np.stack(output_arrays), dtype=torch.float32)
 
