@@ -85,8 +85,12 @@ Example of plugin metadata:
       - 0.0.1
       - A version conforming to <https://www.python.org/dev/peps/pep-0440/#public-version-identifiers>
     * - Type
-      - ``simple`` | ``complex`` | ``TBD…``
-      - A plugin can be ``simple`` (exactly one processing endpoint) or ``complex`` (one entry point but complex interaction).
+      - ``processing`` | ``visalization`` | ``conversion``
+      - A plugin that consumes data and creates new data is a ``processing`` plugin. 
+        Plugins that consume data to produce a microfrontend visualization are ``visualization`` plugins.
+        Plugins that consume input data in one format and output the data converted into a different format are ``conversion`` plugins.
+        Conversion plugins work the same as processing plugins but must follow additional constraints.
+        If support for conversion plugins is not implemented they must be treated as processing plugins.
     * - Tags
       - ``["data-loader", "MUSE"]``
       - A list of tags describing the plugin. Unknown tags must be ignored while parsing this list. 
@@ -122,8 +126,20 @@ When specifying the accepted content or data type of a file input (or output) th
   * ``application/json`` is an exact match
 
 
-Plugin Micro Frontend
----------------------
+Visualization Plugin Micro Frontend
+-----------------------------------
+
+A visualization plugin defines both ``href`` and ``hrefUi`` to point to the micro frontend that provides the data visualization.
+The endpoint **must** accept a single query parameter ``data-url`` in the URL.
+The accepted data type can be indicated by specifying a required dataInput.
+A visualization plugin must have exactly one required data input or exactly one data input (that is implicitly assumed as required).
+A visualization plugin **must not** produce any new data and **must not** list any data outputs.
+
+.. note:: The specification type of plugin is WIP and will be finished later.
+
+
+Processing Plugin Micro Frontend
+--------------------------------
 
 All QHAna plugins should expose the parameters of the algorithm in a micro frontend (see :doc:`adr/0008-use-micro-frontends-to-expose-algorithm-parameters` for reasoning). 
 The micro frontends should only use html and css.
@@ -198,8 +214,8 @@ This can be used to mark data input fields for the QHAna frontend.
       - Mark an input as private. Values of private inputs must never be stored in permanent storage by QHAna. Password inputs are considered private by default.
 
 
-Plugin Results
---------------
+Processing Plugin Results
+-------------------------
 
 The REST entry point of a plugin must return (or forward to) a valid plugin result value.
 
@@ -353,6 +369,14 @@ The list must not be present until the result is completed.
     * - Data Type
       - entity/list
       - The data type tag associated with the data. Describes what kind of data is encoded. Must not contain wildcards (``*``).
+
+Conversion Plugins
+------------------
+
+Conversion plugins are special processing plugins.
+The intended purpose of conversion plugins is to allow automatic conversion between different serialization formats.
+
+.. note:: The specification type of plugin is WIP and will be finished later.
 
 
 Plugin Dependencies
