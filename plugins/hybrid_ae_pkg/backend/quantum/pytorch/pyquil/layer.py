@@ -135,7 +135,7 @@ class PyquilFunction(Function):
         if params.dim() == 1:
             params = params.reshape((1, -1))
 
-        params_ = [params[i].tolist() for i in range(input_data.shape[0])]
+        params_split = [params[i].tolist() for i in range(input_data.shape[0])]
 
         def run(
             program_instance: Program,
@@ -154,8 +154,8 @@ class PyquilFunction(Function):
 
             return np.mean(bit_strings, 0)
 
-        with ThreadPool(2) as pool:
-            output_arrays = pool.starmap(run, zip(programs, inputs, params_))
+        with ThreadPool(8) as pool:
+            output_arrays = pool.starmap(run, zip(programs, inputs, params_split))
 
         return torch.tensor(np.stack(output_arrays), dtype=torch.float32)
 
