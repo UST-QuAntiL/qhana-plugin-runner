@@ -198,19 +198,21 @@ if __name__ == "__main__":
     qc = get_qc("4q-qvm")
     executable = qc.compile(program)
 
-    training_input = torch.tensor([[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]])
-    training_target = torch.tensor([[0.0, 0.0], [1.0, 0.0], [1.0, 0.0], [0.0, 0.0]])
+    training_input = torch.tensor(
+        [[0.0, 0.0], [0.0, np.pi], [np.pi, 0.0], [np.pi, np.pi]]
+    )
+    training_target = torch.tensor([0.0, 1.0, 1.0, 0.0])
     model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1)
 
     loss_fn = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
 
     model.train()
 
     for i in range(100):
         time1 = time.time()
-        pred = model(training_input)
-        loss = loss_fn(pred, training_target)
+        pred: Tensor = model(training_input)
+        loss = loss_fn(pred[:, 0], training_target)
 
         optimizer.zero_grad()
         loss.backward()
