@@ -68,13 +68,13 @@ class QAEFunction(torch.autograd.Function):
                 shifted_input = torch.stack([right_shift, left_shift], dim=0)
                 output = qae.run(shifted_input, encoder_params_extended, 1000)
 
-                derivatives = (output[0] - output[1]) / (2.0 * shift)
-                combined_derivative = (derivatives * grad_output).sum()
+                derivatives = (output[0, :] - output[1, :]) / (2.0 * shift)
+                combined_derivative = (derivatives * grad_output[i]).sum()
 
                 input_grad[i, j] = combined_derivative
 
+        # gradient approximation with central differences for the parameters
         encoder_grad = torch.zeros(encoder_params.shape)
-
         shifted_encoder_params = []
 
         for i in range(encoder_params.shape[0]):
@@ -95,11 +95,11 @@ class QAEFunction(torch.autograd.Function):
 
         for i in range(encoder_params.shape[0]):
             for j in range(input_values.shape[0]):
-                derivatives = (
+                derivative = (
                     output[2 * (i * input_values.shape[0] + j)]
                     - output[2 * (i * input_values.shape[0] + j) + 1]
                 ) / (2.0 * shift)
-                combined_derivative = (derivatives * grad_output).sum()
+                combined_derivative = (derivative * grad_output[j]).sum()
 
                 encoder_grad[i] += combined_derivative
 
