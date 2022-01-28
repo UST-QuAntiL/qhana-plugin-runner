@@ -76,11 +76,12 @@ class PyquilFunction(Function):
                     params_region_name,
                 )
 
-                derivatives = (output[0] - output[1]) / (2.0 * shift)
-                combined_derivative = (derivatives * grad_output).sum()
+                derivatives = (output[0, :] - output[1, :]) / (2.0 * shift)
+                combined_derivative = (derivatives * grad_output[i]).sum()
 
                 input_grad[i, j] = combined_derivative
 
+        # gradient approximation with central differences for the parameters
         params_grad = torch.zeros(params.shape)
         shifted_params = []
 
@@ -109,11 +110,11 @@ class PyquilFunction(Function):
 
         for i in range(params.shape[0]):
             for j in range(input_data.shape[0]):
-                derivatives = (
+                derivative = (
                     output[2 * (i * input_data.shape[0] + j)]
                     - output[2 * (i * input_data.shape[0] + j) + 1]
                 ) / (2.0 * shift)
-                combined_derivative = (derivatives * grad_output).sum()
+                combined_derivative = (derivative * grad_output[j]).sum()
 
                 params_grad[i] += combined_derivative
 
