@@ -67,6 +67,7 @@ class ParameterHandler:
             raise ValueError(
                 f"The following inputs were not provided: {str(not_provided_params)[1:-1]}"
             )
+        self.parameter_dict["batchSize"] = max(self.parameter_dict["batchSize"], self.parameter_dict["dimensions"])
 
     def get(self, key):
         return self.parameter_dict[key]
@@ -77,7 +78,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity-points",
-        data_content_types="text/csv",  # ["application/json", "text/csv", "application/X-lines+json"],
+        data_content_types=["application/json", "text/csv"],  # ["application/json", "text/csv", "application/X-lines+json"],
         metadata={
             "label": "Entity points URL",
             "description": "URL to a json file with the entity points.",

@@ -21,12 +21,26 @@ import numpy as np
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def get_points(ent):
+    point = []
+    d = 0
+    while f"dim{d}" in ent.keys():
+        point.append(ent[f"dim{d}"])
+        d += 1
+    return point
+
+
 # Creates a generator for loading in entities
 def get_entity_generator(entity_points_url: str, stream=False):
     file_ = open_url(entity_points_url, stream=stream)
     file_.encoding = "utf-8"
     if entity_points_url[-3:] == "csv":
-        return load_entities(file_, mimetype="text/csv")
+        for ent in load_entities(file_, mimetype="text/csv"):
+            ent = ent._asdict()
+            point = get_points(ent)
+            prepared_ent = {'ID': ent['ID'], 'href': ent['href'], 'point': point}
+            yield prepared_ent
+        # return load_entities(file_, mimetype="text/csv")
     else:
         return load_entities(file_, mimetype="application/json")
 
@@ -39,6 +53,9 @@ def load_entityPoints_and_idxToId(entity_points_url: str):
 
     ent = None
     for ent in entity_generator:
+        TASK_LOGGER.info(f"ent type: {type(ent)}\n ent is {ent}")
+        # TASK_LOGGER.info(f"{ent.ID}, {ent.href}, {ent.point}")
+        ent = dict(ent)
         if ent["ID"] in id_to_idx:
             raise ValueError("Duplicate ID: ", ent["ID"])
 
@@ -99,6 +116,12 @@ def get_minmax_scaler(entity_points_url: str):
     return scale_min, (scale_max - scale_min)
 
 
+def get_entity_dict(ID, point):
+    ent = {"ID": ID, "href": ""}
+    for d in range(len(point)):
+        ent[f"dim{d}"] = point[d]
+    return ent
+
 # This method is used, when we can avoid that the whole output data is in memory
 # It creates a generator, transforming each input element into the output element
 def prepare_stream_output(entity_generator, pca, minmax_scale, scale_min, scale_max):
@@ -107,16 +130,16 @@ def prepare_stream_output(entity_generator, pca, minmax_scale, scale_min, scale_
         if minmax_scale:
             point = (point - scale_min) / scale_max
         transformed_ent = pca.transform([point])[0]
-        yield {"ID": ent["ID"], "href": "", "point": transformed_ent}
+        yield get_entity_dict(ent["ID"], transformed_ent)
 
 
 # This method is used, when the whole output data is in memory
 def prepare_static_output(
-    transformed_points, pca, id_to_idx, minmax_scale, scale_min, scale_max
+    transformed_points, id_to_idx
 ):
     entity_points = []
     for ID, i in id_to_idx.items():
-        entity_points.append({"ID": ID, "href": "", "point": list(transformed_points[i])})
+        entity_points.append(get_entity_dict(ID, transformed_points[i]))
     return entity_points
 
 
@@ -130,7 +153,7 @@ def complete_fitting(entity_points_url, pca, minmax_scale, scale_min, scale_max)
     pca.fit(entity_points)
     transformed_points = pca.transform(entity_points)
     return prepare_static_output(
-        transformed_points, pca, id_to_idx, minmax_scale, scale_min, scale_max
+        transformed_points, id_to_idx
     )
 
 # This is used, when the pca can be incrementally fitted via batches
@@ -167,7 +190,7 @@ def batch_fitting(entity_points_url, pca, batch_size, minmax_scale, scale_min, s
     )
 
 
-def save_outputs(db_id, pca_output, entity_points):
+def save_outputs(db_id, pca_output, entity_points, attributes):
     # save pca
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(pca_output, output, "application/json")
@@ -182,13 +205,13 @@ def save_outputs(db_id, pca_output, entity_points):
     # save transformed points
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(
-            entity_points, output, "text/csv", attributes=["ID", "href", "point"]
+            entity_points, output, "text/csv", attributes=attributes
         )
         STORE.persist_task_result(
             db_id,
             output,
             "transformed_entity_points.csv",
-            "entity",
+            "entity-points",
             "text/csv",
         )
 
@@ -239,6 +262,8 @@ def calculation_task(self, db_id: int) -> str:
     pca_output["ref-transormed"] = "transformed_entity_points"
     pca_output = [pca_output]
 
-    save_outputs(db_id, pca_output, entity_points)
+    # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
+    attributes = ["ID", "href"] + [f"dim{d}" for d in range(len(pca.components_))]
+    save_outputs(db_id, pca_output, entity_points, attributes)
 
     return "Result stored in file"
