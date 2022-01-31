@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np
 from pyquil import Program, get_qc
-from pyquil.gates import RY, CNOT, MEASURE
+from pyquil.gates import RY, CNOT, MEASURE, RX
 
 
 def create_circuit(q_num: int) -> Tuple[Program, int]:
@@ -18,9 +18,13 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
     params_per_gate = 1
 
     p = Program()
+    input_values = p.declare("input", "REAL", q_num)
     params = p.declare("params", "REAL", gates_num * params_per_gate)
     ro = p.declare("ro", "BIT", q_num)
     param_offset = 0
+
+    for i in range(q_num):
+        p += RX(input_values[i], i)
 
     for i in range(q_num):
         p += RY(params[param_offset], i)
