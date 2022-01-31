@@ -9,7 +9,7 @@ from torch import Tensor
 from torch.autograd import Function
 import numpy as np
 
-from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pyquil import QNN1, QNN2, QNN3
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pyquil import QNN1, QNN2, QNN3, QNN4
 
 
 class PyquilFunction(Function):
@@ -193,7 +193,7 @@ class PyQuilLayer(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    program, params_num = QNN3.create_circuit(2)
+    program, params_num = QNN4.create_circuit(2, 1)
     program.wrap_in_numshots_loop(1000)
     qc = get_qc("4q-qvm")
     executable = qc.compile(program)
