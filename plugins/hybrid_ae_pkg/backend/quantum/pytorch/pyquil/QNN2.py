@@ -14,12 +14,12 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
     :param q_num:
     :return: function that constructs the circuit
     """
-    gates_num = 2 * q_num + q_num * (q_num - 1)
+    parametric_gates_num = 2 * q_num + q_num * (q_num - 1)
     params_per_gate = 3
 
     p = Program()
     input_values = p.declare("input", "REAL", q_num)
-    params = p.declare("params", "REAL", gates_num * params_per_gate)
+    params = p.declare("params", "REAL", parametric_gates_num * params_per_gate)
     ro = p.declare("ro", "BIT", q_num)
     param_offset = 0
 
@@ -41,7 +41,7 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
         p += MEASURE(i, ro[i])
         param_offset += params_per_gate
 
-    return p, gates_num * params_per_gate
+    return p, parametric_gates_num * params_per_gate
 
 
 def _add_single_qubit_gate(p: Program, qubit: int, params: MemoryReference, offset: int):
