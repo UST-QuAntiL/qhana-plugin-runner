@@ -193,7 +193,7 @@ class PyQuilLayer(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    program, params_num = QNN4.create_circuit(2, 1)
+    program, params_num = QNN3.create_circuit(2, 2)
     program.wrap_in_numshots_loop(1000)
     qc = get_qc("4q-qvm")
     executable = qc.compile(program)

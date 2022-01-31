@@ -5,7 +5,7 @@ from pyquil import Program, get_qc
 from pyquil.gates import RY, CNOT, MEASURE, RX
 
 
-def create_circuit(q_num: int) -> Tuple[Program, int]:
+def create_circuit(q_num: int, layers_num: int) -> Tuple[Program, int]:
     """
     Implements the circuit from figure 5 from A. Abbas, D. Sutter, C. Zoufal, A. Lucchi, A. Figalli, and S. Woerner, “The power of
     quantum neural networks,” arXiv:2011.00027 [quant-ph], Oct. 2020, Accessed: Nov. 08, 2020. [Online]. Available:
@@ -14,7 +14,7 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
     :param q_num: number of qubits
     :return: function that constructs the circuit
     """
-    parametric_gates_num = 2 * q_num
+    parametric_gates_num = q_num * layers_num + q_num
     params_per_gate = 1
 
     p = Program()
@@ -26,13 +26,14 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
     for i in range(q_num):
         p += RX(input_values[i], i)
 
-    for i in range(q_num):
-        p += RY(params[param_offset], i)
-        param_offset += params_per_gate
+    for _ in range(layers_num):
+        for i in range(q_num):
+            p += RY(params[param_offset], i)
+            param_offset += params_per_gate
 
-    for i in range(1, q_num):
-        for j in range(i):
-            p += CNOT(j, i)
+        for i in range(1, q_num):
+            for j in range(i):
+                p += CNOT(j, i)
 
     for i in range(q_num):
         p += RY(params[param_offset], i)
@@ -43,7 +44,7 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
 
 
 if __name__ == "__main__":
-    p, params_num = create_circuit(4)
+    p, params_num = create_circuit(4, 1)
     p.wrap_in_numshots_loop(1000)
 
     qc = get_qc("4q-qvm")

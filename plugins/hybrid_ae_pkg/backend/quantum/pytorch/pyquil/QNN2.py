@@ -6,7 +6,7 @@ from pyquil.gates import RY, RZ, MEASURE, RX
 from pyquil.quilatom import MemoryReference
 
 
-def create_circuit(q_num: int) -> Tuple[Program, int]:
+def create_circuit(q_num: int, layers_num: int) -> Tuple[Program, int]:
     """
     Implements circuit B from J. Romero, J. P. Olson, and A. Aspuru-Guzik, “Quantum autoencoders for efficient compression
     of quantum data,” Quantum Sci. Technol., vol. 2, no. 4, p. 045001, Dec. 2017, doi: 10.1088/2058-9565/aa8072.
@@ -14,7 +14,7 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
     :param q_num:
     :return: function that constructs the circuit
     """
-    parametric_gates_num = 2 * q_num + q_num * (q_num - 1)
+    parametric_gates_num = (q_num + q_num * (q_num - 1)) * layers_num + q_num
     params_per_gate = 3
 
     p = Program()
@@ -26,15 +26,16 @@ def create_circuit(q_num: int) -> Tuple[Program, int]:
     for i in range(q_num):
         p += RX(input_values[i], i)
 
-    for i in range(q_num):
-        _add_single_qubit_gate(p, i, params, param_offset)
-        param_offset += params_per_gate
+    for _ in range(layers_num):
+        for i in range(q_num):
+            _add_single_qubit_gate(p, i, params, param_offset)
+            param_offset += params_per_gate
 
-    for i in range(q_num):
-        for j in range(q_num):
-            if i != j:
-                _add_controlled_one_qubit_gate(p, i, j, params, param_offset)
-                param_offset += params_per_gate
+        for i in range(q_num):
+            for j in range(q_num):
+                if i != j:
+                    _add_controlled_one_qubit_gate(p, i, j, params, param_offset)
+                    param_offset += params_per_gate
 
     for i in range(q_num):
         _add_single_qubit_gate(p, i, params, param_offset)
@@ -63,7 +64,7 @@ def _add_controlled_one_qubit_gate(
 
 
 if __name__ == "__main__":
-    p, params_num = create_circuit(4)
+    p, params_num = create_circuit(4, 1)
     p.wrap_in_numshots_loop(1000)
 
     qc = get_qc("4q-qvm")
