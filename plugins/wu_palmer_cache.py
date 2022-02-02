@@ -81,7 +81,7 @@ class CalcSimilarityParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Taxonomies URL",
             "description": "URL to zip file with taxonomies.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
 

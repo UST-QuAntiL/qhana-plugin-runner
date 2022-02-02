@@ -262,7 +262,7 @@ make html
 python -m sphinx.ext.intersphinx _build/html/objects.inv
 
 # export/update requirements.txt from poetry dependencies (for readthedocs build)
-poetry export --dev --format requirements.txt --output docs/requirements.txt
+poetry run invoke update-dependencies
 ```
 
 Update the python source documentation
@@ -271,6 +271,19 @@ Update the python source documentation
 poetry run sphinx-apidoc --separate --force -o docs/source . ./tasks.py docs plugins migrations
 rm docs/source/modules.rst  # delete modules file as this repository only contains one module
 ```
+
+
+## Updating the Third-Party Licenses
+
+```bash
+# list all licenses
+poetry run invoke list-licenses
+
+# update licenses in repository
+poetry run invoke update-dependencies
+```
+
+The third party licenses will be stored in the `qhana_plugin_runner/templates/licenses.html` file.
 
 
 ## Unit Tests

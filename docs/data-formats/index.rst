@@ -1,12 +1,6 @@
 Data Formats defined for QHAna Plugins
 ======================================
 
-.. toctree::
-    :name: formats-toc
-
-    data-model
-    data-loader-formats
-
 
 A collection of data (serialization) formats used by QHAna plugins to exchange data.
 
@@ -20,3 +14,10 @@ A collection of data (serialization) formats used by QHAna plugins to exchange d
       * What tools/libraries exist to work with the target format?
 
     Also make sure to check whether a similar format is already defined before defining a new serialization format.
+
+.. toctree::
+    :name: formats-toc
+
+    data-model
+    data-loader-formats
+    examples/index

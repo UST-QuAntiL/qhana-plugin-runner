@@ -13,12 +13,18 @@ from marshmallow import EXCLUDE
 
 from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
 from plugins.costume_loader_pkg.schemas import (
-    TaskResponseSchema,
-    InputParametersSchema,
     InputParameters,
+    InputParametersSchema,
+    TaskResponseSchema,
 )
 from plugins.costume_loader_pkg.tasks import loading_task
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -31,40 +37,36 @@ class PluginsView(MethodView):
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Plugin loader endpoint returning the plugin metadata."""
-        return {
-            "name": CostumeLoader.instance.name,
-            "version": CostumeLoader.instance.version,
-            "identifier": CostumeLoader.instance.identifier,
-            "root_href": url_for(f"{COSTUME_LOADER_BLP.name}.PluginsView"),
-            "title": "Costume loader",
-            "description": "Loads all the costumes or base elements from the MUSE database.",
-            "plugin_type": "data-loader",
-            "tags": ["data:loading"],
-            "processing_resource_metadata": {
-                "href": url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
-                "ui_href": url_for(f"{COSTUME_LOADER_BLP.name}.MicroFrontend"),
-                "inputs": [],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "raw",
-                            "content_type": "application/json",
-                            "name": "Raw costume data",
-                        },
-                        {
-                            "output_type": "attribute-metadata",
-                            "content_type": "application/json",
-                            "name": "Attribute metadata for the costume data",
-                        },
-                        {
-                            "output_type": "graphs",
-                            "content_type": "application/zip",
-                            "name": "Taxonomies",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Costume loader",
+            description="Loads all the costumes or base elements from the MUSE database.",
+            name=CostumeLoader.instance.name,
+            version=CostumeLoader.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
+                ui_href=url_for(f"{COSTUME_LOADER_BLP.name}.MicroFrontend"),
+                data_input=[],
+                data_output=[
+                    DataMetadata(
+                        data_type="raw",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="attribute-metadata",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="graphs",
+                        content_type=["application/zip"],
+                        required=True,
+                    ),
                 ],
-            },
-        }
+            ),
+            tags=["data:loading"],
+        )
 
 
 @COSTUME_LOADER_BLP.route("/ui/")

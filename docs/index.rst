@@ -18,7 +18,12 @@ Welcome to QHAna-Plugin-Runner's documentation!
     source/qhana_plugin_runner
     changelog
 
+
+Api Documentation
+=================
+
 `Api documentation <api.html>`_
+
 
 Indices and tables
 ==================

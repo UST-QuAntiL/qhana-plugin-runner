@@ -11,33 +11,27 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
-)
-
 from plugins.hello_worl_multi_step import HELLO_MULTI_BLP, HelloWorldMultiStep
 from plugins.hello_worl_multi_step.schemas import (
-    DemoResponseSchema,
     HelloWorldParametersSchema,
     TaskResponseSchema,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import (
-    add_step,
-    save_task_error,
-    save_task_result,
-)
-
 from plugins.hello_worl_multi_step.tasks import preprocessing_task, processing_task
+from qhana_plugin_runner.api.plugin_schemas import (
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 
 @HELLO_MULTI_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, DemoResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
@@ -46,7 +40,7 @@ class PluginsView(MethodView):
             description=HELLO_MULTI_BLP.description,
             name=HelloWorldMultiStep.instance.identifier,
             version=HelloWorldMultiStep.instance.version,
-            type=PluginType.simple,
+            type=PluginType.complex,
             entry_point=EntryPoint(
                 href="./process/", ui_href="./ui/", data_input=[], data_output=[]
             ),
@@ -117,7 +111,7 @@ class MicroFrontend(MethodView):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@HELLO_MULTI_BLP.route("/<string:db_id>/process/")
+@HELLO_MULTI_BLP.route("/<int:db_id>/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
@@ -126,7 +120,7 @@ class ProcessView(MethodView):
     )
     @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: str):
+    def post(self, arguments, db_id: int):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -137,8 +131,12 @@ class ProcessView(MethodView):
 
         # next step
         step_id = "step1"
-        href = url_for(f"{HELLO_MULTI_BLP.name}.Step1Frontend", db_id=db_task.id)
-        ui_href = url_for(f"{HELLO_MULTI_BLP.name}.Step1View", db_id=db_task.id)
+        href = url_for(
+            f"{HELLO_MULTI_BLP.name}.Step1View", db_id=db_task.id, _external=True
+        )
+        ui_href = url_for(
+            f"{HELLO_MULTI_BLP.name}.Step1Frontend", db_id=db_task.id, _external=True
+        )
 
         # all tasks need to know about db id to load the db entry
         task: chain = preprocessing_task.s(db_id=db_task.id) | add_step.s(
@@ -156,7 +154,7 @@ class ProcessView(MethodView):
         )
 
 
-@HELLO_MULTI_BLP.route("/<string:db_id>/step1-ui/")
+@HELLO_MULTI_BLP.route("/<int:db_id>/step1-ui/")
 class Step1Frontend(MethodView):
     """Micro frontend for the hello world plugin."""
 
@@ -175,7 +173,7 @@ class Step1Frontend(MethodView):
         required=False,
     )
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, db_id: str):
+    def get(self, errors, db_id: int):
         """Return the micro frontend."""
         return self.render(request.args, db_id, errors)
 
@@ -190,11 +188,11 @@ class Step1Frontend(MethodView):
         required=False,
     )
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, db_id: str):
+    def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, db_id, errors)
 
-    def render(self, data: Mapping, db_id: str, errors: dict):
+    def render(self, data: Mapping, db_id: int, errors: dict):
         # TODO: retrieve and display data
         schema = HelloWorldParametersSchema()
         return Response(
@@ -215,7 +213,7 @@ class Step1Frontend(MethodView):
         )
 
 
-@HELLO_MULTI_BLP.route("/<string:db_id>/step1/")
+@HELLO_MULTI_BLP.route("/<int:db_id>/step1/")
 class Step1View(MethodView):
     """Start a long running processing task."""
 
@@ -224,7 +222,7 @@ class Step1View(MethodView):
     )
     @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
-    def post(self, error, db_id: str):
+    def post(self, error, db_id: int):
         """Start the demo task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -243,5 +241,5 @@ class Step1View(MethodView):
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", db_id=str(db_id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )

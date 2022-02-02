@@ -20,7 +20,6 @@ from json import load as load_json
 from logging import WARNING, Formatter, Handler, Logger, getLogger
 from logging.config import dictConfig
 from os import environ, makedirs
-from pathlib import Path
 from typing import IO, Any, Dict, Mapping, Optional, cast
 
 import click
@@ -29,10 +28,12 @@ from flask.cli import FlaskGroup
 from flask.config import Config
 from flask.logging import default_handler
 from flask_cors import CORS
-from tomlkit import parse as parse_toml
+from tomlkit.api import parse as parse_toml
 
 from . import api, babel, celery, db, requests
 from .api import jwt_helper
+from .markdown import register_markdown_filter
+from .licenses import register_licenses
 from .plugins_cli import register_plugin_cli_blueprint
 from .storage import register_file_store
 from .util.config import DebugConfig, ProductionConfig
@@ -157,6 +158,7 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     # register jinja helpers
     register_helpers(app)
+    register_markdown_filter(app)
 
     # register request helpers with request session
     register_additional_schemas(requests.REQUEST_SESSION)
@@ -167,6 +169,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     # register file store after plugins to allow plugins to contribute file store implementations
     register_file_store(app)
+
+    # register the licenses blueprint
+    register_licenses(app)
 
     # allow cors requests everywhere (CONFIGURE THIS TO YOUR PROJECTS NEEDS!)
     CORS(app)

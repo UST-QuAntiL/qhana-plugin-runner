@@ -32,8 +32,8 @@ def add_step(
 
     Attributes:
         step_id (str): ID of step, e.g., ``"step1"`` or ``"step1.step2b"``.
-        href (str): The URL of the REST entry point resource.
-        ui_href (str): The URL of the micro frontend that corresponds to the REST entry point resource.
+        href (str): The *absolute* URL of the REST entry point resource.
+        ui_href (str): The *absolute* URL of the micro frontend that corresponds to the REST entry point resource.
         prog_value (int): progress value.
         prog_start (int): progress start value.
         prog_target (int): progress target value.
