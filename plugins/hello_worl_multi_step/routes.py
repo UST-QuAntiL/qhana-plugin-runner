@@ -241,5 +241,5 @@ class Step1View(MethodView):
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", db_id=str(db_id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )
