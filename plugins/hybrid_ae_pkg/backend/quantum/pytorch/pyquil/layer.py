@@ -8,7 +8,13 @@ import torch
 from torch import Tensor
 from torch.autograd import Function
 import numpy as np
+from scipy.optimize import minimize
 
+from plugins.hybrid_ae_pkg.backend.gradient_free import (
+    scipy_compatible_objective_function,
+    get_number_of_parameters,
+    set_parameters_from_1D_array,
+)
 from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pyquil import QNN1, QNN2, QNN3, QNN4
 
 
@@ -192,7 +198,7 @@ class PyQuilLayer(torch.nn.Module):
         )
 
 
-if __name__ == "__main__":
+def _gradient_based_optimization_example():
     program, params_num = QNN3.create_circuit(2, 2)
     program.wrap_in_numshots_loop(1000)
     qc = get_qc("4q-qvm")
@@ -221,3 +227,41 @@ if __name__ == "__main__":
         time2 = time.time()
 
         print(f"loss: {loss.item():>7f} output: {pred} time: {time2 - time1}")
+
+
+def _gradient_free_optimization_example():
+    program, params_num = QNN3.create_circuit(2, 2)
+    program.wrap_in_numshots_loop(1000)
+    qc = get_qc("4q-qvm")
+    executable = qc.compile(program)
+
+    training_input = torch.tensor(
+        [[0.0, 0.0], [0.0, np.pi], [np.pi, 0.0], [np.pi, np.pi]]
+    )
+    training_target = torch.tensor([0.0, 1.0, 1.0, 0.0])
+    model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1)
+
+    def loss_fn(output: torch.Tensor, target: torch.Tensor):
+        return torch.nn.MSELoss()(output[:, 0], target)
+
+    initial_params = np.random.random(get_number_of_parameters(model)) * 2.0 * np.pi
+
+    time1 = time.time()
+
+    res = minimize(
+        scipy_compatible_objective_function,
+        initial_params,
+        (model, training_input, training_target, loss_fn),
+        "COBYLA",
+        options={"disp": True},
+    )
+
+    time2 = time.time()
+
+    set_parameters_from_1D_array(model, res.x)
+    print(model(training_input))
+    print(str(time2 - time1) + "s")
+
+
+if __name__ == "__main__":
+    _gradient_free_optimization()
