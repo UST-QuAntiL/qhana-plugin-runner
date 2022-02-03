@@ -264,4 +264,4 @@ def _gradient_free_optimization_example():
 
 
 if __name__ == "__main__":
-    _gradient_free_optimization()
+    _gradient_free_optimization_example()
