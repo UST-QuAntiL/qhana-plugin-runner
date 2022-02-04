@@ -27,7 +27,7 @@ class HybridAutoencoder(torch.nn.Module):
         q_num: int,
         embedding_size: int,
         qnn_name: str,
-        framework: Backend,
+        backend: Backend,
         dev: Union[qml.Device, QuantumComputer],
     ):
         super(HybridAutoencoder, self).__init__()
@@ -37,14 +37,14 @@ class HybridAutoencoder(torch.nn.Module):
 
         self.fc1 = torch.nn.Linear(input_size, q_num)
 
-        if framework == Backend.pennylane:
+        if backend == Backend.pennylane:
             self.q_layer1 = pennylane_backend.create_qlayer(
                 pennylane_backend.qnn_constructors[qnn_name], q_num, dev
             )
             self.q_layer2 = pennylane_backend.create_qlayer(
                 pennylane_backend.qnn_constructors[qnn_name], q_num, dev
             )
-        elif framework == Backend.pyquil:
+        elif backend == Backend.pyquil:
             self.q_layer1 = pyquil_backend.create_qlayer(
                 pyquil_backend.qnn_constructors[qnn_name], q_num, 1, dev
             )
