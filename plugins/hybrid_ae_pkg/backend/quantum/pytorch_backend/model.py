@@ -1,3 +1,5 @@
+import time
+from enum import Enum
 from itertools import chain
 from math import pi
 from os import PathLike
@@ -5,11 +7,17 @@ from typing import Iterator, Dict, List, Union, BinaryIO, IO
 
 import torch
 import pennylane as qml
+from pyquil import get_qc
+from pyquil.api import QuantumComputer
+from torch import Tensor
 
-from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pl.qlayer import (
-    create_qlayer,
-    qnn_constructors,
-)
+import plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pennylane_backend.qlayer as pennylane_backend
+import plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend.layer as pyquil_backend
+
+
+class Backend(Enum):
+    pennylane = 0
+    pyquil = 1
 
 
 class HybridAutoencoder(torch.nn.Module):
@@ -19,7 +27,8 @@ class HybridAutoencoder(torch.nn.Module):
         q_num: int,
         embedding_size: int,
         qnn_name: str,
-        dev: qml.Device,
+        framework: Backend,
+        dev: Union[qml.Device, QuantumComputer],
     ):
         super(HybridAutoencoder, self).__init__()
 
@@ -27,8 +36,22 @@ class HybridAutoencoder(torch.nn.Module):
         self.embedding_size = embedding_size
 
         self.fc1 = torch.nn.Linear(input_size, q_num)
-        self.q_layer1 = create_qlayer(qnn_constructors[qnn_name], q_num, dev)
-        self.q_layer2 = create_qlayer(qnn_constructors[qnn_name], q_num, dev)
+
+        if framework == Backend.pennylane:
+            self.q_layer1 = pennylane_backend.create_qlayer(
+                pennylane_backend.qnn_constructors[qnn_name], q_num, dev
+            )
+            self.q_layer2 = pennylane_backend.create_qlayer(
+                pennylane_backend.qnn_constructors[qnn_name], q_num, dev
+            )
+        elif framework == Backend.pyquil:
+            self.q_layer1 = pyquil_backend.create_qlayer(
+                pyquil_backend.qnn_constructors[qnn_name], q_num, 1, dev
+            )
+            self.q_layer2 = pyquil_backend.create_qlayer(
+                pyquil_backend.qnn_constructors[qnn_name], q_num, 1, dev
+            )
+
         self.fc2 = torch.nn.Linear(q_num, input_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -88,3 +111,31 @@ class HybridAutoencoder(torch.nn.Module):
             param_dict[k] = v.tolist()
 
         return param_dict
+
+
+def _hybrid_autoencoder_example():
+    model = HybridAutoencoder(4, 2, 1, "QNN3", Backend.pyquil, get_qc("4q-qvm"))
+
+    training_input = torch.tensor([[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0]])
+
+    loss_fn = torch.nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+
+    model.train()
+
+    for i in range(100):
+        time1 = time.time()
+        pred: Tensor = model(training_input)
+        loss = loss_fn(pred, training_input)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        time2 = time.time()
+
+        print(f"loss: {loss.item():>7f} output: {pred} time: {time2 - time1}")
+
+
+if __name__ == "__main__":
+    _hybrid_autoencoder_example()

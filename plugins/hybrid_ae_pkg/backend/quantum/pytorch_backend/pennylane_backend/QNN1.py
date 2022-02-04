@@ -3,7 +3,7 @@ from typing import Tuple, Callable, List
 import pennylane as qml
 import pennylane.numpy as np
 
-from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pl.TwoQubitGate import (
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pennylane_backend.TwoQubitGate import (
     add_two_qubit_gate,
 )
 

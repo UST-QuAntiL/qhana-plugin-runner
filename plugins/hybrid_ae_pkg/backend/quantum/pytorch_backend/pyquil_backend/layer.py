@@ -1,6 +1,6 @@
 import time
 from multiprocessing.pool import ThreadPool
-from typing import Any, Tuple, List
+from typing import Any, Tuple, List, Callable
 
 from pyquil import Program, get_qc
 from pyquil.api import QuantumComputer
@@ -15,7 +15,12 @@ from plugins.hybrid_ae_pkg.backend.gradient_free import (
     get_number_of_parameters,
     set_parameters_from_1D_array,
 )
-from plugins.hybrid_ae_pkg.backend.quantum.pytorch.pyquil import QNN1, QNN2, QNN3, QNN4
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend import (
+    QNN1,
+    QNN2,
+    QNN3,
+    QNN4,
+)
 
 
 class PyquilFunction(Function):
@@ -163,7 +168,12 @@ class PyquilFunction(Function):
         with ThreadPool(8) as pool:
             output_arrays = pool.starmap(run, zip(programs, inputs, params_split))
 
-        return torch.tensor(np.stack(output_arrays), dtype=torch.float32)
+        probabilities = torch.tensor(np.stack(output_arrays), dtype=torch.float32)
+
+        # convert from probabilities to expectation value of Z-measurement
+        exp_values = 1.0 - (2.0 * probabilities)
+
+        return exp_values
 
 
 class PyQuilLayer(torch.nn.Module):
@@ -196,6 +206,35 @@ class PyQuilLayer(torch.nn.Module):
             self.params_region_name,
             self.shift,
         )
+
+
+def create_qlayer(
+    constructor_func: Callable[[int, int], Tuple[Program, int]],
+    q_num: int,
+    layer_num: int,
+    dev: QuantumComputer,
+) -> PyQuilLayer:
+    """
+    Input of the created quantum layer should be in the range [0, pi]. The output will be in the range [-1, 1].
+
+    :param constructor_func: Function that constructs the circuit.
+    :param q_num: Number of qubits.
+    :param dev: device on which the circuits will be executed
+    :return: PyTorch module with integrated PyQuil circuit.
+    """
+    program, param_num = constructor_func(q_num, layer_num)
+    program.wrap_in_numshots_loop(1000)
+    qlayer = PyQuilLayer(dev.compile(program), dev, "input", "params", param_num, 0.1)
+
+    return qlayer
+
+
+qnn_constructors = {
+    "QNN1": QNN1.create_circuit,
+    "QNN2": QNN2.create_circuit,
+    "QNN3": QNN3.create_circuit,
+    "QNN4": QNN4.create_circuit,
+}
 
 
 def _gradient_based_optimization_example():

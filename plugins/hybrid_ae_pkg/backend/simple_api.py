@@ -7,10 +7,10 @@ from torch.optim import Adam, Optimizer
 from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 from plugins.hybrid_ae_pkg.backend.main import train_nn as training_loop
-from plugins.hybrid_ae_pkg.backend.quantum.pytorch.model import (
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.model import (
     HybridAutoencoder as PLHybridAutoencoder,
 )
-from plugins.hybrid_ae_pkg.backend.quantum.pytorch.training import (
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.training import (
     training_loop as pl_training_loop,
 )
 from plugins.hybrid_ae_pkg.backend.quantum.qiskit.autoencoder import (
