@@ -3,12 +3,14 @@ from typing import Tuple
 import numpy as np
 import pennylane as qml
 import torch
+from pyquil import get_qc
 from torch.optim import Adam, Optimizer
 from torch.utils.data import DataLoader, TensorDataset, RandomSampler
 
 from plugins.hybrid_ae_pkg.backend.main import train_nn as training_loop
 from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.model import (
     HybridAutoencoder as PLHybridAutoencoder,
+    Backend,
 )
 from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.training import (
     training_loop as pl_training_loop,
@@ -23,14 +25,27 @@ from plugins.hybrid_ae_pkg.backend.quantum.qiskit.hybrid import (
 )
 
 
-def pennylane_hybrid_autoencoder(
-    input_data: np.ndarray, q_num: int, embedding_size: int, qnn_name: str, steps: int
+def pennylane_pyquil_hybrid_autoencoder(
+    input_data: np.ndarray,
+    q_num: int,
+    embedding_size: int,
+    qnn_name: str,
+    steps: int,
+    backend: Backend,
 ) -> Tuple[np.ndarray, PLHybridAutoencoder, Optimizer, Optimizer]:
-    dev = qml.device("default.qubit", wires=q_num, shots=500)
-    # dev = qml.device("forest.qvm", device="3q-qvm")
-    # dev = qml.device("braket.local.qubit", wires=3)
-    model = PLHybridAutoencoder(input_data.shape[1], q_num, embedding_size, qnn_name, dev)
-    c_optim = Adam(model.get_classical_parameters())
+    dev = None
+
+    if backend == Backend.pennylane:
+        dev = qml.device("default.qubit", wires=q_num, shots=500)
+        # dev = qml.device("forest.qvm", device="3q-qvm")
+        # dev = qml.device("braket.local.qubit", wires=3)
+    elif backend == Backend.pyquil:
+        dev = get_qc(str(q_num) + "q-qvm")
+
+    model = PLHybridAutoencoder(
+        input_data.shape[1], q_num, embedding_size, qnn_name, backend, dev
+    )
+    c_optim = Adam(model.get_classical_parameters(), lr=0.1)
     q_optim = Adam(model.get_quantum_parameters(), lr=0.1)
 
     input_tensor = torch.tensor(input_data, dtype=torch.float32)
@@ -111,5 +126,7 @@ def qiskit_pytorch_autoencoder(
 
 
 if __name__ == "__main__":
-    pennylane_hybrid_autoencoder(np.zeros((1, 10)), 3, 2, "QNN3", 100)
+    pennylane_pyquil_hybrid_autoencoder(
+        np.zeros((1, 10)), 3, 2, "QNN3", 100, Backend.pennylane
+    )
     # qiskit_pytorch_autoencoder(np.zeros((5, 10)), 3, 2, 1000, 10, 5)
