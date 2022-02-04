@@ -160,7 +160,6 @@ class PyquilFunction(Function):
                 region_name=params_region_name, value=single_parameters
             )
 
-            qc.run(program_instance)
             bit_strings = qc.run(program_instance).readout_data.get("ro")
 
             return np.mean(bit_strings, 0)
@@ -246,7 +245,7 @@ def _gradient_based_optimization_example():
     training_input = torch.tensor(
         [[0.0, 0.0], [0.0, np.pi], [np.pi, 0.0], [np.pi, np.pi]]
     )
-    training_target = torch.tensor([0.0, 1.0, 1.0, 0.0])
+    training_target = torch.tensor([-1.0, 1.0, 1.0, -1.0])
     model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1)
 
     loss_fn = torch.nn.MSELoss()
@@ -277,7 +276,7 @@ def _gradient_free_optimization_example():
     training_input = torch.tensor(
         [[0.0, 0.0], [0.0, np.pi], [np.pi, 0.0], [np.pi, np.pi]]
     )
-    training_target = torch.tensor([0.0, 1.0, 1.0, 0.0])
+    training_target = torch.tensor([-1.0, 1.0, 1.0, -1.0])
     model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1)
 
     def loss_fn(output: torch.Tensor, target: torch.Tensor):
@@ -304,3 +303,4 @@ def _gradient_free_optimization_example():
 
 if __name__ == "__main__":
     _gradient_free_optimization_example()
+    # _gradient_based_optimization_example()
