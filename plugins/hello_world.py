@@ -99,8 +99,8 @@ class PluginsView(MethodView):
             version=HelloWorld.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
-                href="./process/",
-                ui_href="./ui/",
+                href=url_for(f"{HELLO_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{HELLO_BLP.name}.MicroFrontend"),
                 data_input=[],
                 data_output=[
                     DataMetadata(
@@ -156,7 +156,7 @@ class MicroFrontend(MethodView):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
-                "hello_template.html",
+                "simple_template.html",
                 name=HelloWorld.instance.name,
                 version=HelloWorld.instance.version,
                 schema=schema,
