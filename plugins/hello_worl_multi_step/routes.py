@@ -141,8 +141,6 @@ class ProcessView(MethodView):
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
-        db_task.save(commit=True)
-
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
