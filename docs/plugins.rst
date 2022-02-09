@@ -317,7 +317,7 @@ Result Steps
 
 Result steps are intermediate steps where additional input is required to continue the result computation.
 The list of result steps should only grow with new steps added on the end of the list.
-Only the last step should be active (e.g. not marked as cleared).
+Only the last step should be active (e.g. not marked as cleared). Plugins that use multiple steps should store form inputs as usual in :py:attr:`~qhana_plugin_runner.db.models.tasks.ProcessingTask.parameters`. Data that is used in subsequent steps should then be extracted in the respective celery task and stored in the key-value store :py:attr:`~qhana_plugin_runner.db.models.tasks.ProcessingTask.data` that has dict-like functionality. Furthermore, whenever valid input data for the current uncleared step is available, :py:attr:`~qhana_plugin_runner.db.models.tasks.ProcessingTask.clear_previous_step` must be called in the function that handles the input data (i.e., the processing endpoint for the corresponding microfrontend endpoint).
 
 .. list-table:: Result Steps
     :header-rows: 1
