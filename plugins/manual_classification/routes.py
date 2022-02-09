@@ -121,9 +121,6 @@ class MicroFrontend(MethodView):
 
     def render(self, data: Mapping, errors: dict):
         """Start the data preprocessing task."""
-        db_task = ProcessingTask(task_name="manual-classification")
-        db_task.save(commit=True)
-
         schema = LoadParametersSchema()
         return Response(
             render_template(
@@ -133,9 +130,7 @@ class MicroFrontend(MethodView):
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(
-                    f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView", db_id=db_task.id
-                ),
+                process=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
                 example_values=url_for(
                     f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend",
                     **self.example_inputs,
@@ -144,7 +139,7 @@ class MicroFrontend(MethodView):
         )
 
 
-@MANUAL_CLASSIFICATION_BLP.route("/<string:db_id>/load/")
+@MANUAL_CLASSIFICATION_BLP.route("/load/")
 class LoadView(MethodView):
     """Start a data preprocessing task."""
 
@@ -153,12 +148,8 @@ class LoadView(MethodView):
     )
     @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: str):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+    def post(self, arguments):
+        db_task = ProcessingTask(task_name="manual-classification")
         db_task.parameters = dumps(arguments)
         db_task.save(commit=True)
 
