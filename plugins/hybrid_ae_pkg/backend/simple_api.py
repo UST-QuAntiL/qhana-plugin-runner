@@ -12,6 +12,9 @@ from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.model import (
     HybridAutoencoder as PLHybridAutoencoder,
     Backend,
 )
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend.layer import (
+    gradient_free_optimization_experiment,
+)
 from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.training import (
     training_loop as pl_training_loop,
 )
@@ -129,7 +132,14 @@ def qiskit_pytorch_autoencoder(
 
 if __name__ == "__main__":
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
-    pennylane_pyquil_hybrid_autoencoder(
-        np.zeros((1, 10)), 3, 2, "QNN3", 100, Backend.pyquil
-    )
+    # pennylane_pyquil_hybrid_autoencoder(
+    #     np.array([[0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [1, 0, 1, 0, 1, 0, 1, 0, 1, 0]]),
+    #     3,
+    #     2,
+    #     "QNN4",
+    #     100,
+    #     Backend.pyquil,
+    # )
     # qiskit_pytorch_autoencoder(np.zeros((5, 10)), 3, 2, 1000, 10, 5)
+
+    gradient_free_optimization_experiment()

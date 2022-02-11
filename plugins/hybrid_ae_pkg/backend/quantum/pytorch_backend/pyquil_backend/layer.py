@@ -2,6 +2,7 @@ import time
 from multiprocessing.pool import ThreadPool
 from typing import Any, Tuple, List, Callable, Optional
 
+import mlflow
 from pyquil import Program, get_qc
 from pyquil.api import QuantumComputer
 import torch
@@ -300,7 +301,7 @@ def _gradient_based_optimization_example():
         print(f"loss: {loss.item():>7f} output: {pred} time: {time2 - time1}")
 
 
-def _gradient_free_optimization_example():
+def gradient_free_optimization_experiment():
     program, params_num = QNN3.create_circuit(2, 2)
     program.wrap_in_numshots_loop(1000)
     qc = get_qc("4q-qvm")
@@ -312,9 +313,15 @@ def _gradient_free_optimization_example():
     training_target = torch.tensor([-1.0, 1.0, 1.0, -1.0])
     logger = CircuitLogger()
     model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1, logger)
+    step = 0
 
     def loss_fn(output: torch.Tensor, target: torch.Tensor):
-        return torch.nn.MSELoss()(output[:, 0], target)
+        nonlocal step
+        loss = torch.nn.MSELoss()(output[:, 0], target)
+        mlflow.log_metric("mse_loss", loss.item(), step)
+        step += 1
+
+        return loss
 
     initial_params = np.random.random(get_number_of_parameters(model)) * 2.0 * np.pi
 
@@ -336,5 +343,5 @@ def _gradient_free_optimization_example():
 
 
 if __name__ == "__main__":
-    _gradient_free_optimization_example()
+    gradient_free_optimization_experiment()
     # _gradient_based_optimization_example()
