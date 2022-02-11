@@ -24,6 +24,8 @@ from plugins.hybrid_ae_pkg.backend.quantum.qiskit.hybrid import (
     HybridAutoencoder as QKHybridAutoencoder,
 )
 
+import mlflow
+
 
 def pennylane_pyquil_hybrid_autoencoder(
     input_data: np.ndarray,
@@ -126,7 +128,8 @@ def qiskit_pytorch_autoencoder(
 
 
 if __name__ == "__main__":
+    mlflow.set_tracking_uri("sqlite:///mlflow.db")
     pennylane_pyquil_hybrid_autoencoder(
-        np.zeros((1, 10)), 3, 2, "QNN3", 100, Backend.pennylane
+        np.zeros((1, 10)), 3, 2, "QNN3", 100, Backend.pyquil
     )
     # qiskit_pytorch_autoencoder(np.zeros((5, 10)), 3, 2, 1000, 10, 5)

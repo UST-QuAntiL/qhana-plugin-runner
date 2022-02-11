@@ -2,6 +2,7 @@ from os import PathLike
 from tempfile import SpooledTemporaryFile
 from typing import Optional, List, Callable, Dict, Any, Union, BinaryIO, IO
 
+import mlflow
 import torch
 from torch.optim import Optimizer
 from torch.utils.data import TensorDataset, DataLoader
@@ -32,7 +33,7 @@ def training_loop(
     test_target: Optional[torch.Tensor],
     test_label: Optional[torch.Tensor],
     grad_optis: Optional[List[Optimizer]],
-    grad_free_opt: Optional[Callable],
+    grad_free_opt: Optional[Callable],  # TODO: add gradient free optimization
     grad_free_opt_args: Optional[Dict[str, Any]],
     steps: int,
     batch_size: int,
@@ -111,14 +112,17 @@ def training_loop(
 
         error_mean = error_sum / batch_cnt
         print("Step:", i, "Training MSE:", error_mean)
+        mlflow.log_metric("train_mse", error_mean, i)
 
         if shadow_model is not None:
+            shadow_error = shadow_model_error_sum / batch_cnt
             print(
                 "Step:",
                 i,
                 "Shadow model training MSE:",
-                shadow_model_error_sum / batch_cnt,
+                shadow_error,
             )
+            mlflow.log_metric("shadow_train_mse", shadow_error, i)
 
         if test_data_available:
             # calculating the error on the test dataset
@@ -141,14 +145,17 @@ def training_loop(
 
             error_mean = error_sum / batch_cnt
             print("Step:", i, "Test MSE:", error_mean)
+            mlflow.log_metric("test_mse", error_mean, i)
 
             if shadow_model is not None:
+                shadow_error = shadow_model_error_sum / batch_cnt
                 print(
                     "Step:",
                     i,
                     "Shadow model test MSE:",
-                    shadow_model_error_sum / batch_cnt,
+                    shadow_error,
                 )
+                mlflow.log_metric("shadow_test_mse", error_mean, i)
 
         # test if the model has an "embed" function and use it to generate embeddings and save them
         embed_func = getattr(model, "embed", None)

@@ -13,6 +13,9 @@ from torch import Tensor
 
 import plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pennylane_backend.qlayer as pennylane_backend
 import plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend.layer as pyquil_backend
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend.circuit_logging import (
+    CircuitLogger,
+)
 
 
 class Backend(Enum):
@@ -45,11 +48,12 @@ class HybridAutoencoder(torch.nn.Module):
                 pennylane_backend.qnn_constructors[qnn_name], q_num, dev
             )
         elif backend == Backend.pyquil:
+            logger = CircuitLogger()
             self.q_layer1 = pyquil_backend.create_qlayer(
-                pyquil_backend.qnn_constructors[qnn_name], q_num, 1, dev
+                pyquil_backend.qnn_constructors[qnn_name], q_num, 1, dev, logger
             )
             self.q_layer2 = pyquil_backend.create_qlayer(
-                pyquil_backend.qnn_constructors[qnn_name], q_num, 1, dev
+                pyquil_backend.qnn_constructors[qnn_name], q_num, 1, dev, logger
             )
 
         self.fc2 = torch.nn.Linear(q_num, input_size)

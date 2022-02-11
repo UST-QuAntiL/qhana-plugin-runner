@@ -1,6 +1,6 @@
 import time
 from multiprocessing.pool import ThreadPool
-from typing import Any, Tuple, List, Callable
+from typing import Any, Tuple, List, Callable, Optional
 
 from pyquil import Program, get_qc
 from pyquil.api import QuantumComputer
@@ -21,6 +21,9 @@ from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend import
     QNN3,
     QNN4,
 )
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend.circuit_logging import (
+    CircuitLogger,
+)
 
 
 class PyquilFunction(Function):
@@ -34,12 +37,14 @@ class PyquilFunction(Function):
         params: Tensor,
         params_region_name: str,
         shift: float,
+        logger: Optional[CircuitLogger] = None,
     ) -> Tensor:
         ctx.program = program
         ctx.qc = qc
         ctx.input_region_name = input_region_name
         ctx.params_region_name = params_region_name
         ctx.shift = shift
+        ctx.logger = logger
         ctx.save_for_backward(input_data, params)
 
         params_extended = params.reshape((1, -1)).repeat(input_data.shape[0], 1)
@@ -51,12 +56,13 @@ class PyquilFunction(Function):
             input_region_name,
             params_extended,
             params_region_name,
+            logger,
         )
 
     @staticmethod
     def backward(
         ctx: Any, grad_output: Tensor
-    ) -> Tuple[None, None, Tensor, None, Tensor, None, None]:
+    ) -> Tuple[None, None, Tensor, None, Tensor, None, None, None]:
         input_data: Tensor
         params: Tensor
         input_data, params = ctx.saved_tensors
@@ -65,6 +71,7 @@ class PyquilFunction(Function):
         input_region_name: str = ctx.input_region_name
         params_region_name: str = ctx.params_region_name
         shift: float = ctx.shift
+        logger: Optional[CircuitLogger] = ctx.logger
 
         # gradient approximation with central differences for the input data
         params_extended = params.reshape((1, -1)).repeat(2, 1)
@@ -85,6 +92,7 @@ class PyquilFunction(Function):
                     input_region_name,
                     params_extended,
                     params_region_name,
+                    logger,
                 )
 
                 derivatives = (output[0, :] - output[1, :]) / (2.0 * shift)
@@ -117,6 +125,7 @@ class PyquilFunction(Function):
             input_region_name,
             stacked_params,
             params_region_name,
+            logger,
         )
 
         for i in range(params.shape[0]):
@@ -129,7 +138,7 @@ class PyquilFunction(Function):
 
                 params_grad[i] += combined_derivative
 
-        return None, None, input_grad, None, params_grad, None, None
+        return None, None, input_grad, None, params_grad, None, None, None
 
     @staticmethod
     def _calc_output(
@@ -139,20 +148,22 @@ class PyquilFunction(Function):
         input_region_name: str,
         params: Tensor,
         params_region_name: str,
+        logger: Optional[CircuitLogger] = None,
     ) -> Tensor:
-        programs = [program.copy() for _ in range(input_data.shape[0])]
-        inputs = [input_data[i].tolist() for i in range(input_data.shape[0])]
+        input_count = input_data.shape[0]
+        programs = [program.copy() for _ in range(input_count)]
+        inputs = [input_data[i].tolist() for i in range(input_count)]
 
         if params.dim() == 1:
             params = params.reshape((1, -1))
 
-        params_split = [params[i].tolist() for i in range(input_data.shape[0])]
+        params_split = [params[i].tolist() for i in range(input_count)]
 
         def run(
             program_instance: Program,
             single_input: List[float],
             single_parameters: List[float],
-        ):
+        ) -> np.ndarray:
             program_instance.write_memory(
                 region_name=input_region_name, value=single_input
             )
@@ -160,12 +171,26 @@ class PyquilFunction(Function):
                 region_name=params_region_name, value=single_parameters
             )
 
+            time1 = time.time()
             bit_strings = qc.run(program_instance).readout_data.get("ro")
+            time2 = time.time()
+
+            if logger is not None:
+                logger.log_circuit_execution(
+                    program_instance,
+                    single_input,
+                    single_parameters,
+                    time2 - time1,
+                    bit_strings.tolist(),
+                )
 
             return np.mean(bit_strings, 0)
 
         with ThreadPool(8) as pool:
-            output_arrays = pool.starmap(run, zip(programs, inputs, params_split))
+            output_arrays = pool.starmap(
+                run,
+                zip(programs, inputs, params_split),
+            )
 
         probabilities = torch.tensor(np.stack(output_arrays), dtype=torch.float32)
 
@@ -184,6 +209,7 @@ class PyQuilLayer(torch.nn.Module):
         params_region_name: str,
         params_num: int,
         shift: float,
+        logger: Optional[CircuitLogger] = None,
     ):
         super(PyQuilLayer, self).__init__()
         self.program = program
@@ -192,6 +218,7 @@ class PyQuilLayer(torch.nn.Module):
         self.params_region_name = params_region_name
         self.params_num = params_num
         self.shift = shift
+        self.logger = logger
 
         self.params = torch.nn.Parameter(torch.rand(self.params_num) * 2 * np.pi)
 
@@ -204,6 +231,7 @@ class PyQuilLayer(torch.nn.Module):
             self.params,
             self.params_region_name,
             self.shift,
+            self.logger,
         )
 
 
@@ -212,18 +240,23 @@ def create_qlayer(
     q_num: int,
     layer_num: int,
     dev: QuantumComputer,
+    logger: Optional[CircuitLogger] = None,
 ) -> PyQuilLayer:
     """
     Input of the created quantum layer should be in the range [0, pi]. The output will be in the range [-1, 1].
 
-    :param constructor_func: Function that constructs the circuit.
-    :param q_num: Number of qubits.
-    :param dev: device on which the circuits will be executed
+    @param constructor_func: Function that constructs the circuit.
+    @param q_num: Number of qubits.
+    @param layer_num: Number of layers.
+    @param dev: device on which the circuits will be executed
+    @param logger: logger that logs circuits, inputs, parameters and the result
     :return: PyTorch module with integrated PyQuil circuit.
     """
     program, param_num = constructor_func(q_num, layer_num)
     program.wrap_in_numshots_loop(1000)
-    qlayer = PyQuilLayer(dev.compile(program), dev, "input", "params", param_num, 0.1)
+    qlayer = PyQuilLayer(
+        dev.compile(program), dev, "input", "params", param_num, 0.1, logger
+    )
 
     return qlayer
 
@@ -277,7 +310,8 @@ def _gradient_free_optimization_example():
         [[0.0, 0.0], [0.0, np.pi], [np.pi, 0.0], [np.pi, np.pi]]
     )
     training_target = torch.tensor([-1.0, 1.0, 1.0, -1.0])
-    model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1)
+    logger = CircuitLogger()
+    model = PyQuilLayer(executable, qc, "input", "params", params_num, 0.1, logger)
 
     def loss_fn(output: torch.Tensor, target: torch.Tensor):
         return torch.nn.MSELoss()(output[:, 0], target)

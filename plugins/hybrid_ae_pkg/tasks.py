@@ -56,7 +56,7 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     if input_data_arr.ndim == 1:
         input_data_arr = input_data_arr.reshape((1, -1))
 
-    output_arr, model, c_optim, q_optim = simple_api.pennylane_hybrid_autoencoder(
+    output_arr, model, c_optim, q_optim = simple_api.pennylane_pyquil_hybrid_autoencoder(
         input_data_arr, q_num, embedding_size, qnn_name, steps
     )
 
