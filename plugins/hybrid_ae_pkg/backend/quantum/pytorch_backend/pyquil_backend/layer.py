@@ -310,7 +310,8 @@ def gradient_free_optimization_experiment():
         q_num, layer_num
     )
     program.wrap_in_numshots_loop(1000)
-    qc = get_qc("4q-qvm")
+    use_simulator = True
+    qc = get_qc("Aspen-11", as_qvm=use_simulator)
     executable = qc.compile(program)
 
     training_input = torch.tensor(
@@ -337,8 +338,9 @@ def gradient_free_optimization_experiment():
     mlflow.log_param("QNN", qnn_name)
     mlflow.log_param("Number of qubits", q_num)
     mlflow.log_param("Number of layers", layer_num)
-    mlflow.log_param("method", method)
-    mlflow.log_param("qc", qc.name)
+    mlflow.log_param("Use simulator", use_simulator)
+    mlflow.log_param("Method", method)
+    mlflow.log_param("QC", qc.name)
     time1 = time.time()
 
     res = minimize(
