@@ -16,6 +16,7 @@ from plugins.hybrid_ae_pkg.backend.gradient_free import (
     get_number_of_parameters,
     set_parameters_from_1D_array,
 )
+from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend import pyquil_backend
 from plugins.hybrid_ae_pkg.backend.quantum.pytorch_backend.pyquil_backend import (
     QNN1,
     QNN2,
@@ -302,7 +303,12 @@ def _gradient_based_optimization_example():
 
 
 def gradient_free_optimization_experiment():
-    program, params_num = QNN3.create_circuit(2, 2)
+    qnn_name = "QNN3"
+    q_num = 2
+    layer_num = 1
+    program, params_num = pyquil_backend.layer.qnn_constructors[qnn_name](
+        q_num, layer_num
+    )
     program.wrap_in_numshots_loop(1000)
     qc = get_qc("4q-qvm")
     executable = qc.compile(program)
@@ -325,13 +331,21 @@ def gradient_free_optimization_experiment():
 
     initial_params = np.random.random(get_number_of_parameters(model)) * 2.0 * np.pi
 
+    method = "COBYLA"
+    # method = "Nelder-Mead"
+
+    mlflow.log_param("QNN", qnn_name)
+    mlflow.log_param("Number of qubits", q_num)
+    mlflow.log_param("Number of layers", layer_num)
+    mlflow.log_param("method", method)
+    mlflow.log_param("qc", qc.name)
     time1 = time.time()
 
     res = minimize(
         scipy_compatible_objective_function,
         initial_params,
         (model, training_input, training_target, loss_fn),
-        "COBYLA",
+        method,
         options={"disp": True},
     )
 
