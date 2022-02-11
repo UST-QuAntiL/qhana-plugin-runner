@@ -1,5 +1,6 @@
 # Custom ignores:
 
+.idea/
 .vscode/
 docs/api.json
 docs/changelog.md

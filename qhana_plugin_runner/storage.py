@@ -307,13 +307,13 @@ class LocalFileStore(FileStore, name="local_filesystem"):
         with target_path.open(mode=mode) as target_file:
             copyfileobj(file_, target_file)
 
-    def get_file_url(self, file_storage_data: str, external: bool) -> str:
+    def get_file_url(self, file_storage_data: str, external: bool = True) -> str:
         if not external:
             # return an internal file url
             return "file://" + file_storage_data
         raise NotImplementedError()  # TODO implement endpoint to download files by file path
 
-    def get_task_file_url(self, file_info: TaskFile, external: bool) -> str:
+    def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
         if not external:
             return super().get_task_file_url(file_info, external=external)
         return url_for(

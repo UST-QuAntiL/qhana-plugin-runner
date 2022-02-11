@@ -15,7 +15,13 @@ from marshmallow import EXCLUDE
 from plugins.quantum_k_means import QKMEANS_BLP, QKMeans
 from plugins.quantum_k_means.backend.clustering import QuantumBackends
 from plugins.quantum_k_means.schemas import InputParametersSchema, TaskResponseSchema
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -30,38 +36,32 @@ class PluginsView(MethodView):
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Quantum k-means endpoint returning the plugin metadata."""
-        return {
-            "name": QKMeans.instance.name,
-            "version": QKMeans.instance.version,
-            "identifier": QKMeans.instance.identifier,
-            "root_href": url_for(f"{QKMEANS_BLP.name}.PluginsView"),
-            "title": "Quantum k-means",
-            "description": "K-means algorithms that can run on quantum computers.",
-            "plugin_type": "points-to-clusters",
-            "tags": [],
-            "processing_resource_metadata": {
-                "href": url_for(f"{QKMEANS_BLP.name}.CalcView"),
-                "ui_href": url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "entity-points",
-                            "content_type": "application/json",
-                            "name": "Entity points",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Quantum k-means",
+            description="K-means algorithms that can run on quantum computers.",
+            name=QKMeans.instance.name,
+            version=QKMeans.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{QKMEANS_BLP.name}.CalcView"),
+                ui_href=url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="entity-points",
+                        content_type=["application/json"],
+                        required=True,
+                    )
                 ],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "clusters",
-                            "content_type": "application/json",
-                            "name": "Clusters",
-                        }
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="clusters",
+                        content_type=["application/json"],
+                        required=True,
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["points-to-clusters"],
+        )
 
 
 @QKMEANS_BLP.route("/ui/")
@@ -161,11 +161,10 @@ class CalcView(MethodView):
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        result: AsyncResult = task.apply_async()
+        task.apply_async()
 
-        db_task.task_id = result.id
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )

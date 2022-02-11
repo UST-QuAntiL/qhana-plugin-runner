@@ -33,7 +33,13 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -75,7 +81,7 @@ class CalcSimilarityParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Taxonomies URL",
             "description": "URL to zip file with taxonomies.",
-            "input_type": "textarea",
+            "input_type": "text",
         },
     )
 
@@ -88,38 +94,32 @@ class PluginsView(MethodView):
     @WU_PALMER_CACHE_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Wu Palmer cache endpoint returning the plugin metadata."""
-        return {
-            "name": WuPalmerCache.instance.name,
-            "version": WuPalmerCache.instance.version,
-            "identifier": WuPalmerCache.instance.identifier,
-            "root_href": url_for(f"{WU_PALMER_CACHE_BLP.name}.PluginsView"),
-            "title": "Wu-Palmer cache generator",
-            "description": "Generates a cache of similarity values based on a taxonomy.",
-            "plugin_type": "similarity-cache-generation",
-            "tags": [],
-            "processing_resource_metadata": {
-                "href": url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
-                "ui_href": url_for(f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "taxonomy",
-                            "content_type": "application/zip",
-                            "name": "Taxonomies",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Wu-Palmer cache generator",
+            description="Generates a cache of similarity values based on a taxonomy.",
+            name=WuPalmerCache.instance.identifier,
+            version=WuPalmerCache.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
+                ui_href=url_for(f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="taxonomy",
+                        content_type=["application/zip"],
+                        required=True,
+                    )
                 ],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "wu-palmer-cache",
-                            "content_type": "application/zip",
-                            "name": "Cache for Wu Palmer",
-                        }
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="wu-palmer-cache",
+                        content_type=["application/zip"],
+                        required=True,
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["similarity-cache-generation"],
+        )
 
 
 @WU_PALMER_CACHE_BLP.route("/ui/")
@@ -200,13 +200,12 @@ class CalcSimilarityView(MethodView):
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        result: AsyncResult = task.apply_async()
+        task.apply_async()
 
-        db_task.task_id = result.id
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 

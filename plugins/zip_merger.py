@@ -13,10 +13,9 @@
 # limitations under the License.
 import json
 from http import HTTPStatus
-from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List
+from typing import Mapping, Optional
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -32,7 +31,13 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -41,12 +46,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-    load_entities,
-)
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -102,43 +102,31 @@ class PluginsView(MethodView):
     @ZIP_MERGER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Zip merger endpoint returning the plugin metadata."""
-        return {
-            "name": ZipMerger.instance.name,
-            "version": ZipMerger.instance.version,
-            "identifier": ZipMerger.instance.identifier,
-            "root_href": url_for(f"{ZIP_MERGER_BLP.name}.PluginsView"),
-            "title": "Zip merger",
-            "description": "Merges two zip files into one zip file.",
-            "plugin_type": "utility",
-            "tags": [],
-            "processing_resource_metadata": {
-                "href": url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
-                "ui_href": url_for(f"{ZIP_MERGER_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "any",
-                            "content_type": "application/zip",
-                            "name": "Entities",
-                        },
-                        {
-                            "output_type": "any",
-                            "content_type": "application/zip",
-                            "name": "Cache",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Zip merger",
+            description="Merges two zip files into one zip file.",
+            name=ZipMerger.instance.identifier,
+            version=ZipMerger.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
+                ui_href=url_for(f"{ZIP_MERGER_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="any", content_type=["application/zip"], required=True
+                    ),
+                    DataMetadata(
+                        data_type="any", content_type=["application/zip"], required=True
+                    ),
                 ],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "any",
-                            "content_type": "application/zip",
-                            "name": "Merged zip file",
-                        }
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="any", content_type=["application/zip"], required=True
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["utility"],
+        )
 
 
 @ZIP_MERGER_BLP.route("/ui/")
@@ -217,13 +205,12 @@ class CalcSimilarityView(MethodView):
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        result: AsyncResult = task.apply_async()
+        task.apply_async()
 
-        db_task.task_id = result.id
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 

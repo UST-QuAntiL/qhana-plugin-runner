@@ -1,3 +1,7 @@
+.qhana-microfrontend {
+    padding: 0.5rem;
+}
+
 .qhana-form {
     padding: 0.5rem;
     display: flex;
@@ -17,8 +21,16 @@
 
 .qhana-form-input {
     padding: 0.3em;
-    width: 100%;
     max-width: 25em;
+    flex-grow: 1;
+}
+
+.qhana-input-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
 }
 
 .qhana-error-message {
