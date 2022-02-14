@@ -39,8 +39,10 @@ def create_circuit(q_num: int, layers_num: int) -> Tuple[Program, int]:
 
     for i in range(q_num):
         _add_single_qubit_gate(p, i, params, param_offset)
-        p += MEASURE(i, ro[i])
         param_offset += params_per_gate
+
+    for i in range(q_num):
+        p += MEASURE(i, ro[i])
 
     return p, parametric_gates_num * params_per_gate
 
