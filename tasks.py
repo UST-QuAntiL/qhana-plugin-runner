@@ -129,21 +129,31 @@ def start_broker(c, port=None):
 
 
 @task
-def worker(c, dev=False, loglevel="INFO"):
+def worker(c, pool="solo", concurrency=1, dev=False, loglevel="INFO"):
     """Run the celery worker, optionally starting the redis broker.
 
     Args:
         c (Context): task context
+        pool (str, optional): the executor pool to use for celery workers (defaults to "solo" for development on linux and windows)
+        concurrency (int, optional): the number of concurrent workers (defaults to 1 for development)
         dev (bool, optional): If true the redis docker container will be started before the worker and stopped after the workers finished. Defaults to False.
         loglevel (str, optional): The loglevel of the celery logger in the worker (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
     """
     if dev:
         start_broker(c)
     c = cast(Context, c)
-    c.run(
-        join(["celery", "--app", CELERY_WORKER, "worker", "--loglevel", loglevel]),
-        echo=True,
-    )
+    cmd = [
+        "celery",
+        "--app",
+        CELERY_WORKER,
+        "worker",
+        f"--pool={pool}",
+        "--concurrency",
+        str(concurrency),
+        "--loglevel",
+        loglevel,
+    ]
+    c.run(join(cmd), echo=True)
     if dev:
         stop_broker(c)
 
