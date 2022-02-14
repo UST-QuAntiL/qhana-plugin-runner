@@ -54,6 +54,15 @@ poetry run invoke start-broker
 poetry run invoke worker  # use strg+c to stop worker
 ```
 
+
+### Debugging with VSCode
+
+There is a default launch configuration for vscode that should work on all platforms.
+To use the configuration copy `default-launch.json` to `.vscode/launch.json`.
+The `all` configuration starts the API and the worker process.
+For code changes both debugging sessions must be restarted as they do not autoreload code!
+
+
 ### Running the Plugin-Runner with Docker Compose
 
 If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:

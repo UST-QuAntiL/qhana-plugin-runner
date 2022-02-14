@@ -1,0 +1,53 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "compounds": [
+        {
+            "name": "All",
+            "configurations": [
+                "Plugin-Runner Worker",
+                "Plugin-Runner API"
+            ]
+        }
+    ],
+    "configurations": [
+        {
+            "name": "Plugin-Runner API",
+            "type": "python",
+            "request": "launch",
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "qhana_plugin_runner",
+                "FLASK_ENV": "development",
+                "FLASK_RUN_PORT": "5005"
+            },
+            "args": [
+                "run",
+                "--no-debugger"
+            ],
+            "jinja": true
+        },
+        {
+            "name": "Plugin-Runner Worker",
+            "type": "python",
+            "request": "launch",
+            "module": "celery",
+            "env": {
+                "FLASK_APP": "qhana_plugin_runner",
+                "FLASK_ENV": "development"
+            },
+            "args": [
+                "--app",
+                "qhana_plugin_runner.celery_worker:CELERY",
+                "worker",
+                "--concurrency",
+                "1",
+                "--pool=solo",
+                "--loglevel",
+                "INFO"
+            ]
+        }
+    ]
+}
