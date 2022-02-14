@@ -52,7 +52,7 @@ class PluginsView(MethodView):
                 data_input=[
                     DataMetadata(
                         data_type="entity-points",
-                        content_type=["text/csv"],
+                        content_type=["text/csv", "application/json"],
                         required=True,
                     )
                 ],
@@ -111,7 +111,6 @@ class MicroFrontend(MethodView):
             fields["pca_type"].data_key: PCATypeEnum.normal,
             fields["dimensions"].data_key: 1,
             fields["solver"].data_key: SolverEnum.auto,
-            fields["minmax_scale"].data_key: False,
             fields["batch_size"].data_key: 1,
             fields["sparsity_alpha"].data_key: 1,
             fields["ridge_alpha"].data_key: 0.01,

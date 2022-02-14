@@ -45,7 +45,6 @@ class ParameterHandler:
             "entityPointsUrl",  # general parameters
             "pcaType",
             "dimensions",
-            "minmaxScale",
             "solver",  # normal PCA
             "batchSize",  # incremental PCA
             "sparsityAlpha",  # sparse PCA
@@ -54,7 +53,6 @@ class ParameterHandler:
             "kernel",  # kernel PCA
         ]
         self.parameter_dict = parameter_dict
-        self.parameter_dict["minmaxScale"] = self.parameter_dict.get("minmaxScale", False)
 
         # log and check input parameters
         not_provided_params = []
@@ -67,7 +65,9 @@ class ParameterHandler:
             raise ValueError(
                 f"The following inputs were not provided: {str(not_provided_params)[1:-1]}"
             )
-        self.parameter_dict["batchSize"] = max(self.parameter_dict["batchSize"], self.parameter_dict["dimensions"])
+        self.parameter_dict["batchSize"] = max(
+            self.parameter_dict["batchSize"], self.parameter_dict["dimensions"]
+        )
 
     def get(self, key):
         return self.parameter_dict[key]
@@ -78,7 +78,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity-points",
-        data_content_types=["application/json", "text/csv"],  # ["application/json", "text/csv", "application/X-lines+json"],
+        data_content_types=[
+            "application/json",
+            "text/csv",
+        ],
         metadata={
             "label": "Entity points URL",
             "description": "URL to a json file with the entity points.",
@@ -121,15 +124,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Batch Size",
             "description": "Batch size when executing Incremental PCA",
             "input_type": "text",
-        },
-    )
-    minmax_scale = ma.fields.Boolean(
-        required=False,
-        allow_none=False,
-        metadata={
-            "label": "MinMax scaling features",
-            "description": "Tells, if features should be scaled to be between 0 and 1 or not",
-            "input_type": "checkbox",
         },
     )
     sparsity_alpha = ma.fields.Float(
