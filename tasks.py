@@ -392,6 +392,7 @@ def update_dependencies(c):
                 "--dev",
                 "--format",
                 "requirements.txt",
+                "--without-hashes",  # with hashes fails because pip is to strict with transitive dependencies
                 "--output",
                 str(Path("./docs/requirements.txt")),
             ]
