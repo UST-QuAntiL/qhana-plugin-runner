@@ -54,6 +54,15 @@ poetry run invoke start-broker
 poetry run invoke worker  # use strg+c to stop worker
 ```
 
+
+### Debugging with VSCode
+
+There is a default launch configuration for vscode that should work on all platforms.
+To use the configuration copy `default-launch.json` to `.vscode/launch.json`.
+The `all` configuration starts the API and the worker process.
+For code changes both debugging sessions must be restarted as they do not autoreload code!
+
+
 ### Running the Plugin-Runner with Docker Compose
 
 If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:
@@ -262,7 +271,7 @@ make html
 python -m sphinx.ext.intersphinx _build/html/objects.inv
 
 # export/update requirements.txt from poetry dependencies (for readthedocs build)
-poetry export --dev --format requirements.txt --output docs/requirements.txt
+poetry run invoke update-dependencies
 ```
 
 Update the python source documentation
@@ -271,6 +280,19 @@ Update the python source documentation
 poetry run sphinx-apidoc --separate --force -o docs/source . ./tasks.py docs plugins migrations
 rm docs/source/modules.rst  # delete modules file as this repository only contains one module
 ```
+
+
+## Updating the Third-Party Licenses
+
+```bash
+# list all licenses
+poetry run invoke list-licenses
+
+# update licenses in repository
+poetry run invoke update-dependencies
+```
+
+The third party licenses will be stored in the `qhana_plugin_runner/templates/licenses.html` file.
 
 
 ## Unit Tests

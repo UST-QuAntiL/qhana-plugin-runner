@@ -16,9 +16,8 @@ import math
 from enum import Enum
 from http import HTTPStatus
 from io import StringIO
-from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict
+from typing import Mapping, Optional, List
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -35,7 +34,13 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api import EnumField
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+    DataMetadata,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -46,10 +51,8 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
-    load_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -137,38 +140,32 @@ class PluginsView(MethodView):
     @TRANSFORMERS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Transformers endpoint returning the plugin metadata."""
-        return {
-            "name": Transformers.instance.name,
-            "version": Transformers.instance.version,
-            "identifier": Transformers.instance.identifier,
-            "root_href": url_for(f"{TRANSFORMERS_BLP.name}.PluginsView"),
-            "title": "Similarities to distances transformers",
-            "description": "Transforms similarities to distances.",
-            "plugin_type": "sim-to-dist",
-            "tags": [],
-            "processing_resource_metadata": {
-                "href": url_for(f"{TRANSFORMERS_BLP.name}.CalcSimilarityView"),
-                "ui_href": url_for(f"{TRANSFORMERS_BLP.name}.MicroFrontend"),
-                "inputs": [
-                    [
-                        {
-                            "output_type": "attribute-similarities",
-                            "content_type": "application/zip",
-                            "name": "Attribute similarities",
-                        },
-                    ]
+        return PluginMetadata(
+            title="Similarities to distances transformers",
+            description="Transforms similarities to distances.",
+            name=Transformers.instance.identifier,
+            version=Transformers.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{TRANSFORMERS_BLP.name}.CalcSimilarityView"),
+                ui_href=url_for(f"{TRANSFORMERS_BLP.name}.MicroFrontend"),
+                data_input=[
+                    DataMetadata(
+                        data_type="attribute-similarities",
+                        content_type=["application/zip"],
+                        required=True,
+                    )
                 ],
-                "outputs": [
-                    [
-                        {
-                            "output_type": "attribute-distances",
-                            "content_type": "application/zip",
-                            "name": "Distance values for the attributes",
-                        }
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="attribute-distances",
+                        content_type=["application/zip"],
+                        required=True,
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["sim-to-dist"],
+        )
 
 
 @TRANSFORMERS_BLP.route("/ui/")
@@ -250,13 +247,12 @@ class CalcSimilarityView(MethodView):
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        result: AsyncResult = task.apply_async()
+        task.apply_async()
 
-        db_task.task_id = result.id
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 

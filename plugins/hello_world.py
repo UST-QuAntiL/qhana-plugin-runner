@@ -28,15 +28,20 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from sqlalchemy.sql.expression import select
 
+from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    PluginMetadataSchema,
+    PluginMetadata,
+    PluginType,
+    EntryPoint,
+)
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -83,15 +88,30 @@ class HelloWorldParametersSchema(FrontendFormBaseSchema):
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @HELLO_BLP.response(HTTPStatus.OK, DemoResponseSchema())
+    @HELLO_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        """Demo endpoint returning the plugin metadata."""
-        return {
-            "name": HelloWorld.instance.name,
-            "version": HelloWorld.instance.version,
-            "identifier": HelloWorld.instance.identifier,
-        }
+        """Endpoint returning the plugin metadata."""
+        return PluginMetadata(
+            title=HelloWorld.instance.name,
+            description=HELLO_BLP.description,
+            name=HelloWorld.instance.identifier,
+            version=HelloWorld.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{HELLO_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{HELLO_BLP.name}.MicroFrontend"),
+                data_input=[],
+                data_output=[
+                    DataMetadata(
+                        data_type="txt",
+                        content_type=["text/plain"],
+                        required=True,
+                    )
+                ],
+            ),
+            tags=[],
+        )
 
 
 @HELLO_BLP.route("/ui/")
@@ -136,7 +156,7 @@ class MicroFrontend(MethodView):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
-                "hello_template.html",
+                "simple_template.html",
                 name=HelloWorld.instance.name,
                 version=HelloWorld.instance.version,
                 schema=schema,
@@ -166,13 +186,12 @@ class ProcessView(MethodView):
         task: chain = demo_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        result: AsyncResult = task.apply_async()
+        task.apply_async()
 
-        db_task.task_id = result.id
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 

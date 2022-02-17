@@ -1,0 +1,448 @@
+{
+  "asyncapi": "2.2.0",
+  "info": {
+    "title": "Plugin Host",
+    "version": "1.0.0",
+    "description": "The Plugin Host that loads the Micro-Frontend based plugin."
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "simpleInputEvents": {
+      "description": "Simple, single string messages received from the loaded plugin.",
+      "publish": {
+        "message": {
+          "oneOf": [
+            {
+              "$ref": "#/components/messages/uiLoaded"
+            },
+            {
+              "$ref": "#/components/messages/uiLoading"
+            }
+          ]
+        }
+      }
+    },
+    "complexInputEvents": {
+      "description": "Complex messages received from the loaded plugin. Complex messages can have additional data in the payload object.",
+      "publish": {
+        "message": {
+          "oneOf": [
+            {
+              "$ref": "#/components/messages/uiResize"
+            },
+            {
+              "$ref": "#/components/messages/submitStatusResponse"
+            },
+            {
+              "$ref": "#/components/messages/formSubmit"
+            },
+            {
+              "$ref": "#/components/messages/formError"
+            },
+            {
+              "$ref": "#/components/messages/requestDataUrl"
+            },
+            {
+              "$ref": "#/components/messages/requestDataUrlInfo"
+            },
+            {
+              "$ref": "#/components/messages/requestPluginUrl"
+            },
+            {
+              "$ref": "#/components/messages/requestPluginUrlInfo"
+            }
+          ]
+        }
+      }
+    },
+    "SimpleOutputEvents": {
+      "description": "Simple, single-string messages sent to the plugin from the plugin host.",
+      "subscribe": {
+        "message": {
+          "oneOf": [
+            {
+              "$ref": "#/components/messages/preventSubmit"
+            },
+            {
+              "$ref": "#/components/messages/allowSubmit"
+            },
+            {
+              "$ref": "#/components/messages/submitStatusRequest"
+            }
+          ]
+        }
+      }
+    },
+    "complexOutputEvents": {
+      "description": "Complex messages sent to the plugin. Complex messages can have additional data in the payload object.",
+      "subscribe": {
+        "message": {
+          "oneOf": [
+            {
+              "$ref": "#/components/messages/loadCss"
+            },
+            {
+              "$ref": "#/components/messages/dataUrlResponse"
+            },
+            {
+              "$ref": "#/components/messages/pluginUrlResponse"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "uiLoaded": {
+        "summary": "The plugin micro-frontend is loaded an ready to receive messages from the plugin host.",
+        "payload": {
+          "type": "string",
+          "const": "ui-loaded"
+        }
+      },
+      "uiLoading": {
+        "summary": "The plugin micro-frontend is loading new content, the plugin host should disable interaction with the plugin until the content is loaded.",
+        "payload": {
+          "type": "string",
+          "const": "ui-loading"
+        }
+      },
+      "preventSubmit": {
+        "summary": "Tell the plugin to prevent the final form submit. The plugin must send the form submit data to the plugin host even if the form is not actually submitted.",
+        "payload": {
+          "type": "string",
+          "const": "ui-prevent-submit"
+        }
+      },
+      "allowSubmit": {
+        "summary": "Tell the plugin to allow the final form submit (the default state).",
+        "payload": {
+          "type": "string",
+          "const": "ui-allow-submit"
+        }
+      },
+      "submitStatusRequest": {
+        "summary": "Ask the plugin about the current submit allowed status.",
+        "payload": {
+          "type": "string",
+          "const": "ui-submit-status"
+        }
+      },
+      "submitStatusResponse": {
+        "summary": "The response of the plugin to changing the submit status and status requests containing a boolean whether submitting the form is currently prevented or allowed.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "ui-submit-status"
+            },
+            "isAllowedToSubmit": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "isAllowedToSubmit"
+          ]
+        }
+      },
+      "uiResize": {
+        "summary": "The height of the micro-frontend has changed. The plugin host should adjust the view window of the plugin to match the new height.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "ui-resize"
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "type",
+            "height"
+          ]
+        }
+      },
+      "formSubmit": {
+        "summary": "The plugin has submitted data to the API. The payload contains a copy of the submitted data.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "form-submit"
+            },
+            "formData": {
+              "type": "string"
+            },
+            "formDataType": {
+              "type": "string"
+            },
+            "dataInputs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "submitUrl": {
+              "type": "string"
+            },
+            "resultUrl": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "formData",
+            "formDataType",
+            "dataInputs",
+            "submitUrl",
+            "resultUrl"
+          ]
+        }
+      },
+      "formError": {
+        "summary": "The plugin failed to submit data to the API. The plugin host should display the error and reset the loading status of the plugin.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "form-error"
+            },
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "status"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "error"
+          ]
+        }
+      },
+      "requestDataUrl": {
+        "summary": "The plugin requests a data URL matching the accepted data and content types for a specific data input. The plugin host should display a data selection dialog or similar to the user. This message must only be sent on a user interaction like a click on a button. (Response: 'data-url-response')",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "request-data-url"
+            },
+            "inputKey": {
+              "type": "string"
+            },
+            "acceptedInputType": {
+              "type": "string",
+              "pattern": "([-\\w.]+|\\*)/([-\\w.]+(\\+[-\\w.]+)?|\\*)"
+            },
+            "acceptedContentTypes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "([-\\w.]+|\\*)/([-\\w.]+(\\+[-\\w.]+)?|\\*)"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "inputKey",
+            "acceptedInputType",
+            "acceptedContentTypes"
+          ]
+        }
+      },
+      "requestDataUrlInfo": {
+        "summary": "The plugin requests information about an existing data URL matching the accepted data and content types for a specific data input. The plugin host should send the information about that URL to the plugin if available.  (Response: 'data-url-response')",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "request-data-url-info"
+            },
+            "inputKey": {
+              "type": "string"
+            },
+            "dataUrl": {
+              "type": "string",
+              "format": "url"
+            }
+          },
+          "required": [
+            "type",
+            "inputKey",
+            "dataUrl"
+          ]
+        }
+      },
+      "requestPluginUrl": {
+        "summary": "The plugin requests the URL of another Plugin matching the provided tags or matching the provided name (and version). If all Attributes are present then all must match. Tags starting with an '!' must not be present on the plugin. The plugin host should display a plugin selection dialog or similar to the user. This message must only be sent on a user interaction like a click on a button. (Response: 'plugin-url-response')",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "request-plugin-url"
+            },
+            "inputKey": {
+              "type": "string"
+            },
+            "pluginName": {
+              "type": "string"
+            },
+            "pluginVersion": {
+              "type": "string",
+              "pattern": "(>=?)?(v?[0-9]+(\\.[0-9]+(\\.[0-9]+)))(\\s+(<=?)(v?[0-9]+(\\.[0-9]+(\\.[0-9]+))))?"
+            },
+            "pluginTags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "!?([a-zA-Z][a-zA-Z0-9-_:]*)"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "inputKey",
+            "pluginTags"
+          ]
+        }
+      },
+      "requestPluginUrlInfo": {
+        "summary": "The plugin requests additional information to the URL of another Plugin. The plugin host should reply with the plugin information if available. (Response: 'plugin-url-response')",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "request-plugin-url-info"
+            },
+            "inputKey": {
+              "type": "string"
+            },
+            "pluginUrl": {
+              "type": "string",
+              "format": "url"
+            }
+          },
+          "required": [
+            "type",
+            "inputKey",
+            "pluginUrl"
+          ]
+        }
+      },
+      "loadCss": {
+        "summary": "A request to the plugin to also load the following css files. A plugin may choose to ignore this message. The message is sent directly after the uiLoaded message is received by the plugin host.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "load-css"
+            },
+            "urls": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "url"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "urls"
+          ]
+        }
+      },
+      "dataUrlResponse": {
+        "summary": "The response to a previously received requestDataUrl (or requestDataUrlInfo) message from the plugin.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "data-url-response"
+            },
+            "inputKey": {
+              "type": "string"
+            },
+            "href": {
+              "type": "string"
+            },
+            "dataType": {
+              "type": "string",
+              "pattern": "([-\\w.]+|\\*)/([-\\w.]+(\\+[-\\w.]+)?|\\*)"
+            },
+            "contentType": {
+              "type": "string",
+              "pattern": "([-\\w.]+|\\*)/([-\\w.]+(\\+[-\\w.]+)?|\\*)"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "inputKey",
+            "href"
+          ]
+        }
+      },
+      "pluginUrlResponse": {
+        "summary": "The response to a previously received requestPluginUrl (or requestPluginUrlInfo) message from the plugin.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "plugin-url-response"
+            },
+            "inputKey": {
+              "type": "string"
+            },
+            "pluginUrl": {
+              "type": "string"
+            },
+            "pluginName": {
+              "type": "string"
+            },
+            "pluginVersion": {
+              "type": "string",
+              "pattern": "v?[0-9]+(\\.[0-9]+(\\.[0-9]+))(-[^\\s]+)?"
+            }
+          },
+          "required": [
+            "type",
+            "inputKey",
+            "pluginUrl"
+          ]
+        }
+      }
+    }
+  }
+}

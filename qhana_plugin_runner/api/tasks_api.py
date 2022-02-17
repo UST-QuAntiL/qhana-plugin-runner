@@ -19,18 +19,18 @@ from http import HTTPStatus
 from typing import Any, Dict, List, Optional, Sequence
 
 import marshmallow as ma
-from celery.result import AsyncResult
 from flask.views import MethodView
 from flask_smorest import abort
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    ConcreteOutputMetadataSchema,
-    OutputMetadata, DelegateMetadataSchema, DelegateMetadata,
+    ProgressMetadata,
+    ProgressMetadataSchema,
+    StepMetadata,
+    StepMetadataSchema,
 )
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
-from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, Step, TaskFile
 from qhana_plugin_runner.storage import STORE
 
 TASKS_API = SmorestBlueprint(
@@ -41,24 +41,69 @@ TASKS_API = SmorestBlueprint(
 )
 
 
+@dataclass
+class OutputDataMetadata:
+    data_type: str
+    content_type: str
+    href: str
+    name: Optional[str] = None
+
+
+class OutputDataMetadataSchema(MaBaseSchema):
+    data_type = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={"description": "The type of the output data (e.g. distance-matrix)."},
+    )
+    content_type = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "The media type (mime type) of the output data (e.g. application/json)."
+        },
+    )
+    href = ma.fields.Url(
+        required=True,
+        allow_none=False,
+        metadata={"description": "The URL of the output data."},
+    )
+    name = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "An optional human readable name for the output data."},
+    )
+
+    @ma.post_dump()
+    def remove_empty_attributes(self, data: Dict[str, Any], **kwargs):
+        """Remove name if it is none."""
+        if data["name"] == None:
+            del data["name"]
+        return data
+
+
 @dataclass()
 class TaskData:
-    name: str
-    task_id: str
     status: str
-    task_log: Optional[str] = None
-    delegate: Optional[DelegateMetadata] = None
-    outputs: Sequence[OutputMetadata] = field(default_factory=list)
+    log: Optional[str] = None
+    progress: Optional[ProgressMetadata] = None
+    steps: Sequence[StepMetadata] = field(default_factory=list)
+    outputs: Sequence[OutputDataMetadata] = field(default_factory=list)
 
 
 class TaskStatusSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
     status = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_log = ma.fields.String(required=False, allow_none=True, dump_only=True)
-    delegate = ma.fields.Nested(DelegateMetadataSchema(), required=False, allow_none=True, dump_only=True)
+    log = ma.fields.String(required=False, allow_none=True, dump_only=True)
+    progress = ma.fields.Nested(
+        ProgressMetadataSchema, required=False, allow_none=True, dump_only=True
+    )
+    steps = ma.fields.List(
+        ma.fields.Nested(StepMetadataSchema),
+        required=False,
+        allow_none=True,
+        dump_only=True,
+    )
     outputs = ma.fields.List(
-        ma.fields.Nested(ConcreteOutputMetadataSchema()),
+        ma.fields.Nested(OutputDataMetadataSchema()),
         required=False,
         allow_none=True,
         dump_only=True,
@@ -67,80 +112,79 @@ class TaskStatusSchema(MaBaseSchema):
     @ma.post_dump()
     def remove_empty_attributes(self, data: Dict[str, Any], **kwargs):
         """Remove result attributes from serialized tasks that have not finished."""
-        if data["taskLog"] is None:
-            del data["taskLog"]
+        if data["log"] == None:
+            del data["log"]
             del data["outputs"]
-        if data["delegate"] is None:
-            del data["delegate"]
+        if data["steps"] == None:
+            del data["steps"]
+        if data["progress"] == None:
+            del data["progress"]
         return data
 
 
-@TASKS_API.route("/<string:task_id>/")
+@TASKS_API.route("/<int:task_id>/")
 class TaskView(MethodView):
     """Task status resource."""
 
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
-    def get(self, task_id: str, delegate: Dict = None):
+    def get(self, task_id: int):
         """Get the current task status."""
-        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_task_id(
-            task_id=task_id
-        )
+        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=task_id)
         if task_data is None:
             abort(HTTPStatus.NOT_FOUND, message="Task not found.")
             return  # return for type checker, abort raises exception
 
-        assert (
-            task_data.task_id is not None
-        ), "If this is None then get_task_by_id is faulty."  # assertion for type checker
+        progress = None
+        if task_data.progress_value:
+            progress = {
+                "value": task_data.progress_value,
+                "start": task_data.progress_start,
+                "target": task_data.progress_target,
+                "unit": task_data.progress_unit,
+            }
 
-        if not task_data.is_finished:
-            task_result = AsyncResult(task_id, app=CELERY)
-            if task_result:
-                return TaskData(
-                    name=task_data.task_name,
-                    task_id=task_data.task_id,
-                    status=task_result.status,
-                    # TODO task result garbage collection (auto delete old (~7d default) results to free up resources again)
-                    task_log=None,  # only return a result if task is marked finished in db
-                )
-            if delegate is not None:
-                return TaskData(
-                    name=task_data.task_name,
-                    task_id=task_data.task_id,
-                    status=task_data.status,
-                    task_log=None,
-                    delegate=DelegateMetadata(
-                        name=delegate["name"],
-                        version=delegate["version"],
-                        url=delegate["url"],
+        steps: Optional[List[StepMetadata]] = None
+        if len(task_data.steps) > 0:
+            steps = []
+            step: Step
+            for step in task_data.steps:
+                steps.append(
+                    StepMetadata(
+                        href=step.href,
+                        uiHref=step.ui_href,
+                        stepId=step.step_id,
+                        cleared=step.cleared,
                     )
                 )
+
+        if not task_data.is_finished:
             return TaskData(
-                name=task_data.task_name,
-                task_id=task_data.task_id,
+                progress=progress,
+                steps=steps,
                 status=task_data.status,
-                task_log=None,
+                log=task_data.task_log,
             )
 
-        outputs: List[OutputMetadata] = []
+        outputs: List[OutputDataMetadata] = []
 
         for file_ in TaskFile.get_task_result_files(task_data):
             if file_.file_type is None or file_.mimetype is None:
                 continue  # result files must have file and mime type set
+            href = STORE[file_.storage_provider].get_task_file_url(file_)
             outputs.append(
-                OutputMetadata(
-                    output_type=file_.file_type,
+                OutputDataMetadata(
+                    data_type=file_.file_type,
                     content_type=file_.mimetype,
+                    href=href,
                     name=file_.file_name,
-                    href=STORE.get_task_file_url(file_),
                 )
             )
 
         return TaskData(
-            name=task_data.task_name,
-            task_id=task_data.task_id,
+            progress=progress,
+            steps=steps,
             status=task_data.status,
-            task_log=task_data.task_log,
+            log=task_data.task_log,
             outputs=outputs,
         )
 

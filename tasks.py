@@ -29,11 +29,30 @@ MODULE_NAME = "qhana_plugin_runner"
 CELERY_WORKER = f"{MODULE_NAME}.celery_worker:CELERY"
 
 
+# a list of allowed licenses, dependencies with other licenses will trigger an error in the list-licenses command
+ALLOWED_LICENSES = [
+    "3-Clause BSD License",
+    "Apache 2.0",
+    "Apache License, Version 2.0",
+    "Apache Software License",
+    "BSD License",
+    "BSD",
+    "GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "GNU Library or Lesser General Public License (LGPL)",
+    "GPLv3",
+    "MIT License",
+    "MIT",
+    "Mozilla Public License 2.0 (MPL 2.0)",
+    "new BSD",
+    "Python Software Foundation License",
+]
+
+
 @task
 def stop_broker(c):
     """Stop the previously started redis broker container with docker or podman.
 
-    Discovers the conteiner id from the environment variable REDIS_CONTAINER_ID.
+    Discovers the container id from the environment variable REDIS_CONTAINER_ID.
     If the variable is not set ``--latest`` is used (this assumes that the latest
     created container is the broker!).
 
@@ -52,7 +71,7 @@ def stop_broker(c):
 def reset_broker(c):
     """Remove the current redis container and unset the REDIS_CONTAINER_ID variable.
 
-    Discovers the conteiner id from the environment variable REDIS_CONTAINER_ID.
+    Discovers the container id from the environment variable REDIS_CONTAINER_ID.
     If the variable is not set this task does nothing.
 
     To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
@@ -78,7 +97,7 @@ def start_broker(c, port=None):
     The reused container ignores the port option!
     Sets the environemnt variable in the .env file if a new container is created.
 
-    Redis port is optionally red from REDIS_PORT environment variable. Use the
+    Redis port is optionally read from REDIS_PORT environment variable. Use the
     ``reset-broker`` task to remove the old container to create a new container
     with a different port.
 
@@ -110,21 +129,31 @@ def start_broker(c, port=None):
 
 
 @task
-def worker(c, dev=False, loglevel="INFO"):
+def worker(c, pool="solo", concurrency=1, dev=False, loglevel="INFO"):
     """Run the celery worker, optionally starting the redis broker.
 
     Args:
         c (Context): task context
+        pool (str, optional): the executor pool to use for celery workers (defaults to "solo" for development on linux and windows)
+        concurrency (int, optional): the number of concurrent workers (defaults to 1 for development)
         dev (bool, optional): If true the redis docker container will be started before the worker and stopped after the workers finished. Defaults to False.
         loglevel (str, optional): The loglevel of the celery logger in the worker (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
     """
     if dev:
         start_broker(c)
     c = cast(Context, c)
-    c.run(
-        join(["celery", "--app", CELERY_WORKER, "worker", "--loglevel", loglevel]),
-        echo=True,
-    )
+    cmd = [
+        "celery",
+        "--app",
+        CELERY_WORKER,
+        "worker",
+        f"--pool={pool}",
+        "--concurrency",
+        str(concurrency),
+        "--loglevel",
+        loglevel,
+    ]
+    c.run(join(cmd), echo=True)
     if dev:
         stop_broker(c)
 
@@ -242,6 +271,132 @@ def purge_task_queues(c):
         return
     c.run(
         join(["celery", "--app", CELERY_WORKER, "purge"]),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task
+def list_licenses(
+    c, format_="json", include_installed=False, summary=False, short=False, echo=False
+):
+    """List licenses of dependencies.
+
+    By default only the direct (and transitive) dependencies of the plugin runner are included.
+
+    Args:
+        c (Context): task context
+        format_ (str, optional): The output format (json, html, markdown, plain, plain-vertical, rst, confluence, json-license-finder, csv). Defaults to "json".
+        include_installed (bool, optional): If true all currently installed packages are considered dependencies. Defaults to False.
+        summary (bool, optional): If true output a summary of found licenses. Defaults to False.
+        short (bool, optional): If true only name, version, license and authors of a apackage are printed. Defaults to False.
+        echo (bool, optional): If true the command used to generate the license output is printed to console. Defaults to False.
+    """
+    packages = []
+    if not include_installed:
+        packages_output = c.run(
+            join(["poetry", "export", "--dev", "--without-hashes"]),
+            echo=False,
+            hide="both",
+        )
+        packages = [p.split("=", 1)[0] for p in packages_output.stdout.splitlines() if p]
+    cmd = [
+        "pip-licenses",
+        "--format",
+        format_,
+        "--with-authors",
+        "--allow-only",
+        ";".join(ALLOWED_LICENSES),
+    ]
+    if not short:
+        cmd += [
+            "--with-urls",
+            "--with-description",
+            "--with-license-file",
+            "--no-license-path",
+            "--with-notice-file",
+        ]
+    if summary:
+        cmd.append("--summary")
+    if not include_installed:
+        cmd += [
+            "--packages",
+            *packages,
+        ]
+    c.run(
+        join(cmd),
+        echo=echo,
+        warn=True,
+    )
+
+
+@task
+def update_licenses(c, include_installed=False):
+    """Update the licenses template to include all licenses.
+
+    By default only the direct (and transitive) dependencies of the plugin runner are included.
+
+    Args:
+        c (Context): task context
+        include_installed (bool, optional): Include all currently installed libraries. Defaults to False.
+    """
+    packages = []
+    if not include_installed:
+        packages_output = c.run(
+            join(["poetry", "export", "--dev", "--without-hashes"]),
+            echo=False,
+            hide="both",
+        )
+        packages = [p.split("=", 1)[0] for p in packages_output.stdout.splitlines() if p]
+    cmd = [
+        "pip-licenses",
+        "--format",
+        "html",
+        "--output-file",
+        str(Path("./qhana_plugin_runner/templates/licenses.html")),
+        "--with-authors",
+        "--with-urls",
+        "--with-description",
+        "--with-license-file",
+        "--no-license-path",
+        "--with-notice-file",
+        "--allow-only",
+        ";".join(ALLOWED_LICENSES),
+    ]
+    if not include_installed:
+        cmd += [
+            "--packages",
+            *packages,
+        ]
+    c.run(
+        join(cmd),
+        echo=True,
+        hide="err",
+        warn=True,
+    )
+
+
+@task(update_licenses)
+def update_dependencies(c):
+    """Update dependencies that are derived from the pyproject.toml dependencies (e.g. doc dependencies and licenses).
+
+    Args:
+        c (Context): task context
+    """
+    c.run(
+        join(
+            [
+                "poetry",
+                "export",
+                "--dev",
+                "--format",
+                "requirements.txt",
+                "--without-hashes",  # with hashes fails because pip is to strict with transitive dependencies
+                "--output",
+                str(Path("./docs/requirements.txt")),
+            ]
+        ),
         echo=True,
         hide="err",
         warn=True,

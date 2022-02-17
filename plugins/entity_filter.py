@@ -12,37 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import mimetypes
-from celery.app.task import Task
-
-import requests
 import random
+from enum import Enum
 from http import HTTPStatus
-from json import dumps, loads, JSONEncoder
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    ResponseLike,
-    ensure_dict,
-    load_entities,
-    save_entities,
-)
-from qhana_plugin_runner.requests import open_url
+from json import JSONEncoder, dumps, loads
+from tempfile import SpooledTemporaryFile
 from typing import Any, Dict, Generator, List, Mapping, Optional, Set, Union
 
 import marshmallow as ma
-from qhana_plugin_runner.api.extra_fields import CSVList, EnumField
 from celery.canvas import chain
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
-from flask import Response
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from sqlalchemy.sql.expression import select
+from marshmallow.validate import Range
 
+from qhana_plugin_runner.api.extra_fields import CSVList, EnumField
+from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
@@ -50,13 +48,16 @@ from qhana_plugin_runner.api.util import (
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ensure_dict,
+    load_entities,
+    save_entities,
+)
+from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from tempfile import SpooledTemporaryFile
-from qhana_plugin_runner.storage import STORE
-from flask import redirect
 
 _plugin_name = "entity-filter"
 __version__ = "v0.1.0"
@@ -69,12 +70,6 @@ ENTITY_FILTER_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Entity filter API.",
 )
-
-
-class ResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -133,6 +128,9 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
     n_rows = ma.fields.Integer(
         required=False,
         allow_none=True,
+        validate=Range(
+            0, min_inclusive=False, error="Number of Rows must be a positive number."
+        ),
         metadata={
             "label": "Number of Rows",
             "description": "Integer of number of rows that should be kept.",
@@ -168,48 +166,37 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, ResponseSchema())
+    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Entity filter endpoint returning the plugin metadata."""
-        return {
-            "name": EntityFilter.instance.name,
-            "version": EntityFilter.instance.version,
-            "identifier": EntityFilter.instance.identifier,
-            "root_href": url_for(f"{ENTITY_FILTER_BLP.name}.PluginsView"),
-            "title": "Entity loader",
-            "description": "Filters data sets from the MUSE database.",
-            "plugin_type": "data-loader",
-            "tags": ["data:loading"],
-            "processing_resource_metadata": {
-                "href": url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
-                "ui_href": url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
-                "inputs": [  # TODO: only file input (entities...)
-                    [
-                        {
-                            "output_type": "raw",
-                            "content_type": "application/json",
-                            "name": "Raw entity data",
-                        },
-                        {
-                            "output_type": "raw",
-                            "content_type": "text/csv",
-                            "name": "Raw entity data",
-                        },
-                        # TODO: OR -> json, csv... scatch, not finalized yet
-                    ]
+        return PluginMetadata(
+            title="Entity loader",
+            description="Filters data sets from the MUSE database.",
+            name=EntityFilter.instance.identifier,
+            version=EntityFilter.instance.version,
+            type=PluginType.simple,
+            entry_point=EntryPoint(
+                href=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
+                data_input=[  # TODO: only file input (entities...)
+                    DataMetadata(
+                        data_type="raw",
+                        content_type=[
+                            "application/json",
+                            "application/zip",
+                        ],  # TODO: OR -> json, csv... scatch, not finalized yet
+                        required=True,
+                    )
                 ],
-                "outputs": [
-                    [
-                        {  # TODO: file handle to filtered file, could be json or csv...
-                            "output_type": "raw",
-                            "content_type": "application/json",
-                            "name": "Filtered raw entity data",
-                        },
-                    ]
+                data_output=[
+                    DataMetadata(
+                        data_type="raw", content_type=["application/json"], required=True
+                    )
                 ],
-            },
-        }
+            ),
+            tags=["data-loader"],
+        )
 
 
 @ENTITY_FILTER_BLP.route("/ui/")
@@ -293,13 +280,12 @@ class ProcessView(MethodView):
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        result: AsyncResult = task.apply_async()
+        task.apply_async()
 
-        db_task.task_id = result.id
         db_task.save(commit=True)
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(result.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 
