@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from distutils.log import warn
 from os import environ
+from os import execvpe as replace_process
+from os import urandom
 from pathlib import Path
+from re import match
 from shlex import join
-from typing import cast
+from shutil import copytree
+from typing import Optional, cast
 
 from dotenv import load_dotenv, set_key, unset_key
-from invoke import task
+from invoke import UnexpectedExit, call, task
 from invoke.context import Context
 from invoke.runners import Result
 
@@ -129,7 +134,7 @@ def start_broker(c, port=None):
 
 
 @task
-def worker(c, pool="solo", concurrency=1, dev=False, loglevel="INFO"):
+def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
     """Run the celery worker, optionally starting the redis broker.
 
     Args:
@@ -137,7 +142,7 @@ def worker(c, pool="solo", concurrency=1, dev=False, loglevel="INFO"):
         pool (str, optional): the executor pool to use for celery workers (defaults to "solo" for development on linux and windows)
         concurrency (int, optional): the number of concurrent workers (defaults to 1 for development)
         dev (bool, optional): If true the redis docker container will be started before the worker and stopped after the workers finished. Defaults to False.
-        loglevel (str, optional): The loglevel of the celery logger in the worker (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
+        log_level (str, optional): The log level of the celery logger in the worker (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
     """
     if dev:
         start_broker(c)
@@ -151,11 +156,15 @@ def worker(c, pool="solo", concurrency=1, dev=False, loglevel="INFO"):
         "--concurrency",
         str(concurrency),
         "--loglevel",
-        loglevel,
+        log_level.upper(),
     ]
-    c.run(join(cmd), echo=True)
     if dev:
+        c.run(join(cmd), echo=True)
         stop_broker(c)
+    else:
+        # if not in dev mode completely replace the current process with the started process
+        print(join(cmd))
+        replace_process(cmd[0], cmd, environ)
 
 
 @task
@@ -275,6 +284,174 @@ def purge_task_queues(c):
         hide="err",
         warn=True,
     )
+
+
+@task
+def start_gunicorn(c, workers=1, log_level="info", docker=False):
+    """Start the gunicorn server.
+
+    This task is intended to be run in docker.
+
+    Args:
+        c (Context): task context
+        workers (int, optional): The number of parallel workers (set this to around <nr_of_cores>*2 + 1). Defaults to 1.
+        log_level (str, optional): the log level to output in console. Defaults to "info".
+        docker (bool, optional): set this to True if running inside of docker. Defaults to false.
+    """
+    cmd = [
+        "python",
+        "-m",
+        "gunicorn",
+        "--pythonpath",
+        ".",
+        "--worker-tmp-dir",
+        "/dev/shm" if docker else "/tmp",  # use in memory file system for heartbeats
+        "-w",
+        environ.get("GUNICORN_WORKERS", str(workers)),
+        "-b",
+        "0.0.0.0:8080",
+        "--log-level",
+        log_level.lower(),
+        "--error-logfile=-",
+        "qhana_plugin_runner:create_app()",
+    ]
+
+    print(join(cmd))
+
+    # replaces the current process with the subprocess!
+    replace_process(cmd[0], cmd, environ)
+
+
+def git_url_to_folder(url: str) -> str:
+    """Extract a sensible and stable repository name from a git url"""
+    # roughly matches …[/<organization]/<repository-name>[.git][/]
+    url_match = match(r".*(?:\/(?P<orga>[^\/.]+))?\/(?P<repo>[^\/]+)(?:\.git)\/?$", url)
+    if not url_match:
+        raise ValueError(f"Url '{url}' could not be parsed!", url_match)
+    if url_match["orga"]:
+        return f"{url_match['orga']}__{url_match['repo']}"
+    else:
+        return url_match["repo"]
+
+
+@task
+def load_git_plugins(c, plugins_path="./git-plugins"):
+    """Load plugins from git repositories (specified via GIT_PLUGINS env var).
+
+    Specify a newline separated list of git repositories to load plugins from
+    in the GIT_PLUGINS environment variable. Each line should contain a git
+    URL following the same format as in requirements.txt used by pip.
+
+    Examples:
+    git+<<url to git repo>[@<branch/tag/commit hash>][#subdirectory=<directory in git repo holding the plugins>]
+    git+https://github.com/UST-QuAntiL/qhana-plugin-runner.git@main#subdirectory=/plugins
+
+    Args:
+        c (Context): task context
+        plugins_path (str, optional): the folder to load plugins into.
+    """
+    git_plugins = environ.get("GIT_PLUGINS")
+    if not git_plugins:
+        return
+
+    repositories_path = Path(plugins_path) / Path(".repositories")
+
+    if not repositories_path.exists():
+        repositories_path.mkdir(parents=True, exist_ok=True)
+
+    for git_plugin in git_plugins.splitlines():
+        plugin_match = match(
+            # roughly matches <vcs=git>+<repo_url>[@<ref>][#…subdirectory=<sub_dir>…]
+            r"^(?P<vcs>git)\+(?P<url>[^@#\n]+)(?:@(?P<ref>[^#\n]+))?(?:#(?:[^&\n]+&)?subdirectory=\/?(?P<dir>[^&\n]+)[^\n]*)?$",
+            git_plugin,
+        )
+        if not plugin_match:
+            print(f"Could not recognise git url '{git_plugin}' – skipping")
+            continue
+        if plugin_match["vcs"] != "git":
+            print(f"Only git is supported (got '{plugin_match['vcs']}') – skipping")
+            continue
+        url: str = plugin_match["url"]
+        ref: Optional[str] = plugin_match["ref"]
+        sub_dir: Optional[str] = plugin_match["dir"]
+
+        cmd = [
+            "git",
+            "clone",
+        ]
+
+        shallow_cmd = [*cmd, "--depth=1"]
+
+        if ref:
+            shallow_cmd.append(f"--branch={ref}")
+
+        folder = git_url_to_folder(url)
+        if (Path(plugins_path) / Path(".repositories") / Path(folder)).exists():
+            print(f"Repository '{url}' is already checked out – skipping")
+            continue  # todo better handling for checked out repositories
+
+        with c.cd(str(repositories_path)):
+            try:
+                # try a shallow clone (only branch and tag refs will work)
+                c.run(join(shallow_cmd + [url, folder]))
+            except UnexpectedExit:
+                # fall back to full clone and checkout ref after cloning
+                c.run(join(cmd + [url, folder]), warn=True)
+                if ref:
+                    with c.cd(folder):
+                        c.run(join(["git", "checkout", ref]), warn=True)
+            if sub_dir:
+                plugin_folder = repositories_path / Path(folder) / Path(sub_dir)
+            else:
+                plugin_folder = repositories_path / Path(folder)
+
+            if plugin_folder.exists() and plugin_folder.is_dir():
+                # copy all files into the plugins directory
+                copytree(plugin_folder, Path(plugins_path), dirs_exist_ok=True)
+
+
+@task
+def install_plugin_dependencies(c):
+    """Install all plugin dependencies."""
+    c.run(join(["python", "-m", "flask", "install"]), echo=True, warn=True)
+
+
+@task
+def await_db(c):
+    """Docker specific task. Do not call."""
+    c.run("/wait", echo=True, warn=False)
+
+
+@task
+def upgrade_db(c):
+    """Upgrade the datzabase to the newest migration."""
+    c.run(join(["python", "-m", "flask", "db", "upgrade"]), echo=True, warn=True)
+
+
+@task
+def ensure_paths(c):
+    """Docker specific task. Do not call."""
+    Path("/app/instance").mkdir(parents=True, exist_ok=True)
+
+
+@task(ensure_paths, load_git_plugins, install_plugin_dependencies, await_db, upgrade_db)
+def start_docker(c):
+    """Docker entry point task. Do not call!"""
+    if not environ.get("QHANA_SECRET_KEY"):
+        environ["QHANA_SECRET_KEY"] = urandom(32).hex()
+
+    log_level = environ.get("DEFAULT_LOG_LEVEL", "INFO")
+    concurrency_env = environ.get("CONCURRENCY", "1")
+    concurrency = int(concurrency_env) if concurrency_env.isdigit() else 1
+    if environ.get("CONTAINER_MODE", "").lower() == "server":
+        start_gunicorn(c, workers=concurrency, log_level=log_level, docker=True)
+    elif environ.get("CONTAINER_MODE", "").lower() == "worker":
+        worker_pool = environ.get("CELERY_WORKER_POOL", "threds")
+        worker(c, concurrency=concurrency, pool=worker_pool, log_level=log_level)
+    else:
+        raise ValueError(
+            "Environment variable 'CONTAINER_MODE' must be set to either 'server' or 'worker'!"
+        )
 
 
 @task
