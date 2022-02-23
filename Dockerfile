@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-LABEL org.opencontainers.image.source="hhttps://github.com/UST-QuAntiL/qhana-plugin-runner"
+LABEL org.opencontainers.image.source="https://github.com/UST-QuAntiL/qhana-plugin-runner"
 
 # install git and remove caches again in same layer
 ARG DEBIAN_FRONTEND=noninteractive
