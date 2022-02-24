@@ -326,7 +326,7 @@ There are three ways to include plugins:
     git+https://github.com/UST-QuAntiL/qhana-plugin-runner.git@main#subdirectory=/plugins
     ```
 
-Te plugin runner is configured to look for plugins in the folders `/app/plugins/`, `/app/git-plugins/` and `/app/extra-plugins/`.
+The plugin runner is configured to look for plugins in the folders `/app/plugins/`, `/app/git-plugins/` and `/app/extra-plugins/`.
 Plugins loaded from git will be placed in the `git-plugins` folder.
 Plugins mapped into the container from outside should use the `extra plugins` folder and plugins included in the container build should go into `plugins`.
 
