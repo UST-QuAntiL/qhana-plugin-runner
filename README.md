@@ -346,7 +346,7 @@ Database drivers can be installed by using plugins that specify that driver as a
 
 ### Running the Plugin-Runner with Docker Compose
 
-If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:
+If you are using an M1 processor you need to build the plugin runner image for the amd64 platform if the plugins you want to use have dependencies that don't have arm64 builds:
 
 ```
 docker buildx build --load -t qhana-plugin-runner --platform linux/amd64 --no-cache .
