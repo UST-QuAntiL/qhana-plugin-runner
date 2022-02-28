@@ -42,7 +42,7 @@ class PluginsView(MethodView):
 
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
-            description="Reduces number of dimensions. (New ONB are the d first principle components)",
+            description="Reduces number of dimensions. (New ONB are the k first principle components)",
             name=PCA.instance.identifier,
             version=PCA.instance.version,
             type=PluginType.simple,
@@ -114,8 +114,10 @@ class MicroFrontend(MethodView):
             fields["batch_size"].data_key: 1,
             fields["sparsity_alpha"].data_key: 1,
             fields["ridge_alpha"].data_key: 0.01,
-            fields["max_itr"].data_key: 1000,
             fields["kernel"].data_key: KernelEnum.linear,
+            fields["degree"].data_key: 3,
+            fields["kernel_gamma"].data_key: 0.1,
+            fields["kernel_coef"].data_key: 1
         }
 
         # overwrite default values with other values if possible

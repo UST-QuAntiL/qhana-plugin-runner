@@ -16,6 +16,8 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
+from plugins.pca.pca_output import pca_to_output
+
 import numpy as np
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -54,8 +56,6 @@ def load_entityPoints_and_idxToId(entity_points_url: str):
 
     ent = None
     for ent in entity_generator:
-        TASK_LOGGER.info(f"ent type: {type(ent)}\n ent is {ent}")
-        # TASK_LOGGER.info(f"{ent.ID}, {ent.href}, {ent.point}")
         ent = dict(ent)
         if ent["ID"] in id_to_idx:
             raise ValueError("Duplicate ID: ", ent["ID"])
@@ -80,27 +80,41 @@ def get_correct_pca(input_params: ParameterHandler):
     from sklearn.decomposition import PCA, IncrementalPCA, SparsePCA, KernelPCA
 
     pca_type = input_params.get("pcaType")
+
+    # Result can't have dim <= 0. If this is entered, set to None.
+    # If set to None all PCA types will compute as many components as possible
+    # Exception for normal PCA we set n_components to 'mle', which automatically will choose the number of dimensions.
+    n_components = input_params.get("dimensions")
+    if n_components <= 0:
+        n_components = None
+
     if pca_type == PCATypeEnum.normal.value:
+        # Set to auto choose dimensions
+        if n_components is None:
+            n_components = 'mle'
         return PCA(
-            n_components=input_params.get("dimensions"),
+            n_components=n_components,
             svd_solver=input_params.get("solver"),
         )
     elif pca_type == PCATypeEnum.incremental.value:
         return IncrementalPCA(
-            n_components=input_params.get("dimensions"),
+            n_components=n_components,
             batch_size=input_params.get("batchSize"),
         )
     elif pca_type == PCATypeEnum.sparse.value:
         return SparsePCA(
-            n_components=input_params.get("dimensions"),
+            n_components=n_components,
             alpha=input_params.get("sparsityAlpha"),
             ridge_alpha=input_params.get("ridgeAlpha"),
-            max_iter=input_params.get("maxItr"),
         )
     elif pca_type == PCATypeEnum.kernel.value:
-        raise ValueError(f"PCA with type KernelPCA is not fully implemented yet (output missing)!")
         return KernelPCA(
-            n_components=input_params.get("dimensions"), kernel=input_params.get("kernel")
+            n_components=n_components,
+            kernel=input_params.get("kernel"),
+            degree=input_params.get("degree"),
+            gamma=input_params.get("kernelGamma"),
+            coef0=input_params.get("kernelCoef")
+
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
@@ -173,8 +187,8 @@ def save_outputs(db_id, pca_output, entity_points, attributes):
         STORE.persist_task_result(
             db_id,
             output,
-            "pca.json",
-            "principle-components",
+            "pca_metadata.json",
+            "pca-metadata",
             "application/json",
         )
 
@@ -219,15 +233,14 @@ def calculation_task(self, db_id: int) -> str:
         entity_points = complete_fitting(entity_points_url, pca)
 
     # Prepare output for pca file
-    pca_output = {
-        "components": pca.components_.tolist(),
-        "mean": pca.mean_.tolist(),
-        "ref-transormed": "transformed_entity_points.csv",
-    }
+    # dim = num features of output. Get dim here, since input params can be <= 0
+    pca_output, dim = pca_to_output(pca)
     pca_output = [pca_output]
 
+    TASK_LOGGER.info(f"\ndim = {dim}\n")
+
     # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
-    attributes = ["ID", "href"] + [f"dim{d}" for d in range(len(pca.components_))]
+    attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
     save_outputs(db_id, pca_output, entity_points, attributes)
 
     return "Result stored in file"

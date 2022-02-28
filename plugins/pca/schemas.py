@@ -36,7 +36,6 @@ class KernelEnum(Enum):
     rbf = "rbf"
     sigmoid = "sigmoid"
     cosine = "cosine"
-    precomputed = "precomputed"
 
 
 class ParameterHandler:
@@ -49,8 +48,10 @@ class ParameterHandler:
             "batchSize",  # incremental PCA
             "sparsityAlpha",  # sparse PCA
             "ridgeAlpha",
-            "maxItr",
             "kernel",  # kernel PCA
+            "degree",
+            "kernelGamma",
+            "kernelCoef"
         ]
         self.parameter_dict = parameter_dict
 
@@ -84,7 +85,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         ],
         metadata={
             "label": "Entity points URL",
-            "description": "URL to a json file with the entity points.",
+            "description": "URL to a json/csv file with the entity points.",
             "input_type": "text",
         },
     )
@@ -102,8 +103,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Dimensions ('auto', if d <= 0)",
-            "description": "Number of dimensions the output will have.",
+            "label": "Dimensions",
+            "description": "Number of dimensions k that the output will have."
+                           "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
             "input_type": "text",
         },
     )
@@ -145,22 +147,40 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    max_itr = ma.fields.Integer(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Max iterations",
-            "description": "Maximum number of iterations to perform.",
-            "input_type": "text",
-        },
-    )
     kernel = EnumField(
         KernelEnum,
         required=True,
         allow_none=False,
         metadata={
             "label": "Kernel",
-            "description": "Type of kernel that should be used.",
+            "description": "Type of kernel that should be used, e.g. poly kernel \'k(x,y) = (ɣ x^T y + c)^d\'",
             "input_type": "select",
+        },
+    )
+    degree = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Degree",
+            "description": "Degree \'d\' of poly kernel.",
+            "input_type": "text",
+        },
+    )
+    kernel_gamma = ma.fields.Float(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Kernel Coefficient",
+            "description": f"Kernel coefficient \'ɣ\' in rbf, poly and sigmoid kernel.",
+            "input_type": "text",
+        },
+    )
+    kernel_coef = ma.fields.Float(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Independent Term in Kernel",
+            "description": f"Independent term \'c\' in poly and sigmoid kernel.",
+            "input_type": "text",
         },
     )
