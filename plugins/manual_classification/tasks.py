@@ -2,6 +2,7 @@ from tempfile import SpooledTemporaryFile
 
 from typing import Optional
 from json import dumps, loads
+import copy
 import mimetypes
 
 from celery.utils.log import get_task_logger
@@ -48,7 +49,9 @@ def pre_render_classification(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise ValueError(msg)
 
-    input_entities = {}
+    entities = []
+    entity_annotation = {}
+    attr_list = set()
     with open_url(input_file_url, stream=True) as url_data:
         try:
             mimetype = url_data.headers["Content-Type"]
@@ -62,14 +65,18 @@ def pre_render_classification(self, db_id: int) -> str:
             TASK_LOGGER.error(msg)
             raise ValueError(msg)
 
-        # extract relevant information to create selection fields for manual classification
-        entity_classification_data = {}
+        # create data structure for annotations and extract attributes used in entities
         for entity in input_entities:
-            # keys are entity id's and values are lists of annotated classes
-            entity_classification_data[entity["ID"]] = []
+            entities.append(entity)
+            entity_annotation[entity["ID"]] = []
+            for attr in entity.keys():
+                attr_list.add(attr)
 
+    attr_list.remove("ID")
     # store in data of task_data
-    task_data.data["entity_data"] = entity_classification_data
+    task_data.data["entity_annotation"] = entity_annotation
+    task_data.data["entity_list"] = entities
+    task_data.data["attr_list"] = ["ID"] + list(attr_list)
     task_data.data["input_file_url"] = input_file_url
     task_data.save(commit=True)
 
@@ -103,16 +110,17 @@ def add_class(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise ValueError(msg)
 
-    entity_data = task_data.data["entity_data"]
-    for id in entity_data.keys():
+    entity_annotation = copy.deepcopy(task_data.data["entity_annotation"])
+    for id in entity_annotation.keys():
         if params.get(id):
-            tmp = set(entity_data[id])
+            tmp = set(entity_annotation[id])
             tmp.add(class_identifier)
-            entity_data[id] = list(tmp)
-
+            entity_annotation[id] = list(tmp)
+    TASK_LOGGER.info(entity_annotation)
     # store in data of task_data
-    task_data.data["entity_data"] = entity_data
+    task_data.data["entity_annotation"] = entity_annotation
     task_data.save(commit=True)
+    TASK_LOGGER.info(task_data.data["entity_annotation"])
 
     return "Adding new class successful."
 
@@ -130,19 +138,13 @@ def save_classification(self, task_log: str, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    try:
-        input_file_url = task_data.data["input_file_url"]
-    except:
-        msg = f"No input_file_url in db! Somehow got lost during the plugin execution"
-        TASK_LOGGER.error(msg)
-        raise KeyError(msg)
-
-    # TODO: somehow return output files with annotated data...
     annotated_entities = []
-    for id in task_data.data["entity_data"].keys():
-        annotated_entities.append(
-            {"ID": id, "annotated_classes": task_data.data["entity_data"][id]}
-        )
+    entity_annotation = task_data.data["entity_annotation"]
+    TASK_LOGGER.info(entity_annotation)
+    entity_list = task_data.data["entity_list"]
+    for entity in entity_list:
+        entity["classification"] = entity_annotation[entity["ID"]]
+        annotated_entities.append(entity)
 
     with SpooledTemporaryFile(mode="w") as output:
         try:
@@ -153,14 +155,18 @@ def save_classification(self, task_log: str, db_id: int) -> str:
 
         if mimetype == "application/json":
             file_type = ".json"
-        else:
+        elif mimetype == "text/csv":
             file_type = ".csv"
+        else:
+            msg = f"Invalid mimetype {mimetype}!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
         STORE.persist_task_result(
             db_id,
             output,
-            "filtered_entities" + file_type,
-            "entity_filter_output",
+            "classified_entities" + file_type,
+            "manual_classification_output",
             mimetype,
         )
 
-    return "Adding new class successful."
+    return "Manual classification successful."

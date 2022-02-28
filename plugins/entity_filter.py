@@ -179,19 +179,21 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
-                data_input=[  # TODO: only file input (entities...)
+                data_input=[
                     DataMetadata(
-                        data_type="raw",
+                        data_type="entity/list",
                         content_type=[
                             "application/json",
-                            "application/zip",
-                        ],  # TODO: OR -> json, csv... scatch, not finalized yet
+                            "text/csv",
+                        ],
                         required=True,
                     )
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="raw", content_type=["application/json"], required=True
+                        data_type="entity/list",
+                        content_type=["application/json", "text/csv"],
+                        required=True,
                     )
                 ],
             ),

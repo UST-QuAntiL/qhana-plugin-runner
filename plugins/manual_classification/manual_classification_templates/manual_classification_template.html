@@ -1,25 +1,66 @@
 {% import 'forms.html' as forms %}
-<style type="text/css">
-    @import url("{{url_for('static', filename='forms.css')}}");
-</style>
+<html>
 
-<h2>Manual Classification</h2>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+    <style type="text/css">
+        @import url("{{url_for('static', filename='forms.css')}}");
 
-{% call forms.render_form() %}
-<!-- class name -->
-{{ forms.render_fields(schema, values=values, errors=errors) }}
-<div class="qhana-form" style="flex-direction: row; flex-wrap: wrap;">
-    <!-- select id's -->
-    {% for id in id_list %}
-    <div class="qhana-form-field" style="width: 3em; height: 2em; padding: 1em;">
-        <input type="checkbox" id={{id}} name={{id}}>
-        <label class="qhana-form-label" for="{{id}}">{{id}}</label>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        td,
+        th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style><!-- TODO -->
+</head>
+
+<body>
+    <div class="qhana-microfrontend">
+        {% call forms.render_form() %}
+        <!-- class name -->
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form" style="flex-direction: row; flex-wrap: wrap;">
+            <!-- select id's -->
+            <table>
+                <tr>
+                    <th>Select</th>
+                    {% for attr in attr_list%}
+                    <th>{{attr}}</th>
+                    {% endfor %}
+                </tr>
+                {% for entity in entity_list %}
+                <tr>
+                    <td class="qhana-form-field" style="width: 3em; padding: 1em;">
+                        <input type="checkbox" id={{entity["ID"]}} name={{entity["ID"]}}>
+                    </td>
+                    {% for attr in attr_list%}
+                    <td>{{entity[attr] if attr in entity.keys() else ""}}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </table>
+
+        </div>
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate")}}
+            {{ forms.submit("continue", action=process)}}
+            {{ forms.submit("done", action=done)}}
+        </div>
+        {% endcall %}
     </div>
-    {% endfor %}
-</div>
-<div class="qhana-form-buttons">
-    {{ forms.submit("validate")}}
-    {{ forms.submit("continue", action=process)}}
-    {{ forms.submit("done", action=done)}}
-</div>
-{% endcall %}
+
+    <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+</body>
+
+</html>
