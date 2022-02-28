@@ -96,12 +96,14 @@ class InputParameters:
         n_qubits: int,
         N_total_iterations: int,
         q_depth: int,
+        batch_size: int,
     ):
         self.theta = theta
         self.step = step
         self.n_qubits = n_qubits
         self.N_total_iterations = N_total_iterations
         self.q_depth = q_depth
+        self.batch_size = batch_size
 
 
 class QNNParametersSchema(FrontendFormBaseSchema):
@@ -147,6 +149,15 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Depth (5)",
             "description": "Depth of the quantum circuit",
+            "input_type": "text",
+        },
+    )
+    batch_size = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Batch Size (10)",
+            "description": "Size of the training batch",
             "input_type": "text",
         },
     )
@@ -357,6 +368,25 @@ import time
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+# -----------------------------------------
+#              load data
+# -----------------------------------------
+# from json file??
+#   input data dimension (number of input nodes)
+#   classes
+#   number of training data elements, number of test data elements
+
+# -----------------------------------------
+#              ?load weights?
+# -----------------------------------------
+#   possible to use pretrained network??
+
+
+# -----------------------------------------
+#              save plots
+# -----------------------------------------
+# in image/jpg or image/png or text/html
+
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
@@ -368,12 +398,8 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    # input_params: InputParameters = QNNParametersSchema().loads(task_data.parameters)
+    input_params: InputParameters = QNNParametersSchema().loads(task_data.parameters)
     # theta = input_params.theta
-    # step = input_params.step
-    # n_qubits = input_params.n_qubits
-    # N_total_iterations = input_params.N_total_iterations
-    # q_depth = input_params.q_depth
     # TASK_LOGGER.info(
     #    f"Loaded input parameters from db: N_total_iterations='{N_total_iterations}'"
     # )
@@ -411,11 +437,15 @@ def calculation_task(self, db_id: int) -> str:
         )
     """
     # return "Task is done"
-    n_qubits = 5  # Number of qubits
-    step = 0.07  # Learning rate
-    batch_size = 10  # Numbre of samples (points) for each mini-batch
+    n_qubits = input_params.n_qubits  # 5  # Number of qubits
+    step = input_params.step  # 0.07  # Learning rate
+    batch_size = (
+        input_params.batch_size
+    )  # 10  # Numbre of samples (points) for each mini-batch
     data_noise = 0.2  # Spread of the data points around the spirals
-    q_depth = 5  # Depth of the quantum circuit (number of variational layers)
+    q_depth = (
+        input_params.q_depth
+    )  # 5  # Depth of the quantum circuit (number of variational layers)
     rng_w_state = 55  # Seed for random initial weights
     n_input_nodes = 2  # 2 input nodes (x and y coordinates of data points).
     classes = [0, 1]  # Class 0 = red points. class 1 = blue points.
@@ -423,8 +453,8 @@ def calculation_task(self, db_id: int) -> str:
     N_train = 2000  # Number of training points
     N_batches = N_train // batch_size  # Number of training batches
     N_total_iterations = (
-        100  # 1000                 # Number of optimization steps (step= 1 batch)
-    )
+        input_params.N_total_iterations
+    )  # 1000                 # Number of optimization steps (step= 1 batch)
     noise_0 = 0.001  # Initial spread of random weight vector
     N_test = 200  # Number of test points
     N_tot = N_train + N_test  # Total number of points
@@ -668,6 +698,8 @@ def calculation_task(self, db_id: int) -> str:
         "main", figsize=(4 * (len(classifiers) + 1), 4 * len(datasets))
     )
 
+    qnn_outputs = []
+
     i = 1
     # Iterate over datasets
     for ds_cnt, ds in enumerate(datasets):
@@ -739,9 +771,7 @@ def calculation_task(self, db_id: int) -> str:
                 # If all train data has been used, then reshuffle
                 if offset > N_train - 1:
                     indices = np.arange(N_train)
-                    rng_shuff.shuffle(
-                        indices
-                    )  ## TODO ##############################################################
+                    rng_shuff.shuffle(indices)
                     X_train = X_train[indices]
                     y_train = y_train[indices]
                     y_train_onehot = y_train_onehot[indices]
@@ -846,6 +876,37 @@ def calculation_task(self, db_id: int) -> str:
                 size=15,
                 horizontalalignment="right",
             )
+
+            # save weights
+            # prepare output
+            # -----------------------------------------
+            #              save weights
+            # -----------------------------------------
+            # in json format
+            # nd array cant be saved in json format
+            qnn_outputs.append(
+                {
+                    "quantum": (node == "quantum"),
+                    "training_dataset": ds_cnt,
+                    # weights of preprocessing layer
+                    "pre_weight_flat": opt_weights[:n_pre].tolist(),
+                    "pre_weights_dims": (n_qubits, n_input_nodes + 1),
+                    # weights of quantum layer
+                    "q_weights_flat": opt_weights[n_pre : n_pre + n_quant].tolist(),
+                    "q_weights_dims": (max_layers, n_qubits),
+                    # weights of classical layer
+                    "c_weights_flat": opt_weights[
+                        n_pre + n_quant : n_pre + n_quant + n_class
+                    ].tolist(),
+                    "c_weights_dims": (n_qubits, n_qubits + 1),
+                    # weight of postprocessing layer
+                    "post_weights_flat": opt_weights[
+                        n_pre + n_quant + n_class :
+                    ].tolist(),
+                    "post_weights_dims": (n_classes, n_qubits + 1),
+                }
+            )
+
             i += 1
 
     # Print final results
@@ -855,10 +916,20 @@ def calculation_task(self, db_id: int) -> str:
     print("Total time: ", minutes, " min, ", seconds, " seconds")
     print("\n")
 
-    # save plot locally
-    plt.savefig("foo.png")
-
     # Show the final figure
     plt.tight_layout()
-    plt.show()
-    return "YES!"
+
+    # save plot locally
+    plt.savefig("foo.png")
+    # plt.show()
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(qnn_outputs, output, "application/json")
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "qnn.json",
+            "qnn-weights",
+            "application/json",
+        )
+        # save_entities(plt, output, "image/png") #????
+    return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
