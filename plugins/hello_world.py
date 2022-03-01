@@ -104,6 +104,7 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{HELLO_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{HELLO_BLP.name}.MicroFrontend"),
+                plugin_dependencies=[],
                 data_input=[],
                 data_output=[
                     DataMetadata(
