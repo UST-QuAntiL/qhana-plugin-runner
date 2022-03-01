@@ -35,7 +35,7 @@ class QHAnaPluginBase:
 
     name: ClassVar[str]
     version: ClassVar[str]
-    instance: ClassVar[Optional["QHAnaPluginBase"]] = None
+    instance: ClassVar["QHAnaPluginBase"]
 
     __app__: Optional[Flask] = None
     __plugins__: Dict[str, "QHAnaPluginBase"] = {}

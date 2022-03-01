@@ -77,7 +77,9 @@ class PluginsView(MethodView):
                     p.name,
                     p.version,
                     p.identifier,
-                    url_for("plugins-api.PluginView", plugin=p.identifier, _external=True),
+                    url_for(
+                        "plugins-api.PluginView", plugin=p.identifier, _external=True
+                    ),
                 )
                 for p in plugins
             ]
@@ -104,6 +106,11 @@ class PluginView(MethodView):
                 found_plugin = p
 
         if found_plugin is None:
+            abort(HTTPStatus.NOT_FOUND, message="No plugin registered with that name.")
+
+        try:
+            found_plugin.get_api_blueprint()
+        except NotImplementedError:
             abort(HTTPStatus.NOT_FOUND, message="No plugin registered with that name.")
 
         return redirect(url_for("plugins-api.PluginView", plugin=found_plugin.identifier))
