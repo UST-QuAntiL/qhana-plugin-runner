@@ -19,22 +19,22 @@ from typing import Mapping, Optional
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
-from flask import Response, redirect
+from flask import abort, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
+from flask.wrappers import Response
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
     EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -92,12 +92,15 @@ class PluginsView(MethodView):
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
+        plugin = HelloWorld.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
-            title=HelloWorld.instance.name,
+            title=plugin.name,
             description=HELLO_BLP.description,
-            name=HelloWorld.instance.identifier,
-            version=HelloWorld.instance.version,
-            type=PluginType.simple,
+            name=plugin.identifier,
+            version=plugin.version,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{HELLO_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{HELLO_BLP.name}.MicroFrontend"),
@@ -153,12 +156,15 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
+        plugin = HelloWorld.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
                 "simple_template.html",
-                name=HelloWorld.instance.name,
-                version=HelloWorld.instance.version,
+                name=plugin.name,
+                version=plugin.version,
                 schema=schema,
                 values=data,
                 errors=errors,

@@ -17,6 +17,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List
+from typing_extensions import Literal
 
 import marshmallow as ma
 
@@ -156,8 +157,17 @@ class EntryPointSchema(MaBaseSchema):
 
 
 class PluginType(Enum):
+    """Type of the plugin.
+
+    Deprecation Warning:
+        "simple" and "complex" are deprecated and should be replaced with "processing"!
+    """
+
     simple = "simple"
     complex = "complex"
+    processing = "processing"
+    visalization = "visalization"
+    conversion = "conversion"
 
 
 @dataclass
@@ -166,7 +176,8 @@ class PluginMetadata:
     description: str
     name: str
     version: str
-    type: PluginType
+    # TODO replace literal with PluginType after removing deprecated values
+    type: Literal[PluginType.processing, PluginType.visalization, PluginType.conversion]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
 
