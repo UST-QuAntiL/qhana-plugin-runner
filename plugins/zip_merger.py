@@ -133,10 +133,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the zip merger plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @ZIP_MERGER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the zip merger plugin."
     )
@@ -178,9 +174,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{ZIP_MERGER_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

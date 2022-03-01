@@ -1,9 +1,8 @@
 from http import HTTPStatus
-from json import dumps, loads
+from json import dumps
 from typing import Mapping, Optional
 
 from celery.canvas import chain
-from celery.result import AsyncResult
 from flask import Response, redirect
 from flask.globals import request
 from flask.helpers import url_for
@@ -60,8 +59,8 @@ class PluginsView(MethodView):
             version=ManualClassification.instance.version,
             type=PluginType.complex,
             entry_point=EntryPoint(
-                href="./load/",
-                ui_href="./ui/",
+                href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
+                ui_href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"),
                 data_input=[
                     DataMetadata(
                         data_type="entity/list",
@@ -92,7 +91,7 @@ class MicroFrontend(MethodView):
     """Micro frontend for the manual classification plugin."""
 
     example_inputs = {
-        "inputFileUrl": "file:///<path_to_file>/entities.json",
+        "inputFileUrl": "file:///home/nico/entities2.json",
     }
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
@@ -177,7 +176,7 @@ class LoadView(MethodView):
             step_id=step_id,
             href=href,
             ui_href=ui_href,
-            prog_value=db_task.data["step_id"] / (db_task.data["step_id"] + 1) * 100,
+            prog_value=(db_task.data["step_id"] / (db_task.data["step_id"] + 1)) * 100,
         )
 
         # save errors to db
@@ -303,7 +302,7 @@ class ClassificationView(MethodView):
             step_id=step_id,
             href=href,
             ui_href=ui_href,
-            prog_value=db_task.data["step_id"] / (db_task.data["step_id"] + 1) * 100,
+            prog_value=(db_task.data["step_id"] / (db_task.data["step_id"] + 1)) * 100,
         )
 
         # save errors to db
@@ -334,7 +333,6 @@ class ClassificationDoneView(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        TASK_LOGGER.error(">>>>>>>>>>" + str(arguments))
         db_task.parameters = dumps(arguments)
         db_task.clear_previous_step(commit=True)
         db_task.save()

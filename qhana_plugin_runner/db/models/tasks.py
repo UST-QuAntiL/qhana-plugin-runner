@@ -69,7 +69,7 @@ class TaskData:
     Attributes:
         id (int): ID of corresponding :class:`ProcessingTask` entry. Use the id to fetch this information from the database.
         key (str): a key in dict
-        value (str, optional): a corresponding value in dict
+        value (Union[dict, list, str, float, int, bool, None], optional): a corresponding value in dict. Note that SQL Alchemy's JSON type is used which does not support in-place mutations. If a value needs to be changed, e.g., use `copy.deepcopy`.
     """
 
     __tablename__ = "TaskData"
@@ -100,7 +100,7 @@ class ProcessingTask:
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
-        data (dict): dict-like key-value store for additional lightweight task data. New elements of type :class:`TaskData` can be added or retrieved as in a dict using ``key`` as key.
+        data (dict): dict-like key-value store for additional lightweight task data. New elements of type :class:`TaskData` can be added or retrieved as in a dict using ``key`` as key. Note that for value SQL Alchemy's JSON type is used which does not support in-place mutations. If a value needs to be changed, e.g., use `copy.deepcopy`.
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
         progress_value (float): current progress value. ``None`` by default.

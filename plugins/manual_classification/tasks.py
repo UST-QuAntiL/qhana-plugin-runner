@@ -1,7 +1,7 @@
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
-from json import dumps, loads
+from json import loads
 import copy
 import mimetypes
 
@@ -13,7 +13,6 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    ResponseLike,
     ensure_dict,
     load_entities,
     save_entities,
@@ -116,11 +115,10 @@ def add_class(self, db_id: int) -> str:
             tmp = set(entity_annotation[id])
             tmp.add(class_identifier)
             entity_annotation[id] = list(tmp)
-    TASK_LOGGER.info(entity_annotation)
+
     # store in data of task_data
     task_data.data["entity_annotation"] = entity_annotation
     task_data.save(commit=True)
-    TASK_LOGGER.info(task_data.data["entity_annotation"])
 
     return "Adding new class successful."
 
@@ -140,7 +138,6 @@ def save_classification(self, task_log: str, db_id: int) -> str:
 
     annotated_entities = []
     entity_annotation = task_data.data["entity_annotation"]
-    TASK_LOGGER.info(entity_annotation)
     entity_list = task_data.data["entity_list"]
     for entity in entity_list:
         entity["classification"] = entity_annotation[entity["ID"]]

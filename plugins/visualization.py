@@ -146,10 +146,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the Visualization plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @VIS_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend of the Visualization plugin.",
@@ -203,9 +199,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{VIS_BLP.name}.CalcView"),
-                example_values=url_for(
-                    f"{VIS_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

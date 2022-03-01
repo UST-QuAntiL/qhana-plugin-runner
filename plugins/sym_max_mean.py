@@ -154,10 +154,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the Sym Max Mean plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @SYM_MAX_MEAN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Sym Max Mean plugin."
     )
@@ -199,9 +195,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{SYM_MAX_MEAN_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{SYM_MAX_MEAN_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

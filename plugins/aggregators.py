@@ -157,10 +157,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the Aggregator plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @AGGREGATOR_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend of the Aggregator plugin.",
@@ -204,9 +200,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{AGGREGATOR_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{AGGREGATOR_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

@@ -104,7 +104,7 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
         metadata={"label": "Entities URL"},
     )
 
-    attributes = CSVList(  # TODO: maybe via ma.fields.List(ma.fields.String(),
+    attributes = CSVList(
         required=False,
         allow_none=True,
         element_type=ma.fields.String,
@@ -171,8 +171,8 @@ class PluginsView(MethodView):
     def get(self):
         """Entity filter endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Entity loader",
-            description="Filters data sets from the MUSE database.",
+            title="Entity loader/filter",
+            description="Loads and filters entities from a file that contains a list of entities.",
             name=EntityFilter.instance.identifier,
             version=EntityFilter.instance.version,
             type=PluginType.simple,

@@ -3,7 +3,6 @@ from json import dumps
 from typing import Mapping
 
 from celery import chain
-from celery.result import AsyncResult
 from flask import url_for, request, Response, render_template, redirect
 from flask.views import MethodView
 from marshmallow import EXCLUDE
@@ -104,11 +103,10 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        print(">>>", errors)
         schema = HybridAutoencoderPennylaneRequestSchema()
         return Response(
             render_template(
-                "hybrid_ae_template.html",
+                "simple_template.html",
                 name=HybridAutoencoderPlugin.instance.name,
                 version=HybridAutoencoderPlugin.instance.version,
                 schema=schema,

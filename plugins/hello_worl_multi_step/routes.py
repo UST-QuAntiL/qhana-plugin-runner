@@ -42,7 +42,10 @@ class PluginsView(MethodView):
             version=HelloWorldMultiStep.instance.version,
             type=PluginType.complex,
             entry_point=EntryPoint(
-                href="./process/", ui_href="./ui/", data_input=[], data_output=[]
+                href=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{HELLO_MULTI_BLP.name}.MicroFrontend"),
+                data_input=[],
+                data_output=[],
             ),
             tags=[],
         )
@@ -97,6 +100,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
+                help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{HELLO_MULTI_BLP.name}.MicroFrontend", **self.example_inputs
                 ),

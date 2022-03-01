@@ -163,6 +163,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_BLP.name}.ProcessView"),
+                help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{HELLO_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
