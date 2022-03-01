@@ -24,7 +24,7 @@
                     {% endfor %}
                     </tr>
                     {% for entity in entity_list %}
-                    <tr>
+                    <tr onclick="selectRow(this)">
                         <td style="padding: 1em">
                             <input class="qhana-form-input" style="height: 1.5em; width: 1.5em" type="checkbox"
                                 id={{entity["ID"]}} name={{entity["ID"]}}>
@@ -46,6 +46,12 @@
     </div>
 
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+    <script type="text/javascript">
+        function selectRow(row) {
+            var checkBox = row.getElementsByTagName('input')[0];
+            checkBox.checked = !checkBox.checked;
+        }
+    </script>
 </body>
 
 </html>
