@@ -53,10 +53,36 @@ Example of plugin metadata:
         "entryPoint": {
             "href": "./process/",
             "uiHref": "./ui/",
+            "pluginDependencies": [
+                {
+                    "parameter": "helperPlugin",
+                    "type": "processing",
+                    "tags": ["my-helper", "!bad-tag"],
+                    "required": true
+                },
+                {
+                    "parameter": "extraHelperPlugin",
+                    "name": "my-helper-plugin",
+                    "version": ">=v0.1.0 <=v0.5.0"
+                }
+            ],
             "dataInput": [
-                {"dataType": "some-data-type", "contentType": ["application/json", "text/csv"], "required": true},
-                {"dataType": "some-other-type", "contentType": ["*"]},
-                {"dataType": "third-type", "contentType": ["text/*"]}
+                {
+                    "parameter": "data",
+                    "dataType": "entity/list",
+                    "contentType": ["application/json", "text/csv"],
+                    "required": true
+                },
+                {
+                    "parameter": "extra",
+                    "dataType": "some-other-type",
+                    "contentType": ["*"]
+                },
+                {
+                    "parameter": "text",
+                    "dataType": "third-type",
+                    "contentType": ["text/*"]
+                }
             ],
             "dataOutput": [
                 {"dataType": "output-type", "contentType": ["application/json"], "required": true}
@@ -104,6 +130,12 @@ Example of plugin metadata:
     * - UI href
       - ./ui/
       - The URL of the micro frontend that corresponds to the REST entry point resource.
+    * - Plugin Dependecies
+      - ``[…]``
+      - A list of plugin dependencies. Plugin dependencies can be specified by type (matching the plugin type), 
+        tags (matching the plugin tags; ``!`` matches only if the tag is not present), name (matching the plugin name)
+        and by version (matching an exact plugin version or a version range). A plugin must match for all attributes.
+        Plugin dependencies are passed by reference (e.g. the URL to the plugin api root).
     * - Data Input
       - ``[…]``
       - A list of possible data inputs. Required data inputs must be provided other inputs are optional.
@@ -111,6 +143,9 @@ Example of plugin metadata:
     * - Data Output
       - ``[…]``
       - A list of possible data outputs. Required data outputs will always be produced by the plugin.
+    * - parameter
+      - data
+      - The parameter name (or key) under which the input data or plugin reference should be available.
     * - Data Type
       - entity/list
       - The data type tag associated with the data. Like content-type but for the data semantic.
@@ -235,13 +270,13 @@ Example of a plugin result:
         },
         "steps": [
             {
-                "href": ".../<UUID>/step1",
+                "href": ".../<UUID>/step1-process",
                 "uiHref": ".../<UUID>/step1-ui",
                 "stepId": "step1",
                 "cleared": true
             },
             {
-                "href": ".../<UUID>/step2b",
+                "href": ".../<UUID>/step2b-process",
                 "uiHref": ".../<UUID>/step2b-ui",
                 "stepId": "step1.step2b",
                 "cleared": true
@@ -317,7 +352,7 @@ Result Steps
 
 Result steps are intermediate steps where additional input is required to continue the result computation.
 The list of result steps should only grow with new steps added on the end of the list.
-Only the last step should be active (e.g. not marked as cleared).
+Only the last step should be active (e.g. not marked as cleared). Plugins that use multiple steps should store form inputs as usual in :py:attr:`~qhana_plugin_runner.db.models.tasks.ProcessingTask.parameters`. Data that is used in subsequent steps should then be extracted in the respective celery task and stored in the key-value store :py:attr:`~qhana_plugin_runner.db.models.tasks.ProcessingTask.data` that has dict-like functionality. Furthermore, whenever valid input data for the current uncleared step is available, :py:attr:`~qhana_plugin_runner.db.models.tasks.ProcessingTask.clear_previous_step` must be called in the function that handles the input data (i.e., the processing endpoint for the corresponding microfrontend endpoint).
 
 .. list-table:: Result Steps
     :header-rows: 1

@@ -53,7 +53,7 @@ class MicroFrontend(MethodView):
     """Micro frontend for the hello world plugin."""
 
     example_inputs = {
-        "inputStr": "Sample input string.",
+        "inputStr": "Test.",
     }
 
     @HELLO_MULTI_BLP.html_response(
@@ -87,10 +87,6 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        """Start the data preprocessing task."""
-        db_task = ProcessingTask(task_name="manual-classification")
-        db_task.save(commit=True)
-
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
@@ -100,7 +96,7 @@ class MicroFrontend(MethodView):
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView", db_id=db_task.id),
+                process=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
                 example_values=url_for(
                     f"{HELLO_MULTI_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
@@ -111,7 +107,7 @@ class MicroFrontend(MethodView):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@HELLO_MULTI_BLP.route("/<int:db_id>/process/")
+@HELLO_MULTI_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
@@ -120,22 +116,20 @@ class ProcessView(MethodView):
     )
     @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-        db_task.parameters = dumps(arguments)
+    def post(self, arguments):
+        """Start the demo task."""
+        db_task = ProcessingTask(
+            task_name="manual-classification", parameters=dumps(arguments)
+        )
         db_task.save(commit=True)
 
         # next step
-        step_id = "step1"
+        step_id = "demo-step"
         href = url_for(
-            f"{HELLO_MULTI_BLP.name}.Step1View", db_id=db_task.id, _external=True
+            f"{HELLO_MULTI_BLP.name}.DemoStepView", db_id=db_task.id, _external=True
         )
         ui_href = url_for(
-            f"{HELLO_MULTI_BLP.name}.Step1Frontend", db_id=db_task.id, _external=True
+            f"{HELLO_MULTI_BLP.name}.DemoStepFrontend", db_id=db_task.id, _external=True
         )
 
         # all tasks need to know about db id to load the db entry
@@ -147,15 +141,13 @@ class ProcessView(MethodView):
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
-        db_task.save(commit=True)
-
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 
-@HELLO_MULTI_BLP.route("/<int:db_id>/step1-ui/")
-class Step1Frontend(MethodView):
+@HELLO_MULTI_BLP.route("/<int:db_id>/demo-step-ui/")
+class DemoStepFrontend(MethodView):
     """Micro frontend for the hello world plugin."""
 
     example_inputs = {
@@ -193,7 +185,20 @@ class Step1Frontend(MethodView):
         return self.render(request.form, db_id, errors)
 
     def render(self, data: Mapping, db_id: int, errors: dict):
-        # TODO: retrieve and display data
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        # retrieve input data from preprocessing
+        if not data:
+            try:
+                input_str = db_task.data["input_str"]
+            except:
+                input_str = ""
+            data = {"inputStr": "Input from preprocessing: " + input_str}
+
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
@@ -203,9 +208,9 @@ class Step1Frontend(MethodView):
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(f"{HELLO_MULTI_BLP.name}.Step1View", db_id=db_id),
+                process=url_for(f"{HELLO_MULTI_BLP.name}.DemoStepView", db_id=db_id),
                 example_values=url_for(
-                    f"{HELLO_MULTI_BLP.name}.Step1Frontend",
+                    f"{HELLO_MULTI_BLP.name}.DemoStepFrontend",
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -213,8 +218,8 @@ class Step1Frontend(MethodView):
         )
 
 
-@HELLO_MULTI_BLP.route("/<int:db_id>/step1/")
-class Step1View(MethodView):
+@HELLO_MULTI_BLP.route("/<int:db_id>/demo-step-process/")
+class DemoStepView(MethodView):
     """Start a long running processing task."""
 
     @HELLO_MULTI_BLP.arguments(
@@ -222,12 +227,17 @@ class Step1View(MethodView):
     )
     @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
-    def post(self, error, db_id: int):
+    def post(self, arguments, db_id: int):
         """Start the demo task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
 
-        # set previous step to cleared
+        db_task.parameters = dumps(arguments)
         db_task.clear_previous_step()
+        db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
         task: chain = processing_task.s(db_id=db_task.id) | save_task_result.s(
@@ -237,8 +247,6 @@ class Step1View(MethodView):
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
-
-        db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER

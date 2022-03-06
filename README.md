@@ -9,6 +9,9 @@ This package uses Poetry ([documentation](https://python-poetry.org/docs/)).
 
 Original template repository: <https://github.com/buehlefs/flask-template/>
 
+> This repository also contains a Dockerfile and has pre-built docker containers available as GitHub packages.
+> Please see the [Docker](#docker) section for more information.
+
 ## VSCode
 
 For vscode install the python extension and add the poetry venv path to the folders the python extension searches for venvs.
@@ -54,33 +57,14 @@ poetry run invoke start-broker
 poetry run invoke worker  # use strg+c to stop worker
 ```
 
-### Running the Plugin-Runner with Docker Compose
 
-If you are using an M1 processor you need to build the plugin runner image for the amd64 platform:
-```
-docker buildx build --load -t qhana-plugin-runner --platform linux/amd64 --no-cache .
-```
+### Debugging with VSCode
 
-Start the docker compose with:
-```
-docker-compose up
-```
+There is a default launch configuration for vscode that should work on all platforms.
+To use the configuration copy `default-launch.json` to `.vscode/launch.json`.
+The `all` configuration starts the API and the worker process.
+For code changes both debugging sessions must be restarted as they do not autoreload code!
 
-Delete the containers with:
-```
-docker-compose down
-```
-
-To also delete the volume containing the output files add the flag `-v`.
-
-#### Docker Compose with MUSE database
-
-If you want to start the MUSE database as well you need to build the muse-db image. 
-As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder with `docker build -t muse-db plugins/costume_loader_pkg/db_container`.
-Then you can start everything with
-```
-docker-compose --profile with_db up
-```
 
 ### Trying out the Plugin-Runner
 
@@ -311,6 +295,85 @@ poetry run pytest -p pytest_cov --cov=qhana_plugin_runner
 
 # With html report (open htmlcov/index.html in browser)
 poetry run pytest -p pytest_cov --cov=qhana_plugin_runner --cov-report=html
+```
+
+## Docker
+
+This repository contains a `Dockerfile` and a `docker-compose.yml` that can be used to run the project.
+Pre-built Docker containers are also available via GitHub packages.
+
+
+### Using the Docker Container
+
+The docker container by default does not include any plugin.
+There are three ways to include plugins:
+
+ *  Build a new docker image with plugins.\
+    Creating a new container with plugins and installing their dependencies at build time can improve the startup time of the container.
+ *  Map in plugins with a bind mount.\
+    Plugins can be mapped into the bare container from the local file system using a bind mount.
+    This is useful for developing or testing plugins.
+ *  Load plugins from a git repository.\
+    The container can load plugins from git repositories specified in the `GIT_PLUGINS` environment variable.
+
+    Specify a newline separated list of git repositories to load plugins from in the GIT_PLUGINS environment variable.
+    Each line should contain a git URL following the same format as in requirements.txt used by pip.
+
+    Examples:
+    
+    ```
+    git+<<url to git repo>[@<branch/tag/commit hash>][#subdirectory=<directory in git repo holding the plugins>]
+    git+https://github.com/UST-QuAntiL/qhana-plugin-runner.git@main#subdirectory=/plugins
+    ```
+
+The plugin runner is configured to look for plugins in the folders `/app/plugins/`, `/app/git-plugins/` and `/app/extra-plugins/`.
+Plugins loaded from git will be placed in the `git-plugins` folder.
+Plugins mapped into the container from outside should use the `extra plugins` folder and plugins included in the container build should go into `plugins`.
+
+The container starts in server mode by default.
+For background tasks of plugins to work a container with the exact same plugins configured needs to be started in worker mode by setting `CONTAINER_MODE=worker`.
+Currently the local file system is used as result store by default, meaning that all server and worker containers using the same set of plugins should share one file system under `/app/instance/`.
+This restriction also applies if the default sqlite database is used.
+
+For communication between server and worker containers, a redis or amqp broker need to be setup.
+Server and worker containers with the same plugin configuration need to use the same broker.
+The broker can be configured using the `BROKER_URL` and the `RESULT_BACKEND` environment variable.
+
+The database to use can be configured using the `SQLALCHEMY_DATABASE_URI` environment variable.
+SQLAlchemy is used wich supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.
+Database drivers can be installed by using plugins that specify that driver as an install requirement.
+
+
+### Running the Plugin-Runner with Docker Compose
+
+If you are using an M1 processor you need to build the plugin runner image for the amd64 platform if the plugins you want to use have dependencies that don't have arm64 builds:
+
+```
+docker buildx build --load -t qhana-plugin-runner --platform linux/amd64 --no-cache .
+```
+
+Start the docker compose with:
+
+```
+docker-compose up
+```
+
+Delete the containers with:
+
+```
+docker-compose down
+```
+
+To also delete the volume containing the output files add the flag `-v`.
+
+#### Docker Compose with MUSE database
+
+If you want to start the MUSE database as well you need to build the muse-db image. 
+As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder with `docker build -t muse-db plugins/costume_loader_pkg/db_container`.
+Then you can start everything with
+
+```
+docker-compose --profile with_db up
 ```
 
 

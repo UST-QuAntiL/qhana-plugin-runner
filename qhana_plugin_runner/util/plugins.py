@@ -35,7 +35,7 @@ class QHAnaPluginBase:
 
     name: ClassVar[str]
     version: ClassVar[str]
-    instance: ClassVar[Optional["QHAnaPluginBase"]] = None
+    instance: ClassVar["QHAnaPluginBase"]
 
     __app__: Optional[Flask] = None
     __plugins__: Dict[str, "QHAnaPluginBase"] = {}
@@ -141,14 +141,21 @@ def _try_load_plugin_file(app: Flask, plugin_file: Path):
         app (Flask): the app instance (used for logging only)
         plugin_file (Path): the path to the python module file (not the directory containing the file!)
     """
-    if plugin_file.suffixes == [".py"]:
-        try:
-            import_module(plugin_file.stem)
-        except ImportError:
-            app.logger.warning(
-                f"Failed to import '{plugin_file.name}' at location '{plugin_file.parent}'.",
-                exc_info=True,
-            )
+    if plugin_file.suffixes != [".py"]:
+        app.logger.debug(f"Tried to import a non python file '{plugin_file}', skipping.")
+        return
+
+    if not plugin_file.exists():
+        app.logger.info(f"Trying to import {plugin_file} but file does not exist.")
+        return
+
+    try:
+        import_module(plugin_file.stem)
+    except ImportError:
+        app.logger.warning(
+            f"Failed to import '{plugin_file.name}' at location '{plugin_file.parent}'.",
+            exc_info=True,
+        )
 
 
 def _try_load_plugin_package(app: Flask, plugin_package: Path):
@@ -161,7 +168,7 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
         plugin_package (Path): the path to the python package (not the directory containing the package!)
     """
     if not (plugin_package / Path("__init__.py")).exists():
-        app.logger.debug(
+        app.logger.info(
             f"Tried to import a normal folder '{plugin_package}' as a python package, skipping."
         )
         return
@@ -196,10 +203,12 @@ def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
         app.logger.info(
             f"Trying to load plugins from '{folder}' but the folder does not exist."
         )
+        return
     if not folder.is_dir():
         app.logger.warning(
             f"Trying to load plugins from '{folder}' but the path is not a directory."
         )
+        return
 
     if (folder / Path("__init__.py")).exists():
         _append_source_path(app, folder.parent)

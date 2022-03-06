@@ -15,17 +15,9 @@
 from logging import Logger
 
 from celery import Celery, Task
-from celery.platforms import IS_WINDOWS
 from celery.signals import after_setup_task_logger
 from flask import globals as flask_flobals
 from flask.app import Flask
-
-if IS_WINDOWS:
-    # celery does not support windows, but should work with this fix applied
-    from os import environ
-
-    # solution taken from https://stackoverflow.com/questions/37255548/how-to-run-celery-on-windows
-    environ.setdefault("FORKED_BY_MULTIPROCESSING", "1")
 
 
 def _configure_celery_logger(logger: Logger, **kwargs):
