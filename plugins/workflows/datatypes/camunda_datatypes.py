@@ -5,6 +5,9 @@ import dataclasses
 # CAMUNDA
 # https://docs.camunda.org/manual/latest/reference/rest/
 #
+from typing import Optional
+
+
 @dataclasses.dataclass
 class ExternalTask:
     """
@@ -23,6 +26,28 @@ class ExternalTask:
             execution_id=serialized["executionId"],
             process_instance_id=serialized["processInstanceId"],
             topic_name=serialized["topicName"],
+        )
+
+
+@dataclasses.dataclass
+class HumanTask:
+    """
+    TODO: Docs for HumanTask
+    """
+    id: str
+    execution_id: str
+    assignee: Optional[str]
+    delegation_state: str
+    process_instance_id: str
+
+    @classmethod
+    def deserialize(cls, serialized):
+        return cls(
+            id=serialized["id"],
+            execution_id=serialized["executionId"],
+            assignee=None if serialized["assignee"] is None else serialized["assignee"],
+            delegation_state=serialized["delegationState"],
+            process_instance_id=serialized["processInstanceId"],
         )
 
 

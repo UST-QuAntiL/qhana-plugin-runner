@@ -41,3 +41,11 @@ class WorkflowsParametersSchema(FrontendFormBaseSchema):
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
         return InputParameters(**data)
+
+
+# class WorkflowsDynamicParameterSchema(FrontendFormBaseSchema):
+#     def __init__(self, params: dict):
+#         super().__init__()
+#         for key, val in params.items():
+
+

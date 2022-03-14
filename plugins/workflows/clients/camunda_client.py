@@ -2,13 +2,17 @@ import logging
 import uuid
 from typing import Optional
 import requests
+
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from ..listeners.human_task_listener import HumanTaskListener
 from ..util.bpmn_handler import BpmnHandler
 from ..clients.qhana_task_client import QhanaTaskClient
-from ..datatypes.camunda_datatypes import Deployment, ProcessInstance, ExternalTask
+from ..datatypes.camunda_datatypes import Deployment, ProcessInstance, ExternalTask, HumanTask
 from ..listeners.camunda_process_end_listener import CamundaProcessEndListener
 from ..listeners.external_task_listener import ExternalTaskListener
 from ..listeners.qhana_plugin_end_listener import QhanaPluginEndListener
-from ..util.helper import endpoint_found
+from ..util.helper import endpoint_found, endpoint_found_simple
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +25,16 @@ class CamundaClient:
 
     def __init__(
             self,
+            db_id,
+            task_data,
             bpmn_handler: BpmnHandler = None,
             qhana_task_client: QhanaTaskClient = None,
             base_url: str = None,
             plugin_prefix: str = "plugin",
-            poll_interval=5000
+            poll_interval=5
     ):
+        self.db_id = db_id
+        self.task_data = task_data
         self.bpmn_handler = bpmn_handler
         self.qhana_task_client = qhana_task_client
         self.m_base_url = base_url
@@ -36,8 +44,6 @@ class CamundaClient:
         self.deployment: Optional[Deployment] = None
         self.process_instance: Optional[ProcessInstance] = None
         self.qhana_listener: Optional[QhanaPluginEndListener] = None
-        self.external_task_listener: Optional[ExternalTaskListener] = None
-        self.process_end_listener: Optional[CamundaProcessEndListener] = None
         self.process_end = False
 
         logger.info(f"New camunda client created with workerId: {self.workerId}")
@@ -75,9 +81,10 @@ class CamundaClient:
         """
         self.deploy()
         self.create_instance()
-        self.external_task_listener = ExternalTaskListener(self, callback=self.qhana_task_client.create_qhana_plugin_instances).start()
+        ExternalTaskListener(self, callback=self.qhana_task_client.create_qhana_plugin_instances).start()
+        HumanTaskListener(self.db_id, self.task_data, self).start()
         self.qhana_listener = QhanaPluginEndListener(self, callback=self.qhana_task_client.complete_qhana_task).start()
-        self.process_end_listener = CamundaProcessEndListener(self, callback=self.stop).start()
+        CamundaProcessEndListener(self, callback=self.stop).start()
         return self
 
     def lock(self, task: ExternalTask):
@@ -151,6 +158,14 @@ class CamundaClient:
         response = requests.get(f"{self.m_base_url}/external-task/{task_id}")
         if endpoint_found(response):
             return response.json()["executionId"]
+
+    def get_human_task_rendered_form(self, task_id: str):
+        """
+        TODO: Docs
+        """
+        response = requests.get(f"{self.m_base_url}/task/{task_id}/rendered-form")
+        if endpoint_found_simple(response):
+            return response.text
 
     def deploy(self):
         """
