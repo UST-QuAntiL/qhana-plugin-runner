@@ -54,29 +54,35 @@ class HumanTaskListener:
                     human_task = HumanTask.deserialize(human_task)
 
                     if (human_task.delegation_state == "PENDING" or human_task.delegation_state is None) and \
-                            human_task.process_instance_id == self.camunda_client.process_instance.id:
+                        human_task.process_instance_id == self.camunda_client.process_instance.id:
                         # rendered_form = self.camunda_client.get_human_task_rendered_form(human_task.id)
                         # logger.info(f"Rendered human task form: \n {rendered_form}")
                         #
-                        form_variables = requests.get(f"{self.camunda_client.m_base_url}/task/{human_task.id}/form-variables")
+                        form_variables = requests.get(
+                            f"{self.camunda_client.m_base_url}/task/{human_task.id}/form-variables")
                         form_variables = str(form_variables.json())
-                        #
+
                         logger.info(f"{form_variables}")
-                        #
+
+                        # Does not work
+
                         # task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=self.db_id)
                         # task_data.data["form_params"] = str(form_variables.json())
                         # task_data.save(commit=True)
-                        #
-                        # href = f"http://localhost:5005/plugins/workflows@v0-1-1/{self.db_id}/demo-step-process/"
-                        # ui_href = f"http://localhost:5005/plugins/workflows@v0-1-1/{self.db_id}/demo-step-ui/"
-                        #
-                        # task = add_step.s(
-                        #     db_id=self.db_id, step_id=human_task.id, href=href, ui_href=ui_href, prog_value=50, task_log="",
-                        # )
-                        #
-                        # task.link_error(save_task_error.s(db_id=self.db_id))
-                        # task.apply_async()
-                        #
-                        # logger.info("Started step..")
+
+                        href = f"http://localhost:5005/plugins/workflows@v0-1-1/{self.db_id}/demo-step-process/"
+                        ui_href = f"http://localhost:5005/plugins/workflows@v0-1-1/{self.db_id}/demo-step-ui/"
+
+                        task = add_step.s(
+                            db_id=self.db_id, step_id=human_task.id, href=href, ui_href=ui_href, prog_value=50,
+                            task_log="",
+                        )
+
+                        task.link_error(save_task_error.s(db_id=self.db_id))
+                        task.apply_async()
+
+                        logger.info("Started step..")
                         self.current_human_task = human_task
                         return
+
+                    # rest of code here (else branch)
