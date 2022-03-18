@@ -74,6 +74,8 @@ python_use_unqualified_type_names = true
 python = ["https://docs.python.org/3"]
 requests = ["https://docs.python-requests.org/en/master/"]
 celery = ["https://docs.celeryproject.org/en/stable/"]
+# user documentation
+qhana = ["https://qhana.readthedocs.io/en/latest/"]
 
 [tool.sphinx.autosectionlabel]
 prefix-document = true
