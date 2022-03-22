@@ -25,15 +25,16 @@ from flask.helpers import url_for
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 
 
-class _FileStoreInterface:
+class FileStoreInterface:
     """Base class defining the file store interface."""
 
-    def persist_file(self, file_: IO, target: Union[str, Path]):
+    def persist_file(self, file_: IO, target: Union[str, Path], mimetype: str):
         """Persist a file to the file storage.
 
         Args:
             file_ (IO): the file like object to perist to the storage.
             target (Union[str, Path]): the file path to save the file on the storage including the file name.
+            mimetype (str): the content type of the data.
         """
         raise NotImplementedError()
 
@@ -122,8 +123,8 @@ class _FileStoreInterface:
         raise NotImplementedError()
 
 
-class FileStore(_FileStoreInterface):
-    """Interface class for file stor implementations."""
+class FileStore(FileStoreInterface):
+    """Interface class for file store implementations."""
 
     __store_classes: ClassVar[Dict[str, Type["FileStore"]]] = {}
 
@@ -134,7 +135,7 @@ class FileStore(_FileStoreInterface):
         cls.name = name
         FileStore.__store_classes[name] = cls
 
-    def __init__(self, app: Flask = None) -> None:
+    def __init__(self, app: Optional[Flask] = None) -> None:
         super().__init__()
         self.app: Optional[Flask] = None
         if app:
@@ -177,17 +178,18 @@ class FileStore(_FileStoreInterface):
             path = path.relative_to(path.root)
         return path
 
-    def _get_file_identifier(self, target: Path):
+    def _get_file_identifier(self, target: Union[Path, str]) -> str:
         """Get the full file identifier (e.g. the absolute path or a UIR/URL to the file)."""
-        raise NotImplementedError()
+        return str(target)
 
     def _persist_task_file(
         self,
         task_db_id: int,
         file_: IO,
-        target: Path,
+        target: Union[Path, str],
+        file_name: str,
         file_type: str,
-        mimetype: Optional[str],
+        mimetype: Optional[str] = None,
         commit: bool = True,
     ) -> TaskFile:
         """Perist a task file and store the file information in the database.
@@ -195,7 +197,8 @@ class FileStore(_FileStoreInterface):
         Args:
             task_db_id (int): the id of the task in the database
             file_ (IO): the file object to persist
-            target (Path): the target path
+            target (Union[Path, str]): the target path or filename
+            file_name (str): the file name
             file_type (str): the file type tag
             mimetype (Optional[str]): the mime type of the file
             commit (bool): if true commits the current DB transaction. Defaults to True.
@@ -209,12 +212,14 @@ class FileStore(_FileStoreInterface):
         task = ProcessingTask.get_by_id(task_db_id)
         if not task:
             raise KeyError(f"No task with database id {task_db_id} found!")
-        self.persist_file(file_, target)
+        if not mimetype:
+            mimetype = "application/octet-stream"
+        self.persist_file(file_, target, mimetype)
         file_info = TaskFile(
             task=task,
             security_tag=token_urlsafe(32),
             storage_provider=self.name,
-            file_name=target.name,
+            file_name=file_name,
             file_storage_data=self._get_file_identifier(target),
             file_type=file_type,
             mimetype=mimetype,
@@ -233,7 +238,7 @@ class FileStore(_FileStoreInterface):
     ) -> TaskFile:
         target = Path(f"task_{task_db_id}/out") / Path(file_name)
         return self._persist_task_file(
-            task_db_id, file_, target, file_type, mimetype, commit
+            task_db_id, file_, target, file_name, file_type, mimetype, commit
         )
 
     def persist_task_temp_file(
@@ -249,6 +254,7 @@ class FileStore(_FileStoreInterface):
             task_db_id,
             file_,
             target,
+            file_name,
             file_type="temp-file",
             mimetype=mimetype,
             commit=commit,
@@ -286,7 +292,7 @@ class LocalFileStore(FileStore, name="local_filesystem"):
         """Get the full path of the file on disc."""
         return str(self._get_storage_root() / target)
 
-    def persist_file(self, file_: IO, target: Union[str, Path]):
+    def persist_file(self, file_: IO, target: Union[str, Path], mimetype: str):
         mode: str  # mode to open target file with
         if isinstance(file_, TextIO):
             mode = "w"
@@ -324,10 +330,10 @@ class LocalFileStore(FileStore, name="local_filesystem"):
         )
 
 
-class FileStoreRegistry(_FileStoreInterface):
+class FileStoreRegistry(FileStoreInterface):
     """Class acting as a registry for loaded file stores. Forwards calls to the default file store."""
 
-    def __init__(self, app: Flask = None) -> None:
+    def __init__(self, app: Optional[Flask] = None) -> None:
         super().__init__()
         self.app: Optional[Flask] = None
         self._default_store: Optional[str] = None
@@ -349,7 +355,13 @@ class FileStoreRegistry(_FileStoreInterface):
         instance set as their :py:attr:`~qhana_plugin_runner.storage.FileStore._store_registry`.
         """
         for name, cls in FileStore._get_registered_store_classes().items():
-            self._stores[name] = cls(app=self.app)
+            try:
+                self._stores[name] = cls(app=self.app)
+            except Exception as e:
+                self.app.logger.warning(
+                    f"Could not load storage provider {name} because of the follwoing exception.",
+                    exc_info=True,
+                )
         self._set_default_store_from_config()
 
     def init_app(self, app: Flask):
@@ -364,10 +376,15 @@ class FileStoreRegistry(_FileStoreInterface):
         if self.app:
             self._default_store = self.app.config.get("DEFAULT_FILE_STORE")
 
-    def persist_file(self, file_: IO, target: Union[str, Path]):
+    def persist_file(
+        self,
+        file_: IO,
+        target: Union[str, Path],
+        mimetype: str = "application/octet-stream",
+    ):
         if self._default_store is None:
             raise NotImplementedError()
-        self._stores[self._default_store].persist_file(file_, target)
+        self._stores[self._default_store].persist_file(file_, target, mimetype)
 
     def persist_task_result(
         self,
