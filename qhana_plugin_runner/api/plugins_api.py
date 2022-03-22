@@ -68,7 +68,7 @@ class PluginsView(MethodView):
     def get(self):
         """Get all loaded plugins."""
         plugins = sorted(
-            QHAnaPluginBase.get_plugins().values(),
+            (p for p in QHAnaPluginBase.get_plugins().values() if p.has_api),
             key=lambda p: (p.name, p.parsed_version),
         )
         return PluginCollectionData(

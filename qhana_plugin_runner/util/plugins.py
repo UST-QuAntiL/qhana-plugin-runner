@@ -36,6 +36,7 @@ class QHAnaPluginBase:
     name: ClassVar[str]
     version: ClassVar[str]
     instance: ClassVar["QHAnaPluginBase"]
+    has_api: ClassVar[bool] = False
 
     __app__: Optional[Flask] = None
     __plugins__: Dict[str, "QHAnaPluginBase"] = {}
@@ -243,8 +244,13 @@ def register_plugins(app: Flask):
 
     # register API blueprints (only do this after the API is registered with flask!)
     for plugin in QHAnaPluginBase.get_plugins().values():
-        plugin_blueprint: Optional[Blueprint] = plugin.get_api_blueprint()
+        plugin_blueprint: Optional[Blueprint] = None
+        try:
+            plugin_blueprint = plugin.get_api_blueprint()
+        except NotImplementedError:
+            pass
         if plugin_blueprint:
+            type(plugin).has_api = True
             ROOT_API.register_blueprint(
                 plugin_blueprint, url_prefix=f"{url_prefix}/plugins/{plugin.identifier}/"
             )
