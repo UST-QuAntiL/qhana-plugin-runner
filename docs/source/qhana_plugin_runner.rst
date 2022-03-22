@@ -21,6 +21,8 @@ Submodules
    qhana_plugin_runner.babel
    qhana_plugin_runner.celery
    qhana_plugin_runner.celery_worker
+   qhana_plugin_runner.licenses
+   qhana_plugin_runner.markdown
    qhana_plugin_runner.plugins_cli
    qhana_plugin_runner.requests
    qhana_plugin_runner.storage
