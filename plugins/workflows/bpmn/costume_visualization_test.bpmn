@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1p53wgv" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.11.1" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.15.0">
+  <bpmn:process id="Process_1yp3sng" isExecutable="true">
+    <bpmn:startEvent id="Event_1wf9hxh">
+      <bpmn:outgoing>Flow_1x1qbu2</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="Event_0rg3zac">
+      <bpmn:incoming>Flow_0j3o6fa</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="Activity_0izdh78" name="Workflow MUSE Costumes (partial)">
+      <bpmn:incoming>Flow_1x1qbu2</bpmn:incoming>
+      <bpmn:outgoing>Flow_1tikkc0</bpmn:outgoing>
+      <bpmn:startEvent id="Event_1nshnjy">
+        <bpmn:outgoing>Flow_0dc0kbr</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:userTask id="Activity_0jnehjw" name="Workflow Inputs">
+        <bpmn:extensionElements>
+          <camunda:formData>
+            <camunda:formField id="qoutput.costumeLoaderHost" label="DB host" type="string" defaultValue="127.0.0.1" />
+            <camunda:formField id="qoutput.costumeLoaderUserName" label="DB user name" type="string" defaultValue="root" />
+            <camunda:formField id="qoutput.costumeLoaderPassword" label="DB password" type="string" defaultValue="root" />
+            <camunda:formField id="qoutput.costumeLoaderDatabase" label="DB database" type="string" defaultValue="muse_db" />
+            <camunda:formField id="qoutput.costumeLoaderCostumeType" label="Costume Type" type="string" defaultValue="WITHOUT_BASE_ELEMENTS" />
+            <camunda:formField id="qoutput.simToDistTransformerIn" label="Transformer" type="string" defaultValue="linear_inverse ┃ exponential_inverse ┃ gaussian_inverse ┃ polynomial_inverse ┃ square_inverse" />
+            <camunda:formField id="qoutput.agrgregatorsAggregator" label="Aggregator" type="string" defaultValue="mean ┃ median ┃ max ┃ min" />
+            <camunda:formField id="qoutput.mdsDimensions" label="Dimensions" type="long" defaultValue="2" />
+            <camunda:formField id="qoutput.mdsMetric" label="Metric" type="string" defaultValue="metric_mds ┃ nonmetric_mds" />
+            <camunda:formField id="qoutput.mdsnInit" label="SMACOF executions" type="long" defaultValue="4" />
+            <camunda:formField id="qoutput.mdsMaxIter" label="SMACOF max iterations" type="long" defaultValue="300" />
+            <camunda:formField id="qoutput.QKMeansClustersCnt" label="Number of clusters" type="long" defaultValue="2" />
+            <camunda:formField id="qoutput.QKMeansVariant" label="Variant" type="string" defaultValue="negative_rotation ┃ destructive_interference ┃ state_preparation ┃ positive_correlation" />
+            <camunda:formField id="qoutput.QKMeansBackend" label="Backend" type="string" defaultValue="custom_ibmq ┃ aer_statevector_simulator ┃ aer_qasm_simulator ┃ ibmq_qasm_simulator ┃ ibmq_santiago ┃ ibmq_manila ┃ ibmq_bogota ┃ ibmq_quito ┃ ibmq_belem ┃ ibmq_lima ┃ ibmq_armonk" />
+            <camunda:formField id="qoutput.QKMeansIbmqToken" label="IBMQ Token" type="string" />
+            <camunda:formField id="qoutput.QKMeansCustomBackend" label="Custom backend" type="string" />
+            <camunda:formField id="qoutput.wuPalmerCacheGenerator" label="Wu Palmer Cache Generator (cache)" type="string" defaultValue="no cache" />
+            <camunda:formField id="qoutput.attributes" label="Attributes" type="string" />
+            <camunda:formField id="qoutput.wuPalmerSimilarities" label="Wu Palmer Similarities (cache)" type="string" defaultValue="no cache" />
+            <camunda:formField id="qoutput.symMaxMean" label="Sym Max Mean (cache)" type="string" defaultValue="no cache" />
+            <camunda:formField id="qoutput.simToDistTransformer" label="Sim to dist (cache)" type="string" defaultValue="no cache" />
+            <camunda:formField id="qoutput.exitEarly" type="string" defaultValue="exit early" />
+          </camunda:formData>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0dc0kbr</bpmn:incoming>
+        <bpmn:outgoing>Flow_1kag0ga</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:serviceTask id="Activity_1w5dbiv" name="Costume Loader" camunda:type="external" camunda:topic="plugin.costume-loader">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qinput.dbDatabase">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoaderDatabase">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.dbPassword">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoaderPassword">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.dbUser">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoaderUserName">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.dbHost">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoaderHost">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.costumeType">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoaderCostumeType">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.costumeLoader">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1kag0ga</bpmn:incoming>
+        <bpmn:outgoing>Flow_1q30r0q</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Activity_1s39zio" name="Wu Palmer Similarities" camunda:type="external" camunda:topic="plugin.wu-palmer">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qinput.attributes">
+              <camunda:map>
+                <camunda:entry key="qoutput.attributes">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.wuPalmerCacheUrl">
+              <camunda:map>
+                <camunda:entry key="qoutput.wuPalmerCacheGenerator">dataType: wu-palmer-cache</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.entitiesMetadataUrl">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoader">dataType: attribute-metadata</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.entitiesUrl">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoader">name: entities.json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.wuPalmerSimilarities">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0evmjgh</bpmn:incoming>
+        <bpmn:outgoing>Flow_1ntyjzd</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Activity_0u019gu" name="Wu Palmer Cache Generator" camunda:type="external" camunda:topic="plugin.wu-palmer-cache">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qinput.taxonomiesZipUrl">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoader">name: taxonomies.zip</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.wuPalmerCacheGenerator">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0g7s0fe</bpmn:incoming>
+        <bpmn:outgoing>Flow_0nkgdhv</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:exclusiveGateway id="Gateway_1te031c">
+        <bpmn:incoming>Flow_1xwawsn</bpmn:incoming>
+        <bpmn:incoming>Flow_0nkgdhv</bpmn:incoming>
+        <bpmn:outgoing>Flow_1b9ced0</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:exclusiveGateway id="Gateway_1c6tbu4" name="Cache exists?">
+        <bpmn:incoming>Flow_1q30r0q</bpmn:incoming>
+        <bpmn:outgoing>Flow_0g7s0fe</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1xwawsn</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_0dc0kbr" sourceRef="Event_1nshnjy" targetRef="Activity_0jnehjw" />
+      <bpmn:sequenceFlow id="Flow_1kag0ga" sourceRef="Activity_0jnehjw" targetRef="Activity_1w5dbiv" />
+      <bpmn:sequenceFlow id="Flow_1q30r0q" sourceRef="Activity_1w5dbiv" targetRef="Gateway_1c6tbu4" />
+      <bpmn:sequenceFlow id="Flow_1b9ced0" sourceRef="Gateway_1te031c" targetRef="Gateway_1auva2e" />
+      <bpmn:sequenceFlow id="Flow_0g7s0fe" name="No" sourceRef="Gateway_1c6tbu4" targetRef="Activity_0u019gu">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable("qoutput.wuPalmerCacheGenerator") == "no cache"}</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_0nkgdhv" sourceRef="Activity_0u019gu" targetRef="Gateway_1te031c" />
+      <bpmn:sequenceFlow id="Flow_1xwawsn" name="Yes" sourceRef="Gateway_1c6tbu4" targetRef="Gateway_1te031c" />
+      <bpmn:serviceTask id="Activity_0glz4hg" name="Sym Max Mean" camunda:type="external" camunda:topic="plugin.sym-max-mean">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qinput.attributes">
+              <camunda:map>
+                <camunda:entry key="qoutput.attributes">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.elementSimilaritiesUrl">
+              <camunda:map>
+                <camunda:entry key="qoutput.wuPalmerSimilarities">dataType: element-similarities</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.entitiesUrl">
+              <camunda:map>
+                <camunda:entry key="qoutput.costumeLoader">name: entities.json</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.symMaxMean">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1cg9c7b</bpmn:incoming>
+        <bpmn:outgoing>Flow_1mptlvm</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:exclusiveGateway id="Gateway_1auva2e" name="Cache exists?">
+        <bpmn:incoming>Flow_1b9ced0</bpmn:incoming>
+        <bpmn:outgoing>Flow_0evmjgh</bpmn:outgoing>
+        <bpmn:outgoing>Flow_07r0cod</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_0evmjgh" name="No" sourceRef="Gateway_1auva2e" targetRef="Activity_1s39zio">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable("qoutput.wuPalmerSimilarities") == "no cache"}</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:endEvent id="Event_0nahd8u">
+        <bpmn:incoming>Flow_0ih8vh3</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_1mptlvm" sourceRef="Activity_0glz4hg" targetRef="Gateway_018zskv" />
+      <bpmn:exclusiveGateway id="Gateway_11dfdh4" name="Cache exists?">
+        <bpmn:incoming>Flow_02l7jc2</bpmn:incoming>
+        <bpmn:outgoing>Flow_1cg9c7b</bpmn:outgoing>
+        <bpmn:outgoing>Flow_0jtvf5y</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_1cg9c7b" name="No" sourceRef="Gateway_11dfdh4" targetRef="Activity_0glz4hg">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable("qoutput.symMaxMean") == "no cache"}</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:exclusiveGateway id="Gateway_018zskv">
+        <bpmn:incoming>Flow_1mptlvm</bpmn:incoming>
+        <bpmn:incoming>Flow_0jtvf5y</bpmn:incoming>
+        <bpmn:outgoing>Flow_00jkhem</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_0jtvf5y" name="Yes" sourceRef="Gateway_11dfdh4" targetRef="Gateway_018zskv" />
+      <bpmn:serviceTask id="Activity_0rrno5i" name="Similarities to distances transformer" camunda:type="external" camunda:topic="plugin.sym-max-mean">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qinput.transformer">
+              <camunda:map>
+                <camunda:entry key="qoutput.simToDistTransformerIn">plain</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.attributes">
+              <camunda:map>
+                <camunda:entry />
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qinput.attributeSimilaritiesUrl">
+              <camunda:map>
+                <camunda:entry key="qoutput.symMaxMean">dataType: attribute_similarities</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.simToDistTransformer">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0n7vc9q</bpmn:incoming>
+        <bpmn:outgoing>Flow_0g5rz1d</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:sequenceFlow id="Flow_0g5rz1d" sourceRef="Activity_0rrno5i" targetRef="Gateway_09s87oo" />
+      <bpmn:exclusiveGateway id="Gateway_09s87oo">
+        <bpmn:incoming>Flow_0g5rz1d</bpmn:incoming>
+        <bpmn:incoming>Flow_1df50zt</bpmn:incoming>
+        <bpmn:outgoing>Flow_0ih8vh3</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_0ih8vh3" sourceRef="Gateway_09s87oo" targetRef="Event_0nahd8u" />
+      <bpmn:sequenceFlow id="Flow_00jkhem" sourceRef="Gateway_018zskv" targetRef="Gateway_07oqhdt" />
+      <bpmn:exclusiveGateway id="Gateway_07oqhdt" name="Cache exists?">
+        <bpmn:incoming>Flow_00jkhem</bpmn:incoming>
+        <bpmn:outgoing>Flow_0n7vc9q</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1df50zt</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_0n7vc9q" name="No" sourceRef="Gateway_07oqhdt" targetRef="Activity_0rrno5i">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable("qoutput.simToDistTransformer") == "no cache"}</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="Flow_1df50zt" name="Yes" sourceRef="Gateway_07oqhdt" targetRef="Gateway_09s87oo" />
+      <bpmn:exclusiveGateway id="Gateway_087uo2g">
+        <bpmn:incoming>Flow_07r0cod</bpmn:incoming>
+        <bpmn:incoming>Flow_1ntyjzd</bpmn:incoming>
+        <bpmn:outgoing>Flow_02l7jc2</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow_02l7jc2" sourceRef="Gateway_087uo2g" targetRef="Gateway_11dfdh4" />
+      <bpmn:sequenceFlow id="Flow_07r0cod" name="Yes" sourceRef="Gateway_1auva2e" targetRef="Gateway_087uo2g" />
+      <bpmn:sequenceFlow id="Flow_1ntyjzd" sourceRef="Activity_1s39zio" targetRef="Gateway_087uo2g" />
+    </bpmn:subProcess>
+    <bpmn:userTask id="Activity_0jln2xe" name="Review Failure">
+      <bpmn:incoming>Flow_1esfhvi</bpmn:incoming>
+      <bpmn:outgoing>Flow_1q0ym42</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="Event_1mb4st6">
+      <bpmn:incoming>Flow_1q0ym42</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Event_1s5umi8" attachedToRef="Activity_0izdh78">
+      <bpmn:outgoing>Flow_1esfhvi</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_0ox6aho" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_1esfhvi" sourceRef="Event_1s5umi8" targetRef="Activity_0jln2xe" />
+    <bpmn:sequenceFlow id="Flow_1q0ym42" sourceRef="Activity_0jln2xe" targetRef="Event_1mb4st6" />
+    <bpmn:sequenceFlow id="Flow_1x1qbu2" sourceRef="Event_1wf9hxh" targetRef="Activity_0izdh78" />
+    <bpmn:sequenceFlow id="Flow_1tikkc0" sourceRef="Activity_0izdh78" targetRef="Activity_1ekm3gw" />
+    <bpmn:sequenceFlow id="Flow_0j3o6fa" sourceRef="Activity_1ekm3gw" targetRef="Event_0rg3zac" />
+    <bpmn:userTask id="Activity_1ekm3gw" name="Review">
+      <bpmn:incoming>Flow_1tikkc0</bpmn:incoming>
+      <bpmn:outgoing>Flow_0j3o6fa</bpmn:outgoing>
+    </bpmn:userTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1yp3sng">
+      <bpmndi:BPMNEdge id="Flow_0j3o6fa_di" bpmnElement="Flow_0j3o6fa">
+        <di:waypoint x="2770" y="340" />
+        <di:waypoint x="2882" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1tikkc0_di" bpmnElement="Flow_1tikkc0">
+        <di:waypoint x="2540" y="340" />
+        <di:waypoint x="2670" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1x1qbu2_di" bpmnElement="Flow_1x1qbu2">
+        <di:waypoint x="198" y="268" />
+        <di:waypoint x="290" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1q0ym42_di" bpmnElement="Flow_1q0ym42">
+        <di:waypoint x="1880" y="590" />
+        <di:waypoint x="1932" y="590" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1esfhvi_di" bpmnElement="Flow_1esfhvi">
+        <di:waypoint x="1830" y="468" />
+        <di:waypoint x="1830" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Event_1wf9hxh_di" bpmnElement="Event_1wf9hxh">
+        <dc:Bounds x="162" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0rg3zac_di" bpmnElement="Event_0rg3zac">
+        <dc:Bounds x="2882" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0izdh78_di" bpmnElement="Activity_0izdh78" isExpanded="true">
+        <dc:Bounds x="290" y="85" width="2250" height="365" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1ntyjzd_di" bpmnElement="Flow_1ntyjzd">
+        <di:waypoint x="1400" y="250" />
+        <di:waypoint x="1505" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_07r0cod_di" bpmnElement="Flow_07r0cod">
+        <di:waypoint x="1200" y="275" />
+        <di:waypoint x="1200" y="330" />
+        <di:waypoint x="1530" y="330" />
+        <di:waypoint x="1530" y="275" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1356" y="312" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02l7jc2_di" bpmnElement="Flow_02l7jc2">
+        <di:waypoint x="1555" y="250" />
+        <di:waypoint x="1655" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1599" y="232" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1df50zt_di" bpmnElement="Flow_1df50zt">
+        <di:waypoint x="2070" y="275" />
+        <di:waypoint x="2070" y="330" />
+        <di:waypoint x="2360" y="330" />
+        <di:waypoint x="2360" y="275" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2206" y="312" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0n7vc9q_di" bpmnElement="Flow_0n7vc9q">
+        <di:waypoint x="2095" y="250" />
+        <di:waypoint x="2170" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2125" y="232" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00jkhem_di" bpmnElement="Flow_00jkhem">
+        <di:waypoint x="1995" y="250" />
+        <di:waypoint x="2045" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ih8vh3_di" bpmnElement="Flow_0ih8vh3">
+        <di:waypoint x="2385" y="250" />
+        <di:waypoint x="2452" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0g5rz1d_di" bpmnElement="Flow_0g5rz1d">
+        <di:waypoint x="2270" y="250" />
+        <di:waypoint x="2335" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jtvf5y_di" bpmnElement="Flow_0jtvf5y">
+        <di:waypoint x="1680" y="275" />
+        <di:waypoint x="1680" y="330" />
+        <di:waypoint x="1970" y="330" />
+        <di:waypoint x="1970" y="275" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1816" y="312" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1cg9c7b_di" bpmnElement="Flow_1cg9c7b">
+        <di:waypoint x="1705" y="250" />
+        <di:waypoint x="1780" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1735" y="232" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1mptlvm_di" bpmnElement="Flow_1mptlvm">
+        <di:waypoint x="1880" y="250" />
+        <di:waypoint x="1945" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0evmjgh_di" bpmnElement="Flow_0evmjgh">
+        <di:waypoint x="1225" y="250" />
+        <di:waypoint x="1300" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1255" y="232" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1xwawsn_di" bpmnElement="Flow_1xwawsn">
+        <di:waypoint x="790" y="275" />
+        <di:waypoint x="790" y="330" />
+        <di:waypoint x="1090" y="330" />
+        <di:waypoint x="1090" y="275" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="931" y="312" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0nkgdhv_di" bpmnElement="Flow_0nkgdhv">
+        <di:waypoint x="990" y="250" />
+        <di:waypoint x="1065" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0g7s0fe_di" bpmnElement="Flow_0g7s0fe">
+        <di:waypoint x="815" y="250" />
+        <di:waypoint x="890" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="845" y="232" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1b9ced0_di" bpmnElement="Flow_1b9ced0">
+        <di:waypoint x="1115" y="250" />
+        <di:waypoint x="1175" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1q30r0q_di" bpmnElement="Flow_1q30r0q">
+        <di:waypoint x="703" y="250" />
+        <di:waypoint x="765" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1kag0ga_di" bpmnElement="Flow_1kag0ga">
+        <di:waypoint x="543" y="250" />
+        <di:waypoint x="603" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0dc0kbr_di" bpmnElement="Flow_0dc0kbr">
+        <di:waypoint x="388" y="250" />
+        <di:waypoint x="443" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Event_1nshnjy_di" bpmnElement="Event_1nshnjy">
+        <dc:Bounds x="352" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0jnehjw_di" bpmnElement="Activity_0jnehjw">
+        <dc:Bounds x="443" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1w5dbiv_di" bpmnElement="Activity_1w5dbiv">
+        <dc:Bounds x="603" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1s39zio_di" bpmnElement="Activity_1s39zio">
+        <dc:Bounds x="1300" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0u019gu_di" bpmnElement="Activity_0u019gu">
+        <dc:Bounds x="890" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1te031c_di" bpmnElement="Gateway_1te031c" isMarkerVisible="true">
+        <dc:Bounds x="1065" y="225" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_13yuq6c_di" bpmnElement="Gateway_1c6tbu4" isMarkerVisible="true">
+        <dc:Bounds x="765" y="225" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="755" y="195" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0glz4hg_di" bpmnElement="Activity_0glz4hg" bioc:stroke="#000000" bioc:fill="#ffffff" color:background-color="#ffffff" color:border-color="#000000">
+        <dc:Bounds x="1780" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1auva2e_di" bpmnElement="Gateway_1auva2e" isMarkerVisible="true">
+        <dc:Bounds x="1175" y="225" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1165" y="195" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0nahd8u_di" bpmnElement="Event_0nahd8u">
+        <dc:Bounds x="2452" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_11dfdh4_di" bpmnElement="Gateway_11dfdh4" isMarkerVisible="true">
+        <dc:Bounds x="1655" y="225" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1645" y="195" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_018zskv_di" bpmnElement="Gateway_018zskv" isMarkerVisible="true">
+        <dc:Bounds x="1945" y="225" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0rrno5i_di" bpmnElement="Activity_0rrno5i" bioc:stroke="#000000" bioc:fill="#ffffff" color:background-color="#ffffff" color:border-color="#000000">
+        <dc:Bounds x="2170" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_09s87oo_di" bpmnElement="Gateway_09s87oo" isMarkerVisible="true">
+        <dc:Bounds x="2335" y="225" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_07oqhdt_di" bpmnElement="Gateway_07oqhdt" isMarkerVisible="true">
+        <dc:Bounds x="2045" y="225" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2035" y="195" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_087uo2g_di" bpmnElement="Gateway_087uo2g" isMarkerVisible="true">
+        <dc:Bounds x="1505" y="225" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1504" y="195" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0jln2xe_di" bpmnElement="Activity_0jln2xe">
+        <dc:Bounds x="1780" y="550" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1mb4st6_di" bpmnElement="Event_1mb4st6">
+        <dc:Bounds x="1932" y="572" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_15vnqcg_di" bpmnElement="Activity_1ekm3gw">
+        <dc:Bounds x="2670" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1s5umi8_di" bpmnElement="Event_1s5umi8">
+        <dc:Bounds x="1812" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
