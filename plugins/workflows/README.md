@@ -1,5 +1,5 @@
 # Workflow plugin for BPMN and Camunda
-Plugin: workflows@v0.2.0
+Plugin: workflows@v0.2.0 ([changelog](#changelog))
 
 
 ## Prerequisites
@@ -33,3 +33,10 @@ pip install dataclasses-json
 ## Creating workflows
 
 TODO
+
+## Changelog
+
+### v0.2.0
+
+- Use Celery tasks instead of threads
+- Added invoke beat command to poetry
