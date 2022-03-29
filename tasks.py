@@ -157,6 +157,7 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         str(concurrency),
         "--loglevel",
         log_level.upper(),
+        "-E"
     ]
     if dev:
         c.run(join(cmd), echo=True)
@@ -165,6 +166,26 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         # if not in dev mode completely replace the current process with the started process
         print(join(cmd))
         replace_process(cmd[0], cmd, environ)
+
+
+@task
+def beat(c, log_level="INFO"):
+    """Run the celery beat required for periodic tasks.
+
+    Args:
+        c (Context): task context
+        log_level (str, optional): The log level of the celery logger for the beat scheduler (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
+    """
+    cmd = [
+        "celery",
+        "--app",
+        CELERY_WORKER,
+        "beat",
+        "--loglevel",
+        log_level.upper(),
+    ]
+    print(join(cmd))
+    replace_process(cmd[0], cmd, environ)
 
 
 @task
