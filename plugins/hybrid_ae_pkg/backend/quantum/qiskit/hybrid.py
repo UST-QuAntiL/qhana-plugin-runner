@@ -5,8 +5,8 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-from plugins.hybrid_ae_pkg.backend.quantum.qiskit.autoencoder import QuantumAutoencoder
-from plugins.hybrid_ae_pkg.backend.quantum.qiskit.autograd import QAEModule
+from .autoencoder import QuantumAutoencoder
+from .autograd import QAEModule
 from torch.utils.data import Dataset, Sampler
 
 
