@@ -1,8 +1,7 @@
 from celery.utils.log import get_task_logger
-from plugins.workflows import Workflows
+from plugins.workflows import Workflows, conf as config
 from plugins.workflows.clients.camunda_client import CamundaClient
 from plugins.workflows.clients.qhana_task_client import QhanaTaskClient
-from plugins.workflows.config import CAMUNDA_BASE_URL, CAMUNDA_GENERAL_POLL_TIMEOUT, QHANA_PLUGIN_ENDPOINTS
 from plugins.workflows.datatypes.camunda_datatypes import ExternalTask, CamundaConfig
 from plugins.workflows.datatypes.qhana_datatypes import QhanaResult, QhanaOutput
 from plugins.workflows.util.helper import request_json
@@ -18,8 +17,13 @@ def qhana_instance_watcher(camunda_external_task: str):
     """
 
     # Clients
-    camunda_client = CamundaClient(CamundaConfig(base_url=CAMUNDA_BASE_URL, poll_interval=CAMUNDA_GENERAL_POLL_TIMEOUT))
-    qhana_client = QhanaTaskClient(QHANA_PLUGIN_ENDPOINTS)
+    camunda_client = CamundaClient(
+        CamundaConfig(
+            base_url=config['environment']['CAMUNDA_BASE_URL'],
+            poll_interval=config['polling_rates']['camunda_general'],
+        )
+    )
+    qhana_client = QhanaTaskClient(config['environment']['QHANA_PLUGIN_ENDPOINTS'])
 
     # Deserialize
     external_task: ExternalTask = ExternalTask.from_dict(camunda_external_task)

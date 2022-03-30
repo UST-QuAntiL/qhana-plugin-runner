@@ -37,6 +37,7 @@ class HumanTask:
     TODO: Docs for HumanTask
     """
     id: str
+    name: str
     execution_id: str
     assignee: Optional[str]
     delegation_state: str
@@ -46,6 +47,7 @@ class HumanTask:
     def deserialize(cls, serialized):
         return cls(
             id=serialized["id"],
+            name=serialized["name"],
             execution_id=serialized["executionId"],
             assignee=None if serialized["assignee"] is None else serialized["assignee"],
             delegation_state=serialized["delegationState"],

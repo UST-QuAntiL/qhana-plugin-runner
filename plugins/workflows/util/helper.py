@@ -1,45 +1,38 @@
 import logging
-import threading
+import re
+
 import requests
-from typing import Callable
+from celery.utils.log import get_task_logger
 
-logger = logging.getLogger(__name__)
+TASK_LOGGER = get_task_logger(__name__)
 
 
-def periodic_thread_max_one(interval, fun: Callable, camunda_client, run=False):
-    """
-    Semi periodic function runner. Each function runs in a thread and every "interval" seconds after(!)
-    the last function finished. There can be at most one function running at the same time. Only runs while bpmn model
-    instance is active.
-    :param interval:
-    :param fun: The function to run
-    :param run: Used to avoid running the function in main process
-    :return:
-    """
+def get_form_variables(rendered_form, instance_variables):
+    form_variables = form_variables_from_html(rendered_form)
+    variables = instance_variables
 
-    if camunda_client.process_end:
-        return
+    for k in variables.copy().keys():
+        if k not in form_variables:
+            del variables[k]
 
-    thread = threading.Timer(
-        interval,
-        periodic_thread_max_one,
-        [interval, fun, camunda_client, True]
-    )
+    return variables
 
-    thread.daemon = True
 
-    if run:
-        fun()
+def form_variables_from_html(html):
+    variables = []
+    matches = re.findall(r'<input class="[^"]*" name="[^"]*"', html)
+    for match in matches:
+        variable_name = re.search(r'"[^"]*"$', match).group()[1:-1]
+        variables.append(variable_name)
 
-    thread.start()
-    return thread
+    return variables
 
 
 def endpoint_found(response):
     if not response or (response.status_code != 204 and (
             'message' in response.json() and response.json()['message'] == "HTTP 404 Not Found")):
-        logger.warning(f"Endpoint not found or failed {response.url}")
-        logger.warning(f"{response.json} / {response.text}")
+        TASK_LOGGER.warning(f"Endpoint not found or failed {response.url}")
+        TASK_LOGGER.warning(f"{response.json} / {response.text}")
         raise Exception
     else:
         return True
@@ -47,7 +40,7 @@ def endpoint_found(response):
 
 def endpoint_found_simple(response):
     if not response:
-        logger.warning("Endpoint not found or failed")
+        TASK_LOGGER.warning("Endpoint not found or failed")
         raise Exception
     else:
         return True
@@ -57,13 +50,3 @@ def request_json(url: str):
     response = requests.get(url)
     if endpoint_found(response):
         return response.json()
-
-
-def get_input_parameters():
-    parameters = {}
-    text = input("Input plugin parameters as \"key: value\" (type done to submit)\n")
-    while text.lower() != "done":
-        key, val = text.split(':', 1)
-        parameters[key] = val.strip()
-        text = input("")
-    return parameters

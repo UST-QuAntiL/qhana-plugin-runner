@@ -48,7 +48,7 @@ the name of the plugin.
 
 ![Example Linking](./docs/linking.png)
 
-### Output
+### Plugin Output
 
 It is possible to assign a variable to the output of a QHAna plugin. To do this,
 add an entry to the Output Parameters option of the service task. In the Process
@@ -64,7 +64,7 @@ section discusses how to select a specific result as input.
 
 ![Example Output](./docs/output.png)
 
-### Inputs
+### Plugin Inputs
 
 A QHAna plugin may have one or more inputs. To define inputs in the Camunda
 modeler, add an entry to the Input Parameters option of the service task.
@@ -90,6 +90,16 @@ plugin. (Variable name is not `qoutput.name`)
 You can add multiple inputs to the Input Parameters option of the service task.
 
 ![Example Inputs](./docs/inputs.png)
+
+
+### Workflow outputs
+
+To mark a variable as workflow output add the prefix `return.`. 
+
+Example:
+
+- `qoutput.someVariable` to `return.qoutput.someVariable`
+- `myVariable` to `return.myVariable`
 
 
 ### Human Tasks / Workflow Inputs
@@ -134,6 +144,10 @@ an unprocessable entity
 You can find examples in the `/bpmn` directory of the workflows plugin to get started.
 
 ## Changelog
+
+### v0.3.0
+- Mark workflow variables as workflow output
+- Plugin now terminates with a list of workflow output variables
 
 ### v0.2.0
 

@@ -6,12 +6,11 @@ logger = logging.getLogger(__name__)
 class BpmnHandler:
     def __init__(self, filename):
         self.filename = filename
-        self.bpmn = None
-        self.load()
+        self.bpmn = self.load()
 
     def load(self):
         """
         Loads the BPMN model at the specified location
         :return:
         """
-        self.bpmn = open("plugins/workflows/bpmn/" + self.filename, 'rb')
+        return open("plugins/workflows/bpmn/" + self.filename, 'rb')

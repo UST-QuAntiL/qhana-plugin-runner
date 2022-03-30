@@ -25,10 +25,10 @@
         <camunda:inputOutput>
           <camunda:inputParameter name="qinput.inputStr">
             <camunda:map>
-              <camunda:entry key="qoutput.inputHelloWorld1">plain</camunda:entry>
+              <camunda:entry key="return.qoutput.inputHelloWorld1">plain</camunda:entry>
             </camunda:map>
           </camunda:inputParameter>
-          <camunda:outputParameter name="qoutput.helloWorld1">${output}</camunda:outputParameter>
+          <camunda:outputParameter name="return.qoutput.helloWorld1">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_0a9w3v6</bpmn:incoming>
@@ -58,7 +58,7 @@
           </camunda:inputParameter>
           <camunda:inputParameter name="qinput.zip1Url">
             <camunda:map>
-              <camunda:entry key="qoutput.helloWorld1">name: out.txt</camunda:entry>
+              <camunda:entry key="return.qoutput.helloWorld1">name: out.txt</camunda:entry>
             </camunda:map>
           </camunda:inputParameter>
           <camunda:outputParameter name="qoutput.zipMerger1">${output}</camunda:outputParameter>
@@ -77,7 +77,7 @@
       <bpmn:errorEventDefinition id="ErrorEventDefinition_0lfzsf2" camunda:errorCodeVariable="zip-merger-errorCode" camunda:errorMessageVariable="zip-merger-errorMessage" />
     </bpmn:boundaryEvent>
     <bpmn:sequenceFlow id="Flow_0z4t38e" sourceRef="Event_1y1pplm" targetRef="Activity_14zn4pw" />
-    <bpmn:userTask id="Activity_14zn4pw" name="Review">
+    <bpmn:userTask id="Activity_14zn4pw" name="Workflow Return Variables">
       <bpmn:incoming>Flow_0z4t38e</bpmn:incoming>
       <bpmn:outgoing>Flow_0j2wmi1</bpmn:outgoing>
     </bpmn:userTask>
@@ -87,21 +87,8 @@
     <bpmn:userTask id="Activity_100bip4" name="input hello-world1" camunda:assignee="demo" camunda:candidateUsers="demo">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="qoutput.inputHelloWorld1" label="inputStr" type="string" defaultValue="example string" />
-          <camunda:formField id="sometest2" label="TEST" type="long">
-            <camunda:properties>
-              <camunda:property id="Property_1dru63b" value="fsdfsdfsd" />
-              <camunda:property id="Property_06cgv3v" value="dsfdsfdf" />
-            </camunda:properties>
-          </camunda:formField>
-          <camunda:formField id="color" label="Color" type="enum">
-            <camunda:value id="blue" name="Blue" />
-            <camunda:value id="red" name="Red" />
-          </camunda:formField>
+          <camunda:formField id="return.qoutput.inputHelloWorld1" label="inputStr" type="string" defaultValue="example string" />
         </camunda:formData>
-        <camunda:properties>
-          <camunda:property />
-        </camunda:properties>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1sqv81y</bpmn:incoming>
       <bpmn:incoming>Flow_1w6egii</bpmn:incoming>
@@ -122,11 +109,11 @@
       <bpmn:errorEventDefinition id="ErrorEventDefinition_1nxri44" />
     </bpmn:boundaryEvent>
     <bpmn:sequenceFlow id="Flow_16onbvf" sourceRef="Event_1u5jbdj" targetRef="Activity_0gg95gz" />
+    <bpmn:sequenceFlow id="Flow_1w6egii" sourceRef="Event_1wmynr9" targetRef="Activity_100bip4" />
     <bpmn:boundaryEvent id="Event_1wmynr9" attachedToRef="Activity_0l8vgkb">
       <bpmn:outgoing>Flow_1w6egii</bpmn:outgoing>
-      <bpmn:errorEventDefinition id="ErrorEventDefinition_1v5o2vb" />
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_0wojzu1" />
     </bpmn:boundaryEvent>
-    <bpmn:sequenceFlow id="Flow_1w6egii" sourceRef="Event_1wmynr9" targetRef="Activity_100bip4" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="test">
@@ -222,7 +209,7 @@
       <bpmndi:BPMNShape id="Activity_1tdslf7_di" bpmnElement="Activity_0gg95gz">
         <dc:Bounds x="470" y="300" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_057tlmg_di" bpmnElement="Event_1wmynr9">
+      <bpmndi:BPMNShape id="Event_11k0uv2_di" bpmnElement="Event_1wmynr9">
         <dc:Bounds x="692" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_11h94r9_di" bpmnElement="Event_1u5jbdj">

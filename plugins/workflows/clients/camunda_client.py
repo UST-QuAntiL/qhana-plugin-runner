@@ -1,10 +1,13 @@
 import datetime
 import logging
 import requests
+from celery.utils.log import get_task_logger
+
+from .. import conf as config
 from typing import Optional
 from ..util.bpmn_handler import BpmnHandler
 from ..datatypes.camunda_datatypes import Deployment, ProcessInstance, ExternalTask, CamundaConfig
-from ..util.helper import endpoint_found, endpoint_found_simple
+from ..util.helper import endpoint_found, endpoint_found_simple, request_json
 from dateutil import parser
 
 logger = logging.getLogger(__name__)
@@ -17,9 +20,9 @@ class CamundaClient:
     """
 
     def __init__(
-            self,
-            camunda_config: CamundaConfig,
-            bpmn_handler: Optional[BpmnHandler] = None,
+        self,
+        camunda_config: CamundaConfig,
+        bpmn_handler: Optional[BpmnHandler] = None,
     ):
         self.camunda_config = camunda_config
         self.bpmn_handler = bpmn_handler
@@ -124,7 +127,6 @@ class CamundaClient:
                                  json={"workerId": self.camunda_config.worker_id, "variables": result})
         endpoint_found(response)
 
-
     def get_task_local_variables(self, task: ExternalTask):
         """
         Gets all local variables of an external task
@@ -142,9 +144,25 @@ class CamundaClient:
         :param external_task
         :return:
         """
-        response = requests.get(f"{self.camunda_config.base_url}/process-instance/{external_task.process_instance_id}/variables/{name}")
+        response = requests.get(
+            f"{self.camunda_config.base_url}/process-instance/{external_task.process_instance_id}/variables/{name}")
         if endpoint_found(response):
             return response.json()["value"]
+
+    def get_instance_return_variables(self):
+        variables = request_json(
+            f"{self.camunda_config.base_url}/process-instance/{self.camunda_config.process_instance.id}/variables")
+        return_variables = []
+
+        for variable_key in variables.keys():
+            if variable_key.startswith(config['workflow_out']['prefix']):
+                return_variables.append(
+                    {
+                        variable_key: variables[variable_key]
+                    }
+                )
+
+        return return_variables
 
     def get_task_execution_id(self, task_id: str):
         """
@@ -179,8 +197,9 @@ class CamundaClient:
         Create a workflow instance from the deployed BPMN model
         :return:
         """
-        response = requests.post(f"{self.camunda_config.base_url}/process-definition/{self.camunda_config.deployment.process_definition_id}/start",
-                                 json={"variables": {}})
+        response = requests.post(
+            f"{self.camunda_config.base_url}/process-definition/{self.camunda_config.deployment.process_definition_id}/start",
+            json={"variables": {}})
         if endpoint_found(response):
             self.camunda_config.process_instance = ProcessInstance.deserialize(response.json())
 
@@ -204,7 +223,8 @@ class CamundaClient:
         Applying cascade to json doesn't work for some reason, multiple bug reports on the camunda forum open..
         :return:
         """
-        response = requests.delete(f"{self.camunda_config.base_url}/deployment/{self.camunda_config.deployment.id}?cascade={str(cascade).lower()}")
+        response = requests.delete(
+            f"{self.camunda_config.base_url}/deployment/{self.camunda_config.deployment.id}?cascade={str(cascade).lower()}")
         try:
             endpoint_found(response)
         except:

@@ -1,10 +1,15 @@
+import yaml
 from typing import Optional
+from celery.utils.log import get_task_logger
 from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
+conf = yaml.safe_load(open("plugins/workflows/config.yml"))
+TASK_LOGGER = get_task_logger(__name__)
+
 _plugin_name = "workflows"
-__version__ = "v0.2.0"
+__version__ = "v0.3.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 WORKFLOWS_BLP = SecurityBlueprint(
