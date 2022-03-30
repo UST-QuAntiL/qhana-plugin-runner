@@ -1,8 +1,10 @@
 # Workflow plugin for BPMN and Camunda
-Plugin: workflows@v0.2.0 ([changelog](#changelog))
+Plugin: workflows@v0.4.0 ([changelog](#changelog))
 
 
 ## Prerequisites
+
+Python >= 3.9
 
 Celery beat is required in order to run workflow instances.
 
@@ -122,6 +124,10 @@ The `Label` can be set to any value. The label is placed above the text box for 
 input in a QHAna form. `Default Value` is used for the text box for
 the input. Both can be left empty, but it is recommended to use the label.
 
+To display a select field within a QHAna form add the prefix `choice:` to the 
+`Default Value` field.
+Example: `choice: typeA, typeB, typeC`.
+
 ![Example Human Task Form](./docs/human-task-form.png)
 
 ### Exceptions
@@ -144,6 +150,9 @@ an unprocessable entity
 You can find examples in the `/bpmn` directory of the workflows plugin to get started.
 
 ## Changelog
+
+### v0.4.0
+- Support select form fields for QHAna forms
 
 ### v0.3.0
 - Mark workflow variables as workflow output

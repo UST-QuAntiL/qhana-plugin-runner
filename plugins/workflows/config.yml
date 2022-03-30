@@ -13,6 +13,8 @@ polling_rates:
 
 qhana_input:
   prefix: "qinput"
+  prefix_value_choice: "choice"
+  prefix_value_delimiter: ":"
   mode_text: "plain"
   mode_filename: "name"
   mode_datatype: "dataType"

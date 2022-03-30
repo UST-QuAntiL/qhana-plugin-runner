@@ -9,7 +9,7 @@ conf = yaml.safe_load(open("plugins/workflows/config.yml"))
 TASK_LOGGER = get_task_logger(__name__)
 
 _plugin_name = "workflows"
-__version__ = "v0.3.0"
+__version__ = "v0.4.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 WORKFLOWS_BLP = SecurityBlueprint(

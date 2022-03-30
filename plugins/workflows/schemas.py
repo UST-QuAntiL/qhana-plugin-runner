@@ -1,7 +1,13 @@
+import enum
+
 import marshmallow as ma
 from collections import OrderedDict
+
+from celery.utils.log import get_task_logger
+from flask import current_app
+from . import conf as config
 from marshmallow import post_load, INCLUDE
-from qhana_plugin_runner.api import MaBaseSchema
+from qhana_plugin_runner.api import MaBaseSchema, EnumField
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 
 
@@ -50,7 +56,26 @@ class AnyInputSchema(FrontendFormBaseSchema):
             params = {}
         inputs = {}
         for key, val in params.items():
-            if val["type"] == "String":
+            prefix = config["qhana_input"]["prefix_value_choice"]
+            prefix_delimiter = config["qhana_input"]["prefix_value_delimiter"]
+            if val["type"] == "String" and val["value"].startswith(f"{prefix}{prefix_delimiter}"):
+                choices = (val["value"][len(prefix)+len(prefix_delimiter):len(val["value"])]).split(",")
+                choices_dict = {}
+                for choice in choices:
+                    choices_dict[choice] = choice
+                choices_enum = enum.Enum('Enum', choices_dict)
+                inputs[key] = EnumField(
+                    choices_enum,
+                    required=True,
+                    allow_none=False,
+                    metadata={
+                        "label": f"{key}",
+                        "description": f"Workflow Input {key}",
+                        "input_type": "select",
+                    },
+                )
+                self.__setattr__(key, inputs[key])
+            elif val["type"] == "String":
                 inputs[key] = ma.fields.String(
                     required=True,
                     allow_none=False,

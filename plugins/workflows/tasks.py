@@ -1,15 +1,12 @@
 import ast
-import random
-import requests
 from typing import Optional
 from celery.utils.log import get_task_logger
 from plugins.workflows.clients.camunda_client import CamundaClient
-from plugins.workflows.config import CAMUNDA_BASE_URL, CAMUNDA_GENERAL_POLL_TIMEOUT
 from plugins.workflows.datatypes.camunda_datatypes import CamundaConfig, ProcessInstance
 from plugins.workflows import Workflows, conf as config
 from plugins.workflows.schemas import WorkflowsParametersSchema, InputParameters
 from plugins.workflows.util.bpmn_handler import BpmnHandler
-from plugins.workflows.watchers.human_task_watcher import human_task_watcher, run_human_task_watcher
+from plugins.workflows.watchers.human_task_watcher import run_human_task_watcher
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 

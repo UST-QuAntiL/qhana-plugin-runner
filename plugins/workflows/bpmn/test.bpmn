@@ -88,6 +88,7 @@
       <bpmn:extensionElements>
         <camunda:formData>
           <camunda:formField id="return.qoutput.inputHelloWorld1" label="inputStr" type="string" defaultValue="example string" />
+          <camunda:formField id="return.some_var" label="enum" type="string" defaultValue="choice: typeA, typeB, typeC, foo, bar, eins zwei drei" />
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1sqv81y</bpmn:incoming>
