@@ -42,6 +42,7 @@ class HumanTask:
     assignee: Optional[str]
     delegation_state: str
     process_instance_id: str
+    task_definition_key: str
 
     @classmethod
     def deserialize(cls, serialized):
@@ -52,6 +53,7 @@ class HumanTask:
             assignee=None if serialized["assignee"] is None else serialized["assignee"],
             delegation_state=serialized["delegationState"],
             process_instance_id=serialized["processInstanceId"],
+            task_definition_key=serialized["taskDefinitionKey"],
         )
 
 
@@ -76,13 +78,16 @@ class Deployment:
 class ProcessInstance:
     """
     id: The identifier of the process instance
+    definition_id:
     """
     id: str
+    definition_id: Optional[str]
 
     @classmethod
     def deserialize(cls, serialized):
         return cls(
-            id=serialized["id"]
+            id=serialized["id"],
+            definition_id=serialized["definitionId"]
         )
 
 

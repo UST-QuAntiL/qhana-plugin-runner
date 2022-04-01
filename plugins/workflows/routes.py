@@ -9,7 +9,7 @@ from marshmallow import EXCLUDE
 from flask.globals import request, current_app
 from flask.helpers import url_for
 from celery.canvas import chain
-from plugins.workflows import Workflows, WORKFLOWS_BLP
+from plugins.workflows import Workflows, WORKFLOWS_BLP, conf as config
 from plugins.workflows.schemas import WorkflowsParametersSchema, WorkflowsTaskResponseSchema, InputParameters, \
     AnyInputSchema
 from plugins.workflows.tasks import process_input, start_workflow
@@ -175,7 +175,10 @@ class DemoStepFrontend(MethodView):
 
         data = {}
         for key, val in form_params.items():
-            data[key] = val["value"]
+            prefix_file_url = config["qhana_input"]["prefix_value_file_url"]
+            prefix_delimiter = config["qhana_input"]["prefix_value_delimiter"]
+            if not (val["type"] == "String" and val["value"].startswith(f"{prefix_file_url}{prefix_delimiter}")):
+                data[key] = val["value"]
 
         schema = AnyInputSchema(form_params)
         return Response(
@@ -187,6 +190,60 @@ class DemoStepFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{WORKFLOWS_BLP.name}.DemoStepView", db_id=db_id),
+            )
+        )
+
+@WORKFLOWS_BLP.route("/<int:db_id>/demo-step-ui/bpmn_io")
+class DemoStepFrontend(MethodView):
+    """Micro frontend for the hello world plugin."""
+
+    @WORKFLOWS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the hello world plugin2."
+    )
+    @WORKFLOWS_BLP.arguments(
+        WorkflowsParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        """Return the micro frontend."""
+        return self.render(request.args, db_id, errors)
+
+    @WORKFLOWS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the hello world plugin2."
+    )
+    @WORKFLOWS_BLP.arguments(
+        WorkflowsParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, db_id, errors)
+
+    def render(self, data: Mapping, db_id: int, errors: dict):
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        if not data:
+            try:
+                bpmn_properties = ast.literal_eval(db_task.data["bpmn"])
+            except:
+                bpmn_properties = None
+
+        return Response(
+            render_template(
+                "bpmn_io.html",
+                values=bpmn_properties,
             )
         )
 

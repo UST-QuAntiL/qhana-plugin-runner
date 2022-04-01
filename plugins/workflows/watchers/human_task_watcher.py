@@ -58,7 +58,7 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
                         )
                     )
                     STORE.persist_task_result(
-                        db_id, result, "result.json", "workflow-output", "text/plain"
+                        db_id, result, "result.json", "workflow-output", "application/json"
                     )
 
                 save_task_result.s(
@@ -74,8 +74,16 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
 
             form_variables = get_form_variables(rendered_form, instance_variables)
 
+            process_definition_id = camunda_client.camunda_config.process_instance.definition_id
+
+            bpmn_properties = {
+                "bpmn_xml_url": f"{camunda_client.camunda_config.base_url}/process-definition/{process_definition_id}/xml",
+                "human_task_definition_key": human_task.task_definition_key
+            }
+
             task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
             task_data.data["form_params"] = str(form_variables)
+            task_data.data["bpmn"] = str(bpmn_properties)
             task_data.data["human_task_id"] = human_task.id
             task_data.save(commit=True)
 
