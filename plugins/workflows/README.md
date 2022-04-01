@@ -1,5 +1,5 @@
 # Workflow plugin for BPMN and Camunda
-Plugin: workflows@v0.5.0 ([changelog](#changelog))
+Plugin: workflows@v0.5.1 ([changelog](#changelog))
 
 
 ## Prerequisites
