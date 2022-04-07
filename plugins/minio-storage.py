@@ -14,6 +14,8 @@
 
 from collections.abc import Sized
 from datetime import timedelta
+from json import loads
+from os import environ
 from pathlib import Path
 from typing import IO, BinaryIO, Optional, TextIO, Union, cast
 
@@ -60,10 +62,13 @@ class MinioStore(FileStore, name="minio"):
 
     The minio client can be configured with the `MINIO_CLIENT` config key.
     The configuration is a mapping that is directly passed to `minio.Minio()`.
+    The client configuration can also be set via the environment variable
+    `MINIO_CLIENT`. The config needs to be encoded as a json object.
 
     All files will be stored in a single bucket. The bucket and all other
     settings of the storage provider use the `MINIO` config key. The default
     bucket can be configured by the setting `MINIO.bucket="custom-bucket"`.
+    The default bucket can also be set via the `MINIO_BUCKET` environment variable.
     """
 
     def __init__(self, app: Flask) -> None:
@@ -75,9 +80,13 @@ class MinioStore(FileStore, name="minio"):
         """Init the file store with the Flask app to get access to the flask config."""
         super().init_app(app)
         minio_config = app.config.get("MINIO_CLIENT", {})
+        env_config = environ.get("MINIO_CLIENT", None)
+        if env_config:
+            minio_config = loads(env_config)
         if not minio_config:
             raise ValueError("No configuration for the minio file store found.")
         self._minio_bucket = app.config.get("MINIO", {}).get("bucket", "experiment-data")
+        self._minio_bucket = environ.get("MINIO_BUCKET", self._minio_bucket)
         self._client = minio.Minio(**minio_config)
         if not self._client.bucket_exists(self._minio_bucket):
             self._client.make_bucket(self._minio_bucket)
