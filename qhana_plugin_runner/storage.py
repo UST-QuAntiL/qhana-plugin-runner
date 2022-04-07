@@ -368,8 +368,18 @@ class FileStoreRegistry(FileStoreInterface):
         """Init the file store with the Flask app to get access to the flask config."""
         self.app = app
         self._set_default_store_from_config()
-        for store in self._stores.values():
-            store.init_app(app)
+        failed_stores = set()
+        for key, store in self._stores.items():
+            try:
+                store.init_app(app)
+            except:
+                app.logger.warning(
+                    f"Failed to initialize File Store '{key}'. The file store will be removed.",
+                    exc_info=True,
+                )
+                failed_stores.add(key)
+        for key in failed_stores:
+            del self._stores[key]
 
     def _set_default_store_from_config(self):
         """Read and set the default store implementation to use from flask config."""
