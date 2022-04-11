@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from json import dumps
+from json import dumps, loads
 from typing import Mapping, Optional
 
 import marshmallow as ma
@@ -186,7 +186,7 @@ class ProcessView(MethodView):
     @FILE_UPLOAD_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
-        db_task = ProcessingTask(task_name=demo_task.name, parameters=dumps(arguments))
+        db_task = ProcessingTask(task_name=demo_task.name, parameters="")
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
@@ -194,24 +194,27 @@ class ProcessView(MethodView):
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
 
-        if "file" not in request.files:
-            raise ValueError("No file in request.")
+        try:
+            if "file" not in request.files:
+                raise ValueError("No file in request.")
 
-        file = request.files["file"]
+            file = request.files["file"]
 
-        if file.filename == "":
-            raise ValueError("No file selected.")
+            if file.filename == "":
+                raise ValueError("No file selected.")
 
-        if file:
-            filename = secure_filename(file.filename)
+            if file:
+                filename = secure_filename(file.filename)
 
-            STORE.persist_task_result(
-                db_task.id,
-                file.stream,
-                filename,
-                arguments["data_type"],
-                arguments["content_type"],
-            )
+                STORE.persist_task_result(
+                    db_task.id,
+                    file.stream,
+                    filename,
+                    arguments["data_type"],
+                    arguments["content_type"],
+                )
+        except Exception as err:
+            db_task.parameters = dumps({"error": str(err)})
 
         task.apply_async()
 
@@ -241,10 +244,14 @@ TASK_LOGGER = get_task_logger(__name__)
 def demo_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new demo task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    error_message: Optional[str] = loads(task_data.parameters or "{}").get("error", None)
 
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    return "Done"
+    if error_message is not None:
+        raise Exception(error_message)
+
+    return "File uploaded."
