@@ -9,8 +9,8 @@ from sqlalchemy import select, and_, join, func
 from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy.sql import expression
 
-from plugins.costume_loader_pkg.backend.attribute import Attribute
-from plugins.costume_loader_pkg.backend.database import Database
+from .attribute import Attribute
+from .database import Database
 
 MUSE_URL = "http://129.69.214.108/"
 

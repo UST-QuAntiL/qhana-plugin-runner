@@ -2,7 +2,7 @@ from typing import Callable
 
 import pennylane as qml
 
-from plugins.hybrid_ae_pkg.backend.quantum.pl import QNN1, QNN2, QNN3
+from ... import QNN1, QNN2, QNN3
 
 
 def create_qlayer(

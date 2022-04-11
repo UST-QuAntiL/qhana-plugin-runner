@@ -7,7 +7,7 @@ import pennylane as qml
 from celery.utils.log import get_task_logger
 from qiskit import IBMQ
 
-from plugins.quantum_k_means.backend.quantumKMeans import (
+from .quantumKMeans import (
     NegativeRotationQuantumKMeans,
     DestructiveInterferenceQuantumKMeans,
     StatePreparationQuantumKMeans,

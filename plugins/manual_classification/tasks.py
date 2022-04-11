@@ -6,7 +6,7 @@ import mimetypes
 
 from celery.utils.log import get_task_logger
 
-from plugins.manual_classification import ManualClassification
+from . import ManualClassification
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 

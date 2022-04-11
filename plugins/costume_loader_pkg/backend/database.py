@@ -5,7 +5,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.ext.automap import automap_base, AutomapBase
 from sqlalchemy.orm import Session, DeclarativeMeta
 
-from plugins.costume_loader_pkg.backend.singleton import Singleton
+from .singleton import Singleton
 
 
 class Database(Singleton):

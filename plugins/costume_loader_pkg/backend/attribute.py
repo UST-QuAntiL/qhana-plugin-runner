@@ -1,7 +1,7 @@
 import enum
 import logging
-from typing import Any, Optional
-from plugins.costume_loader_pkg.backend.taxonomy import Taxonomy, TaxonomyType
+from typing import Optional
+from .taxonomy import TaxonomyType
 
 """
 This class is an enum for all attributes.

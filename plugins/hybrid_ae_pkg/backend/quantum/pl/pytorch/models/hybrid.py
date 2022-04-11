@@ -6,10 +6,7 @@ from typing import Iterator, Dict, List, Union, BinaryIO, IO
 import torch
 import pennylane as qml
 
-from plugins.hybrid_ae_pkg.backend.quantum.pl.pytorch.models.common_functions import (
-    create_qlayer,
-    qnn_constructors,
-)
+from .common_functions import create_qlayer, qnn_constructors
 
 
 class HybridAutoencoder(torch.nn.Module):
