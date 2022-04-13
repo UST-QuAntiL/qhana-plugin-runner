@@ -95,7 +95,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
 {%- endmacro %}
 
 {% macro render_form(action="", method="post", target="api", class="qhana-form") -%}
-<form action="{{action}}" method="{{method}}" data-target="{{target}}" class="{{class}}">
+<form action="{{action}}" method="{{method}}" data-target="{{target}}" class="{{class}}" enctype="multipart/form-data">
   {{ caller() }}
 </form>
 {%- endmacro %}

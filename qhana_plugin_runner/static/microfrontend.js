@@ -365,9 +365,9 @@ function onFormSubmit(event, dataInputs, privateInputs) {
 }
 
 function submitFormData(formData, formAction, formMethod) {
-
-    let data = new URLSearchParams(formData);
     if (formMethod.toLowerCase() === "get") {
+        let data = new URLSearchParams(formData);
+
         data.forEach((value, key) => {
             formAction.searchParams.append(key, value);
         })
@@ -375,9 +375,8 @@ function submitFormData(formData, formAction, formMethod) {
     }
 
     return fetch(formAction.toString(), {
-        body: data.toString(),
+        body: formData,
         method: formMethod,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
 }
 
