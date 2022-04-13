@@ -14,6 +14,10 @@
 
 """Functions for opening files from external URLs."""
 
+from re import Pattern
+
+from flask import Flask
+from flask.globals import current_app
 from requests import Session
 from requests.models import Response
 
@@ -28,10 +32,18 @@ def open_url(url: str, raise_on_error_status=True, **kwargs) -> Response:
     It is best to use this function in a ``with``-statement to get autoclosing behaviour
     for the returned response. The returned response acts as a context manager.
 
-    For streaming access set ``stream=True``. 
+    For streaming access set ``stream=True``.
 
     An appropriate exception is raised for an error status. To ignore an error status set ``raise_on_error_status=False``.
     """
+    if current_app:
+        # apply rewrite rules from the current app context in sequence
+        app: Flask = current_app
+        pattern: Pattern
+        replacement: str
+        for pattern, replacement in app.config.get("URL_REWRITE_RULES", []):
+            url = pattern.sub(replacement, url)
+            
     url_data = REQUEST_SESSION.get(url, **kwargs)
     if raise_on_error_status:
         url_data.raise_for_status()

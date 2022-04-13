@@ -15,8 +15,10 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Module containing default config values."""
+import re
 from logging import INFO, WARNING
 from os import urandom
+from typing import Sequence, Tuple
 
 from .celery_config import CELERY_DEBUG_CONFIG, CELERY_PRODUCTION_CONFIG
 from .smorest_config import SmorestDebugConfig, SmorestProductionConfig
@@ -45,6 +47,10 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
 
     DEFAULT_FILE_STORE = "local_filesystem"
     FILE_STORE_ROOT_PATH = "files"
+
+    # URL rewrite rules are (pattern, replacement) pairs that are applied
+    # in order to URLs opened with qhana_plugin_runner.requests.open_url
+    URL_REWRITE_RULES: Sequence[Tuple[re.Pattern, str]] = []
 
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):

@@ -16,7 +16,9 @@
 
 """Root module containing the flask app factory."""
 import os
+import re
 from json import load as load_json
+from json import loads
 from logging import WARNING, Formatter, Handler, Logger, getLogger
 from logging.config import dictConfig
 from os import environ, makedirs
@@ -32,8 +34,8 @@ from tomlkit.api import parse as parse_toml
 
 from . import api, babel, celery, db, requests
 from .api import jwt_helper
-from .markdown import register_markdown_filter
 from .licenses import register_licenses
+from .markdown import register_markdown_filter
 from .plugins_cli import register_plugin_cli_blueprint
 from .storage import register_file_store
 from .util.config import DebugConfig, ProductionConfig
@@ -99,9 +101,23 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         # load database URI from env vars
         if "SQLALCHEMY_DATABASE_URI" in os.environ:
             config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLALCHEMY_DATABASE_URI"]
+
+        if "URL_MAP" in os.environ:
+            config["URL_REWRITE_RULES"] = loads(os.environ["URL_MAP"])
     else:
         # load the test config if passed in
         config.from_mapping(test_config)
+
+    if isinstance(config.get("URL_REWRITE_RULES"), Mapping):
+        # rewrite mapping to tuple sequence and precompile regex patterns
+        url_map = config["URL_REWRITE_RULES"]
+        config["URL_REWRITE_RULES"] = [
+            (re.compile(key), value)  # pattern, replacement pairs
+            for key, value in url_map.items()
+            if isinstance(key, str) and isinstance(value, str)  # only str, str allowed
+        ]
+        if len(config["URL_REWRITE_RULES"]) != len(url_map):
+            pass  # TODO some rewrite rules were dismissed as invalid!
 
     # End Loading config #################
 
