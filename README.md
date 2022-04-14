@@ -340,8 +340,11 @@ Server and worker containers with the same plugin configuration need to use the 
 The broker can be configured using the `BROKER_URL` and the `RESULT_BACKEND` environment variable.
 
 The database to use can be configured using the `SQLALCHEMY_DATABASE_URI` environment variable.
-SQLAlchemy is used wich supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.
+SQLAlchemy is used which supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.
 Database drivers can be installed by using plugins that specify that driver as an install requirement.
+
+The default file store can be configured with the `DEFAULT_FILE_STORE` environment variable.
+This defaults to `local_filesystem`.
 
 
 ### Running the Plugin-Runner with Docker Compose
