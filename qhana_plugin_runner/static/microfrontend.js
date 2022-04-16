@@ -61,6 +61,7 @@ function onLoadCssMessage(data, state) {
         head.appendChild(styleLink);
     });
     state.heightUnchangedCount = 0;
+    document.body.style.background = "transparent";
     monitorHeightChanges(state);
 }
 
