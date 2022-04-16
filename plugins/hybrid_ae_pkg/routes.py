@@ -7,9 +7,9 @@ from flask import url_for, request, Response, render_template, redirect
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.hybrid_ae_pkg import HybridAutoencoderPlugin, HA_BLP
-from plugins.hybrid_ae_pkg.tasks import hybrid_autoencoder_pennylane_task
-from plugins.hybrid_ae_pkg.schemas import (
+from . import HybridAutoencoderPlugin, HA_BLP
+from .tasks import hybrid_autoencoder_pennylane_task
+from .schemas import (
     HybridAutoencoderTaskResponseSchema,
     HybridAutoencoderPennylaneRequestSchema,
 )

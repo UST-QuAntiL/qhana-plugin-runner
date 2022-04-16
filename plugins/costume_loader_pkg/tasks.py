@@ -5,17 +5,13 @@ from zipfile import ZipFile
 
 import flask
 from celery.utils.log import get_task_logger
-from plugins.costume_loader_pkg.backend.attribute import Attribute
-from plugins.costume_loader_pkg.backend.database import Database
-from plugins.costume_loader_pkg.backend.entity import EntityFactory
+from .backend.attribute import Attribute
+from .backend.database import Database
+from .backend.entity import EntityFactory
 
-from plugins.costume_loader_pkg import CostumeLoader
-from plugins.costume_loader_pkg.backend.taxonomy import Taxonomy, TaxonomyType
-from plugins.costume_loader_pkg.schemas import (
-    InputParametersSchema,
-    InputParameters,
-    CostumeType,
-)
+from . import CostumeLoader
+from .backend.taxonomy import Taxonomy, TaxonomyType
+from .schemas import InputParametersSchema, InputParameters, CostumeType
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata

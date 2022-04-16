@@ -7,8 +7,9 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   qhana_plugin_runner.api.extra_fields
    qhana_plugin_runner.api.files_api
-   qhana_plugin_runner.api.jwt
+   qhana_plugin_runner.api.jwt_helper
    qhana_plugin_runner.api.plugin_schemas
    qhana_plugin_runner.api.plugins_api
    qhana_plugin_runner.api.tasks_api

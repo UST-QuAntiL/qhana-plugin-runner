@@ -16,12 +16,28 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List
+from typing import Any, Dict, List
 
 import marshmallow as ma
+from marshmallow.validate import Regexp
+from typing_extensions import Literal
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import MaBaseSchema
+
+
+class PluginType(Enum):
+    """Type of the plugin.
+
+    Deprecation Warning:
+        "simple" and "complex" are deprecated and should be replaced with "processing"!
+    """
+
+    simple = "simple"
+    complex = "complex"
+    processing = "processing"
+    visualization = "visualization"
+    conversion = "conversion"
 
 
 @dataclass
@@ -29,6 +45,11 @@ class DataMetadata:
     data_type: str
     content_type: List[str]
     required: bool
+
+
+@dataclass
+class InputDataMetadata(DataMetadata):
+    parameter: str
 
 
 class DataMetadataSchema(MaBaseSchema):
@@ -50,6 +71,78 @@ class DataMetadataSchema(MaBaseSchema):
         allow_none=False,
         metadata={"description": "If the data is required or not."},
     )
+
+
+class InputDataMetadataSchema(DataMetadataSchema):
+    parameter = ma.fields.String(
+        required=False,  # FIXME make this required once all plugins use this
+        allow_none=False,
+        metadata={"description": "The parameter where the input should be available at."},
+    )
+
+
+@dataclass
+class PluginDependencyMetadata:
+    parameter: str
+    name: str
+    version: str
+    tags: List[str]
+    type: PluginType
+    required: bool
+
+
+class PluginDependencyMetadataSchema(MaBaseSchema):
+    parameter = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "The parameter where the plugin url should be available at."
+        },
+    )
+    type = EnumField(
+        PluginType,
+        required=False,
+        allow_none=False,
+        metadata={"description": "Type of the plugin dependency."},
+    )
+    tags = ma.fields.List(
+        ma.fields.String,
+        required=False,
+        allow_none=False,
+        metadata={
+            "description": "A list of tags required to match a plugin. Tags startign with '!' must not be present on the plugin."
+        },
+    )
+    name = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "description": "The name of the plugin dependency. Must be an exact match."
+        },
+    )
+    version = ma.fields.String(
+        required=False,
+        allow_none=False,
+        validate=Regexp(
+            r"(>=?)?(v?[0-9]+(\.[0-9]+(\.[0-9]+)))(?:\s+(<=?)(v?[0-9]+(\.[0-9]+(\.[0-9]+))))?"
+        ),
+        metadata={
+            "description": "The version of the plugin dependency. Examples: 'v1' (matches v1.?.?), 'v1.2.0', '>=v1.1.3', '>=v1.1.3 <v2.0.0'"
+        },
+    )
+    required = ma.fields.Boolean(
+        required=True,
+        allow_none=False,
+        metadata={"description": "If the data is required or not."},
+    )
+
+    @ma.post_dump()
+    def remove_empty_attributes(self, data: Dict[str, Any], **kwargs):
+        """Remove result attributes from serialized tasks that have not finished."""
+        for attr in ("name", "type", "version", "tags"):
+            if data[attr] == None:
+                del data[attr]
+        return data
 
 
 class ProgressMetadataSchema(MaBaseSchema):
@@ -104,8 +197,9 @@ class StepMetadataSchema(MaBaseSchema):
 class EntryPoint:
     href: str
     ui_href: str
-    data_input: List[DataMetadata] = field(default_factory=list)
+    data_input: List[InputDataMetadata] = field(default_factory=list)
     data_output: List[DataMetadata] = field(default_factory=list)
+    plugin_dependencies: List[PluginDependencyMetadata] = field(default_factory=list)
 
 
 @dataclass
@@ -137,9 +231,17 @@ class EntryPointSchema(MaBaseSchema):
             "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
     )
+    plugin_dependencies = ma.fields.List(
+        ma.fields.Nested(
+            PluginDependencyMetadataSchema,
+            required=True,
+            allow_none=False,
+            metadata={"description": "A list of possible plugin dependencies inputs."},
+        )
+    )
     data_input = ma.fields.List(
         ma.fields.Nested(
-            DataMetadataSchema,
+            InputDataMetadataSchema,
             required=True,
             allow_none=False,
             metadata={"description": "A list of possible data inputs."},
@@ -155,18 +257,14 @@ class EntryPointSchema(MaBaseSchema):
     )
 
 
-class PluginType(Enum):
-    simple = "simple"
-    complex = "complex"
-
-
 @dataclass
 class PluginMetadata:
     title: str
     description: str
     name: str
     version: str
-    type: PluginType
+    # TODO replace literal with PluginType after removing deprecated values
+    type: Literal[PluginType.processing, PluginType.visualization, PluginType.conversion]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
 

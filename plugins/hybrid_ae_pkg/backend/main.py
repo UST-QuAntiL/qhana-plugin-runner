@@ -9,7 +9,7 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
-from plugins.hybrid_ae_pkg.backend.quantum.qiskit.hybrid import ClassicalAutoEncoder
+from .quantum.qiskit.hybrid import ClassicalAutoEncoder
 
 
 # TODO: dont train in the 0th epoch

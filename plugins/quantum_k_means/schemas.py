@@ -3,7 +3,7 @@ from enum import Enum
 import marshmallow as ma
 from marshmallow import post_load
 
-from plugins.quantum_k_means.backend.clustering import QuantumBackends
+from .backend.clustering import QuantumBackends
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,

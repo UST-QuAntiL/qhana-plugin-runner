@@ -9,6 +9,7 @@ Submodules
 
    qhana_plugin_runner.plugin_utils.attributes
    qhana_plugin_runner.plugin_utils.entity_marshalling
+   qhana_plugin_runner.plugin_utils.zip_utils
 
 Module contents
 ---------------

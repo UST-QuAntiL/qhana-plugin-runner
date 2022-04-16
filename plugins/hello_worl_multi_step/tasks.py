@@ -5,7 +5,7 @@ from json import loads
 
 from celery.utils.log import get_task_logger
 
-from plugins.hello_worl_multi_step import HelloWorldMultiStep
+from . import HelloWorldMultiStep
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 

@@ -20,8 +20,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
 )
 
-from plugins.manual_classification import MANUAL_CLASSIFICATION_BLP, ManualClassification
-from plugins.manual_classification.schemas import (
+from . import MANUAL_CLASSIFICATION_BLP, ManualClassification
+from .schemas import (
     ResponseSchema,
     TaskResponseSchema,
     LoadParametersSchema,
@@ -34,11 +34,7 @@ from qhana_plugin_runner.tasks import (
     save_task_result,
 )
 
-from plugins.manual_classification.tasks import (
-    pre_render_classification,
-    add_class,
-    save_classification,
-)
+from .tasks import pre_render_classification, add_class, save_classification
 
 
 TASK_LOGGER = get_task_logger(__name__)

@@ -5,7 +5,7 @@ import numpy as np
 # import matplotlib.pyplot as plt
 import pennylane as qml
 import random
-from plugins.quantum_k_means.backend.tools import pl_samples_to_counts
+from .tools import pl_samples_to_counts
 
 
 TASK_LOGGER = get_task_logger(__name__)

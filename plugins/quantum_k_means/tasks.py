@@ -5,19 +5,15 @@ from typing import Optional
 
 from celery.utils.log import get_task_logger
 
-from plugins.quantum_k_means import QKMeans
-from plugins.quantum_k_means.backend.clustering import (
+from . import QKMeans
+from .backend.clustering import (
     Clustering,
     NegativeRotationQuantumKMeansClustering,
     DestructiveInterferenceQuantumKMeansClustering,
     StatePreparationQuantumKMeansClustering,
     PositiveCorrelationQuantumKMeansClustering,
 )
-from plugins.quantum_k_means.schemas import (
-    InputParameters,
-    InputParametersSchema,
-    VariantEnum,
-)
+from .schemas import InputParameters, InputParametersSchema, VariantEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (

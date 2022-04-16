@@ -3,7 +3,6 @@ from typing import Mapping
 
 import flask
 from celery.canvas import chain
-from celery.result import AsyncResult
 from flask import Response, redirect
 from flask.globals import request
 from flask.helpers import url_for
@@ -11,13 +10,9 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.costume_loader_pkg import COSTUME_LOADER_BLP, CostumeLoader
-from plugins.costume_loader_pkg.schemas import (
-    InputParameters,
-    InputParametersSchema,
-    TaskResponseSchema,
-)
-from plugins.costume_loader_pkg.tasks import loading_task
+from . import COSTUME_LOADER_BLP, CostumeLoader
+from .schemas import InputParameters, InputParametersSchema, TaskResponseSchema
+from .tasks import loading_task
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
