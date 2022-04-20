@@ -26,7 +26,7 @@ def run_human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
     if camunda_client.is_process_active():
         human_task_watcher\
             .s(db_id, camunda_config.to_dict())\
-            .apply_async(countdown=config['polling_rates']['camunda_general'])
+            .apply_async(countdown=config['polling_rates']['external_watcher'])
 
         TASK_LOGGER.info(f"Started human task watcher with db_id: '{db_id}'")
 
@@ -46,6 +46,7 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
         if (human_task.delegation_state == "PENDING" or human_task.delegation_state is None) and \
                 human_task.process_instance_id == camunda_client.camunda_config.process_instance.id:
 
+            # Save result file with workflow instance variables marked as output
             if human_task.name == config['workflow_out']['camunda_user_task_name']:
                 return_variables = camunda_client.get_instance_return_variables()
 
@@ -72,6 +73,7 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
             instance_variables = requests.get(
                 f"{camunda_client.camunda_config.base_url}/task/{human_task.id}/form-variables").json()
 
+            # Extract form variables from the rendered form. Cannot use camunda endpoint for form variables (broken)
             form_variables = get_form_variables(rendered_form, instance_variables)
 
             process_definition_id = camunda_client.camunda_config.process_instance.definition_id
@@ -88,8 +90,8 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
             task_data.save(commit=True)
 
             # TODO: Remove
-            href = f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/demo-step-process/"
-            ui_href = f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/demo-step-ui/"
+            href = f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-process/"
+            ui_href = f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-ui/"
 
             # Add new sub-step task for input gathering
             new_sub_step_task = add_step.s(
@@ -106,5 +108,5 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
 
     run_human_task_watcher.apply_async(
         (db_id, camunda_config),
-        countdown=5.0,
+        countdown=config['polling_rates']['external_watcher'],
     )

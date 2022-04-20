@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_09wj7fi" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.11.1" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.15.0">
-  <bpmn:process id="test" isExecutable="true">
+  <bpmn:process id="demo" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1">
       <bpmn:outgoing>Flow_02ahp08</bpmn:outgoing>
     </bpmn:startEvent>
@@ -89,7 +89,7 @@
         <camunda:formData>
           <camunda:formField id="return.qoutput.inputHelloWorld1" label="inputStr" type="string" defaultValue="example string" />
           <camunda:formField id="return.some_var" label="enum" type="string" defaultValue="file_url:: workflow-output, text/plain" />
-          <camunda:formField id="enum_var" label="Test enum" type="string" defaultValue="enum:: test_input: Test Input" />
+          <camunda:formField id="enum_var" label="Test enum" type="string" defaultValue="enum:: test_input: Test Input, other_input: Other Input, a: A, b: B, c: C" />
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_1sqv81y</bpmn:incoming>
@@ -118,7 +118,7 @@
     </bpmn:boundaryEvent>
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="test">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="demo">
       <bpmndi:BPMNEdge id="Flow_1w6egii_di" bpmnElement="Flow_1w6egii">
         <di:waypoint x="710" y="102" />
         <di:waypoint x="710" y="82" />

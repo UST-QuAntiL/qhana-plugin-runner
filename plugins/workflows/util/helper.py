@@ -1,6 +1,4 @@
-import logging
 import re
-
 import requests
 from celery.utils.log import get_task_logger
 
@@ -8,6 +6,9 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_form_variables(rendered_form, instance_variables):
+    """
+    Due to Camunda not returning only form variables for the form variables endpoint, extract from rendered form instead
+    """
     form_variables = form_variables_from_html(rendered_form)
     variables = instance_variables
 
@@ -19,6 +20,9 @@ def get_form_variables(rendered_form, instance_variables):
 
 
 def form_variables_from_html(html):
+    """
+    Extract form variables form rendered form
+    """
     variables = []
     matches = re.findall(r'<input class="[^"]*" name="[^"]*"', html)
     for match in matches:
@@ -29,6 +33,9 @@ def form_variables_from_html(html):
 
 
 def endpoint_found(response):
+    """
+    Checks if request was successful
+    """
     if not response or (response.status_code != 204 and (
             'message' in response.json() and response.json()['message'] == "HTTP 404 Not Found")):
         TASK_LOGGER.warning(f"Endpoint not found or failed {response.url}")
@@ -39,6 +46,9 @@ def endpoint_found(response):
 
 
 def endpoint_found_simple(response):
+    """
+    Simple check if request was successful, e.g., if the response is plain text
+    """
     if not response:
         TASK_LOGGER.warning("Endpoint not found or failed")
         raise Exception
@@ -46,7 +56,13 @@ def endpoint_found_simple(response):
         return True
 
 
-def request_json(url: str):
-    response = requests.get(url)
+def request_json(url: str, post: bool = False, **kwargs):
+    """
+    Call endpoint and return json contents
+    """
+    if post:
+        response = requests.post(url, **kwargs)
+    else:
+        response = requests.get(url)
     if endpoint_found(response):
         return response.json()

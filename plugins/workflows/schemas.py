@@ -49,19 +49,36 @@ class WorkflowsParametersSchema(FrontendFormBaseSchema):
         return InputParameters(**data)
 
 
+# TODO: Cleanup
 class AnyInputSchema(FrontendFormBaseSchema):
     def __init__(self, params=None):
         super().__init__(unknown=INCLUDE)
+
         if params is None:
             params = {}
+
         inputs = {}
+
         for key, val in params.items():
             prefix_choices = config["qhana_input"]["prefix_value_choice"]
             prefix_enum = config["qhana_input"]["prefix_value_enum"]
             prefix_file_url = config["qhana_input"]["prefix_value_file_url"]
             prefix_delimiter = config["qhana_input"]["prefix_value_delimiter"]
+
+            if not val["value"]:
+                inputs[key] = ma.fields.String(
+                    required=True,
+                    allow_none=False,
+                    metadata={
+                        "label": f"{key}",
+                        "description": f"Workflow Input {key}",
+                        "input_type": "text",
+                    }
+                )
+                self.__setattr__(key, inputs[key])
+                continue
             if val["type"] == "String" and val["value"].startswith(f"{prefix_choices}{prefix_delimiter}"):
-                choices = (val["value"][len(prefix_choices)+len(prefix_delimiter):len(val["value"])]).split(",")
+                choices = (val["value"][len(prefix_choices) + len(prefix_delimiter):len(val["value"])]).split(",")
                 choices_dict = {}
                 for choice in choices:
                     choices_dict[choice] = choice

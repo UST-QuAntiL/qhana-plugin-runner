@@ -20,6 +20,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 TASK_LOGGER = get_task_logger(__name__)
 
+
 @WORKFLOWS_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
@@ -111,10 +112,8 @@ class ProcessView(MethodView):
             task_name=start_workflow.name,
             parameters=WorkflowsParametersSchema().dumps(input_params)
         )
-        current_app.logger.info(f"/////////////////////////TEST/////////////// PARAM {db_task.parameters}")
         db_task.save(commit=True)
-        # | save_task_result.s(db_id=db_task.id)
-        task: chain = start_workflow.s(db_id=db_task.id)  # | save_task_result.s(db_id=db_task.id)
+        task: chain = start_workflow.s(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
 
         task.apply_async()
@@ -125,12 +124,12 @@ class ProcessView(MethodView):
         )
 
 
-@WORKFLOWS_BLP.route("/<int:db_id>/demo-step-ui/")
+@WORKFLOWS_BLP.route("/<int:db_id>/human-task-ui/")
 class DemoStepFrontend(MethodView):
-    """Micro frontend for the hello world plugin."""
+    """Micro frontend for human tasks."""
 
     @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the hello world plugin2."
+        HTTPStatus.OK, description="Micro frontend of a workflow human task."
     )
     @WORKFLOWS_BLP.arguments(
         WorkflowsParametersSchema(
@@ -145,7 +144,7 @@ class DemoStepFrontend(MethodView):
         return self.render(request.args, db_id, errors)
 
     @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the hello world plugin2."
+        HTTPStatus.OK, description="Micro frontend of a workflow human task."
     )
     @WORKFLOWS_BLP.arguments(
         WorkflowsParametersSchema(
@@ -160,7 +159,6 @@ class DemoStepFrontend(MethodView):
         return self.render(request.form, db_id, errors)
 
     def render(self, data: Mapping, db_id: int, errors: dict):
-        # current_app.logger.info(f".")
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -173,14 +171,17 @@ class DemoStepFrontend(MethodView):
             except:
                 form_params = None
 
+        # TODO: Cleanup
         data = {}
         for key, val in form_params.items():
             prefix_file_url = config["qhana_input"]["prefix_value_file_url"]
             prefix_delimiter = config["qhana_input"]["prefix_value_delimiter"]
-            if not (val["type"] == "String" and val["value"].startswith(f"{prefix_file_url}{prefix_delimiter}")):
-                data[key] = val["value"]
+            if val["value"]:
+                if not (val["type"] == "String" and val["value"].startswith(f"{prefix_file_url}{prefix_delimiter}")):
+                    data[key] = val["value"]
 
         schema = AnyInputSchema(form_params)
+
         return Response(
             render_template(
                 "workflows_template.html",
@@ -193,12 +194,13 @@ class DemoStepFrontend(MethodView):
             )
         )
 
-@WORKFLOWS_BLP.route("/<int:db_id>/demo-step-ui/bpmn_io")
+
+@WORKFLOWS_BLP.route("/<int:db_id>/human-task-ui/bpmn_io")
 class DemoStepFrontend(MethodView):
-    """Micro frontend for the hello world plugin."""
+    """Micro frontend for bpmn io."""
 
     @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the hello world plugin2."
+        HTTPStatus.OK, description="Micro frontend for bpmn io."
     )
     @WORKFLOWS_BLP.arguments(
         WorkflowsParametersSchema(
@@ -213,7 +215,7 @@ class DemoStepFrontend(MethodView):
         return self.render(request.args, db_id, errors)
 
     @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the hello world plugin2."
+        HTTPStatus.OK, description="Micro frontend for bpmn io."
     )
     @WORKFLOWS_BLP.arguments(
         WorkflowsParametersSchema(
@@ -248,7 +250,7 @@ class DemoStepFrontend(MethodView):
         )
 
 
-@WORKFLOWS_BLP.route("/<int:db_id>/demo-step-process/")
+@WORKFLOWS_BLP.route("/<int:db_id>/human-task-process/")
 class DemoStepView(MethodView):
     """Start a long running processing task."""
 
@@ -256,7 +258,6 @@ class DemoStepView(MethodView):
     @WORKFLOWS_BLP.response(HTTPStatus.OK, WorkflowsTaskResponseSchema())
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
-        """Start the demo task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
