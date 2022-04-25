@@ -28,7 +28,6 @@ from sqlalchemy.sql.schema import (
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from ..db import DB, REGISTRY
-from .mutable_json import MutableJSON
 
 
 @REGISTRY.mapped
@@ -84,7 +83,7 @@ class TaskData:
     )
     key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
     value: Union[dict, list, str, float, int, bool, None] = field(
-        metadata={"sa": Column(sql.JSON)}  # TODO
+        metadata={"sa": Column(sql.JSON)}
     )
 
 
