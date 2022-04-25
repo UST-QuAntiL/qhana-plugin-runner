@@ -20,16 +20,15 @@ from sqlalchemy.orm import relation, relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.sql import sqltypes as sql
-from sqlalchemy.sql.expression import null, select
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.schema import (
     Column,
     ForeignKey,
-    ForeignKeyConstraint,
-    PrimaryKeyConstraint,
 )
-from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
+from sqlalchemy.ext.associationproxy import association_proxy
 
 from ..db import DB, REGISTRY
+from .mutable_json import MutableJSON
 
 
 @REGISTRY.mapped
@@ -85,7 +84,7 @@ class TaskData:
     )
     key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
     value: Union[dict, list, str, float, int, bool, None] = field(
-        metadata={"sa": Column(sql.JSON())}
+        metadata={"sa": Column(sql.JSON)}  # TODO
     )
 
 
