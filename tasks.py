@@ -291,6 +291,8 @@ def start_gunicorn(c, workers=1, log_level="info", docker=False):
     """Start the gunicorn server.
 
     This task is intended to be run in docker.
+    The gunicorn server port defaults to 8080 but can be changed by setting
+    the SERVER_PORT environment variable.
 
     Args:
         c (Context): task context
@@ -298,6 +300,10 @@ def start_gunicorn(c, workers=1, log_level="info", docker=False):
         log_level (str, optional): the log level to output in console. Defaults to "info".
         docker (bool, optional): set this to True if running inside of docker. Defaults to false.
     """
+    server_port: str = environ.get("SERVER_PORT", "8080")
+    assert match(
+        r"[1-9][0-9]*", server_port
+    ), f"The given server port '{server_port}' does not have the right format! (must be a valid port number)"
     cmd = [
         "python",
         "-m",
@@ -309,7 +315,7 @@ def start_gunicorn(c, workers=1, log_level="info", docker=False):
         "-w",
         environ.get("GUNICORN_WORKERS", str(workers)),
         "-b",
-        "0.0.0.0:8080",
+        f"0.0.0.0:{server_port}",
         "--log-level",
         log_level.lower(),
         "--error-logfile=-",
