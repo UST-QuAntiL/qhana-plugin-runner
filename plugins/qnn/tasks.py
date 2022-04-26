@@ -83,7 +83,7 @@ def entangling_layer(nqubits):
         qml.CNOT(wires=[i, i + 1])
 
 
-def cost_from_output(weights_flat, net_out_list, labels):
+def cost_from_output(net_out_list, labels):
     """Cost as a function of the list of network output"""
 
     log_like = np.sum(net_out_list * labels)
@@ -98,6 +98,17 @@ def accuracy(predictions, labels):
     return np.sum(predicted_digits == label_digits) / len(label_digits)
 
 
+def twospirals(n_points, noise=0.7, turns=1.52):
+    """Returns the two spirals dataset."""
+    n = np.sqrt(np.random.rand(n_points, 1)) * turns * (2 * np.pi)
+    d1x = -np.cos(n) * n + np.random.rand(n_points, 1) * noise
+    d1y = np.sin(n) * n + np.random.rand(n_points, 1) * noise
+    return (
+        np.vstack((np.hstack((d1x, d1y)), np.hstack((-d1x, -d1y)))),
+        np.hstack((np.zeros(n_points).astype(int), np.ones(n_points).astype(int))),
+    )
+
+
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new QNN calculation task with db id '{db_id}'")
@@ -107,15 +118,35 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
     input_params: InputParameters = QNNParametersSchema().loads(task_data.parameters)
-    entity_points_url = input_params.entity_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
-    )
-    clusters_url = input_params.clusters_url
-    TASK_LOGGER.info(f"Loaded input parameters from db: clusters_url='{clusters_url}'")
-    # load data from file
-    entity_points = open_url(entity_points_url).json()
-    clusters_entities = open_url(clusters_url).json()
+
+    datasets = None
+    if input_params.use_default_dataset:
+        # spiral dataset
+        datasets = twospirals(2000, turns=1.52)
+    else:
+        # get data from file
+        entity_points_url = input_params.entity_points_url
+        TASK_LOGGER.info(
+            f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
+        )
+        clusters_url = input_params.clusters_url
+        TASK_LOGGER.info(
+            f"Loaded input parameters from db: clusters_url='{clusters_url}'"
+        )
+        # load data from file
+        entity_points = open_url(entity_points_url).json()
+        clusters_entities = open_url(clusters_url).json()
+
+        # get data
+        clusters = {}
+        for ent in clusters_entities:
+            clusters[ent["ID"]] = ent["cluster"]
+        points = []
+        labels = []
+        for ent in entity_points:
+            points.append(ent["point"])
+            labels.append(clusters[ent["ID"]])
+        datasets = (points, np.array(labels))
 
     n_qubits = input_params.n_qubits  # Number of qubits
     step = input_params.step  # Learning rate
@@ -136,28 +167,17 @@ def calculation_task(self, db_id: int) -> str:
     cm = plt.cm.RdBu  # Test point colors
     cm_bright = ListedColormap(["#FF0000", "#0000FF"])  # Train point colors
 
-    # get data
-    clusters = {}
-    for ent in clusters_entities:
-        clusters[ent["ID"]] = ent["cluster"]
-    points = []
-    labels = []
-    for ent in entity_points:
-        points.append(ent["point"])
-        labels.append(clusters[ent["ID"]])
-    TASK_LOGGER.info(f"Points '{len(points)}'")
-    TASK_LOGGER.info(f"Labels '{len(labels)}'")
-
     # determine amount of training and test data
-    N_test = int(len(labels) * input_params.test_percentage)
+    N_tot = len(datasets[1])
+    N_test = int(N_tot * input_params.test_percentage)
     TASK_LOGGER.info(f"N_test before '{N_test}'")
     if N_test < 1:
         N_test = 1
-    if N_test > len(labels) - 1:
-        N_test = len(labels) - 1
+    if N_test > N_tot - 1:
+        N_test = N_tot - 1
     TASK_LOGGER.info(f"N_test after '{N_test}'")
 
-    N_train = len(labels) - N_test  # Number of training points
+    N_train = N_tot - N_test  # Number of training points
     TASK_LOGGER.info(f"N_train '{N_train}'")
 
     dev = qml.device("default.qubit", wires=n_qubits)
@@ -219,8 +239,6 @@ def calculation_task(self, db_id: int) -> str:
         log_like = np.sum(predictions * labels)
         return -log_like
 
-    datasets = (points, np.array(labels))
-
     X, y = datasets
     X = StandardScaler().fit_transform(X)
     X_train, X_test, y_train, y_test = train_test_split(
@@ -249,23 +267,17 @@ def calculation_task(self, db_id: int) -> str:
         # select training data batch
         train_data_batch = X_train[offset : offset + batch_size]
         train_labels_batch = y_train_onehot[offset : offset + batch_size]
-        # Step of Adam optimizer
+        # Step of optimizer
         opt_weights = opt.step(
             lambda w: cost(w, train_data_batch, train_labels_batch),
             opt_weights,
         )
-        # opt_weights = opt.step(lambda w: cost_function(w, train_data_batch, train_labels_batch, node="quantum"), opt_weights)
         # iteration results
         training_pred = np.asarray(
             [dressedQNN(opt_weights, data_point=point) for point in train_data_batch]
         )
-        # training_pred = np.asarray(
-        #    [full_network(opt_weights, data_point=point, node="quantum") for point in train_data_batch]
-        # )
         train_history.append(accuracy(training_pred, train_labels_batch))
-        train_cost_history.append(
-            cost_from_output(opt_weights, training_pred, train_labels_batch)
-        )
+        train_cost_history.append(cost_from_output(training_pred, train_labels_batch))
         # print iteration info
         total_it_time = time.time() - start_it_time
         minutes_it = total_it_time // 60
@@ -281,9 +293,6 @@ def calculation_task(self, db_id: int) -> str:
     test_pred = np.asarray(
         [dressedQNN(opt_weights, data_point=point) for point in X_test]
     )
-    # test_pred = np.asarray(
-    #    [full_network(opt_weights, data_point=point, node="quantum") for point in X_test]
-    # )
     score = accuracy(test_pred, y_test_onehot)
     TASK_LOGGER.info("Test accuracy: %4.3f" % (score))
 
@@ -292,6 +301,7 @@ def calculation_task(self, db_id: int) -> str:
     # ------------------------------
     # Initialize the figure that will contain the final plots.
     figure_main = plt.figure("main", figsize=(4, 4))
+    plt.clf()
     x_min, x_max = X[:, 0].min() - 0.5, X[:, 0].max() + 0.5
     y_min, y_max = X[:, 1].min() - 0.5, X[:, 1].max() + 0.5
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))

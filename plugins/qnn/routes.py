@@ -101,13 +101,33 @@ class MicroFrontend(MethodView):
 
     def render(self, data: Mapping, errors: dict):
         schema = QNNParametersSchema()
+
+        data_dict = dict(data)
+        # define default values
+        default_values = {
+            schema.fields["theta"].data_key: 0,  ######
+            schema.fields["test_percentage"].data_key: 0.05,
+            schema.fields["step"].data_key: 0.07,
+            schema.fields["n_qubits"].data_key: 5,
+            schema.fields["N_total_iterations"].data_key: 2,
+            schema.fields["q_depth"].data_key: 5,
+            schema.fields["batch_size"].data_key: 10,
+        }
+        # overwrite default values with other values if possible
+        default_values.update(data_dict)
+        data_dict = default_values
+
+        # schema.fields["use_default_dataset"].data_key: True,
+        # schema.entity_points_url.data_key: "http://host.docker.internal:9090/experiments/1/data/entity_points.json/download?version=1",
+        # schema.clusters_url.data_key: "http://host.docker.internal:9090/experiments/1/data/clusters.json/download?version=1",
+
         return Response(
             render_template(
                 "simple_template.html",
                 name=QNN.instance.name,
                 version=QNN.instance.version,
                 schema=schema,
-                values=data,
+                values=data_dict,
                 errors=errors,
                 process=url_for(f"{QNN_BLP.name}.ProcessView"),
                 example_values=url_for(

@@ -6,12 +6,18 @@ from qhana_plugin_runner.api.util import (
 )
 from marshmallow import EXCLUDE, post_load
 
+from enum import Enum
+
+
+class OptimizerEnum(Enum):
+    adam = "adam"
+    sgd = "sgd"
+
 
 class InputParameters:
     def __init__(
         self,
         theta: float,
-        # use_default_dataset: bool,
         entity_points_url: str,
         clusters_url: str,
         test_percentage: float,
@@ -20,8 +26,9 @@ class InputParameters:
         N_total_iterations: int,
         q_depth: int,
         batch_size: int,
+        use_default_dataset=True,
     ):
-        # self.use_default_dataset = use_default_dataset
+        self.use_default_dataset = use_default_dataset
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.test_percentage = test_percentage
@@ -41,7 +48,7 @@ class TaskResponseSchema(MaBaseSchema):
 
 class QNNParametersSchema(FrontendFormBaseSchema):
     theta = ma.fields.Float(
-        required=True,
+        required=False,
         allow_none=False,
         metadata={
             "label": "Theta (Not used right now)",
@@ -49,17 +56,17 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    # use_default_dataset = ma.fields.Bool(
-    #    required=True,
-    #    allow_none=False,
-    #    metadata={
-    #        "label": "Use default dataset",
-    #        "description": "Use internally generated dataset (no files required)",
-    #        "input_type": "bool",
-    #    },
-    # )
+    use_default_dataset = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Use default dataset",
+            "description": "Use internally generated dataset (no files required)",
+            "input_type": "checkbox",
+        },
+    )
     entity_points_url = FileUrl(
-        required=True,
+        required=False,
         allow_none=True,
         data_input_type="entity-points",
         data_content_types="application/json",
