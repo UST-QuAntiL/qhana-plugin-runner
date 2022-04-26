@@ -8,10 +8,37 @@ from celery.utils.log import get_task_logger
 from plugins.hello_worl_multi_step import HelloWorldMultiStep
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-
+from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+# copied from pca
+def load_from_url(entity_point_url):
+    import numpy as np
+
+    entity_points = open_url(entity_point_url).json()
+    id_to_idx = {}
+
+    idx = 0
+
+    for ent in entity_points:
+        if ent["ID"] in id_to_idx:
+            raise ValueError("Duplicate ID: ", ent["ID"])
+
+        id_to_idx[ent["ID"]] = idx
+        idx += 1
+
+    points_cnt = len(id_to_idx)
+    dimensions = len(entity_points[0]["point"])
+    points_arr = np.zeros((points_cnt, dimensions))
+
+    for ent in entity_points:
+        idx = id_to_idx[ent["ID"]]
+        points_arr[idx] = ent["point"]
+
+    return points_arr, id_to_idx
 
 
 @CELERY.task(

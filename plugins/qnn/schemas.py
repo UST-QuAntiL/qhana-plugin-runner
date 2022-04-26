@@ -2,6 +2,7 @@ import marshmallow as ma
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
+    FileUrl,
 )
 from marshmallow import EXCLUDE, post_load
 
@@ -10,12 +11,16 @@ class InputParameters:
     def __init__(
         self,
         theta: float,
+        entity_points_url: str,
+        clusters_url: str,
         step: float,
         n_qubits: int,
         N_total_iterations: int,
         q_depth: int,
         batch_size: int,
     ):
+        self.entity_points_url = entity_points_url
+        self.clusters_url = clusters_url
         self.theta = theta
         self.step = step
         self.n_qubits = n_qubits
@@ -37,6 +42,28 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Theta (Not used right now)",
             "description": "The input parameter for the QNN (rotation parameter)",
+            "input_type": "text",
+        },
+    )
+    entity_points_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="entity-points",
+        data_content_types="application/json",
+        metadata={
+            "label": "Entity points URL",
+            "description": "URL to a json file with the entity points.",
+            "input_type": "text",
+        },
+    )
+    clusters_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="clusters",
+        data_content_types="application/json",
+        metadata={
+            "label": "Clusters URL",
+            "description": "URL to a json file with the clusters.",
             "input_type": "text",
         },
     )
