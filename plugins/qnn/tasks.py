@@ -44,7 +44,58 @@ import time
 # Scikit-learn tools
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import json
+
+
+def digits2position(vec_of_digits, n_positions):
+    """One-hot encoding of a batch of vectors."""
+    return np.eye(n_positions)[vec_of_digits]
+
+
+def position2digit(exp_values):
+    """Inverse of digits2position()."""
+    return np.argmax(exp_values)
+
+
+# def H_layer(nqubits):
+#    """Layer of single-qubit Hadamard gates."""
+#    for idx in range(nqubits):
+#        qml.Hadamard(wires=idx)
+
+
+def RY_layer(w):
+    """Layer of parametrized qubit rotations around the y axis."""
+    for idx, element in enumerate(w):
+        qml.RY(element, wires=idx)
+
+
+def entangling_layer(nqubits):
+    """Layer of CNOTs followed by another shifted layer of CNOTs."""
+    # In other words it should apply something like :
+    # CNOT CNOT CNOT CNOT... CNOT
+    #  CNOT CNOT CNOT... CNOT
+
+    # Loop over even indices: i=0,2,...N-2
+    for i in range(0, nqubits - 1, 2):
+        qml.CNOT(wires=[i, i + 1])
+
+    # Loop over odd indices: i=1,3,...N-3
+    for i in range(1, nqubits - 1, 2):
+        qml.CNOT(wires=[i, i + 1])
+
+
+def cost_from_output(weights_flat, net_out_list, labels):
+    """Cost as a function of the list of network output"""
+
+    log_like = np.sum(net_out_list * labels)
+    return -log_like
+
+
+def accuracy(predictions, labels):
+    """Returns fraction of correct predictions."""
+
+    predicted_digits = np.array([position2digit(item) for item in predictions])
+    label_digits = np.array([position2digit(item) for item in labels])
+    return np.sum(predicted_digits == label_digits) / len(label_digits)
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
@@ -69,11 +120,9 @@ def calculation_task(self, db_id: int) -> str:
     n_qubits = input_params.n_qubits  # Number of qubits
     step = input_params.step  # Learning rate
     batch_size = input_params.batch_size  # Numbre of samples (points) for each mini-batch
-    data_noise = 0.2  # Spread of the data points around the spirals
     q_depth = (
         input_params.q_depth
     )  # Depth of the quantum circuit (number of variational layers)
-    rng_w_state = 55  # Seed for random initial weights
     n_input_nodes = 2  # 2 input nodes (x and y coordinates of data points).
     classes = [0, 1]  # Class 0 = red points. class 1 = blue points.
     n_classes = len(classes)
@@ -87,11 +136,8 @@ def calculation_task(self, db_id: int) -> str:
     cm = plt.cm.RdBu  # Test point colors
     cm_bright = ListedColormap(["#FF0000", "#0000FF"])  # Train point colors
 
-    # load data from file
-    # entity_points = open_url(entity_points_url).json()
-    # clusters_entities = open_url(clusters_url).json()
+    # get data
     clusters = {}
-    ids = []
     for ent in clusters_entities:
         clusters[ent["ID"]] = ent["cluster"]
     points = []
@@ -102,12 +148,20 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Points '{len(points)}'")
     TASK_LOGGER.info(f"Labels '{len(labels)}'")
 
-    N_train = len(labels) - 5  # Number of training points
-    N_batches = N_train // batch_size  # Number of training batches
-    N_test = 5  # Number of test points
-    N_tot = N_train + N_test  # Total number of points
+    # determine amount of training and test data
+    N_test = int(len(labels) * input_params.test_percentage)
+    TASK_LOGGER.info(f"N_test before '{N_test}'")
+    if N_test < 1:
+        N_test = 1
+    if N_test > len(labels) - 1:
+        N_test = len(labels) - 1
+    TASK_LOGGER.info(f"N_test after '{N_test}'")
+
+    N_train = len(labels) - N_test  # Number of training points
+    TASK_LOGGER.info(f"N_train '{N_train}'")
 
     dev = qml.device("default.qubit", wires=n_qubits)
+
     # Number of pre-processing parameters (1 matrix and 1 intercept)
     n_pre = n_qubits * (n_input_nodes + 1)
     # Number of quantum node parameters (1 row of rotations per layer)
@@ -116,51 +170,6 @@ def calculation_task(self, db_id: int) -> str:
     n_post = n_classes * (n_qubits + 1)
     # Initialize a unique vector of random parameters.
     weights_flat_0 = noise_0 * np.random.randn(n_pre + n_quant + n_post)
-
-    def digits2position(vec_of_digits, n_positions):
-        """One-hot encoding of a batch of vectors."""
-        return np.eye(n_positions)[vec_of_digits]
-
-    def position2digit(exp_values):
-        """Inverse of digits2position()."""
-        return np.argmax(exp_values)
-
-    def H_layer(nqubits):
-        """Layer of single-qubit Hadamard gates."""
-        for idx in range(nqubits):
-            qml.Hadamard(wires=idx)
-
-    def RY_layer(w):
-        """Layer of parametrized qubit rotations around the y axis."""
-        for idx, element in enumerate(w):
-            qml.RY(element, wires=idx)
-
-    def entangling_layer(nqubits):
-        """Layer of CNOTs followed by another shifted layer of CNOTs."""
-        # In other words it should apply something like :
-        # CNOT CNOT CNOT CNOT... CNOT
-        #  CNOT CNOT CNOT... CNOT
-
-        # Loop over even indices: i=0,2,...N-2
-        for i in range(0, nqubits - 1, 2):
-            qml.CNOT(wires=[i, i + 1])
-
-        # Loop over odd indices: i=1,3,...N-3
-        for i in range(1, nqubits - 1, 2):
-            qml.CNOT(wires=[i, i + 1])
-
-    def cost_from_output(weights_flat, net_out_list, labels):
-        """Cost as a function of the list of network output"""
-
-        log_like = np.sum(net_out_list * labels)
-        return -log_like
-
-    def accuracy(predictions, labels):
-        """Returns fraction of correct predictions."""
-
-        predicted_digits = np.array([position2digit(item) for item in predictions])
-        label_digits = np.array([position2digit(item) for item in labels])
-        return np.sum(predicted_digits == label_digits) / len(label_digits)
 
     @qml.qnode(dev)
     def variationalQuantumCircuit(q_weights_flat, q_in):
@@ -217,8 +226,6 @@ def calculation_task(self, db_id: int) -> str:
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=N_test, random_state=42
     )
-    print(X_train[:0])
-    print(X_train[:1])
     opt_weights = None
     train_history = []
     train_cost_history = []
@@ -263,11 +270,9 @@ def calculation_task(self, db_id: int) -> str:
         total_it_time = time.time() - start_it_time
         minutes_it = total_it_time // 60
         seconds_it = round(total_it_time - minutes_it * 60)
-        print(
+        TASK_LOGGER.info(
             "Iteration: %4d of %4d. Time:%3d min %3d sec."
             % (it + 1, N_total_iterations, minutes_it, seconds_it),
-            end="\r",
-            flush=True,
         )
         offset += batch_size
     # ------------------------------
@@ -280,7 +285,7 @@ def calculation_task(self, db_id: int) -> str:
     #    [full_network(opt_weights, data_point=point, node="quantum") for point in X_test]
     # )
     score = accuracy(test_pred, y_test_onehot)
-    print("Test accuracy: %4.3f" % (score))
+    TASK_LOGGER.info("Test accuracy: %4.3f" % (score))
 
     # ------------------------------
     #           plotting
@@ -314,10 +319,25 @@ def calculation_task(self, db_id: int) -> str:
         horizontalalignment="right",
     )
 
-    # Print final results
-    total_time = time.time() - start_time
-    minutes = total_time // 60
-    seconds = round(total_time - minutes * 60)
+    import base64
+    from io import BytesIO
+
+    # plot to html
+    tmpfile = BytesIO()
+    figure_main.savefig(tmpfile, format="png")
+    encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
+    html = "<img src='data:image/png;base64,{}'>".format(encoded)
+
+    # show plot
+    with SpooledTemporaryFile(mode="wt") as output:
+        output.write(html)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "plot.html",
+            "plot",
+            "text/html",
+        )
 
     # save weights
     # prepare output
@@ -340,14 +360,7 @@ def calculation_task(self, db_id: int) -> str:
             "post_weights_dims": (n_classes, n_qubits + 1),
         }
     )
-    import base64
-    from io import BytesIO
 
-    # plot to html
-    tmpfile = BytesIO()
-    figure_main.savefig(tmpfile, format="png")
-    encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
-    html = "<img src='data:image/png;base64,{}'>".format(encoded)
     # save weights
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(qnn_outputs, output, "application/json")
@@ -358,14 +371,10 @@ def calculation_task(self, db_id: int) -> str:
             "qnn-weights",
             "application/json",
         )
-    # show plot
-    with SpooledTemporaryFile(mode="wt") as output:
-        output.write(html)
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "plot.html",
-            "plot",
-            "text/html",
-        )
+
+    # Print final results
+    total_time = time.time() - start_time
+    minutes = total_time // 60
+    seconds = round(total_time - minutes * 60)
+
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"

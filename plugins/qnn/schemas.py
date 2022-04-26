@@ -11,16 +11,20 @@ class InputParameters:
     def __init__(
         self,
         theta: float,
+        # use_default_dataset: bool,
         entity_points_url: str,
         clusters_url: str,
+        test_percentage: float,
         step: float,
         n_qubits: int,
         N_total_iterations: int,
         q_depth: int,
         batch_size: int,
     ):
+        # self.use_default_dataset = use_default_dataset
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
+        self.test_percentage = test_percentage
         self.theta = theta
         self.step = step
         self.n_qubits = n_qubits
@@ -45,9 +49,18 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    # use_default_dataset = ma.fields.Bool(
+    #    required=True,
+    #    allow_none=False,
+    #    metadata={
+    #        "label": "Use default dataset",
+    #        "description": "Use internally generated dataset (no files required)",
+    #        "input_type": "bool",
+    #    },
+    # )
     entity_points_url = FileUrl(
         required=True,
-        allow_none=False,
+        allow_none=True,
         data_input_type="entity-points",
         data_content_types="application/json",
         metadata={
@@ -58,12 +71,21 @@ class QNNParametersSchema(FrontendFormBaseSchema):
     )
     clusters_url = FileUrl(
         required=True,
-        allow_none=False,
+        allow_none=True,
         data_input_type="clusters",
         data_content_types="application/json",
         metadata={
             "label": "Clusters URL",
             "description": "URL to a json file with the clusters.",
+            "input_type": "text",
+        },
+    )
+    test_percentage = ma.fields.Float(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Test data percentage",
+            "description": "Percentage of the data used for testing",
             "input_type": "text",
         },
     )
