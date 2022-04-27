@@ -1,12 +1,12 @@
 from tempfile import SpooledTemporaryFile
 
-from typing import Optional
+from typing import Optional, List
 
 from json import loads
 from celery.utils.log import get_task_logger
 
 from . import PCA
-from .schemas import ParameterHandler, PCATypeEnum
+from .schemas import ParameterHandler, PCATypeEnum, KernelEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
@@ -75,6 +75,37 @@ def load_entityPoints_and_idxToId(entity_points_url: str):
         points_arr[idx] = ent["point"]
 
     return points_arr, id_to_idx
+
+
+def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
+    kernel_json = open_url(kernel_url).json()
+    id_to_idx_X = {}
+    id_to_idx_Y = {}
+    idx_X = 0
+    idx_Y = 0
+    for entry in kernel_json:
+        if entry["entity_1_ID"] not in id_to_idx_Y:
+            id_to_idx_Y[entry["entity_1_ID"]] = idx_Y
+            idx_Y += 1
+        if entry["entity_2_ID"] not in id_to_idx_X:
+            id_to_idx_X[entry["entity_2_ID"]] = idx_X
+            idx_X += 1
+    kernel_matrix = np.zeros((len(id_to_idx_Y), len(id_to_idx_X)))
+
+    if id_to_idx_Y.keys() == id_to_idx_X.keys():
+        id_to_idx_Y = id_to_idx_X
+
+    for entry in kernel_json:
+        ent_id_Y = entry["entity_1_ID"]
+        ent_id_X = entry["entity_2_ID"]
+        kernel = entry["kernel"]
+
+        ent_idx_Y = id_to_idx_Y[ent_id_Y]
+        ent_idx_X = id_to_idx_X[ent_id_X]
+
+        kernel_matrix[ent_idx_Y, ent_idx_X] = kernel
+
+    return id_to_idx_X, id_to_idx_Y, kernel_matrix
 
 
 # This method returns a pca, depending on the input parameters input_params
@@ -184,6 +215,17 @@ def complete_fitting(entity_points_url, pca):
     return prepare_static_output(transformed_points, id_to_idx)
 
 
+def precomputed_kernel_fitting(kernel_url: str, pca):
+    # load data from file
+    id_to_idx_X, id_to_idx_Y, kernel_matrix = load_kernel_matrix(kernel_url)
+    TASK_LOGGER.info(f"id_to_idx_X: {id_to_idx_X}")
+    TASK_LOGGER.info(f"id_to_idx_Y: {id_to_idx_Y}")
+    TASK_LOGGER.info(f"kernel_matrix: {kernel_matrix}")
+    pca.fit(kernel_matrix)
+    transformed_points = pca.transform(kernel_matrix)
+    # Here we only allow kernel matrices between the same points. K(X, X)
+    return prepare_static_output(transformed_points, id_to_idx_X)
+
 # This is used, when the pca can be incrementally fitted via batches
 # In this method the input data is loaded in batchwise
 def batch_fitting(entity_points_url, pca, batch_size):
@@ -266,6 +308,7 @@ def calculation_task(self, db_id: int) -> str:
     )
 
     entity_points_url = input_params.get("entityPointsUrl")
+    kernel_url = input_params.get("kernelUrl")
 
     # Compute pca
     pca = get_correct_pca(input_params)
@@ -274,6 +317,8 @@ def calculation_task(self, db_id: int) -> str:
     if input_params.get("pcaType") == PCATypeEnum.incremental.value:
         batch_size = input_params.get("batchSize")
         entity_points = batch_fitting(entity_points_url, pca, batch_size)
+    elif input_params.get("pcaType") == PCATypeEnum.kernel.value and input_params.get("kernel") == KernelEnum.precomputed.value:
+        entity_points = precomputed_kernel_fitting(kernel_url, pca)
     # Since the other PCAs need the complete dataset at once, we load it in at once
     else:
         entity_points = complete_fitting(entity_points_url, pca)

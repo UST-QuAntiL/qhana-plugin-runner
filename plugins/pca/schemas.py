@@ -36,6 +36,7 @@ class KernelEnum(Enum):
     rbf = "rbf"
     sigmoid = "sigmoid"
     cosine = "cosine"
+    precomputed = "precomputed"
 
 
 class ParameterHandler:
@@ -49,6 +50,7 @@ class ParameterHandler:
             "sparsityAlpha",  # sparse PCA
             "ridgeAlpha",
             "kernel",  # kernel PCA
+            "kernelUrl",
             "degree",
             "kernelGamma",
             "kernelCoef",
@@ -57,6 +59,14 @@ class ParameterHandler:
             "iteratedPower"
         ]
         self.parameter_dict = parameter_dict
+        # Prevents the log and check to throw an error, when there is no entity URL,
+        # if we are using the precomputed kernel option
+        if self.parameter_dict.get("kernel", None) == KernelEnum.precomputed.value:
+            self.parameter_dict["entityPointsUrl"] = "No URL"
+        # Prevents the log and check to throw an error, when there is no kernel URL,
+        # if we are NOT using the precomputed kernel option
+        else:
+            self.parameter_dict["kernelURL"] = "No URL"
 
         # log and check input parameters
         not_provided_params = []
@@ -69,6 +79,7 @@ class ParameterHandler:
             raise ValueError(
                 f"The following inputs were not provided: {str(not_provided_params)[1:-1]}"
             )
+
         # Maximum number of iterations for sparse PCA should be non-negativ
         if self.parameter_dict["maxItr"] <= 0:
             raise ValueError(
@@ -120,7 +131,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         ],
         metadata={
             "label": "Entity points URL",
-            "description": "URL to a json/csv file with the entity points. Implementation uses scikit-learn",
+            "description": "URL to a json/csv file with the entity points.",
             "input_type": "text",
         },
     )
@@ -191,6 +202,19 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Kernel",
             "description": "Type of kernel that should be used, e.g. poly kernel \'k(x,y) = (ɣ x^T y + c)^d\'",
             "input_type": "select",
+        },
+    )
+    kernel_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="kernel-matrix",
+        data_content_types=["application/json"],
+        metadata={
+            "label": "Kernel matrix URL",
+            "description": "URL to a json file, containing the kernel matrix."
+                           "Note that only kernel matrices between the same set of points X can be processed here, "
+                           "i.e. K(X, X)",
+            "input_type": "text",
         },
     )
     degree = ma.fields.Integer(
