@@ -1,0 +1,87 @@
+{% import 'forms.html' as forms %}
+
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+    </head>
+
+    <body>
+        <div class="qhana-microfrontend">
+            <details id="visualization-options" open>
+                <summary>Visualization Options</summary>
+                {% call forms.render_form(target="microfrontend") %}
+                    {{ forms.render_fields(schema, values=values, errors=errors) }}
+                    <div class="qhana-form-buttons">
+                    {{ forms.submit("validate", target="microfrontend")}}
+                    {{ forms.submit("submit", action=process)}}
+                    </div>
+                {% endcall %}
+            </details>
+        </div>
+
+        <div id="csv-preview" class="qhana-data-preview qhana-table" style="flex-direction: row; flex-wrap: wrap; 
+        height: 750px; overflow: auto;" hidden>
+        </div>
+
+        <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+
+        <script>
+        function updatePreview(newUrl) {
+            const dataPreview = document.querySelector('#csv-preview');
+            const options = document.querySelector('#visualization-options');
+            if (newUrl == null || newUrl === "") {
+                dataPreview.setAttribute("hidden", "hidden");
+                options.setAttribute("open", "open");
+                return;
+            }
+            
+            console.log(newUrl)
+            let csv_header = null;
+            const rows = [];
+            options.setAttribute("open", "open");
+            Papa.parse(newUrl, {
+                download: true,
+                preview: 101,
+                worker: true,
+                step: function(results) {
+                    if (csv_header == null) {
+                        csv_header = results.data;
+                        return;
+                    }
+                    rows.push(results.data);
+                },
+                complete: function() {
+                    console.log(csv_header, rows);
+                    const table = document.createElement("table");
+                    headerRow = document.createElement("tr");
+                    table.appendChild(headerRow)
+                    csv_header.forEach(column => {
+                        const th = document.createElement("th");
+                        th.appendChild(document.createTextNode(column));
+                        headerRow.appendChild(th);
+                    });
+                    rows.forEach(row => {
+                        const tr = document.createElement("tr");
+                        row.forEach(column => {
+                            const td = document.createElement("td");
+                            td.appendChild(document.createTextNode(column));
+                            tr.appendChild(td);
+                        });
+                        table.appendChild(tr)
+                    });
+                    dataPreview.replaceChildren(table);
+                    dataPreview.removeAttribute("hidden");
+                    options.removeAttribute("open");
+                }
+            });
+        }
+
+        const dataInput = document.querySelector('input[name=data]');
+        updatePreview(dataInput.value);
+        dataInput.addEventListener("input", (event) => updatePreview(dataInput.value));
+        </script>
+
+        <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
+    </body>
+</html>
