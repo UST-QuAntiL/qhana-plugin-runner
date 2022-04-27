@@ -75,6 +75,8 @@ function onDataUrlResponseMessage(data) {
     var input = document.querySelector(`input#${data.inputKey}`);
     if (input != null) {
         input.value = data.href;
+        input.dispatchEvent(new InputEvent("input", { data: data.href, cancelable: false }));
+        input.dispatchEvent(new InputEvent("change", { data: data.href, cancelable: false }));
         var filenameSpan = document.querySelector(`.selected-file-name[data-input-id=${data.inputKey}]`);
         if (filenameSpan != null) {
             filenameSpan.textContent = `${data.filename || "unknown"} (v${data.version || "?"}) ${data.dataType || "*"} – ${data.contentType || "*"}`;
@@ -97,6 +99,8 @@ function onPluginUrlResponseMessage(data) {
     var input = document.querySelector(`input#${data.inputKey}`);
     if (input != null) {
         input.value = data.pluginUrl;
+        input.dispatchEvent(new InputEvent("input", { data: data.pluginUrl, cancelable: false }));
+        input.dispatchEvent(new InputEvent("change", { data: data.pluginUrl, cancelable: false }));
         var pluginNameSpan = document.querySelector(`.selected-plugin-name[data-input-id=${data.inputKey}]`);
         if (pluginNameSpan != null) {
             pluginNameSpan.textContent = `${data.pluginName || "unknown"} (v${data.pluginVersion || "?"})`;
