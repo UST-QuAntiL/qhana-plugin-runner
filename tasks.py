@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from distutils.log import warn
 from os import environ
 from os import execvpe as replace_process
 from os import urandom
