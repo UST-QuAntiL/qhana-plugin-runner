@@ -65,16 +65,12 @@ def KernelPCA_output(pca: KernelPCA) -> (dict, int):
 # dim = num features of output. Return dim here, since input params of the plugin can be <= 0
 def pca_to_output(pca: BaseEstimator) -> (dict, int):
     if type(pca) == PCA:
-        print('PCA')
         return PCA_output(pca)
     elif type(pca) == IncrementalPCA:
-        print('IncrementalPCA')
         return IncrementalPCA_output(pca)
     elif type(pca) == SparsePCA:
-        print('SparsePCA')
         return SparsePCA_output(pca)
     elif type(pca) == KernelPCA:
-        print('KernelPCA')
         return KernelPCA_output(pca)
     else:
         raise ValueError(f"Creating an output for object type {type(pca)} is not implemented!")

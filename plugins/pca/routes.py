@@ -10,8 +10,8 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.pca import PCA_BLP, PCA
-from plugins.pca.schemas import (
+from . import PCA_BLP, PCA
+from .schemas import (
     InputParametersSchema,
     TaskResponseSchema,
     SolverEnum,
@@ -28,7 +28,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
-from plugins.pca.tasks import calculation_task
+from .tasks import calculation_task
 
 
 @PCA_BLP.route("/")
@@ -42,7 +42,8 @@ class PluginsView(MethodView):
 
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
-            description="Reduces number of dimensions. (New ONB are the k first principle components)",
+            description="Reduces number of dimensions (New ONB are the k first principle components). "
+                        "The methods implemented here are from scikit-learn.",
             name=PCA.instance.identifier,
             version=PCA.instance.version,
             type=PluginType.simple,
@@ -117,7 +118,10 @@ class MicroFrontend(MethodView):
             fields["kernel"].data_key: KernelEnum.linear,
             fields["degree"].data_key: 3,
             fields["kernel_gamma"].data_key: 0.1,
-            fields["kernel_coef"].data_key: 1
+            fields["kernel_coef"].data_key: 1,
+            fields["max_itr"].data_key: 1000,
+            fields["tol"].data_key: 0,
+            fields["iterated_power"].data_key: 0,
         }
 
         # overwrite default values with other values if possible

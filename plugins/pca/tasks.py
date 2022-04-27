@@ -5,8 +5,8 @@ from typing import Optional
 from json import loads
 from celery.utils.log import get_task_logger
 
-from plugins.pca import PCA
-from plugins.pca.schemas import ParameterHandler, PCATypeEnum
+from . import PCA
+from .schemas import ParameterHandler, PCATypeEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
@@ -16,7 +16,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
-from plugins.pca.pca_output import pca_to_output
+from .pca_output import pca_to_output
 
 import numpy as np
 
@@ -36,15 +36,17 @@ def get_points(ent):
 def get_entity_generator(entity_points_url: str, stream=False):
     file_ = open_url(entity_points_url, stream=stream)
     file_.encoding = "utf-8"
-    if entity_points_url[-3:] == "csv":
-        for ent in load_entities(file_, mimetype="text/csv"):
+    # if entity_points_url[-3:] == "csv":
+    file_type = file_.headers['Content-Type']
+    if file_type == 'text/csv':
+        for ent in load_entities(file_, mimetype=file_type):
             ent = ent._asdict()
             point = get_points(ent)
             prepared_ent = {"ID": ent["ID"], "href": ent["href"], "point": point}
             yield prepared_ent
         # return load_entities(file_, mimetype="text/csv")
-    else:
-        for ent in load_entities(file_, mimetype="application/json"):
+    elif file_type == 'application/json':
+        for ent in load_entities(file_, mimetype=file_type):
             yield ent
 
 
@@ -84,37 +86,66 @@ def get_correct_pca(input_params: ParameterHandler):
     # Result can't have dim <= 0. If this is entered, set to None.
     # If set to None all PCA types will compute as many components as possible
     # Exception for normal PCA we set n_components to 'mle', which automatically will choose the number of dimensions.
-    n_components = input_params.get("dimensions")
-    if n_components <= 0:
-        n_components = None
 
     if pca_type == PCATypeEnum.normal.value:
-        # Set to auto choose dimensions
-        if n_components is None:
-            n_components = 'mle'
+        # For Debugging
+        # TASK_LOGGER.info(f"\nNormal PCA with parameters:"
+        #                  f"\n\tn_components={input_params.get('dimensions')}"
+        #                  f"\n\tsvd_solver={input_params.get('solver')}"
+        #                  f"\n\ttol={input_params.get('tol')}"
+        #                  f"\n\titerated_power={input_params.get('iteratedPower')}")
         return PCA(
-            n_components=n_components,
+            n_components=input_params.get('dimensions'),
             svd_solver=input_params.get("solver"),
+            tol=input_params.get('tol'),
+            iterated_power=input_params.get('iteratedPower')
         )
     elif pca_type == PCATypeEnum.incremental.value:
+        # For Debugging
+        # TASK_LOGGER.info(f"\nIncremental PCA with parameters:"
+        #                  f"\n\tn_components={input_params.get('dimensions')}"
+        #                  f"\n\tbatch_size={input_params.get('batchSize')}")
         return IncrementalPCA(
-            n_components=n_components,
+            n_components=input_params.get('dimensions'),
             batch_size=input_params.get("batchSize"),
         )
     elif pca_type == PCATypeEnum.sparse.value:
+        # For Debugging
+        # TASK_LOGGER.info(f"\nSparse PCA with parameters:"
+        #                  f"\n\tn_components={input_params.get('dimensions')}"
+        #                  f"\n\talpha={input_params.get('sparsityAlpha')} (Sparsity Alpha)"
+        #                  f"\n\tridge_alpha={input_params.get('ridgeAlpha')}"
+        #                  f"\n\tmax_iter={input_params.get('maxItr')}"
+        #                  f"\n\ttol={input_params.get('tol')}")
         return SparsePCA(
-            n_components=n_components,
+            n_components=input_params.get('dimensions'),
             alpha=input_params.get("sparsityAlpha"),
             ridge_alpha=input_params.get("ridgeAlpha"),
+            max_iter=input_params.get('maxItr'),
+            tol=input_params.get('tol')
         )
     elif pca_type == PCATypeEnum.kernel.value:
+        eigen_solver = input_params.get("solver")
+        if eigen_solver == 'full':
+            eigen_solver = 'dense'
+        # For Debugging
+        # TASK_LOGGER.info(f"\nKernel PCA with parameters:"
+        #                 f"\n\tn_components={input_params.get('dimensions')}"
+        #                 f"\n\tkernel={input_params.get('kernel')}"
+        #                 f"\n\tdegree={input_params.get('degree')}"
+        #                 f"\n\tgamma={input_params.get('kernelGamma')}"
+        #                 f"\n\tcoef0={input_params.get('kernelCoef')}"
+        #                 f"\n\teigen_solver={eigen_solver}"
+        #                 f"\n\ttol={input_params.get('tol')}")
         return KernelPCA(
-            n_components=n_components,
+            n_components=input_params.get('dimensions'),
             kernel=input_params.get("kernel"),
             degree=input_params.get("degree"),
             gamma=input_params.get("kernelGamma"),
-            coef0=input_params.get("kernelCoef")
-
+            coef0=input_params.get("kernelCoef"),
+            eigen_solver=eigen_solver,
+            tol=input_params.get('tol'),
+            # iterated_power=input_params.get('iteratedPower')  # This parameter is available in scikit-learn version ~= 1.0.2
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
@@ -160,19 +191,34 @@ def batch_fitting(entity_points_url, pca, batch_size):
     # get First element to get the correct array size
     el = next(entity_generator)["point"]
     batch = np.empty((batch_size, len(el)))
-    batch[0] = el
+    prev_batch = np.empty((batch_size, len(el)))
+    prev_batch[0] = el
     idx = 1
+    # Init prev_batch
+    for el in entity_generator:
+        # append element
+        prev_batch[idx] = el["point"].copy()
+        idx += 1
+        # check if we reached the batch_size
+        if idx == batch_size:
+            idx = 0
+            break
     for el in entity_generator:
         # check if we reached the batch_size
         if idx == batch_size:
             batch = np.array(batch)
-            pca.partial_fit(batch)
+            pca.partial_fit(prev_batch)
+            prev_batch = batch.copy()
             idx = 0
         # append element
         batch[idx] = el["point"].copy()
         idx += 1
     if idx != 0:
-        batch = batch[:idx]
+        if idx < pca.n_components:
+            batch = np.concatenate((prev_batch, batch[:idx]))
+        else:
+            pca.partial_fit(prev_batch)
+            batch = batch[:idx]
         pca.partial_fit(batch)
     return prepare_stream_output(
         get_entity_generator(entity_points_url, stream=True),
@@ -236,8 +282,6 @@ def calculation_task(self, db_id: int) -> str:
     # dim = num features of output. Get dim here, since input params can be <= 0
     pca_output, dim = pca_to_output(pca)
     pca_output = [pca_output]
-
-    TASK_LOGGER.info(f"\ndim = {dim}\n")
 
     # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
     attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]

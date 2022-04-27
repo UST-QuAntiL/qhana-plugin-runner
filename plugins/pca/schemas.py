@@ -51,7 +51,10 @@ class ParameterHandler:
             "kernel",  # kernel PCA
             "degree",
             "kernelGamma",
-            "kernelCoef"
+            "kernelCoef",
+            "maxItr",
+            "tol",
+            "iteratedPower"
         ]
         self.parameter_dict = parameter_dict
 
@@ -66,9 +69,41 @@ class ParameterHandler:
             raise ValueError(
                 f"The following inputs were not provided: {str(not_provided_params)[1:-1]}"
             )
+        # Maximum number of iterations for sparse PCA should be non-negativ
+        if self.parameter_dict["maxItr"] <= 0:
+            raise ValueError(
+                f"The maximum number of iterations should be greater than 0, but was: {str(self.parameter_dict['maxItr'])}"
+            )
+
+        # Set parameters correctly
+        self.set_parameters_correctly()
+
+    # Sets parameters to correct values
+    # E.g. if dimensions <= 0, we want it to be chosen automatically => set it to None or 'mle'
+    def set_parameters_correctly(self):
+        # Set parameters to correct conditions
+        # batch size needs to be at least the size of the dimensions
         self.parameter_dict["batchSize"] = max(
             self.parameter_dict["batchSize"], self.parameter_dict["dimensions"]
         )
+        # If dimensions <= 0, then dimensions should be chosen automatically
+        if self.parameter_dict["dimensions"] <= 0:
+            self.parameter_dict["dimensions"] = None
+            if self.parameter_dict["pcaType"] == PCATypeEnum.normal:
+                self.parameter_dict["dimensions"] = 'mle'
+        # If tolerance tol is set to <= 0, then we set it as follows
+        if self.parameter_dict["tol"] <= 0:
+            # 1e-8 for sparse PCA
+            if self.parameter_dict["pcaType"] == PCATypeEnum.sparse:
+                self.parameter_dict["tol"] = 1e-8
+            # 0 for normal and kernel PCA
+            else:
+                self.parameter_dict["tol"] = 0
+            # Incremental PCA does not use this parameter
+
+        # If iterated power is set to <= 0, then it should be chosen automatically
+        if self.parameter_dict["iteratedPower"] <= 0:
+            self.parameter_dict["iteratedPower"] = 'auto'
 
     def get(self, key):
         return self.parameter_dict[key]
@@ -85,7 +120,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         ],
         metadata={
             "label": "Entity points URL",
-            "description": "URL to a json/csv file with the entity points.",
+            "description": "URL to a json/csv file with the entity points. Implementation uses scikit-learn",
             "input_type": "text",
         },
     )
@@ -124,7 +159,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Batch Size",
-            "description": "Batch size when executing Incremental PCA",
+            "description": "Batch size used when executing Incremental PCA. "
+                           "The batch size will be automatically set to at least the number of dimensions k.",
             "input_type": "text",
         },
     )
@@ -142,8 +178,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Ridge shrinkage",
-            "description": "Amount of ridge shrinkage to apply"
-            " in order to improve conditioning when calling the transform method.",
+            "description": "To avoid instability issues in case the system is under-determined, "
+                            "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
             "input_type": "text",
         },
     )
@@ -181,6 +217,35 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Independent Term in Kernel",
             "description": f"Independent term \'c\' in poly and sigmoid kernel.",
+            "input_type": "text",
+        },
+    )
+    max_itr = ma.fields.Integer(
+        required=True,
+        allow_None=False,
+        metadata={
+            "label": "Max Number of Iterations",
+            "description": f"The maximum number of iterations that sparse PCA performs.",
+            "input_type": "text",
+        },
+    )
+    tol = ma.fields.Float(
+        required=True,
+        allow_None=False,
+        metadata={
+            "label": "Error Tolerance",
+            "description": f"Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
+                           f"If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
+            "input_type": "text",
+        },
+    )
+    iterated_power = ma.fields.Integer(
+        required=True,
+        allow_None=False,
+        metadata={
+            "label": "Iterated Power",
+            "description": f"This sets the iterated power parameter for the randomized solver. \n"
+                           f"If it is set to <= 0, the iterated power will be chosen automatically.",
             "input_type": "text",
         },
     )
