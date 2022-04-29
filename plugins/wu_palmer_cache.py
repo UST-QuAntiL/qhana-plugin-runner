@@ -126,10 +126,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the Wu Palmer cache plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @WU_PALMER_CACHE_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Wu Palmer cache plugin."
     )
@@ -171,9 +167,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

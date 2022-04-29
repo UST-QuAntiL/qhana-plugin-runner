@@ -188,10 +188,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the MDS plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @MDS_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend of the MDS plugin.",
@@ -250,9 +246,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{MDS_BLP.name}.CalcView"),
-                example_values=url_for(
-                    f"{MDS_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

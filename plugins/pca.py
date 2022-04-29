@@ -174,10 +174,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the PCA plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
     @PCA_BLP.arguments(
         InputParametersSchema(
@@ -228,9 +224,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{PCA_BLP.name}.ProcessView"),
-                example_values=url_for(
-                    f"{PCA_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

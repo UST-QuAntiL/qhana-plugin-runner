@@ -68,10 +68,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the quantum k-means plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @QKMEANS_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend of the quantum k-means plugin.",
@@ -133,9 +129,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QKMEANS_BLP.name}.CalcView"),
-                example_values=url_for(
-                    f"{QKMEANS_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 

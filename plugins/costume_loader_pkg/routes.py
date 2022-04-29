@@ -117,7 +117,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "costume_loader_template.html",
+                "simple_template.html",
                 name=CostumeLoader.instance.name,
                 version=CostumeLoader.instance.version,
                 schema=InputParametersSchema(),

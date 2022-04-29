@@ -104,7 +104,7 @@ class EntityFilterParametersSchema(FrontendFormBaseSchema):
         metadata={"label": "Entities URL"},
     )
 
-    attributes = CSVList(  # TODO: maybe via ma.fields.List(ma.fields.String(),
+    attributes = CSVList(
         required=False,
         allow_none=True,
         element_type=ma.fields.String,
@@ -171,27 +171,29 @@ class PluginsView(MethodView):
     def get(self):
         """Entity filter endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Entity loader",
-            description="Filters data sets from the MUSE database.",
+            title="Entity loader/filter",
+            description="Loads and filters entities from a file that contains a list of entities.",
             name=EntityFilter.instance.identifier,
             version=EntityFilter.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
-                data_input=[  # TODO: only file input (entities...)
+                data_input=[
                     DataMetadata(
-                        data_type="raw",
+                        data_type="entity/list",
                         content_type=[
                             "application/json",
-                            "application/zip",
-                        ],  # TODO: OR -> json, csv... scatch, not finalized yet
+                            "text/csv",
+                        ],
                         required=True,
                     )
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="raw", content_type=["application/json"], required=True
+                        data_type="entity/list",
+                        content_type=["application/json", "text/csv"],
+                        required=True,
                     )
                 ],
             ),
