@@ -223,11 +223,11 @@ class PrimitiveBool(TrackedObject, int, Mutable):
 
     value: bool
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, value, *args, **kwds):
         self.parent = None
+        value = bool(value)
 
     def __new__(cls, o: object):
-        value = bool(o)
 
     def __and__(self, x):
         return self.value.__and__(x)
