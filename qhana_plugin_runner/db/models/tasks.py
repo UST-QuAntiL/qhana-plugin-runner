@@ -63,34 +63,6 @@ class Step:
 
 @REGISTRY.mapped
 @dataclass
-class TaskData:
-    """Dataclass for key-value store of :class:`ProcessingTask`
-
-    Attributes:
-        id (int): ID of corresponding :class:`ProcessingTask` entry. Use the id to fetch this information from the database.
-        key (str): a key in dict
-        value (Union[dict, list, str, float, int, bool, None], optional): a corresponding value in dict. Note that SQL Alchemy's JSON type is used which does not support in-place mutations. If a value needs to be changed, e.g., use `copy.deepcopy`.
-    """
-
-    __tablename__ = "TaskData"
-
-    __sa_dataclass_metadata_key__ = "sa"
-
-    id: int = field(
-        metadata={
-            "sa": Column(
-                ForeignKey("ProcessingTask.id"), primary_key=True, nullable=False
-            )
-        },
-    )
-    key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
-    value: Union[dict, list, str, float, int, bool, None] = field(
-        metadata={"sa": Column(MutableJSON)}  # TODO
-    )
-
-
-@REGISTRY.mapped
-@dataclass
 class ProcessingTask:
     """Dataclass for persisting (logical) task information.
 
@@ -100,7 +72,7 @@ class ProcessingTask:
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
-        data (dict): dict-like key-value store for additional lightweight task data. New elements of type :class:`TaskData` can be added or retrieved as in a dict using ``key`` as key. Note that for value SQL Alchemy's JSON type is used which does not support in-place mutations. If a value needs to be changed, e.g., use `copy.deepcopy`.
+        data (Union[dict, list, str, float, int, bool, None]): mutable JSON-like store for additional lightweight task data. Default value is empty dict.
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
         progress_value (float): current progress value. ``None`` by default.
@@ -127,21 +99,6 @@ class ProcessingTask:
     )
 
     parameters: str = field(default="", metadata={"sa": Column(sql.Text())})
-
-    _data: dict = field(
-        default_factory=dict,
-        metadata={
-            "sa": relationship(
-                "TaskData",
-                collection_class=attribute_mapped_collection("key"),
-                cascade="all, delete-orphan",
-            )
-        },
-    )
-
-    data_old = association_proxy(
-        "_data", "value", creator=lambda key, value: TaskData(id=id, key=key, value=value)
-    )
 
     data: Union[dict, list, str, float, int, bool, None] = field(
         default_factory=dict, metadata={"sa": Column(MutableJSON)}
@@ -279,12 +236,6 @@ class ProcessingTask:
     def get_by_id(cls, id_: int) -> Optional["ProcessingTask"]:
         """Get the object instance by the object id from the database. (None if not found)"""
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
-
-
-@listens_for(ProcessingTask.data, "set")
-def prevent_storage_manipulation(target, value, old_value, initiator):
-    """Prevent manipulation of the base dict for the key value storage of :class:`ProcessingTask`."""
-    pass
 
 
 @REGISTRY.mapped

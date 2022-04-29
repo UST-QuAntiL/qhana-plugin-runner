@@ -33,73 +33,7 @@ def preprocessing_task(self, db_id: int) -> str:
 
     # Save input data in internal data structure for further processing
     task_data.data["input_str"] = input_str
-    task_data.data = input_str
     task_data.save(commit=True)
-
-    # TASK_LOGGER.info(
-    #     ">>>>>>>>>>>>Test result str: "
-    #     + str(task_data.data)
-    #     + " type: "
-    #     + str(type(task_data.data))
-    # )
-    # task_data.data = 1
-    # TASK_LOGGER.info(
-    #     ">>>>>>>>>>>>Test result int: "
-    #     + str(task_data.data)
-    #     + " type: "
-    #     + str(type(task_data.data))
-    # )
-    # task_data.save(commit=True)
-    # task_data.data = None
-    # TASK_LOGGER.info(
-    #     ">>>>>>>>>>>>Test result None: "
-    #     + str(task_data.data)
-    #     + " type: "
-    #     + str(type(task_data.data))
-    # )
-    task_data.data = True
-    task_data.save(commit=True)
-    TASK_LOGGER.info(
-        ">>>>>>>>>>>>Test result Bool: "
-        + str(task_data.data)
-        + " type: "
-        + str(type(task_data.data))
-    )
-    # task_data.save(commit=True)
-    # task_data.data = 1.3324
-    # TASK_LOGGER.info(
-    #     ">>>>>>>>>>>>Test result Float: "
-    #     + str(task_data.data)
-    #     + " type: "
-    #     + str(type(task_data.data))
-    # )
-    # task_data.data = {}
-    # task_data.data["test"] = {"x": 1, "y": 2}
-    # task_data.save(commit=True)
-    # TASK_LOGGER.info(
-    #     ">>>>>>>>>>>>Test result dict of ints: "
-    #     + str(task_data.data["test"]["x"])
-    #     + " type: "
-    #     + str(type(task_data.data["test"]["x"]))
-    # )
-    # task_data.data["test"]["z"] = [1, 2, 3]
-    # task_data.save(commit=True)
-
-    # TASK_LOGGER.info(
-    #     ">>>>>>>>>>>>Test result (add key): "
-    #     + str(task_data.data["test"]["z"])
-    #     + " type: "
-    #     + str(type(task_data.data["test"]["z"]))
-    # )
-    # task_data.data["test"]["x"] += 10
-    # task_data.save(commit=True)
-
-    # TASK_LOGGER.info(
-    #     ">>>>>>>>>>>>Test result addition int: "
-    #     + str(task_data.data["test"]["x"])
-    #     + " type: "
-    #     + str(type(task_data.data["test"]["x"]))
-    # )
 
     if input_str:
         out_str = "Processed in the preprocessing step: " + input_str
@@ -131,13 +65,6 @@ def processing_task(self, db_id: int) -> str:
         input_str_preprocessing = task_data.data["input_str"]
     except:
         input_str_preprocessing = ""
-
-    # TEST TODO: Remove
-    TASK_LOGGER.info(">>>>>>>>>>>>Test result: " + str(task_data.data["test"]["x"]))
-
-    task_data.data["test"]["x"] = 3
-    task_data.save(commit=True)
-    TASK_LOGGER.info(">>>>>>>>>>>>Test result: " + str(task_data.data["test"]["x"]))
 
     if input_str:
         out_str = (

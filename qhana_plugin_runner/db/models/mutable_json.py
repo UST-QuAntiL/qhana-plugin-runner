@@ -22,6 +22,7 @@ from itertools import chain
 from six import iteritems
 from sqlalchemy import Boolean
 from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy import event, inspect
 from sqlalchemy.types import JSON
 from typing import TypeVar, overload
 
@@ -206,99 +207,87 @@ class NestedMutableList(TrackedList, Mutable):
         return super(cls).coerce(key, value)
 
 
-class PrimitiveInt(TrackedObject, int, Mutable):
-    def __init__(self, *args, **kwds):
-        self.parent = None
-
-    @classmethod
-    def coerce(cls, key, value):
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, int):
-            return cls(value)
-        return super(cls).coerce(key, value)
-
-
-class PrimitiveBool(TrackedObject, int, Mutable):
-
-    value: bool
-
-    def __init__(self, value, *args, **kwds):
-        self.parent = None
-        value = bool(value)
-
-    def __and__(self, x):
-        return self.value.__and__(x)
-
-    def __or__(self, x):
-        return self.value.__or__(x)
-
-    def __xor__(self, x: bool) -> bool:
-        return self.value.__xor__(x)
-
-    def __rand__(self, x):
-        return self.value.__rand__(x)
-
-    def __ror__(self, x):
-        return self.value.__rand__(x)
-
-    def __rxor__(self, x):
-        return self.value.__rand__(x)
-
-    def __getnewargs__(self):
-        return self.value.__getnewargs__()
-
-    @classmethod
-    def coerce(cls, key, value):
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, bool):
-            return cls(value)
-        return super(cls).coerce(key, value)
-
-
-class PrimitiveStr(TrackedObject, str, Mutable):
-    def __init__(self, *args, **kwds):
-        self.parent = None
-
-    @classmethod
-    def coerce(cls, key, value):
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, str):
-            return cls(value)
-        return super(cls).coerce(key, value)
-
-
-class PrimitiveFloat(TrackedObject, float, Mutable):
-    def __init__(self, *args, **kwds):
-        self.parent = None
-
-    @classmethod
-    def coerce(cls, key, value):
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, float):
-            return cls(value)
-        return super(cls).coerce(key, value)
-
-
 class NestedMutable(Mutable):
     """SQLAlchemy `mutable` extension with nested change tracking."""
+
+    @classmethod
+    def _listen_on_attribute(cls, attribute, coerce, parent_cls):
+        """Overwrite method of base class in order to accept primitive (immutable) types. Code is identical apart from handling ``str``, ``float`` and ``int`` (which includes ``bool`` as ``bool`` is a subclass of ``int``)."""
+        key = attribute.key
+        if parent_cls is not attribute.class_:
+            return
+
+        # rely on "propagate" here
+        parent_cls = attribute.class_
+
+        listen_keys = cls._get_listen_keys(attribute)
+
+        def load(state, *args):
+            """Listen for objects loaded or refreshed.
+
+            Wrap the target data member's value with
+            ``Mutable``.
+
+            """
+            val = state.dict.get(key, None)
+            if val is not None and not isinstance(val, (str, float, int)):
+                if coerce:
+                    val = cls.coerce(key, val)
+                    state.dict[key] = val
+                val._parents[state] = key
+
+        def load_attrs(state, ctx, attrs):
+            if not attrs or listen_keys.intersection(attrs):
+                load(state)
+
+        def set_(target, value, oldvalue, initiator):
+            """Listen for set/replace events on the target
+            data member.
+
+            Establish a weak reference to the parent object
+            on the incoming value, remove it for the one
+            outgoing.
+
+            """
+            if value is oldvalue:
+                return value
+            if isinstance(value, (str, float, int)):
+                return value
+
+            if not isinstance(value, cls):
+                value = cls.coerce(key, value)
+            if value is not None:
+                value._parents[target] = key
+            if isinstance(oldvalue, cls):
+                oldvalue._parents.pop(inspect(target), None)
+            return value
+
+        def pickle(state, state_dict):
+            val = state.dict.get(key, None)
+            if val is not None:
+                if "ext.mutable.values" not in state_dict:
+                    state_dict["ext.mutable.values"] = []
+                state_dict["ext.mutable.values"].append(val)
+
+        def unpickle(state, state_dict):
+            if "ext.mutable.values" in state_dict:
+                for val in state_dict["ext.mutable.values"]:
+                    val._parents[state] = key
+
+        event.listen(parent_cls, "load", load, raw=True, propagate=True)
+        event.listen(parent_cls, "refresh", load_attrs, raw=True, propagate=True)
+        event.listen(parent_cls, "refresh_flush", load_attrs, raw=True, propagate=True)
+        event.listen(attribute, "set", set_, raw=True, retval=True, propagate=True)
+        event.listen(parent_cls, "pickle", pickle, raw=True, propagate=True)
+        event.listen(parent_cls, "unpickle", unpickle, raw=True, propagate=True)
 
     @classmethod
     def coerce(cls, key, value):
         """Convert plain JSON structure to NestedMutable."""
         if value is None:
             return value
-        if isinstance(value, str):
-            return PrimitiveStr.coerce(key, value)
-        if isinstance(value, bool):
-            return PrimitiveBool.coerce(key, value)
-        if isinstance(value, int):
-            return PrimitiveInt.coerce(key, value)
-        if isinstance(value, float):
-            return PrimitiveFloat.coerce(key, value)
+        if isinstance(value, (str, int, float)):
+            return value
         if isinstance(value, cls):
             return value
         if isinstance(value, dict):
