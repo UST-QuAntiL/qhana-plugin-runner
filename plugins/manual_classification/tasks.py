@@ -109,7 +109,9 @@ def add_class(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise ValueError(msg)
 
-    entity_annotation = copy.deepcopy(task_data.data["entity_annotation"])
+    entity_annotation = copy.deepcopy(
+        task_data.data["entity_annotation"]
+    )  # TODO remove deepcopy or enforce
     for id in entity_annotation.keys():
         if params.get(id):
             tmp = set(entity_annotation[id])

@@ -26,6 +26,7 @@ from sqlalchemy.sql.schema import (
     ForeignKey,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.event import listens_for
 
 from ..db import DB, REGISTRY
 from .mutable_json import MutableJSON
@@ -84,7 +85,7 @@ class TaskData:
     )
     key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
     value: Union[dict, list, str, float, int, bool, None] = field(
-        metadata={"sa": Column(sql.JSON)}  # TODO
+        metadata={"sa": Column(MutableJSON)}  # TODO
     )
 
 
@@ -138,8 +139,12 @@ class ProcessingTask:
         },
     )
 
-    data = association_proxy(
+    data_old = association_proxy(
         "_data", "value", creator=lambda key, value: TaskData(id=id, key=key, value=value)
+    )
+
+    data: Union[dict, list, str, float, int, bool, None] = field(
+        default_factory=dict, metadata={"sa": Column(MutableJSON)}
     )
 
     multi_step: bool = field(default=False, metadata={"sa": Column(sql.Boolean())})
@@ -274,6 +279,12 @@ class ProcessingTask:
     def get_by_id(cls, id_: int) -> Optional["ProcessingTask"]:
         """Get the object instance by the object id from the database. (None if not found)"""
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
+
+
+@listens_for(ProcessingTask.data, "set")
+def prevent_storage_manipulation(target, value, old_value, initiator):
+    """Prevent manipulation of the base dict for the key value storage of :class:`ProcessingTask`."""
+    pass
 
 
 @REGISTRY.mapped

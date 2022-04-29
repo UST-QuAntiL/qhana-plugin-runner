@@ -23,6 +23,7 @@ from six import iteritems
 from sqlalchemy import Boolean
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.types import JSON
+from typing import TypeVar, overload
 
 __all__ = "MutableJson"
 
@@ -205,22 +206,9 @@ class NestedMutableList(TrackedList, Mutable):
         return super(cls).coerce(key, value)
 
 
-class PrimitiveStr(TrackedObject, str, Mutable):
-    def __new__(cls, value):
-        super().__new__(cls, cls.convert(value, None))
-
-    @classmethod
-    def coerce(cls, key, value):
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, str):
-            return cls(value)
-        return super().coerce(key, value)
-
-
 class PrimitiveInt(TrackedObject, int, Mutable):
-    def __new__(cls, value):
-        super().__new__(cls, cls.convert(value, None))
+    def __init__(self, *args, **kwds):
+        self.parent = None
 
     @classmethod
     def coerce(cls, key, value):
@@ -228,12 +216,39 @@ class PrimitiveInt(TrackedObject, int, Mutable):
             return value
         if isinstance(value, int):
             return cls(value)
-        return super().coerce(key, value)
+        return super(cls).coerce(key, value)
 
 
-class PrimitiveBool(TrackedObject, Boolean, Mutable):
-    def __new__(cls, value):
-        super().__new__(cls, cls.convert(value, None))
+class PrimitiveBool(TrackedObject, int, Mutable):
+
+    value: bool
+
+    def __init__(self, *args, **kwds):
+        self.parent = None
+
+    def __new__(cls, o: object):
+        value = bool(o)
+
+    def __and__(self, x):
+        return self.value.__and__(x)
+
+    def __or__(self, x):
+        return self.value.__or__(x)
+
+    def __xor__(self, x: bool) -> bool:
+        return self.value.__xor__(x)
+
+    def __rand__(self, x):
+        return self.value.__rand__(x)
+
+    def __ror__(self, x):
+        return self.value.__rand__(x)
+
+    def __rxor__(self, x):
+        return self.value.__rand__(x)
+
+    def __getnewargs__(self):
+        return self.value.__getnewargs__()
 
     @classmethod
     def coerce(cls, key, value):
@@ -241,12 +256,25 @@ class PrimitiveBool(TrackedObject, Boolean, Mutable):
             return value
         if isinstance(value, bool):
             return cls(value)
-        return super().coerce(key, value)
+        return super(cls).coerce(key, value)
+
+
+class PrimitiveStr(TrackedObject, str, Mutable):
+    def __init__(self, *args, **kwds):
+        self.parent = None
+
+    @classmethod
+    def coerce(cls, key, value):
+        if isinstance(value, cls):
+            return value
+        if isinstance(value, str):
+            return cls(value)
+        return super(cls).coerce(key, value)
 
 
 class PrimitiveFloat(TrackedObject, float, Mutable):
-    def __new__(cls, value):
-        super().__new__(cls, cls.convert(value, None))
+    def __init__(self, *args, **kwds):
+        self.parent = None
 
     @classmethod
     def coerce(cls, key, value):
@@ -254,7 +282,7 @@ class PrimitiveFloat(TrackedObject, float, Mutable):
             return value
         if isinstance(value, float):
             return cls(value)
-        return super().coerce(key, value)
+        return super(cls).coerce(key, value)
 
 
 class NestedMutable(Mutable):
@@ -267,10 +295,10 @@ class NestedMutable(Mutable):
             return value
         if isinstance(value, str):
             return PrimitiveStr.coerce(key, value)
-        if isinstance(value, int):
-            return PrimitiveInt.coerce(key, value)
         if isinstance(value, bool):
             return PrimitiveBool.coerce(key, value)
+        if isinstance(value, int):
+            return PrimitiveInt.coerce(key, value)
         if isinstance(value, float):
             return PrimitiveFloat.coerce(key, value)
         if isinstance(value, cls):
