@@ -227,8 +227,6 @@ class PrimitiveBool(TrackedObject, int, Mutable):
         self.parent = None
         value = bool(value)
 
-    def __new__(cls, o: object):
-
     def __and__(self, x):
         return self.value.__and__(x)
 
