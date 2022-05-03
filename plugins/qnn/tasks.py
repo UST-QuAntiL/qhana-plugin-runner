@@ -10,7 +10,7 @@ from celery.utils.log import get_task_logger
 TASK_LOGGER = get_task_logger(__name__)
 
 from plugins.qnn import QNN
-from plugins.qnn.schemas import InputParameters, QNNParametersSchema
+from plugins.qnn.schemas import InputParameters, OptimizerEnum, QNNParametersSchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -119,11 +119,17 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
     input_params: InputParameters = QNNParametersSchema().loads(task_data.parameters)
 
+    use_default_dataset = input_params.use_default_dataset
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: use_default_dataset='{use_default_dataset}'"
+    )
     datasets = None
-    if input_params.use_default_dataset:
+    if use_default_dataset:
+        print("USE default dataset")
         # spiral dataset
         datasets = twospirals(2000, turns=1.52)
     else:
+        print("USE data from files")
         # get data from file
         entity_points_url = input_params.entity_points_url
         TASK_LOGGER.info(
@@ -249,7 +255,15 @@ def calculation_task(self, db_id: int) -> str:
     train_cost_history = []
     y_train_onehot = digits2position(y_train, n_classes)
     y_test_onehot = digits2position(y_test, n_classes)
-    opt = qml.GradientDescentOptimizer(stepsize=step)
+
+    optimizer = input_params.optimizer
+
+    opt = None
+    if optimizer == OptimizerEnum.adam:
+        opt = AdamOptimizer(step)
+    else:
+        opt = qml.GradientDescentOptimizer(stepsize=step)
+
     # random start weights
     opt_weights = weights_flat_0
 

@@ -12,6 +12,7 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+from plugins.pca import SolverEnum
 
 from plugins.qnn import QNN_BLP, QNN
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -22,6 +23,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
 )
 from plugins.qnn.schemas import (
+    OptimizerEnum,
     QNNParametersSchema,
     TaskResponseSchema,
 )
@@ -107,11 +109,13 @@ class MicroFrontend(MethodView):
         default_values = {
             schema.fields["theta"].data_key: 0,  ######
             schema.fields["test_percentage"].data_key: 0.05,
+            schema.fields["optimizer"].data_key: OptimizerEnum.adam,
             schema.fields["step"].data_key: 0.07,
             schema.fields["n_qubits"].data_key: 5,
             schema.fields["N_total_iterations"].data_key: 2,
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
+            schema.fields["use_default_dataset"].data_key: False,
         }
         # overwrite default values with other values if possible
         default_values.update(data_dict)

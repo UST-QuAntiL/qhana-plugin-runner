@@ -1,4 +1,6 @@
+from xmlrpc.client import Boolean
 import marshmallow as ma
+from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -21,18 +23,20 @@ class InputParameters:
         entity_points_url: str,
         clusters_url: str,
         test_percentage: float,
+        optimizer: OptimizerEnum,
         step: float,
         n_qubits: int,
         N_total_iterations: int,
         q_depth: int,
         batch_size: int,
-        use_default_dataset=True,
+        use_default_dataset=False,
     ):
         self.use_default_dataset = use_default_dataset
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.test_percentage = test_percentage
         self.theta = theta
+        self.optimizer = optimizer
         self.step = step
         self.n_qubits = n_qubits
         self.N_total_iterations = N_total_iterations
@@ -94,6 +98,16 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Test data percentage",
             "description": "Percentage of the data used for testing",
             "input_type": "text",
+        },
+    )
+    optimizer = EnumField(
+        OptimizerEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Optimizer",
+            "description": "Type of optimizer used for training",
+            "input_type": "select",
         },
     )
     step = ma.fields.Float(
