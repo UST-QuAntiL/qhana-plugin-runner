@@ -28,6 +28,12 @@ def test_mutable_json_init(task_data: ProcessingTask):
 
 
 def test_mutable_json_primitive_values(task_data: ProcessingTask):
+    task_data.data = None
+    task_data.save(commit=True)
+    assert isinstance(
+        task_data.data, type(None)
+    ), "Task data.data is expected to be of type NoneType."
+
     task_data.data = bool(True)
     task_data.save(commit=True)
     assert isinstance(
