@@ -2,7 +2,7 @@ from typing import Callable
 
 import pennylane as qml
 
-from ... import QNN1, QNN2, QNN3
+from ... import qnn1, qnn2, qnn3
 
 
 def create_qlayer(
@@ -27,7 +27,7 @@ def create_qlayer(
 
 
 qnn_constructors = {
-    "QNN1": QNN1.constructor,
-    "QNN2": QNN2.constructor,
-    "QNN3": QNN3.constructor,
+    "QNN1": qnn1.constructor,
+    "QNN2": qnn2.constructor,
+    "QNN3": qnn3.constructor,
 }
