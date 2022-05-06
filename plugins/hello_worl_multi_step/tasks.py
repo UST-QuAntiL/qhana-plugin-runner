@@ -35,6 +35,75 @@ def preprocessing_task(self, db_id: int) -> str:
     task_data.data["input_str"] = input_str
     task_data.save(commit=True)
 
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result str: "
+        + str(task_data.data)
+        + " type: "
+        + str(type(task_data.data))
+    )
+    task_data.data = 1
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result int: "
+        + str(task_data.data)
+        + " type: "
+        + str(type(task_data.data))
+    )
+    task_data.save(commit=True)
+    task_data.data = None
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result None: "
+        + str(task_data.data)
+        + " type: "
+        + str(type(task_data.data))
+    )
+    task_data.data = True
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result Bool: "
+        + str(task_data.data)
+        + " type: "
+        + str(type(task_data.data))
+    )
+    task_data.save(commit=True)
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result Bool after commit: "
+        + str(task_data.data)
+        + " type: "
+        + str(type(task_data.data))
+    )
+    task_data.save(commit=True)
+    task_data.data = 1.3324
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result Float: "
+        + str(task_data.data)
+        + " type: "
+        + str(type(task_data.data))
+    )
+    task_data.data = {}
+    task_data.data["test"] = {"x": 1, "y": 2}
+    task_data.save(commit=True)
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result dict of ints: "
+        + str(task_data.data["test"])
+        + " type: "
+        + str(type(task_data.data["test"]))
+    )
+    task_data.data["test"]["z"] = [1, 2, 3]
+    task_data.save(commit=True)
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result (add key): "
+        + str(task_data.data["test"]["z"])
+        + " type: "
+        + str(type(task_data.data["test"]["z"]))
+    )
+    task_data.data["test"]["x"] += 10
+    task_data.save(commit=True)
+    TASK_LOGGER.info(
+        ">>>>>>>>>>>>Test result addition int: "
+        + str(task_data.data["test"]["x"])
+        + " type: "
+        + str(type(task_data.data["test"]["x"]))
+    )
+
     if input_str:
         out_str = "Processed in the preprocessing step: " + input_str
         with SpooledTemporaryFile(mode="w") as output:

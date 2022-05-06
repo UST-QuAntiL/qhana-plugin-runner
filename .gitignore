@@ -7,7 +7,6 @@ docs/changelog.md
 docs/readme.md
 git-plugins
 
-
 # Ignores from Template:
 
 # Byte-compiled / optimized / DLL files
@@ -74,6 +73,7 @@ db.sqlite3
 db.sqlite3-journal
 
 # Flask stuff:
+test-instance/
 instance/
 .webassets-cache
 
