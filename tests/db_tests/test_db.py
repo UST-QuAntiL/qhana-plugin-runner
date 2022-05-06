@@ -1,3 +1,17 @@
+# Copyright 2021 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from conftests import task_data
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -7,54 +21,85 @@ from qhana_plugin_runner.db.models.mutable_json import (
 )
 
 
-def test_json_strorage(task_data: ProcessingTask):
-    # Test mutable json data attribute
-    assert task_data.data == dict()
+def test_mutable_json_init(task_data: ProcessingTask):
+    assert (
+        task_data.data == dict()
+    ), "Task data.data is expected to be an empty dict at the start of the unit test."
 
-    # Primitive data types
+
+def test_mutable_json_primitive_values(task_data: ProcessingTask):
     task_data.data = bool(True)
     task_data.save(commit=True)
-    assert isinstance(task_data.data, bool)
-    assert task_data.data == True
+    assert isinstance(
+        task_data.data, bool
+    ), "Task data.data is expected to be of type bool."
+    assert task_data.data == True, "Task data.data is expected to have value 'True'."
 
     task_data.data = 1
     task_data.save(commit=True)
-    assert isinstance(task_data.data, int)
-    assert task_data.data == 1
+    assert isinstance(
+        task_data.data, int
+    ), "Task data.data is expected to be of type int."
+    assert task_data.data == 1, "Task data.data is expected to have int value '1'."
 
     task_data.data = "Test"
     task_data.save(commit=True)
-    assert isinstance(task_data.data, str)
-    assert task_data.data == "Test"
+    assert isinstance(
+        task_data.data, str
+    ), "Task data.data is expected to be of type str."
+    assert (
+        task_data.data == "Test"
+    ), "Task data.data is expected to have str value 'Test'."
 
     task_data.data = 1.12
     task_data.save(commit=True)
-    assert isinstance(task_data.data, float)
-    assert task_data.data == 1.12
+    assert isinstance(
+        task_data.data, float
+    ), "Task data.data is expected to be of type float."
+    assert (
+        task_data.data == 1.12
+    ), "Task data.data is expected to have float value '1.12'."
 
-    # Nested data types
+
+def test_mutable_json_nested(task_data: ProcessingTask):
     task_data.data = {}
     task_data.data["test"] = {"x": 1, "y": 2}
     task_data.save(commit=True)
-    assert isinstance(task_data.data, TrackedDict)
-    assert isinstance(task_data.data["test"], TrackedDict)
-    assert task_data.data["test"]["y"] == 2
+    assert isinstance(
+        task_data.data, TrackedDict
+    ), "Task data.data is expected to be of type TackedDict."
+    assert isinstance(
+        task_data.data["test"], TrackedDict
+    ), "Task data.data['test'] is expected to be of type TrackedDict."
+    assert (
+        task_data.data["test"]["y"] == 2
+    ), "Task data.data['test']['y'] is expected to have int value '2'."
 
     task_data.data["test"]["x"] += 10
     task_data.save(commit=True)
-    assert task_data.data["test"]["x"] == 11
+    assert (
+        task_data.data["test"]["x"] == 11
+    ), "Task data.data['test']['x'] is expected to have int value '11'."
 
     task_data.data["test"]["x"] = []
     task_data.save(commit=True)
-    assert task_data.data["test"]["x"] == []
+    assert (
+        task_data.data["test"]["x"] == []
+    ), "Task data.data['test']['x'] is expected to have value [] (empty list)."
 
     task_data.data = []
     task_data.data.append({"x": 1, "y": 2})
     task_data.save(commit=True)
-    assert isinstance(task_data.data, TrackedList)
-    assert isinstance(task_data.data[0], TrackedDict)
-    assert task_data.data[0]["x"] == 1
+    assert isinstance(
+        task_data.data, TrackedList
+    ), "Task data.data is expected to be of type TrackedList."
+    assert isinstance(
+        task_data.data[0], TrackedDict
+    ), "Task data.data[0] is expected to be of type TrackedDict."
+    assert (
+        task_data.data[0]["x"] == 1
+    ), "Task data.data[0]['x'] is expected to have int value '1'."
 
     task_data.data[0] = 1
     task_data.save(commit=True)
-    assert task_data.data[0] == 1
+    assert task_data.data[0] == 1, "Task data.data[0] is expected to have int value '1'."

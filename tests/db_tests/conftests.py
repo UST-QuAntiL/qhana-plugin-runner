@@ -1,4 +1,4 @@
-# Copyright 2021 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 """Tests for the db module of the plugin_utils."""
 
-from os import environ
+import os
 import pytest
 from dotenv import load_dotenv
 
@@ -23,26 +23,22 @@ load_dotenv(".env")
 
 MODULE_NAME = "qhana_plugin_runner"
 
-from qhana_plugin_runner import create_app
-from qhana_plugin_runner.db.cli import create_db_function, drop_db, create_db
 
+from qhana_plugin_runner import create_app
+from qhana_plugin_runner.db.cli import create_db_function
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.db.models.mutable_json import (
-    NestedMutableDict,
-    NestedMutableList,
-)
 
 
 @pytest.fixture(scope="function")
 def task_data():
+    if os.path.exists("./instance/test.db"):
+        os.remove("./instance/test.db")
 
-    environ["SQLALCHEMY_DATABASE_URI"] = "sqlite:///../instance/test.db"
-    app = create_app()
+    test_config = {
+        "SQLALCHEMY_DATABASE_URI": "sqlite:///../instance/test.db"  # or "sqlite:///:memory:"
+    }
+    app = create_app(test_config)
     with app.app_context():
-        try:
-            drop_db()
-        except:
-            pass
         create_db_function(app)
         task_data = ProcessingTask(task_name="test-data")
         task_data.save(commit=True)

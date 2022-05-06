@@ -20,11 +20,9 @@ counterparts is also included.
 from itertools import chain
 
 from six import iteritems
-from sqlalchemy import Boolean
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy import event, inspect
 from sqlalchemy.types import JSON
-from typing import TypeVar, overload
 
 __all__ = "MutableJson"
 
