@@ -86,9 +86,7 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the manual classification plugin."""
 
-    example_inputs = {
-        "inputFileUrl": "file:///home/nico/entities2.json",
-    }
+    example_inputs = {}
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the manual classification plugin."

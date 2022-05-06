@@ -14,23 +14,23 @@
         height: 750px; overflow: auto;">
             <!-- select id's -->
             <table>
-                <tr">
+                <tr>
                     <th>Select</th>
                     {% for attr in attr_list%}
                     <th>{{attr}}</th>
                     {% endfor %}
-                    </tr>
-                    {% for entity in entity_list %}
-                    <tr onclick="selectRow(this)">
-                        <td style="padding: 1em">
-                            <input class="qhana-form-input" style="height: 1.5em; width: 1.5em" type="checkbox"
-                                id={{entity["ID"]}} name={{entity["ID"]}}>
-                        </td>
-                        {% for attr in attr_list%}
-                        <td>{{entity[attr] if attr in entity.keys() else ""}}</td>
-                        {% endfor %}
-                    </tr>
+                </tr>
+                {% for entity in entity_list %}
+                <tr onclick="selectRow(this)">
+                    <td style="padding: 1em">
+                        <input class="qhana-form-input" style="height: 1.5em; width: 1.5em" type="checkbox"
+                            id={{entity["ID"]}} name={{entity["ID"]}}>
+                    </td>
+                    {% for attr in attr_list%}
+                    <td>{{entity[attr] if attr in entity.keys() else ""}}</td>
                     {% endfor %}
+                </tr>
+                {% endfor %}
             </table>
         </div>
         <br>

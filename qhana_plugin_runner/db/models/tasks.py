@@ -28,8 +28,8 @@ from sqlalchemy.sql.schema import (
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.event import listens_for
 
-from ..db import DB, REGISTRY
 from .mutable_json import MutableJSON
+from ..db import DB, REGISTRY
 
 
 @REGISTRY.mapped
