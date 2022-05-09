@@ -1,0 +1,80 @@
+"""
+The Kernels stem from the paper by Suzuki et al
+Suzuki, Y., Yano, H., Gao, Q. et al.
+Analysis and synthesis of feature map for kernel-based quantum classifier.
+Quantum Mach. Intell. 2, 9 (2020). https://doi.org/10.1007/s42484-020-00020-y
+
+The Kernels actually make most sense, when n_qbits=2
+"""
+
+from .zz_kernel import ZZKernel
+import numpy as np
+
+
+class SuzukiKernelEq8(ZZKernel):
+
+    def __init__(self, backend, n_qbits, reps, entanglement_pattern):
+        super().__init__(backend, n_qbits, reps, entanglement_pattern)
+
+    def feature_map(self, x) -> float:
+        result = np.pi
+        if len(x) == 1:
+            return x[0]
+        for x_i in x:
+            result *= x_i
+        return result
+
+
+class SuzukiKernelEq9(ZZKernel):
+
+    def __init__(self, backend, n_qbits, reps, entanglement_pattern):
+        super().__init__(backend, n_qbits, reps, entanglement_pattern)
+
+    def feature_map(self, x) -> float:
+        result = np.pi/2.
+        if len(x) == 1:
+            return x[0]
+        for x_i in x:
+            result *= (1 - x_i)
+        return result
+
+
+class SuzukiKernelEq10(ZZKernel):
+
+    def __init__(self, backend, n_qbits, reps, entanglement_pattern):
+        super().__init__(backend, n_qbits, reps, entanglement_pattern)
+
+    def feature_map(self, x) -> float:
+        if len(x) == 1:
+            return x[0]
+        square_diff = []
+        for i, x_i in enumerate(x):
+            for j, x_j in enumerate(x):
+                if i != j:
+                    square_diff.append((x_i - x_j) * (x_j - x_i))
+        mean = np.array(square_diff).mean()
+        return np.pi * np.exp(mean / 8.)
+
+
+class SuzukiKernelEq11(ZZKernel):
+
+    def __init__(self, backend, n_qbits, reps, entanglement_pattern):
+        super().__init__(backend, n_qbits, reps, entanglement_pattern)
+
+    def feature_map(self, x) -> float:
+        if len(x) == 1:
+            return x[0]
+        x = 1. / np.cos(x)
+        return np.pi / 3. * np.product(x)
+
+
+class SuzukiKernelEq12(ZZKernel):
+
+    def __init__(self, backend, n_qbits, reps, entanglement_pattern):
+        super().__init__(backend, n_qbits, reps, entanglement_pattern)
+
+    def feature_map(self, x) -> float:
+        if len(x) == 1:
+            return x[0]
+        x = np.cos(x)
+        return np.pi * np.product(x)
