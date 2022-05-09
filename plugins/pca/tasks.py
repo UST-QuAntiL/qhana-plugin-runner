@@ -218,9 +218,6 @@ def complete_fitting(entity_points_url, pca):
 def precomputed_kernel_fitting(kernel_url: str, pca):
     # load data from file
     id_to_idx_X, id_to_idx_Y, kernel_matrix = load_kernel_matrix(kernel_url)
-    TASK_LOGGER.info(f"id_to_idx_X: {id_to_idx_X}")
-    TASK_LOGGER.info(f"id_to_idx_Y: {id_to_idx_Y}")
-    TASK_LOGGER.info(f"kernel_matrix: {kernel_matrix}")
     pca.fit(kernel_matrix)
     transformed_points = pca.transform(kernel_matrix)
     # Here we only allow kernel matrices between the same points. K(X, X)

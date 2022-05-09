@@ -122,8 +122,8 @@ class ParameterHandler:
 
 class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         data_input_type="entity-points",
         data_content_types=[
             "application/json",
