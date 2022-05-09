@@ -31,12 +31,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 @pytest.fixture(scope="function")
 def task_data():
-    if os.path.exists("./instance/test.db"):
-        os.remove("./instance/test.db")
-
-    test_config = {
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///../instance/test.db"  # or "sqlite:///:memory:"
-    }
+    test_config = {"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}
     app = create_app(test_config)
     with app.app_context():
         create_db_function(app)

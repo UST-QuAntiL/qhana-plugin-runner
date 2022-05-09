@@ -205,6 +205,7 @@ class NestedMutableList(TrackedList, Mutable):
         return super(cls).coerce(key, value)
 
 
+# NOTE: the following deviates from the original sourcecode to support primitive types (int, float, str, bool, None) without nesting.
 class NestedMutable(Mutable):
     """SQLAlchemy `mutable` extension with nested change tracking."""
 

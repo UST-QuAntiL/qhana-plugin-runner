@@ -1,4 +1,4 @@
-# Copyright 2021 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,14 +39,18 @@ def test_mutable_json_primitive_values(task_data: ProcessingTask):
     assert isinstance(
         task_data.data, bool
     ), "Task data.data is expected to be of type bool."
-    assert task_data.data == True, "Task data.data is expected to have value 'True'."
+    assert (
+        task_data.data == True
+    ), "Failed to persist a change to a boolean value to the database."
 
     task_data.data = 1
     task_data.save(commit=True)
     assert isinstance(
         task_data.data, int
     ), "Task data.data is expected to be of type int."
-    assert task_data.data == 1, "Task data.data is expected to have int value '1'."
+    assert (
+        task_data.data == 1
+    ), "Failed to persist a change to an int value to the database."
 
     task_data.data = "Test"
     task_data.save(commit=True)
@@ -55,7 +59,7 @@ def test_mutable_json_primitive_values(task_data: ProcessingTask):
     ), "Task data.data is expected to be of type str."
     assert (
         task_data.data == "Test"
-    ), "Task data.data is expected to have str value 'Test'."
+    ), "Failed to persist a change to a string value to the database."
 
     task_data.data = 1.12
     task_data.save(commit=True)
@@ -64,7 +68,7 @@ def test_mutable_json_primitive_values(task_data: ProcessingTask):
     ), "Task data.data is expected to be of type float."
     assert (
         task_data.data == 1.12
-    ), "Task data.data is expected to have float value '1.12'."
+    ), "Failed to persist a change to a float value to the database."
 
 
 def test_mutable_json_nested(task_data: ProcessingTask):
@@ -79,19 +83,19 @@ def test_mutable_json_nested(task_data: ProcessingTask):
     ), "Task data.data['test'] is expected to be of type TrackedDict."
     assert (
         task_data.data["test"]["y"] == 2
-    ), "Task data.data['test']['y'] is expected to have int value '2'."
+    ), "Failed to correctly persist a nested dict to the database."
 
     task_data.data["test"]["x"] += 10
     task_data.save(commit=True)
     assert (
         task_data.data["test"]["x"] == 11
-    ), "Task data.data['test']['x'] is expected to have int value '11'."
+    ), "Failed to persist a change to a nested dict entry to the database."
 
     task_data.data["test"]["x"] = []
     task_data.save(commit=True)
     assert (
         task_data.data["test"]["x"] == []
-    ), "Task data.data['test']['x'] is expected to have value [] (empty list)."
+    ), "Failed to persist a change to a nested dict entry to the database (assignment of nested list)."
 
     task_data.data = []
     task_data.data.append({"x": 1, "y": 2})
@@ -104,8 +108,10 @@ def test_mutable_json_nested(task_data: ProcessingTask):
     ), "Task data.data[0] is expected to be of type TrackedDict."
     assert (
         task_data.data[0]["x"] == 1
-    ), "Task data.data[0]['x'] is expected to have int value '1'."
+    ), "Failed to persist a change to an entry of a nested dict within a nested list to the database."
 
     task_data.data[0] = 1
     task_data.save(commit=True)
-    assert task_data.data[0] == 1, "Task data.data[0] is expected to have int value '1'."
+    assert (
+        task_data.data[0] == 1
+    ), "Failed to persist a change to a nested list entry to the database."
