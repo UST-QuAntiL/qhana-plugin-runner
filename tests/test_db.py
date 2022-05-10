@@ -13,12 +13,9 @@
 # limitations under the License.
 
 from conftests import task_data
+from sqlalchemy_json import TrackedDict, TrackedList
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.db.models.mutable_json import (
-    TrackedDict,
-    TrackedList,
-)
 
 
 def test_mutable_json_init(task_data: ProcessingTask):
