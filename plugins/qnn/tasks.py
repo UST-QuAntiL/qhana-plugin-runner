@@ -10,7 +10,12 @@ from celery.utils.log import get_task_logger
 TASK_LOGGER = get_task_logger(__name__)
 
 from plugins.qnn import QNN
-from plugins.qnn.schemas import InputParameters, OptimizerEnum, QNNParametersSchema
+from plugins.qnn.schemas import (
+    DeviceEnum,
+    InputParameters,
+    OptimizerEnum,
+    QNNParametersSchema,
+)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -21,22 +26,17 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 
-
 # Plotting
-#%matplotlib inline
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+
+# Plot to html
+import base64
+from io import BytesIO
 
 # PennyLane
 import pennylane as qml
 from pennylane import numpy as np
-
-# Optimized logsumexp().
-# from scipy.misc import logsumexp      # Working but deprecated
-# from scipy.special import logsumexp   # May gives problems with autograd.
-
-# Adam optimizer
-from pennylane.optimize import AdamOptimizer
 
 # Timing tool
 import time
@@ -44,6 +44,10 @@ import time
 # Scikit-learn tools
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+# ------------------------------
+#       one-hot encoding
+# ------------------------------
 
 
 def digits2position(vec_of_digits, n_positions):
@@ -56,12 +60,9 @@ def position2digit(exp_values):
     return np.argmax(exp_values)
 
 
-# def H_layer(nqubits):
-#    """Layer of single-qubit Hadamard gates."""
-#    for idx in range(nqubits):
-#        qml.Hadamard(wires=idx)
-
-
+# ------------------------------
+#   layers for quantum circuit
+# ------------------------------
 def RY_layer(w):
     """Layer of parametrized qubit rotations around the y axis."""
     for idx, element in enumerate(w):
@@ -70,19 +71,19 @@ def RY_layer(w):
 
 def entangling_layer(nqubits):
     """Layer of CNOTs followed by another shifted layer of CNOTs."""
-    # In other words it should apply something like :
-    # CNOT CNOT CNOT CNOT... CNOT
-    #  CNOT CNOT CNOT... CNOT
 
-    # Loop over even indices: i=0,2,...N-2
+    # first layer of CNOTS
     for i in range(0, nqubits - 1, 2):
         qml.CNOT(wires=[i, i + 1])
 
-    # Loop over odd indices: i=1,3,...N-3
+    # a second shifted layer of CNOTs
     for i in range(1, nqubits - 1, 2):
         qml.CNOT(wires=[i, i + 1])
 
 
+# -----------------------------------
+#   performance evaluation functions
+# -----------------------------------
 def cost_from_output(net_out_list, labels):
     """Cost as a function of the list of network output"""
 
@@ -98,6 +99,9 @@ def accuracy(predictions, labels):
     return np.sum(predicted_digits == label_digits) / len(label_digits)
 
 
+# ------------------------------
+#       dataset generation
+# ------------------------------
 def twospirals(n_points, noise=0.7, turns=1.52):
     """Returns the two spirals dataset."""
     n = np.sqrt(np.random.rand(n_points, 1)) * turns * (2 * np.pi)
@@ -111,7 +115,14 @@ def twospirals(n_points, noise=0.7, turns=1.52):
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
+
+    # ------------------------------
+    #        get input data
+    # ------------------------------
+
     TASK_LOGGER.info(f"Starting new QNN calculation task with db id '{db_id}'")
+
+    # load data from db
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -119,17 +130,46 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
     input_params: InputParameters = QNNParametersSchema().loads(task_data.parameters)
 
+    # set variables to loaded values
+    n_qubits = input_params.n_qubits  # Number of qubits
+    TASK_LOGGER.info(f"Loaded input parameters from db: n_qubits='{n_qubits}'")
+    step = input_params.step  # Learning rate
+    TASK_LOGGER.info(f"Loaded input parameters from db: step='{step}'")
+    batch_size = input_params.batch_size  # Numbre of samples (points) for each mini-batch
+    TASK_LOGGER.info(f"Loaded input parameters from db: batch_size='{batch_size}'")
+    q_depth = (
+        input_params.q_depth
+    )  # Depth of the quantum circuit (number of variational layers)
+    TASK_LOGGER.info(f"Loaded input parameters from db: q_depth='{q_depth}'")
     use_default_dataset = input_params.use_default_dataset
     TASK_LOGGER.info(
         f"Loaded input parameters from db: use_default_dataset='{use_default_dataset}'"
     )
-    datasets = None
+    N_total_iterations = (
+        input_params.N_total_iterations  # Number of optimization steps (step= 1 batch)
+    )
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: N_total_iterations='{N_total_iterations}'"
+    )
+    test_percentage = input_params.test_percentage
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: test_percentage='{test_percentage}'"
+    )
+    shots = input_params.shots
+    TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
+    optimizer = input_params.optimizer
+    TASK_LOGGER.info(f"Loaded input parameters from db: optimizer='{optimizer}'")
+    device = input_params.device
+    TASK_LOGGER.info(f"Loaded input parameters from db: device='{device}'")
+
+    # load or generate dataset
+    dataset = None
     if use_default_dataset:
-        print("USE default dataset")
+        print("Use default dataset")
         # spiral dataset
-        datasets = twospirals(2000, turns=1.52)
+        dataset = twospirals(2000, turns=1.52)
     else:
-        print("USE data from files")
+        print("Load dataset from files")
         # get data from file
         entity_points_url = input_params.entity_points_url
         TASK_LOGGER.info(
@@ -152,20 +192,17 @@ def calculation_task(self, db_id: int) -> str:
         for ent in entity_points:
             points.append(ent["point"])
             labels.append(clusters[ent["ID"]])
-        datasets = (points, np.array(labels))
+        dataset = (points, np.array(labels))
 
-    n_qubits = input_params.n_qubits  # Number of qubits
-    step = input_params.step  # Learning rate
-    batch_size = input_params.batch_size  # Numbre of samples (points) for each mini-batch
-    q_depth = (
-        input_params.q_depth
-    )  # Depth of the quantum circuit (number of variational layers)
-    n_input_nodes = 2  # 2 input nodes (x and y coordinates of data points).
+    # ------------------------------
+    #    define initial variables
+    # ------------------------------
+
+    n_input_nodes = len(
+        dataset[0][0]
+    )  # dimensions of first data element (e.g. 2 for (x,y))
     classes = [0, 1]  # Class 0 = red points. class 1 = blue points.
     n_classes = len(classes)
-    N_total_iterations = (
-        input_params.N_total_iterations  # 1000                 # Number of optimization steps (step= 1 batch)
-    )
     noise_0 = 0.001  # Initial spread of random weight vector
     max_layers = 15  # Keep 15 even if not all are used
     h = 0.2  # Plot grid step size
@@ -174,19 +211,23 @@ def calculation_task(self, db_id: int) -> str:
     cm_bright = ListedColormap(["#FF0000", "#0000FF"])  # Train point colors
 
     # determine amount of training and test data
-    N_tot = len(datasets[1])
-    N_test = int(N_tot * input_params.test_percentage)
-    TASK_LOGGER.info(f"N_test before '{N_test}'")
+    N_tot = len(dataset[1])
+    N_test = int(N_tot * test_percentage)
     if N_test < 1:
         N_test = 1
     if N_test > N_tot - 1:
         N_test = N_tot - 1
-    TASK_LOGGER.info(f"N_test after '{N_test}'")
-
     N_train = N_tot - N_test  # Number of training points
-    TASK_LOGGER.info(f"N_train '{N_train}'")
+    TASK_LOGGER.info(
+        f"Number of data elements: N_train = '{N_train}', N_test = '{N_test}'"
+    )
 
-    dev = qml.device("default.qubit", wires=n_qubits)
+    device_name = None
+    if device == DeviceEnum.default:
+        device_name = "default.qubit"
+    else:
+        device_name = "default.qubit"
+    dev = qml.device(name=device_name, wires=n_qubits, shots=shots)
 
     # Number of pre-processing parameters (1 matrix and 1 intercept)
     n_pre = n_qubits * (n_input_nodes + 1)
@@ -197,8 +238,15 @@ def calculation_task(self, db_id: int) -> str:
     # Initialize a unique vector of random parameters.
     weights_flat_0 = noise_0 * np.random.randn(n_pre + n_quant + n_post)
 
+    # ------------------------------
+    #      network definition
+    # ------------------------------
+
     @qml.qnode(dev)
     def variationalQuantumCircuit(q_weights_flat, q_in):
+        """
+        The quantum circuit with a variable number of quantum layers
+        """
         q_weights = q_weights_flat.reshape(max_layers, n_qubits)
         # Hadamard layer
         for idx in range(n_qubits):
@@ -214,6 +262,10 @@ def calculation_task(self, db_id: int) -> str:
         return tuple(exp_vals)
 
     def dressedQNN(weights_flat, data_point=None):
+        """
+        A quantum circuit dressed in a classical fully connected PREprocessing
+        and a classical fully-connected POSTprocessing layer
+        """
         # ------------------------------
         # classical preprocessing layer
         # ------------------------------
@@ -240,12 +292,17 @@ def calculation_task(self, db_id: int) -> str:
         post_out = post_one - np.log(np.sum(np.exp(post_one), axis=0))
         return post_out
 
-    def cost(weights_flat, points, labels, node=None):
+    def cost(weights_flat, points, labels):
         predictions = [dressedQNN(weights_flat, data_point=point) for point in points]
         log_like = np.sum(predictions * labels)
         return -log_like
 
-    X, y = datasets
+    # ------------------------------
+    #       setup for training
+    # ------------------------------
+
+    # initialized variables for training
+    X, y = dataset
     X = StandardScaler().fit_transform(X)
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=N_test, random_state=42
@@ -256,18 +313,37 @@ def calculation_task(self, db_id: int) -> str:
     y_train_onehot = digits2position(y_train, n_classes)
     y_test_onehot = digits2position(y_test, n_classes)
 
-    optimizer = input_params.optimizer
-
     opt = None
-    if optimizer == OptimizerEnum.adam:
-        opt = AdamOptimizer(step)
-    else:
+    if optimizer == OptimizerEnum.adagrad:
+        opt = qml.AdagradOptimizer(step)
+    elif optimizer == OptimizerEnum.adam:
+        opt = qml.AdamOptimizer(step)
+    elif optimizer == OptimizerEnum.gradient_descent:
         opt = qml.GradientDescentOptimizer(stepsize=step)
+    # elif optimizer == OptimizerEnum.lie_agebra:
+    #    opt = qml.LieAlgebraOptimizer(stepsize=step) # needs circuit parameter (q node)
+    elif optimizer == OptimizerEnum.momentum:
+        opt = qml.MomentumOptimizer(stepsize=step)
+    elif optimizer == OptimizerEnum.nesterov_momentum:
+        opt = qml.NesterovMomentumOptimizer(stepsize=step)
+    # elif optimizer == OptimizerEnum.qng:
+    #    opt = qml.QNGOptimizer(stepsize=step)  # objective function must be encoded as a single qnode
+    elif optimizer == OptimizerEnum.rms:
+        opt = qml.RMSPropOptimizer(stepsize=step)
+    # elif optimizer == OptimizerEnum.rotosolve:
+    #    opt = qml.RotosolveOptimizer(stepsize=step)
+    # elif optimizer == OptimizerEnum.rotoselect:
+    #    opt = qml.RotoselectOptimizer(stepsize=step)
+    # elif optimizer == OptimizerEnum.shot_adaptive:
+    #    opt = qml.ShotAdaptiveOptimizer(stepsize=step)
 
     # random start weights
     opt_weights = weights_flat_0
 
     offset = 0
+    # ------------------------------
+    #           training
+    # ------------------------------
     for it in range(N_total_iterations):
         start_it_time = time.time()
         # reshuffle if all training data was used
@@ -343,9 +419,6 @@ def calculation_task(self, db_id: int) -> str:
         horizontalalignment="right",
     )
 
-    import base64
-    from io import BytesIO
-
     # plot to html
     tmpfile = BytesIO()
     figure_main.savefig(tmpfile, format="png")
@@ -391,7 +464,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "qnn.json",
+            "qnn-weights.json",
             "qnn-weights",
             "application/json",
         )
@@ -401,4 +474,5 @@ def calculation_task(self, db_id: int) -> str:
     minutes = total_time // 60
     seconds = round(total_time - minutes * 60)
 
+    # TASK_LOGGER.info("Quantum circuit:", qml.draw(variationalQuantumCircuit)) # not possible with this qml version?
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"

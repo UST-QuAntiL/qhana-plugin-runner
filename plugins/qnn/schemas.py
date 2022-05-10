@@ -12,17 +12,32 @@ from enum import Enum
 
 
 class OptimizerEnum(Enum):
+    adagrad = "adagrad"
     adam = "adam"
-    sgd = "sgd"
+    gradient_descent = "gradient-descent"
+    # lie_agebra = "lie-albebra"
+    momentum = "momentum"
+    nesterov_momentum = "nesterov-momentum"
+    # qng = "qng"
+    rms = "rms"
+    # rotosolve = "rotosolve"
+    # rotoselect = "rotoselect"
+    # shot_adaptive = "shot-adaptive"
+
+
+class DeviceEnum(Enum):
+    default = "default"
+    test = "test (the same)"
 
 
 class InputParameters:
     def __init__(
         self,
-        theta: float,
         entity_points_url: str,
         clusters_url: str,
         test_percentage: float,
+        device: DeviceEnum,
+        shots: int,
         optimizer: OptimizerEnum,
         step: float,
         n_qubits: int,
@@ -35,7 +50,8 @@ class InputParameters:
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.test_percentage = test_percentage
-        self.theta = theta
+        self.device = device
+        self.shots = shots
         self.optimizer = optimizer
         self.step = step
         self.n_qubits = n_qubits
@@ -51,15 +67,6 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class QNNParametersSchema(FrontendFormBaseSchema):
-    theta = ma.fields.Float(
-        required=False,
-        allow_none=False,
-        metadata={
-            "label": "Theta (Not used right now)",
-            "description": "The input parameter for the QNN (rotation parameter)",
-            "input_type": "text",
-        },
-    )
     use_default_dataset = ma.fields.Boolean(
         required=False,
         allow_none=False,
@@ -81,7 +88,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         },
     )
     clusters_url = FileUrl(
-        required=True,
+        required=False,
         allow_none=True,
         data_input_type="clusters",
         data_content_types="application/json",
@@ -100,6 +107,25 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    device = EnumField(
+        DeviceEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Device",
+            "description": "Quantum device or simulator used for calculations",
+            "input_type": "select",
+        },
+    )
+    shots = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Shots",
+            "description": "Number of shots",
+            "input_type": "text",
+        },
+    )
     optimizer = EnumField(
         OptimizerEnum,
         required=True,
@@ -114,7 +140,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Learning Rate (0.07)",
+            "label": "Learning Rate",
             "description": "Learning rate for the training of the hybrid NN",
             "input_type": "text",
         },
@@ -123,7 +149,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Number of Qubits (5)",
+            "label": "Number of Qubits",
             "description": "Number of Qubits used for the quantum circuit",
             "input_type": "text",
         },
@@ -132,7 +158,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Number of iterations (2)",
+            "label": "Number of iterations",
             "description": "Number of total training iterations",
             "input_type": "text",
         },
@@ -141,7 +167,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Depth (5)",
+            "label": "Depth",
             "description": "Depth of the quantum circuit",
             "input_type": "text",
         },
@@ -150,7 +176,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Batch Size (10)",
+            "label": "Batch Size",
             "description": "Size of the training batch",
             "input_type": "text",
         },
