@@ -244,7 +244,7 @@ class VIS(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "plotly~=5.3.1"
+        return "plotly~=5.3.1\npandas~=1.4.2"
 
 
 TASK_LOGGER = get_task_logger(__name__)

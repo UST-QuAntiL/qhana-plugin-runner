@@ -39,7 +39,7 @@ RUN python -m venv ${VIRTUAL_ENV}
 # change path to include virtualenv first (affects all following commands)
 ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
 
-RUN python -m pip install --upgrade pip && python -m pip install gunicorn poetry invoke pandas
+RUN python -m pip install --upgrade pip && python -m pip install gunicorn poetry invoke
 
 COPY --chown=gunicorn . /app
 
