@@ -369,16 +369,6 @@ docker-compose down
 
 To also delete the volume containing the output files add the flag `-v`.
 
-#### Docker Compose with MUSE database
-
-If you want to start the MUSE database as well you need to build the muse-db image. 
-As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder with `docker build -t muse-db plugins/costume_loader_pkg/db_container`.
-Then you can start everything with
-
-```
-docker-compose --profile with_db up
-```
-
 
 ## Acknowledgements
 
