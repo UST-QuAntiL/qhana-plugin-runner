@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-"""This module contains helper class to track changes in json columns."""
+"""This module provides a helper class :py:class:`MutableJSON` that can be used as a column in SQL Alchemy. SQL Alchemy's built-in JSON type is immutable and hence inflexible for usage as a key-value storage. :py:class:`MutableJSON` supports all primitive types in JSON (``str``, ``float``, ``int`` and ``bool``) as well nested dicts and lists with change tracking."""
 
 from sqlalchemy import event, inspect
 from sqlalchemy.ext.mutable import Mutable
@@ -26,8 +26,8 @@ class NestedMutable(Mutable):
 
     @classmethod
     def _listen_on_attribute(cls, attribute, coerce, parent_cls):
-        """Overwrite method of base class in order to accept primitive (immutable) types. 
-        
+        """Overwrite method of base class in order to accept primitive (immutable) types.
+
         Code is identical to MutableBase._listen_on_attribute apart from handling ``str``, ``float`` and ``int`` (which includes ``bool`` as ``bool`` is a subclass of ``int``)."""
         key = attribute.key
         if parent_cls is not attribute.class_:
