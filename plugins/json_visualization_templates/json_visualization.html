@@ -1,0 +1,69 @@
+{% import 'forms.html' as forms %}
+
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/rainbow.min.css">
+    </head>
+
+    <body>
+        <div class="qhana-microfrontend">
+            <details id="visualization-options" open>
+                <summary>Visualization Options</summary>
+                {% call forms.render_form(target="microfrontend") %}
+                    {{ forms.render_fields(schema, values=values, errors=errors) }}
+                    <div class="qhana-form-buttons">
+                    {{ forms.submit("validate", target="microfrontend")}}
+                    {{ forms.submit("submit", action=process)}}
+                    </div>
+                {% endcall %}
+            </details>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+
+        <pre>
+            <code id="json-preview" class="qhana-data-preview" style="flex-direction: row; flex-wrap: wrap;
+            max-height: 750px; overflow: auto; background: transparent" hidden>
+            </code>
+        </pre>
+
+        <script>
+        function httpGet(theUrl) {
+            let xmlHttpReq = new XMLHttpRequest();
+            xmlHttpReq.open("GET", theUrl, false);
+            xmlHttpReq.send(null);
+            return xmlHttpReq.responseText;
+        }
+
+        function updatePreview(newUrl) {
+            const dataPreview = document.querySelector('#json-preview');
+            const options = document.querySelector('#visualization-options');
+            if (newUrl == null || newUrl === "") {
+                dataPreview.setAttribute("hidden", "hidden");
+                options.setAttribute("open", "open");
+                return;
+            }
+
+            console.log(newUrl)
+
+            const json_data = httpGet(newUrl);
+            const prettified_json_str = JSON.stringify(JSON.parse(json_data), null, 4);
+
+            dataPreview.innerHTML = prettified_json_str;
+
+            hljs.highlightAll();
+
+            dataPreview.removeAttribute("hidden");
+            options.removeAttribute("open");
+        }
+
+        const dataInput = document.querySelector('input[name=data]');
+        updatePreview(dataInput.value);
+        dataInput.addEventListener("input", (event) => updatePreview(dataInput.value));
+        </script>
+
+        <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
+    </body>
+</html>
