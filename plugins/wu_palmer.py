@@ -38,6 +38,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -138,20 +139,23 @@ class PluginsView(MethodView):
                 href=url_for(f"{WU_PALMER_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{WU_PALMER_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entities",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entitiesUrl",
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="wu-palmer-cache",
                         content_type=["application/zip"],
                         required=True,
+                        parameter="entitiesMetadataUrl",
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="attribute-metadata",
                         content_type=["application/json"],
                         required=True,
+                        parameter="wuPalmerCacheUrl",
                     ),
                 ],
                 data_output=[

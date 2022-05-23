@@ -39,6 +39,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -125,10 +126,11 @@ class PluginsView(MethodView):
                 href=url_for(f"{TIME_TANH_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{TIME_TANH_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entities",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entitiesUrl",
                     )
                 ],
                 data_output=[

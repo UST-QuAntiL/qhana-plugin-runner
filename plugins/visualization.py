@@ -35,6 +35,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -124,19 +125,20 @@ class PluginsView(MethodView):
                 href=url_for(f"{VIS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{VIS_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-points",
                         content_type=["application/json"],
                         required=True,
-                    )
-                ],
-                data_output=[
-                    DataMetadata(
+                        parameter="entityPointsUrl",
+                    ),
+                    InputDataMetadata(
                         data_type="clusters",
                         content_type=["application/json"],
                         required=True,
-                    )
+                        parameter="clustersUrl",
+                    ),
                 ],
+                data_output=[],
             ),
             tags=["visualization"],
         )

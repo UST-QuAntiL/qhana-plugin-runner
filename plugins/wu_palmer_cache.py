@@ -39,6 +39,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -104,10 +105,11 @@ class PluginsView(MethodView):
                 href=url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="taxonomy",
                         content_type=["application/zip"],
                         required=True,
+                        parameter="taxonomiesZipUrl",
                     )
                 ],
                 data_output=[
