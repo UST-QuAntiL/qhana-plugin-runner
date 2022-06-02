@@ -21,6 +21,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -46,10 +47,11 @@ class PluginsView(MethodView):
                 href=url_for(f"{QKMEANS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-points",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entityPointsUrl",
                     )
                 ],
                 data_output=[

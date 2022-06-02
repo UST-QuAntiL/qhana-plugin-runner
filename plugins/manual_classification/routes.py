@@ -18,6 +18,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 
 from . import MANUAL_CLASSIFICATION_BLP, ManualClassification
@@ -58,13 +59,14 @@ class PluginsView(MethodView):
                 href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
                 ui_href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity/list",
                         content_type=[
                             "application/json",
                             "text/csv",
                         ],
                         required=True,
+                        parameter="inputFileUrl",
                     )
                 ],
                 data_output=[

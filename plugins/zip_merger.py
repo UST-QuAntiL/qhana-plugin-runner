@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -112,11 +113,17 @@ class PluginsView(MethodView):
                 href=url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{ZIP_MERGER_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
-                        data_type="any", content_type=["application/zip"], required=True
+                    InputDataMetadata(
+                        data_type="any",
+                        content_type=["application/zip"],
+                        required=True,
+                        parameter="zip1Url",
                     ),
-                    DataMetadata(
-                        data_type="any", content_type=["application/zip"], required=True
+                    InputDataMetadata(
+                        data_type="any",
+                        content_type=["application/zip"],
+                        required=True,
+                        parameter="zip2Url",
                     ),
                 ],
                 data_output=[
