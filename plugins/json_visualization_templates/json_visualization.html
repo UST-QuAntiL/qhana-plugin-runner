@@ -29,26 +29,24 @@
         </pre>
 
         <script>
-        function httpGet(theUrl) {
-            let xmlHttpReq = new XMLHttpRequest();
-            xmlHttpReq.open("GET", theUrl, false);
-            xmlHttpReq.send(null);
-            return xmlHttpReq.responseText;
-        }
-
-        function updatePreview(newUrl) {
+        function checkUrl(newUrl) {
             const dataPreview = document.querySelector('#json-preview');
             const options = document.querySelector('#visualization-options');
             if (newUrl == null || newUrl === "") {
                 dataPreview.setAttribute("hidden", "hidden");
                 options.setAttribute("open", "open");
-                return;
+                return false;
             }
 
             console.log(newUrl)
 
-            const json_data = httpGet(newUrl);
-            const prettified_json_str = JSON.stringify(JSON.parse(json_data), null, 4);
+            return true;
+        }
+
+        function addJsonToPreview(json_str) {
+            const dataPreview = document.querySelector('#json-preview');
+            const options = document.querySelector('#visualization-options');
+            const prettified_json_str = JSON.stringify(JSON.parse(json_str), null, 4);
 
             dataPreview.innerHTML = prettified_json_str;
 
@@ -58,9 +56,25 @@
             options.removeAttribute("open");
         }
 
+        function getUrl() {
+            return document.querySelector('input[name=data]').value;
+        }
+
+        function updatePreview() {
+            const url = getUrl()
+
+            if (checkUrl(url)) {
+                fetch(url)
+                    .then((response) => response.text())
+                    .then((json_str) => addJsonToPreview(json_str))
+            }
+        }
+
+        updatePreview();
+
         const dataInput = document.querySelector('input[name=data]');
-        updatePreview(dataInput.value);
-        dataInput.addEventListener("input", (event) => updatePreview(dataInput.value));
+        dataInput.addEventListener("input", (event) => updatePreview());
+
         </script>
 
         <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
