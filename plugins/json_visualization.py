@@ -1,4 +1,4 @@
-# Copyright 2021 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -126,10 +126,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the JSON visualization plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @JSON_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the JSON visualization plugin."
     )
@@ -146,7 +142,7 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @JSON_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the csv visualization plugin."
+        HTTPStatus.OK, description="Micro frontend of the json visualization plugin."
     )
     @JSON_BLP.arguments(
         JsonInputParametersSchema(
@@ -174,9 +170,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{JSON_BLP.name}.ProcessView"),
-                example_values=url_for(
-                    f"{JSON_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
+                example_values=url_for(f"{JSON_BLP.name}.MicroFrontend"),
             )
         )
 
