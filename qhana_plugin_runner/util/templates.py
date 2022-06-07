@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import jsonschema
 from pathlib import Path
 from typing import ClassVar, Dict, List, Optional, Union
 
@@ -40,17 +41,10 @@ class QHanaTemplateCategory:
 
     @classmethod
     def from_dict(cls, category_dict):
-        if not "name" in category_dict:
-            return
-        if not "plugins" in category_dict:
-            return
         plugins = []
-        for plugin_id in category_dict["plugins"]:
-            if not plugin_id in QHAnaPluginBase.get_plugins():
-                # TODO: warning: plugin not found
-                continue
-            plugin = QHAnaPluginBase.get_plugins()[plugin_id]
-            plugins.append(plugin)
+
+        # TODO: load tags of all plugins and select the ones that match the logic expression
+
         return cls(category_dict["name"], category_dict.get("description", ""), plugins)
 
 
@@ -92,18 +86,14 @@ class QHanaTemplate:
 
     @classmethod
     def from_dict(cls, template_dict, app):
-        if not "title" in template_dict:
-            return
-        if not "categories" in template_dict:
-            return
-
         categories = []
+
         for category_dict in template_dict["categories"]:
             category = QHanaTemplateCategory.from_dict(category_dict)
             categories.append(category)
 
         return cls(
-            template_dict["title"], template_dict.get("description", ""), categories, app
+            template_dict["name"], template_dict.get("description", ""), categories, app
         )
 
 
@@ -138,29 +128,39 @@ def _load_templates_from_folder(app: Flask, folder: Union[str, Path]):
         )
         return
 
-    try: 
-        template_scheme_file_name = folder.joinpath("template_scheme.json")
-        with open(template_scheme_file_name, "r", encoding="utf-8") as template_scheme_file:
-            template_scheme = json.load(template_scheme_file)
+    # TODO: support multiple template folders? as implemented needs a schema file in every templates folder
+    template_schema_file_name = "template_schema.json"
+    try:
+        template_schema_file_path = folder.joinpath(template_schema_file_name)
+        with open(
+            template_schema_file_path, "r", encoding="utf-8"
+        ) as template_schema_file:
+            template_schema = json.load(template_schema_file)
     except FileNotFoundError:
-        app.logger.error("template_scheme.json not found")
+        app.logger.error(f"{template_schema_file_path} not found")
+        return
     except json.decoder.JSONDecodeError:
-        app.logger.error("template_scheme.json has incorrect format")
+        app.logger.error(f"{template_schema_file_path} template_schema.json has incorrect format")
+        return
 
     for child in folder.iterdir():
-        if child.suffixes != [".json"] or child.name == "template_scheme.json":
+        if child.suffixes != [".json"] or child.name == "template_schema.json":
             continue
 
-        with open(child, "r") as f:
-            template = json.load(f)
-        # TODO: Verify JSON data has valid format
-
-        if not "title" in template:
-            app.logger.warning(f"Template '{child.name}' has no title.")
+        try:
+            with open(child, "r") as f:
+                template = json.load(f)
+                jsonschema.validate(template, template_schema)
+        except json.decoder.JSONDecodeError:
+            app.logger.error(f"{child} has incorrect format")
             return
+        except jsonschema.exceptions.ValidationError:
+            app.logger.error(
+                f"{child} does not fit the schema of template configuration files defined in {template_schema_file_path}"
+            )
 
         QHanaTemplate.__templates__[
-            template_identifier(template["title"])
+            template_identifier(template["name"])
         ] = QHanaTemplate.from_dict(template, app)
 
 
