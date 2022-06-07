@@ -1,0 +1,38 @@
+{
+    "title": "MUSE",
+    "description": "Template for MUSE workflow",
+    "categories": [{
+            "name": "Load data",
+            "description": "Plugin for loading costume data",
+            "plugins": [
+                "costume-loader@v0-1-0"
+            ]
+        },
+        {
+            "name": "Data Preperation",
+            "description": "Plugins for data Perperation",
+            "plugins": [
+                "wu-palmer-cache@v0-1-0",
+                "similarity-calculation@v0-1-0",
+                "sym-max-mean@v0-1-0",
+                "sim-to-dist-transformers@v0-1-0",
+                "distance-aggregator@v0-1-0",
+                "mds@v0-1-0"
+            ]
+        },
+        {
+            "name": "Quantum Part",
+            "description": "Plugin for Quantum Algorithm",
+            "plugins": [
+                "quantum-k-means@v0-1-0"
+            ]
+        },
+        {
+            "name": "Visualization",
+            "description": "Plugin for visualization",
+            "plugins": [
+                "visualization@v0-1-0"
+            ]
+        }
+    ]
+}

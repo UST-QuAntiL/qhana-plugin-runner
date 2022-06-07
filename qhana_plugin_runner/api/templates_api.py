@@ -16,7 +16,8 @@
 
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import List, Optional
+from typing import List, Dict
+from unicodedata import name
 
 import marshmallow as ma
 from flask.helpers import url_for
@@ -27,6 +28,7 @@ from flask import Flask
 
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
+from qhana_plugin_runner.util.templates import QHanaTemplate
 
 TEMPLATES_API = SmorestBlueprint(
     "templates-api",
@@ -37,17 +39,33 @@ TEMPLATES_API = SmorestBlueprint(
 
 
 @dataclass()
-class TemplateItem:
+class CategoryData:
     name: str
     description: str
-    tags: List[str]
+    plugin_endpoints: List[str]
+
+
+@dataclass()
+class CategoryCollentionData:
+    categories: List[CategoryData]
+
+
+class CategoryDataSchema(MaBaseSchema):
+    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    description = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    plugin_endpoints = ma.fields.List(ma.fields.String(), required=True, allow_none=False, dump_only=True)
+
+
+class CategoryCollentionSchema(MaBaseSchema):
+    categories = ma.fields.List(ma.fields.Nested(CategoryDataSchema()), required=True, allow_none=False, dump_only=True)
 
 
 @dataclass()
 class TemplateData:
-    title: str
+    name: str
     description: str
-    categories: List[TemplateItem]
+    identifier: str
+    api_root: str
 
 
 @dataclass()
@@ -55,20 +73,14 @@ class TemplateCollectionData:
     templates: List[TemplateData]
 
 
-class TemplateItemSchema(MaBaseSchema):
+class TemplateDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    tags = ma.fields.List(ma.fields.String())
-
-
-class TemplateSchema(MaBaseSchema):
-    title = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    description = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    categories = ma.fields.List(ma.fields.Nested(TemplateItemSchema()))
+    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
 
 
 class TemplateCollectionSchema(MaBaseSchema):
-    templates = ma.fields.List(ma.fields.Nested(TemplateSchema()))
+    templates = ma.fields.List(ma.fields.Nested(TemplateDataSchema()))
 
 
 @TEMPLATES_API.route("/")
@@ -78,61 +90,41 @@ class TemplatesView(MethodView):
     @TEMPLATES_API.response(HTTPStatus.OK, TemplateCollectionSchema())
     def get(self):
         """Get all loaded templates."""
-        template_data = [
-            {
-                "title": "MUSE",
-                "description": "Template for MUSE workflow",
-                "categories": [
-                    {
-                        "name": "Load data",
-                        "description": "Plugin for loading costume data",
-                        "tags": [
-                            "data:loading"
-                        ]
-                    },
-                    {
-                        "name": "Data Preperation",
-                        "description": "Plugins for data Perperation",
-                        "tags": [
-                            "similarity-cache-generation",
-                            "similarity-calculation",
-                            "attribute-similarity-calculation",
-                            "sim-to-dist",
-                            "aggregator",
-                            "dist-to-points"
-                        ]
-                    },
-                    {
-                        "name": "Quantum Part",
-                        "description": "Plugin for Quantum Algorithm",
-                        "tags": [
-                            "points-to-clusters"
-                        ]
-                    },
-                    {
-                        "name": "Visualization",
-                        "description": "Plugin for visualization",
-                        "tags": [
-                            "visualization"
-                        ]
-                    }
-                ]
-            }
-        ]
 
         return TemplateCollectionData(
-            templates=[
+            templates=sorted([
                 TemplateData(
-                    title=t['title'],
-                    description=t['description'],
-                    categories=[
-                        TemplateItem(
-                            name=c['name'],
-                            description=c['description'],
-                            tags=c['tags']
-                        ) for c in t['categories']
-                    ]
+                    name=t.name,
+                    description=t.description,
+                    identifier=t.identifier,
+                    api_root=url_for(
+                        "templates-api.TemplateView", template_id=t.identifier, _external=True
+                    )
                 )
-                for t in template_data
-            ]
+                for t in QHanaTemplate.get_templates().values()
+            ], key=lambda x: x.identifier)
+        )
+
+
+@TEMPLATES_API.route("/<string:template_id>/")
+class TemplateView(MethodView):
+    """Generic fallback templates view."""
+
+    @TEMPLATES_API.response(HTTPStatus.OK, CategoryCollentionSchema())
+    def get(self, template_id: str):
+        """Get all loaded templates."""
+
+        if template_id not in QHanaTemplate.get_templates():
+            abort(
+                HTTPStatus.NOT_FOUND, message=f"No template with identifier '{template_id}' exists."
+            )
+        template = QHanaTemplate.get_templates()[template_id]
+        return CategoryCollentionData(
+            categories=[CategoryData(
+                name=category.name,
+                description=category.description,
+                plugin_endpoints=[url_for(
+                        "plugins-api.PluginView", plugin=p.identifier, _external=True
+                        ) for p in category.plugins]
+            ) for category in template.categories]
         )
