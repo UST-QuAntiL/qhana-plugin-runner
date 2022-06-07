@@ -40,18 +40,18 @@ class QHanaTemplateCategory:
 
     @classmethod
     def from_dict(cls, category_dict):
-        if not 'name' in category_dict:
+        if not "name" in category_dict:
             return
-        if not 'plugins' in category_dict:
+        if not "plugins" in category_dict:
             return
         plugins = []
-        for plugin_id in category_dict['plugins']:
+        for plugin_id in category_dict["plugins"]:
             if not plugin_id in QHAnaPluginBase.get_plugins():
                 # TODO: warning: plugin not found
                 continue
             plugin = QHAnaPluginBase.get_plugins()[plugin_id]
             plugins.append(plugin)
-        return cls(category_dict['name'], category_dict.get('description', ''), plugins)
+        return cls(category_dict["name"], category_dict.get("description", ""), plugins)
 
 
 class QHanaTemplate:
@@ -63,7 +63,13 @@ class QHanaTemplate:
     __app__: Optional[Flask] = None
     __templates__: Dict[str, "QHanaTemplate"] = {}
 
-    def __init__(self, name: str, description: str, categories: List[QHanaTemplateCategory], app: Optional[Flask]) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        categories: List[QHanaTemplateCategory],
+        app: Optional[Flask],
+    ) -> None:
         super().__init__()
         self.app: Optional[Flask] = None
         if app:
@@ -86,17 +92,19 @@ class QHanaTemplate:
 
     @classmethod
     def from_dict(cls, template_dict, app):
-        if not 'title' in template_dict:
+        if not "title" in template_dict:
             return
-        if not 'categories' in template_dict:
+        if not "categories" in template_dict:
             return
 
         categories = []
-        for category_dict in template_dict['categories']:
+        for category_dict in template_dict["categories"]:
             category = QHanaTemplateCategory.from_dict(category_dict)
             categories.append(category)
 
-        return cls(template_dict['title'], template_dict.get('description', ''), categories, app)
+        return cls(
+            template_dict["title"], template_dict.get("description", ""), categories, app
+        )
 
 
 def _load_templates_from_folder(app: Flask, folder: Union[str, Path]):
@@ -123,24 +131,37 @@ def _load_templates_from_folder(app: Flask, folder: Union[str, Path]):
             f"Trying to load templates from '{folder}' but the folder does not exist."
         )
         return
+
     if not folder.is_dir():
         app.logger.warning(
             f"Trying to load templates from '{folder}' but the path is not a directory."
         )
         return
 
+    try: 
+        template_scheme_file_name = folder.joinpath("template_scheme.json")
+        with open(template_scheme_file_name, "r", encoding="utf-8") as template_scheme_file:
+            template_scheme = json.load(template_scheme_file)
+    except FileNotFoundError:
+        app.logger.error("template_scheme.json not found")
+    except json.decoder.JSONDecodeError:
+        app.logger.error("template_scheme.json has incorrect format")
+
     for child in folder.iterdir():
-        if child.suffixes != [".json"]:
+        if child.suffixes != [".json"] or child.name == "template_scheme.json":
             continue
-        with open(child, 'r') as f:
+
+        with open(child, "r") as f:
             template = json.load(f)
         # TODO: Verify JSON data has valid format
-        if not 'title' in template:
-            app.logger.warning(
-                f"Template '{child.name}' has no title."
-            )
+
+        if not "title" in template:
+            app.logger.warning(f"Template '{child.name}' has no title.")
             return
-        QHanaTemplate.__templates__[template_identifier(template['title'])] = QHanaTemplate.from_dict(template, app)
+
+        QHanaTemplate.__templates__[
+            template_identifier(template["title"])
+        ] = QHanaTemplate.from_dict(template, app)
 
 
 def register_templates(app: Flask):
@@ -152,7 +173,7 @@ def register_templates(app: Flask):
     from qhana_plugin_runner.api import ROOT_API
 
     QHanaTemplate.__app__ = app
-    template_folders = app.config.get("TEMPLATE_FOLDERS", [])
+    template_folders = app.config.get("TEMPLATE_FOLDERS", ["templates"])
     for folder in template_folders:
         _load_templates_from_folder(app, folder)
 

@@ -1,0 +1,108 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Record of template",
+	"description": "This document records the details of an template",
+	"type": "object",
+	"properties": {
+		"name": {
+			"description": "Name of template",
+			"type": "string"
+		},
+		"description": {
+			"description": "Description of template",
+			"type": "string"
+		},
+		"categories": {
+			"description": "List of categories",
+			"type": "array",
+			"items": {
+				"description": "describes one categorie",
+				"type": "object",
+				"properties": {
+					"name": {
+						"description": "Name of categorie",
+						"type": "string"
+					},
+					"description": {
+						"description": "Description of categorie",
+						"type": "string"
+					},
+					"tags": {
+						"description": "Logic formula of tags",
+						"$ref": "#/definitions/logicFormulaOfTags"
+					}
+				},
+				"required": [
+					"name",
+					"description",
+					"tags"
+				],
+				"additionalProperties": false
+			},
+			"minItems": 1
+		}
+	},
+	"required": [
+		"name",
+		"description",
+		"categories"
+	],
+	"additionalProperties": false,
+	
+	"definitions": {
+		"logicFormulaOfTags": {
+    		"oneOf": [
+				{						
+					"description": "Name of tag",
+					"type": "string"
+				},
+				{ 
+					"description": "Logic AND",
+					"type": "object",
+					"properties": {
+						"and": {
+							"type": "array",
+							"items":  {
+								"$ref": "#/definitions/logicFormulaOfTags"
+							},
+							"minItems": 2
+						}
+					},
+					"required": ["and"],
+					"additionalProperties": false
+				},
+				{ 
+					"description": "Logic OR",
+					"type": "object",
+					"properties": {
+						"or": {
+							"type": "array",
+							"items":  {
+								"$ref": "#/definitions/logicFormulaOfTags"
+							},
+							"minItems": 2
+						}
+					},
+					"required": ["or"],
+					"additionalProperties": false
+				},
+				{ 
+					"description": "Logic NOT",
+					"type": "object",
+					"properties": {
+						"not": {
+							"type": "array",
+							"items":  {
+								"$ref": "#/definitions/logicFormulaOfTags"
+							},
+							"minItems": 1,
+							"maxItems": 1
+						}
+					},
+					"required": ["not"],
+					"additionalProperties": false
+				}
+			]
+		}
+	}
+}
