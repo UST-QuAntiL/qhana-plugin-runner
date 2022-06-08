@@ -160,9 +160,7 @@ class ProgressMetadataSchema(MaBaseSchema):
         metadata={"description": "The progress target value."},
     )
     unit = ma.fields.String(
-        required=False,
-        allow_none=False,
-        metadata={"description": "The progress unit."},
+        required=False, allow_none=False, metadata={"description": "The progress unit."},
     )
 
 

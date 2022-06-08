@@ -1,4 +1,4 @@
-# Copyright 2021 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,11 +53,18 @@ class CategoryCollentionData:
 class CategoryDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    plugin_endpoints = ma.fields.List(ma.fields.String(), required=True, allow_none=False, dump_only=True)
+    plugin_endpoints = ma.fields.List(
+        ma.fields.String(), required=True, allow_none=False, dump_only=True
+    )
 
 
 class CategoryCollentionSchema(MaBaseSchema):
-    categories = ma.fields.List(ma.fields.Nested(CategoryDataSchema()), required=True, allow_none=False, dump_only=True)
+    categories = ma.fields.List(
+        ma.fields.Nested(CategoryDataSchema()),
+        required=True,
+        allow_none=False,
+        dump_only=True,
+    )
 
 
 @dataclass()
@@ -92,17 +99,22 @@ class TemplatesView(MethodView):
         """Get all loaded templates."""
 
         return TemplateCollectionData(
-            templates=sorted([
-                TemplateData(
-                    name=t.name,
-                    description=t.description,
-                    identifier=t.identifier,
-                    api_root=url_for(
-                        "templates-api.TemplateView", template_id=t.identifier, _external=True
+            templates=sorted(
+                [
+                    TemplateData(
+                        name=t.name,
+                        description=t.description,
+                        identifier=t.identifier,
+                        api_root=url_for(
+                            "templates-api.TemplateView",
+                            template_id=t.identifier,
+                            _external=True,
+                        ),
                     )
-                )
-                for t in QHanaTemplate.get_templates().values()
-            ], key=lambda x: x.identifier)
+                    for t in QHanaTemplate.get_templates().values()
+                ],
+                key=lambda x: x.identifier,
+            )
         )
 
 
@@ -116,15 +128,22 @@ class TemplateView(MethodView):
 
         if template_id not in QHanaTemplate.get_templates():
             abort(
-                HTTPStatus.NOT_FOUND, message=f"No template with identifier '{template_id}' exists."
+                HTTPStatus.NOT_FOUND,
+                message=f"No template with identifier '{template_id}' exists.",
             )
         template = QHanaTemplate.get_templates()[template_id]
         return CategoryCollentionData(
-            categories=[CategoryData(
-                name=category.name,
-                description=category.description,
-                plugin_endpoints=[url_for(
-                        "plugins-api.PluginView", plugin=p.identifier, _external=True
-                        ) for p in category.plugins]
-            ) for category in template.categories]
+            categories=[
+                CategoryData(
+                    name=category.name,
+                    description=category.description,
+                    plugin_endpoints=[
+                        url_for(
+                            "plugins-api.PluginView", plugin=p.identifier, _external=True
+                        )
+                        for p in category.plugins
+                    ],
+                )
+                for category in template.categories
+            ]
         )

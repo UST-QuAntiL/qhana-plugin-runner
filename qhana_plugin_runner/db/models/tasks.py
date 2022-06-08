@@ -236,10 +236,7 @@ class ProcessingTask:
 
         self.current_step += 1
         new_step: Step = Step(
-            id=self.id,
-            step_id=step_id,
-            href=href,
-            ui_href=ui_href,
+            id=self.id, step_id=step_id, href=href, ui_href=ui_href,
         )
         self.steps.append(new_step)
 

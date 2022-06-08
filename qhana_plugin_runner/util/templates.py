@@ -49,7 +49,11 @@ class QHanaTemplateCategory:
 
     @classmethod
     def from_dict(cls, category_dict):
-        return cls(category_dict["name"], category_dict.get("description", ""), category_dict["tags"])
+        return cls(
+            category_dict["name"],
+            category_dict.get("description", ""),
+            category_dict["tags"],
+        )
 
     @cached_property
     def plugins(self) -> List[QHAnaPluginBase]:
@@ -57,17 +61,19 @@ class QHanaTemplateCategory:
 
         for plugin in QHAnaPluginBase.get_plugins().values():
             try:
-                plugin_url = url_for("plugins-api.PluginView", plugin=plugin.identifier, _external=True)
+                plugin_url = url_for(
+                    "plugins-api.PluginView", plugin=plugin.identifier, _external=True
+                )
                 with urllib.request.urlopen(plugin_url) as f:
                     response = json.load(f)
-                    tags = response["tags"] 
-                
+                    tags = response["tags"]
+
                 if QHanaTemplateCategory.tags_match_expr(tags, self.logic_expr):
                     plugins.append(plugin)
-            
+
             except urllib.error.HTTPError:
                 pass
-        
+
         return plugins
 
     @staticmethod
@@ -82,7 +88,7 @@ class QHanaTemplateCategory:
                 logic_expr["or"],
                 False,
             )
-            
+
         elif "and" in logic_expr:
             return reduce(
                 lambda res, nested_expr: res
@@ -90,7 +96,7 @@ class QHanaTemplateCategory:
                 logic_expr["and"],
                 True,
             )
-        
+
         elif "not" in logic_expr:
             return not QHanaTemplateCategory.tags_match_expr(tags, logic_expr["not"])
 
@@ -239,5 +245,6 @@ def register_templates(app: Flask):
             url_prefix=f"{url_prefix}/templates/{template.identifier}/",
         )
         ROOT_API.register_blueprint(
-            template_blueprint, url_prefix=f"{url_prefix}/templates/{template.identifier}/"
+            template_blueprint,
+            url_prefix=f"{url_prefix}/templates/{template.identifier}/",
         )
