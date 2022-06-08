@@ -14,11 +14,14 @@
 
 import json
 import jsonschema
+import urllib
+from functools import reduce
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional, Union
+from typing import ClassVar, Dict, List, Optional, Union, Any
 
 from flask import Flask
 from flask.blueprints import Blueprint
+from flask.helpers import url_for
 from werkzeug.utils import cached_property
 
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
@@ -29,27 +32,73 @@ def template_identifier(name) -> str:
     return name.lower()
 
 
+LogicExpr = Union[str, Dict[str, Any]]
+# LogicExpr = Union[str, Dict[str, List[LExpr]], Dict[str, LExpr]] not yet supported by mypy
+# https://github.com/python/mypy/issues/731
+
+
 class QHanaTemplateCategory:
     name: ClassVar[str]
     description: ClassVar[str]
-    plugins: ClassVar[List[QHAnaPluginBase]]
+    logic_expr: LogicExpr
 
     def __init__(self, name, description, plugins) -> None:
         self.name = name
         self.description = description
-        self.plugins = plugins
+        self.logic_expr = plugins
 
     @classmethod
     def from_dict(cls, category_dict):
+        return cls(category_dict["name"], category_dict.get("description", ""), category_dict["tags"])
+
+    @cached_property
+    def plugins(self) -> List[QHAnaPluginBase]:
         plugins = []
 
-        # TODO: load tags of all plugins and select the ones that match the logic expression
+        for plugin in QHAnaPluginBase.get_plugins().values():
+            try:
+                plugin_url = url_for("plugins-api.PluginView", plugin=plugin.identifier, _external=True)
+                with urllib.request.urlopen(plugin_url) as f:
+                    response = json.load(f)
+                    tags = response["tags"] 
+                
+                if QHanaTemplateCategory.tags_match_expr(tags, self.logic_expr):
+                    plugins.append(plugin)
+            
+            except urllib.error.HTTPError:
+                pass
+        
+        return plugins
 
-        return cls(category_dict["name"], category_dict.get("description", ""), plugins)
+    @staticmethod
+    def tags_match_expr(tags: List[str], logic_expr: LogicExpr) -> bool:
+        if isinstance(logic_expr, str):
+            return logic_expr in tags
+
+        elif "or" in logic_expr:
+            return reduce(
+                lambda res, nested_expr: res
+                or QHanaTemplateCategory.tags_match_expr(tags, nested_expr),
+                logic_expr["or"],
+                False,
+            )
+            
+        elif "and" in logic_expr:
+            return reduce(
+                lambda res, nested_expr: res
+                and QHanaTemplateCategory.tags_match_expr(tags, nested_expr),
+                logic_expr["and"],
+                True,
+            )
+        
+        elif "not" in logic_expr:
+            return not QHanaTemplateCategory.tags_match_expr(tags, logic_expr["not"])
+
+        else:
+            return False
 
 
 class QHanaTemplate:
-
     name: ClassVar[str]
     description: ClassVar[str]
     categories: ClassVar[List[QHanaTemplateCategory]]
@@ -140,7 +189,9 @@ def _load_templates_from_folder(app: Flask, folder: Union[str, Path]):
         app.logger.error(f"{template_schema_file_path} not found")
         return
     except json.decoder.JSONDecodeError:
-        app.logger.error(f"{template_schema_file_path} template_schema.json has incorrect format")
+        app.logger.error(
+            f"{template_schema_file_path} template_schema.json has incorrect format"
+        )
         return
 
     for child in folder.iterdir():
@@ -181,12 +232,12 @@ def register_templates(app: Flask):
 
     # register API blueprints (only do this after the API is registered with flask!)
     for template in QHanaTemplate.get_templates().values():
-        plugin_blueprint = SecurityBlueprint(
+        template_blueprint = SecurityBlueprint(
             f"template-{template.identifier}-api",
             template.name,
             description=f"Api to {template.name} template.",
             url_prefix=f"{url_prefix}/templates/{template.identifier}/",
         )
         ROOT_API.register_blueprint(
-            plugin_blueprint, url_prefix=f"{url_prefix}/templates/{template.identifier}/"
+            template_blueprint, url_prefix=f"{url_prefix}/templates/{template.identifier}/"
         )
