@@ -205,10 +205,17 @@ class FileUrl(ma.fields.Url):
         require_tld: bool = True,
         data_input_type: Optional[str] = None,
         data_content_types: Optional[Union[Sequence[str], str]] = None,
+        required: bool = False,
+        allow_none: bool = False,
         **kwargs,
     ):
         super().__init__(
-            relative=relative, schemes=schemes, require_tld=require_tld, **kwargs
+            relative=relative,
+            schemes=schemes,
+            require_tld=require_tld,
+            allow_none=allow_none,
+            required=required,
+            **kwargs,
         )
         if data_input_type is not None:
             self.metadata["data_input_type"] = data_input_type
@@ -220,3 +227,18 @@ class FileUrl(ma.fields.Url):
             require_tld=self.require_tld,
             error=self.error_messages["invalid"],
         )
+
+    def deserialize(
+        self,
+        value: Any,
+        attr: Optional[str] = None,
+        data: Optional[Mapping[str, Any]] = None,
+        **kwargs,
+    ):
+        # treat empty string as None
+        if value == "":
+            value = None
+        return super().deserialize(value, attr, data, **kwargs)
+
+
+# TODO add plugin URL field + UI generator functions

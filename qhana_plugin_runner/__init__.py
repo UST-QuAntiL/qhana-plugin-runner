@@ -104,6 +104,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
         if "URL_MAP" in os.environ:
             config["URL_REWRITE_RULES"] = loads(os.environ["URL_MAP"])
+
+        if "DEFAULT_FILE_STORE" in os.environ:
+            config["DEFAULT_FILE_STORE"] = os.environ["DEFAULT_FILE_STORE"]
     else:
         # load the test config if passed in
         config.from_mapping(test_config)
