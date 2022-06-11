@@ -84,6 +84,7 @@ class TemplateDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    api_root = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class TemplateCollectionSchema(MaBaseSchema):
@@ -107,7 +108,7 @@ class TemplatesView(MethodView):
                         identifier=t.identifier,
                         api_root=url_for(
                             "templates-api.TemplateView",
-                            template_id=t.identifier,
+                            template=t.identifier,
                             _external=True,
                         ),
                     )
@@ -118,20 +119,20 @@ class TemplatesView(MethodView):
         )
 
 
-@TEMPLATES_API.route("/<string:template_id>/")
+@TEMPLATES_API.route("/<string:template>/")
 class TemplateView(MethodView):
     """Generic fallback templates view."""
 
     @TEMPLATES_API.response(HTTPStatus.OK, CategoryCollentionSchema())
-    def get(self, template_id: str):
+    def get(self, template: str):
         """Get all loaded templates."""
 
-        if template_id not in QHanaTemplate.get_templates():
+        if template not in QHanaTemplate.get_templates():
             abort(
                 HTTPStatus.NOT_FOUND,
-                message=f"No template with identifier '{template_id}' exists.",
+                message=f"No template with identifier '{template}' exists.",
             )
-        template = QHanaTemplate.get_templates()[template_id]
+        template = QHanaTemplate.get_templates()[template]
         return CategoryCollentionData(
             categories=[
                 CategoryData(
