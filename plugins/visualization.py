@@ -140,7 +140,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[],
             ),
-            tags=["visualization"],
+            tags=VIS.instance.tags,
         )
 
 
@@ -238,6 +238,7 @@ class CalcView(MethodView):
 class VIS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["visualization"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

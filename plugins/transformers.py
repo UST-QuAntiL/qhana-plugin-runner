@@ -166,7 +166,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["sim-to-dist"],
+            tags=Transformers.instance.tags,
         )
 
 
@@ -261,6 +261,7 @@ class CalcSimilarityView(MethodView):
 class Transformers(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["sim-to-dist"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

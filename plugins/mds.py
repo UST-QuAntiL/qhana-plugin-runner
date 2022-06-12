@@ -182,7 +182,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dist-to-points"],
+            tags=MDS.instance.tags,
         )
 
 
@@ -285,6 +285,7 @@ class CalcView(MethodView):
 class MDS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["dist-to-points"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

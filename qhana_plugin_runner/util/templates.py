@@ -60,19 +60,8 @@ class QHanaTemplateCategory:
         plugins = []
 
         for plugin in QHAnaPluginBase.get_plugins().values():
-            try:
-                plugin_url = url_for(
-                    "plugins-api.PluginView", plugin=plugin.identifier, _external=True
-                )
-                with urllib.request.urlopen(plugin_url) as f:
-                    response = json.load(f)
-                    tags = response["tags"]
-
-                if QHanaTemplateCategory.tags_match_expr(tags, self.logic_expr):
-                    plugins.append(plugin)
-
-            except urllib.error.HTTPError:
-                pass
+            if QHanaTemplateCategory.tags_match_expr(plugin.tags, self.logic_expr):
+                plugins.append(plugin)
 
         return plugins
 

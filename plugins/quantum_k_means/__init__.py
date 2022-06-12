@@ -20,6 +20,7 @@ QKMEANS_BLP = SecurityBlueprint(
 class QKMeans(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["points-to-clusters"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -80,7 +80,7 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=["data-annotation"],
+            tags=ManualClassification.instance.tags,
         )
 
 

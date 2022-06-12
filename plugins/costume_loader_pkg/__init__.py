@@ -34,6 +34,7 @@ COSTUME_LOADER_BLP = SecurityBlueprint(
 class CostumeLoader(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["data:loading"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

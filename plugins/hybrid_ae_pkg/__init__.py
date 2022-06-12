@@ -34,6 +34,7 @@ HA_BLP = SecurityBlueprint(
 class HybridAutoencoderPlugin(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["dimensionality-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

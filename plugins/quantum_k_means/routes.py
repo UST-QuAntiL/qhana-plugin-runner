@@ -62,7 +62,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["points-to-clusters"],
+            tags=QKMeans.instance.tags,
         )
 
 

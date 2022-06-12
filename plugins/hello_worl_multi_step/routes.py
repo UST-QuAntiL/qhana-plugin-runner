@@ -44,7 +44,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[],
             ),
-            tags=[],
+            tags=HelloWorldMultiStep.instance.tags,
         )
 
 

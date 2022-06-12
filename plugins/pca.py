@@ -168,7 +168,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dimension-reduction"],
+            tags=PCA.instance.tags,
         )
 
 
@@ -263,6 +263,7 @@ class ProcessView(MethodView):
 class PCA(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["dimension-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

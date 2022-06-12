@@ -15,7 +15,7 @@
 import sys
 from importlib import import_module
 from pathlib import Path
-from typing import ClassVar, Dict, Optional, Union
+from typing import ClassVar, Dict, List, Optional, Union
 
 from flask import Flask
 from flask.blueprints import Blueprint
@@ -36,6 +36,7 @@ class QHAnaPluginBase:
     name: ClassVar[str]
     version: ClassVar[str]
     instance: ClassVar["QHAnaPluginBase"]
+    tags: ClassVar[List[str]] = []
     has_api: ClassVar[bool] = False
 
     __app__: Optional[Flask] = None

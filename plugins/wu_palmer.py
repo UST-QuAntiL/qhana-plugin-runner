@@ -166,7 +166,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["similarity-calculation"],
+            tags=WuPalmer.instance.tags,
         )
 
 
@@ -251,6 +251,7 @@ class CalcSimilarityView(MethodView):
 class WuPalmer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

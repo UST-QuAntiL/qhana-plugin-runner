@@ -60,7 +60,7 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=["data:loading"],
+            tags=CostumeLoader.instance.tags,
         )
 
 

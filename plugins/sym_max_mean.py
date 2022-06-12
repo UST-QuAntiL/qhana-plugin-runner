@@ -149,7 +149,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["attribute-similarity-calculation"],
+            tags=SymMaxMean.instance.tags,
         )
 
 
@@ -234,6 +234,7 @@ class CalcSimilarityView(MethodView):
 class SymMaxMean(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["attribute-similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

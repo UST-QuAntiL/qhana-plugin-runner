@@ -151,7 +151,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["aggregator"],
+            tags=Aggregator.instance.tags,
         )
 
 
@@ -239,6 +239,7 @@ class CalcSimilarityView(MethodView):
 class Aggregator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["aggregator"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

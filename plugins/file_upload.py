@@ -112,7 +112,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=[],
+            tags=FileUpload.instance.tags,
         )
 
 
@@ -229,6 +229,7 @@ class FileUpload(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    tags = []
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

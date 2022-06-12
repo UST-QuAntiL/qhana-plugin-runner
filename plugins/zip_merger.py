@@ -132,7 +132,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["utility"],
+            tags=ZipMerger.instance.tags,
         )
 
 
@@ -217,6 +217,7 @@ class CalcSimilarityView(MethodView):
 class ZipMerger(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    tags = ["utility"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

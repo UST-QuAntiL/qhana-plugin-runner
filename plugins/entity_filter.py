@@ -199,7 +199,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["data-loader"],
+            tags=EntityFilter.instance.tags,
         )
 
 
@@ -297,6 +297,7 @@ class EntityFilter(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    tags = ["data-loader"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -56,7 +56,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dimensionality-reduction"],
+            tags=HybridAutoencoderPlugin.instance.tags,
         )
 
 

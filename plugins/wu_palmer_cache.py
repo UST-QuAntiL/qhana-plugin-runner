@@ -120,7 +120,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["similarity-cache-generation"],
+            tags=WuPalmerCache.instance.tags,
         )
 
 
@@ -208,6 +208,7 @@ class WuPalmerCache(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    tags = ["similarity-cache-generation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
