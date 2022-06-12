@@ -28,6 +28,7 @@ from flask import Flask
 
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
+from qhana_plugin_runner.api.plugins_api import PluginSchema, PluginData
 from qhana_plugin_runner.util.templates import QHanaTemplate
 
 TEMPLATES_API = SmorestBlueprint(
@@ -42,7 +43,7 @@ TEMPLATES_API = SmorestBlueprint(
 class CategoryData:
     name: str
     description: str
-    plugin_endpoints: List[str]
+    plugins: List[PluginData]
 
 
 @dataclass()
@@ -53,8 +54,8 @@ class CategoryCollentionData:
 class CategoryDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    plugin_endpoints = ma.fields.List(
-        ma.fields.String(), required=True, allow_none=False, dump_only=True
+    plugins = ma.fields.List(
+        ma.fields.Nested(PluginSchema()), required=True, allow_none=False, dump_only=True
     )
 
 
@@ -138,9 +139,16 @@ class TemplateView(MethodView):
                 CategoryData(
                     name=category.name,
                     description=category.description,
-                    plugin_endpoints=[
-                        url_for(
-                            "plugins-api.PluginView", plugin=p.identifier, _external=True
+                    plugins=[
+                        PluginData(
+                            name=p.name,
+                            version=p.version,
+                            identifier=p.identifier,
+                            api_root=url_for(
+                                "plugins-api.PluginView",
+                                plugin=p.identifier,
+                                _external=True,
+                            ),
                         )
                         for p in category.plugins
                     ],
