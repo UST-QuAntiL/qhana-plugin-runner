@@ -26,14 +26,13 @@ MODULE_NAME = "qhana_plugin_runner"
 
 from qhana_plugin_runner import create_app
 from qhana_plugin_runner.db.cli import create_db_function
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.util.config.celery_config import CELERY_PRODUCTION_CONFIG
 
 DEFAULT_TEST_CONFIG = {
     "SECRET_KEY": "test",
     "DEBUG": False,
     "TESTING": True,
-
     "JSON_SORT_KEYS": True,
     "JSONIFY_PRETTYPRINT_REGULAR": False,
     "DEFAULT_LOG_SEVERITY": INFO,
@@ -60,3 +59,18 @@ def task_data():
         task_data = ProcessingTask(task_name="test-data")
         task_data.save(commit=True)
         yield task_data
+
+
+@pytest.fixture(scope="function")
+def task_file(task_data):
+    task_file = TaskFile(
+        task=task_data,
+        security_tag="asdlaskd",
+        storage_provider="test",
+        file_name="testf",
+        file_storage_data="path",
+        file_type="file_type",
+        mimetype="mimetype",
+    )
+    task_file.save(commit=True)
+    yield task_file

@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from conftests import task_data
+from conftests import task_data, task_file
 from sqlalchemy_json import TrackedDict, TrackedList
 
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, Step, TaskFile
 
 
 def test_mutable_json_init(task_data: ProcessingTask):
@@ -112,3 +112,20 @@ def test_mutable_json_nested(task_data: ProcessingTask):
     assert (
         task_data.data[0] == 1
     ), "Failed to persist a change to a nested list entry to the database."
+
+
+def test_delete_processing_task(task_data: ProcessingTask):
+    task_data.add_next_step("step-href", "step-ui_href", "step", commit=True)
+    id = task_data.id
+    ProcessingTask.delete(id, commit=True)
+    assert ProcessingTask.get_by_id(id) is None, "ProcessingTask entry was not deleted."
+
+    assert (
+        Step.get_by_id(id) == []
+    ), "Step entries associated with Processing Task entry were not deleted."
+
+
+def test_delete_task_file(task_file: TaskFile):
+    id = task_file.id
+    TaskFile.delete(id, commit=True)
+    assert TaskFile.get_by_id(id) is None, "TaskFile entry was not deleted."

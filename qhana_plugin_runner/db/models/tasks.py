@@ -61,6 +61,11 @@ class Step:
     ui_href: str = field(metadata={"sa": Column(sql.String(500))})
     cleared: bool = field(metadata={"sa": Column(sql.Boolean())}, default=False)
 
+    @classmethod
+    def get_by_id(cls, id_: int) -> list["ProcessingTask"]:
+        """Get the object instance by the object id from the database. (None if not found)"""
+        return DB.session.execute(select(cls).filter_by(id=id_)).scalars().all()
+
 
 @REGISTRY.mapped
 @dataclass
