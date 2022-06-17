@@ -242,3 +242,45 @@ class FileUrl(ma.fields.Url):
 
 
 # TODO add plugin URL field + UI generator functions
+class PluginUrl(ma.fields.URL):
+    """Extension of the URL field that can handle plugin URLs"""
+
+    def __init__(
+        self,
+        *,
+        relative: bool = False,
+        schemes: Optional[types.StrSequenceOrSet] = None,
+        require_tld: bool = True,
+        plugin_tags: Optional[Union[Sequence[str], str]] = None,
+        required: bool = False,
+        allow_none: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            relative=relative,
+            schemes=schemes,
+            require_tld=require_tld,
+            allow_none=allow_none,
+            required=required,
+            **kwargs,
+        )
+        if plugin_tags:
+            self.metadata["data_content_types"] = plugin_tags
+        self.validators[0] = FileUrlValidator(
+            relative=self.relative,
+            schemes=schemes,
+            require_tld=self.require_tld,
+            error=self.error_messages["invalid"],
+        )
+
+    def deserialize(
+        self,
+        value: Any,
+        attr: Optional[str] = None,
+        data: Optional[Mapping[str, Any]] = None,
+        **kwargs,
+    ):
+        # treat empty string as None
+        if value == "":
+            value = None
+        return super().deserialize(value, attr, data, **kwargs)
