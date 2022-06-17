@@ -15,6 +15,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Sequence, Union
+from sqlalchemy import delete
 
 from sqlalchemy.orm import relation, relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
@@ -274,6 +275,14 @@ class ProcessingTask:
         """Get the object instance by the object id from the database. (None if not found)"""
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
 
+    @classmethod
+    def delete(cls, id_: int, commit: bool = False):
+        """Delete object from database by object id."""
+        DB.session.execute(delete(Step).filter_by(id=id_))
+        DB.session.execute(delete(cls).filter_by(id=id_))
+        if commit:
+            DB.session.commit()
+
 
 @REGISTRY.mapped
 @dataclass
@@ -335,3 +344,12 @@ class TaskFile:
             cls.task == task if isinstance(task, ProcessingTask) else cls.task_id == task,
         )
         return DB.session.execute(select(cls).filter(*filter_)).scalars().all()
+
+    @classmethod
+    def delete(cls, id_: int, commit: bool = False):
+        """Delete object from database by object id.
+
+        Does not remove the stored file. To remove the file and the db entry, call :py:meth:`~qhana_plugin_runner.storage.FileStoreRegistry.delete_task_file`."""
+        DB.session.execute(delete(cls).filter_by(id=id_))
+        if commit:
+            DB.session.commit()
