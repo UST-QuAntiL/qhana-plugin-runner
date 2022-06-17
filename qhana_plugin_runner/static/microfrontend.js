@@ -96,6 +96,7 @@ function onDataUrlResponseMessage(data) {
  * @param {{lastHeight: number, heightUnchangedCount: number}} state 
  */
 function onPluginUrlResponseMessage(data) {
+    console.log(data);
     var input = document.querySelector(`input#${data.inputKey}`);
     if (input != null) {
         input.value = data.pluginUrl;
@@ -217,6 +218,7 @@ function instrumentForm() {
         });
         form.querySelectorAll('input[data-input-type=plugin]').forEach(inputElement => {
             console.log("PLUGIN INPUT:", inputElement)
+            // TODO: request-plugin-url-info
             var pluginInputId = inputElement.getAttribute("id");
             var pluginInputValue = inputElement.value;
             if (pluginInputId && pluginInputValue) {

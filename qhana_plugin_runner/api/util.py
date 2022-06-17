@@ -252,6 +252,8 @@ class PluginUrl(ma.fields.URL):
         schemes: Optional[types.StrSequenceOrSet] = None,
         require_tld: bool = True,
         plugin_tags: Optional[Union[Sequence[str], str]] = None,
+        plugin_name: Optional[str] = None,
+        plugin_version: Optional[str] = None,
         required: bool = False,
         allow_none: bool = False,
         **kwargs,
@@ -265,7 +267,11 @@ class PluginUrl(ma.fields.URL):
             **kwargs,
         )
         if plugin_tags:
-            self.metadata["data_content_types"] = plugin_tags
+            self.metadata["plugin_tags"] = plugin_tags
+        if plugin_name:
+            self.metadata["plugin_name"] = plugin_name
+        if plugin_version:
+            self.metadata["plugin_version"] = plugin_version
         self.validators[0] = FileUrlValidator(
             relative=self.relative,
             schemes=schemes,
