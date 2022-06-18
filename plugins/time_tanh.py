@@ -119,7 +119,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Time tanh similarities",
             description="Compares elements and returns similarity values.",
-            name=TimeTanh.instance.identifier,
+            name=TimeTanh.instance.name,
             version=TimeTanh.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -239,7 +239,7 @@ class TimeTanh(QHAnaPluginBase):
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
-    def get_api_blueprint(self):
+    def get_api_blueprint(self) -> SecurityBlueprint:
         return TIME_TANH_BLP
 
     def get_requirements(self) -> str:

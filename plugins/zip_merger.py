@@ -106,7 +106,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Zip merger",
             description="Merges two zip files into one zip file.",
-            name=ZipMerger.instance.identifier,
+            name=ZipMerger.instance.name,
             version=ZipMerger.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

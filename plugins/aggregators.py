@@ -129,7 +129,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Aggregators",
             description="Aggregates attribute distances to entity distances.",
-            name=Aggregator.instance.identifier,
+            name=Aggregator.instance.name,
             version=Aggregator.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

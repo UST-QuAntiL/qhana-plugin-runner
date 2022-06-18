@@ -121,7 +121,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Sym Max Mean attribute comparer",
             description="Compares attributes and returns similarity values.",
-            name=SymMaxMean.instance.identifier,
+            name=SymMaxMean.instance.name,
             version=SymMaxMean.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

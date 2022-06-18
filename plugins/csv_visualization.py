@@ -101,7 +101,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title=plugin.name,
             description=CSV_BLP.description,
-            name=plugin.identifier,
+            name=plugin.name,
             version=plugin.version,
             type=PluginType.visualization,
             entry_point=EntryPoint(

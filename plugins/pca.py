@@ -146,7 +146,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
             description="Reduces number of dimensions. (New ONB are the d first principle components)",
-            name=PCA.instance.identifier,
+            name=PCA.instance.name,
             version=PCA.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

@@ -174,7 +174,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Entity loader/filter",
             description="Loads and filters entities from a file that contains a list of entities.",
-            name=EntityFilter.instance.identifier,
+            name=EntityFilter.instance.name,
             version=EntityFilter.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

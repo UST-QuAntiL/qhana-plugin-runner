@@ -98,7 +98,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Wu-Palmer cache generator",
             description="Generates a cache of similarity values based on a taxonomy.",
-            name=WuPalmerCache.instance.identifier,
+            name=WuPalmerCache.instance.name,
             version=WuPalmerCache.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

@@ -118,7 +118,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Visualization",
             description="Plots points with cluster information.",
-            name=VIS.instance.identifier,
+            name=VIS.instance.name,
             version=VIS.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

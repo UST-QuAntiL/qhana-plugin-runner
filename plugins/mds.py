@@ -160,7 +160,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Multidimensional Scaling (MDS)",
             description="Converts distance values (distance matrix) to points in a space.",
-            name=MDS.instance.identifier,
+            name=MDS.instance.name,
             version=MDS.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

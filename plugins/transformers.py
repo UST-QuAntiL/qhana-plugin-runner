@@ -144,7 +144,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Similarities to distances transformers",
             description="Transforms similarities to distances.",
-            name=Transformers.instance.identifier,
+            name=Transformers.instance.name,
             version=Transformers.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(

@@ -35,7 +35,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title=HelloWorldMultiStep.instance.name,
             description=HELLO_MULTI_BLP.description,
-            name=HelloWorldMultiStep.instance.identifier,
+            name=HelloWorldMultiStep.instance.name,
             version=HelloWorldMultiStep.instance.version,
             type=PluginType.complex,
             entry_point=EntryPoint(
