@@ -39,7 +39,7 @@ class PluginsView(MethodView):
         """Quantum k-means endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Quantum k-means",
-            description="K-means algorithms that can run on quantum computers.",
+            description=QKMeans.instance.description,
             name=QKMeans.instance.name,
             version=QKMeans.instance.version,
             type=PluginType.simple,
@@ -71,8 +71,7 @@ class MicroFrontend(MethodView):
     """Micro frontend for the quantum k-means plugin."""
 
     @QKMEANS_BLP.html_response(
-        HTTPStatus.OK,
-        description="Micro frontend of the quantum k-means plugin.",
+        HTTPStatus.OK, description="Micro frontend of the quantum k-means plugin.",
     )
     @QKMEANS_BLP.arguments(
         InputParametersSchema(
@@ -87,8 +86,7 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @QKMEANS_BLP.html_response(
-        HTTPStatus.OK,
-        description="Micro frontend of the quantum k-means plugin.",
+        HTTPStatus.OK, description="Micro frontend of the quantum k-means plugin.",
     )
     @QKMEANS_BLP.arguments(
         InputParametersSchema(

@@ -21,6 +21,7 @@ class ManualClassification(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Manually annotate classes for data sets from MUSE database."
     tags = ["data-annotation"]
 
     def __init__(self, app: Optional[Flask]) -> None:

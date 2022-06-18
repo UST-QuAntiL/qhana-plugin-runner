@@ -91,12 +91,7 @@
 					"type": "object",
 					"properties": {
 						"not": {
-							"type": "array",
-							"items":  {
-								"$ref": "#/definitions/logicFormulaOfTags"
-							},
-							"minItems": 1,
-							"maxItems": 1
+							"$ref": "#/definitions/logicFormulaOfTags"
 						}
 					},
 					"required": ["not"],

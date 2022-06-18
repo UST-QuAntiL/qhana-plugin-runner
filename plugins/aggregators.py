@@ -47,9 +47,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -82,9 +80,7 @@ class AggregatorsEnum(Enum):
 
 class InputParameters:
     def __init__(
-        self,
-        attribute_distances_url: str,
-        aggregator: AggregatorsEnum,
+        self, attribute_distances_url: str, aggregator: AggregatorsEnum,
     ):
         self.attribute_distances_url = attribute_distances_url
         self.aggregator = aggregator
@@ -128,8 +124,8 @@ class PluginsView(MethodView):
         """Aggregators endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Aggregators",
-            description="Aggregates attribute distances to entity distances.",
             name=Aggregator.instance.name,
+            description=Aggregator.instance.description,
             version=Aggregator.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -160,8 +156,7 @@ class MicroFrontend(MethodView):
     """Micro frontend for the Aggregator plugin."""
 
     @AGGREGATOR_BLP.html_response(
-        HTTPStatus.OK,
-        description="Micro frontend of the Aggregator plugin.",
+        HTTPStatus.OK, description="Micro frontend of the Aggregator plugin.",
     )
     @AGGREGATOR_BLP.arguments(
         InputParametersSchema(
@@ -176,8 +171,7 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @AGGREGATOR_BLP.html_response(
-        HTTPStatus.OK,
-        description="Micro frontend of the Aggregator plugin.",
+        HTTPStatus.OK, description="Micro frontend of the Aggregator plugin.",
     )
     @AGGREGATOR_BLP.arguments(
         InputParametersSchema(
@@ -239,6 +233,7 @@ class CalcSimilarityView(MethodView):
 class Aggregator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Aggregates attribute distances to entity distances."
     tags = ["aggregator"]
 
     def __init__(self, app: Optional[Flask]) -> None:

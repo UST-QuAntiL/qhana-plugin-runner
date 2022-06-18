@@ -29,9 +29,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.requests import open_url
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
@@ -145,7 +143,7 @@ class PluginsView(MethodView):
 
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
-            description="Reduces number of dimensions. (New ONB are the d first principle components)",
+            description=PCA.instance.description,
             name=PCA.instance.name,
             version=PCA.instance.version,
             type=PluginType.simple,
@@ -263,6 +261,9 @@ class ProcessView(MethodView):
 class PCA(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = (
+        "Reduces number of dimensions. (New ONB are the d first principle components)"
+    )
     tags = ["dimension-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -370,11 +371,7 @@ def calculation_task(self, db_id: int) -> str:
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
         STORE.persist_task_result(
-            db_id,
-            output,
-            "pca.json",
-            "principle-components",
-            "application/json",
+            db_id, output, "pca.json", "principle-components", "application/json",
         )
 
     return "Result stored in file"

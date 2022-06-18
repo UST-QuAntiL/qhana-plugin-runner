@@ -225,11 +225,7 @@ def test_list_serialization_roundtrip(entities: list):
     serialize = dict_serializer(LIST_ENTITY_ATTRIBUTES, attr_metadata, in_place=False)
     serialized_entities = list(serialize(entity) for entity in entities)
     assert_sequence_partial_equals(
-        expected=entities,
-        actual=serialized_entities,
-        attributes_to_test=[
-            "ID",
-        ],
+        expected=entities, actual=serialized_entities, attributes_to_test=["ID",],
     )
 
     # assert all serialized
@@ -268,11 +264,7 @@ def test_set_serialization_roundtrip(entities: list):
     serialize = dict_serializer(SET_ENTITY_ATTRIBUTES, attr_metadata, in_place=False)
     serialized_entities = list(serialize(entity) for entity in entities)
     assert_sequence_partial_equals(
-        expected=entities,
-        actual=serialized_entities,
-        attributes_to_test=[
-            "ID",
-        ],
+        expected=entities, actual=serialized_entities, attributes_to_test=["ID",],
     )
 
     # assert all serialized

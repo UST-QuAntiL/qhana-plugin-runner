@@ -22,6 +22,7 @@ class HelloWorldMultiStep(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Tests the connection of all components by printing some text but multi step."  # TODO better description
     tags = []
 
     def __init__(self, app: Optional[Flask]) -> None:

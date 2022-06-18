@@ -97,7 +97,7 @@ class PluginsView(MethodView):
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
             title=plugin.name,
-            description=HELLO_BLP.description,
+            description=plugin.description,
             name=plugin.name,
             version=plugin.version,
             type=PluginType.processing,
@@ -108,9 +108,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="txt",
-                        content_type=["text/plain"],
-                        required=True,
+                        data_type="txt", content_type=["text/plain"], required=True,
                     )
                 ],
             ),
@@ -207,6 +205,7 @@ class HelloWorld(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Tests the connection of all components by printing some text."
     tags = []
 
     def __init__(self, app: Optional[Flask]) -> None:

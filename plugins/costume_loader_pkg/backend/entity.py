@@ -623,10 +623,7 @@ class EntityFactory:
                         costume_base_element_table,
                         join_on[costume_base_element_table],
                     )
-                    j = j.join(
-                        tables[attr],
-                        join_on[tables[attr]],
-                    )
+                    j = j.join(tables[attr], join_on[tables[attr]],)
                 else:
                     j = join(costume_table, tables[attr], join_on[tables[attr]])
             else:
@@ -733,10 +730,7 @@ class EntityFactory:
 def main():
     db = Database()
     db.open_with_params(
-        host="localhost",
-        user="test",
-        password="test",
-        database="KostuemRepo",
+        host="localhost", user="test", password="test", database="KostuemRepo",
     )
 
     time1 = time.time()

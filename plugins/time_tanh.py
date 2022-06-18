@@ -118,7 +118,7 @@ class PluginsView(MethodView):
         """Time tanh endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Time tanh similarities",
-            description="Compares elements and returns similarity values.",
+            description=TimeTanh.instance.description,
             name=TimeTanh.instance.name,
             version=TimeTanh.instance.version,
             type=PluginType.simple,
@@ -234,6 +234,7 @@ class TimeTanh(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = ("Compares elements and returns similarity values.",)
     tags = ["similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -332,11 +333,7 @@ def calculation_task(self, db_id: int) -> str:
     zip_file.close()
 
     STORE.persist_task_result(
-        db_id,
-        tmp_zip_file,
-        "time_tanh.zip",
-        "element-similarities",
-        "application/zip",
+        db_id, tmp_zip_file, "time_tanh.zip", "element-similarities", "application/zip",
     )
 
     return "Result stored in file"

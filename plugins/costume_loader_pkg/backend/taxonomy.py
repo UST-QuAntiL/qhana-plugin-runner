@@ -251,10 +251,7 @@ class Taxonomy:
 def main():
     db = Database()
     db.open_with_params(
-        host="localhost",
-        user="test",
-        password="test",
-        database="KostuemRepo",
+        host="localhost", user="test", password="test", database="KostuemRepo",
     )
 
     taxonomy = Taxonomy.create_from_db(TaxonomyType.farbe, db)

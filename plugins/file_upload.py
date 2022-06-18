@@ -95,7 +95,7 @@ class PluginsView(MethodView):
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
             title=plugin.name,
-            description=FILE_UPLOAD_BLP.description,
+            description=plugin.description,
             name=plugin.name,
             version=plugin.version,
             type=PluginType.processing,
@@ -105,11 +105,7 @@ class PluginsView(MethodView):
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[
-                    DataMetadata(
-                        data_type="*",
-                        content_type=["*"],
-                        required=True,
-                    )
+                    DataMetadata(data_type="*", content_type=["*"], required=True,)
                 ],
             ),
             tags=FileUpload.instance.tags,
@@ -229,6 +225,7 @@ class FileUpload(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Uploads files to use in the workflow."
     tags = []
 
     def __init__(self, app: Optional[Flask]) -> None:

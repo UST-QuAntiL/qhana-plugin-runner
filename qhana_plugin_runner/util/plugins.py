@@ -36,6 +36,7 @@ class QHAnaPluginBase:
     name: ClassVar[str]
     version: ClassVar[str]
     instance: ClassVar["QHAnaPluginBase"]
+    description: str
     tags: ClassVar[List[str]] = []
     has_api: ClassVar[bool] = False
 

@@ -167,11 +167,7 @@ def loading_task(self, db_id: int) -> str:
     zip_file.close()
 
     STORE.persist_task_result(
-        db_id,
-        tmp_zip_file,
-        "taxonomies.zip",
-        "graphs",
-        "application/zip",
+        db_id, tmp_zip_file, "taxonomies.zip", "graphs", "application/zip",
     )
 
     return "result stored in output files"

@@ -34,7 +34,7 @@ class PluginsView(MethodView):
         """Plugin loader endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Costume loader",
-            description="Loads all the costumes or base elements from the MUSE database.",
+            description=CostumeLoader.instance.description,
             name=CostumeLoader.instance.name,
             version=CostumeLoader.instance.version,
             type=PluginType.simple,
@@ -44,9 +44,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="raw",
-                        content_type=["application/json"],
-                        required=True,
+                        data_type="raw", content_type=["application/json"], required=True,
                     ),
                     DataMetadata(
                         data_type="attribute-metadata",

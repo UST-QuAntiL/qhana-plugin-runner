@@ -97,7 +97,7 @@ class PluginsView(MethodView):
         """Wu Palmer cache endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Wu-Palmer cache generator",
-            description="Generates a cache of similarity values based on a taxonomy.",
+            description=WuPalmerCache.instance.description,
             name=WuPalmerCache.instance.name,
             version=WuPalmerCache.instance.version,
             type=PluginType.simple,
@@ -208,6 +208,7 @@ class WuPalmerCache(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = ("Generates a cache of similarity values based on a taxonomy.",)
     tags = ["similarity-cache-generation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -236,10 +237,8 @@ def calculation_task(self, db_id: int) -> str:
         ud_graph = graph.to_undirected()
 
         # Get lowest reachable node from both
-        lowest_common_ancestor = (
-            nx.algorithms.lowest_common_ancestors.lowest_common_ancestor(
-                graph, first, second
-            )
+        lowest_common_ancestor = nx.algorithms.lowest_common_ancestors.lowest_common_ancestor(
+            graph, first, second
         )
 
         # Get root of graph
@@ -340,11 +339,7 @@ def calculation_task(self, db_id: int) -> str:
     zip_file.close()
 
     STORE.persist_task_result(
-        db_id,
-        tmp_zip_file,
-        "wu_palmer_cache.zip",
-        "wu-palmer-cache",
-        "application/zip",
+        db_id, tmp_zip_file, "wu_palmer_cache.zip", "wu-palmer-cache", "application/zip",
     )
 
     return "Result stored in file"

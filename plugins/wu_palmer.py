@@ -131,7 +131,7 @@ class PluginsView(MethodView):
         """Time tanh endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Wu Palmer similarities",
-            description="Compares elements and returns similarity values.",
+            description=WuPalmer.instance.description,
             name=WuPalmer.instance.name,
             version=WuPalmer.instance.version,
             type=PluginType.simple,
@@ -251,6 +251,7 @@ class CalcSimilarityView(MethodView):
 class WuPalmer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = ("Compares elements and returns similarity values.",)
     tags = ["similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -388,11 +389,7 @@ def calculation_task(self, db_id: int) -> str:
     zip_file.close()
 
     STORE.persist_task_result(
-        db_id,
-        tmp_zip_file,
-        "wu_palmer.zip",
-        "element-similarities",
-        "application/zip",
+        db_id, tmp_zip_file, "wu_palmer.zip", "element-similarities", "application/zip",
     )
 
     return "Result stored in file"

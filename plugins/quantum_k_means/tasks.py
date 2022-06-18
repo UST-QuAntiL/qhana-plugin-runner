@@ -16,9 +16,7 @@ from .backend.clustering import (
 from .schemas import InputParameters, InputParametersSchema, VariantEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
@@ -135,11 +133,7 @@ def calculation_task(self, db_id: int) -> str:
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_clusters, output, "application/json")
         STORE.persist_task_result(
-            db_id,
-            output,
-            "clusters.json",
-            "clusters",
-            "application/json",
+            db_id, output, "clusters.json", "clusters", "application/json",
         )
 
     return "Result stored in file"

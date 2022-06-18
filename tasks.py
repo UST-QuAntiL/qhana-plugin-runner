@@ -507,9 +507,7 @@ def list_licenses(
             *packages,
         ]
     c.run(
-        join(cmd),
-        echo=echo,
-        warn=True,
+        join(cmd), echo=echo, warn=True,
     )
 
 
@@ -552,10 +550,7 @@ def update_licenses(c, include_installed=False):
             *packages,
         ]
     c.run(
-        join(cmd),
-        echo=True,
-        hide="err",
-        warn=True,
+        join(cmd), echo=True, hide="err", warn=True,
     )
 
 

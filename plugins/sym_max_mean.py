@@ -120,7 +120,7 @@ class PluginsView(MethodView):
         """Sym Max Mean endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Sym Max Mean attribute comparer",
-            description="Compares attributes and returns similarity values.",
+            description=SymMaxMean.instance.description,
             name=SymMaxMean.instance.name,
             version=SymMaxMean.instance.version,
             type=PluginType.simple,
@@ -234,6 +234,7 @@ class CalcSimilarityView(MethodView):
 class SymMaxMean(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = ("Compares attributes and returns similarity values.",)
     tags = ["attribute-similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:

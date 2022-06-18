@@ -120,7 +120,7 @@ class MinioStore(FileStore, name="minio"):
 
         if length < 0:
             # part size >5MiB must be set if the size is unknown
-            extra_args["part_size"] = 2**25
+            extra_args["part_size"] = 2 ** 25
 
         self._client.put_object(
             self._minio_bucket,

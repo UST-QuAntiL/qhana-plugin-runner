@@ -83,8 +83,7 @@ def pre_render_classification(self, db_id: int) -> str:
 
 
 @CELERY.task(
-    name=f"{ManualClassification.instance.identifier}.add_class",
-    bind=True,
+    name=f"{ManualClassification.instance.identifier}.add_class", bind=True,
 )
 def add_class(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new add class task with db id '{db_id}'")
@@ -124,8 +123,7 @@ def add_class(self, db_id: int) -> str:
 
 
 @CELERY.task(
-    name=f"{ManualClassification.instance.identifier}.save_classification",
-    bind=True,
+    name=f"{ManualClassification.instance.identifier}.save_classification", bind=True,
 )
 def save_classification(self, task_log: str, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new add class task with db id '{db_id}'")
