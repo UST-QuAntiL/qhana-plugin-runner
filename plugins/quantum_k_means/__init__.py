@@ -20,7 +20,7 @@ QKMEANS_BLP = SecurityBlueprint(
 class QKMeans(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = ("K-means algorithms that can run on quantum computers.",)
+    description = "K-means algorithms that can run on quantum computers."
     tags = ["points-to-clusters"]
 
     def __init__(self, app: Optional[Flask]) -> None:

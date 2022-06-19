@@ -259,7 +259,7 @@ class CalcSimilarityView(MethodView):
 class Transformers(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = ("Transforms similarities to distances.",)
+    description = "Transforms similarities to distances."
     tags = ["sim-to-dist"]
 
     def __init__(self, app: Optional[Flask]) -> None:

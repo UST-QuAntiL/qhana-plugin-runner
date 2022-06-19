@@ -208,7 +208,7 @@ class WuPalmerCache(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
-    description = ("Generates a cache of similarity values based on a taxonomy.",)
+    description = "Generates a cache of similarity values based on a taxonomy."
     tags = ["similarity-cache-generation"]
 
     def __init__(self, app: Optional[Flask]) -> None:

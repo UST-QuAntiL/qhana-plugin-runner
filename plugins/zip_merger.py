@@ -217,7 +217,7 @@ class CalcSimilarityView(MethodView):
 class ZipMerger(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = ("Merges two zip files into one zip file.",)
+    description = "Merges two zip files into one zip file."
     tags = ["utility"]
 
     def __init__(self, app: Optional[Flask]) -> None:

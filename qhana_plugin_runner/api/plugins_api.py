@@ -57,6 +57,7 @@ class PluginSchema(MaBaseSchema):
     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
     api_root = ma.fields.Url(required=False, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    tags = ma.fields.List(ma.fields.String(), required=True, dump_only=True)
 
 
 class PluginCollectionSchema(MaBaseSchema):

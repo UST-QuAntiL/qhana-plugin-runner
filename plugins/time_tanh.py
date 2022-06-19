@@ -234,7 +234,7 @@ class TimeTanh(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
-    description = ("Compares elements and returns similarity values.",)
+    description = "Compares elements and returns similarity values."
     tags = ["similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:

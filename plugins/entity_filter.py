@@ -295,7 +295,7 @@ class EntityFilter(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
-        "Loads and filters entities from a file that contains a list of entities.",
+        "Loads and filters entities from a file that contains a list of entities."
     )
     tags = ["data-loader"]
 

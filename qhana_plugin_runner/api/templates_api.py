@@ -149,6 +149,8 @@ class TemplateView(MethodView):
                                 plugin=p.identifier,
                                 _external=True,
                             ),
+                            description=p.description,
+                            tags=p.tags,
                         )
                         for p in category.plugins
                     ],

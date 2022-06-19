@@ -281,7 +281,7 @@ class CalcView(MethodView):
 class MDS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = ("Converts distance values (distance matrix) to points in a space.",)
+    description = "Converts distance values (distance matrix) to points in a space."
     tags = ["dist-to-points"]
 
     def __init__(self, app: Optional[Flask]) -> None:
