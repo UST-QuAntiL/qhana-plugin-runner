@@ -206,7 +206,7 @@ class HelloWorld(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Tests the connection of all components by printing some text."
-    tags = []
+    tags = ["hello-world"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

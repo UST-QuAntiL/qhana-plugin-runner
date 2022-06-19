@@ -1,5 +1,5 @@
 {
-	"name": "MUSE",
+    "name": "MUSE",
     "description": "Template for MUSE workflow",
     "categories": [
 		{
@@ -19,7 +19,7 @@
 					"aggregator",
 					"dist-to-points"
 				]
-			}   
+			}
 		},
 		{
 		  "name": "Quantum Part",
@@ -29,7 +29,7 @@
 		{
 		  "name": "Visualization",
 		  "description": "Plugin for visualization",
-		  "tags": "visualization"			  
+		  "tags": "visualization"
 		}
 	]
 }
