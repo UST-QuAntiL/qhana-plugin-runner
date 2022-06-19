@@ -66,3 +66,12 @@ def test_tags_match_expr_combination():
     expr = {"and": ["a", "b", "c", {"not": "f"}, {"or": ["c", "z"]}]}
 
     assert QHanaTemplateCategory.tags_match_expr(tags, expr)
+
+def test_tags_match_expr_none():
+    tags = ["a", "b", "c", "d", "e"]
+
+    assert QHanaTemplateCategory.tags_match_expr(tags, None)
+
+    tags = ["a"]
+
+    assert QHanaTemplateCategory.tags_match_expr(tags, None)

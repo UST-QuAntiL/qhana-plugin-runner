@@ -42,10 +42,10 @@ class QHanaTemplateCategory:
     description: ClassVar[str]
     logic_expr: LogicExpr
 
-    def __init__(self, name, description, plugins) -> None:
+    def __init__(self, name, description, tags_logic_expr) -> None:
         self.name = name
         self.description = description
-        self.logic_expr = plugins
+        self.logic_expr = tags_logic_expr
 
     @classmethod
     def from_dict(cls, category_dict):
@@ -67,6 +67,9 @@ class QHanaTemplateCategory:
 
     @staticmethod
     def tags_match_expr(tags: List[str], logic_expr: LogicExpr) -> bool:
+        if logic_expr == None:
+            return True
+
         if isinstance(logic_expr, str):
             return logic_expr in tags
 
@@ -140,9 +143,19 @@ class QHanaTemplate:
             template_dict["name"], template_dict.get("description", ""), categories, app
         )
 
+def _add_allPlugins_template(app: Flask) -> None:
+    """Add a template to show all loaded plugins
 
-def _load_templates_from_folder(app: Flask, folder: Union[str, Path]):
-    """Load all plugins from a folder path.
+    Args:
+        app (Flask): the app instance (used for logging only)
+    """
+    allCategory = QHanaTemplateCategory("All Plugins", "Show all loaded plugins", None)
+    QHanaTemplate.__templates__[
+            template_identifier("All Plugins")
+    ] = QHanaTemplate("All Plugins", "Show all loaded plugins", [allCategory], app)
+
+def _load_templates_from_folder(app: Flask, folder: Union[str, Path]) -> None:
+    """Load all templates from a folder path.
 
     Every importable python module in the folder is considered a plugin and
     will be automatically imported. The parent path will be added to ``sys.path``
@@ -210,7 +223,7 @@ def _load_templates_from_folder(app: Flask, folder: Union[str, Path]):
         ] = QHanaTemplate.from_dict(template, app)
 
 
-def register_templates(app: Flask):
+def register_templates(app: Flask) -> None:
     """Load and register QHAna templates in the locations specified by the app config.
 
     Args:
@@ -222,6 +235,8 @@ def register_templates(app: Flask):
     template_folders = app.config.get("TEMPLATE_FOLDERS", ["templates"])
     for folder in template_folders:
         _load_templates_from_folder(app, folder)
+
+    _add_allPlugins_template(app)
 
     url_prefix: str = app.config.get("OPENAPI_URL_PREFIX", "").rstrip("/")
 

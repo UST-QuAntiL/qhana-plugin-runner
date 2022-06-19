@@ -16,7 +16,7 @@
 
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import List, Dict
+from typing import List
 from unicodedata import name
 
 import marshmallow as ma
