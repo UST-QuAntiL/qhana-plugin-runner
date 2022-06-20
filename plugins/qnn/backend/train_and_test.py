@@ -50,9 +50,6 @@ def train(
         # get model predictions
         predictions = model(train_data_batch)
 
-        # print("predicitons",predictions)
-        # print("train_label_batch",train_label_batch)
-
         # calculate loss
         loss = loss_fn(predictions, train_label_batch)
 
@@ -63,16 +60,14 @@ def train(
         # accuracy
         _, predicted_class = torch.max(predictions, 1)
         _, labels = torch.max(train_label_batch, 1)
-        # print("predictions", predictions)
-        # print("predicted_class", predicted_class)
         batch_accuracy = float(torch.sum(predicted_class == labels).item()) / len(labels)
-        # print("loss", loss.item())
-        # print("acc", batch_accuracy)
 
+        # time
         total_it_time = time.time() - start_it_time
         minutes_it = total_it_time // 60
         seconds_it = round(total_it_time - minutes_it * 60)
 
+        # print loss, accuracy and time of this iteration
         print(
             "Iter: {}/{} Time: {:.4f} min {:.4f} sec with loss: {:.4f} and accuracy: {:.4f} on the training data".format(
                 i + 1, num_iterations, minutes_it, seconds_it, loss.item(), batch_accuracy
@@ -80,7 +75,6 @@ def train(
             end="\r",
             flush=True,
         )
-        # print('Iteration: %4d of %4d. Time:%3d min %3d sec with loss: %5d and accuracy: %5d on the training data.' %(i + 1, num_iterations, minutes_it, seconds_it, loss.item(), batch_accuracy))#, end="\r", flush=True)
         offset += batch_size
 
 
@@ -95,16 +89,17 @@ def test(model, X_test, Y_test, loss_fn, n_classes):
 
     # TODO batches??
 
+    # feed test data into network and get predictions
     predictions = model(X_test)
 
+    # compute loss
     test_loss = loss_fn(predictions, Y_test_onehot)
 
     # accuracy
     _, predicted_class = torch.max(predictions, 1)
     test_accuracy = float(torch.sum(predicted_class == Y_test).item()) / len(Y_test)
-    # print("loss", test_loss.item())
-    # print("acc", test_accuracy)
-    # print('Test loss: %10d and accuracy: %10d' %(test_loss.item(), test_accuracy))#, end="\r", flush=True)
+
+    # print loss and accuracy for test data
     print("")
     print(
         "Test loss: {:.4f} and accuracy: {:.4f} on the test data".format(

@@ -1,6 +1,7 @@
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
 
 
+import imp
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
@@ -26,19 +27,13 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 from plugins.qnn.backend.model import DressedQuantumNet
+from plugins.qnn.backend.train_and_test import train, test
+from plugins.qnn.backend.visualization import plot_classification
 
-# Plotting
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-
-# Plot to html
-import base64
-from io import BytesIO
 
 # PennyLane
 import pennylane as qml
 from pennylane import numpy as np
-
 
 # Timing tool
 import time
@@ -52,64 +47,12 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 
-# Matplotlib
+# Plotting
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.lines import Line2D
 
-# ------------------------------
-#       one-hot encoding
-# ------------------------------
-
-
-def digits2position(vec_of_digits, n_positions):
-    """One-hot encoding of a batch of vectors."""
-    return np.eye(n_positions)[vec_of_digits]
-
-
-def position2digit(exp_values):
-    """Inverse of digits2position()."""
-    return np.argmax(exp_values)
-
-
-# ------------------------------
-#   layers for quantum circuit
-# ------------------------------
-def RY_layer(w):
-    """Layer of parametrized qubit rotations around the y axis."""
-    for idx, element in enumerate(w):
-        qml.RY(element, wires=idx)
-
-
-def entangling_layer(nqubits):
-    """Layer of CNOTs followed by another shifted layer of CNOTs."""
-
-    # first layer of CNOTS
-    for i in range(0, nqubits - 1, 2):
-        qml.CNOT(wires=[i, i + 1])
-
-    # a second shifted layer of CNOTs
-    for i in range(1, nqubits - 1, 2):
-        qml.CNOT(wires=[i, i + 1])
-
-
-# -----------------------------------
-#   performance evaluation functions
-# -----------------------------------
-def cost_from_output(net_out_list, labels):
-    """Cost as a function of the list of network output"""
-
-    log_like = np.sum(net_out_list * labels)
-    return -log_like
-
-
-def accuracy(predictions, labels):
-    """Returns fraction of correct predictions."""
-
-    predicted_digits = np.array([position2digit(item) for item in predictions])
-    label_digits = np.array([position2digit(item) for item in labels])
-    return np.sum(predicted_digits == label_digits) / len(label_digits)
-
+# Plot to html
+import base64
+from io import BytesIO
 
 # ------------------------------
 #       dataset generation
@@ -179,7 +122,7 @@ def calculation_task(self, db_id: int) -> str:
     if use_default_dataset:
         print("Use default dataset")
         # spiral dataset
-        dataset = twospirals(2000, turns=1.52)
+        dataset = twospirals(200, turns=1.52)  # twospirals(2000, turns=1.52)
     else:
         print("Load dataset from files")
         # get data from file
@@ -207,74 +150,33 @@ def calculation_task(self, db_id: int) -> str:
         dataset = (points, np.array(labels))
 
     # ------------------------------
-    #    define initial variables
-    # ------------------------------
-
-    n_input_nodes = len(
-        dataset[0][0]
-    )  # dimensions of first data element (e.g. 2 for (x,y))
-    classes = [0, 1]  # Class 0 = red points. class 1 = blue points.
-    n_classes = len(classes)
-    noise_0 = 0.001  # Initial spread of random weight vector
-    max_layers = 15  # Keep 15 even if not all are used
-    h = 0.2  # Plot grid step size
-    start_time = time.time()  # Start the computation timer
-    cm = plt.cm.RdBu  # Test point colors
-    cm_bright = ListedColormap(["#FF0000", "#0000FF"])  # Train point colors
-
-    # determine amount of training and test data
-    N_tot = len(dataset[1])
-    N_test = int(N_tot * test_percentage)
-    if N_test < 1:
-        N_test = 1
-    if N_test > N_tot - 1:
-        N_test = N_tot - 1
-    N_train = N_tot - N_test  # Number of training points
-    TASK_LOGGER.info(
-        f"Number of data elements: N_train = '{N_train}', N_test = '{N_test}'"
-    )
-
-    # Number of pre-processing parameters (1 matrix and 1 intercept)
-    n_pre = n_qubits * (n_input_nodes + 1)
-    # Number of quantum node parameters (1 row of rotations per layer)
-    n_quant = max_layers * n_qubits
-    # Number of post-processing parameters (1 matrix and 1 intercept)
-    n_post = n_classes * (n_qubits + 1)
-    # Initialize a unique vector of random parameters.
-    weights_flat_0 = noise_0 * np.random.randn(n_pre + n_quant + n_post)
-
-    # random start weights
-    opt_weights = weights_flat_0
-
-    # ------------------------------
     #          new qnn
     # ------------------------------
+    start_time = time.time()  # Start the computation timer
 
-    print("HI")
-    X, Y = dataset  # twospirals(200, turns=1.52)
+    X, Y = dataset
+
+    classes = list(set(list(Y)))
+    n_classes = len(classes)
 
     torch.manual_seed(42)
     np.random.seed(42)
 
-    n_qubits = 5
-    step = 0.07  # learning rate
-    batch_size = 10
-    q_depth = 5
-    n_classes = 2
-
-    dev = qml.device("default.qubit", wires=n_qubits)
+    dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    # dressed quantum network
     model = DressedQuantumNet(n_qubits, dev, q_depth)  # n_qubits, quantum_device, q_depth
     model = model.to(device)
 
+    # loss function
     loss_fn = nn.CrossEntropyLoss()
 
+    # optimizer TODO choose based on input parameter
     optimizer = optim.Adam(model.parameters(), lr=step)
 
-    print(len(Y))
-
     n_data = len(Y)
+    print(n_data)
 
     X = StandardScaler().fit_transform(X)
 
@@ -284,92 +186,44 @@ def calculation_task(self, db_id: int) -> str:
     X_shuffle = X[indices]
     Y_shuffle = Y[indices]
 
-    n_test = n_data // 10
+    # n_test = n_data // 10
 
+    # determine amount of training and test data
+    n_test = int(n_data * test_percentage)  # number of test data elements
+    if n_test < 1:
+        n_test = 1
+    if n_test > n_data - 1:
+        n_test = n_data - 1
+    n_train = n_data - n_test  # Number of training points
+    TASK_LOGGER.info(
+        f"Number of data elements: n_train = '{n_train}', n_test = '{n_test}'"
+    )
+    # train test split
     X_train = X_shuffle[:-n_test]
     X_test = X_shuffle[-n_test:]
 
     Y_train = Y_shuffle[:-n_test]
     Y_test = Y_shuffle[-n_test:]
 
-    """
+    print("Y_train len", len(Y_train))
+    print("Y_test len", len(Y_test))
+
     # train network
-    train(model, X_train, Y_train, loss_fn, optimizer, 2000)
-    #test network
-    accuracy_on_test_data = test(model, X_test, Y_test, loss_fn)
+    train(
+        model,
+        X_train,
+        Y_train,
+        loss_fn,
+        optimizer,
+        N_total_iterations,
+        n_classes,
+        batch_size,
+    )
+    # test network
+    accuracy_on_test_data = test(model, X_test, Y_test, loss_fn, n_classes)
     # plot results (for grid)
-    plot_classification(model, X, X_train, X_test, Y_train, Y_test, accuracy_on_test_data)
-    """
-
-    # ------------------------------
-    #           plotting
-    # ------------------------------
-    # Initialize the figure that will contain the final plots.
-    figure_main = plt.figure("main", figsize=(4, 4))
-
-    colors = cm.get_cmap("rainbow", n_classes)
-
-    # draw training data
-    figure_main.scatter(
-        X_train[:, 0],
-        X_train[:, 1],
-        c=Y_train,
-        s=100,
-        lw=0,
-        vmin=0,
-        vmax=n_classes,
-        cmap=colors,
-    )
-    # mark train data
-    figure_main.scatter(
-        X_train[:, 0], X_train[:, 1], c="b", s=50, marker="x"
-    )  # , label="train data")
-
-    # scatter test set
-    figure_main.scatter(
-        X_test[:, 0],
-        X_test[:, 1],
-        c=Y_test,
-        s=100,
-        lw=0,
-        vmin=0,
-        vmax=n_classes,
-        cmap=colors,
-    )
-
-    # create legend elements
-    # classes
-    legend_elements = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            color="w",
-            label=i,
-            markerfacecolor=colors(i),
-            markersize=10,
-            ls="",
-        )
-        for i in range(n_classes)
-    ]
-    # training element crosses
-    legend_elements = legend_elements + [
-        Line2D(
-            [0],
-            [0],
-            marker="x",
-            color="b",
-            label="train data",
-            markerfacecolor="g",
-            markersize=8,
-            ls="",
-        )
-    ]
-
-    figure_main.legend(handles=legend_elements)
-
-    figure_main.set_title(
-        "Classification \naccuracy on test data={}".format(accuracy_on_test_data)
+    figure_main = plot_classification(
+        model, X, X_train, X_test, Y_train, Y_test, accuracy_on_test_data
     )
 
     # plot to html
@@ -394,6 +248,22 @@ def calculation_task(self, db_id: int) -> str:
     # -----------------------------------------
     #              save weights
     # -----------------------------------------
+    n_input_nodes = len(
+        dataset[0][0]
+    )  # dimensions of first data element (e.g. 2 for (x,y))
+    noise_0 = 0.001  # Initial spread of random weight vector
+    max_layers = 15  # Keep 15 even if not all are used
+    # Number of pre-processing parameters (1 matrix and 1 intercept)
+    n_pre = n_qubits * (n_input_nodes + 1)
+    # Number of quantum node parameters (1 row of rotations per layer)
+    n_quant = max_layers * n_qubits
+    # Number of post-processing parameters (1 matrix and 1 intercept)
+    n_post = n_classes * (n_qubits + 1)
+    # Initialize a unique vector of random parameters.
+    weights_flat_0 = noise_0 * np.random.randn(n_pre + n_quant + n_post)
+
+    # random start weights
+    opt_weights = weights_flat_0
     # in json format
     # nd array cant be saved in json format
     qnn_outputs = []
@@ -431,10 +301,12 @@ def calculation_task(self, db_id: int) -> str:
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
 
 
-# using task.py from git works
-# here issues with torch?
-# connection error when trying to set requirement pennylane~=0.16
-
-# TODO install pennylane version
-# requirement settin (in __init__.py) and
-# poetry run flask install
+# TODO quantum devices
+# TODO optimizers
+# TODO save actual weights to file
+# TODO visualize circuit??
+# TODO cleanup and comments
+# TODO documentation
+# TODO add references
+# TODO turn off gradient calculation for some parts?
+# TODO option to initialize wrights (different random inits, zero init, with weights file)
