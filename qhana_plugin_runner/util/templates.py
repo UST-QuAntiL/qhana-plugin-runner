@@ -32,69 +32,28 @@ def template_identifier(name) -> str:
     return name.lower()
 
 
-LogicExpr = Union[str, Dict[str, Any]]
-# LogicExpr = Union[str, Dict[str, List[LExpr]], Dict[str, LExpr]] not yet supported by mypy
+FilterExpr = Union[str, Dict[str, Any]]
+# FilterExpr = Union[str, Dict[str, List[FilterExpr]], Dict[str, FilterExpr]] not yet supported by mypy
 # https://github.com/python/mypy/issues/731
 
 
 class QHanaTemplateCategory:
     name: ClassVar[str]
     description: ClassVar[str]
-    logic_expr: LogicExpr
+    tags_filter: ClassVar[FilterExpr]
 
-    def __init__(self, name, description, tags_logic_expr) -> None:
+    def __init__(self, name: str, description: str, tags_filter: FilterExpr) -> None:
         self.name = name
         self.description = description
-        self.logic_expr = tags_logic_expr
+        self.tags_filter = tags_filter
 
     @classmethod
     def from_dict(cls, category_dict):
         return cls(
-            category_dict["name"],
-            category_dict.get("description", ""),
-            category_dict["tags"],
+            name=category_dict["name"],
+            description=category_dict.get("description", ""),
+            tags_filter=category_dict["tags"],
         )
-
-    @cached_property
-    def plugins(self) -> List[QHAnaPluginBase]:
-        plugins = []
-
-        for plugin in QHAnaPluginBase.get_plugins().values():
-            if QHanaTemplateCategory.tags_match_expr(plugin.tags, self.logic_expr):
-                plugins.append(plugin)
-
-        return plugins
-
-    @staticmethod
-    def tags_match_expr(tags: List[str], logic_expr: LogicExpr) -> bool:
-        if logic_expr == None:
-            return True
-
-        if isinstance(logic_expr, str):
-            return logic_expr in tags
-
-        elif "or" in logic_expr:
-            return reduce(
-                lambda res, nested_expr: res
-                or QHanaTemplateCategory.tags_match_expr(tags, nested_expr),
-                logic_expr["or"],
-                False,
-            )
-
-        elif "and" in logic_expr:
-            return reduce(
-                lambda res, nested_expr: res
-                and QHanaTemplateCategory.tags_match_expr(tags, nested_expr),
-                logic_expr["and"],
-                True,
-            )
-
-        elif "not" in logic_expr:
-            return not QHanaTemplateCategory.tags_match_expr(tags, logic_expr["not"])
-
-        else:
-            return False
-
 
 class QHanaTemplate:
     name: ClassVar[str]

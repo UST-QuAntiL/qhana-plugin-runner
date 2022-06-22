@@ -29,7 +29,7 @@ from flask import Flask
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
 from qhana_plugin_runner.api.plugins_api import PluginSchema, PluginData
-from qhana_plugin_runner.util.templates import QHanaTemplate
+from qhana_plugin_runner.util.templates import QHanaTemplate, FilterExpr
 
 TEMPLATES_API = SmorestBlueprint(
     "templates-api",
@@ -43,7 +43,7 @@ TEMPLATES_API = SmorestBlueprint(
 class CategoryData:
     name: str
     description: str
-    plugins: List[PluginData]
+    tags_filter: FilterExpr
 
 
 @dataclass()
@@ -54,9 +54,7 @@ class CategoryCollentionData:
 class CategoryDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    plugins = ma.fields.List(
-        ma.fields.Nested(PluginSchema()), required=True, allow_none=False, dump_only=True
-    )
+    tags_filter = ma.fields.Raw(required=True, allow_none=False, dump_only=True)
 
 
 class CategoryCollentionSchema(MaBaseSchema):
@@ -139,21 +137,7 @@ class TemplateView(MethodView):
                 CategoryData(
                     name=category.name,
                     description=category.description,
-                    plugins=[
-                        PluginData(
-                            name=p.name,
-                            version=p.version,
-                            identifier=p.identifier,
-                            api_root=url_for(
-                                "plugins-api.PluginView",
-                                plugin=p.identifier,
-                                _external=True,
-                            ),
-                            description=p.description,
-                            tags=p.tags,
-                        )
-                        for p in category.plugins
-                    ],
+                    tags_filter=category.tags_filter,
                 )
                 for category in template.categories
             ]
