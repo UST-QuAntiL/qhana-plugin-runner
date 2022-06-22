@@ -1,5 +1,6 @@
 from http import HTTPStatus
 from json import dumps
+from logging import Logger
 from typing import Mapping, Optional
 
 from celery.canvas import chain
@@ -105,7 +106,7 @@ class MicroFrontend(MethodView):
         )
 
 
-TASK_LOGGER = get_task_logger(__name__)
+TASK_LOGGER: Logger = get_task_logger(__name__)
 
 
 @TEST_BLP.route("/process/")
@@ -118,20 +119,31 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Start the demo task."""
         db_task = ProcessingTask(
-            task_name="manual-classification", parameters=dumps(arguments)
+            task_name=preprocessing_task.name,
+        )
+        db_task.save(commit=True)
+
+        db_task.data["input_str"] = arguments["input_str"]
+        db_task.data["href"] = url_for(
+            f"{TEST_BLP.name}.DemoStepView", db_id=db_task.id, _external=True
+        )
+        db_task.data["ui_href"] = url_for(
+            f"{TEST_BLP.name}.DemoStepFrontend", db_id=db_task.id, _external=True
         )
         db_task.save(commit=True)
 
         # next step
         step_id = "demo-step"
-        href = url_for(f"{TEST_BLP.name}.DemoStepView", db_id=db_task.id, _external=True)
+        href = url_for(
+            f"hello-world-invoked@v0-1-0.ProcessView", db_id=db_task.id, _external=True
+        )  # FIXME replace hardcoded plugin name with user input
         ui_href = url_for(
-            f"{TEST_BLP.name}.DemoStepFrontend", db_id=db_task.id, _external=True
-        )
+            f"hello-world-invoked@v0-1-0.MicroFrontend", db_id=db_task.id, _external=True
+        )  # FIXME replace hardcoded plugin name with user input
 
         # all tasks need to know about db id to load the db entry
         task: chain = preprocessing_task.s(db_id=db_task.id) | add_step.s(
-            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=33
         )
 
         # save errors to db
@@ -230,7 +242,7 @@ class DemoStepView(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.parameters = dumps(arguments)
+        db_task.data["input_str"] = arguments["input_str"]
         db_task.clear_previous_step()
         db_task.save(commit=True)
 

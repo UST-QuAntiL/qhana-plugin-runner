@@ -24,14 +24,10 @@ def preprocessing_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_str: Optional[str] = loads(task_data.parameters or "{}").get("input_str", None)
+    input_str = task_data.data["input_str"]
     TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
     if input_str is None:
         raise ValueError("No input argument provided!")
-
-    # Save input data in internal data structure for further processing
-    task_data.data["input_str"] = input_str
-    task_data.save(commit=True)
 
     if input_str:
         out_str = "Processed in the preprocessing step: " + input_str
@@ -54,23 +50,14 @@ def processing_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_str: Optional[str] = loads(task_data.parameters or "{}").get("input_str", None)
+    input_str: str = task_data.data["input_str"]
     TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
     if input_str is None:
         raise ValueError("No input argument provided!")
 
-    try:
-        input_str_preprocessing = task_data.data["input_str"]
-    except:
-        input_str_preprocessing = ""
-
     if input_str:
-        out_str = (
-            "Processed in the processing step: "
-            + input_str_preprocessing
-            + " "
-            + input_str
-        )
+        out_str = input_str
+
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
