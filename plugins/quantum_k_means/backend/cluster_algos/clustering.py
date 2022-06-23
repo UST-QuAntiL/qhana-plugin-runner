@@ -19,7 +19,6 @@ class ClusteringEnum(enum.Enum):
     destructive_interference = "Destructive Interference"
     state_preparation = "State Preparation"
     positive_correlation = "Positive Correlation"
-    state_preparation_test = "state_preparation_test"
 
 
     def get_cluster_algo(self,
