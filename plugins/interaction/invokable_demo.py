@@ -117,7 +117,7 @@ class MicroFrontend(MethodView):
     """Micro frontend of the invokable demo plugin."""
 
     example_inputs = {
-        "inputStr": "Sample input string.",
+        "inputStr": "test2",
     }
 
     @INVOKABLE_DEMO_BLP.html_response(
@@ -163,7 +163,9 @@ class MicroFrontend(MethodView):
         schema = InputParametersSchema()
 
         if not data:
-            data = {"inputStr": db_task.data["input_str"]}
+            data = {
+                "inputStr": "Data from invoking plugin: " + db_task.data.get("input_str")
+            }
 
         return Response(
             render_template(
@@ -246,16 +248,22 @@ def demo_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_str: str = task_data.data["input_str"]
-    TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
+    input_str: str = task_data.data.get("input_str")
+    TASK_LOGGER.info(f"Loaded input data from db: input_str='{input_str}'")
+
     if input_str is None:
-        raise ValueError("No input argument provided!")
+        raise ValueError("No input data provided!")
+
     if input_str:
-        out_str = input_str.replace("input", "output")
+        out_str = "User input from invoked plugin micro frontend: " + input_str
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "out.txt", "hello-world-output", "text/plain"
+                db_id,
+                output,
+                "output_invoked_demo.txt",
+                "hello-world-output",
+                "text/plain",
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"

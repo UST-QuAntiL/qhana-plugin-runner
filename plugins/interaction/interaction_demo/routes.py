@@ -216,7 +216,7 @@ class MicroFrontendStep2(MethodView):
                 input_str = db_task.data["input_str"]
             except:
                 input_str = ""
-            data = {"inputStr": "Input from preprocessing: " + input_str}
+            data = {"inputStr": "Data from invoked plugin: " + input_str}
 
         schema = InputParametersSchema()
         return Response(

@@ -23,17 +23,18 @@ def processing_task_1(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_str = task_data.data["input_str"]
+    input_str = task_data.data.get("input_str")
     TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
+
     if input_str is None:
-        raise ValueError("No input argument provided!")
+        raise ValueError("No input data provided!")
 
     if input_str:
-        out_str = "Processed in the preprocessing step: " + input_str
+        out_str = "User input from step 1 micro frontend: " + input_str
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "output1.txt", "hello-world-output", "text/plain"
+                db_id, output, "output_step_1.txt", "hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"
@@ -49,18 +50,19 @@ def processing_task_2(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_str: str = task_data.data["input_str"]
-    TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
+    input_str: str = task_data.data.get("input_str")
+    TASK_LOGGER.info(f"Loaded input data from db: input_str='{input_str}'")
+
     if input_str is None:
-        raise ValueError("No input argument provided!")
+        raise ValueError("No input data provided!")
 
     if input_str:
-        out_str = input_str
+        out_str = "User input from step 2 micro frontend: " + input_str
 
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "output2.txt", "hello-world-output", "text/plain"
+                db_id, output, "output_step_2.txt", "hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"
