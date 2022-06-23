@@ -1,0 +1,174 @@
+from marshmallow import post_load
+import marshmallow as ma
+from qhana_plugin_runner.api import EnumField
+from qhana_plugin_runner.api.util import (
+    FrontendFormBaseSchema,
+    MaBaseSchema,
+    FileUrl,
+)
+from celery.utils.log import get_task_logger
+from .backend.qiskit_backends import QiskitBackends
+from .backend.kernel import KernelEnum, EntanglementPatternEnum
+
+
+TASK_LOGGER = get_task_logger(__name__)
+
+class TaskResponseSchema(MaBaseSchema):
+    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
+
+
+class InputParameters:
+    def __init__(
+        self,
+        entity_points_url1: str,
+        entity_points_url2: str,
+        kernel: KernelEnum,
+        entanglement_pattern: EntanglementPatternEnum,
+        n_qbits: int,
+        reps: int,
+        shots: int,
+        backend: QiskitBackends,
+        ibmq_token: str,
+        custom_backend: str,
+    ):
+        self.entity_points_url1 = entity_points_url1
+        self.entity_points_url2 = entity_points_url2
+        if entity_points_url2 is None or entity_points_url2 == "":
+            self.entity_points_url2 = entity_points_url1
+        self.kernel = kernel
+        self.entanglement_pattern = entanglement_pattern
+        self.n_qbits = n_qbits
+        self.reps = reps
+        self.shots = shots
+        self.backend = backend
+        self.ibmq_token = ibmq_token
+        self.custom_backend = custom_backend
+
+
+class InputParametersSchema(FrontendFormBaseSchema):
+    entity_points_url1 = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="entity-points",
+        data_content_types="application/json",
+        metadata={
+            "label": "Entity points URL 1",
+            "description": "URL to a json file with the first set of entity points.",
+            "input_type": "text",
+        },
+    )
+    entity_points_url2 = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity-points",
+        data_content_types="application/json",
+        metadata={
+            "label": "Entity points URL 2",
+            "description": "URL to a json file with the second set of entity points.",
+            "input_type": "text",
+        },
+    )
+    kernel = EnumField(
+        KernelEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Quantum Kernel",
+            "description": "All specified kernels arise from Havlíček's kernel [0] and use his proposed feature map.",
+            "input_type": "select",
+        },
+    )
+    entanglement_pattern = EnumField(
+        EntanglementPatternEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Entanglement Pattern",
+            "description": """This determines how the different Qubits will be entangled.
+            In case of 3 qubits, the patterns are as follows:
+            full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]
+            linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]
+            circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]
+            To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets
+            {0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the
+            feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to
+            the feature map and so on for {0, 2} and {1, 2}.""",
+            "input_type": "select",
+        },
+    )
+    n_qbits = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Number of Qubits",
+            "description": """The number of qubits for the embedding that will be used. This directly corresponds with 
+                            the features (the dimensions of our points) that will be used, i.e. number of qubits is 2, 
+                            then the first two dimensions will be considered.""",
+            "input_type": "text",
+        },
+    )
+    # paulis = ma.fields.String(
+    #     required=False,
+    #     allow_none=True,
+    #     metadata={
+    #         "label": "Pauli Matrices",
+    #         "description": "",
+    #         "input_type": "text",
+    #     }
+    # )
+    reps = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Number of Repetitions",
+            "description": """The kernel proposed by Havlíček [0] works by creating an ansatz, which is a specific
+                            quantum circuit. The final quantum circuit contains this ansatz number of repetitions times.""",
+            "input_type": "text",
+        },
+    )
+    shots = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Number of Shots",
+            "description": """The number of times the quantum circuit gets executed. The higher, the more accurate our 
+                            results get.""",
+            "input_type": "text",
+        },
+    )
+    backend = EnumField(
+        QiskitBackends,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Backend",
+            "description": "The quantum computer or simulator that will be used.",
+            "input_type": "select",
+        },
+    )
+    ibmq_token = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "text",
+        },
+    )
+    custom_backend = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Custom backend",
+            "description": "Custom backend for IBMQ.",
+            "input_type": "text",
+        },
+    )
+
+    @post_load
+    def make_input_params(self, data, **kwargs) -> InputParameters:
+        TASK_LOGGER.info("test")
+        TASK_LOGGER.info(f"data: {data}")
+        return InputParameters(**data)
