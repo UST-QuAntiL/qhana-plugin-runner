@@ -12,9 +12,9 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.quantum_k_means import QKMEANS_BLP, QKMeans
-from plugins.quantum_k_means.backend.clustering import QuantumBackends
-from plugins.quantum_k_means.schemas import InputParametersSchema, TaskResponseSchema
+from . import QKMEANS_BLP, QKMeans
+from .backend.quantum_backend import QuantumBackends
+from .schemas import InputParametersSchema, TaskResponseSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -25,7 +25,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
-from plugins.quantum_k_means.tasks import calculation_task
+from .tasks import calculation_task
 
 
 @QKMEANS_BLP.route("/")
@@ -111,7 +111,10 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             fields["clusters_cnt"].data_key: 2,
+            fields["tol"].data_key: 0.0,
+            fields["max_runs"].data_key: 1000,
             fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+            fields["shots"].data_key: 1024,
         }
 
         if "IBMQ_BACKEND" in os.environ:

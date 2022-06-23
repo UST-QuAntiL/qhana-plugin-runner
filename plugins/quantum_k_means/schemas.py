@@ -3,7 +3,8 @@ from enum import Enum
 import marshmallow as ma
 from marshmallow import post_load
 
-from plugins.quantum_k_means.backend.clustering import QuantumBackends
+from .backend.quantum_backend import QuantumBackends
+from .backend.cluster_algos.clustering import ClusteringEnum
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -18,27 +19,28 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class VariantEnum(Enum):
-    negative_rotation = "Negative Rotation"
-    destructive_interference = "Destructive Interference"
-    state_preparation = "State Preparation"
-    positive_correlation = "Positive Correlation"
-
-
 class InputParameters:
     def __init__(
         self,
         entity_points_url: str,
         clusters_cnt: int,
-        variant: VariantEnum,
+        variant: ClusteringEnum,
+        tol: float,
+        max_runs: int,
         backend: QuantumBackends,
+        shots: int,
         ibmq_token: str,
         custom_backend: str,
     ):
         self.entity_points_url = entity_points_url
         self.clusters_cnt = clusters_cnt
         self.variant = variant
+        if tol < 0:
+            raise ValueError("The tolerance must be positive")
+        self.tol = tol / 100.
+        self.max_runs = max_runs
         self.backend = backend
+        self.shots = shots
         self.ibmq_token = ibmq_token
         self.custom_backend = custom_backend
 
@@ -65,13 +67,34 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
     variant = EnumField(
-        VariantEnum,
+        ClusteringEnum,
         required=True,
         allow_none=False,
         metadata={
             "label": "Variant",
             "description": "Variant of quantum k-means that will be used.",
             "input_type": "select",
+        },
+    )
+    tol = ma.fields.Float(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Tolerance for Convergence Criteria",
+            "description": "The tolerance is given in percentage, i.e. an input of 5 = 5%.\n"
+                           "The algorithm does multiple iterations and after each iteration it checks how the cluster assignments for our data points "
+                           "have changed. If the input tolerance is 5%, then the algorithm stops, if less than 5% of the "
+                           "assignments have changed."
+        }
+    )
+    max_runs = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Maximum Number of Iterations",
+            "description": "The algorithms does multiple iterations. After reaching the maximum number of iterations, "
+                           "the algorithm terminates, even if the tolerance isn't reached.",
+            "input_type": "text",
         },
     )
     backend = EnumField(
@@ -83,6 +106,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "QC or simulator that will be used.",
             "input_type": "select",
         },
+    )
+    shots = ma.fields.Integer(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Shots",
+            "description": "Number of times a quantum circuit gets repeatedly executed.",
+            "input_type": "text",
+        }
     )
     ibmq_token = ma.fields.String(
         required=False,
