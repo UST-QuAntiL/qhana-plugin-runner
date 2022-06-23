@@ -128,6 +128,7 @@ class ProcessStep1View(MethodView):
         db_task.save(commit=True)
 
         db_task.data["input_str"] = arguments["input_str"]
+        db_task.data["next_step_id"] = "processing-returned-data"
         db_task.data["href"] = url_for(
             f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View",
             db_id=db_task.id,
@@ -141,7 +142,7 @@ class ProcessStep1View(MethodView):
         db_task.save(commit=True)
 
         # next step
-        step_id = "demo-step"
+        step_id = "invoked plugin"
         href = url_for(
             f"invokable-demo@v0-1-0.ProcessView", db_id=db_task.id, _external=True
         )  # FIXME replace hardcoded plugin name with user input

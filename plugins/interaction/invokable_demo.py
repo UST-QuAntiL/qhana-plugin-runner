@@ -86,10 +86,10 @@ class PluginsView(MethodView):
     def get(self):
         """Endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title=HelloWorldInvoked.instance.name,
+            title=InvokableDemo.instance.name,
             description=INVOKABLE_DEMO_BLP.description,
-            name=HelloWorldInvoked.instance.identifier,
-            version=HelloWorldInvoked.instance.version,
+            name=InvokableDemo.instance.identifier,
+            version=InvokableDemo.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(
@@ -157,7 +157,7 @@ class MicroFrontend(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        plugin = HelloWorldInvoked.instance
+        plugin = InvokableDemo.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = InputParametersSchema()
@@ -170,8 +170,8 @@ class MicroFrontend(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=HelloWorldInvoked.instance.name,
-                version=HelloWorldInvoked.instance.version,
+                name=InvokableDemo.instance.name,
+                version=InvokableDemo.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
@@ -208,7 +208,7 @@ class ProcessView(MethodView):
         # all tasks need to know about db id to load the db entry
         task: chain = demo_task.s(db_id=db_task.id) | add_step.s(
             db_id=db_task.id,
-            step_id="hello-world-step",
+            step_id=db_task.data["next_step_id"],
             href=db_task.data["href"],
             ui_href=db_task.data["ui_href"],
             prog_value=66,
@@ -223,7 +223,7 @@ class ProcessView(MethodView):
         )
 
 
-class HelloWorldInvoked(QHAnaPluginBase):
+class InvokableDemo(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
@@ -238,7 +238,7 @@ class HelloWorldInvoked(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{HelloWorldInvoked.instance.identifier}.demo_task", bind=True)
+@CELERY.task(name=f"{InvokableDemo.instance.identifier}.demo_task", bind=True)
 def demo_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new invoked task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
