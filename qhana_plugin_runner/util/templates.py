@@ -40,19 +40,19 @@ FilterExpr = Union[str, Dict[str, Any]]
 class QHanaTemplateCategory:
     name: ClassVar[str]
     description: ClassVar[str]
-    tags_filter: ClassVar[FilterExpr]
+    plugin_filter: ClassVar[FilterExpr]
 
-    def __init__(self, name: str, description: str, tags_filter: FilterExpr) -> None:
+    def __init__(self, name: str, description: str, plugin_filter: FilterExpr) -> None:
         self.name = name
         self.description = description
-        self.tags_filter = tags_filter
+        self.plugin_filter = plugin_filter
 
     @classmethod
     def from_dict(cls, category_dict):
         return cls(
             name=category_dict["name"],
             description=category_dict.get("description", ""),
-            tags_filter=category_dict["tags"],
+            plugin_filter=category_dict["tags"],
         )
 
 class QHanaTemplate:
@@ -101,17 +101,6 @@ class QHanaTemplate:
         return cls(
             template_dict["name"], template_dict.get("description", ""), categories, app
         )
-
-def _add_allPlugins_template(app: Flask) -> None:
-    """Add a template to show all loaded plugins
-
-    Args:
-        app (Flask): the app instance (used for logging only)
-    """
-    allCategory = QHanaTemplateCategory("All Plugins", "Show all loaded plugins", None)
-    QHanaTemplate.__templates__[
-            template_identifier("All Plugins")
-    ] = QHanaTemplate("All Plugins", "Show all loaded plugins", [allCategory], app)
 
 def _load_templates_from_folder(app: Flask, folder: Union[str, Path]) -> None:
     """Load all templates from a folder path.
@@ -194,8 +183,6 @@ def register_templates(app: Flask) -> None:
     template_folders = app.config.get("TEMPLATE_FOLDERS", ["templates"])
     for folder in template_folders:
         _load_templates_from_folder(app, folder)
-
-    _add_allPlugins_template(app)
 
     url_prefix: str = app.config.get("OPENAPI_URL_PREFIX", "").rstrip("/")
 
