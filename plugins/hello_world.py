@@ -39,6 +39,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
+    PluginUrl,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -80,6 +81,16 @@ class HelloWorldParametersSchema(FrontendFormBaseSchema):
             "label": "Input String",
             "description": "A simple string input.",
             "input_type": "textarea",
+        },
+    )
+    plugin_selector = PluginUrl(
+        required=True,
+        allow_none=False,
+        plugin_tags=["data-loader"],
+        metadata={
+            "label": "Plugin selection",
+            "description": "URL of plugin.",
+            "input_type": "text",
         },
     )
 

@@ -6,7 +6,7 @@ docs/api.json
 docs/changelog.md
 docs/readme.md
 git-plugins
-plugins/test_plugin.py
+local_plugins/
 
 # Ignores from Template:
 
