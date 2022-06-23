@@ -53,7 +53,7 @@ class FileView(MethodView):
     )
     def get(self, query_data, file_id: int):
         """Get the task file information by file id."""
-        security_tag = query_data["file_id"]  # prevent simple file id enumeration attacs
+        security_tag = query_data["file_id"]  # prevent simple file id enumeration attacks
         task_file: TaskFile = TaskFile.get_by_id(file_id)
         if (
             not task_file

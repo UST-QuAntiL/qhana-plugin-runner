@@ -129,7 +129,7 @@ def _append_source_path(app: Flask, source_path: Union[str, Path]):
     source_path = str(source_path)
     if source_path in sys.path:
         return
-    app.logger.debug("Adding new source path to the python path: '{}'", source_path)
+    app.logger.debug(f"Adding new source path to the python path: '{source_path}'")
     sys.path.append(source_path)
 
 

@@ -14,6 +14,7 @@
 
 """Module containing a file store interface with a implementation for the local file system."""
 
+import os
 from pathlib import Path
 from secrets import token_urlsafe
 from shutil import copyfileobj
@@ -119,6 +120,16 @@ class FileStoreInterface:
 
         Returns:
             str: the URL to the file
+        """
+        raise NotImplementedError()
+
+    def delete_task_file(self, file_info: TaskFile):
+        """Delete a TaskFile object with its associated stored file.
+
+        See :py:meth:`~qhana_plugin_runner.storage.FileStoreRegistry.delete_task_file`
+
+        Args:
+            file_info (TaskFile): the information of the task file
         """
         raise NotImplementedError()
 
@@ -329,6 +340,11 @@ class LocalFileStore(FileStore, name="local_filesystem"):
             _external=True,
         )
 
+    def delete_task_file(self, file_info: TaskFile):
+        if os.path.exists(file_info.file_storage_data):
+            os.remove(file_info.file_storage_data)
+        TaskFile.delete(file_info.id, commit=True)
+
 
 class FileStoreRegistry(FileStoreInterface):
     """Class acting as a registry for loaded file stores. Forwards calls to the default file store."""
@@ -434,6 +450,11 @@ class FileStoreRegistry(FileStoreInterface):
         if self._default_store is None:
             raise NotImplementedError()
         return self._stores[self._default_store].get_task_file_url(file_info, external)
+
+    def delete_task_file(self, file_info: TaskFile):
+        if self._default_store is None:
+            raise NotImplementedError()
+        return self._stores[self._default_store].delete_task_file(file_info)
 
 
 # The file store registry that should be imported and used
