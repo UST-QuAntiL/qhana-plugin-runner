@@ -1,11 +1,10 @@
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
-from json import loads
 
 from celery.utils.log import get_task_logger
 
-from . import Test
+from . import InteractionDemo
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -14,9 +13,9 @@ from qhana_plugin_runner.storage import STORE
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{Test.instance.identifier}.preprocessing_task", bind=True)
-def preprocessing_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(f"Starting preprocessing demo task with db id '{db_id}'")
+@CELERY.task(name=f"{InteractionDemo.instance.identifier}.processing_task_1", bind=True)
+def processing_task_1(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting processing step 1 task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -40,9 +39,9 @@ def preprocessing_task(self, db_id: int) -> str:
     return "Empty input string, no output could be generated!"
 
 
-@CELERY.task(name=f"{Test.instance.identifier}.processing_task", bind=True)
-def processing_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(f"Starting preprocessing demo task with db id '{db_id}'")
+@CELERY.task(name=f"{InteractionDemo.instance.identifier}.processing_task_2", bind=True)
+def processing_task_2(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting processing step 2 task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:

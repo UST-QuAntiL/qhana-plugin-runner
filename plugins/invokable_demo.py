@@ -46,12 +46,12 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result, add_step
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "hello-world-invoked"
+_plugin_name = "invokable-demo"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-HELLO_INVOKED_BLP = SecurityBlueprint(
+INVOKABLE_DEMO_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Demo plugin that can be invoked by other plugins API.",
@@ -65,7 +65,7 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class HelloWorldInvokedParametersSchema(FrontendFormBaseSchema):
+class InputParametersSchema(FrontendFormBaseSchema):
     input_str = ma.fields.String(
         required=True,
         allow_none=False,
@@ -77,26 +77,26 @@ class HelloWorldInvokedParametersSchema(FrontendFormBaseSchema):
     )
 
 
-@HELLO_INVOKED_BLP.route("/")
+@INVOKABLE_DEMO_BLP.route("/")
 class PluginsView(MethodView):
-    """Plugins collection resource."""
+    """Plugins metadata resource."""
 
-    @HELLO_INVOKED_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
-    @HELLO_INVOKED_BLP.require_jwt("jwt", optional=True)
+    @INVOKABLE_DEMO_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @INVOKABLE_DEMO_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
         return PluginMetadata(
             title=HelloWorldInvoked.instance.name,
-            description=HELLO_INVOKED_BLP.description,
+            description=INVOKABLE_DEMO_BLP.description,
             name=HelloWorldInvoked.instance.identifier,
             version=HelloWorldInvoked.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(
-                    f"{HELLO_INVOKED_BLP.name}.ProcessView", db_id=0
+                    f"{INVOKABLE_DEMO_BLP.name}.ProcessView", db_id=0
                 ),  # FIXME: db_id
                 ui_href=url_for(
-                    f"{HELLO_INVOKED_BLP.name}.MicroFrontend", db_id=0
+                    f"{INVOKABLE_DEMO_BLP.name}.MicroFrontend", db_id=0
                 ),  # FIXME: db_id
                 plugin_dependencies=[],
                 data_input=[],
@@ -112,40 +112,40 @@ class PluginsView(MethodView):
         )
 
 
-@HELLO_INVOKED_BLP.route("/<int:db_id>/ui/")
+@INVOKABLE_DEMO_BLP.route("/<int:db_id>/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the hello world invoked plugin."""
+    """Micro frontend of the invokable demo plugin."""
 
     example_inputs = {
         "inputStr": "Sample input string.",
     }
 
-    @HELLO_INVOKED_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the hello world invoked plugin."
+    @INVOKABLE_DEMO_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the invokable demo plugin."
     )
-    @HELLO_INVOKED_BLP.arguments(
-        HelloWorldInvokedParametersSchema(
+    @INVOKABLE_DEMO_BLP.arguments(
+        InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @HELLO_INVOKED_BLP.require_jwt("jwt", optional=True)
+    @INVOKABLE_DEMO_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int):
         """Return the micro frontend."""
         return self.render(request.args, db_id, errors)
 
-    @HELLO_INVOKED_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the hello world invoked plugin."
+    @INVOKABLE_DEMO_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the invokable demo plugin."
     )
-    @HELLO_INVOKED_BLP.arguments(
-        HelloWorldInvokedParametersSchema(
+    @INVOKABLE_DEMO_BLP.arguments(
+        InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @HELLO_INVOKED_BLP.require_jwt("jwt", optional=True)
+    @INVOKABLE_DEMO_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, db_id, errors)
@@ -160,7 +160,7 @@ class MicroFrontend(MethodView):
         plugin = HelloWorldInvoked.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-        schema = HelloWorldInvokedParametersSchema()
+        schema = InputParametersSchema()
 
         if not data:
             data = {"inputStr": db_task.data["input_str"]}
@@ -173,10 +173,10 @@ class MicroFrontend(MethodView):
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(f"{HELLO_INVOKED_BLP.name}.ProcessView", db_id=db_id),
+                process=url_for(f"{INVOKABLE_DEMO_BLP.name}.ProcessView", db_id=db_id),
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{HELLO_INVOKED_BLP.name}.MicroFrontend",
+                    f"{INVOKABLE_DEMO_BLP.name}.MicroFrontend",
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -184,15 +184,13 @@ class MicroFrontend(MethodView):
         )
 
 
-@HELLO_INVOKED_BLP.route("/<int:db_id>/process/")
+@INVOKABLE_DEMO_BLP.route("/<int:db_id>/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @HELLO_INVOKED_BLP.arguments(
-        HelloWorldInvokedParametersSchema(unknown=EXCLUDE), location="form"
-    )
-    @HELLO_INVOKED_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @HELLO_INVOKED_BLP.require_jwt("jwt", optional=True)
+    @INVOKABLE_DEMO_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
+    @INVOKABLE_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @INVOKABLE_DEMO_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Start the invoked task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -232,7 +230,7 @@ class HelloWorldInvoked(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return HELLO_INVOKED_BLP
+        return INVOKABLE_DEMO_BLP
 
 
 TASK_LOGGER = get_task_logger(__name__)
