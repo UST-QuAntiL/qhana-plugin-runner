@@ -181,7 +181,9 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
         )
 
 
-def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
+def _load_plugins_from_folder(
+    app: Flask, folder: Union[str, Path], max_depth: int = 3, current_depth: int = 0
+):
     """Load all plugins from a folder path.
 
     Every importable python module in the folder or its sub-folders is considered a plugin and
@@ -194,6 +196,9 @@ def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
     Args:
         app (Flask): the app instance (used for logging only)
         folder (Union[str, Path]): the folder path to scan for plugins
+        max_depth (int): configures the maximum depth of the recursion i.e. how many folders deep it will search for
+            plugins
+        current_depth (int): the current depth in recursion, should not be set by code outside this method
     """
     if isinstance(folder, str):
         folder = Path(folder)
@@ -221,13 +226,22 @@ def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
     for child in folder.iterdir():
         if child.name.startswith("."):
             continue
+
         if child.is_file():
             _try_load_plugin_file(app, child)
+
         if child.is_dir():
-            if (child / Path("__init__.py")).exists():
+            ignore_dir: bool = (child / Path(".ignore")).exists()
+
+            if ignore_dir:
+                continue
+
+            is_package: bool = (child / Path("__init__.py")).exists()
+
+            if is_package:
                 _try_load_plugin_package(app, child)
-            else:
-                _load_plugins_from_folder(app, child)
+            elif current_depth < max_depth:
+                _load_plugins_from_folder(app, child, max_depth, current_depth + 1)
 
 
 def register_plugins(app: Flask):

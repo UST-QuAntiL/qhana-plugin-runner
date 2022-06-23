@@ -175,7 +175,10 @@ Additional files and folders:
  *  `tasks.py`\
     Tasks that can be executed with `invoke` (see [celery background tasks](#celery-background-tasks))
  *  `plugins`\
-    A folder to place plugins in during initial development. Mature plugins should be relocated into seperate repositories eventually.
+    A folder to place plugins in during initial development.
+    Mature plugins should be relocated into seperate repositories eventually.
+    Sub-folders will also be search for plugins up a maximum depth of 3 (can be changed in `qhana_plugin_runner/util/plugins.py`).
+    Folders and files that start with a dot and folders that contain a file named `.ignore` will be ignored as well as all of their sub-folders.
 
 
 ## Babel
