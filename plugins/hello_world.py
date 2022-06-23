@@ -83,16 +83,6 @@ class HelloWorldParametersSchema(FrontendFormBaseSchema):
             "input_type": "textarea",
         },
     )
-    plugin_selector = PluginUrl(
-        required=True,
-        allow_none=False,
-        plugin_tags=["data-loader"],
-        metadata={
-            "label": "Plugin selection",
-            "description": "URL of plugin.",
-            "input_type": "text",
-        },
-    )
 
 
 @HELLO_BLP.route("/")

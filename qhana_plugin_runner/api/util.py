@@ -194,6 +194,38 @@ class FileUrlValidator(UrlValidator):
         return value
 
 
+class DataUrlValidator(UrlValidator):
+    """Extension of the URL validator that can handle file and data URLs"""
+
+    default_schemes = {"http", "https", "ftp", "ftps", "data"}
+
+    _data_url_regex = re.compile(
+        r"data:(?P<mime>[\w/\-\.+]+)(?P<charset>;charset=[\w/\-\.+]+)?(?P<encoding>;base64)?,.*"
+    )
+
+    def __call__(self, value: str) -> str:
+        if value and value.startswith("data:"):
+            return self._validate_data_url(value)
+
+        super().__init__(require_tld=False)
+
+        return super().__call__(value)
+
+    def _validate_file_url(self, value: str) -> str:
+        result = urlparse(value)
+        if result.netloc:
+            if result.netloc != "localhost":
+                raise ValidationError(self._format_error(value))
+        else:
+            pass  # just hope that url is correct...
+        return value
+
+    def _validate_data_url(self, value: str) -> str:
+        if not self._data_url_regex.search(value):
+            raise ValidationError(self._format_error(value))
+        return value
+
+
 class FileUrl(ma.fields.Url):
     """Extension of the URL field that can handle file and data URLs"""
 
@@ -241,7 +273,6 @@ class FileUrl(ma.fields.Url):
         return super().deserialize(value, attr, data, **kwargs)
 
 
-# TODO add plugin URL field + UI generator functions
 class PluginUrl(ma.fields.URL):
     """Extension of the URL field that can handle plugin URLs"""
 
@@ -272,7 +303,7 @@ class PluginUrl(ma.fields.URL):
             self.metadata["plugin_name"] = plugin_name
         if plugin_version:
             self.metadata["plugin_version"] = plugin_version
-        self.validators[0] = FileUrlValidator(
+        self.validators[0] = DataUrlValidator(
             relative=self.relative,
             schemes=schemes,
             require_tld=self.require_tld,
