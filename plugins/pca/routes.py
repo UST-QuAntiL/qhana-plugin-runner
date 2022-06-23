@@ -10,7 +10,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import PCA_BLP, PCA
+from . import PCA_BLP, PCA, sklearn_version
 from .schemas import (
     InputParametersSchema,
     TaskResponseSchema,
@@ -42,8 +42,10 @@ class PluginsView(MethodView):
 
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
-            description="Reduces number of dimensions (New ONB are the k first principle components). "
-                        "The methods implemented here are from scikit-learn.",
+            description=f"""The PCA Plugin reduces the number of dimensions by computing the principle components.
+                        The new orthonormal basis consists of the k first principle components.
+                        The methods implemented here are from scikit-learn.
+                        Currently this plugin uses scikit-learn version {sklearn_version}.""",
             name=PCA.instance.identifier,
             version=PCA.instance.version,
             type=PluginType.simple,

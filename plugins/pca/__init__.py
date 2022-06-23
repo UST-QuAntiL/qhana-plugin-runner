@@ -16,6 +16,8 @@ PCA_BLP = SecurityBlueprint(
     description="PCA plugin API",
 )
 
+sklearn_version = "0.24.2"
+
 
 class PCA(QHAnaPluginBase):
     name = _plugin_name
@@ -28,7 +30,9 @@ class PCA(QHAnaPluginBase):
         return PCA_BLP
 
     def get_requirements(self) -> str:
-        return "scikit-learn~=0.24.2"
+        return f"scikit-learn~={sklearn_version}\n" \
+               "plotly~=5.3.1\n" \
+               "pandas~=1.4.1"
 
 
 try:
