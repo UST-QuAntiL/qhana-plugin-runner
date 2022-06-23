@@ -20,29 +20,45 @@ class QuantumBackends(enum.Enum):
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
 
-    @staticmethod
+    def get_max_num_qbits(
+            self,
+            ibmq_token: str,
+            custom_backend_name: str,
+    ):
+        if self.name.startswith("aer"):
+            return None
+        elif self.name.startswith("ibmq"):
+            # Use IBMQ backend
+            provider = IBMQ.enable_account(ibmq_token)
+            backend = provider.get_backend(self.name)
+            return backend.configuration().n_qubits
+        elif self.name.startswith("custom_ibmq"):
+            provider = IBMQ.enable_account(ibmq_token)
+            backend = provider.get_backend(custom_backend_name)
+            return backend.configuration().n_qubits
+
     def get_pennylane_backend(
-        backend_enum: "QuantumBackends",
+        self,
         ibmq_token: str,
         custom_backend_name: str,
         qubit_cnt: int,
     ) -> qml.Device:
-        if backend_enum.name.startswith("aer"):
+        if self.name.startswith("aer"):
             # Use local AER backend
-            aer_backend_name = backend_enum.name[4:]
+            aer_backend_name = self.name[4:]
 
             return qml.device("qiskit.aer", wires=qubit_cnt, backend=aer_backend_name)
-        elif backend_enum.name.startswith("ibmq"):
+        elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             provider = IBMQ.enable_account(ibmq_token)
 
             return qml.device(
                 "qiskit.ibmq",
                 wires=qubit_cnt,
-                backend=backend_enum.name,
+                backend=self.name,
                 provider=provider
             )
-        elif backend_enum.name.startswith("custom_ibmq"):
+        elif self.name.startswith("custom_ibmq"):
             provider = IBMQ.enable_account(ibmq_token)
 
             return qml.device(

@@ -109,12 +109,14 @@ def calculation_task(self, db_id: int) -> str:
     id_to_idx_X, points_arr_X = get_indices_and_pointArr(entity_points_url1)
     id_to_idx_Y, points_arr_Y = get_indices_and_pointArr(entity_points_url2)
 
-    backend = QuantumBackends.get_pennylane_backend(
-        backend, ibmq_token, custom_backend, n_qbits
-    )
+    max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
+    if max_qbits is None:
+        max_qbits = 6
+
+    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
     backend.shots = shots
 
-    entanglement_pattern = entanglement_pattern.get_pattern(n_qbits)
+    # entanglement_pattern = entanglement_pattern.get_pattern(n_qbits)
     kernel = kernel_enum.get_kernel(backend, n_qbits, reps, entanglement_pattern)
     # kernel_matrix is size len(points_arrY) x len(points_arrX)
     kernel_matrix = kernel.evaluate(points_arr_X, points_arr_Y)
