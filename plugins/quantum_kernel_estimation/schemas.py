@@ -35,6 +35,8 @@ class InputParameters:
     ):
         self.entity_points_url1 = entity_points_url1
         self.entity_points_url2 = entity_points_url2
+        if entity_points_url2 is None or entity_points_url2 == "":
+            self.entity_points_url2 = entity_points_url1
         self.kernel = kernel
         self.entanglement_pattern = entanglement_pattern
         self.n_qbits = n_qbits
@@ -53,7 +55,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types="application/json",
         metadata={
             "label": "Entity points URL 1",
-            "description": "URL to a json file with the entity points.",
+            "description": "URL to a json file with the first entity points.",
             "input_type": "text",
         },
     )
@@ -64,7 +66,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types="application/json",
         metadata={
             "label": "Entity points URL 2",
-            "description": "URL to a json file with the entity points.",
+            "description": "URL to a json file with the second entity points.",
             "input_type": "text",
         },
     )
@@ -74,7 +76,20 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Quantum Kernel",
-            "description": "The quantum kernel that will be used.",
+            "description": """The kernels by Havlíček and Suzuki both use the same \"kernel\" proposed by Havlíček.
+            The difference is that the kernel can take different so called feature maps. 
+            In the following the corresponding feature maps are listed. The sets are decided by the entanglement patterns
+            and xi or similar notation represent the i'th entry of vector x.
+            Havlíček Kernel: f(x) = xi for set {i}, f(x) = (π - xa) * (π - xb) * ... for set {a, b, ...}
+            Suzuki Kernel 8: f(x) = xi for set {i}, f(x) = π * x_a_ * x_b_ * ... for set {a, b, ...}
+            Suzuki Kernel 9: f(x) = xi for set {i}, f(x) = π/2 * (1 - x_a_) * (1 - x_b_) * ... for set {a, b, ...}
+            Suzuki Kernel 10: f(x) = xi for set {i}, f(x) = π * exp(g(x)) for set {a, b, ...},
+            where g(x) sums up all combinations |xi - xj|^2^, where i != j and i, j ∈ {a, b, ...} and takes the mean.
+            Suzuki Kernel 11: f(x) = xi for set {i}, f(x) = π / (3 * cos(x_a_) * cos(x_b_) * ...) for set {a, b, ...}
+            Suzuki Kernel 12: f(x) = xi for set {i}, f(x) = π * cos(x_a_) * cos(x_b_) * ... for set {a, b, ...}
+            Suzuki actually only defined the feature maps up to a set size of 2. Here we have extended them, although 
+            it's questionable, if these are extended in a good way. For more information, please have a look at the 
+            respective papers.""",
             "input_type": "select",
         },
     )
@@ -84,7 +99,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Entanglement Pattern",
-            "description": "The entanglement pattern that will be used.",
+            "description": """This determines how the different Qubits will be entangled.
+            In case of 3 dimensional data, we need 3 qubits and therefor the patterns are as follows:
+            full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]
+            linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]
+            circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]
+            To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets
+            {0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the
+            feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to
+            the feature map and so on for {0, 2} and {1, 2}.""",
             "input_type": "select",
         },
     )
@@ -102,7 +125,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Number of Repetitions",
-            "description": "The number of how often the embedding circuit gets repeated.",
+            "description": """The kernel proposed by Havlíček [0] works by creating an ansatz, which is a specific
+                            quantum circuit. The final quantum circuit contains this ansatz number of repetitions times.""",
             "input_type": "text",
         },
     )
@@ -111,7 +135,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Number of Shots",
-            "description": "The number of times the quantum circuit gets executed.",
+            "description": """The number of times the quantum circuit gets executed. The higher, the more accurate our 
+                            results get.""",
             "input_type": "text",
         },
     )
