@@ -184,7 +184,7 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
 def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
     """Load all plugins from a folder path.
 
-    Every importable python module in the folder is considered a plugin and
+    Every importable python module in the folder or its sub-folders is considered a plugin and
     will be automatically imported. The parent path will be added to ``sys.path``
     if not already added.
 
@@ -224,7 +224,10 @@ def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
         if child.is_file():
             _try_load_plugin_file(app, child)
         if child.is_dir():
-            _try_load_plugin_package(app, child)
+            if (child / Path("__init__.py")).exists():
+                _try_load_plugin_package(app, child)
+            else:
+                _load_plugins_from_folder(app, child)
 
 
 def register_plugins(app: Flask):
