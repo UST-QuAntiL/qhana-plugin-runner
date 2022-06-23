@@ -86,8 +86,6 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         """
         Performs the positive correlation quantum KMeans accordingly to
         https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76
-        resp.
-        https://arxiv.org/abs/1909.04226
         """
         centroid_angles = self.map_to_zero_to_2pi(centroids)
         centroid_mapping = np.zeros(len(preped_data), dtype=int)

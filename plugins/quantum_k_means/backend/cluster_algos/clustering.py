@@ -84,18 +84,11 @@ class Clustering:
 
         return preprocessedData
 
-    def check_convergence(self, old_centroid_mapping, new_centroid_mapping, tol):
+    def check_convergence(self, old_centroid_mapping, new_centroid_mapping):
         """
-        Check if two centroid mappings are different and how different they are
-        i.e. this is the convergence condition. Return true if we are converged.
-        The tol is the percentage/100 of how many points are
-        allowed to have a different labels in the new iteration but still accept it
-        as converged.
-
-        E.g.: tol = 0.05, 100 data points in total
-
-        =>  if from one iteration to the other less than 100 * 0.05 = 5 points change their
-            label, we still accept it as converged
+        Check if two centroid mappings are different. If they are similar enough, return True, otherwise return False.
+        They are similar enough, if the number of different labels are less than
+        the tolerance tol (a number between 0 and 1) times the total number of data points
         """
         n_different_labels = 0
         n_data_points = len(new_centroid_mapping)
@@ -103,7 +96,7 @@ class Clustering:
             if old_centroid_mapping[i] != new_centroid_mapping[i]:
                 n_different_labels += 1
 
-        if n_different_labels - n_data_points * tol <= 0:
+        if n_different_labels - n_data_points * self.tol <= 0:
             return True
         else:
             return False
@@ -161,22 +154,26 @@ class Clustering:
 
         return centroids
 
-    def create_clusters(self, data: List[List[float]], k: int):
+    def create_clusters(self, data: List[List[float]], k: int) -> np.ndarray:
         """
         Executes the quantum k means cluster algorithm on the given
         quantum backend and the specified circuit.
-        The dataRaw needs to be 2D cartesian coordinates.
-        ShotsEach describes how often one circuit will be executed.
-        We return a list with a mapping from data indizes to centeroid indizes,
-        i.e. if we return a list [2, 0, 1, ...] this means:
+        The data needs to be 2D cartesian coordinates.
+        We return a np.array with a mapping from data indizes to centeroid indizes,
+        i.e. if we return a np.array [2, 0, 1, ...] this means:
 
         data vector with index 0 -> mapped to centroid with index 2
         data vector with index 1 -> mapped to centroid 0
         data vector with index 2 -> mapped to centroid 1
         """
+        # The circuit version diverge on how the data and the centroids get preprocessed and how the centroid mappings
+        # get computed, but the outer loop with the convergence criteria is the same.
 
         # Init centroids and Prepare data
         preped_centroids = self.prep_centroids(self.init_centroids(k))
+        # Data gets prepared twice, since we need a version, to compute the new centroids after each iteration
+        # and we might need a different version as input for the quantum circuits. Since the data points never change,
+        # we compute both versions right here
         preped_data = self.prep_data(data)
 
         circuit_data = self.prep_data_for_circuit(preped_data)
@@ -193,7 +190,7 @@ class Clustering:
             centroids = self.get_mean_centroids_from_mapping(newCentroidMapping, preped_data, k)
             preped_centroids = self.prep_centroids(centroids)
 
-            not_converged = not self.check_convergence(oldCentroidMapping, newCentroidMapping, self.tol)
+            not_converged = not self.check_convergence(oldCentroidMapping, newCentroidMapping)
             iterations += 1
             TASK_LOGGER.info(f"Iteration {iterations} done")
 

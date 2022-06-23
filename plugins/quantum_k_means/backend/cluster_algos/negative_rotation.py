@@ -75,26 +75,6 @@ class NegativeRotationQuantumKMeans(Clustering):
                                      preped_data: List[float],
                                      centroids: List[List[float]]
                                      ) -> (List[List[int]], int):
-        """
-        Create and apply the negative rotation circuit.
-        Note, that the lenght of centeroids is the same as k!
-
-        We return a list with a mapping from test angle indizes to centeroid angle indizes,
-        i.e. if we return a list [2, 0, 1, ...] this means:
-
-        data vector with index 0 -> mapped to centroid with index 2
-        data vector with index 1 -> mapped to centroid 0
-        data vector with index 2 -> mapped to centroid 1
-        ...
-
-        We need for each data angle len(centroidAngles) qubits.
-        We do this in a chained fession, i.e. we take the first
-        data angle and use len(centroidAngles) qubits.
-        If we still have free qubits, we take the next data angle
-        and do the same. If we reach the maxQubits limit, we execute the
-        circuit and safe the result. If we are not able to test all centeroids
-        in one run, we just use the next run for the remaining centeroids.
-        """
         centroid_angles = self.calculate_angles(centroids)
         centroid_mapping = np.zeros(len(preped_data), dtype=int)
         mapping_distance = np.zeros(len(preped_data))

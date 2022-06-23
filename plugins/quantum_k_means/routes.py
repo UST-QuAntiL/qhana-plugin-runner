@@ -28,6 +28,15 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from .tasks import calculation_task
 
 
+description = """## Description
+This plugin groups the data into different clusters, with the help of quantum algorithms.\n
+Currently there are four implemented algorithms. Destructive interference and negative rotation are from [0], 
+positive correlation is from [1] and state preparation is from a previous colleague.
+## Source
+[0] S. Khan and A. Awan and G. Vall-Llosera. K-Means Clustering on Noisy Intermediate Scale Quantum Computers.arXiv. <a href=\"https://doi.org/10.48550/ARXIV.1909.12183\">https://doi.org/10.48550/ARXIV.1909.12183</a>
+[1] https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76"""
+
+
 @QKMEANS_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
@@ -38,7 +47,7 @@ class PluginsView(MethodView):
         """Quantum k-means endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Quantum k-means",
-            description="K-means algorithms that can run on quantum computers.",
+            description=description,
             name=QKMeans.instance.name,
             version=QKMeans.instance.version,
             type=PluginType.simple,
