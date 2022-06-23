@@ -259,13 +259,108 @@ def batch_fitting(entity_points_url, pca, batch_size):
             pca.partial_fit(prev_batch)
             batch = batch[:idx]
         pca.partial_fit(batch)
-    return prepare_stream_output(
-        get_entity_generator(entity_points_url, stream=True),
-        pca,
-    )
 
 
-def save_outputs(db_id, pca_output, entity_points, attributes):
+def plot_data(entity_points, dim, only_first_100):
+    import pandas as pd
+    import plotly.express as px
+    if dim == 3:
+        points_x = []
+        points_y = []
+        points_z = []
+        ids = []
+        if only_first_100:
+            for i in range(100):
+                entity = next(entity_points)
+                points_x.append(float(entity["dim0"]))
+                points_y.append(float(entity["dim1"]))
+                points_z.append(float(entity["dim2"]))
+                ids.append(entity["ID"])
+        else:
+            for entity in entity_points:
+                points_x.append(float(entity["dim0"]))
+                points_y.append(float(entity["dim1"]))
+                points_z.append(float(entity["dim2"]))
+                ids.append(entity["ID"])
+        df = pd.DataFrame(
+            {
+                "x": points_x,
+                "y": points_y,
+                "z": points_z,
+                "ID": ids,
+                "size": [10]*len(ids),
+            }
+        )
+        return px.scatter_3d(
+            df, x="x", y="y", z="z", hover_name="ID", size="size"
+        )
+    elif dim == 2:
+        points_x = []
+        points_y = []
+        ids = []
+        if only_first_100:
+            for i in range(100):
+                entity = next(entity_points)
+                points_x.append(float(entity["dim0"]))
+                points_y.append(float(entity["dim1"]))
+                ids.append(entity["ID"])
+        else:
+            for entity in entity_points:
+                points_x.append(float(entity["dim0"]))
+                points_y.append(float(entity["dim1"]))
+                ids.append(entity["ID"])
+        df = pd.DataFrame(
+            {
+                "x": points_x,
+                "y": points_y,
+                "ID": ids,
+                "size": [10] * len(ids),
+            }
+        )
+        return px.scatter(
+            df, x="x", y="y", hover_name="ID", size="size"
+        )
+    else:
+        points_x = []
+        ids = []
+        if only_first_100:
+            for i in range(100):
+                entity = next(entity_points)
+                points_x.append(float(entity["dim0"]))
+                ids.append(entity["ID"])
+        else:
+            for entity in entity_points:
+                points_x.append(float(entity["dim0"]))
+                ids.append(entity["ID"])
+        df = pd.DataFrame(
+            {
+                "x": points_x,
+                "y": [0] * len(ids),
+                "ID": ids,
+                "size": [10] * len(ids),
+            }
+        )
+        return px.scatter(
+            df, x="x", y="y", hover_name="ID", size="size"
+        )
+
+
+def save_outputs(db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim):
+    TASK_LOGGER.info(f"entity_points_for_plot is not None = {entity_points_for_plot is not None}")
+    if entity_points_for_plot is not None:
+        fig = plot_data(entity_points_for_plot, dim, only_first_100=(pca_output[0]["type"]=='incremental'))
+
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "plot.html",
+                "plot",
+                "text/html",
+            )
     # save pca
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(pca_output, output, "application/json")
@@ -306,6 +401,7 @@ def calculation_task(self, db_id: int) -> str:
 
     entity_points_url = input_params.get("entityPointsUrl")
     kernel_url = input_params.get("kernelUrl")
+    output_dimensions = input_params.get("dimensions")
 
     # Compute pca
     pca = get_correct_pca(input_params)
@@ -313,20 +409,25 @@ def calculation_task(self, db_id: int) -> str:
     # Since incremental pca uses batches, we want to load in the data in batches
     if input_params.get("pcaType") == PCATypeEnum.incremental.value:
         batch_size = input_params.get("batchSize")
-        entity_points = batch_fitting(entity_points_url, pca, batch_size)
+        batch_fitting(entity_points_url, pca, batch_size)
+        entity_points = prepare_stream_output(get_entity_generator(entity_points_url, stream=True), pca)
+        entity_points_for_plot = prepare_stream_output(get_entity_generator(entity_points_url, stream=True), pca)
     elif input_params.get("pcaType") == PCATypeEnum.kernel.value and input_params.get("kernel") == KernelEnum.precomputed.value:
         entity_points = precomputed_kernel_fitting(kernel_url, pca)
+        entity_points_for_plot = entity_points
     # Since the other PCAs need the complete dataset at once, we load it in at once
     else:
         entity_points = complete_fitting(entity_points_url, pca)
+        entity_points_for_plot = entity_points
 
     # Prepare output for pca file
     # dim = num features of output. Get dim here, since input params can be <= 0
     pca_output, dim = pca_to_output(pca)
     pca_output = [pca_output]
-
+    if dim > 3:
+        entity_points_for_plot = None
     # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
     attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
-    save_outputs(db_id, pca_output, entity_points, attributes)
+    save_outputs(db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim)
 
     return "Result stored in file"
