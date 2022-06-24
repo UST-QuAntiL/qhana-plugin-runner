@@ -18,7 +18,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginMetadata,
     PluginMetadataSchema,
-    PluginType, DataMetadata,
+    PluginType,
+    DataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
@@ -56,7 +57,7 @@ class MetadataView(MethodView):
                         data_type="txt",
                         content_type=["text/plain"],
                         required=True,
-                    )
+                    ),
                 ],
             ),
             tags=[],
