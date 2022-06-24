@@ -94,10 +94,10 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(
                     f"{INVOKABLE_DEMO_BLP.name}.ProcessView", db_id=0
-                ),  # FIXME: db_id
+                ),  # URL for the first process endpoint  # FIXME: db_id
                 ui_href=url_for(
                     f"{INVOKABLE_DEMO_BLP.name}.MicroFrontend", db_id=0
-                ),  # FIXME: db_id
+                ),  # URL for the first micro frontend endpoint  # FIXME: db_id
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[
@@ -175,13 +175,15 @@ class MicroFrontend(MethodView):
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(f"{INVOKABLE_DEMO_BLP.name}.ProcessView", db_id=db_id),
+                process=url_for(
+                    f"{INVOKABLE_DEMO_BLP.name}.ProcessView", db_id=db_id
+                ),  # URL of the processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{INVOKABLE_DEMO_BLP.name}.MicroFrontend",
                     db_id=db_id,
                     **self.example_inputs,
-                ),
+                ),  # URL of this endpoint
             )
         )
 
@@ -205,17 +207,18 @@ class ProcessView(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        # all tasks need to know about db id to load the db entry
+        # add the next processing step with the data that was stored by the previous step of the invoking plugin
         task: chain = demo_task.s(db_id=db_task.id) | add_step.s(
             db_id=db_task.id,
-            step_id=db_task.data["next_step_id"],
-            href=db_task.data["href"],
-            ui_href=db_task.data["ui_href"],
+            step_id=db_task.data["next_step_id"],  # name of the next sub-step
+            href=db_task.data["href"],  # URL to the processing endpoint of the next step
+            ui_href=db_task.data["ui_href"],  # URL to the micro frontend of the next step
             prog_value=66,
         )
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
+        # start tasks
         task.apply_async()
 
         return redirect(
@@ -240,6 +243,12 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{InvokableDemo.instance.identifier}.demo_task", bind=True)
 def demo_task(self, db_id: int) -> str:
+    """
+    Demo processing task. Retrieves the input data from the database and stores it in a file.
+    @param self:
+    @param db_id: database ID that will be used to retrieve the task data from the database
+    @return: log message
+    """
     TASK_LOGGER.info(f"Starting new invoked task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -254,16 +263,14 @@ def demo_task(self, db_id: int) -> str:
     if input_str is None:
         raise ValueError("No input data provided!")
 
-    if input_str:
-        out_str = "User input from invoked plugin micro frontend: " + input_str
-        with SpooledTemporaryFile(mode="w") as output:
-            output.write(out_str)
-            STORE.persist_task_result(
-                db_id,
-                output,
-                "output_invoked_demo.txt",
-                "hello-world-output",
-                "text/plain",
-            )
-        return "result: " + repr(out_str)
-    return "Empty input string, no output could be generated!"
+    out_str = "User input from invoked plugin micro frontend: " + input_str
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(out_str)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "output_invoked_demo.txt",
+            "hello-world-output",
+            "text/plain",
+        )
+    return "result: " + repr(out_str)

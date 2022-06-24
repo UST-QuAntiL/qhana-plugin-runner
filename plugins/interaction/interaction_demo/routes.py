@@ -39,8 +39,12 @@ class MetadataView(MethodView):
             version=InteractionDemo.instance.version,
             type=PluginType.complex,
             entry_point=EntryPoint(
-                href=url_for(f"{INTERACTION_DEMO_BLP.name}.ProcessStep1View"),
-                ui_href=url_for(f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1"),
+                href=url_for(
+                    f"{INTERACTION_DEMO_BLP.name}.ProcessStep1View"
+                ),  # URL for the first process endpoint
+                ui_href=url_for(
+                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1"
+                ),  # URL for the first micro frontend endpoint
                 data_input=[],
                 data_output=[],
             ),
@@ -98,10 +102,12 @@ class MicroFrontendStep1(MethodView):
                 schema=schema,
                 values=data,
                 errors=errors,
-                process=url_for(f"{INTERACTION_DEMO_BLP.name}.ProcessStep1View"),
+                process=url_for(
+                    f"{INTERACTION_DEMO_BLP.name}.ProcessStep1View"
+                ),  # URL of the first processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1",
+                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1",  # URL of this endpoint
                     **self.example_inputs,
                 ),
             )
@@ -113,7 +119,7 @@ TASK_LOGGER: Logger = get_task_logger(__name__)
 
 @INTERACTION_DEMO_BLP.route("/process-step-1/")
 class ProcessStep1View(MethodView):
-    """Start a long running processing task."""
+    """Start the processing task of step 1."""
 
     @INTERACTION_DEMO_BLP.arguments(
         InputParametersSchema(unknown=EXCLUDE), location="form"
@@ -141,22 +147,29 @@ class ProcessStep1View(MethodView):
         )
         db_task.save(commit=True)
 
-        # next step
+        # add new step where the "invokable demo" plugin is executed
+
+        # name of the next step
         step_id = "invoked plugin"
+        # URL of the process endpoint of the invoked plugin
         href = url_for(
             f"invokable-demo@v0-1-0.ProcessView", db_id=db_task.id, _external=True
         )  # FIXME replace hardcoded plugin name with user input
+        # URL of the micro frontend endpoint of the invoked plugin
         ui_href = url_for(
             f"invokable-demo@v0-1-0.MicroFrontend", db_id=db_task.id, _external=True
         )  # FIXME replace hardcoded plugin name with user input
 
-        # all tasks need to know about db id to load the db entry
+        # Chain the first processing task with executing the "invokable demo" plugin.
+        # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
+        # steps in the database.
         task: chain = processing_task_1.s(db_id=db_task.id) | add_step.s(
             db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=33
         )
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
+        # start tasks
         task.apply_async()
 
         return redirect(
@@ -211,12 +224,9 @@ class MicroFrontendStep2(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        # retrieve input data from preprocessing
         if not data:
-            try:
-                input_str = db_task.data["input_str"]
-            except:
-                input_str = ""
+            # retrieve data from the invoked plugin
+            input_str = db_task.data.get("input_str")
             data = {"inputStr": "Data from invoked plugin: " + input_str}
 
         schema = InputParametersSchema()
@@ -229,10 +239,11 @@ class MicroFrontendStep2(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View", db_id=db_id
+                    f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View",
+                    db_id=db_id,  # URL of the second processing step
                 ),
                 example_values=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep2",
+                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep2",  # URL of the second micro frontend
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -242,7 +253,7 @@ class MicroFrontendStep2(MethodView):
 
 @INTERACTION_DEMO_BLP.route("/<int:db_id>/process-step-2/")
 class ProcessStep2View(MethodView):
-    """Start a long running processing task."""
+    """Start the processing task of step 2."""
 
     @INTERACTION_DEMO_BLP.arguments(
         InputParametersSchema(unknown=EXCLUDE), location="form"
@@ -261,13 +272,14 @@ class ProcessStep2View(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        # all tasks need to know about db id to load the db entry
+        # Chain the second processing task with executing the task that saves the results and ends the execution.
         task: chain = processing_task_2.s(db_id=db_task.id) | save_task_result.s(
             db_id=db_id
         )
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
+        # start tasks
         task.apply_async()
 
         return redirect(
