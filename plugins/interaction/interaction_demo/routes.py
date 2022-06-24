@@ -18,7 +18,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginMetadata,
     PluginMetadataSchema,
-    PluginType,
+    PluginType, DataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
@@ -46,7 +46,18 @@ class MetadataView(MethodView):
                     f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1"
                 ),  # URL for the first micro frontend endpoint
                 data_input=[],
-                data_output=[],
+                data_output=[
+                    DataMetadata(
+                        data_type="txt",
+                        content_type=["text/plain"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="txt",
+                        content_type=["text/plain"],
+                        required=True,
+                    )
+                ],
             ),
             tags=[],
         )
