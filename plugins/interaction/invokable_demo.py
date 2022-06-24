@@ -90,7 +90,7 @@ class PluginsView(MethodView):
             description=INVOKABLE_DEMO_BLP.description,
             name=InvokableDemo.instance.identifier,
             version=InvokableDemo.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(
                     f"{INVOKABLE_DEMO_BLP.name}.ProcessView", db_id=0

@@ -37,7 +37,7 @@ class MetadataView(MethodView):
             description=INTERACTION_DEMO_BLP.description,
             name=InteractionDemo.instance.identifier,
             version=InteractionDemo.instance.version,
-            type=PluginType.complex,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(
                     f"{INTERACTION_DEMO_BLP.name}.ProcessStep1View"
