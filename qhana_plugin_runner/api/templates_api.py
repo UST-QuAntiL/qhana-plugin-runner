@@ -38,53 +38,33 @@ TEMPLATES_API = SmorestBlueprint(
     url_prefix="/templates",
 )
 
-
 @dataclass()
 class CategoryData:
     name: str
     description: str
     plugin_filter: FilterExpr
 
-
-@dataclass()
-class CategoryCollentionData:
-    categories: List[CategoryData]
-
-
 class CategoryDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
     plugin_filter = ma.fields.Raw(required=True, allow_none=False, dump_only=True)
-
-
-class CategoryCollentionSchema(MaBaseSchema):
-    categories = ma.fields.List(
-        ma.fields.Nested(CategoryDataSchema()),
-        required=True,
-        allow_none=False,
-        dump_only=True,
-    )
-
 
 @dataclass()
 class TemplateData:
     name: str
     description: str
     identifier: str
-    api_root: str
-
-
-@dataclass()
-class TemplateCollectionData:
-    templates: List[TemplateData]
-
+    categories: List[CategoryData]
 
 class TemplateDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    api_root = ma.fields.Url(required=True, allow_none=False, dump_only=True)
+    categories = ma.fields.List(ma.fields.Nested(CategoryDataSchema()))
 
+@dataclass()
+class TemplateCollectionData:
+    templates: List[TemplateData]
 
 class TemplateCollectionSchema(MaBaseSchema):
     templates = ma.fields.List(ma.fields.Nested(TemplateDataSchema()))
@@ -105,40 +85,17 @@ class TemplatesView(MethodView):
                         name=t.name,
                         description=t.description,
                         identifier=t.identifier,
-                        api_root=url_for(
-                            "templates-api.TemplateView",
-                            template=t.identifier,
-                            _external=True,
-                        ),
+                        categories=[
+                            CategoryData(
+                                name=c.name,
+                                description=c.description,
+                                plugin_filter=c.plugin_filter,
+                            )
+                            for c in t.categories
+                        ]
                     )
                     for t in QHanaTemplate.get_templates().values()
                 ],
                 key=lambda x: x.identifier,
             )
-        )
-
-
-@TEMPLATES_API.route("/<string:template>/")
-class TemplateView(MethodView):
-    """Generic fallback templates view."""
-
-    @TEMPLATES_API.response(HTTPStatus.OK, CategoryCollentionSchema())
-    def get(self, template: str):
-        """Get all loaded templates."""
-
-        if template not in QHanaTemplate.get_templates():
-            abort(
-                HTTPStatus.NOT_FOUND,
-                message=f"No template with identifier '{template}' exists.",
-            )
-        template = QHanaTemplate.get_templates()[template]
-        return CategoryCollentionData(
-            categories=[
-                CategoryData(
-                    name=category.name,
-                    description=category.description,
-                    plugin_filter=category.plugin_filter,
-                )
-                for category in template.categories
-            ]
         )

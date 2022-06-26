@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import json
 import jsonschema
 import urllib
@@ -37,15 +38,11 @@ FilterExpr = Union[str, Dict[str, Any]]
 # https://github.com/python/mypy/issues/731
 
 
+@dataclass()
 class QHanaTemplateCategory:
-    name: ClassVar[str]
-    description: ClassVar[str]
-    plugin_filter: ClassVar[FilterExpr]
-
-    def __init__(self, name: str, description: str, plugin_filter: FilterExpr) -> None:
-        self.name = name
-        self.description = description
-        self.plugin_filter = plugin_filter
+    name: str
+    description: str
+    plugin_filter: FilterExpr
 
     @classmethod
     def from_dict(cls, category_dict):
