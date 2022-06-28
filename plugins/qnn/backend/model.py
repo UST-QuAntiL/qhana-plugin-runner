@@ -5,6 +5,8 @@ from pennylane import numpy as np
 import torch
 import torch.nn as nn
 
+from plugins.qnn.schemas import WeightInitEnum
+
 #######################################
 # VARIATIONAL QUANTUM CIRCUIT
 
@@ -40,15 +42,35 @@ class DressedQuantumNet(nn.Module):
     Torch module implementing the *dressed* quantum net.
     """
 
-    def __init__(self, n_qubits, quantum_device, q_depth):
+    def __init__(self, n_qubits, quantum_device, q_depth, weight_init):
         """
         Definition of the *dressed* layout.
         """
 
         super().__init__()
         self.pre_net = nn.Linear(2, n_qubits)
-        self.q_params = nn.Parameter(0.01 * torch.randn(q_depth * n_qubits))
         self.post_net = nn.Linear(n_qubits, 2)
+
+        q_params = None
+
+        # weight init
+        # TODO what about biases?
+        if weight_init == WeightInitEnum.standard_normal:
+            q_params = 0.01 * torch.randn(q_depth * n_qubits)
+            nn.init.normal_(self.pre_net.weight)
+            nn.init.normal_(self.post_net.weight)
+        elif weight_init == WeightInitEnum.uniform:
+            q_params = 0.01 * torch.rand(q_depth * n_qubits)
+            nn.init.uniform_(self.pre_net.weight)
+            nn.init.uniform_(self.post_net.weight)
+        elif weight_init == WeightInitEnum.zero:
+            q_params = torch.zeros(q_depth * n_qubits)
+            nn.init.zeros_(self.pre_net.weight)
+            nn.init.zeros_(self.post_net.weight)
+        else:
+            print("unknown weight init method")
+
+        self.q_params = nn.Parameter(q_params)
 
         # define circuit
         @qml.qnode(quantum_device, interface="torch")

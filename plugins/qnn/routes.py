@@ -25,6 +25,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from plugins.qnn.schemas import (
     DeviceEnum,
     OptimizerEnum,
+    WeightInitEnum,
     QNNParametersSchema,
     TaskResponseSchema,
 )
@@ -125,7 +126,7 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             schema.fields["test_percentage"].data_key: 0.05,
-            schema.fields["device"].data_key: DeviceEnum.default,
+            schema.fields["device"].data_key: DeviceEnum.aer_statevector_simulator,
             schema.fields["shots"].data_key: 1000,
             schema.fields["optimizer"].data_key: OptimizerEnum.adam,
             schema.fields["step"].data_key: 0.07,
@@ -134,6 +135,7 @@ class MicroFrontend(MethodView):
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
             schema.fields["use_default_dataset"].data_key: False,
+            schema.fields["weight_init"].data_key: WeightInitEnum.uniform,
         }
         # overwrite default values with other values if possible
         default_values.update(data_dict)

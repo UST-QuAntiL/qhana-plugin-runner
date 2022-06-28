@@ -29,12 +29,7 @@ class QNN(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         return "numpy~=1.22.2\nmatplotlib~=3.5.1\nPennyLane~=0.16\nscikit-learn~=0.24.2\ntorch~=1.11.0"
-        # return "numpy~=1.22.2\nmatplotlib~=3.5.1\nPennyLane~=0.7.0\nscikit-learn~=0.24.2\ntorch~=1.11.0"  # TODO? # after specifying here "poetry run flask install"
-        # return "numpy~=1.22.2\nmatplotlib~=3.5.1\npennylane~=0.16\nscikit-learn~=0.24.2"  # TODO? # after specifying here "poetry run flask install"
-        # \ntorch~=1.11.0
 
-
-# qiskit~=0.27
 
 try:
     # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are

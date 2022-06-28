@@ -1,4 +1,6 @@
+# implemented based on:
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
+# https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
 
 
 import imp
@@ -15,6 +17,7 @@ from plugins.qnn.schemas import (
     DeviceEnum,
     InputParameters,
     OptimizerEnum,
+    WeightInitEnum,
     QNNParametersSchema,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -45,10 +48,6 @@ from sklearn.preprocessing import StandardScaler
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import lr_scheduler
-
-# Plotting
-import matplotlib.pyplot as plt
 
 # Plot to html
 import base64
@@ -116,13 +115,17 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: optimizer='{optimizer}'")
     device = input_params.device
     TASK_LOGGER.info(f"Loaded input parameters from db: device='{device}'")
+    weight_init = input_params.weight_init
+    TASK_LOGGER.info(f"Loaded input parameters from db: weight_init='{weight_init}'")
 
     # load or generate dataset
     dataset = None
     if use_default_dataset:
         print("Use default dataset")
         # spiral dataset
-        dataset = twospirals(200, turns=1.52)  # twospirals(2000, turns=1.52)
+        dataset = twospirals(
+            200, turns=1.52
+        )  # twospirals(2000, turns=1.52) # TODO set number of data elements in GUI??
     else:
         print("Load dataset from files")
         # get data from file
@@ -154,29 +157,81 @@ def calculation_task(self, db_id: int) -> str:
     # ------------------------------
     start_time = time.time()  # Start the computation timer
 
-    X, Y = dataset
+    torch.manual_seed(42)  # TODO doesn't work?
+    np.random.seed(42)  # TODO doesn't work?
 
-    classes = list(set(list(Y)))
-    n_classes = len(classes)
+    # TODO choose based on input parameters
+    dev = None
+    if device == DeviceEnum.aer_statevector_simulator:
+        dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
+    else:
+        # THE SAME FOR NOW
+        # TODO change
+        dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
 
-    torch.manual_seed(42)
-    np.random.seed(42)
-
-    dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # dressed quantum network
-    model = DressedQuantumNet(n_qubits, dev, q_depth)  # n_qubits, quantum_device, q_depth
+    model = DressedQuantumNet(n_qubits, dev, q_depth, weight_init)
     model = model.to(device)
 
     # loss function
     loss_fn = nn.CrossEntropyLoss()
 
-    # optimizer TODO choose based on input parameter
-    optimizer = optim.Adam(model.parameters(), lr=step)
+    # select optimizer
+    opt = None
+    if optimizer == OptimizerEnum.adadelta:
+        print("adadelta")
+        opt = optim.Adadelta(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adagrad:
+        print("adagrad")
+        opt = optim.Adagrad(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adam:
+        print("adam")
+        opt = optim.Adam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adamW:
+        print("adamW")
+        opt = optim.AdamW(model.parameters(), lr=step)
+    elif (
+        optimizer == OptimizerEnum.sparse_adam
+    ):  # TODO check "RuntimeError: SparseAdam does not support dense gradients, please consider Adam instead"
+        print("SparseAdam")
+        opt = optim.SparseAdam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adamax:
+        print("Adamax")
+        opt = optim.Adamax(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.asgd:
+        print("ASGD")
+        opt = optim.ASGD(model.parameters(), lr=step)
+    elif (
+        optimizer == OptimizerEnum.lbfgs
+    ):  # TODO step() missing 1 required argument: 'closure'
+        print("LBFGS")
+        opt = optim.LBFGS(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.n_adam:
+        print("NAdam")
+        opt = optim.NAdam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.r_adam:
+        print("RAdam")
+        opt = optim.RAdam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.rms_prob:
+        print("RMSprop")
+        opt = optim.RMSprop(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.Rprop:
+        print("Rprop")
+        opt = optim.Rprop(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.sdg:
+        print("SGD")
+        opt = optim.SGD(model.parameters(), lr=step)
+    else:
+        print("unknown optimizer")
+
+    X, Y = dataset
+
+    classes = list(set(list(Y)))
+    n_classes = len(classes)
 
     n_data = len(Y)
-    print(n_data)
 
     X = StandardScaler().fit_transform(X)
 
@@ -185,8 +240,6 @@ def calculation_task(self, db_id: int) -> str:
     np.random.shuffle(indices)
     X_shuffle = X[indices]
     Y_shuffle = Y[indices]
-
-    # n_test = n_data // 10
 
     # determine amount of training and test data
     n_test = int(n_data * test_percentage)  # number of test data elements
@@ -198,6 +251,7 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(
         f"Number of data elements: n_train = '{n_train}', n_test = '{n_test}'"
     )
+
     # train test split
     X_train = X_shuffle[:-n_test]
     X_test = X_shuffle[-n_test:]
@@ -205,16 +259,13 @@ def calculation_task(self, db_id: int) -> str:
     Y_train = Y_shuffle[:-n_test]
     Y_test = Y_shuffle[-n_test:]
 
-    print("Y_train len", len(Y_train))
-    print("Y_test len", len(Y_test))
-
     # train network
     train(
         model,
         X_train,
         Y_train,
         loss_fn,
-        optimizer,
+        opt,
         N_total_iterations,
         n_classes,
         batch_size,
@@ -244,44 +295,33 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     # save weights
+
+    # model.state_dict()
+    #   q_params
+    #   pre_net.weight
+    #   pre_net.bias
+    #   post_net.weight
+    #   post_net.bias
+
     # prepare output
-    # -----------------------------------------
-    #              save weights
-    # -----------------------------------------
-    n_input_nodes = len(
-        dataset[0][0]
-    )  # dimensions of first data element (e.g. 2 for (x,y))
-    noise_0 = 0.001  # Initial spread of random weight vector
-    max_layers = 15  # Keep 15 even if not all are used
-    # Number of pre-processing parameters (1 matrix and 1 intercept)
-    n_pre = n_qubits * (n_input_nodes + 1)
-    # Number of quantum node parameters (1 row of rotations per layer)
-    n_quant = max_layers * n_qubits
-    # Number of post-processing parameters (1 matrix and 1 intercept)
-    n_post = n_classes * (n_qubits + 1)
-    # Initialize a unique vector of random parameters.
-    weights_flat_0 = noise_0 * np.random.randn(n_pre + n_quant + n_post)
+    weights_dict = model.state_dict()
+    out_weights_dict = {}
+    for key in weights_dict:
+        print(key)
+        print(weights_dict[key])
 
-    # random start weights
-    opt_weights = weights_flat_0
-    # in json format
-    # nd array cant be saved in json format
+        out_weights_dict[key + ".dims"] = list(
+            weights_dict[key].shape
+        )  # dimensions of the weights tensor
+
+        out_weights_dict[key] = (
+            weights_dict[key].flatten().tolist()
+        )  #  one dimensional list of weights
+
     qnn_outputs = []
-    qnn_outputs.append(
-        {
-            # weights of preprocessing layer
-            "pre_weight_flat": opt_weights[:n_pre].tolist(),
-            "pre_weights_dims": (n_qubits, n_input_nodes + 1),
-            # weights of quantum layer
-            "q_weights_flat": opt_weights[n_pre : n_pre + n_quant].tolist(),
-            "q_weights_dims": (max_layers, n_qubits),
-            # weight of postprocessing layer
-            "post_weights_flat": opt_weights[n_pre + n_quant :].tolist(),
-            "post_weights_dims": (n_classes, n_qubits + 1),
-        }
-    )
+    qnn_outputs.append(out_weights_dict)  # TODO better solution?
 
-    # save weights
+    # save weights in file
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(qnn_outputs, output, "application/json")
         STORE.persist_task_result(
@@ -302,11 +342,25 @@ def calculation_task(self, db_id: int) -> str:
 
 
 # TODO quantum devices
-# TODO optimizers
-# TODO save actual weights to file
+#   QuantumBackend
+#       enum default: aer_statevector_simulator (aer_qasm_simulator)
+#   IBMQ-Custom-Backend: str default "", name of a custom backend of ibmq
+#   IBMQ-Token: str default "", IBMQ-Token for access to IBMQ online service
 # TODO visualize circuit??
 # TODO cleanup and comments
 # TODO documentation
-# TODO add references
 # TODO turn off gradient calculation for some parts?
-# TODO option to initialize wrights (different random inits, zero init, with weights file)
+# TODO prints -> task logger info
+# TODO hidden layers for preprocessing and postprocessing? GUI..
+# TODO Quantum layer: shift for gradient determination?
+# TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
+
+
+# DONE save actual weights to file
+# DONE add references
+# DONE optimizers
+#       old qhana: Adadelta, Adagrad, Adam, AdamW, SparseAdam, Adamax, ASGD, SGD, Rprop, RMSprop, LBFGS
+#       default: Adam
+# DONE option to initialize weights (different random inits, zero init, with weights file)
+#   standard_normal, uniform, zero (distribution for (random) initialization of weights)
+#   default: uniform

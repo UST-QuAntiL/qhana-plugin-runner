@@ -10,24 +10,44 @@ from marshmallow import EXCLUDE, post_load
 
 from enum import Enum
 
+# copied from quantum_k_means plugin
+class DeviceEnum(Enum):
+    #    default = "default"
+    #    test = "test (the same)"
+    # class QuantumBackends(Enum):
+    custom_ibmq = "custom_ibmq"
+    aer_statevector_simulator = "aer_statevector_simulator"
+    aer_qasm_simulator = "aer_qasm_simulator"
+    ibmq_qasm_simulator = "ibmq_qasm_simulator"
+    ibmq_santiago = "ibmq_santiago"
+    ibmq_manila = "ibmq_manila"
+    ibmq_bogota = "ibmq_bogota"
+    ibmq_quito = "ibmq_quito"
+    ibmq_belem = "ibmq_belem"
+    ibmq_lima = "ibmq_lima"
+    ibmq_armonk = "ibmq_armonk"
+
 
 class OptimizerEnum(Enum):
-    adagrad = "adagrad"
-    adam = "adam"
-    gradient_descent = "gradient-descent"
-    # lie_agebra = "lie-albebra"
-    momentum = "momentum"
-    nesterov_momentum = "nesterov-momentum"
-    # qng = "qng"
-    rms = "rms"
-    # rotosolve = "rotosolve"
-    # rotoselect = "rotoselect"
-    # shot_adaptive = "shot-adaptive"
+    adadelta = "Adadelta"
+    adagrad = "Adagrad"
+    adam = "Adam"  # TODO default
+    adamW = "AdamW"
+    sparse_adam = "SparseAdam"
+    adamax = "Adamax"
+    asgd = "ASGD"
+    lbfgs = "LBFGS"
+    n_adam = "NAdam"
+    r_adam = "RAdam"
+    rms_prob = "RMSprop"
+    r_prop = "Rprop"
+    sdg = "SDG"
 
 
-class DeviceEnum(Enum):
-    default = "default"
-    test = "test (the same)"
+class WeightInitEnum(Enum):
+    standard_normal = "standard normal"
+    uniform = "uniform"
+    zero = "zero"
 
 
 class InputParameters:
@@ -39,6 +59,7 @@ class InputParameters:
         device: DeviceEnum,
         shots: int,
         optimizer: OptimizerEnum,
+        weight_init: WeightInitEnum,
         step: float,
         n_qubits: int,
         N_total_iterations: int,
@@ -58,6 +79,7 @@ class InputParameters:
         self.N_total_iterations = N_total_iterations
         self.q_depth = q_depth
         self.batch_size = batch_size
+        self.weight_init = weight_init
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -179,6 +201,16 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Batch Size",
             "description": "Size of the training batch",
             "input_type": "text",
+        },
+    )
+    weight_init = EnumField(
+        WeightInitEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Weight Initialization Strategy",
+            "description": "Distribution of (random) initialization of weigths",
+            "input_type": "select",
         },
     )
 
