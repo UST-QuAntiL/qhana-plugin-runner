@@ -9,12 +9,14 @@ from qhana_plugin_runner.api.util import (
 from marshmallow import EXCLUDE, post_load
 
 from enum import Enum
+import pennylane as qml
+from qiskit import IBMQ
 
 # copied from quantum_k_means plugin
-class DeviceEnum(Enum):
-    #    default = "default"
-    #    test = "test (the same)"
-    # class QuantumBackends(Enum):
+# class DeviceEnum(Enum):
+#    default = "default"
+#    test = "test (the same)"
+class QuantumBackends(Enum):
     custom_ibmq = "custom_ibmq"
     aer_statevector_simulator = "aer_statevector_simulator"
     aer_qasm_simulator = "aer_qasm_simulator"
@@ -26,6 +28,46 @@ class DeviceEnum(Enum):
     ibmq_belem = "ibmq_belem"
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
+
+    @staticmethod
+    def get_pennylane_backend(
+        backend_enum: "QuantumBackends",
+        ibmq_token: str,
+        custom_backend_name: str,
+        qubit_cnt: int,
+        shots: int,
+    ) -> qml.Device:
+        if backend_enum.name.startswith("aer"):
+            # Use local AER backend
+            aer_backend_name = backend_enum.name[4:]
+
+            return qml.device(
+                "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
+            )  # TODO check if shots parameter exists
+        elif backend_enum.name.startswith("ibmq"):
+            # Use IBMQ backend
+            provider = IBMQ.enable_account(ibmq_token)
+
+            return qml.device(
+                "qiskit.ibmq",
+                wires=qubit_cnt,
+                backend=backend_enum.name,
+                provider=provider,
+                shots=shots,
+            )  # TODO check if shots parameter exists??
+        elif backend_enum.name.startswith("custom_ibmq"):
+            provider = IBMQ.enable_account(ibmq_token)
+
+            return qml.device(
+                "qiskit.ibmq",
+                wires=qubit_cnt,
+                backend=custom_backend_name,
+                provider=provider,
+                shots=shots,
+            )  # TODO check if shots parameter exists??
+        else:
+            # TASK_LOGGER.error
+            print("Unknown pennylane backend specified!")
 
 
 class OptimizerEnum(Enum):
@@ -56,7 +98,9 @@ class InputParameters:
         entity_points_url: str,
         clusters_url: str,
         test_percentage: float,
-        device: DeviceEnum,
+        device: QuantumBackends,
+        ibmq_token: str,
+        custom_backend: str,
         shots: int,
         optimizer: OptimizerEnum,
         weight_init: WeightInitEnum,
@@ -66,12 +110,15 @@ class InputParameters:
         q_depth: int,
         batch_size: int,
         use_default_dataset=False,
+        randomly_shuffle=True,
     ):
         self.use_default_dataset = use_default_dataset
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.test_percentage = test_percentage
         self.device = device
+        self.ibmq_token = ibmq_token
+        self.custom_backend = custom_backend
         self.shots = shots
         self.optimizer = optimizer
         self.step = step
@@ -80,6 +127,7 @@ class InputParameters:
         self.q_depth = q_depth
         self.batch_size = batch_size
         self.weight_init = weight_init
+        self.randomly_shuffle = randomly_shuffle
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -120,6 +168,15 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    randomly_shuffle = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Shuffle",
+            "description": "randomly shuffle data before training",
+            "input_type": "checkbox",
+        },
+    )
     test_percentage = ma.fields.Float(
         required=True,
         allow_none=False,
@@ -130,13 +187,31 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         },
     )
     device = EnumField(
-        DeviceEnum,
+        QuantumBackends,
         required=True,
         allow_none=False,
         metadata={
-            "label": "Device",
-            "description": "Quantum device or simulator used for calculations",
+            "label": "Backend",
+            "description": "QC or simulator that will be used.",
             "input_type": "select",
+        },
+    )
+    ibmq_token = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "text",
+        },
+    )
+    custom_backend = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Custom backend",
+            "description": "Custom backend for IBMQ.",
+            "input_type": "text",
         },
     )
     shots = ma.fields.Int(

@@ -2,7 +2,7 @@
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
 
-
+import os
 import imp
 from tempfile import SpooledTemporaryFile
 
@@ -14,7 +14,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 from plugins.qnn import QNN
 from plugins.qnn.schemas import (
-    DeviceEnum,
+    QuantumBackends,
     InputParameters,
     OptimizerEnum,
     WeightInitEnum,
@@ -115,19 +115,40 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: optimizer='{optimizer}'")
     device = input_params.device
     TASK_LOGGER.info(f"Loaded input parameters from db: device='{device}'")
+    ibmq_token = input_params.ibmq_token
+    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+
+    if ibmq_token == "****":
+        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+
+        if "IBMQ_TOKEN" in os.environ:
+            ibmq_token = os.environ["IBMQ_TOKEN"]
+            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
+        else:
+            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+
+    custom_backend = input_params.custom_backend
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
+    )
+
     weight_init = input_params.weight_init
     TASK_LOGGER.info(f"Loaded input parameters from db: weight_init='{weight_init}'")
+    randomly_shuffle = input_params.randomly_shuffle
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: randomly_shuffle='{randomly_shuffle}'"
+    )
 
     # load or generate dataset
     dataset = None
     if use_default_dataset:
-        print("Use default dataset")
+        TASK_LOGGER.info("Use default dataset")
         # spiral dataset
         dataset = twospirals(
             200, turns=1.52
         )  # twospirals(2000, turns=1.52) # TODO set number of data elements in GUI??
     else:
-        print("Load dataset from files")
+        TASK_LOGGER.info("Load dataset from files")
         # get data from file
         entity_points_url = input_params.entity_points_url
         TASK_LOGGER.info(
@@ -161,14 +182,21 @@ def calculation_task(self, db_id: int) -> str:
     np.random.seed(42)  # TODO doesn't work?
 
     # TODO choose based on input parameters
+
+    # choose quantum backend
+    dev = QuantumBackends.get_pennylane_backend(
+        device, ibmq_token, custom_backend, n_qubits, shots
+    )
+
+    """
     dev = None
-    if device == DeviceEnum.aer_statevector_simulator:
+    if device == QuantumBackends.aer_statevector_simulator:
         dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
     else:
         # THE SAME FOR NOW
         # TODO change
         dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
-
+    """
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # dressed quantum network
@@ -181,50 +209,50 @@ def calculation_task(self, db_id: int) -> str:
     # select optimizer
     opt = None
     if optimizer == OptimizerEnum.adadelta:
-        print("adadelta")
+        TASK_LOGGER.info("adadelta")
         opt = optim.Adadelta(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.adagrad:
-        print("adagrad")
+        TASK_LOGGER.info("adagrad")
         opt = optim.Adagrad(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.adam:
-        print("adam")
+        TASK_LOGGER.info("adam")
         opt = optim.Adam(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.adamW:
-        print("adamW")
+        TASK_LOGGER.info("adamW")
         opt = optim.AdamW(model.parameters(), lr=step)
     elif (
         optimizer == OptimizerEnum.sparse_adam
     ):  # TODO check "RuntimeError: SparseAdam does not support dense gradients, please consider Adam instead"
-        print("SparseAdam")
+        TASK_LOGGER.info("SparseAdam")
         opt = optim.SparseAdam(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.adamax:
-        print("Adamax")
+        TASK_LOGGER.info("Adamax")
         opt = optim.Adamax(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.asgd:
-        print("ASGD")
+        TASK_LOGGER.info("ASGD")
         opt = optim.ASGD(model.parameters(), lr=step)
     elif (
         optimizer == OptimizerEnum.lbfgs
     ):  # TODO step() missing 1 required argument: 'closure'
-        print("LBFGS")
+        TASK_LOGGER.info("LBFGS")
         opt = optim.LBFGS(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.n_adam:
-        print("NAdam")
+        TASK_LOGGER.info("NAdam")
         opt = optim.NAdam(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.r_adam:
-        print("RAdam")
+        TASK_LOGGER.info("RAdam")
         opt = optim.RAdam(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.rms_prob:
-        print("RMSprop")
+        TASK_LOGGER.info("RMSprop")
         opt = optim.RMSprop(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.Rprop:
-        print("Rprop")
+        TASK_LOGGER.info("Rprop")
         opt = optim.Rprop(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.sdg:
-        print("SGD")
+        TASK_LOGGER.info("SGD")
         opt = optim.SGD(model.parameters(), lr=step)
     else:
-        print("unknown optimizer")
+        TASK_LOGGER.info("unknown optimizer")
 
     X, Y = dataset
 
@@ -235,9 +263,12 @@ def calculation_task(self, db_id: int) -> str:
 
     X = StandardScaler().fit_transform(X)
 
-    # randomly shuffle data
     indices = np.arange(n_data)
-    np.random.shuffle(indices)
+
+    if randomly_shuffle:
+        # randomly shuffle data
+        np.random.shuffle(indices)
+
     X_shuffle = X[indices]
     Y_shuffle = Y[indices]
 
@@ -307,9 +338,6 @@ def calculation_task(self, db_id: int) -> str:
     weights_dict = model.state_dict()
     out_weights_dict = {}
     for key in weights_dict:
-        print(key)
-        print(weights_dict[key])
-
         out_weights_dict[key + ".dims"] = list(
             weights_dict[key].shape
         )  # dimensions of the weights tensor
@@ -332,6 +360,24 @@ def calculation_task(self, db_id: int) -> str:
             "application/json",
         )
 
+    # TODO Qasm output (requires pygments>2.4 library)
+    """
+    # save quantum circuit as qasm file
+    # requires pennylane-qiskit
+    # TODO check if it works (try catch????)
+    with SpooledTemporaryFile(mode="wt") as output:
+        str = dev._circuit.qasm(formatted=True)
+        output.write(str)
+
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "qasm-quantum-circuit.html",
+            "plot",
+            "text/html",
+        )
+    """
+
     # Print final results
     total_time = time.time() - start_time
     minutes = total_time // 60
@@ -341,20 +387,14 @@ def calculation_task(self, db_id: int) -> str:
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
 
 
-# TODO quantum devices
-#   QuantumBackend
-#       enum default: aer_statevector_simulator (aer_qasm_simulator)
-#   IBMQ-Custom-Backend: str default "", name of a custom backend of ibmq
-#   IBMQ-Token: str default "", IBMQ-Token for access to IBMQ online service
-# TODO visualize circuit??
+# TODO visualize circuit?? openqasm file?
 # TODO cleanup and comments
 # TODO documentation
 # TODO turn off gradient calculation for some parts?
-# TODO prints -> task logger info
 # TODO hidden layers for preprocessing and postprocessing? GUI..
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
-
+# TODO check if quantum device selection works as intended
 
 # DONE save actual weights to file
 # DONE add references
@@ -364,3 +404,9 @@ def calculation_task(self, db_id: int) -> str:
 # DONE option to initialize weights (different random inits, zero init, with weights file)
 #   standard_normal, uniform, zero (distribution for (random) initialization of weights)
 #   default: uniform
+# DONE quantum devices
+#   QuantumBackend
+#       enum default: aer_statevector_simulator (aer_qasm_simulator)
+#   IBMQ-Custom-Backend: str default "", name of a custom backend of ibmq
+#   IBMQ-Token: str default "", IBMQ-Token for access to IBMQ online service
+# DONE prints -> task logger info

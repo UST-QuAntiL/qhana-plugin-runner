@@ -13,6 +13,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from plugins.pca import SolverEnum
+import os
 
 from plugins.qnn import QNN_BLP, QNN
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -23,7 +24,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
 )
 from plugins.qnn.schemas import (
-    DeviceEnum,
+    QuantumBackends,
     OptimizerEnum,
     WeightInitEnum,
     QNNParametersSchema,
@@ -126,7 +127,7 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             schema.fields["test_percentage"].data_key: 0.05,
-            schema.fields["device"].data_key: DeviceEnum.aer_statevector_simulator,
+            schema.fields["device"].data_key: QuantumBackends.aer_statevector_simulator,
             schema.fields["shots"].data_key: 1000,
             schema.fields["optimizer"].data_key: OptimizerEnum.adam,
             schema.fields["step"].data_key: 0.07,
@@ -135,8 +136,16 @@ class MicroFrontend(MethodView):
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
             schema.fields["use_default_dataset"].data_key: False,
+            schema.fields["randomly_shuffle"].data_key: True,
             schema.fields["weight_init"].data_key: WeightInitEnum.uniform,
         }
+
+        if "IBMQ_BACKEND" in os.environ:
+            default_values[schema.fields["device"].data_key] = os.environ["IBMQ_BACKEND"]
+
+        if "IBMQ_TOKEN" in os.environ:
+            default_values[schema.fields["ibmq_token"].data_key] = "****"
+
         # overwrite default values with other values if possible
         default_values.update(data_dict)
         data_dict = default_values
