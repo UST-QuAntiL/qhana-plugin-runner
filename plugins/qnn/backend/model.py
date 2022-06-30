@@ -1,3 +1,7 @@
+# implementation based on:
+# https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
+# https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
+
 import pennylane as qml
 from pennylane import numpy as np
 
@@ -7,12 +11,7 @@ import torch.nn as nn
 
 from plugins.qnn.schemas import WeightInitEnum
 
-#######################################
-# VARIATIONAL QUANTUM CIRCUIT
-
 # define quantum layers
-
-
 def H_layer(nqubits):
     """Layer of single-qubit Hadamard gates."""
     for idx in range(nqubits):

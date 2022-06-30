@@ -3,7 +3,6 @@
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
 
 import os
-import imp
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
@@ -17,7 +16,6 @@ from plugins.qnn.schemas import (
     QuantumBackends,
     InputParameters,
     OptimizerEnum,
-    WeightInitEnum,
     QNNParametersSchema,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -144,9 +142,7 @@ def calculation_task(self, db_id: int) -> str:
     if use_default_dataset:
         TASK_LOGGER.info("Use default dataset")
         # spiral dataset
-        dataset = twospirals(
-            200, turns=1.52
-        )  # twospirals(2000, turns=1.52) # TODO set number of data elements in GUI??
+        dataset = twospirals(200, turns=1.52)  # TODO set number of data elements in GUI??
     else:
         TASK_LOGGER.info("Load dataset from files")
         # get data from file
@@ -181,22 +177,12 @@ def calculation_task(self, db_id: int) -> str:
     torch.manual_seed(42)  # TODO doesn't work?
     np.random.seed(42)  # TODO doesn't work?
 
-    # TODO choose based on input parameters
-
     # choose quantum backend
     dev = QuantumBackends.get_pennylane_backend(
         device, ibmq_token, custom_backend, n_qubits, shots
     )
+    #  dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
 
-    """
-    dev = None
-    if device == QuantumBackends.aer_statevector_simulator:
-        dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
-    else:
-        # THE SAME FOR NOW
-        # TODO change
-        dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
-    """
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # dressed quantum network
@@ -254,11 +240,11 @@ def calculation_task(self, db_id: int) -> str:
     else:
         TASK_LOGGER.info("unknown optimizer")
 
+    # prepare data
     X, Y = dataset
 
     classes = list(set(list(Y)))
     n_classes = len(classes)
-
     n_data = len(Y)
 
     X = StandardScaler().fit_transform(X)
@@ -361,29 +347,31 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     # TODO Qasm output (requires pygments>2.4 library)
-    """
+
     # save quantum circuit as qasm file
     # requires pennylane-qiskit
     # TODO check if it works (try catch????)
-    with SpooledTemporaryFile(mode="wt") as output:
-        str = dev._circuit.qasm(formatted=True)
-        output.write(str)
+    try:
+        with SpooledTemporaryFile(mode="wt") as output:
+            qasm_str = dev._circuit.qasm(formatted=True)
+            output.write(qasm_str)
 
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "qasm-quantum-circuit.html",
-            "plot",
-            "text/html",
-        )
-    """
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "qasm-quantum-circuit.html",
+                "plot",
+                "text/html",
+            )
+    except Exception as e:
+        print("Couldn't save circuit as qasm file")  # TODO
+        print(e)  # TODO
 
-    # Print final results
+    # Print final time
     total_time = time.time() - start_time
     minutes = total_time // 60
     seconds = round(total_time - minutes * 60)
 
-    # TASK_LOGGER.info("Quantum circuit:", qml.draw(variationalQuantumCircuit)) # not possible with this qml version?
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
 
 

@@ -12,10 +12,8 @@ from enum import Enum
 import pennylane as qml
 from qiskit import IBMQ
 
-# copied from quantum_k_means plugin
-# class DeviceEnum(Enum):
-#    default = "default"
-#    test = "test (the same)"
+# TODO additional pennylane devices?
+#   default.qubit, default.gaussian, default.qubit.tf, default.qubit.autograd
 class QuantumBackends(Enum):
     custom_ibmq = "custom_ibmq"
     aer_statevector_simulator = "aer_statevector_simulator"
@@ -67,7 +65,7 @@ class QuantumBackends(Enum):
             )  # TODO check if shots parameter exists??
         else:
             # TASK_LOGGER.error
-            print("Unknown pennylane backend specified!")
+            print("Unknown pennylane backend specified!")  # TODO
 
 
 class OptimizerEnum(Enum):
@@ -142,7 +140,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Use default dataset",
-            "description": "Use internally generated dataset (no files required)",
+            "description": "Use internally generated dataset (no input files required)",
             "input_type": "checkbox",
         },
     )
@@ -173,7 +171,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Shuffle",
-            "description": "randomly shuffle data before training",
+            "description": "Randomly shuffle data before training",
             "input_type": "checkbox",
         },
     )
@@ -181,8 +179,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Test data percentage",
-            "description": "Percentage of the data used for testing",
+            "label": "Amount of test data",
+            "description": "1 - only test data, 0 - only training data",
             "input_type": "text",
         },
     )
@@ -274,7 +272,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Batch Size",
-            "description": "Size of the training batch",
+            "description": "Size of training batches",
             "input_type": "text",
         },
     )
@@ -283,7 +281,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Weight Initialization Strategy",
+            "label": "Weight initialization strategy",
             "description": "Distribution of (random) initialization of weigths",
             "input_type": "select",
         },

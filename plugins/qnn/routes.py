@@ -1,18 +1,13 @@
 from http import HTTPStatus
-from json import dumps
-from typing import Mapping, Optional
+from typing import Mapping
 
-import marshmallow as ma
 from celery.canvas import chain
-from celery.utils.log import get_task_logger
 from flask import Response, redirect
-from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from plugins.pca import SolverEnum
 import os
 
 from plugins.qnn import QNN_BLP, QNN
@@ -128,7 +123,7 @@ class MicroFrontend(MethodView):
         default_values = {
             schema.fields["test_percentage"].data_key: 0.05,
             schema.fields["device"].data_key: QuantumBackends.aer_statevector_simulator,
-            schema.fields["shots"].data_key: 1000,
+            schema.fields["shots"].data_key: 10,
             schema.fields["optimizer"].data_key: OptimizerEnum.adam,
             schema.fields["step"].data_key: 0.07,
             schema.fields["n_qubits"].data_key: 5,
