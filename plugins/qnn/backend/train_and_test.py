@@ -1,3 +1,7 @@
+# implementation based on:
+# https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
+# https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
+
 from pennylane import numpy as np
 
 # PyTorch
@@ -14,7 +18,18 @@ def digits2position(vec_of_digits, n_positions):
 def train(
     model, X_train, Y_train, loss_fn, optimizer, num_iterations, n_classes, batch_size
 ):
+    """
+    train the model with the given data and parameters
 
+    model: network to train
+    X_train: training input data
+    Y_train: trianing labels
+    loss_fn: loss function
+    optimizer: optimizer
+    num_iterations: amount of batches to use during training
+    n_classes: number of classes used for classication
+    batch_size: number of training elements per batch
+    """
     n_train = len(Y_train)
 
     # prepare data and label format
@@ -79,6 +94,15 @@ def train(
 
 
 def test(model, X_test, Y_test, loss_fn, n_classes):
+    """
+    test the model with the given data and parameters
+
+    model: network to test
+    X_test: test data
+    Y_test: test labels
+    loss_fn: loss function
+    n_classes: number of classes used in the classification
+    """
     # TEST
     model.eval()
     # TODO disable gradient calculation

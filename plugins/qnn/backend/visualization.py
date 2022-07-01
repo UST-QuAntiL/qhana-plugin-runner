@@ -1,3 +1,8 @@
+# implementation based on:
+# https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
+# https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
+
+
 from pennylane import numpy as np
 
 # PyTorch
@@ -12,6 +17,17 @@ from matplotlib.lines import Line2D
 def plot_classification(
     model, X, X_train, X_test, y_train, y_test, accuracy_on_test_data
 ):
+    """
+    visualize the classification results of the given model
+
+    model: network
+    X: all data elements
+    X_train: training data
+    X_test: test data
+    y_train: training labels
+    y_test: test labels
+    accuracy_on_test_data: (previously computed) accuracy of the models predictions on test data
+    """
     # number of classes
     classes = list(set(list(y_train) + list(y_test)))
     n_classes = len(classes)

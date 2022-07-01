@@ -1,4 +1,4 @@
-# implemented based on:
+# hybrid quantum neural network implemented based on:
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
 

@@ -38,12 +38,17 @@ def entangling_layer(nqubits):
 # dressed quantum circuit
 class DressedQuantumNet(nn.Module):
     """
-    Torch module implementing the *dressed* quantum net.
+    Torch module implementing the dressed quantum net.
     """
 
     def __init__(self, n_qubits, quantum_device, q_depth, weight_init):
         """
-        Definition of the *dressed* layout.
+        Initialize network with preprocessing, quantum and postprocessing layers
+
+        n_qubits: number of qubits
+        quantum_device: device for quantum network
+        q_depth: amount of quantum layers
+        weight_init: type of (random) initialization of the models weights (WeightInitEnum)
         """
 
         super().__init__()
@@ -101,8 +106,7 @@ class DressedQuantumNet(nn.Module):
 
     def forward(self, input_features):
         """
-        Defining how tensors are supposed to move through the *dressed* quantum
-        net.
+        pass input features through preprocessing, quantum and postprocessing layers
         """
 
         # obtain the input features for the quantum circuit
