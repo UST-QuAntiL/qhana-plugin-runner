@@ -21,7 +21,7 @@ class QKMeans(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "K-means algorithms that can run on quantum computers."
-    tags = ["points-to-clusters"]
+    tags = ["points-to-clusters", "k-means"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -213,7 +213,7 @@ class CsvVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "A demo CSV visualization plugin."
-    tags = []
+    tags = ["visualization"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

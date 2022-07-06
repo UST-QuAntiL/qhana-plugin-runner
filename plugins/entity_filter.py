@@ -297,7 +297,7 @@ class EntityFilter(QHAnaPluginBase):
     description = (
         "Loads and filters entities from a file that contains a list of entities."
     )
-    tags = ["data-loader"]
+    tags = ["data-loading"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -5,7 +5,7 @@
 		{
 		  "name": "Load data",
 		  "description": "Plugin for loading costume data",
-		  "tags": "data:loading"
+		  "tags": "costume-loader"
 		},
 		{
 		  "name": "Data Preperation",
@@ -13,7 +13,7 @@
 		  "tags": {
 				"or": [
 					"similarity-cache-generation",
-					"similarity-calculation",
+					"wu-palmer",
 					"attribute-similarity-calculation",
 					"sim-to-dist",
 					"aggregator",
@@ -29,7 +29,7 @@
 		{
 		  "name": "Visualization",
 		  "description": "Plugin for visualization",
-		  "tags": "visualization"
+		  "tags": "visualization@v0-1-0"
 		}
 	]
 }
