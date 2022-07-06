@@ -2,10 +2,10 @@
     "name": "Hello World",
     "description": "Templates for testing with Hello World",
     "categories": [
-		{
-		  "name": "Hello World",
-		  "description": "Plugin Hello World",
-		  "tags": "hello-world"
-		}
-	]
+        {
+          "name": "Hello World",
+          "description": "Plugin Hello World",
+          "filter": "hello-world"
+        }
+    ]
 }

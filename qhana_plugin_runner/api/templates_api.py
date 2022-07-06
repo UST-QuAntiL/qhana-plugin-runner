@@ -38,16 +38,19 @@ TEMPLATES_API = SmorestBlueprint(
     url_prefix="/templates",
 )
 
+
 @dataclass()
 class CategoryData:
     name: str
     description: str
     plugin_filter: FilterExpr
 
+
 class CategoryDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
     plugin_filter = ma.fields.Raw(required=True, allow_none=False, dump_only=True)
+
 
 @dataclass()
 class TemplateData:
@@ -56,15 +59,18 @@ class TemplateData:
     identifier: str
     categories: List[CategoryData]
 
+
 class TemplateDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
     categories = ma.fields.List(ma.fields.Nested(CategoryDataSchema()))
 
+
 @dataclass()
 class TemplateCollectionData:
     templates: List[TemplateData]
+
 
 class TemplateCollectionSchema(MaBaseSchema):
     templates = ma.fields.List(ma.fields.Nested(TemplateDataSchema()))
@@ -92,7 +98,7 @@ class TemplatesView(MethodView):
                                 plugin_filter=c.plugin_filter,
                             )
                             for c in t.categories
-                        ]
+                        ],
                     )
                     for t in QHanaTemplate.get_templates().values()
                 ],

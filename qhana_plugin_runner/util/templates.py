@@ -49,8 +49,9 @@ class QHanaTemplateCategory:
         return cls(
             name=category_dict["name"],
             description=category_dict.get("description", ""),
-            plugin_filter=category_dict["tags"],
+            plugin_filter=category_dict["filter"],
         )
+
 
 class QHanaTemplate:
     name: ClassVar[str]
@@ -98,6 +99,7 @@ class QHanaTemplate:
         return cls(
             template_dict["name"], template_dict.get("description", ""), categories, app
         )
+
 
 def _load_templates_from_folder(app: Flask, folder: Union[str, Path]) -> None:
     """Load all templates from a folder path.

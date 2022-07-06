@@ -74,10 +74,7 @@ class JsonInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         data_input_type="*",
         data_content_types=["application/json"],
-        metadata={
-            "label": "JSON File",
-            "description": "The URL to a JSON file.",
-        },
+        metadata={"label": "JSON File", "description": "The URL to a JSON file.",},
     )
 
 
@@ -112,9 +109,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="*",
-                        content_type=["text/html"],
-                        required=True,
+                        data_type="*", content_type=["text/html"], required=True,
                     )
                 ],
             ),
