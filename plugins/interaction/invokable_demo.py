@@ -98,6 +98,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(
                     f"{INVOKABLE_DEMO_BLP.name}.MicroFrontend", db_id=0
                 ),  # URL for the first micro frontend endpoint  # FIXME: db_id
+                interaction_endpoints=[],
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[

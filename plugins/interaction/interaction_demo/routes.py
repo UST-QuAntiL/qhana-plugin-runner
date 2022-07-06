@@ -46,6 +46,7 @@ class MetadataView(MethodView):
                 ui_href=url_for(
                     f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1"
                 ),  # URL for the first micro frontend endpoint
+                interaction_endpoints=[],
                 data_input=[],
                 data_output=[
                     DataMetadata(
@@ -59,6 +60,7 @@ class MetadataView(MethodView):
                         required=True,
                     ),
                 ],
+                # TODO: add plugin dependency
             ),
             tags=[],
         )

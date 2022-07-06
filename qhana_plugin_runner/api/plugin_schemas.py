@@ -194,9 +194,33 @@ class StepMetadataSchema(MaBaseSchema):
 
 
 @dataclass
+class InteractionEndpoint:
+    type: str  # e.g. optimization-step, objective-function
+    href: str
+
+
+class InteractionEndpointSchema(MaBaseSchema):
+    type = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "Type of the endpoint. All endpoints of the same type must be compatible with each other."
+        },
+    )
+    href = ma.fields.Url(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "The URL of a REST endpoint that is usable by other plugins."
+        },
+    )
+
+
+@dataclass
 class EntryPoint:
     href: str
     ui_href: str
+    interaction_endpoints: List[InteractionEndpoint] = field(default_factory=list)
     data_input: List[InputDataMetadata] = field(default_factory=list)
     data_output: List[DataMetadata] = field(default_factory=list)
     plugin_dependencies: List[PluginDependencyMetadata] = field(default_factory=list)
@@ -230,6 +254,16 @@ class EntryPointSchema(MaBaseSchema):
         metadata={
             "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
+    )
+    interaction_endpoints = ma.fields.List(
+        ma.fields.Nested(
+            InteractionEndpointSchema,
+            required=True,
+            allow_none=False,
+            metadata={
+                "description": "A list of endpoints that can be used by other plugins."
+            },
+        )
     )
     plugin_dependencies = ma.fields.List(
         ma.fields.Nested(
