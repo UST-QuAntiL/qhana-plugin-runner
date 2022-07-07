@@ -47,7 +47,7 @@ from qhana_plugin_runner.api.util import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import save_task_error, save_task_result, add_step
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "objective-function-demo"
@@ -111,8 +111,12 @@ class PluginsView(MethodView):
             version=ObjectiveFunctionDemo.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.SetupView"),
-                ui_href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend"),
+                href=url_for(
+                    f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", optimizer_db_id=0
+                ),  # FIXME id
+                ui_href=url_for(
+                    f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend", optimizer_db_id=0
+                ),  # FIXME id
                 interaction_endpoints=[
                     # TODO: add obj. func. calculation endpoint
                     # InteractionEndpoint(
@@ -134,7 +138,7 @@ class PluginsView(MethodView):
         )
 
 
-@OBJ_FUNC_DEMO_BLP.route("/ui/")
+@OBJ_FUNC_DEMO_BLP.route("/<int:optimizer_db_id>/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend of the objective function demo plugin."""
 
@@ -149,9 +153,9 @@ class MicroFrontend(MethodView):
         required=False,
     )
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors):
+    def get(self, errors, optimizer_db_id: int):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, optimizer_db_id)
 
     @OBJ_FUNC_DEMO_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the objective function demo plugin."
@@ -164,11 +168,11 @@ class MicroFrontend(MethodView):
         required=False,
     )
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors):
+    def post(self, errors, optimizer_db_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, optimizer_db_id)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, optimizer_db_id: int):
         plugin = ObjectiveFunctionDemo.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -183,17 +187,18 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.SetupView"
+                    f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", optimizer_db_id=optimizer_db_id
                 ),  # URL of the processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend",
+                    optimizer_db_id=optimizer_db_id,
                 ),  # URL of this endpoint
             )
         )
 
 
-@OBJ_FUNC_DEMO_BLP.route("/setup/")
+@OBJ_FUNC_DEMO_BLP.route("/<int:optimizer_db_id>/setup/")
 class SetupView(MethodView):
     """Start a long running processing task."""
 
@@ -202,20 +207,41 @@ class SetupView(MethodView):
     )
     @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
-        """Start the demo task."""
+    def post(self, arguments, optimizer_db_id: int):
+        """Start the setup task."""
         db_task = ProcessingTask(task_name=setup_task.name, parameters=dumps(arguments))
         db_task.save(commit=True)
 
-        # all tasks need to know about db id to load the db entry
-        task: chain = setup_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
+        optimizer_db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(
+            id_=optimizer_db_id
         )
+        if optimizer_db_task is None:
+            msg = (
+                f"Could not load task data with id {optimizer_db_id} to read parameters!"
+            )
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+        optimizer_db_task.data["objective_function_task_id"] = db_task.id
+        optimizer_db_task.clear_previous_step()
+        optimizer_db_task.save(commit=True)
+
+        # add the next processing step with the data that was stored by the previous step of the invoking plugin
+        task: chain = setup_task.s(db_id=db_task.id) | add_step.s(
+            db_id=optimizer_db_task.id,
+            step_id=optimizer_db_task.data["next_step_id"],  # name of the next sub-step
+            href=optimizer_db_task.data[
+                "href"
+            ],  # URL to the processing endpoint of the next step
+            ui_href=optimizer_db_task.data[
+                "ui_href"
+            ],  # URL to the micro frontend of the next step
+            prog_value=66,
+        )
+
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
+        # start tasks
         task.apply_async()
-
-        db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
@@ -292,7 +318,7 @@ class NeuralNetwork(nn.Module):
         return len(self.get_param_list())
 
 
-@CELERY.task(name=f"{ObjectiveFunctionDemo.instance.identifier}.demo_task", bind=True)
+@CELERY.task(name=f"{ObjectiveFunctionDemo.instance.identifier}.setup_task", bind=True)
 def setup_task(self, db_id: int) -> str:
     """
     Retrieves the input data from the database and stores metadata and hyperparameters into files.
