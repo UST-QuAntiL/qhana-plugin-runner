@@ -43,12 +43,14 @@ TEMPLATES_API = SmorestBlueprint(
 class CategoryData:
     name: str
     description: str
+    identifier: str
     plugin_filter: FilterExpr
 
 
 class CategoryDataSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     description = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
     plugin_filter = ma.fields.Raw(required=True, allow_none=False, dump_only=True)
 
 
@@ -95,6 +97,7 @@ class TemplatesView(MethodView):
                             CategoryData(
                                 name=c.name,
                                 description=c.description,
+                                identifier=c.identifier,
                                 plugin_filter=c.plugin_filter,
                             )
                             for c in t.categories

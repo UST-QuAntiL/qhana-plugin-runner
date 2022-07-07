@@ -43,6 +43,11 @@ class QHanaTemplateCategory:
     name: str
     description: str
     plugin_filter: FilterExpr
+    
+    @cached_property
+    def identifier(self) -> str:
+        """An url safe identifier based on name of the template."""
+        return create_identifier(self.name)
 
     @classmethod
     def from_dict(cls, category_dict):

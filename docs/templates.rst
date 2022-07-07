@@ -9,8 +9,8 @@ Template Definition
 
 You can define a template by creating a `.json` file in the folder `templates`.
 
-A template has a name, identifier, description, and a list of categories.
-A category has a name, identifier, description, and a plugin filter expression.
+A template has a name, description, and a list of categories.
+A category has a name, description, and a plugin filter expression.
 
 Plugin Filter Expressions
 -------------------------
