@@ -9,7 +9,7 @@
         },
         {
           "name": "Data Preperation",
-          "description": "Plugins for data Perperation",
+          "description": "Plugins for Data Preperation",
           "filter": {
                 "or": [
                     "similarity-cache-generation",

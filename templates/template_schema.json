@@ -16,7 +16,7 @@
             "description": "List of categories",
             "type": "array",
             "items": {
-                "description": "describes one categorie",
+                "description": "Describes one categorie",
                 "type": "object",
                 "properties": {
                     "name": {
@@ -53,7 +53,7 @@
         "logicFormulaOfTags": {
             "oneOf": [
                 {						
-                    "description": "Name of tag",
+                    "description": "Tag name, Plugin name or Plugin identifier",
                     "type": "string"
                 },
                 { 
