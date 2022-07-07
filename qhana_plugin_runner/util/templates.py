@@ -29,8 +29,8 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 from qhana_plugin_runner.api.util import SecurityBlueprint
 
 
-def template_identifier(name) -> str:
-    return name.lower()
+def create_identifier(name) -> str:
+    return name.lower().replace(" ", "-")
 
 
 FilterExpr = Union[str, Dict[str, Any]]
@@ -81,8 +81,8 @@ class QHanaTemplate:
 
     @cached_property
     def identifier(self) -> str:
-        """An url safe identifier based on name and version of the template."""
-        return template_identifier(self.name)
+        """An url safe identifier based on name of the template."""
+        return create_identifier(self.name)
 
     @staticmethod
     def get_templates() -> Dict[str, "QHanaTemplate"]:
@@ -166,7 +166,7 @@ def _load_templates_from_folder(app: Flask, folder: Union[str, Path]) -> None:
             )
 
         QHanaTemplate.__templates__[
-            template_identifier(template["name"])
+            create_identifier(template["name"])
         ] = QHanaTemplate.from_dict(template, app)
 
 
