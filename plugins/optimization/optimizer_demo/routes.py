@@ -168,13 +168,13 @@ class ProcessStep1View(MethodView):
         # URL of the process endpoint of the invoked plugin
         href = url_for(
             f"objective-function-demo@v0-1-0.SetupView",
-            optimizer_db_id=db_task.id,
+            db_id=db_task.id,
             _external=True,
         )  # FIXME replace hardcoded plugin name with user input
         # URL of the micro frontend endpoint of the invoked plugin
         ui_href = url_for(
             f"objective-function-demo@v0-1-0.MicroFrontend",
-            optimizer_db_id=db_task.id,
+            db_id=db_task.id,
             _external=True,
         )  # FIXME replace hardcoded plugin name with user input
 

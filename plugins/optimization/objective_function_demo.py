@@ -19,6 +19,7 @@ from typing import Mapping, Optional, Dict, List
 
 import marshmallow as ma
 import numpy as np
+import requests
 import torch
 from celery import chain
 from celery.utils.log import get_task_logger
@@ -69,7 +70,7 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class UIInputParametersSchema(FrontendFormBaseSchema):
+class HyperparametersSchema(FrontendFormBaseSchema):
     number_of_input_values = ma.fields.Integer(
         required=True,
         allow_none=False,
@@ -90,10 +91,14 @@ class UIInputParametersSchema(FrontendFormBaseSchema):
     )
 
 
-class ProcessingInputParametersSchema(MaBaseSchema):
+class CalculationInputSchema(MaBaseSchema):
     data_set = ma.fields.Url(required=True, allow_none=False)
     hyperparameters = ma.fields.Url(required=True, allow_none=False)
-    parameters = ma.fields.Url(required=True, allow_none=False)
+    parameters = ma.fields.List(ma.fields.Float(), required=True, allow_none=False)
+
+
+class CalculationOutputSchema(MaBaseSchema):
+    objective_value = ma.fields.Float(required=True, allow_none=False)
 
 
 @OBJ_FUNC_DEMO_BLP.route("/")
@@ -111,11 +116,9 @@ class PluginsView(MethodView):
             version=ObjectiveFunctionDemo.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", optimizer_db_id=0
-                ),  # FIXME id
+                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", db_id=0),  # FIXME id
                 ui_href=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend", optimizer_db_id=0
+                    f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend", db_id=0
                 ),  # FIXME id
                 interaction_endpoints=[
                     # TODO: add obj. func. calculation endpoint
@@ -138,7 +141,7 @@ class PluginsView(MethodView):
         )
 
 
-@OBJ_FUNC_DEMO_BLP.route("/<int:optimizer_db_id>/ui/")
+@OBJ_FUNC_DEMO_BLP.route("/<int:db_id>/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend of the objective function demo plugin."""
 
@@ -146,37 +149,37 @@ class MicroFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of the objective function demo plugin."
     )
     @OBJ_FUNC_DEMO_BLP.arguments(
-        UIInputParametersSchema(
+        HyperparametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, optimizer_db_id: int):
+    def get(self, errors, db_id: int):
         """Return the micro frontend."""
-        return self.render(request.args, errors, optimizer_db_id)
+        return self.render(request.args, errors, db_id)
 
     @OBJ_FUNC_DEMO_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the objective function demo plugin."
     )
     @OBJ_FUNC_DEMO_BLP.arguments(
-        UIInputParametersSchema(
+        HyperparametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, optimizer_db_id: int):
+    def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, optimizer_db_id)
+        return self.render(request.form, errors, db_id)
 
-    def render(self, data: Mapping, errors: dict, optimizer_db_id: int):
+    def render(self, data: Mapping, errors: dict, db_id: int):
         plugin = ObjectiveFunctionDemo.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-        schema = UIInputParametersSchema()
+        schema = HyperparametersSchema()
 
         return Response(
             render_template(
@@ -187,46 +190,37 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", optimizer_db_id=optimizer_db_id
+                    f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", db_id=db_id
                 ),  # URL of the processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend",
-                    optimizer_db_id=optimizer_db_id,
+                    db_id=db_id,
                 ),  # URL of this endpoint
             )
         )
 
 
-@OBJ_FUNC_DEMO_BLP.route("/<int:optimizer_db_id>/setup/")
+@OBJ_FUNC_DEMO_BLP.route("/<int:db_id>/setup/")
 class SetupView(MethodView):
     """Start a long running processing task."""
 
-    @OBJ_FUNC_DEMO_BLP.arguments(
-        UIInputParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @OBJ_FUNC_DEMO_BLP.arguments(HyperparametersSchema(unknown=EXCLUDE), location="form")
     @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, optimizer_db_id: int):
+    def post(self, arguments, db_id: int):
         """Start the setup task."""
-        db_task = ProcessingTask(task_name=setup_task.name, parameters=dumps(arguments))
-        db_task.save(commit=True)
-
-        optimizer_db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(
-            id_=optimizer_db_id
-        )
+        optimizer_db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if optimizer_db_task is None:
-            msg = (
-                f"Could not load task data with id {optimizer_db_id} to read parameters!"
-            )
+            msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
-        optimizer_db_task.data["objective_function_task_id"] = db_task.id
         optimizer_db_task.clear_previous_step()
+        optimizer_db_task.parameters = dumps(arguments)
         optimizer_db_task.save(commit=True)
 
         # add the next processing step with the data that was stored by the previous step of the invoking plugin
-        task: chain = setup_task.s(db_id=db_task.id) | add_step.s(
+        task: chain = setup_task.s(db_id=optimizer_db_task.id) | add_step.s(
             db_id=optimizer_db_task.id,
             step_id=optimizer_db_task.data["next_step_id"],  # name of the next sub-step
             href=optimizer_db_task.data[
@@ -239,12 +233,13 @@ class SetupView(MethodView):
         )
 
         # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.link_error(save_task_error.s(db_id=optimizer_db_task.id))
         # start tasks
         task.apply_async()
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(optimizer_db_task.id)),
+            HTTPStatus.SEE_OTHER,
         )
 
 
@@ -326,7 +321,7 @@ def setup_task(self, db_id: int) -> str:
     @param db_id: database ID that will be used to retrieve the task data from the database
     @return: log message
     """
-    TASK_LOGGER.info(f"Starting new invoked task with db id '{db_id}'")
+    TASK_LOGGER.info(f"Starting setup task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -371,3 +366,31 @@ def setup_task(self, db_id: int) -> str:
         )
 
     return ""
+
+
+@OBJ_FUNC_DEMO_BLP.route("/calc/")
+class PluginsView(MethodView):
+    """Plugins metadata resource."""
+
+    @OBJ_FUNC_DEMO_BLP.arguments(CalculationInputSchema())
+    @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, CalculationOutputSchema())
+    @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments):
+        """Endpoint calculating the objective value."""
+        data_set_url: str = arguments["data_set"]
+        hyperparameters_url: str = arguments["hyperparameters"]
+        parameters: List[float] = arguments["parameters"]
+
+        data_set = requests.get(data_set_url).json()
+        hyperparameters = requests.get(hyperparameters_url).json()
+
+        model = NeuralNetwork(
+            hyperparameters["number_of_input_values"],
+            hyperparameters["number_of_neurons"],
+        )
+        model.set_param_list(parameters)
+        loss = model.get_loss(
+            torch.tensor(data_set["input_data"]), torch.tensor(data_set["target"])
+        )
+
+        return {"objective_value": loss}
