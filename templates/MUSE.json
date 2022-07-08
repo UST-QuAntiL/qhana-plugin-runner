@@ -28,7 +28,7 @@
         },
         {
           "name": "Visualization",
-          "description": "Plugin for visualization",
+          "description": "Plugin for Visualization",
           "filter": "visualization@v0-1-0"
         }
     ]

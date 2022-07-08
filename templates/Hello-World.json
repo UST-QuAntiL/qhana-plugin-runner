@@ -4,7 +4,7 @@
     "categories": [
         {
           "name": "Hello World",
-          "description": "Plugin Hello World",
+          "description": "Hello World Plugins",
           "filter": "hello-world"
         }
     ]

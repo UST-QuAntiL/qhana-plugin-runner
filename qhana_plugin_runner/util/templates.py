@@ -46,7 +46,7 @@ class QHanaTemplateCategory:
     
     @cached_property
     def identifier(self) -> str:
-        """An url safe identifier based on name of the template."""
+        """An url safe identifier based on name of the category."""
         return create_identifier(self.name)
 
     @classmethod

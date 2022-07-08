@@ -28,14 +28,14 @@
                         "type": "string"
                     },
                     "filter": {
-                        "description": "Logic formula of tags",
+                        "description": "Logic formula as Filter",
                         "$ref": "#/definitions/logicFormulaOfTags"
                     }
                 },
                 "required": [
                     "name",
                     "description",
-                    "tags"
+                    "filter"
                 ],
                 "additionalProperties": false
             },
