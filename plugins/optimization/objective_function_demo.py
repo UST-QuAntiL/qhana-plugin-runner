@@ -390,7 +390,8 @@ class PluginsView(MethodView):
         )
         model.set_param_list(parameters)
         loss = model.get_loss(
-            torch.tensor(data_set["input_data"]), torch.tensor(data_set["target"])
+            torch.tensor(data_set["input"], dtype=torch.float32),
+            torch.tensor(data_set["target"], dtype=torch.float32),
         )
 
         return {"objective_value": loss}

@@ -11,7 +11,8 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import INTERACTION_DEMO_BLP, InteractionDemo
+from qhana_plugin_runner.storage import STORE
+from . import INTERACTION_DEMO_BLP, OptimizerDemo
 from .schemas import InputParametersSchema, TaskResponseSchema
 from .tasks import processing_task_1, processing_task_2
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -21,7 +22,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     DataMetadata,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 
@@ -34,10 +35,10 @@ class MetadataView(MethodView):
     def get(self):
         """Endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title=InteractionDemo.instance.name,
+            title=OptimizerDemo.instance.name,
             description=INTERACTION_DEMO_BLP.description,
-            name=InteractionDemo.instance.identifier,
-            version=InteractionDemo.instance.version,
+            name=OptimizerDemo.instance.identifier,
+            version=OptimizerDemo.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(
@@ -111,8 +112,8 @@ class MicroFrontendStep1(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=InteractionDemo.instance.name,
-                version=InteractionDemo.instance.version,
+                name=OptimizerDemo.instance.name,
+                version=OptimizerDemo.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
@@ -251,8 +252,8 @@ class MicroFrontendStep2(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=InteractionDemo.instance.name,
-                version=InteractionDemo.instance.version,
+                name=OptimizerDemo.instance.name,
+                version=OptimizerDemo.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
@@ -286,7 +287,24 @@ class ProcessStep2View(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.data["input_str"] = arguments["input_str"]
+        metadata_url: Optional[str] = None
+        hyperparameter_url: Optional[str] = None
+
+        for task_file in TaskFile.get_task_result_files(db_task):
+            if task_file.file_name == "metadata.json":
+                metadata_url = STORE.get_task_file_url(task_file)
+            elif task_file.file_name == "hyperparameters.json":
+                hyperparameter_url = STORE.get_task_file_url(task_file)
+
+        if metadata_url is None:
+            raise ValueError("metadata.json missing")
+
+        if hyperparameter_url is None:
+            raise ValueError("hyperparameter.json missing")
+
+        db_task.data["metadata_url"] = metadata_url
+        db_task.data["hyperparameter_url"] = hyperparameter_url
+
         db_task.clear_previous_step()
         db_task.save(commit=True)
 

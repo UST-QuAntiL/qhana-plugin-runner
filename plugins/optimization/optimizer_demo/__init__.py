@@ -18,7 +18,7 @@ INTERACTION_DEMO_BLP = SecurityBlueprint(
 )
 
 
-class InteractionDemo(QHAnaPluginBase):
+class OptimizerDemo(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
