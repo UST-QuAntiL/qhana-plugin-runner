@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from json import dumps
 from logging import Logger
 from typing import Mapping, Optional
 
@@ -13,7 +14,7 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.storage import STORE
 from . import INTERACTION_DEMO_BLP, OptimizerDemo
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import InputParametersSchema, TaskResponseSchema, DatasetInputSchema
 from .tasks import processing_task_1, processing_task_2
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
@@ -209,9 +210,7 @@ class MicroFrontendStep2(MethodView):
         description="Micro frontend for step 2 of the interaction demo plugin.",
     )
     @INTERACTION_DEMO_BLP.arguments(
-        InputParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
+        DatasetInputSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
         location="query",
         required=False,
     )
@@ -225,9 +224,7 @@ class MicroFrontendStep2(MethodView):
         description="Micro frontend for step 2 of the interaction demo plugin.",
     )
     @INTERACTION_DEMO_BLP.arguments(
-        InputParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
+        DatasetInputSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
         location="form",
         required=False,
     )
@@ -248,7 +245,7 @@ class MicroFrontendStep2(MethodView):
             obj_func_task_id = db_task.data.get("objective_function_task_id")
             data = {"inputStr": "ID of objective function task: " + str(obj_func_task_id)}
 
-        schema = InputParametersSchema()
+        schema = DatasetInputSchema()
         return Response(
             render_template(
                 "simple_template.html",
@@ -274,9 +271,7 @@ class MicroFrontendStep2(MethodView):
 class ProcessStep2View(MethodView):
     """Start the processing task of step 2."""
 
-    @INTERACTION_DEMO_BLP.arguments(
-        InputParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @INTERACTION_DEMO_BLP.arguments(DatasetInputSchema(unknown=EXCLUDE), location="form")
     @INTERACTION_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
@@ -304,6 +299,8 @@ class ProcessStep2View(MethodView):
 
         db_task.data["metadata_url"] = metadata_url
         db_task.data["hyperparameter_url"] = hyperparameter_url
+
+        db_task.parameters = dumps(arguments)
 
         db_task.clear_previous_step()
         db_task.save(commit=True)

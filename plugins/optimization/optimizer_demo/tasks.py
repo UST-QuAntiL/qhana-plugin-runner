@@ -1,4 +1,4 @@
-from json import dumps
+from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
@@ -51,10 +51,10 @@ def processing_task_1(self, db_id: int) -> str:
     return "result: " + repr(out_str)
 
 
-def objective_function_wrapper(data_set_url: str, hyperparameters_url: str):
+def objective_function_wrapper(dataset_url: str, hyperparameters_url: str):
     def objective_function(x: np.ndarray) -> float:
         request_data = {
-            "dataSet": data_set_url,
+            "dataSet": dataset_url,
             "hyperparameters": hyperparameters_url,
             "parameters": x.tolist(),
         }
@@ -86,12 +86,13 @@ def processing_task_2(self, db_id: int) -> str:
 
     metadata_url = db_task.data.get("metadata_url")
     hyperparameter_url = db_task.data.get("hyperparameter_url")
+    dataset_url = loads(db_task.parameters).get("dataset_url")
 
     metadata = requests.get(metadata_url).json()
     number_of_parameters = metadata["number_of_parameters"]
     parameters = np.random.normal(size=(number_of_parameters,))
     obj_func = objective_function_wrapper(
-        "http://localhost:9090/experiments/1/data/dataset_test.json/download?version=1",
+        dataset_url,
         hyperparameter_url,
     )  # FIXME: replace hardcoded URLs
 

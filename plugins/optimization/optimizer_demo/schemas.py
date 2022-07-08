@@ -2,6 +2,7 @@ import marshmallow as ma
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
+    FileUrl,
 )
 
 
@@ -19,5 +20,19 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Input String",
             "description": "A simple string input.",
             "input_type": "textarea",
+        },
+    )
+
+
+class DatasetInputSchema(FrontendFormBaseSchema):
+    dataset_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="dataset",
+        data_content_types="application/json",
+        metadata={
+            "label": "Dataset URL",
+            "description": "URL to a dataset.",
+            "input_type": "text",
         },
     )
