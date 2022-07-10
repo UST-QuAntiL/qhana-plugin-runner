@@ -106,7 +106,24 @@ class QHanaTemplate:
         )
 
 
-def _load_templates_from_folder(app: Flask, folder: Union[str, Path]) -> None:
+def _load_template_schema() -> Dict[str, Any]:
+    template_schema_file_path = Path("templates/schema/template_schema.json")
+    template_schema_file_path = template_schema_file_path.resolve()
+
+    try:
+        with open(
+            template_schema_file_path, "r", encoding="utf-8"
+        ) as template_schema_file:
+            return json.load(template_schema_file)
+        
+    except FileNotFoundError:
+        app.logger.error(f"{template_schema_file_path} not found")
+    except json.decoder.JSONDecodeError:
+        app.logger.error(
+            f"{template_schema_file_path} template_schema.json has incorrect format"
+        )
+
+def _load_templates_from_folder(app: Flask, folder: Union[str, Path], template_schema: Dict[str, Any]) -> None:
     """Load all templates from a folder path.
 
     Every importable python module in the folder is considered a plugin and
@@ -134,23 +151,6 @@ def _load_templates_from_folder(app: Flask, folder: Union[str, Path]) -> None:
     if not folder.is_dir():
         app.logger.warning(
             f"Trying to load templates from '{folder}' but the path is not a directory."
-        )
-        return
-
-    # TODO: support multiple template folders? as implemented needs a schema file in every templates folder
-    template_schema_file_name = "template_schema.json"
-    try:
-        template_schema_file_path = folder.joinpath(template_schema_file_name)
-        with open(
-            template_schema_file_path, "r", encoding="utf-8"
-        ) as template_schema_file:
-            template_schema = json.load(template_schema_file)
-    except FileNotFoundError:
-        app.logger.error(f"{template_schema_file_path} not found")
-        return
-    except json.decoder.JSONDecodeError:
-        app.logger.error(
-            f"{template_schema_file_path} template_schema.json has incorrect format"
         )
         return
 
@@ -184,21 +184,9 @@ def register_templates(app: Flask) -> None:
     from qhana_plugin_runner.api import ROOT_API
 
     QHanaTemplate.__app__ = app
+    
+    template_schema = _load_template_schema()
+    
     template_folders = app.config.get("TEMPLATE_FOLDERS", ["templates"])
     for folder in template_folders:
-        _load_templates_from_folder(app, folder)
-
-    url_prefix: str = app.config.get("OPENAPI_URL_PREFIX", "").rstrip("/")
-
-    # register API blueprints (only do this after the API is registered with flask!)
-    for template in QHanaTemplate.get_templates().values():
-        template_blueprint = SecurityBlueprint(
-            f"template-{template.identifier}-api",
-            template.name,
-            description=f"Api to {template.name} template.",
-            url_prefix=f"{url_prefix}/templates/{template.identifier}/",
-        )
-        ROOT_API.register_blueprint(
-            template_blueprint,
-            url_prefix=f"{url_prefix}/templates/{template.identifier}/",
-        )
+        _load_templates_from_folder(app, folder, template_schema)
