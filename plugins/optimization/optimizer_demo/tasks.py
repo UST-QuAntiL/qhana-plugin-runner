@@ -33,22 +33,7 @@ def processing_task_1(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_str = task_data.data.get("input_str")  # get data from database
-    TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
-
-    if input_str is None:
-        raise ValueError("No input data provided!")
-
-    out_str = "User input from step 1 micro frontend: " + input_str
-
-    # store data in file
-    with SpooledTemporaryFile(mode="w") as output:
-        output.write(out_str)
-        STORE.persist_task_result(
-            db_id, output, "output_step_1.txt", "hello-world-output", "text/plain"
-        )
-
-    return "result: " + repr(out_str)
+    return ""
 
 
 def objective_function_wrapper(dataset_url: str, hyperparameters_url: str):
@@ -110,7 +95,7 @@ def processing_task_2(self, db_id: int) -> str:
             )
         )
         STORE.persist_task_result(
-            db_id, output, "output_step_2.txt", "optimization-output", "application/json"
+            db_id, output, "output_step_2.json", "optimization-output", "application/json"
         )
 
     return "result: "

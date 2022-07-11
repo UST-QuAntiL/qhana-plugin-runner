@@ -149,7 +149,6 @@ class ProcessStep1View(MethodView):
         )
         db_task.save(commit=True)
 
-        db_task.data["input_str"] = arguments["input_str"]
         db_task.data["next_step_id"] = "processing-returned-data"
         db_task.data["href"] = url_for(
             f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View",
