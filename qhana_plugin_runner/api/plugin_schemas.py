@@ -19,6 +19,7 @@ from enum import Enum
 from typing import Any, Dict, List
 
 import marshmallow as ma
+from marshmallow import post_load
 from marshmallow.validate import Regexp
 from typing_extensions import Literal
 
@@ -72,6 +73,10 @@ class DataMetadataSchema(MaBaseSchema):
         metadata={"description": "If the data is required or not."},
     )
 
+    @post_load
+    def make_object(self, data, **kwargs):
+        return DataMetadata(**data)
+
 
 class InputDataMetadataSchema(DataMetadataSchema):
     parameter = ma.fields.String(
@@ -79,6 +84,10 @@ class InputDataMetadataSchema(DataMetadataSchema):
         allow_none=False,
         metadata={"description": "The parameter where the input should be available at."},
     )
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return InputDataMetadata(**data)
 
 
 @dataclass
@@ -144,6 +153,10 @@ class PluginDependencyMetadataSchema(MaBaseSchema):
                 del data[attr]
         return data
 
+    @post_load
+    def make_object(self, data, **kwargs):
+        return PluginDependencyMetadata(**data)
+
 
 class ProgressMetadataSchema(MaBaseSchema):
     value = ma.fields.Integer(
@@ -164,6 +177,10 @@ class ProgressMetadataSchema(MaBaseSchema):
         allow_none=False,
         metadata={"description": "The progress unit."},
     )
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return ProgressMetadata(**data)
 
 
 class StepMetadataSchema(MaBaseSchema):
@@ -192,6 +209,10 @@ class StepMetadataSchema(MaBaseSchema):
         },
     )
 
+    @post_load
+    def make_object(self, data, **kwargs):
+        return StepMetadata(**data)
+
 
 @dataclass
 class InteractionEndpoint:
@@ -210,10 +231,15 @@ class InteractionEndpointSchema(MaBaseSchema):
     href = ma.fields.Url(
         required=True,
         allow_none=False,
+        relative=True,
         metadata={
             "description": "The URL of a REST endpoint that is usable by other plugins."
         },
     )
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return InteractionEndpoint(**data)
 
 
 @dataclass
@@ -246,11 +272,13 @@ class EntryPointSchema(MaBaseSchema):
     href = ma.fields.Url(
         required=True,
         allow_none=False,
+        relative=True,
         metadata={"description": "The URL of the REST entry point resource."},
     )
     ui_href = ma.fields.Url(
         required=True,
         allow_none=False,
+        relative=True,
         metadata={
             "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
@@ -290,6 +318,10 @@ class EntryPointSchema(MaBaseSchema):
         )
     )
 
+    @post_load
+    def make_object(self, data, **kwargs):
+        return EntryPoint(**data)
+
 
 @dataclass
 class PluginMetadata:
@@ -307,47 +339,44 @@ class PluginMetadataSchema(MaBaseSchema):
     title = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Human readable plugin title."},
     )
     description = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Human readable plugin description."},
     )
     name = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Unique name of the plugin."},
     )
     version = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Version of the plugin."},
     )
     type = EnumField(
         PluginType,
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Type of the plugin"},
     )
     entry_point = ma.fields.Nested(
         EntryPointSchema,
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "The entry point of the plugin"},
     )
     tags = ma.fields.List(
         ma.fields.String(),
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={
             "description": "A list of tags describing the plugin (e.g. classical-algorithm, quantum-algorithm, hybrid-algorithm)."
         },
     )
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return PluginMetadata(**data)
