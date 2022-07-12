@@ -2,12 +2,14 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
+from urllib.parse import urljoin
 
 import numpy as np
 import requests
 from celery.utils.log import get_task_logger
 from scipy.optimize import minimize
 
+from qhana_plugin_runner.api.plugin_schemas import PluginMetadata, PluginMetadataSchema
 from . import OptimizerDemo
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
@@ -36,7 +38,9 @@ def processing_task_1(self, db_id: int) -> str:
     return ""
 
 
-def objective_function_wrapper(dataset_url: str, hyperparameters_url: str):
+def objective_function_wrapper(
+    dataset_url: str, hyperparameters_url: str, objective_function_calculation_url: str
+):
     def objective_function(x: np.ndarray) -> float:
         request_data = {
             "dataSet": dataset_url,
@@ -44,7 +48,7 @@ def objective_function_wrapper(dataset_url: str, hyperparameters_url: str):
             "parameters": x.tolist(),
         }
         res = requests.post(
-            "http://localhost:5005/plugins/objective-function-demo%40v0-1-0/calc/",
+            objective_function_calculation_url,
             json=request_data,
         ).json()
 
@@ -69,6 +73,28 @@ def processing_task_2(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
+    objective_function_plugin_url = db_task.data.get("objective_function_url")
+
+    if objective_function_plugin_url is None:
+        raise ValueError("Objective function plugin URL missing")
+
+    schema = PluginMetadataSchema()
+    plugin_metadata: PluginMetadata = schema.loads(
+        requests.get(objective_function_plugin_url).text
+    )
+    objective_function_calculation_url: Optional[str] = None
+
+    for entry_point in plugin_metadata.entry_point.interaction_endpoints:
+        if entry_point.type == "objective-function-calculation":
+            objective_function_calculation_url = urljoin(
+                objective_function_plugin_url, entry_point.href
+            )
+
+    if objective_function_calculation_url is None:
+        raise ValueError(
+            "No interaction endpoint found in plugin with type objective-function-calculation"
+        )
+
     metadata_url = db_task.data.get("metadata_url")
     hyperparameter_url = db_task.data.get("hyperparameter_url")
     dataset_url = loads(db_task.parameters).get("dataset_url")
@@ -77,9 +103,8 @@ def processing_task_2(self, db_id: int) -> str:
     number_of_parameters = metadata["number_of_parameters"]
     parameters = np.random.normal(size=(number_of_parameters,))
     obj_func = objective_function_wrapper(
-        dataset_url,
-        hyperparameter_url,
-    )  # FIXME: replace hardcoded URLs
+        dataset_url, hyperparameter_url, objective_function_calculation_url
+    )
 
     result = minimize(obj_func, parameters, method="COBYLA")
     optimized_parameters: np.ndarray = result.x

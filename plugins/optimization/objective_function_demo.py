@@ -101,13 +101,14 @@ class CalculationOutputSchema(MaBaseSchema):
     objective_value = ma.fields.Float(required=True, allow_none=False)
 
 
-@OBJ_FUNC_DEMO_BLP.route("/")
+@OBJ_FUNC_DEMO_BLP.route("/", defaults={"db_id": 0})
+@OBJ_FUNC_DEMO_BLP.route("/<int:db_id>/")
 class PluginsView(MethodView):
     """Plugins metadata resource."""
 
     @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def get(self):
+    def get(self, db_id):
         """Endpoint returning the plugin metadata."""
         return PluginMetadata(
             title=ObjectiveFunctionDemo.instance.name,
@@ -116,16 +117,13 @@ class PluginsView(MethodView):
             version=ObjectiveFunctionDemo.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", db_id=0),  # FIXME id
-                ui_href=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend", db_id=0
-                ),  # FIXME id
+                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.SetupView", db_id=db_id),
+                ui_href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend", db_id=db_id),
                 interaction_endpoints=[
-                    # TODO: add obj. func. calculation endpoint
-                    # InteractionEndpoint(
-                    #     type="objective-function-metadata",
-                    #     href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.ProcessView"),
-                    # )
+                    InteractionEndpoint(
+                        type="objective-function-calculation",
+                        href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.CalculationView"),
+                    )
                 ],
                 plugin_dependencies=[],
                 data_input=[],
@@ -369,8 +367,8 @@ def setup_task(self, db_id: int) -> str:
 
 
 @OBJ_FUNC_DEMO_BLP.route("/calc/")
-class PluginsView(MethodView):
-    """Plugins metadata resource."""
+class CalculationView(MethodView):
+    """Objective function calculation resource."""
 
     @OBJ_FUNC_DEMO_BLP.arguments(CalculationInputSchema())
     @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, CalculationOutputSchema())

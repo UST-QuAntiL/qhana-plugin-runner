@@ -1,4 +1,5 @@
 import marshmallow as ma
+
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
@@ -13,7 +14,15 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
-    pass
+    objective_function_url = ma.fields.Url(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Objective Function",
+            "description": "URL for an objective function plugin",
+            "input_type": "text",
+        },
+    )
 
 
 class DatasetInputSchema(FrontendFormBaseSchema):

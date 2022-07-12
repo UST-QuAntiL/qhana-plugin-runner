@@ -2,7 +2,9 @@ from http import HTTPStatus
 from json import dumps
 from logging import Logger
 from typing import Mapping, Optional
+from urllib.parse import urljoin
 
+import requests
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
@@ -73,7 +75,7 @@ class MicroFrontendStep1(MethodView):
     """Micro frontend for step 1 of the interaction demo plugin."""
 
     example_inputs = {
-        "inputStr": "test1",
+        "objectiveFunctionUrl": "http://localhost:5005/plugins/objective-function-demo%40v0-1-0",
     }
 
     @INTERACTION_DEMO_BLP.html_response(
@@ -160,24 +162,23 @@ class ProcessStep1View(MethodView):
             db_id=db_task.id,
             _external=True,
         )
+        objective_function_url = arguments["objective_function_url"]
+        db_task.data["objective_function_url"] = objective_function_url
         db_task.save(commit=True)
 
         # add new step where the "invokable demo" plugin is executed
 
         # name of the next step
         step_id = "objective function setup"
+
+        objective_function_url_with_id = objective_function_url + "/" + str(db_task.id)
+        schema = PluginMetadataSchema()
+        raw_metadata = requests.get(objective_function_url_with_id).json()
+        plugin_metadata: PluginMetadata = schema.load(raw_metadata)
         # URL of the process endpoint of the invoked plugin
-        href = url_for(
-            f"objective-function-demo@v0-1-0.SetupView",
-            db_id=db_task.id,
-            _external=True,
-        )  # FIXME replace hardcoded plugin name with user input
+        href = urljoin(objective_function_url, plugin_metadata.entry_point.href)
         # URL of the micro frontend endpoint of the invoked plugin
-        ui_href = url_for(
-            f"objective-function-demo@v0-1-0.MicroFrontend",
-            db_id=db_task.id,
-            _external=True,
-        )  # FIXME replace hardcoded plugin name with user input
+        ui_href = urljoin(objective_function_url, plugin_metadata.entry_point.ui_href)
 
         # Chain the first processing task with executing the "invokable demo" plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
