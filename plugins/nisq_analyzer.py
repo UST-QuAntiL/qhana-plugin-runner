@@ -13,14 +13,9 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from json import dumps, loads
-from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
-import marshmallow as ma
-from celery.canvas import chain
-from celery.utils.log import get_task_logger
-from flask import abort, redirect
+from flask import abort
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -30,7 +25,6 @@ from flask.wrappers import Response
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata,
     EntryPoint,
     PluginMetadata,
     PluginMetadataSchema,
@@ -38,13 +32,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
-from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "nisq-analyzer"
@@ -77,8 +66,8 @@ class PluginsView(MethodView):
             version=plugin.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href="",
-                ui_href="http://localhost:80",
+                href=url_for(f"{NISQ_BLP.name}.PluginsView"),
+                ui_href=url_for(f"{NISQ_BLP.name}.MicroFrontend"),
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[],
@@ -86,11 +75,46 @@ class PluginsView(MethodView):
             tags=NisqAnalyzer.instance.tags,
         )
 
+
+@NISQ_BLP.route("/ui/")
+class MicroFrontend(MethodView):
+    """Micro frontend for the NISQ Analyzer plugin."""
+
+    @NISQ_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the NISQ Analyzer plugin."
+    )
+    @NISQ_BLP.arguments(
+        FrontendFormBaseSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @NISQ_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors):
+        """Return the micro frontend."""
+        return self.render(request.args, errors)
+
+    def render(self, data: Mapping, errors: dict):
+        plugin = NisqAnalyzer.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        return Response(
+            render_template(
+                "nisq_analyzer.html",
+                name=plugin.name,
+                version=plugin.version,
+                values=data,
+                errors=errors
+            )
+        )
+
+
 class NisqAnalyzer(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
-    description = "NISQ Analyzer Plugin."
+    description = "Provides the NISQ Analyzer UI."
     tags = ["nisq-analyzer"]
 
     def __init__(self, app: Optional[Flask]) -> None:
