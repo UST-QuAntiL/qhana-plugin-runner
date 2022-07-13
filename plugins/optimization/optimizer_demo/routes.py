@@ -45,10 +45,10 @@ class MetadataView(MethodView):
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ProcessStep1View"
+                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSetupProcess"
                 ),  # URL for the first process endpoint
                 ui_href=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1"
+                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSelectionUI"
                 ),  # URL for the first micro frontend endpoint
                 interaction_endpoints=[],
                 data_input=[],
@@ -64,23 +64,23 @@ class MetadataView(MethodView):
                         required=True,
                     ),
                 ],
-                # TODO: add plugin dependency
             ),
             tags=[],
         )
 
 
-@INTERACTION_DEMO_BLP.route("/ui-step-1/")
-class MicroFrontendStep1(MethodView):
-    """Micro frontend for step 1 of the interaction demo plugin."""
+@INTERACTION_DEMO_BLP.route("/obj-func-selection/")
+class ObjFuncSelectionUI(MethodView):
+    """Micro frontend for the selection of the objective function plugin."""
 
+    # FIXME: remove when plugin selection PR has been merged
     example_inputs = {
         "objectiveFunctionUrl": "http://localhost:5005/plugins/objective-function-demo%40v0-1-0",
     }
 
     @INTERACTION_DEMO_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for step 1 of the interaction demo plugin.",
+        description="Micro frontend for the selection of the objective function plugin.",
     )
     @INTERACTION_DEMO_BLP.arguments(
         InputParametersSchema(
@@ -96,7 +96,7 @@ class MicroFrontendStep1(MethodView):
 
     @INTERACTION_DEMO_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for step 1 of the interaction demo plugin.",
+        description="Micro frontend for the selection of the objective function plugin.",
     )
     @INTERACTION_DEMO_BLP.arguments(
         InputParametersSchema(
@@ -121,11 +121,11 @@ class MicroFrontendStep1(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ProcessStep1View"
+                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSetupProcess"
                 ),  # URL of the first processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep1",  # URL of this endpoint
+                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSelectionUI",  # URL of this endpoint
                     **self.example_inputs,
                 ),
             )
@@ -135,8 +135,8 @@ class MicroFrontendStep1(MethodView):
 TASK_LOGGER: Logger = get_task_logger(__name__)
 
 
-@INTERACTION_DEMO_BLP.route("/process-step-1/")
-class ProcessStep1View(MethodView):
+@INTERACTION_DEMO_BLP.route("/obj-func-setup/")
+class ObjFuncSetupProcess(MethodView):
     """Start the processing task of step 1."""
 
     @INTERACTION_DEMO_BLP.arguments(
@@ -145,7 +145,7 @@ class ProcessStep1View(MethodView):
     @INTERACTION_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        """Start the demo task."""
+        """Start the objective function setup task."""
         db_task = ProcessingTask(
             task_name=processing_task_1.name,
         )
@@ -166,7 +166,7 @@ class ProcessStep1View(MethodView):
         db_task.data["objective_function_url"] = objective_function_url
         db_task.save(commit=True)
 
-        # add new step where the "invokable demo" plugin is executed
+        # add new step where the setup of the objective function plugin is executed
 
         # name of the next step
         step_id = "objective function setup"
@@ -180,7 +180,7 @@ class ProcessStep1View(MethodView):
         # URL of the micro frontend endpoint of the invoked plugin
         ui_href = urljoin(objective_function_url, plugin_metadata.entry_point.ui_href)
 
-        # Chain the first processing task with executing the "invokable demo" plugin.
+        # Chain the first processing task with executing the objective function plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
         # steps in the database.
         task: chain = processing_task_1.s(db_id=db_task.id) | add_step.s(
@@ -199,15 +199,13 @@ class ProcessStep1View(MethodView):
 
 @INTERACTION_DEMO_BLP.route("/<int:db_id>/ui-step-2/")
 class MicroFrontendStep2(MethodView):
-    """Micro frontend for step 2 of the interaction demo plugin."""
+    """Micro frontend for the selection of the dataset."""
 
-    example_inputs = {
-        "inputStr": "test3",
-    }
+    example_inputs = {}
 
     @INTERACTION_DEMO_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for step 2 of the interaction demo plugin.",
+        description="Micro frontend for the selection of the dataset.",
     )
     @INTERACTION_DEMO_BLP.arguments(
         DatasetInputSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
@@ -221,7 +219,7 @@ class MicroFrontendStep2(MethodView):
 
     @INTERACTION_DEMO_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for step 2 of the interaction demo plugin.",
+        description="Micro frontend for the selection of the dataset.",
     )
     @INTERACTION_DEMO_BLP.arguments(
         DatasetInputSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),

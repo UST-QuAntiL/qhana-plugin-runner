@@ -201,7 +201,7 @@ class MicroFrontend(MethodView):
 
 @OBJ_FUNC_DEMO_BLP.route("/<int:db_id>/setup/")
 class SetupView(MethodView):
-    """Start a long running processing task."""
+    """Start the setup task."""
 
     @OBJ_FUNC_DEMO_BLP.arguments(HyperparametersSchema(unknown=EXCLUDE), location="form")
     @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
@@ -363,7 +363,7 @@ def setup_task(self, db_id: int) -> str:
             "application/json",
         )
 
-    return ""
+    return "Stored metadata and hyperparameters"
 
 
 @OBJ_FUNC_DEMO_BLP.route("/calc/")

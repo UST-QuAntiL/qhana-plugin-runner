@@ -14,6 +14,7 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
+    # FIXME: change to plugin selection when plugin selection RP has been merged
     objective_function_url = ma.fields.Url(
         required=True,
         allow_none=False,

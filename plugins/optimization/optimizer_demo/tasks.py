@@ -22,7 +22,7 @@ TASK_LOGGER = get_task_logger(__name__)
 @CELERY.task(name=f"{OptimizerDemo.instance.identifier}.processing_task_1", bind=True)
 def processing_task_1(self, db_id: int) -> str:
     """
-    First processing task. Retrieves the input data from the database and stores it in a file.
+    First processing task. Does nothing.
     @param self:
     @param db_id: database ID that will be used to retrieve the task data from the database
     @return: log message
@@ -60,7 +60,7 @@ def objective_function_wrapper(
 @CELERY.task(name=f"{OptimizerDemo.instance.identifier}.processing_task_2", bind=True)
 def processing_task_2(self, db_id: int) -> str:
     """
-    Second processing task. Retrieves the input data from the database and stores it in a file.
+    Second processing task. Uses an optimizer to optimize the specified objective function.
     @param self:
     @param db_id: database ID that will be used to retrieve the task data from the database
     @return: log message
@@ -108,6 +108,7 @@ def processing_task_2(self, db_id: int) -> str:
 
     result = minimize(obj_func, parameters, method="COBYLA")
     optimized_parameters: np.ndarray = result.x
+    last_objective_value = obj_func(optimized_parameters)
 
     # store data in file
     with SpooledTemporaryFile(mode="w") as output:
@@ -115,7 +116,7 @@ def processing_task_2(self, db_id: int) -> str:
             dumps(
                 {
                     "optimized_parameters": optimized_parameters.tolist(),
-                    "last_objective_value": obj_func(optimized_parameters),
+                    "last_objective_value": last_objective_value,
                 }
             )
         )
@@ -123,4 +124,4 @@ def processing_task_2(self, db_id: int) -> str:
             db_id, output, "output_step_2.json", "optimization-output", "application/json"
         )
 
-    return "result: "
+    return f"result: {last_objective_value}"
