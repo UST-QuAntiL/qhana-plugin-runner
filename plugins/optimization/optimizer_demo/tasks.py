@@ -1,6 +1,5 @@
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -10,11 +9,10 @@ from celery.utils.log import get_task_logger
 from scipy.optimize import minimize
 
 from qhana_plugin_runner.api.plugin_schemas import PluginMetadata, PluginMetadataSchema
-from . import OptimizerDemo
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
+from . import OptimizerDemo
 
 TASK_LOGGER = get_task_logger(__name__)
 

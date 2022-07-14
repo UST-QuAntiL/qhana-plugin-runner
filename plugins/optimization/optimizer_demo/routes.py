@@ -14,6 +14,15 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
+from qhana_plugin_runner.api.plugin_schemas import (
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+    DataMetadata,
+)
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 from . import INTERACTION_DEMO_BLP, OptimizerDemo
 from .schemas import (
     InputParametersSchema,
@@ -22,15 +31,6 @@ from .schemas import (
     CallbackSchema,
 )
 from .tasks import no_op_task, processing_task_2
-from qhana_plugin_runner.api.plugin_schemas import (
-    EntryPoint,
-    PluginMetadata,
-    PluginMetadataSchema,
-    PluginType,
-    DataMetadata,
-)
-from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 
 @INTERACTION_DEMO_BLP.route("/")
