@@ -14,10 +14,14 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from qhana_plugin_runner.storage import STORE
 from . import INTERACTION_DEMO_BLP, OptimizerDemo
-from .schemas import InputParametersSchema, TaskResponseSchema, DatasetInputSchema
-from .tasks import processing_task_1, processing_task_2
+from .schemas import (
+    InputParametersSchema,
+    TaskResponseSchema,
+    DatasetInputSchema,
+    CallbackSchema,
+)
+from .tasks import no_op_task, processing_task_2
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginMetadata,
@@ -147,21 +151,10 @@ class ObjFuncSetupProcess(MethodView):
     def post(self, arguments):
         """Start the objective function setup task."""
         db_task = ProcessingTask(
-            task_name=processing_task_1.name,
+            task_name=no_op_task.name,
         )
         db_task.save(commit=True)
 
-        db_task.data["next_step_id"] = "processing-returned-data"
-        db_task.data["href"] = url_for(
-            f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View",
-            db_id=db_task.id,
-            _external=True,
-        )
-        db_task.data["ui_href"] = url_for(
-            f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep2",
-            db_id=db_task.id,
-            _external=True,
-        )
         objective_function_url = arguments["objective_function_url"]
         db_task.data["objective_function_url"] = objective_function_url
         db_task.save(commit=True)
@@ -171,9 +164,8 @@ class ObjFuncSetupProcess(MethodView):
         # name of the next step
         step_id = "objective function setup"
 
-        objective_function_url_with_id = objective_function_url + "/" + str(db_task.id)
         schema = PluginMetadataSchema()
-        raw_metadata = requests.get(objective_function_url_with_id).json()
+        raw_metadata = requests.get(objective_function_url).json()
         plugin_metadata: PluginMetadata = schema.load(raw_metadata)
         # URL of the process endpoint of the invoked plugin
         href = urljoin(objective_function_url, plugin_metadata.entry_point.href)
@@ -183,8 +175,18 @@ class ObjFuncSetupProcess(MethodView):
         # Chain the first processing task with executing the objective function plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
         # steps in the database.
-        task: chain = processing_task_1.s(db_id=db_task.id) | add_step.s(
-            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=33
+        task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id,
+            step_id=step_id,
+            href=href,
+            ui_href=ui_href
+            + "?callbackUrl="
+            + url_for(
+                f"{INTERACTION_DEMO_BLP.name}.Callback",
+                db_id=str(db_task.id),
+                _external=True,
+            ),
+            prog_value=33,
         )
 
         # save errors to db
@@ -195,6 +197,48 @@ class ObjFuncSetupProcess(MethodView):
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
+
+
+@INTERACTION_DEMO_BLP.route("/<int:db_id>/callback/")
+class Callback(MethodView):
+    @INTERACTION_DEMO_BLP.arguments(CallbackSchema(unknown=EXCLUDE))
+    @INTERACTION_DEMO_BLP.response(HTTPStatus.OK)
+    def post(self, arguments, db_id: int):
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.clear_previous_step()
+        db_task.data["obj_func_db_id"] = arguments["db_id"]
+        db_task.data["number_of_parameters"] = arguments["number_of_parameters"]
+        db_task.save(commit=True)
+
+        step_id = "processing-returned-data"
+        href = url_for(
+            f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View",
+            db_id=db_task.id,
+            _external=True,
+        )
+        ui_href = url_for(
+            f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep2",
+            db_id=db_task.id,
+            _external=True,
+        )
+
+        task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id,
+            step_id=step_id,
+            href=href,
+            ui_href=ui_href,
+            prog_value=66,
+        )
+
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        # start tasks
+        task.apply_async()
 
 
 @INTERACTION_DEMO_BLP.route("/<int:db_id>/ui-step-2/")
@@ -279,24 +323,6 @@ class ProcessStep2View(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
-
-        metadata_url: Optional[str] = None
-        hyperparameter_url: Optional[str] = None
-
-        for task_file in TaskFile.get_task_result_files(db_task):
-            if task_file.file_name == "metadata.json":
-                metadata_url = STORE.get_task_file_url(task_file)
-            elif task_file.file_name == "hyperparameters.json":
-                hyperparameter_url = STORE.get_task_file_url(task_file)
-
-        if metadata_url is None:
-            raise ValueError("metadata.json missing")
-
-        if hyperparameter_url is None:
-            raise ValueError("hyperparameter.json missing")
-
-        db_task.data["metadata_url"] = metadata_url
-        db_task.data["hyperparameter_url"] = hyperparameter_url
 
         db_task.parameters = dumps(arguments)
 

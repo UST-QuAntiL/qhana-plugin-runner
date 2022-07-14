@@ -20,7 +20,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 @CELERY.task(name=f"{OptimizerDemo.instance.identifier}.processing_task_1", bind=True)
-def processing_task_1(self, db_id: int) -> str:
+def no_op_task(self, db_id: int) -> str:
     """
     First processing task. Does nothing.
     @param self:
@@ -39,12 +39,12 @@ def processing_task_1(self, db_id: int) -> str:
 
 
 def objective_function_wrapper(
-    dataset_url: str, hyperparameters_url: str, objective_function_calculation_url: str
+    dataset_url: str, objective_function_calculation_url: str, obj_func_db_id: int
 ):
     def objective_function(x: np.ndarray) -> float:
         request_data = {
             "dataSet": dataset_url,
-            "hyperparameters": hyperparameters_url,
+            "dbId": obj_func_db_id,
             "parameters": x.tolist(),
         }
         res = requests.post(
@@ -95,15 +95,13 @@ def processing_task_2(self, db_id: int) -> str:
             "No interaction endpoint found in plugin with type objective-function-calculation"
         )
 
-    metadata_url = db_task.data.get("metadata_url")
-    hyperparameter_url = db_task.data.get("hyperparameter_url")
+    obj_func_db_id = db_task.data.get("obj_func_db_id")
     dataset_url = loads(db_task.parameters).get("dataset_url")
 
-    metadata = requests.get(metadata_url).json()
-    number_of_parameters = metadata["number_of_parameters"]
+    number_of_parameters = db_task.data.get("number_of_parameters")
     parameters = np.random.normal(size=(number_of_parameters,))
     obj_func = objective_function_wrapper(
-        dataset_url, hyperparameter_url, objective_function_calculation_url
+        dataset_url, objective_function_calculation_url, obj_func_db_id
     )
 
     result = minimize(obj_func, parameters, method="COBYLA")

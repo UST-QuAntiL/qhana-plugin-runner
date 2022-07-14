@@ -26,6 +26,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
     )
 
 
+class CallbackSchema(MaBaseSchema):
+    db_id = ma.fields.Integer(required=True, allow_none=False)
+    number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
+
+
 class DatasetInputSchema(FrontendFormBaseSchema):
     dataset_url = FileUrl(
         required=True,
