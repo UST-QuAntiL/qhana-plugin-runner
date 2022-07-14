@@ -57,7 +57,7 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 CSV_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="CSV vidualization API.",
+    description="CSV visualization API.",
     template_folder="csv_visualization_templates",
 )
 

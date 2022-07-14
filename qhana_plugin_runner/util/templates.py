@@ -43,7 +43,7 @@ class QHanaTemplateCategory:
     name: str
     description: str
     plugin_filter: FilterExpr
-    
+
     @cached_property
     def identifier(self) -> str:
         """An url safe identifier based on name of the category."""
@@ -115,7 +115,7 @@ def _load_template_schema() -> Dict[str, Any]:
             template_schema_file_path, "r", encoding="utf-8"
         ) as template_schema_file:
             return json.load(template_schema_file)
-        
+
     except FileNotFoundError:
         app.logger.error(f"{template_schema_file_path} not found")
     except json.decoder.JSONDecodeError:
@@ -123,19 +123,18 @@ def _load_template_schema() -> Dict[str, Any]:
             f"{template_schema_file_path} template_schema.json has incorrect format"
         )
 
-def _load_templates_from_folder(app: Flask, folder: Union[str, Path], template_schema: Dict[str, Any]) -> None:
+
+def _load_templates_from_folder(
+    app: Flask, folder: Union[str, Path], template_schema: Dict[str, Any]
+) -> None:
     """Load all templates from a folder path.
 
-    Every importable python module in the folder is considered a plugin and
-    will be automatically imported. The parent path will be added to ``sys.path``
-    if not already added.
-
-    If the folder contains a ``__init__.py`` file itself, then the folder is
-    assumed to be a python package and only that python package is imported.
+    Every .json file in the folder is considered a template and will be loaded.
 
     Args:
         app (Flask): the app instance (used for logging only)
-        folder (Union[str, Path]): the folder path to scan for plugins
+        folder (Union[str, Path]): the folder path to scan for templates
+        template_schema (Dict[str, Any]): the schema the templates have to conform to
     """
     if isinstance(folder, str):
         folder = Path(folder)
@@ -184,9 +183,9 @@ def register_templates(app: Flask) -> None:
     from qhana_plugin_runner.api import ROOT_API
 
     QHanaTemplate.__app__ = app
-    
+
     template_schema = _load_template_schema()
-    
+
     template_folders = app.config.get("TEMPLATE_FOLDERS", ["templates"])
     for folder in template_folders:
         _load_templates_from_folder(app, folder, template_schema)
