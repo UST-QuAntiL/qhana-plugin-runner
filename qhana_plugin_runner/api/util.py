@@ -194,6 +194,38 @@ class FileUrlValidator(UrlValidator):
         return value
 
 
+class DataUrlValidator(UrlValidator):
+    """Extension of the URL validator that can handle file and data URLs"""
+
+    default_schemes = {"http", "https", "ftp", "ftps", "data"}
+
+    _data_url_regex = re.compile(
+        r"data:(?P<mime>[\w/\-\.+]+)(?P<charset>;charset=[\w/\-\.+]+)?(?P<encoding>;base64)?,.*"
+    )
+
+    def __call__(self, value: str) -> str:
+        if value and value.startswith("data:"):
+            return self._validate_data_url(value)
+
+        super().__init__(require_tld=False)
+
+        return super().__call__(value)
+
+    def _validate_file_url(self, value: str) -> str:
+        result = urlparse(value)
+        if result.netloc:
+            if result.netloc != "localhost":
+                raise ValidationError(self._format_error(value))
+        else:
+            pass  # just hope that url is correct...
+        return value
+
+    def _validate_data_url(self, value: str) -> str:
+        if not self._data_url_regex.search(value):
+            raise ValidationError(self._format_error(value))
+        return value
+
+
 class FileUrl(ma.fields.Url):
     """Extension of the URL field that can handle file and data URLs"""
 
@@ -241,4 +273,51 @@ class FileUrl(ma.fields.Url):
         return super().deserialize(value, attr, data, **kwargs)
 
 
-# TODO add plugin URL field + UI generator functions
+class PluginUrl(ma.fields.URL):
+    """Extension of the URL field that can handle plugin URLs"""
+
+    def __init__(
+        self,
+        *,
+        relative: bool = False,
+        schemes: Optional[types.StrSequenceOrSet] = None,
+        require_tld: bool = True,
+        plugin_tags: Optional[Union[Sequence[str], str]] = None,
+        plugin_name: Optional[str] = None,
+        plugin_version: Optional[str] = None,
+        required: bool = False,
+        allow_none: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            relative=relative,
+            schemes=schemes,
+            require_tld=require_tld,
+            allow_none=allow_none,
+            required=required,
+            **kwargs,
+        )
+        if plugin_tags:
+            self.metadata["plugin_tags"] = plugin_tags
+        if plugin_name:
+            self.metadata["plugin_name"] = plugin_name
+        if plugin_version:
+            self.metadata["plugin_version"] = plugin_version
+        self.validators[0] = DataUrlValidator(
+            relative=self.relative,
+            schemes=schemes,
+            require_tld=self.require_tld,
+            error=self.error_messages["invalid"],
+        )
+
+    def deserialize(
+        self,
+        value: Any,
+        attr: Optional[str] = None,
+        data: Optional[Mapping[str, Any]] = None,
+        **kwargs,
+    ):
+        # treat empty string as None
+        if value == "":
+            value = None
+        return super().deserialize(value, attr, data, **kwargs)
