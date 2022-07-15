@@ -43,9 +43,9 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
 
 
     {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-    <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden {{ field_attr('data-input',
-      field.metadata.get('data_input_type')) }} {{ field_attr('data-content-type',
-      space_delimited_list(field.metadata.get('data_content_types'))) }}>
+    <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden 
+      {{ field_attr('data-input', field.metadata.get('data_input_type')) }} 
+      {{ field_attr('data-content-type',space_delimited_list(field.metadata.get('data_content_types'))) }}>
       choose file
     </button>
     {% endif %}
@@ -54,7 +54,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
       {{ field_attr('data-plugin-tags', space_delimited_list(field.metadata.get('plugin_tags', []))) }} 
       {{ field_attr('data-plugin-name', field.metadata.get('plugin_name')) }}
       {{ field_attr('data-plugin-version', field.metadata.get('plugin_version')) }}>
-      choose file
+      select plugin
     </button>
     {% endif %}
   </div>

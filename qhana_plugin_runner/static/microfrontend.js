@@ -197,13 +197,11 @@ function instrumentForm() {
             }
         });
         form.querySelectorAll('input[data-input-type=data]').forEach(inputElement => {
-            console.log("DATA INPUT:", inputElement)
             const name = inputElement.getAttribute('name');
             if (name == null) {
                 console.warn('Input has no specified name but is marked as data input!', inputElement);
             } else {
                 dataInputs.add(name);
-                // TODO request-data-url-info
             }
             var dataInputId = inputElement.getAttribute("id");
             var dataInputValue = inputElement.value;
@@ -216,7 +214,6 @@ function instrumentForm() {
             }
         });
         form.querySelectorAll('input[data-input-type=plugin]').forEach(inputElement => {
-            console.log("PLUGIN INPUT:", inputElement)
             var pluginInputId = inputElement.getAttribute("id");
             var pluginInputValue = inputElement.value;
             if (pluginInputId && pluginInputValue) {

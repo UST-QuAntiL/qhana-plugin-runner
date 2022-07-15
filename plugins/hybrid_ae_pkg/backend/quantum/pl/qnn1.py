@@ -3,7 +3,7 @@ from typing import Tuple, Callable, List
 import pennylane as qml
 import pennylane.numpy as np
 
-from .TwoQubitGate import add_two_qubit_gate
+from .two_qubit_gate import add_two_qubit_gate
 
 
 def constructor(q_num: int) -> Tuple[Callable, int]:

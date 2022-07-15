@@ -39,6 +39,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -152,10 +153,11 @@ class PluginsView(MethodView):
                 href=url_for(f"{PCA_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{PCA_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-points",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entityPointsUrl",
                     )
                 ],
                 data_output=[

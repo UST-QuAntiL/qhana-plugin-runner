@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -166,10 +167,11 @@ class PluginsView(MethodView):
                 href=url_for(f"{MDS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{MDS_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-distances",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entityDistancesUrl",
                     )
                 ],
                 data_output=[

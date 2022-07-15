@@ -40,6 +40,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FileUrl,
@@ -180,13 +181,14 @@ class PluginsView(MethodView):
                 href=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity/list",
                         content_type=[
                             "application/json",
                             "text/csv",
                         ],
                         required=True,
+                        parameter="inputFileUrl",
                     )
                 ],
                 data_output=[
