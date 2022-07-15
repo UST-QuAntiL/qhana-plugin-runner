@@ -39,7 +39,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
-    PluginUrl,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
