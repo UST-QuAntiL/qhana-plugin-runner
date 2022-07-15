@@ -125,12 +125,12 @@ class PluginsView(MethodView):
             version=ObjectiveFunctionDemo.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.SetupView"),
+                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.Setup"),
                 ui_href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend"),
                 interaction_endpoints=[
                     InteractionEndpoint(
                         type="objective-function-calculation",
-                        href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.CalculationView"),
+                        href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.Calculation"),
                     )
                 ],
                 plugin_dependencies=[],
@@ -196,7 +196,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.SetupView"
+                    f"{OBJ_FUNC_DEMO_BLP.name}.Setup"
                 ),  # URL of the processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
@@ -207,7 +207,7 @@ class MicroFrontend(MethodView):
 
 
 @OBJ_FUNC_DEMO_BLP.route("/setup/")
-class SetupView(MethodView):
+class Setup(MethodView):
     """Start the setup task."""
 
     @OBJ_FUNC_DEMO_BLP.arguments(HyperparametersSchema(unknown=EXCLUDE), location="form")
@@ -354,7 +354,7 @@ def setup_task(self, db_id: int) -> str:
 
 
 @OBJ_FUNC_DEMO_BLP.route("/calc/")
-class CalculationView(MethodView):
+class Calculation(MethodView):
     """Objective function calculation resource."""
 
     @OBJ_FUNC_DEMO_BLP.arguments(CalculationInputSchema())

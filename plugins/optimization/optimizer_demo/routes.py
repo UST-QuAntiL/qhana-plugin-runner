@@ -1,3 +1,16 @@
+# Copyright 2022 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from http import HTTPStatus
 from json import dumps
 from logging import Logger
@@ -30,7 +43,7 @@ from .schemas import (
     DatasetInputSchema,
     CallbackSchema,
 )
-from .tasks import no_op_task, processing_task_2
+from .tasks import no_op_task, optimization_task
 
 
 @INTERACTION_DEMO_BLP.route("/")
@@ -141,7 +154,10 @@ TASK_LOGGER: Logger = get_task_logger(__name__)
 
 @INTERACTION_DEMO_BLP.route("/obj-func-setup/")
 class ObjFuncSetupProcess(MethodView):
-    """Start the processing task of step 1."""
+    """
+    Adds the setup of the objective function plugin as the next step. This leads to the microfrontend of the objective
+    function plugin to be displayed to the user who can then input the required hyperparameters.
+    """
 
     @INTERACTION_DEMO_BLP.arguments(
         InputParametersSchema(unknown=EXCLUDE), location="form"
@@ -162,30 +178,31 @@ class ObjFuncSetupProcess(MethodView):
         # add new step where the setup of the objective function plugin is executed
 
         # name of the next step
-        step_id = "objective function setup"
+        step_id = "objective-function-setup"
 
+        # get metadata
         schema = PluginMetadataSchema()
         raw_metadata = requests.get(objective_function_url).json()
         plugin_metadata: PluginMetadata = schema.load(raw_metadata)
-        # URL of the process endpoint of the invoked plugin
+
+        # URL of the process endpoint of the objective function plugin
         href = urljoin(objective_function_url, plugin_metadata.entry_point.href)
-        # URL of the micro frontend endpoint of the invoked plugin
+        # URL of the micro frontend endpoint of the objective function plugin
         ui_href = urljoin(objective_function_url, plugin_metadata.entry_point.ui_href)
 
-        # Chain the first processing task with executing the objective function plugin.
-        # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
-        # steps in the database.
+        callback_url_query = "?callbackUrl=" + url_for(
+            f"{INTERACTION_DEMO_BLP.name}.Callback",
+            db_id=str(db_task.id),
+            _external=True,
+        )
+
+        # Chain a processing task (that does nothing) with executing the objective function plugin setup.
         task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
             db_id=db_task.id,
             step_id=step_id,
             href=href,
-            ui_href=ui_href
-            + "?callbackUrl="
-            + url_for(
-                f"{INTERACTION_DEMO_BLP.name}.Callback",
-                db_id=str(db_task.id),
-                _external=True,
-            ),
+            # adds callback URL so that the objective function plugin can signal that it has finished and send data back
+            ui_href=ui_href + callback_url_query,
             prog_value=33,
         )
 
@@ -201,9 +218,21 @@ class ObjFuncSetupProcess(MethodView):
 
 @INTERACTION_DEMO_BLP.route("/<int:db_id>/callback/")
 class Callback(MethodView):
+    """
+    Callback endpoint that will be used by the objective function plugins to signal that they have finished and to send
+    data back.
+    """
+
     @INTERACTION_DEMO_BLP.arguments(CallbackSchema(unknown=EXCLUDE))
     @INTERACTION_DEMO_BLP.response(HTTPStatus.OK)
     def post(self, arguments, db_id: int):
+        """
+        Gets data from the objective function plugin and starts the next step.
+
+        :param arguments:
+        :param db_id: Database ID of the task object. This refers to the database that the objective function plugin uses which might not be the same as the one this plugin uses.
+        :return:
+        """
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -217,12 +246,12 @@ class Callback(MethodView):
 
         step_id = "processing-returned-data"
         href = url_for(
-            f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View",
+            f"{INTERACTION_DEMO_BLP.name}.OptimizationProcessEndpoint",
             db_id=db_task.id,
             _external=True,
         )
         ui_href = url_for(
-            f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep2",
+            f"{INTERACTION_DEMO_BLP.name}.DatasetSelectionUI",
             db_id=db_task.id,
             _external=True,
         )
@@ -242,7 +271,7 @@ class Callback(MethodView):
 
 
 @INTERACTION_DEMO_BLP.route("/<int:db_id>/ui-step-2/")
-class MicroFrontendStep2(MethodView):
+class DatasetSelectionUI(MethodView):
     """Micro frontend for the selection of the dataset."""
 
     example_inputs = {}
@@ -297,11 +326,11 @@ class MicroFrontendStep2(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ProcessStep2View",
+                    f"{INTERACTION_DEMO_BLP.name}.OptimizationProcessEndpoint",
                     db_id=db_id,  # URL of the second processing step
                 ),
                 example_values=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.MicroFrontendStep2",  # URL of the second micro frontend
+                    f"{INTERACTION_DEMO_BLP.name}.DatasetSelectionUI",  # URL of the second micro frontend
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -309,15 +338,15 @@ class MicroFrontendStep2(MethodView):
         )
 
 
-@INTERACTION_DEMO_BLP.route("/<int:db_id>/process-step-2/")
-class ProcessStep2View(MethodView):
-    """Start the processing task of step 2."""
+@INTERACTION_DEMO_BLP.route("/<int:db_id>/optimization-process/")
+class OptimizationProcessEndpoint(MethodView):
+    """Start the optimization task."""
 
     @INTERACTION_DEMO_BLP.arguments(DatasetInputSchema(unknown=EXCLUDE), location="form")
     @INTERACTION_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
-        """Start the demo task."""
+        """Start the optimization task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -329,8 +358,8 @@ class ProcessStep2View(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        # Chain the second processing task with executing the task that saves the results and ends the execution.
-        task: chain = processing_task_2.s(db_id=db_task.id) | save_task_result.s(
+        # Chain the optimization task with executing the task that saves the results and ends the execution.
+        task: chain = optimization_task.s(db_id=db_task.id) | save_task_result.s(
             db_id=db_id
         )
 
