@@ -1459,6 +1459,7 @@ testing = [
 
 [metadata]
 content-hash = "5f78c627d34db46907f68fc3cffde5e31f2b76625fd6607be8d5fa0969615f01"
+content-hash = "5f78c627d34db46907f68fc3cffde5e31f2b76625fd6607be8d5fa0969615f01"
 lock-version = "1.1"
 python-versions = "^3.7"
 
