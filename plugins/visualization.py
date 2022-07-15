@@ -70,7 +70,9 @@ class TaskResponseSchema(MaBaseSchema):
 
 class InputParameters:
     def __init__(
-        self, entity_points_url: str, clusters_url: str,
+        self,
+        entity_points_url: str,
+        clusters_url: str,
     ):
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
@@ -147,7 +149,8 @@ class MicroFrontend(MethodView):
     """Micro frontend for the Visualization plugin."""
 
     @VIS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the Visualization plugin.",
+        HTTPStatus.OK,
+        description="Micro frontend of the Visualization plugin.",
     )
     @VIS_BLP.arguments(
         InputParametersSchema(
@@ -162,7 +165,8 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @VIS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the Visualization plugin.",
+        HTTPStatus.OK,
+        description="Micro frontend of the Visualization plugin.",
     )
     @VIS_BLP.arguments(
         InputParametersSchema(
@@ -323,7 +327,11 @@ def calculation_task(self, db_id: int) -> str:
         output.write(html)
 
         STORE.persist_task_result(
-            db_id, output, "plot.html", "plot", "text/html",
+            db_id,
+            output,
+            "plot.html",
+            "plot",
+            "text/html",
         )
 
     return "Result stored in file"

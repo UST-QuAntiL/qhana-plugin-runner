@@ -105,7 +105,11 @@ class PluginsView(MethodView):
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[
-                    DataMetadata(data_type="*", content_type=["*"], required=True,)
+                    DataMetadata(
+                        data_type="*",
+                        content_type=["*"],
+                        required=True,
+                    )
                 ],
             ),
             tags=FileUpload.instance.tags,

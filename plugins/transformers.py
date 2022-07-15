@@ -353,7 +353,11 @@ def calculation_task(self, db_id: int) -> str:
     zip_file.close()
 
     STORE.persist_task_result(
-        db_id, tmp_zip_file, "attr_dist.zip", "attribute_distances", "application/zip",
+        db_id,
+        tmp_zip_file,
+        "attr_dist.zip",
+        "attribute_distances",
+        "application/zip",
     )
 
     return "Result stored in file"

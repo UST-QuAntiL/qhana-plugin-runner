@@ -80,7 +80,9 @@ class AggregatorsEnum(Enum):
 
 class InputParameters:
     def __init__(
-        self, attribute_distances_url: str, aggregator: AggregatorsEnum,
+        self,
+        attribute_distances_url: str,
+        aggregator: AggregatorsEnum,
     ):
         self.attribute_distances_url = attribute_distances_url
         self.aggregator = aggregator
@@ -156,7 +158,8 @@ class MicroFrontend(MethodView):
     """Micro frontend for the Aggregator plugin."""
 
     @AGGREGATOR_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the Aggregator plugin.",
+        HTTPStatus.OK,
+        description="Micro frontend of the Aggregator plugin.",
     )
     @AGGREGATOR_BLP.arguments(
         InputParametersSchema(
@@ -171,7 +174,8 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @AGGREGATOR_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the Aggregator plugin.",
+        HTTPStatus.OK,
+        description="Micro frontend of the Aggregator plugin.",
     )
     @AGGREGATOR_BLP.arguments(
         InputParametersSchema(

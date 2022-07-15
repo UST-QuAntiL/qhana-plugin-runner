@@ -264,7 +264,11 @@ def calculation_task(self, db_id: int) -> str:
     merged_zip_file.close()
 
     STORE.persist_task_result(
-        db_id, tmp_zip_file, "merged.zip", "any", "application/zip",
+        db_id,
+        tmp_zip_file,
+        "merged.zip",
+        "any",
+        "application/zip",
     )
 
     return "Result stored in file"

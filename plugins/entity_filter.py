@@ -183,7 +183,10 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
-                        content_type=["application/json", "text/csv",],
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="inputFileUrl",
                     )

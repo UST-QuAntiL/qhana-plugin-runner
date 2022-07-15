@@ -44,7 +44,9 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="raw", content_type=["application/json"], required=True,
+                        data_type="raw",
+                        content_type=["application/json"],
+                        required=True,
                     ),
                     DataMetadata(
                         data_type="attribute-metadata",

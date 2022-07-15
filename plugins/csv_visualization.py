@@ -80,7 +80,10 @@ class CsvInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         data_input_type="*",
         data_content_types=["text/csv"],
-        metadata={"label": "CSV File", "description": "The URL to a CSV file.",},
+        metadata={
+            "label": "CSV File",
+            "description": "The URL to a CSV file.",
+        },
     )
 
 
@@ -115,7 +118,9 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="*", content_type=["text/html"], required=True,
+                        data_type="*",
+                        content_type=["text/html"],
+                        required=True,
                     )
                 ],
             ),

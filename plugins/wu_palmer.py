@@ -389,7 +389,11 @@ def calculation_task(self, db_id: int) -> str:
     zip_file.close()
 
     STORE.persist_task_result(
-        db_id, tmp_zip_file, "wu_palmer.zip", "element-similarities", "application/zip",
+        db_id,
+        tmp_zip_file,
+        "wu_palmer.zip",
+        "element-similarities",
+        "application/zip",
     )
 
     return "Result stored in file"

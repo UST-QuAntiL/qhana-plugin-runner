@@ -108,7 +108,9 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="txt", content_type=["text/plain"], required=True,
+                        data_type="txt",
+                        content_type=["text/plain"],
+                        required=True,
                     )
                 ],
             ),

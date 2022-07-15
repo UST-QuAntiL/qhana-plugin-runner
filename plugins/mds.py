@@ -189,7 +189,8 @@ class MicroFrontend(MethodView):
     """Micro frontend for the MDS plugin."""
 
     @MDS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the MDS plugin.",
+        HTTPStatus.OK,
+        description="Micro frontend of the MDS plugin.",
     )
     @MDS_BLP.arguments(
         InputParametersSchema(
@@ -204,7 +205,8 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @MDS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the MDS plugin.",
+        HTTPStatus.OK,
+        description="Micro frontend of the MDS plugin.",
     )
     @MDS_BLP.arguments(
         InputParametersSchema(
@@ -372,7 +374,11 @@ def calculation_task(self, db_id: int) -> str:
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
         STORE.persist_task_result(
-            db_id, output, "entity_points.json", "entity-points", "application/json",
+            db_id,
+            output,
+            "entity_points.json",
+            "entity-points",
+            "application/json",
         )
 
     return "Result stored in file"

@@ -132,7 +132,8 @@ class HybridAutoencoderPennylaneAPI(MethodView):
     def post(self, req_dict):
         """Start the demo task."""
         db_task = ProcessingTask(
-            task_name=hybrid_autoencoder_pennylane_task.name, parameters=dumps(req_dict),
+            task_name=hybrid_autoencoder_pennylane_task.name,
+            parameters=dumps(req_dict),
         )
         db_task.save(commit=True)
 

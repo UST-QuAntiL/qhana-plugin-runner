@@ -48,7 +48,9 @@ class FileView(MethodView):
     """Download task result file stored in the local file-system store."""
 
     @FILES_API.arguments(FileSecurityTagSchema, location="query")
-    @FILES_API.response(HTTPStatus.OK,)
+    @FILES_API.response(
+        HTTPStatus.OK,
+    )
     def get(self, query_data, file_id: int):
         """Get the task file information by file id."""
         security_tag = query_data["file_id"]  # prevent simple file id enumeration attacs

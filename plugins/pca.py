@@ -371,7 +371,11 @@ def calculation_task(self, db_id: int) -> str:
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
         STORE.persist_task_result(
-            db_id, output, "pca.json", "principle-components", "application/json",
+            db_id,
+            output,
+            "pca.json",
+            "principle-components",
+            "application/json",
         )
 
     return "Result stored in file"
