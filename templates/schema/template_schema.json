@@ -1,0 +1,103 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Record of template",
+    "description": "This document records the details of an template",
+    "type": "object",
+    "properties": {
+        "name": {
+            "description": "Name of template",
+            "type": "string"
+        },
+        "description": {
+            "description": "Description of template",
+            "type": "string"
+        },
+        "categories": {
+            "description": "List of categories",
+            "type": "array",
+            "items": {
+                "description": "Describes one categorie",
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "description": "Name of categorie",
+                        "type": "string"
+                    },
+                    "description": {
+                        "description": "Description of categorie",
+                        "type": "string"
+                    },
+                    "filter": {
+                        "description": "Logic formula of tags",
+                        "$ref": "#/definitions/logicFormulaOfTags"
+                    }
+                },
+                "required": [
+                    "name",
+                    "description",
+                    "filter"
+                ],
+                "additionalProperties": false
+            },
+            "minItems": 1
+        }
+    },
+    "required": [
+        "name",
+        "description",
+        "categories"
+    ],
+    "additionalProperties": false,
+    
+    "definitions": {
+        "logicFormulaOfTags": {
+            "oneOf": [
+                {						
+                    "description": "Tag name, Plugin name or Plugin identifier",
+                    "type": "string"
+                },
+                { 
+                    "description": "Logic AND",
+                    "type": "object",
+                    "properties": {
+                        "and": {
+                            "type": "array",
+                            "items":  {
+                                "$ref": "#/definitions/logicFormulaOfTags"
+                            },
+                            "minItems": 2
+                        }
+                    },
+                    "required": ["and"],
+                    "additionalProperties": false
+                },
+                { 
+                    "description": "Logic OR",
+                    "type": "object",
+                    "properties": {
+                        "or": {
+                            "type": "array",
+                            "items":  {
+                                "$ref": "#/definitions/logicFormulaOfTags"
+                            },
+                            "minItems": 2
+                        }
+                    },
+                    "required": ["or"],
+                    "additionalProperties": false
+                },
+                { 
+                    "description": "Logic NOT",
+                    "type": "object",
+                    "properties": {
+                        "not": {
+                            "$ref": "#/definitions/logicFormulaOfTags"
+                        }
+                    },
+                    "required": ["not"],
+                    "additionalProperties": false
+                }
+            ]
+        }
+    }
+}

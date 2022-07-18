@@ -47,9 +47,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -159,8 +157,8 @@ class PluginsView(MethodView):
         """MDS endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Multidimensional Scaling (MDS)",
-            description="Converts distance values (distance matrix) to points in a space.",
-            name=MDS.instance.identifier,
+            description=MDS.instance.description,
+            name=MDS.instance.name,
             version=MDS.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -182,7 +180,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dist-to-points"],
+            tags=MDS.instance.tags,
         )
 
 
@@ -285,6 +283,8 @@ class CalcView(MethodView):
 class MDS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Converts distance values (distance matrix) to points in a space."
+    tags = ["dist-to-points"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

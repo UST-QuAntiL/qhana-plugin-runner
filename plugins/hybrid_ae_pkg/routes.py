@@ -34,8 +34,8 @@ class PluginsView(MethodView):
         """Demo endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Hybrid Autoencoder",
-            description="Reduces the dimensionality of a given dataset with a combination of classical and quantum neural networks.",
-            name=HybridAutoencoderPlugin.instance.identifier,
+            description=HybridAutoencoderPlugin.instance.description,
+            name=HybridAutoencoderPlugin.instance.name,
             version=HybridAutoencoderPlugin.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -56,7 +56,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dimensionality-reduction"],
+            tags=HybridAutoencoderPlugin.instance.tags,
         )
 
 

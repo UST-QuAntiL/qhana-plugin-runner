@@ -50,9 +50,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -143,8 +141,8 @@ class PluginsView(MethodView):
         """Transformers endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Similarities to distances transformers",
-            description="Transforms similarities to distances.",
-            name=Transformers.instance.identifier,
+            description=Transformers.instance.description,
+            name=Transformers.instance.name,
             version=Transformers.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -166,7 +164,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["sim-to-dist"],
+            tags=Transformers.instance.tags,
         )
 
 
@@ -261,6 +259,8 @@ class CalcSimilarityView(MethodView):
 class Transformers(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Transforms similarities to distances."
+    tags = ["sim-to-dist"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

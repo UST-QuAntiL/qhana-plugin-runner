@@ -39,7 +39,7 @@ class PluginsView(MethodView):
         """Quantum k-means endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Quantum k-means",
-            description="K-means algorithms that can run on quantum computers.",
+            description=QKMeans.instance.description,
             name=QKMeans.instance.name,
             version=QKMeans.instance.version,
             type=PluginType.simple,
@@ -62,7 +62,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["points-to-clusters"],
+            tags=QKMeans.instance.tags,
         )
 
 

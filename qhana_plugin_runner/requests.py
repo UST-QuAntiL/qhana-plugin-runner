@@ -43,7 +43,7 @@ def open_url(url: str, raise_on_error_status=True, **kwargs) -> Response:
         replacement: str
         for pattern, replacement in app.config.get("URL_REWRITE_RULES", []):
             url = pattern.sub(replacement, url)
-            
+
     url_data = REQUEST_SESSION.get(url, **kwargs)
     if raise_on_error_status:
         url_data.raise_for_status()

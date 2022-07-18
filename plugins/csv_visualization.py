@@ -57,7 +57,7 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 CSV_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="A demo CSV visualization plugin.",
+    description="CSV visualization API.",
     template_folder="csv_visualization_templates",
 )
 
@@ -100,8 +100,8 @@ class PluginsView(MethodView):
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
             title=plugin.name,
-            description=CSV_BLP.description,
-            name=plugin.identifier,
+            description=plugin.description,
+            name=plugin.name,
             version=plugin.version,
             type=PluginType.visualization,
             entry_point=EntryPoint(
@@ -124,7 +124,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=[],
+            tags=CsvVisualization.instance.tags,
         )
 
 
@@ -217,6 +217,8 @@ class CsvVisualization(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "A demo CSV visualization plugin."
+    tags = ["visualization"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

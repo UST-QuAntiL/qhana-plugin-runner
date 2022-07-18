@@ -51,7 +51,7 @@ class PluginsView(MethodView):
         """Manual classification endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Manual Classification",
-            description="Manually annotate classes for data sets from MUSE database.",
+            description=ManualClassification.instance.description,
             name=ManualClassification.instance.name,
             version=ManualClassification.instance.version,
             type=PluginType.complex,
@@ -80,7 +80,7 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=["data-annotation"],
+            tags=ManualClassification.instance.tags,
         )
 
 

@@ -97,8 +97,8 @@ class PluginsView(MethodView):
         """Wu Palmer cache endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Wu-Palmer cache generator",
-            description="Generates a cache of similarity values based on a taxonomy.",
-            name=WuPalmerCache.instance.identifier,
+            description=WuPalmerCache.instance.description,
+            name=WuPalmerCache.instance.name,
             version=WuPalmerCache.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -120,7 +120,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["similarity-cache-generation"],
+            tags=WuPalmerCache.instance.tags,
         )
 
 
@@ -208,6 +208,8 @@ class WuPalmerCache(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Generates a cache of similarity values based on a taxonomy."
+    tags = ["similarity-cache-generation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

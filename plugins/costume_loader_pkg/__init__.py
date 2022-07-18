@@ -34,6 +34,8 @@ COSTUME_LOADER_BLP = SecurityBlueprint(
 class CostumeLoader(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Loads all the costumes or base elements from the MUSE database."
+    tags = ["data-loading"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

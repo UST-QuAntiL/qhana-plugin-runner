@@ -1,0 +1,35 @@
+{
+    "name": "MUSE",
+    "description": "Template for MUSE workflow",
+    "categories": [
+        {
+          "name": "Load data",
+          "description": "Plugin for loading costume data",
+          "filter": "costume-loader"
+        },
+        {
+          "name": "Data Preperation",
+          "description": "Plugins for Data Preperation",
+          "filter": {
+                "or": [
+                    "similarity-cache-generation",
+                    "wu-palmer",
+                    "attribute-similarity-calculation",
+                    "sim-to-dist",
+                    "aggregator",
+                    "dist-to-points"
+                ]
+            }
+        },
+        {
+          "name": "Quantum Part",
+          "description": "Plugin for Quantum Algorithm",
+          "filter": "points-to-clusters"
+        },
+        {
+          "name": "Visualization",
+          "description": "Plugin for Visualization",
+          "filter": "visualization@v0-1-0"
+        }
+    ]
+}

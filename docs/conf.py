@@ -127,7 +127,9 @@ todo_include_todos = not ON_READTHEDOCS
 todo_emit_warnings = not ON_READTHEDOCS
 todo_link_only = False
 
-python_use_unqualified_type_names = sphinx_config.get("python_use_unqualified_type_names", False)
+python_use_unqualified_type_names = sphinx_config.get(
+    "python_use_unqualified_type_names", False
+)
 
 # enable sphinx autodoc
 if sphinx_config.get("enable-autodoc", False):

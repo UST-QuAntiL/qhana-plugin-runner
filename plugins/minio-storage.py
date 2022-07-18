@@ -33,6 +33,8 @@ class HelloWorld(QHAnaPluginBase):
 
     name = "minio-storage"
     version = __version__
+    description = "minio-storage"
+    tags = []
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
