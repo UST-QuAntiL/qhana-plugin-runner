@@ -18,20 +18,20 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
-_plugin_name = "optimizer-demo"
+_plugin_name = "optimization-coordinator"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-INTERACTION_DEMO_BLP = SecurityBlueprint(
+OPTI_COORD_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Interaction demo plugin API.",
+    description="Optimization coordinator API.",
     template_folder="hello_world_templates",
 )
 
 
-class OptimizerDemo(QHAnaPluginBase):
+class OptimizationCoordinator(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
@@ -40,7 +40,7 @@ class OptimizerDemo(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return INTERACTION_DEMO_BLP
+        return OPTI_COORD_BLP
 
 
 try:

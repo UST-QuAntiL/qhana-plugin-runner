@@ -25,12 +25,12 @@ from qhana_plugin_runner.api.plugin_schemas import PluginMetadata, PluginMetadat
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
-from . import OptimizerDemo
+from . import OptimizationCoordinator
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{OptimizerDemo.instance.identifier}.no_op_task", bind=True)
+@CELERY.task(name=f"{OptimizationCoordinator.instance.identifier}.no_op_task", bind=True)
 def no_op_task(self, db_id: int) -> str:
     """
     First processing task. Does nothing.
@@ -98,7 +98,9 @@ def _get_calc_endpoint(objective_function_plugin_url: str) -> str:
     return objective_function_calculation_url
 
 
-@CELERY.task(name=f"{OptimizerDemo.instance.identifier}.optimization_task", bind=True)
+@CELERY.task(
+    name=f"{OptimizationCoordinator.instance.identifier}.optimization_task", bind=True
+)
 def optimization_task(self, db_id: int) -> str:
     """
     Second processing task. Uses an optimizer to optimize the specified objective function.

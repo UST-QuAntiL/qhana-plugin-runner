@@ -36,7 +36,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
-from . import INTERACTION_DEMO_BLP, OptimizerDemo
+from . import OPTI_COORD_BLP, OptimizationCoordinator
 from .schemas import (
     InputParametersSchema,
     TaskResponseSchema,
@@ -46,26 +46,26 @@ from .schemas import (
 from .tasks import no_op_task, optimization_task
 
 
-@INTERACTION_DEMO_BLP.route("/")
+@OPTI_COORD_BLP.route("/")
 class MetadataView(MethodView):
     """Plugin metadata resource."""
 
-    @INTERACTION_DEMO_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
-    @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
+    @OPTI_COORD_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title=OptimizerDemo.instance.name,
-            description=INTERACTION_DEMO_BLP.description,
-            name=OptimizerDemo.instance.identifier,
-            version=OptimizerDemo.instance.version,
+            title=OptimizationCoordinator.instance.name,
+            description=OPTI_COORD_BLP.description,
+            name=OptimizationCoordinator.instance.identifier,
+            version=OptimizationCoordinator.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSetupProcess"
+                    f"{OPTI_COORD_BLP.name}.ObjFuncSetupProcess"
                 ),  # URL for the first process endpoint
                 ui_href=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSelectionUI"
+                    f"{OPTI_COORD_BLP.name}.ObjFuncSelectionUI"
                 ),  # URL for the first micro frontend endpoint
                 interaction_endpoints=[],
                 data_input=[],
@@ -86,7 +86,7 @@ class MetadataView(MethodView):
         )
 
 
-@INTERACTION_DEMO_BLP.route("/obj-func-selection/")
+@OPTI_COORD_BLP.route("/obj-func-selection/")
 class ObjFuncSelectionUI(MethodView):
     """Micro frontend for the selection of the objective function plugin."""
 
@@ -95,34 +95,34 @@ class ObjFuncSelectionUI(MethodView):
         "objectiveFunctionUrl": "http://localhost:5005/plugins/objective-function-demo%40v0-1-0",
     }
 
-    @INTERACTION_DEMO_BLP.html_response(
+    @OPTI_COORD_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the selection of the objective function plugin.",
     )
-    @INTERACTION_DEMO_BLP.arguments(
+    @OPTI_COORD_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
+    @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @INTERACTION_DEMO_BLP.html_response(
+    @OPTI_COORD_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the selection of the objective function plugin.",
     )
-    @INTERACTION_DEMO_BLP.arguments(
+    @OPTI_COORD_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
+    @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors)
@@ -132,17 +132,17 @@ class ObjFuncSelectionUI(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=OptimizerDemo.instance.name,
-                version=OptimizerDemo.instance.version,
+                name=OptimizationCoordinator.instance.name,
+                version=OptimizationCoordinator.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSetupProcess"
+                    f"{OPTI_COORD_BLP.name}.ObjFuncSetupProcess"
                 ),  # URL of the first processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.ObjFuncSelectionUI",  # URL of this endpoint
+                    f"{OPTI_COORD_BLP.name}.ObjFuncSelectionUI",  # URL of this endpoint
                     **self.example_inputs,
                 ),
             )
@@ -152,18 +152,16 @@ class ObjFuncSelectionUI(MethodView):
 TASK_LOGGER: Logger = get_task_logger(__name__)
 
 
-@INTERACTION_DEMO_BLP.route("/obj-func-setup/")
+@OPTI_COORD_BLP.route("/obj-func-setup/")
 class ObjFuncSetupProcess(MethodView):
     """
     Adds the setup of the objective function plugin as the next step. This leads to the microfrontend of the objective
     function plugin to be displayed to the user who can then input the required hyperparameters.
     """
 
-    @INTERACTION_DEMO_BLP.arguments(
-        InputParametersSchema(unknown=EXCLUDE), location="form"
-    )
-    @INTERACTION_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
+    @OPTI_COORD_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
+    @OPTI_COORD_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the objective function setup task."""
         db_task = ProcessingTask(
@@ -191,7 +189,7 @@ class ObjFuncSetupProcess(MethodView):
         ui_href = urljoin(objective_function_url, plugin_metadata.entry_point.ui_href)
 
         callback_url_query = "?callbackUrl=" + url_for(
-            f"{INTERACTION_DEMO_BLP.name}.Callback",
+            f"{OPTI_COORD_BLP.name}.Callback",
             db_id=str(db_task.id),
             _external=True,
         )
@@ -216,15 +214,15 @@ class ObjFuncSetupProcess(MethodView):
         )
 
 
-@INTERACTION_DEMO_BLP.route("/<int:db_id>/callback/")
+@OPTI_COORD_BLP.route("/<int:db_id>/callback/")
 class Callback(MethodView):
     """
     Callback endpoint that will be used by the objective function plugins to signal that they have finished and to send
     data back.
     """
 
-    @INTERACTION_DEMO_BLP.arguments(CallbackSchema(unknown=EXCLUDE))
-    @INTERACTION_DEMO_BLP.response(HTTPStatus.OK)
+    @OPTI_COORD_BLP.arguments(CallbackSchema(unknown=EXCLUDE))
+    @OPTI_COORD_BLP.response(HTTPStatus.OK)
     def post(self, arguments, db_id: int):
         """
         Gets data from the objective function plugin and starts the next step.
@@ -246,12 +244,12 @@ class Callback(MethodView):
 
         step_id = "processing-returned-data"
         href = url_for(
-            f"{INTERACTION_DEMO_BLP.name}.OptimizationProcessEndpoint",
+            f"{OPTI_COORD_BLP.name}.OptimizationProcessEndpoint",
             db_id=db_task.id,
             _external=True,
         )
         ui_href = url_for(
-            f"{INTERACTION_DEMO_BLP.name}.DatasetSelectionUI",
+            f"{OPTI_COORD_BLP.name}.DatasetSelectionUI",
             db_id=db_task.id,
             _external=True,
         )
@@ -270,36 +268,36 @@ class Callback(MethodView):
         task.apply_async()
 
 
-@INTERACTION_DEMO_BLP.route("/<int:db_id>/ui-step-2/")
+@OPTI_COORD_BLP.route("/<int:db_id>/dataset-selection/")
 class DatasetSelectionUI(MethodView):
     """Micro frontend for the selection of the dataset."""
 
     example_inputs = {}
 
-    @INTERACTION_DEMO_BLP.html_response(
+    @OPTI_COORD_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the selection of the dataset.",
     )
-    @INTERACTION_DEMO_BLP.arguments(
+    @OPTI_COORD_BLP.arguments(
         DatasetInputSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
         location="query",
         required=False,
     )
-    @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
+    @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int):
         """Return the micro frontend."""
         return self.render(request.args, db_id, errors)
 
-    @INTERACTION_DEMO_BLP.html_response(
+    @OPTI_COORD_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the selection of the dataset.",
     )
-    @INTERACTION_DEMO_BLP.arguments(
+    @OPTI_COORD_BLP.arguments(
         DatasetInputSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
         location="form",
         required=False,
     )
-    @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
+    @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, db_id, errors)
@@ -320,17 +318,17 @@ class DatasetSelectionUI(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=OptimizerDemo.instance.name,
-                version=OptimizerDemo.instance.version,
+                name=OptimizationCoordinator.instance.name,
+                version=OptimizationCoordinator.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.OptimizationProcessEndpoint",
+                    f"{OPTI_COORD_BLP.name}.OptimizationProcessEndpoint",
                     db_id=db_id,  # URL of the second processing step
                 ),
                 example_values=url_for(
-                    f"{INTERACTION_DEMO_BLP.name}.DatasetSelectionUI",  # URL of the second micro frontend
+                    f"{OPTI_COORD_BLP.name}.DatasetSelectionUI",  # URL of the second micro frontend
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -338,13 +336,13 @@ class DatasetSelectionUI(MethodView):
         )
 
 
-@INTERACTION_DEMO_BLP.route("/<int:db_id>/optimization-process/")
+@OPTI_COORD_BLP.route("/<int:db_id>/optimization-process/")
 class OptimizationProcessEndpoint(MethodView):
     """Start the optimization task."""
 
-    @INTERACTION_DEMO_BLP.arguments(DatasetInputSchema(unknown=EXCLUDE), location="form")
-    @INTERACTION_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @INTERACTION_DEMO_BLP.require_jwt("jwt", optional=True)
+    @OPTI_COORD_BLP.arguments(DatasetInputSchema(unknown=EXCLUDE), location="form")
+    @OPTI_COORD_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Start the optimization task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
