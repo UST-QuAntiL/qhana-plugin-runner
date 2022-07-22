@@ -117,8 +117,8 @@ class PluginsView(MethodView):
         """Visualization endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Visualization",
-            description="Plots points with cluster information.",
-            name=VIS.instance.identifier,
+            description=VIS.instance.description,
+            name=VIS.instance.name,
             version=VIS.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -140,7 +140,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[],
             ),
-            tags=["visualization"],
+            tags=VIS.instance.tags,
         )
 
 
@@ -238,6 +238,8 @@ class CalcView(MethodView):
 class VIS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Plots points with cluster information."
+    tags = ["visualization"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

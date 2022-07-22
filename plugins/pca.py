@@ -29,9 +29,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.requests import open_url
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
@@ -145,8 +143,8 @@ class PluginsView(MethodView):
 
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
-            description="Reduces number of dimensions. (New ONB are the d first principle components)",
-            name=PCA.instance.identifier,
+            description=PCA.instance.description,
+            name=PCA.instance.name,
             version=PCA.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -168,7 +166,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dimension-reduction"],
+            tags=PCA.instance.tags,
         )
 
 
@@ -263,6 +261,10 @@ class ProcessView(MethodView):
 class PCA(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = (
+        "Reduces number of dimensions. (New ONB are the d first principle components)"
+    )
+    tags = ["dimension-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

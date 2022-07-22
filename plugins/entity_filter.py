@@ -173,8 +173,8 @@ class PluginsView(MethodView):
         """Entity filter endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Entity loader/filter",
-            description="Loads and filters entities from a file that contains a list of entities.",
-            name=EntityFilter.instance.identifier,
+            description=EntityFilter.instance.description,
+            name=EntityFilter.instance.name,
             version=EntityFilter.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -199,7 +199,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["data-loader"],
+            tags=EntityFilter.instance.tags,
         )
 
 
@@ -297,6 +297,10 @@ class EntityFilter(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = (
+        "Loads and filters entities from a file that contains a list of entities."
+    )
+    tags = ["data-loading"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

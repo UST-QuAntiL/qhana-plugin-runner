@@ -1,0 +1,11 @@
+{
+    "name": "Hello World",
+    "description": "Templates for testing with Hello World",
+    "categories": [
+        {
+          "name": "Hello World",
+          "description": "Hello World Plugins",
+          "filter": "hello-world"
+        }
+    ]
+}

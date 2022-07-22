@@ -105,8 +105,8 @@ class PluginsView(MethodView):
         """Zip merger endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Zip merger",
-            description="Merges two zip files into one zip file.",
-            name=ZipMerger.instance.identifier,
+            description=ZipMerger.instance.description,
+            name=ZipMerger.instance.name,
             version=ZipMerger.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -132,7 +132,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["utility"],
+            tags=ZipMerger.instance.tags,
         )
 
 
@@ -217,6 +217,8 @@ class CalcSimilarityView(MethodView):
 class ZipMerger(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Merges two zip files into one zip file."
+    tags = ["utility"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

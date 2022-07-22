@@ -94,7 +94,7 @@ class PluginsView(MethodView):
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
             title=plugin.name,
-            description=JSON_BLP.description,
+            description=plugin.description,
             name=plugin.identifier,
             version=plugin.version,
             type=PluginType.visualization,
@@ -204,6 +204,8 @@ class JsonVisualization(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Visualizes JSON data."
+    tags = ["visualization"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

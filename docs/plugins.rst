@@ -489,6 +489,8 @@ The method is allowed to throw a ``NotImplementedError`` when the plugin does no
     class MyPlugin(QHAnaPluginBase):
 
         name = "my-plugin"
+        description = "A plugin description."
+        tags = ["tag"]
         version = "1.0"
 
         def __init__(self, app: Optional[Flask]) -> None:
