@@ -109,7 +109,7 @@ def add_class(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise ValueError(msg)
 
-    entity_annotation = copy.deepcopy(task_data.data["entity_annotation"])
+    entity_annotation = task_data.data["entity_annotation"]
     for id in entity_annotation.keys():
         if params.get(id):
             tmp = set(entity_annotation[id])
@@ -117,7 +117,7 @@ def add_class(self, db_id: int) -> str:
             entity_annotation[id] = list(tmp)
 
     # store in data of task_data
-    task_data.data["entity_annotation"] = entity_annotation
+    # task_data.data["entity_annotation"] = entity_annotation # TODO check if changes happen
     task_data.save(commit=True)
 
     return "Adding new class successful."
