@@ -30,6 +30,11 @@ def train(
     n_classes: number of classes used for classication
     batch_size: number of training elements per batch
     """
+
+    # TRAINING
+    model.train()
+    torch.set_grad_enabled(True)
+
     n_train = len(Y_train)
 
     # prepare data and label format
@@ -38,9 +43,6 @@ def train(
     Y_train_onehot = torch.from_numpy(
         digits2position(Y_train, n_classes)
     )  # [0] -> [1,0],   [1] -> [0,1]
-
-    # TRAINING
-    model.train()
 
     offset = 0
     for i in range(num_iterations):
@@ -105,8 +107,9 @@ def test(model, X_test, Y_test, loss_fn, n_classes):
     """
     # TEST
     model.eval()
-    # TODO disable gradient calculation
+    torch.set_grad_enabled(False)
 
+    # get data
     X_test = torch.Tensor(X_test)
     Y_test_onehot = torch.from_numpy(digits2position(Y_test, n_classes))
     Y_test = torch.from_numpy(Y_test)

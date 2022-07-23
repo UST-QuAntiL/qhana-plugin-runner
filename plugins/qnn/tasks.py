@@ -353,14 +353,16 @@ def calculation_task(self, db_id: int) -> str:
     # TODO check if it works (try catch????)
     try:
         with SpooledTemporaryFile(mode="wt") as output:
-            qasm_str = dev._circuit.qasm(formatted=True)
+            qasm_str = (
+                dev._circuit.qasm()
+            )  # formatted=True) # formatted only works with pygments>2.4
             output.write(qasm_str)
 
             STORE.persist_task_result(
                 db_id,
                 output,
                 "qasm-quantum-circuit.html",
-                "plot",
+                "qasm-quantum-circuit",
                 "text/html",
             )
     except Exception as e:
@@ -375,14 +377,13 @@ def calculation_task(self, db_id: int) -> str:
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
 
 
-# TODO visualize circuit?? openqasm file?
-# TODO cleanup and comments
-# TODO documentation
-# TODO turn off gradient calculation for some parts?
+# TODO cleanup and comments, documentation
 # TODO hidden layers for preprocessing and postprocessing? GUI..
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
 # TODO check if quantum device selection works as intended
+# TODO check if training still works
+# TODO ouput document with details for classical network parts
 
 # DONE save actual weights to file
 # DONE add references
@@ -398,3 +399,5 @@ def calculation_task(self, db_id: int) -> str:
 #   IBMQ-Custom-Backend: str default "", name of a custom backend of ibmq
 #   IBMQ-Token: str default "", IBMQ-Token for access to IBMQ online service
 # DONE prints -> task logger info
+# DONE visualize circuit?? openqasm file?
+# DONE turn off gradient calculation for some parts?
