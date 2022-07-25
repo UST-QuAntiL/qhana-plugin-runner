@@ -1,29 +1,11 @@
-# Copyright 2022 QHAna plugin runner contributors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-import json
-from enum import Enum
 from http import HTTPStatus
-from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, Dict
+from typing import Mapping, Optional
 
-import marshmallow as ma
 import numpy as np
 import requests
 from celery import chain
 from celery.utils.log import get_task_logger
 from flask import Response, abort, redirect
-from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -31,7 +13,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 from scipy.optimize import minimize
 
-from qhana_plugin_runner.api import EnumField
+from . import OPTIMIZER_DEMO_BLP, OptimizerDemo
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     PluginMetadataSchema,
@@ -40,76 +22,18 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     InteractionEndpoint,
 )
-from qhana_plugin_runner.api.util import (
-    FrontendFormBaseSchema,
-    MaBaseSchema,
-    SecurityBlueprint,
-)
-from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-
-_plugin_name = "optimizer-demo"
-__version__ = "v0.1.0"
-_identifier = plugin_identifier(_plugin_name, __version__)
-
-
-OPTIMIZER_DEMO_BLP = SecurityBlueprint(
-    _identifier,  # blueprint name
-    __name__,  # module import name!
-    description="API of an optimizer plugin that can be used by other plugins.",
-    template_folder="hello_world_templates",
+from .schemas import (
+    OptimizationInputSchema,
+    OptimizationOutputSchema,
+    HyperparametersSchema,
+    TaskResponseSchema,
 )
+from .tasks import setup_task
 
 
-class Optimizers(Enum):
-    cobyla = "COBYLA"
-    # nelder_mead = "Nelder-Mead"
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
-class HyperparametersSchema(FrontendFormBaseSchema):
-    optimizer = EnumField(
-        Optimizers,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Optimizer.",
-            "description": "Which optimizer to use.",
-            "input_type": "select",
-        },
-    )
-    callback_url = ma.fields.Url(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Callback URL",
-            "description": "Callback URL of the optimizer plugin. Will be filled automatically when using the optimizer plugin. MUST NOT BE CHANGED!",
-            "input_type": "text",
-        },
-    )
-
-
-class OptimizationInputSchema(MaBaseSchema):
-    dataset = ma.fields.Url(required=True, allow_none=False)
-    optimizer_db_id = ma.fields.Integer(required=True, allow_none=False)
-    number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
-    obj_func_db_id = ma.fields.Integer(required=True, allow_none=False)
-    obj_func_calc_url = ma.fields.Url(required=True, allow_none=False)
-
-
-class OptimizationOutputSchema(MaBaseSchema):
-    last_objective_value = ma.fields.Float(required=True, allow_none=False)
-    optimized_parameters = ma.fields.List(
-        ma.fields.Float(), required=True, allow_none=False
-    )
+TASK_LOGGER = get_task_logger(__name__)
 
 
 @OPTIMIZER_DEMO_BLP.route("/")
@@ -238,69 +162,6 @@ class Setup(MethodView):
             url_for("tasks-api.TaskView", task_id=str(db_task.id)),
             HTTPStatus.SEE_OTHER,
         )
-
-
-class OptimizerDemo(QHAnaPluginBase):
-
-    name = _plugin_name
-    version = __version__
-
-    def __init__(self, app: Optional[Flask]) -> None:
-        super().__init__(app)
-
-    def get_api_blueprint(self):
-        return OPTIMIZER_DEMO_BLP
-
-    def get_requirements(self) -> str:
-        return "scipy~=1.8.1"
-
-
-TASK_LOGGER = get_task_logger(__name__)
-
-
-@CELERY.task(name=f"{OptimizerDemo.instance.identifier}.setup_task", bind=True)
-def setup_task(self, db_id: int) -> str:
-    """
-    Retrieves the input data from the database and stores metadata and hyperparameters into files.
-
-    :param self:
-    :param db_id: database ID that will be used to retrieve the task data from the database
-    :return: log message
-    """
-    TASK_LOGGER.info(f"Starting setup task with db id '{db_id}'")
-    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-
-    if task_data is None:
-        msg = f"Could not load task data with id {db_id} to read parameters!"
-        TASK_LOGGER.error(msg)
-        raise KeyError(msg)
-
-    parameters: Dict = json.loads(task_data.parameters)
-    optimizer: str = parameters.get("optimizer")
-    callback_url: str = parameters.get("callbackUrl")
-
-    TASK_LOGGER.info(f"Loaded data from db: optimizer='{optimizer}'")
-    TASK_LOGGER.info(f"Loaded data from db: callback_url='{callback_url}'")
-
-    if optimizer is None or callback_url is None:
-        raise ValueError("Input parameters incomplete")
-
-    with SpooledTemporaryFile(mode="w") as output:
-        output.write(task_data.parameters)
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "hyperparameters.json",
-            "objective-function-hyperparameters",
-            "application/json",
-        )
-
-    requests.post(
-        callback_url,
-        json={"dbId": db_id},
-    )
-
-    return "Stored metadata and hyperparameters"
 
 
 @OPTIMIZER_DEMO_BLP.route("/optimization/")
