@@ -246,7 +246,7 @@ class ObjectiveFunctionDemo(QHAnaPluginBase):
         return OBJ_FUNC_DEMO_BLP
 
     def get_requirements(self) -> str:
-        return "scipy~=1.8.1\ntorch~=1.12"
+        return "torch~=1.12"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -312,7 +312,7 @@ def setup_task(self, db_id: int) -> str:
     @param db_id: database ID that will be used to retrieve the task data from the database
     @return: log message
     """
-    TASK_LOGGER.info(f"Starting setup task with db id '{db_id}'")
+    TASK_LOGGER.info(f"Starting objective function setup task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -329,6 +329,7 @@ def setup_task(self, db_id: int) -> str:
         f"Loaded data from db: number_of_input_values='{number_of_input_values}'"
     )
     TASK_LOGGER.info(f"Loaded data from db: number_of_neurons='{number_of_neurons}'")
+    TASK_LOGGER.info(f"Loaded data from db: callback_url='{callback_url}'")
 
     if number_of_input_values is None or number_of_neurons is None:
         raise ValueError("Input parameters incomplete")

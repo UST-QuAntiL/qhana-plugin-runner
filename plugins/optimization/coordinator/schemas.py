@@ -26,7 +26,20 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class InputParametersSchema(FrontendFormBaseSchema):
+class OptimSelectionSchema(FrontendFormBaseSchema):
+    # FIXME: change to plugin selection when plugin selection RP has been merged
+    optimizer_url = ma.fields.Url(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Optimizer",
+            "description": "URL for an optimizer plugin",
+            "input_type": "text",
+        },
+    )
+
+
+class ObjFuncSelectionSchema(FrontendFormBaseSchema):
     # FIXME: change to plugin selection when plugin selection RP has been merged
     objective_function_url = ma.fields.Url(
         required=True,
@@ -39,7 +52,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
     )
 
 
-class CallbackSchema(MaBaseSchema):
+class OptimCallbackSchema(MaBaseSchema):
+    db_id = ma.fields.Integer(required=True, allow_none=False)
+
+
+class ObjFuncCallbackSchema(MaBaseSchema):
     db_id = ma.fields.Integer(required=True, allow_none=False)
     number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
 
