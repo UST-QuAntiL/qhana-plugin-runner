@@ -46,7 +46,7 @@ class OptimizationCoordinator(QHAnaPluginBase):
 try:
     # It is important to import the routes **after** OPTI_COORD_BLP and OptimizationCoordinator are defined, because
     # they are accessed as soon as the routes are imported.
-    from . import routes
+    from .routes import metadata, objective_function, optimizer, dataset_and_start
 except ImportError:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.
