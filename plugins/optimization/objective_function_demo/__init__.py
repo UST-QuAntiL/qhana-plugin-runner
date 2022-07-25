@@ -18,20 +18,20 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
-_plugin_name = "optimization-coordinator"
+_plugin_name = "objective-function-demo"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-OPTI_COORD_BLP = SecurityBlueprint(
+OBJ_FUNC_DEMO_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Optimization coordinator API.",
+    description="API of objective function plugin that can be used by other plugins.",
     template_folder="hello_world_templates",
 )
 
 
-class OptimizationCoordinator(QHAnaPluginBase):
+class ObjectiveFunctionDemo(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
@@ -40,11 +40,14 @@ class OptimizationCoordinator(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return OPTI_COORD_BLP
+        return OBJ_FUNC_DEMO_BLP
+
+    def get_requirements(self) -> str:
+        return "torch~=1.12"
 
 
 try:
-    # It is important to import the routes **after** OPTI_COORD_BLP and OptimizationCoordinator are defined, because
+    # It is important to import the routes **after** OBJ_FUNC_DEMO_BLP and ObjectiveFunctionDemo are defined, because
     # they are accessed as soon as the routes are imported.
     from . import routes
 except ImportError:
