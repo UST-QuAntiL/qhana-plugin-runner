@@ -51,12 +51,14 @@ class PluginsView(MethodView):
             version=OptimizerDemo.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{OPTIMIZER_DEMO_BLP.name}.Setup"),
-                ui_href=url_for(f"{OPTIMIZER_DEMO_BLP.name}.MicroFrontend"),
+                href=url_for(f"{OPTIMIZER_DEMO_BLP.name}.{Setup.__name__}"),
+                ui_href=url_for(f"{OPTIMIZER_DEMO_BLP.name}.{MicroFrontend.__name__}"),
                 interaction_endpoints=[
                     InteractionEndpoint(
                         type="start-optimization",
-                        href=url_for(f"{OPTIMIZER_DEMO_BLP.name}.Optimization"),
+                        href=url_for(
+                            f"{OPTIMIZER_DEMO_BLP.name}.{Optimization.__name__}"
+                        ),
                     )
                 ],
                 plugin_dependencies=[],
@@ -122,11 +124,11 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTIMIZER_DEMO_BLP.name}.Setup"
+                    f"{OPTIMIZER_DEMO_BLP.name}.{Setup.__name__}"
                 ),  # URL of the processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{OPTIMIZER_DEMO_BLP.name}.MicroFrontend"
+                    f"{OPTIMIZER_DEMO_BLP.name}.{MicroFrontend.__name__}"
                 ),  # URL of this endpoint
             )
         )

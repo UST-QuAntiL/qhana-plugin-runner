@@ -52,12 +52,12 @@ class PluginsView(MethodView):
             version=ObjectiveFunctionDemo.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.Setup"),
-                ui_href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend"),
+                href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.{Setup.__name__}"),
+                ui_href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.{MicroFrontend.__name__}"),
                 interaction_endpoints=[
                     InteractionEndpoint(
                         type="objective-function-calculation",
-                        href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.Calculation"),
+                        href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.{Calculation.__name__}"),
                     )
                 ],
                 plugin_dependencies=[],
@@ -123,11 +123,11 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.Setup"
+                    f"{OBJ_FUNC_DEMO_BLP.name}.{Setup.__name__}"
                 ),  # URL of the processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{OBJ_FUNC_DEMO_BLP.name}.MicroFrontend"
+                    f"{OBJ_FUNC_DEMO_BLP.name}.{MicroFrontend.__name__}"
                 ),  # URL of this endpoint
             )
         )

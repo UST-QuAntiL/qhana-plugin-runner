@@ -139,11 +139,11 @@ class OptimSelectionUI(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTI_COORD_BLP.name}.OptimSetupProcess"
+                    f"{OPTI_COORD_BLP.name}.{OptimSetupProcess.__name__}"
                 ),  # URL of the first processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{OPTI_COORD_BLP.name}.OptimSelectionUI",  # URL of this endpoint
+                    f"{OPTI_COORD_BLP.name}.{OptimSelectionUI.__name__}",  # URL of this endpoint
                     **self.example_inputs,
                 ),
             )
@@ -190,7 +190,7 @@ class OptimSetupProcess(MethodView):
         ui_href = urljoin(optimizer_url, plugin_metadata.entry_point.ui_href)
 
         callback_url_query = "?callbackUrl=" + url_for(
-            f"{OPTI_COORD_BLP.name}.OptimCallback",
+            f"{OPTI_COORD_BLP.name}.{OptimCallback.__name__}",
             db_id=str(db_task.id),
             _external=True,
         )
@@ -246,12 +246,12 @@ class OptimCallback(MethodView):
 
         step_id = "obj-func-selection"
         href = url_for(
-            f"{OPTI_COORD_BLP.name}.ObjFuncSetupProcess",
+            f"{OPTI_COORD_BLP.name}.{ObjFuncSetupProcess.__name__}",
             db_id=db_task.id,
             _external=True,
         )
         ui_href = url_for(
-            f"{OPTI_COORD_BLP.name}.ObjFuncSelectionUI",
+            f"{OPTI_COORD_BLP.name}.{ObjFuncSelectionUI.__name__}",
             db_id=db_task.id,
             _external=True,
         )
@@ -322,11 +322,11 @@ class ObjFuncSelectionUI(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTI_COORD_BLP.name}.ObjFuncSetupProcess", db_id=db_id
+                    f"{OPTI_COORD_BLP.name}.{ObjFuncSetupProcess.__name__}", db_id=db_id
                 ),  # URL of the first processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{OPTI_COORD_BLP.name}.ObjFuncSelectionUI",  # URL of this endpoint,
+                    f"{OPTI_COORD_BLP.name}.{ObjFuncSelectionUI.__name__}",  # URL of this endpoint,
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -373,7 +373,7 @@ class ObjFuncSetupProcess(MethodView):
         ui_href = urljoin(objective_function_url, plugin_metadata.entry_point.ui_href)
 
         callback_url_query = "?callbackUrl=" + url_for(
-            f"{OPTI_COORD_BLP.name}.ObjFuncCallback",
+            f"{OPTI_COORD_BLP.name}.{ObjFuncCallback.__name__}",
             db_id=str(db_task.id),
             _external=True,
         )
@@ -430,12 +430,12 @@ class ObjFuncCallback(MethodView):
 
         step_id = "dataset-selection"
         href = url_for(
-            f"{OPTI_COORD_BLP.name}.StartOptimization",
+            f"{OPTI_COORD_BLP.name}.{StartOptimization.__name__}",
             db_id=db_task.id,
             _external=True,
         )
         ui_href = url_for(
-            f"{OPTI_COORD_BLP.name}.DatasetSelectionUI",
+            f"{OPTI_COORD_BLP.name}.{DatasetSelectionUI.__name__}",
             db_id=db_task.id,
             _external=True,
         )
@@ -510,11 +510,11 @@ class DatasetSelectionUI(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTI_COORD_BLP.name}.StartOptimization",
+                    f"{OPTI_COORD_BLP.name}.{StartOptimization.__name__}",
                     db_id=db_id,  # URL of the second processing step
                 ),
                 example_values=url_for(
-                    f"{OPTI_COORD_BLP.name}.DatasetSelectionUI",  # URL of the second micro frontend
+                    f"{OPTI_COORD_BLP.name}.{DatasetSelectionUI.__name__}",  # URL of the second micro frontend
                     db_id=db_id,
                     **self.example_inputs,
                 ),
