@@ -24,6 +24,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -55,10 +56,11 @@ class PluginsView(MethodView):
                 href=url_for(f"{PCA_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{PCA_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-points",
                         content_type=["text/csv", "application/json"],
                         required=True,
+                        parameter="entityPointsUrl",
                     )
                 ],
                 data_output=[
@@ -69,7 +71,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dimension-reduction"],
+            tags=PCA.instance.tags,
         )
 
 
@@ -77,11 +79,10 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the PCA plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
-    @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
+    @PCA_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the PCA plugin."
+    )
     @PCA_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -94,7 +95,10 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
+    @PCA_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the PCA plugin."
+    )
     @PCA_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -141,9 +145,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{PCA_BLP.name}.ProcessView"),
-                example_values=url_for(
-                    f"{PCA_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
