@@ -34,6 +34,11 @@ def get_points(ent):
 
 # Creates a generator for loading in entities
 def get_entity_generator(entity_points_url: str, stream=False):
+    """
+    Return a generator for the entity points, given a url to them. This is useful, if not all points have to be loaded in
+    at once, e.g. in IncrementalPCA.
+    :param entity_points_url: url to the entity points
+    """
     file_ = open_url(entity_points_url, stream=stream)
     file_.encoding = "utf-8"
     # if entity_points_url[-3:] == "csv":
@@ -52,6 +57,10 @@ def get_entity_generator(entity_points_url: str, stream=False):
 
 # loads in the complete dataset as entity_points and idx_to_id
 def load_entityPoints_and_idxToId(entity_points_url: str):
+    """
+    Loads in entity points, given their url.
+    :param entity_points_url: url to the entity points
+    """
     entity_generator = get_entity_generator(entity_points_url)
     id_to_idx = {}
     idx = 0
@@ -78,6 +87,10 @@ def load_entityPoints_and_idxToId(entity_points_url: str):
 
 
 def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
+    """
+    Loads in a kernel matrix, given its url
+    :param kernel_url: url to the kernel matrix
+    """
     kernel_json = open_url(kernel_url).json()
     id_to_idx_X = {}
     id_to_idx_Y = {}
@@ -110,6 +123,10 @@ def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
 
 # This method returns a pca, depending on the input parameters input_params
 def get_correct_pca(input_params: ParameterHandler):
+    """
+    Returns the correct pca model, given by the frontend's input paramters.
+    :param input_params: ParameterHandler containing the frontend's input parameters
+    """
     from sklearn.decomposition import PCA, IncrementalPCA, SparsePCA, KernelPCA
 
     pca_type = input_params.get("pcaType")
@@ -182,6 +199,12 @@ def get_correct_pca(input_params: ParameterHandler):
 
 
 def get_entity_dict(ID, point):
+    """
+    Converts a point to the correct output format
+    :param ID: The points ID
+    :param point: The point
+    :return: dict
+    """
     ent = {"ID": ID, "href": ""}
     for d in range(len(point)):
         ent[f"dim{d}"] = point[d]
@@ -199,6 +222,12 @@ def prepare_stream_output(entity_generator, pca):
 
 # This method is used, when the whole output data is in memory
 def prepare_static_output(transformed_points, id_to_idx):
+    """
+    This method takes a set of points and prepares them for the final output. Each point gets converted to a dictionary
+    with 'ID', 'href' and an entry for each dimension 'dim0', 'dim1', ...
+    :param transformed_points: set of points
+    :param id_to_idx: list converting a points id to the idx in the list transformed_points
+    """
     entity_points = []
     for ID, i in id_to_idx.items():
         entity_points.append(get_entity_dict(ID, transformed_points[i]))
@@ -208,6 +237,13 @@ def prepare_static_output(transformed_points, id_to_idx):
 # This is used, when the pca needs the whole dataset in memory to be fitted
 # In this method the input data is completely loaded into memory
 def complete_fitting(entity_points_url, pca):
+    """
+    This method loads in the entity points from the url. Then it fits the pca instance, transforms the entity points
+    and returns a generator for the transformed entity points
+    :param entity_points_url: url to the entity points
+    :param pca: pca instance
+    :return: list of the transformed data points
+    """
     # load data from file
     (entity_points, id_to_idx) = load_entityPoints_and_idxToId(entity_points_url)
     pca.fit(entity_points)
@@ -216,9 +252,18 @@ def complete_fitting(entity_points_url, pca):
 
 
 def precomputed_kernel_fitting(kernel_url: str, pca):
+    """
+    This method takes a url to the kernel matrix and loads it. Afterwards it fits the pca model with the help of the
+    kernel matrix and returns a generator of the already transformed data points.
+    :param kernel_url: A url to the kernel matrix file
+    :param pca: pca instance of sklearn
+    :return: list of the transformed data points
+    """
     # load data from file
     id_to_idx_X, id_to_idx_Y, kernel_matrix = load_kernel_matrix(kernel_url)
+    # fit
     pca.fit(kernel_matrix)
+    # transform
     transformed_points = pca.transform(kernel_matrix)
     # Here we only allow kernel matrices between the same points. K(X, X)
     return prepare_static_output(transformed_points, id_to_idx_X)
@@ -226,6 +271,14 @@ def precomputed_kernel_fitting(kernel_url: str, pca):
 # This is used, when the pca can be incrementally fitted via batches
 # In this method the input data is loaded in batchwise
 def batch_fitting(entity_points_url, pca, batch_size):
+    """
+    This method loads in the entity points in batches of size batch_size from the entity_points_url and fits the
+    pca with these batches. This is used for the IncrementalPCA class in sklearn.
+    :param entity_points_url: url to the entity_points
+    :param pca: a unfitted pca model
+    :param batch_size: int how big the batchs for fitting should be.
+    :return: None
+    """
     entity_generator = get_entity_generator(entity_points_url, stream=True)
     # get First element to get the correct array size
     el = next(entity_generator)["point"]
@@ -262,9 +315,17 @@ def batch_fitting(entity_points_url, pca, batch_size):
 
 
 def plot_data(entity_points, dim, only_first_100):
+    """
+    This method creates a 1d, 2d or 3d plot of the given data. If the data is higher dimensional, then only the first three
+    dimensions will be used to plot it.
+    :param entity_points: List[dict]. Each point is a dictionary, with ID, href and its dimensions (e.g. dim0, dim1, ...).
+    :param dim: int.
+    :param only_first_100: If set to true, then only the first 100 points will be included in the plot.
+    :return: plotly.express figure
+    """
     import pandas as pd
     import plotly.express as px
-    if dim == 3:
+    if dim >= 3:
         points_x = []
         points_y = []
         points_z = []
@@ -346,6 +407,10 @@ def plot_data(entity_points, dim, only_first_100):
 
 
 def save_outputs(db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim):
+    """
+    Saves the plugin's ouput into files. This includes a plot of the transformed data, the pca's parameters and
+    the transformed points themselves.
+    """
     TASK_LOGGER.info(f"entity_points_for_plot is not None = {entity_points_for_plot is not None}")
     if entity_points_for_plot is not None:
         fig = plot_data(entity_points_for_plot, dim, only_first_100=(pca_output[0]["type"]=='incremental'))

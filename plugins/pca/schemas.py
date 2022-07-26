@@ -40,6 +40,9 @@ class KernelEnum(Enum):
 
 
 class ParameterHandler:
+    """
+    This class takes all the parameters set in the front end, prepares them and makes them available via a get method.
+    """
     def __init__(self, parameter_dict: dict, TASK_LOGGER: Logger):
         self.parameter_keys = [
             "entityPointsUrl",  # general parameters

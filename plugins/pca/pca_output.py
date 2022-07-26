@@ -64,6 +64,12 @@ def KernelPCA_output(pca: KernelPCA) -> (dict, int):
 
 # dim = num features of output. Return dim here, since input params of the plugin can be <= 0
 def pca_to_output(pca: BaseEstimator) -> (dict, int):
+    """
+    This method takes a fitted pca by sklearn as an input and converts its state into a dictionary inorder to save it.
+    Additionally, it returns the dimensionality of a transformed data point.
+    :param pca: one of sklearns pca types, e.g. PCA or KernelPCA
+    :return: (dict, int) a dictionary to save the current state of the PCA and an integer equal to the output's number of dimensions
+    """
     if type(pca) == PCA:
         return PCA_output(pca)
     elif type(pca) == IncrementalPCA:
