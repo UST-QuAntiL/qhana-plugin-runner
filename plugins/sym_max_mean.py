@@ -38,6 +38,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -119,23 +120,25 @@ class PluginsView(MethodView):
         """Sym Max Mean endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Sym Max Mean attribute comparer",
-            description="Compares attributes and returns similarity values.",
-            name=SymMaxMean.instance.identifier,
+            description=SymMaxMean.instance.description,
+            name=SymMaxMean.instance.name,
             version=SymMaxMean.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{SYM_MAX_MEAN_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{SYM_MAX_MEAN_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entities",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entitiesUrl",
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="element-similarities",
                         content_type=["application/zip"],
                         required=True,
+                        parameter="elementSimilaritiesUrl",
                     ),
                 ],
                 data_output=[
@@ -146,17 +149,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["attribute-similarity-calculation"],
+            tags=SymMaxMean.instance.tags,
         )
 
 
 @SYM_MAX_MEAN_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the Sym Max Mean plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @SYM_MAX_MEAN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Sym Max Mean plugin."
@@ -199,9 +198,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{SYM_MAX_MEAN_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{SYM_MAX_MEAN_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -238,6 +234,8 @@ class CalcSimilarityView(MethodView):
 class SymMaxMean(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Compares attributes and returns similarity values."
+    tags = ["attribute-similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -46,9 +47,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -127,18 +126,19 @@ class PluginsView(MethodView):
         """Aggregators endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Aggregators",
-            description="Aggregates attribute distances to entity distances.",
-            name=Aggregator.instance.identifier,
+            name=Aggregator.instance.name,
+            description=Aggregator.instance.description,
             version=Aggregator.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{AGGREGATOR_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{AGGREGATOR_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="attribute-distances",
                         content_type=["application/zip"],
                         required=True,
+                        parameter="attributeDistancesUrl",
                     )
                 ],
                 data_output=[
@@ -149,17 +149,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["aggregator"],
+            tags=Aggregator.instance.tags,
         )
 
 
 @AGGREGATOR_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the Aggregator plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @AGGREGATOR_BLP.html_response(
         HTTPStatus.OK,
@@ -204,9 +200,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{AGGREGATOR_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{AGGREGATOR_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -244,6 +237,8 @@ class CalcSimilarityView(MethodView):
 class Aggregator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Aggregates attribute distances to entity distances."
+    tags = ["aggregator"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

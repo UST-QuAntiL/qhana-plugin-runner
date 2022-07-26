@@ -1,25 +1,54 @@
 {% import 'forms.html' as forms %}
-<style type="text/css">
-    @import url("{{url_for('static', filename='forms.css')}}");
-</style>
+<html>
 
-<h2>Manual Classification</h2>
+<head>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+</head>
 
-{% call forms.render_form() %}
-<!-- class name -->
-{{ forms.render_fields(schema, values=values, errors=errors) }}
-<div class="qhana-form" style="flex-direction: row; flex-wrap: wrap;">
-    <!-- select id's -->
-    {% for id in id_list %}
-    <div class="qhana-form-field" style="width: 3em; height: 2em; padding: 1em;">
-        <input type="checkbox" id={{id}} name={{id}}>
-        <label class="qhana-form-label" for="{{id}}">{{id}}</label>
+<body>
+    <div class="qhana-microfrontend">
+        {% call forms.render_form() %}
+        <!-- class name -->
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-table" style="flex-direction: row; flex-wrap: wrap; 
+        height: 750px; overflow: auto;">
+            <!-- select id's -->
+            <table>
+                <tr>
+                    <th>Select</th>
+                    {% for attr in attr_list%}
+                    <th>{{attr}}</th>
+                    {% endfor %}
+                </tr>
+                {% for entity in entity_list %}
+                <tr onclick="selectRow(this)">
+                    <td style="padding: 1em">
+                        <input class="qhana-form-input" style="height: 1.5em; width: 1.5em" type="checkbox"
+                            id={{entity["ID"]}} name={{entity["ID"]}}>
+                    </td>
+                    {% for attr in attr_list%}
+                    <td>{{entity[attr] if attr in entity.keys() else ""}}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <br>
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend")}}
+            {{ forms.submit("continue", action=process)}}
+            {{ forms.submit("done", action=done)}}
+        </div>
+        {% endcall %}
     </div>
-    {% endfor %}
-</div>
-<div class="qhana-form-buttons">
-    {{ forms.submit("validate")}}
-    {{ forms.submit("continue", action=process)}}
-    {{ forms.submit("done", action=done)}}
-</div>
-{% endcall %}
+
+    <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+    <script type="text/javascript">
+        function selectRow(row) {
+            var checkBox = row.getElementsByTagName('input')[0];
+            checkBox.checked = !checkBox.checked;
+        }
+    </script>
+</body>
+
+</html>

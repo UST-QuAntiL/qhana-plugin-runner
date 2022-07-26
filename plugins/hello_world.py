@@ -19,22 +19,22 @@ from typing import Mapping, Optional
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
-from flask import Response, redirect
+from flask import abort, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
+from flask.wrappers import Response
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
     EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -92,15 +92,19 @@ class PluginsView(MethodView):
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
+        plugin = HelloWorld.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
-            title=HelloWorld.instance.name,
-            description=HELLO_BLP.description,
-            name=HelloWorld.instance.identifier,
-            version=HelloWorld.instance.version,
-            type=PluginType.simple,
+            title=plugin.name,
+            description=plugin.description,
+            name=plugin.name,
+            version=plugin.version,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{HELLO_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{HELLO_BLP.name}.MicroFrontend"),
+                plugin_dependencies=[],
                 data_input=[],
                 data_output=[
                     DataMetadata(
@@ -110,7 +114,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=[],
+            tags=HelloWorld.instance.tags,
         )
 
 
@@ -153,16 +157,20 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
+        plugin = HelloWorld.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
                 "simple_template.html",
-                name=HelloWorld.instance.name,
-                version=HelloWorld.instance.version,
+                name=plugin.name,
+                version=plugin.version,
                 schema=schema,
                 values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_BLP.name}.ProcessView"),
+                help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{HELLO_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
@@ -199,6 +207,8 @@ class HelloWorld(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Tests the connection of all components by printing some text."
+    tags = ["hello-world"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

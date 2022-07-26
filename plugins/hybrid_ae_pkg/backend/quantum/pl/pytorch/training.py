@@ -6,7 +6,7 @@ import torch
 from torch.optim import Optimizer
 from torch.utils.data import TensorDataset, DataLoader
 
-from plugins.hybrid_ae_pkg.backend.helpers import save_optim_state
+from ....helpers import save_optim_state
 from qhana_plugin_runner.storage import STORE
 
 

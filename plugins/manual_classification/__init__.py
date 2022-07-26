@@ -21,6 +21,8 @@ class ManualClassification(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Manually annotate classes for data sets from MUSE database."
+    tags = ["data-annotation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -35,7 +37,7 @@ class ManualClassification(QHAnaPluginBase):
 try:
     # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
     # accessed as soon as the routes are imported.
-    import plugins.manual_classification.routes
+    from . import routes
 except ImportError:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.

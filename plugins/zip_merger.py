@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -104,19 +105,25 @@ class PluginsView(MethodView):
         """Zip merger endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Zip merger",
-            description="Merges two zip files into one zip file.",
-            name=ZipMerger.instance.identifier,
+            description=ZipMerger.instance.description,
+            name=ZipMerger.instance.name,
             version=ZipMerger.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{ZIP_MERGER_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
-                        data_type="any", content_type=["application/zip"], required=True
+                    InputDataMetadata(
+                        data_type="any",
+                        content_type=["application/zip"],
+                        required=True,
+                        parameter="zip1Url",
                     ),
-                    DataMetadata(
-                        data_type="any", content_type=["application/zip"], required=True
+                    InputDataMetadata(
+                        data_type="any",
+                        content_type=["application/zip"],
+                        required=True,
+                        parameter="zip2Url",
                     ),
                 ],
                 data_output=[
@@ -125,17 +132,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["utility"],
+            tags=ZipMerger.instance.tags,
         )
 
 
 @ZIP_MERGER_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the zip merger plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @ZIP_MERGER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the zip merger plugin."
@@ -178,9 +181,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{ZIP_MERGER_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -217,6 +217,8 @@ class CalcSimilarityView(MethodView):
 class ZipMerger(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Merges two zip files into one zip file."
+    tags = ["utility"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

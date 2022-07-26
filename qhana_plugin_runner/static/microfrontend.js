@@ -61,6 +61,7 @@ function onLoadCssMessage(data, state) {
         head.appendChild(styleLink);
     });
     state.heightUnchangedCount = 0;
+    document.body.style.background = "transparent";
     monitorHeightChanges(state);
 }
 
@@ -74,6 +75,8 @@ function onDataUrlResponseMessage(data) {
     var input = document.querySelector(`input#${data.inputKey}`);
     if (input != null) {
         input.value = data.href;
+        input.dispatchEvent(new InputEvent("input", { data: data.href, cancelable: false }));
+        input.dispatchEvent(new InputEvent("change", { data: data.href, cancelable: false }));
         var filenameSpan = document.querySelector(`.selected-file-name[data-input-id=${data.inputKey}]`);
         if (filenameSpan != null) {
             filenameSpan.textContent = `${data.filename || "unknown"} (v${data.version || "?"}) ${data.dataType || "*"} – ${data.contentType || "*"}`;
@@ -96,6 +99,8 @@ function onPluginUrlResponseMessage(data) {
     var input = document.querySelector(`input#${data.inputKey}`);
     if (input != null) {
         input.value = data.pluginUrl;
+        input.dispatchEvent(new InputEvent("input", { data: data.pluginUrl, cancelable: false }));
+        input.dispatchEvent(new InputEvent("change", { data: data.pluginUrl, cancelable: false }));
         var pluginNameSpan = document.querySelector(`.selected-plugin-name[data-input-id=${data.inputKey}]`);
         if (pluginNameSpan != null) {
             pluginNameSpan.textContent = `${data.pluginName || "unknown"} (v${data.pluginVersion || "?"})`;
@@ -192,13 +197,11 @@ function instrumentForm() {
             }
         });
         form.querySelectorAll('input[data-input-type=data]').forEach(inputElement => {
-            console.log("DATA INPUT:", inputElement)
             const name = inputElement.getAttribute('name');
             if (name == null) {
                 console.warn('Input has no specified name but is marked as data input!', inputElement);
             } else {
                 dataInputs.add(name);
-                // TODO request-data-url-info
             }
             var dataInputId = inputElement.getAttribute("id");
             var dataInputValue = inputElement.value;
@@ -211,7 +214,6 @@ function instrumentForm() {
             }
         });
         form.querySelectorAll('input[data-input-type=plugin]').forEach(inputElement => {
-            console.log("PLUGIN INPUT:", inputElement)
             var pluginInputId = inputElement.getAttribute("id");
             var pluginInputValue = inputElement.value;
             if (pluginInputId && pluginInputValue) {
@@ -365,9 +367,9 @@ function onFormSubmit(event, dataInputs, privateInputs) {
 }
 
 function submitFormData(formData, formAction, formMethod) {
-
-    let data = new URLSearchParams(formData);
     if (formMethod.toLowerCase() === "get") {
+        let data = new URLSearchParams(formData);
+
         data.forEach((value, key) => {
             formAction.searchParams.append(key, value);
         })
@@ -375,9 +377,8 @@ function submitFormData(formData, formAction, formMethod) {
     }
 
     return fetch(formAction.toString(), {
-        body: data.toString(),
+        body: formData,
         method: formMethod,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
 }
 

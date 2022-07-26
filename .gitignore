@@ -5,8 +5,8 @@
 docs/api.json
 docs/changelog.md
 docs/readme.md
-
-
+git-plugins
+local_plugins/
 
 # Ignores from Template:
 
