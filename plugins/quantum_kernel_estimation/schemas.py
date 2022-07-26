@@ -76,20 +76,21 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Quantum Kernel",
-            "description": """The kernels by Havlíček and Suzuki both use the same \"kernel\" proposed by Havlíček.
-            The difference is that the kernel can take different so called feature maps. 
-            In the following the corresponding feature maps are listed. The sets are decided by the entanglement patterns
-            and xi or similar notation represent the i'th entry of vector x.
-            Havlíček Kernel: f(x) = xi for set {i}, f(x) = (π - xa) * (π - xb) * ... for set {a, b, ...}
-            Suzuki Kernel 8: f(x) = xi for set {i}, f(x) = π * x_a_ * x_b_ * ... for set {a, b, ...}
-            Suzuki Kernel 9: f(x) = xi for set {i}, f(x) = π/2 * (1 - x_a_) * (1 - x_b_) * ... for set {a, b, ...}
-            Suzuki Kernel 10: f(x) = xi for set {i}, f(x) = π * exp(g(x)) for set {a, b, ...},
-            where g(x) sums up all combinations |xi - xj|^2^, where i != j and i, j ∈ {a, b, ...} and takes the mean.
-            Suzuki Kernel 11: f(x) = xi for set {i}, f(x) = π / (3 * cos(x_a_) * cos(x_b_) * ...) for set {a, b, ...}
-            Suzuki Kernel 12: f(x) = xi for set {i}, f(x) = π * cos(x_a_) * cos(x_b_) * ... for set {a, b, ...}
-            Suzuki actually only defined the feature maps up to a set size of 2. Here we have extended them, although 
-            it's questionable, if these are extended in a good way. For more information, please have a look at the 
-            respective papers.""",
+            "description": "The kernels by Havlíček and Suzuki both use the same \"kernel\" proposed by Havlíček. "
+                           "The difference is that the kernel can take different so called feature maps. "
+                           "In the following the corresponding feature maps are listed. "
+                           "The sets are decided by the entanglement patterns"
+                           "and xi or similar notation represent the i'th entry of vector x.\n"
+                           "- Havlíček Kernel: f(x) = xi for set {i}, f(x) = (π - xa) * (π - xb) * ... for set {a, b, ...}\n"
+                           "- Suzuki Kernel 8: f(x) = xi for set {i}, f(x) = π * xa * xb * ... for set {a, b, ...}\n"
+                           "- Suzuki Kernel 9: f(x) = xi for set {i}, f(x) = π/2 * (1 - xa) * (1 - xb) * ... for set {a, b, ...}\n"
+                           "- Suzuki Kernel 10: f(x) = xi for set {i}, f(x) = π * exp(g(x)) for set {a, b, ...}, "
+                           "where g(x) sums up all combinations |xi - xj|^2, where i != j and i, j ∈ {a, b, ...} and takes the mean.\n"
+                           "- Suzuki Kernel 11: f(x) = xi for set {i}, f(x) = π / (3 * cos(xa) * cos(xb) * ...) for set {a, b, ...}\n"
+                           "- Suzuki Kernel 12: f(x) = xi for set {i}, f(x) = π * cos(xa) * cos(xb) * ... for set {a, b, ...}\n"
+                           "Suzuki actually only defined the feature maps up to a set size of 2. "
+                           "Here we have extended them, although it's questionable, if these are extended in a good way. "
+                           "For more information, please have a look at the respective papers [0] [1].",
             "input_type": "select",
         },
     )
@@ -99,15 +100,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Entanglement Pattern",
-            "description": """This determines how the different Qubits will be entangled.
-            In case of 3 dimensional data, we need 3 qubits and therefor the patterns are as follows:
-            full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]
-            linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]
-            circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]
-            To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets
-            {0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the
-            feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to
-            the feature map and so on for {0, 2} and {1, 2}.""",
+            "description": "This determines how the different Qubits will be entangled."
+                           "In case of 3 dimensional data, we need 3 qubits and therefor the patterns are as follows:\n"
+                           "- full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]\n"
+                           "- linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]\n"
+                           "- circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]\n"
+                           "To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets"
+                           "{0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the"
+                           "feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to"
+                           "the feature map and so on for {0, 2} and {1, 2}.",
             "input_type": "select",
         },
     )
