@@ -20,7 +20,13 @@ QKMEANS_BLP = SecurityBlueprint(
 class QKMeans(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "K-means algorithms that can run on quantum computers."
+    description = "This plugin groups the data into different clusters, with the help of quantum algorithms.\n" \
+                  "Currently there are four implemented algorithms. Destructive interference and negative rotation are from [0], " \
+                  "positive correlation is from [1] and state preparation is from a previous colleague.\n\n" \
+                  "Source:\n" \
+                  "[0] S. Khan and A. Awan and G. Vall-Llosera. K-Means Clustering on Noisy Intermediate Scale Quantum Computers.arXiv. <a href=\"https://doi.org/10.48550/ARXIV.1909.12183\">https://doi.org/10.48550/ARXIV.1909.12183</a>\n" \
+                  "[1] https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76"
+    # description = "K-means algorithms that can run on quantum computers."
     tags = ["points-to-clusters", "k-means"]
 
     def __init__(self, app: Optional[Flask]) -> None:
