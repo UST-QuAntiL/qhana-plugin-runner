@@ -20,6 +20,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -46,7 +47,7 @@ class PluginsView(MethodView):
         """Qiskit quantum kernel estimation endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Qiskit Quantum Kernel Estimation",
-            description=description,
+            description=Qiskit_QKE.instance.description,
             name=Qiskit_QKE.instance.name,
             version=Qiskit_QKE.instance.version,
             type=PluginType.simple,
@@ -54,10 +55,17 @@ class PluginsView(MethodView):
                 href=url_for(f"{QISKIT_QKE_BLP.name}.CalcView"),
                 ui_href=url_for(f"{QISKIT_QKE_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-points",
                         content_type=["application/json"],
                         required=True,
+                        parameter='entityPointsUrl1'
+                    ),
+                    InputDataMetadata(
+                        data_type="entity-points",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter='entityPointsUrl2'
                     )
                 ],
                 data_output=[
@@ -68,7 +76,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["kernel-matrix"],
+            tags=Qiskit_QKE.instance.tags,
         )
 
 
