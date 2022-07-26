@@ -27,15 +27,13 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from .tasks import calculation_task
 
 
-description = """## Description
-Produces a kernel matrix from a quantum kernel. 
-Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel.
-These feature maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library.
-These feature maps all use the proposed kernel by Havlíček [0].
-The following versions were used qiskit~=0.27 and qiskit-machine-learning~=0.4.0.
-## Source
-[0] Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). <a href=\"https://doi.org/10.1038/s41586-019-0980-2\">https://doi.org/10.1038/s41586-019-0980-2</a>
-"""
+description = "Produces a kernel matrix from a quantum kernel. " \
+"Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature " \
+"maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed " \
+"kernel by Havlíček [0]. The following versions were used qiskit~=0.27 and qiskit-machine-learning~=0.4.0.\n\n" \
+"Source:\n" \
+"[0] Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). <a href=\"https://doi.org/10.1038/s41586-019-0980-2\">https://doi.org/10.1038/s41586-019-0980-2</a>"
+
 
 
 @QISKIT_QKE_BLP.route("/")
