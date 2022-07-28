@@ -41,6 +41,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginType,
     EntryPoint,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
@@ -133,33 +134,36 @@ class PluginsView(MethodView):
         """Endpoint returning the plugin metadata."""
         return PluginMetadata(
             title=Converter.instance.name,
-            description=CONVERTER_BLP.description,
+            description=Converter.instance.description,
             name=Converter.instance.identifier,
             version=Converter.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{CONVERTER_BLP.name}.CalcView"),
                 ui_href=url_for(f"{CONVERTER_BLP.name}.MicroFrontend"),
-                data_input=[],
+                data_input=[
+                    InputDataMetadata(
+                        data_type="entity-points",
+                        content_type=["text/csv", "application/json"],
+                        required=True,
+                        parameter="entitiesUrl",
+                    )
+                ],
                 data_output=[
                     DataMetadata(
-                        data_type="txt",
-                        content_type=["text/plain"],
+                        data_type="entity-points",
+                        content_type=["text/csv", "application/json"],
                         required=True,
                     )
                 ],
             ),
-            tags=[],
+            tags=Converter.instance.tags,
         )
 
 
 @CONVERTER_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the hello world plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @CONVERTER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
@@ -202,9 +206,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{CONVERTER_BLP.name}.CalcView"),
-                example_values=url_for(
-                    f"{CONVERTER_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -243,6 +244,8 @@ class Converter(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Converts a file containing entity points into another file format, e.g. csv into json"
+    tags = ["converter"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
