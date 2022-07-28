@@ -476,3 +476,16 @@ class ObjFuncCalcOutputSchema(MaBaseSchema):
     @post_load
     def make_object(self, data, **kwargs):
         return ObjFuncCalcOutput(**data)
+
+
+@dataclass
+class CallbackURL:
+    callback_url: str
+
+
+class CallbackURLSchema(MaBaseSchema):
+    callback_url = ma.fields.Url(required=True, allow_none=False)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return CallbackURL(**data)
