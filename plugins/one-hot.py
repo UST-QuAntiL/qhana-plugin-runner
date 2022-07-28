@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -147,7 +148,7 @@ class PluginsView(MethodView):
         """MDS endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="One-Hot Encoding",
-            description="Converts Muse Data to One-Hot Encodings",
+            description=OneHot.instance.description,
             name=OneHot.instance.identifier,
             version=OneHot.instance.version,
             type=PluginType.simple,
@@ -155,20 +156,23 @@ class PluginsView(MethodView):
                 href=url_for(f"{ONEHOT_BLP.name}.CalcView"),
                 ui_href=url_for(f"{ONEHOT_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entities",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entitiesUrl"
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="taxonomy",
                         content_type=["application/zip"],
                         required=True,
+                        parameter="taxonomiesZipUrl"
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="attribute-metadata",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entitiesMetadataUrl"
                     ),
                 ],
                 data_output=[
@@ -179,17 +183,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["one-hot-encoding"],
+            tags=OneHot.instance.tags,
         )
 
 
 @ONEHOT_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the MDS plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @ONEHOT_BLP.html_response(
         HTTPStatus.OK,
@@ -237,9 +237,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{ONEHOT_BLP.name}.CalcView"),
-                example_values=url_for(
-                    f"{ONEHOT_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -277,6 +274,8 @@ class CalcView(MethodView):
 class OneHot(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Converts Muse Data to One-Hot Encodings"
+    tags = ["encoding", "one-hot"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
