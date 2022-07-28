@@ -14,7 +14,7 @@
 from http import HTTPStatus
 from logging import Logger
 from typing import Mapping, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 
 import requests
 from celery.canvas import chain
@@ -31,6 +31,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     ObjectiveFunctionCallbackSchema,
     ObjectiveFunctionCallbackData,
+    CallbackURL,
+    CallbackURLSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error
@@ -160,11 +162,16 @@ class ObjFuncSetupProcess(MethodView):
             internal_data.objective_function_url, plugin_metadata.entry_point.ui_href
         )
 
-        callback_url_query = "?callbackUrl=" + url_for(
-            f"{OPTI_COORD_BLP.name}.{ObjFuncCallback.__name__}",
-            db_id=str(db_task.id),
-            _external=True,
+        callback_schema = CallbackURLSchema()
+        callback_url = CallbackURL(
+            callback_url=url_for(
+                f"{OPTI_COORD_BLP.name}.{ObjFuncCallback.__name__}",
+                db_id=str(db_task.id),
+                _external=True,
+            )
         )
+
+        callback_url_query = urlencode(callback_schema.dump(callback_url))
 
         # Chain a processing task (that does nothing) with executing the objective function plugin setup.
         task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
@@ -172,7 +179,7 @@ class ObjFuncSetupProcess(MethodView):
             step_id=step_id,
             href=href,
             # adds callback URL so that the objective function plugin can signal that it has finished and send data back
-            ui_href=ui_href + callback_url_query,
+            ui_href=ui_href + "?" + callback_url_query,
             prog_value=60,
         )
 
