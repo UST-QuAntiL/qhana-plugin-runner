@@ -16,6 +16,8 @@ from marshmallow import EXCLUDE
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
+    OptimizerCallbackSchema,
+    OptimizerCallbackData,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error
@@ -25,7 +27,9 @@ from ..schemas import (
     ObjFuncSelectionSchema,
     TaskResponseSchema,
     OptimSelectionSchema,
-    OptimCallbackSchema,
+    InternalDataSchema,
+    InternalData,
+    OptimSelectionData,
 )
 from ..tasks import no_op_task
 
@@ -106,15 +110,19 @@ class OptimSetupProcess(MethodView):
     @OPTI_COORD_BLP.arguments(OptimSelectionSchema(unknown=EXCLUDE), location="form")
     @OPTI_COORD_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, arguments: OptimSelectionData):
         """Start the optimizer setup task."""
         db_task = ProcessingTask(
             task_name=no_op_task.name,
         )
         db_task.save(commit=True)
 
-        optimizer_url = arguments["optimizer_url"]
-        db_task.data["optimizer_url"] = optimizer_url
+        schema = InternalDataSchema()
+        internal_data: InternalData = InternalData()
+
+        internal_data.optimizer_url = arguments.optimizer_url
+
+        db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)
 
         # add new step where the setup of the optimizer plugin is executed
@@ -123,14 +131,16 @@ class OptimSetupProcess(MethodView):
         step_id = "optimizer-setup"
 
         # get metadata
-        schema = PluginMetadataSchema()
-        raw_metadata = requests.get(optimizer_url).json()
-        plugin_metadata: PluginMetadata = schema.load(raw_metadata)
+        metadata_schema = PluginMetadataSchema()
+        raw_metadata = requests.get(internal_data.optimizer_url).json()
+        plugin_metadata: PluginMetadata = metadata_schema.load(raw_metadata)
 
         # URL of the process endpoint of the objective function plugin
-        href = urljoin(optimizer_url, plugin_metadata.entry_point.href)
+        href = urljoin(internal_data.optimizer_url, plugin_metadata.entry_point.href)
         # URL of the micro frontend endpoint of the objective function plugin
-        ui_href = urljoin(optimizer_url, plugin_metadata.entry_point.ui_href)
+        ui_href = urljoin(
+            internal_data.optimizer_url, plugin_metadata.entry_point.ui_href
+        )
 
         callback_url_query = "?callbackUrl=" + url_for(
             f"{OPTI_COORD_BLP.name}.{OptimCallback.__name__}",
@@ -165,9 +175,9 @@ class OptimCallback(MethodView):
     data back.
     """
 
-    @OPTI_COORD_BLP.arguments(OptimCallbackSchema(unknown=EXCLUDE))
+    @OPTI_COORD_BLP.arguments(OptimizerCallbackSchema(unknown=EXCLUDE))
     @OPTI_COORD_BLP.response(HTTPStatus.OK)
-    def post(self, arguments, db_id: int):
+    def post(self, arguments: OptimizerCallbackData, db_id: int):
         """
         Gets data from the objective function plugin and starts the next step.
 
@@ -184,7 +194,13 @@ class OptimCallback(MethodView):
             raise KeyError(msg)
 
         db_task.clear_previous_step()
-        db_task.data["optim_db_id"] = arguments["db_id"]
+
+        schema = InternalDataSchema()
+        internal_data: InternalData = schema.loads(db_task.parameters)
+
+        internal_data.optim_db_id = arguments.db_id
+
+        db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)
 
         step_id = "obj-func-selection"

@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import dataclass
+from typing import Optional, List
+
 import marshmallow as ma
+from marshmallow import post_load
 
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -26,6 +30,34 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+@dataclass
+class InternalData:
+    objective_function_url: Optional[str] = None
+    optimizer_url: Optional[str] = None
+    dataset_url: Optional[str] = None
+    optim_db_id: Optional[int] = None
+    number_of_parameters: Optional[int] = None
+    obj_func_db_id: Optional[int] = None
+
+
+class InternalDataSchema(MaBaseSchema):
+    objective_function_url = ma.fields.Url(required=False, allow_none=True)
+    optimizer_url = ma.fields.Url(required=False, allow_none=True)
+    dataset_url = ma.fields.Url(required=False, allow_none=True)
+    optim_db_id = ma.fields.Integer(required=False, allow_none=True)
+    number_of_parameters = ma.fields.Integer(required=False, allow_none=True)
+    obj_func_db_id = ma.fields.Integer(required=False, allow_none=True)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return InternalData(**data)
+
+
+@dataclass
+class OptimSelectionData:
+    optimizer_url: str
+
+
 class OptimSelectionSchema(FrontendFormBaseSchema):
     # FIXME: change to plugin selection when plugin selection RP has been merged
     optimizer_url = ma.fields.Url(
@@ -37,6 +69,15 @@ class OptimSelectionSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return OptimSelectionData(**data)
+
+
+@dataclass
+class ObjFuncSelectionData:
+    objective_function_url: str
 
 
 class ObjFuncSelectionSchema(FrontendFormBaseSchema):
@@ -51,14 +92,14 @@ class ObjFuncSelectionSchema(FrontendFormBaseSchema):
         },
     )
 
+    @post_load
+    def make_object(self, data, **kwargs):
+        return ObjFuncSelectionData(**data)
 
-class OptimCallbackSchema(MaBaseSchema):
-    db_id = ma.fields.Integer(required=True, allow_none=False)
 
-
-class ObjFuncCallbackSchema(MaBaseSchema):
-    db_id = ma.fields.Integer(required=True, allow_none=False)
-    number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
+@dataclass
+class DatasetInput:
+    dataset_url: str
 
 
 class DatasetInputSchema(FrontendFormBaseSchema):
@@ -73,3 +114,24 @@ class DatasetInputSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return DatasetInput(**data)
+
+
+@dataclass
+class OutputData:
+    last_objective_value: float
+    optimized_parameters: List[float]
+
+
+class OutputDataSchema(MaBaseSchema):
+    last_objective_value = ma.fields.Float(required=True, allow_none=False)
+    optimized_parameters = ma.fields.List(
+        ma.fields.Float, required=True, allow_none=False
+    )
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return OutputData(**data)

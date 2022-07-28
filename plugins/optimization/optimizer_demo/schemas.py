@@ -1,4 +1,7 @@
+from dataclasses import dataclass
 from enum import Enum
+
+from marshmallow import post_load
 
 from qhana_plugin_runner.api import MaBaseSchema, EnumField
 import marshmallow as ma
@@ -15,6 +18,12 @@ class TaskResponseSchema(MaBaseSchema):
 class Optimizers(Enum):
     cobyla = "COBYLA"
     # nelder_mead = "Nelder-Mead"
+
+
+@dataclass
+class Hyperparameters:
+    optimizer: str
+    callback_url: str
 
 
 class HyperparametersSchema(FrontendFormBaseSchema):
@@ -38,17 +47,6 @@ class HyperparametersSchema(FrontendFormBaseSchema):
         },
     )
 
-
-class OptimizationInputSchema(MaBaseSchema):
-    dataset = ma.fields.Url(required=True, allow_none=False)
-    optimizer_db_id = ma.fields.Integer(required=True, allow_none=False)
-    number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
-    obj_func_db_id = ma.fields.Integer(required=True, allow_none=False)
-    obj_func_calc_url = ma.fields.Url(required=True, allow_none=False)
-
-
-class OptimizationOutputSchema(MaBaseSchema):
-    last_objective_value = ma.fields.Float(required=True, allow_none=False)
-    optimized_parameters = ma.fields.List(
-        ma.fields.Float(), required=True, allow_none=False
-    )
+    @post_load
+    def make_object(self, data, **kwargs):
+        return Hyperparameters(**data)

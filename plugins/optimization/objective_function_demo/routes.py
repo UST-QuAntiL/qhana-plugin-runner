@@ -20,6 +20,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     InteractionEndpoint,
+    ObjFuncCalcInputSchema,
+    ObjFuncCalcOutputSchema,
+    ObjFuncCalcInput,
+    ObjFuncCalcOutput,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
@@ -27,10 +31,9 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from . import OBJ_FUNC_DEMO_BLP, ObjectiveFunctionDemo
 from .neural_network import NeuralNetwork
 from .schemas import (
-    CalculationInputSchema,
-    CalculationOutputSchema,
     HyperparametersSchema,
     TaskResponseSchema,
+    Hyperparameters,
 )
 from .tasks import setup_task
 
@@ -140,9 +143,12 @@ class Setup(MethodView):
     @OBJ_FUNC_DEMO_BLP.arguments(HyperparametersSchema(unknown=EXCLUDE), location="form")
     @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, arguments: Hyperparameters):
         """Start the setup task."""
-        db_task = ProcessingTask(task_name=setup_task.name, parameters=dumps(arguments))
+        schema = HyperparametersSchema()
+        db_task = ProcessingTask(
+            task_name=setup_task.name, parameters=schema.dumps(arguments)
+        )
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
@@ -165,19 +171,17 @@ class Setup(MethodView):
 class Calculation(MethodView):
     """Objective function calculation resource."""
 
-    @OBJ_FUNC_DEMO_BLP.arguments(CalculationInputSchema())
-    @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, CalculationOutputSchema())
+    @OBJ_FUNC_DEMO_BLP.arguments(ObjFuncCalcInputSchema())
+    @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, ObjFuncCalcOutputSchema())
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, arguments: ObjFuncCalcInput):
         """Endpoint calculating the objective value."""
-        data_set_url: str = arguments["data_set"]
-        db_id: int = arguments["db_id"]
-        parameters: List[float] = arguments["parameters"]
-
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=arguments.db_id)
 
         if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
+            msg = (
+                f"Could not load task data with id {arguments.db_id} to read parameters!"
+            )
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
@@ -190,17 +194,20 @@ class Calculation(MethodView):
         if hyperparameter_url is None:
             raise ValueError("Hyperparameter file missing")
 
-        data_set = requests.get(data_set_url).json()
-        hyperparameters = requests.get(hyperparameter_url).json()
+        data_set = requests.get(arguments.data_set).json()
+        schema = HyperparametersSchema()
+        hyperparameters: Hyperparameters = schema.load(
+            requests.get(hyperparameter_url).json()
+        )
 
         model = NeuralNetwork(
-            hyperparameters["number_of_input_values"],
-            hyperparameters["number_of_neurons"],
+            hyperparameters.number_of_input_values,
+            hyperparameters.number_of_neurons,
         )
-        model.set_param_list(parameters)
+        model.set_param_list(arguments.parameters)
         loss = model.get_loss(
             torch.tensor(data_set["input"], dtype=torch.float32),
             torch.tensor(data_set["target"], dtype=torch.float32),
         )
 
-        return {"objective_value": loss}
+        return ObjFuncCalcOutput(loss)

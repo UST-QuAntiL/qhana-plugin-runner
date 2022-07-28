@@ -1,14 +1,18 @@
-import json
 from tempfile import SpooledTemporaryFile
-from typing import Optional, Dict
+from typing import Optional
 
 import requests
 from celery.utils.log import get_task_logger
 
+from qhana_plugin_runner.api.plugin_schemas import (
+    OptimizerCallbackData,
+    OptimizerCallbackSchema,
+)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from . import OptimizerDemo
+from .schemas import HyperparametersSchema, Hyperparameters
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -30,14 +34,13 @@ def setup_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    parameters: Dict = json.loads(task_data.parameters)
-    optimizer: str = parameters.get("optimizer")
-    callback_url: str = parameters.get("callbackUrl")
+    schema = HyperparametersSchema()
+    parameters: Hyperparameters = schema.loads(task_data.parameters)
 
-    TASK_LOGGER.info(f"Loaded data from db: optimizer='{optimizer}'")
-    TASK_LOGGER.info(f"Loaded data from db: callback_url='{callback_url}'")
+    TASK_LOGGER.info(f"Loaded data from db: optimizer='{parameters.optimizer}'")
+    TASK_LOGGER.info(f"Loaded data from db: callback_url='{parameters.callback_url}'")
 
-    if optimizer is None or callback_url is None:
+    if parameters.optimizer is None or parameters.callback_url is None:
         raise ValueError("Input parameters incomplete")
 
     with SpooledTemporaryFile(mode="w") as output:
@@ -50,9 +53,12 @@ def setup_task(self, db_id: int) -> str:
             "application/json",
         )
 
+    callback_schema = OptimizerCallbackSchema()
+    callback_data = OptimizerCallbackData(db_id=db_id)
+
     requests.post(
-        callback_url,
-        json={"dbId": db_id},
+        parameters.callback_url,
+        json=callback_schema.dump(callback_data),
     )
 
     return "Stored metadata and hyperparameters"

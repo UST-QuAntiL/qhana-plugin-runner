@@ -19,11 +19,19 @@ from urllib.parse import urljoin
 import requests
 from celery.utils.log import get_task_logger
 
-from qhana_plugin_runner.api.plugin_schemas import PluginMetadataSchema, PluginMetadata
+from qhana_plugin_runner.api.plugin_schemas import (
+    PluginMetadataSchema,
+    PluginMetadata,
+    OptimizationInput,
+    OptimizationInputSchema,
+    OptimizationOutputSchema,
+    OptimizationOutput,
+)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from . import OptimizationCoordinator
+from .schemas import InternalDataSchema, InternalData
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -66,48 +74,45 @@ def start_optimization_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    objective_function_plugin_url = task_data.data["objective_function_url"]
-    optimizer_plugin_url = task_data.data["optimizer_url"]
-    dataset_url = task_data.data["dataset_url"]
-    optim_db_id = task_data.data["optim_db_id"]
-    number_of_parameters = task_data.data["number_of_parameters"]
-    obj_func_db_id = task_data.data["obj_func_db_id"]
-    obj_func_calc_url = _get_calc_endpoint(objective_function_plugin_url)
+    schema = InternalDataSchema()
+    internal_data: InternalData = schema.loads(task_data.parameters)
+    obj_func_calc_url = _get_calc_endpoint(internal_data.objective_function_url)
 
     schema = PluginMetadataSchema()
     plugin_metadata: PluginMetadata = schema.loads(
-        requests.get(optimizer_plugin_url).text
+        requests.get(internal_data.optimizer_url).text
     )
     optimizer_start_url: Optional[str] = None
 
+    # TODO: make it more generic and move it to the plugin runner
     for entry_point in plugin_metadata.entry_point.interaction_endpoints:
         if entry_point.type == "start-optimization":
-            optimizer_start_url = urljoin(objective_function_plugin_url, entry_point.href)
+            optimizer_start_url = urljoin(
+                internal_data.objective_function_url, entry_point.href
+            )
 
     if optimizer_start_url is None:
         raise ValueError("No interaction endpoint found with type start-optimization")
 
-    request_data = {
-        "dataset": dataset_url,
-        "optimizerDbId": optim_db_id,
-        "numberOfParameters": number_of_parameters,
-        "objFuncDbId": obj_func_db_id,
-        "objFuncCalcUrl": obj_func_calc_url,
-    }
-    res = requests.post(
-        optimizer_start_url,
-        json=request_data,
-    ).json()
+    request_schema = OptimizationInputSchema()
+    request_data = OptimizationInput(
+        dataset=internal_data.dataset_url,
+        optimizer_db_id=internal_data.optim_db_id,
+        number_of_parameters=internal_data.number_of_parameters,
+        obj_func_db_id=internal_data.obj_func_db_id,
+        obj_func_calc_url=obj_func_calc_url,
+    )
+
+    response_schema = OptimizationOutputSchema()
+    response: OptimizationOutput = response_schema.load(
+        requests.post(
+            optimizer_start_url,
+            json=request_schema.dump(request_data),
+        ).json()
+    )
 
     with SpooledTemporaryFile(mode="w") as output:
-        output.write(
-            json.dumps(
-                {
-                    "last_objective_value": res["lastObjectiveValue"],
-                    "optimized_parameters": res["optimizedParameters"],
-                }
-            )
-        )
+        output.write(response_schema.dumps(response))
         STORE.persist_task_result(
             db_id, output, "result.json", "optimization-result", "application/json"
         )
@@ -115,6 +120,7 @@ def start_optimization_task(self, db_id: int) -> str:
     return ""
 
 
+# TODO: make it more generic and move to plugin runner
 def _get_calc_endpoint(objective_function_plugin_url: str) -> str:
     schema = PluginMetadataSchema()
     plugin_metadata: PluginMetadata = schema.loads(

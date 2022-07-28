@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Mapping, Optional
+from typing import Mapping, Optional, List
 
 import numpy as np
 import requests
@@ -21,12 +21,18 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     InteractionEndpoint,
+    ObjFuncCalcInput,
+    ObjFuncCalcInputSchema,
+    ObjFuncCalcOutputSchema,
+    ObjFuncCalcOutput,
+    OptimizationInputSchema,
+    OptimizationInput,
+    OptimizationOutput,
+    OptimizationOutputSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from .schemas import (
-    OptimizationInputSchema,
-    OptimizationOutputSchema,
     HyperparametersSchema,
     TaskResponseSchema,
 )
@@ -173,28 +179,23 @@ class Optimization(MethodView):
     @OPTIMIZER_DEMO_BLP.arguments(OptimizationInputSchema(unknown=EXCLUDE))
     @OPTIMIZER_DEMO_BLP.response(HTTPStatus.OK, OptimizationOutputSchema())
     @OPTIMIZER_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, arguments: OptimizationInput):
         """Start the optimization."""
-        dataset_url: str = arguments["dataset"]
-        optimizer_db_id: int = arguments["optimizer_db_id"]
-        number_of_parameters: int = arguments["number_of_parameters"]
-        obj_func_db_id: int = arguments["obj_func_db_id"]
-        obj_func_calc_url: str = arguments["obj_func_calc_url"]
 
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=optimizer_db_id)
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(
+            id_=arguments.optimizer_db_id
+        )
 
         if db_task is None:
-            msg = (
-                f"Could not load task data with id {optimizer_db_id} to read parameters!"
-            )
+            msg = f"Could not load task data with id {arguments.optimizer_db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
         # randomly initialize parameters
-        parameters = np.random.normal(size=(number_of_parameters,))
+        parameters = np.random.normal(size=(arguments.number_of_parameters,))
 
         obj_func = _objective_function_wrapper(
-            dataset_url, obj_func_calc_url, obj_func_db_id
+            arguments.dataset, arguments.obj_func_calc_url, arguments.obj_func_db_id
         )
 
         # optimization
@@ -203,11 +204,11 @@ class Optimization(MethodView):
         # get results
         optimized_parameters: np.ndarray = result.x
         last_objective_value = obj_func(optimized_parameters)
+        parameter_list: List[float] = optimized_parameters.tolist()
 
-        return {
-            "last_objective_value": last_objective_value,
-            "optimized_parameters": optimized_parameters.tolist(),
-        }
+        return OptimizationOutput(
+            last_objective_value=last_objective_value, optimized_parameters=parameter_list
+        )
 
 
 def _objective_function_wrapper(
@@ -224,16 +225,19 @@ def _objective_function_wrapper(
     """
 
     def objective_function(x: np.ndarray) -> float:
-        request_data = {
-            "dataSet": dataset_url,
-            "dbId": obj_func_db_id,
-            "parameters": x.tolist(),
-        }
+        request_data = ObjFuncCalcInput(
+            data_set=dataset_url, db_id=obj_func_db_id, parameters=x.tolist()
+        )
+        input_schema = ObjFuncCalcInputSchema()
+
         res = requests.post(
             objective_function_calculation_url,
-            json=request_data,
+            json=input_schema.dump(request_data),
         ).json()
 
-        return res["objectiveValue"]
+        output_schema = ObjFuncCalcOutputSchema()
+        output: ObjFuncCalcOutput = output_schema.load(res)
+
+        return output.objective_value
 
     return objective_function

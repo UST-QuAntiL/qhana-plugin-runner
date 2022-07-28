@@ -16,6 +16,8 @@ from marshmallow import EXCLUDE
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
+    ObjectiveFunctionCallbackSchema,
+    ObjectiveFunctionCallbackData,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error
@@ -24,7 +26,9 @@ from .. import OPTI_COORD_BLP, OptimizationCoordinator
 from ..schemas import (
     ObjFuncSelectionSchema,
     TaskResponseSchema,
-    ObjFuncCallbackSchema,
+    InternalDataSchema,
+    InternalData,
+    ObjFuncSelectionData,
 )
 from ..tasks import no_op_task
 
@@ -106,7 +110,7 @@ class ObjFuncSetupProcess(MethodView):
     @OPTI_COORD_BLP.arguments(ObjFuncSelectionSchema(unknown=EXCLUDE), location="form")
     @OPTI_COORD_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int):
+    def post(self, arguments: ObjFuncSelectionData, db_id: int):
         """Start the objective function setup task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -115,8 +119,13 @@ class ObjFuncSetupProcess(MethodView):
             raise KeyError(msg)
 
         db_task.clear_previous_step()
-        objective_function_url = arguments["objective_function_url"]
-        db_task.data["objective_function_url"] = objective_function_url
+
+        schema = InternalDataSchema()
+        internal_data: InternalData = schema.loads(db_task.parameters)
+
+        internal_data.objective_function_url = arguments.objective_function_url
+
+        db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)
 
         # add new step where the setup of the objective function plugin is executed
@@ -126,13 +135,17 @@ class ObjFuncSetupProcess(MethodView):
 
         # get metadata
         schema = PluginMetadataSchema()
-        raw_metadata = requests.get(objective_function_url).json()
+        raw_metadata = requests.get(internal_data.objective_function_url).json()
         plugin_metadata: PluginMetadata = schema.load(raw_metadata)
 
         # URL of the process endpoint of the objective function plugin
-        href = urljoin(objective_function_url, plugin_metadata.entry_point.href)
+        href = urljoin(
+            internal_data.objective_function_url, plugin_metadata.entry_point.href
+        )
         # URL of the micro frontend endpoint of the objective function plugin
-        ui_href = urljoin(objective_function_url, plugin_metadata.entry_point.ui_href)
+        ui_href = urljoin(
+            internal_data.objective_function_url, plugin_metadata.entry_point.ui_href
+        )
 
         callback_url_query = "?callbackUrl=" + url_for(
             f"{OPTI_COORD_BLP.name}.{ObjFuncCallback.__name__}",
@@ -167,9 +180,9 @@ class ObjFuncCallback(MethodView):
     data back.
     """
 
-    @OPTI_COORD_BLP.arguments(ObjFuncCallbackSchema(unknown=EXCLUDE))
+    @OPTI_COORD_BLP.arguments(ObjectiveFunctionCallbackSchema(unknown=EXCLUDE))
     @OPTI_COORD_BLP.response(HTTPStatus.OK)
-    def post(self, arguments, db_id: int):
+    def post(self, arguments: ObjectiveFunctionCallbackData, db_id: int):
         """
         Gets data from the objective function plugin and starts the next step.
 
@@ -186,8 +199,14 @@ class ObjFuncCallback(MethodView):
             raise KeyError(msg)
 
         db_task.clear_previous_step()
-        db_task.data["obj_func_db_id"] = arguments["db_id"]
-        db_task.data["number_of_parameters"] = arguments["number_of_parameters"]
+
+        schema = InternalDataSchema()
+        internal_data: InternalData = schema.loads(db_task.parameters)
+
+        internal_data.obj_func_db_id = arguments.db_id
+        internal_data.number_of_parameters = arguments.number_of_parameters
+
+        db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)
 
         step_id = "dataset-selection"

@@ -380,3 +380,99 @@ class PluginMetadataSchema(MaBaseSchema):
     @post_load
     def make_object(self, data, **kwargs):
         return PluginMetadata(**data)
+
+
+@dataclass
+class OptimizerCallbackData:
+    db_id: int
+
+
+class OptimizerCallbackSchema(MaBaseSchema):
+    db_id = ma.fields.Integer(required=True, allow_none=False)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return OptimizerCallbackData(**data)
+
+
+@dataclass
+class ObjectiveFunctionCallbackData:
+    db_id: int
+    number_of_parameters: int
+
+
+class ObjectiveFunctionCallbackSchema(MaBaseSchema):
+    db_id = ma.fields.Integer(required=True, allow_none=False)
+    number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return ObjectiveFunctionCallbackData(**data)
+
+
+@dataclass
+class OptimizationInput:
+    dataset: str
+    optimizer_db_id: int
+    number_of_parameters: int
+    obj_func_db_id: int
+    obj_func_calc_url: str
+
+
+class OptimizationInputSchema(MaBaseSchema):
+    dataset = ma.fields.Url(required=True, allow_none=False)
+    optimizer_db_id = ma.fields.Integer(required=True, allow_none=False)
+    number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
+    obj_func_db_id = ma.fields.Integer(required=True, allow_none=False)
+    obj_func_calc_url = ma.fields.Url(required=True, allow_none=False)
+
+    @post_load
+    def make_obj(self, data, **kwargs):
+        return OptimizationInput(**data)
+
+
+@dataclass
+class OptimizationOutput:
+    last_objective_value: float
+    optimized_parameters: List[float]
+
+
+class OptimizationOutputSchema(MaBaseSchema):
+    last_objective_value = ma.fields.Float(required=True, allow_none=False)
+    optimized_parameters = ma.fields.List(
+        ma.fields.Float(), required=True, allow_none=False
+    )
+
+    @post_load
+    def make_obj(self, data, **kwargs):
+        return OptimizationOutput(**data)
+
+
+@dataclass
+class ObjFuncCalcInput:
+    data_set: str
+    db_id: int
+    parameters: List[float]
+
+
+class ObjFuncCalcInputSchema(MaBaseSchema):
+    data_set = ma.fields.Url(required=True, allow_none=False)
+    db_id = ma.fields.Integer(required=True, allow_none=False)
+    parameters = ma.fields.List(ma.fields.Float(), required=True, allow_none=False)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return ObjFuncCalcInput(**data)
+
+
+@dataclass
+class ObjFuncCalcOutput:
+    objective_value: float
+
+
+class ObjFuncCalcOutputSchema(MaBaseSchema):
+    objective_value = ma.fields.Float(required=True, allow_none=False)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return ObjFuncCalcOutput(**data)

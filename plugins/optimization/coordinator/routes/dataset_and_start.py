@@ -17,6 +17,9 @@ from .. import OPTI_COORD_BLP, OptimizationCoordinator
 from ..schemas import (
     TaskResponseSchema,
     DatasetInputSchema,
+    DatasetInput,
+    InternalDataSchema,
+    InternalData,
 )
 from ..tasks import start_optimization_task
 
@@ -65,11 +68,6 @@ class DatasetSelectionUI(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        if not data:
-            # retrieve data from the invoked plugin
-            obj_func_task_id = db_task.data.get("objective_function_task_id")
-            data = {"inputStr": "ID of objective function task: " + str(obj_func_task_id)}
-
         schema = DatasetInputSchema()
         return Response(
             render_template(
@@ -101,7 +99,7 @@ class StartOptimization(MethodView):
     @OPTI_COORD_BLP.arguments(DatasetInputSchema(unknown=EXCLUDE), location="form")
     @OPTI_COORD_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @OPTI_COORD_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int):
+    def post(self, arguments: DatasetInput, db_id: int):
         """Start the optimization task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -110,7 +108,13 @@ class StartOptimization(MethodView):
             raise KeyError(msg)
 
         db_task.clear_previous_step()
-        db_task.data["dataset_url"] = arguments["dataset_url"]
+
+        schema = InternalDataSchema()
+        internal_data: InternalData = schema.loads(db_task.parameters)
+
+        internal_data.dataset_url = arguments.dataset_url
+
+        db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
