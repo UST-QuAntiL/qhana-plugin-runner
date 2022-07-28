@@ -13,7 +13,6 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 from scipy.optimize import minimize
 
-from . import OPTIMIZER_DEMO_BLP, OptimizerDemo
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     PluginMetadataSchema,
@@ -32,12 +31,12 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from . import OPTIMIZER_DEMO_BLP, OptimizerDemo
 from .schemas import (
     HyperparametersSchema,
     TaskResponseSchema,
 )
 from .tasks import setup_task
-
 
 TASK_LOGGER = get_task_logger(__name__)
 

@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum
 
+import marshmallow as ma
 from marshmallow import post_load
 
 from qhana_plugin_runner.api import MaBaseSchema, EnumField
-import marshmallow as ma
-
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 
 

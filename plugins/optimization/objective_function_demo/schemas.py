@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 
+import marshmallow as ma
 from marshmallow import post_load
 
 from qhana_plugin_runner.api import MaBaseSchema
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
-
-import marshmallow as ma
 
 
 class TaskResponseSchema(MaBaseSchema):

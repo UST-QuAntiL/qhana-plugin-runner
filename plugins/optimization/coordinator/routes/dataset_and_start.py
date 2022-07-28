@@ -23,7 +23,6 @@ from ..schemas import (
 )
 from ..tasks import start_optimization_task
 
-
 TASK_LOGGER: Logger = get_task_logger(__name__)
 
 

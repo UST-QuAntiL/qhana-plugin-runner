@@ -1,6 +1,5 @@
 from http import HTTPStatus
-from json import dumps
-from typing import Mapping, Optional, List
+from typing import Mapping, Optional
 
 import requests
 import torch
