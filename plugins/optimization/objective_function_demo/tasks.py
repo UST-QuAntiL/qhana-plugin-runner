@@ -26,7 +26,11 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from . import ObjectiveFunctionDemo
 from .neural_network import NeuralNetwork
-from .schemas import HyperparametersSchema, Hyperparameters
+from .schemas import (
+    HyperparametersSchema,
+    InternalData,
+    InternalDataSchema,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -47,21 +51,26 @@ def setup_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    schema = HyperparametersSchema()
-    parameters: Hyperparameters = schema.loads(task_data.parameters)
+    schema = InternalDataSchema()
+    internal_data: InternalData = schema.loads(task_data.parameters)
 
     TASK_LOGGER.info(
-        f"Loaded data from db: number_of_input_values='{parameters.number_of_input_values}'"
+        f"Loaded data from db: number_of_input_values='{internal_data.hyperparameters.number_of_input_values}'"
     )
     TASK_LOGGER.info(
-        f"Loaded data from db: number_of_neurons='{parameters.number_of_neurons}'"
+        f"Loaded data from db: number_of_neurons='{internal_data.hyperparameters.number_of_neurons}'"
     )
-    TASK_LOGGER.info(f"Loaded data from db: callback_url='{parameters.callback_url}'")
+    TASK_LOGGER.info(
+        f"Loaded data from db: callback_url='{internal_data.callback_url.callback_url}'"
+    )
 
-    model = NeuralNetwork(parameters.number_of_input_values, parameters.number_of_neurons)
+    model = NeuralNetwork(
+        internal_data.hyperparameters.number_of_input_values,
+        internal_data.hyperparameters.number_of_neurons,
+    )
 
     with SpooledTemporaryFile(mode="w") as output:
-        output.write(task_data.parameters)
+        output.write(HyperparametersSchema().dumps(internal_data.hyperparameters))
         STORE.persist_task_result(
             db_id,
             output,
@@ -76,7 +85,7 @@ def setup_task(self, db_id: int) -> str:
     )
 
     requests.post(
-        parameters.callback_url,
+        internal_data.callback_url.callback_url,
         json=callback_schema.dump(callback_data),
     )
 

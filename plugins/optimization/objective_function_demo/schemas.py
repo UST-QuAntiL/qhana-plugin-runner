@@ -17,6 +17,7 @@ import marshmallow as ma
 from marshmallow import post_load
 
 from qhana_plugin_runner.api import MaBaseSchema
+from qhana_plugin_runner.api.plugin_schemas import CallbackURL, CallbackURLSchema
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 
 
@@ -30,7 +31,6 @@ class TaskResponseSchema(MaBaseSchema):
 class Hyperparameters:
     number_of_input_values: int
     number_of_neurons: int
-    callback_url: str
 
 
 class HyperparametersSchema(FrontendFormBaseSchema):
@@ -52,16 +52,24 @@ class HyperparametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    callback_url = ma.fields.Url(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Callback URL",
-            "description": "Callback URL of the optimizer plugin. Will be filled automatically when using the optimizer plugin. MUST NOT BE CHANGED!",
-            "input_type": "text",
-        },
-    )
 
     @post_load
     def make_object(self, data, **kwargs):
         return Hyperparameters(**data)
+
+
+@dataclass
+class InternalData:
+    hyperparameters: Hyperparameters
+    callback_url: CallbackURL
+
+
+class InternalDataSchema(MaBaseSchema):
+    hyperparameters = ma.fields.Nested(
+        HyperparametersSchema, required=True, allow_none=False
+    )
+    callback_url = ma.fields.Nested(CallbackURLSchema, required=True, allow_none=False)
+
+    @post_load
+    def make_object(self, data, **kwargs):
+        return InternalData(**data)
