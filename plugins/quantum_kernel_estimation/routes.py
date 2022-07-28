@@ -83,10 +83,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the quantum kernel estimation plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
-
     @QKE_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend of the quantum kernel estimation plugin.",
@@ -150,9 +146,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QKE_BLP.name}.CalcView"),
-                example_values=url_for(
-                    f"{QKE_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
