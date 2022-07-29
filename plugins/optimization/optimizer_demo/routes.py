@@ -41,6 +41,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
     OptimizationInput,
     OptimizationOutput,
     OptimizationOutputSchema,
+    CallbackURLSchema,
+    CallbackURL,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -48,6 +50,9 @@ from . import OPTIMIZER_DEMO_BLP, OptimizerDemo
 from .schemas import (
     HyperparametersSchema,
     TaskResponseSchema,
+    InternalDataSchema,
+    Hyperparameters,
+    InternalData,
 )
 from .tasks import setup_task
 
@@ -107,10 +112,15 @@ class MicroFrontend(MethodView):
         location="query",
         required=False,
     )
+    @OPTIMIZER_DEMO_BLP.arguments(
+        CallbackURLSchema(unknown=EXCLUDE),
+        location="query",
+        required=False,
+    )
     @OPTIMIZER_DEMO_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors):
+    def get(self, errors, callback_url: CallbackURL):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, callback_url)
 
     @OPTIMIZER_DEMO_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the optimizer plugin."
@@ -122,12 +132,17 @@ class MicroFrontend(MethodView):
         location="form",
         required=False,
     )
+    @OPTIMIZER_DEMO_BLP.arguments(
+        CallbackURLSchema(unknown=EXCLUDE),
+        location="query",
+        required=False,
+    )
     @OPTIMIZER_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors):
+    def post(self, errors, callback_url: CallbackURL):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, callback_url)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, callback_url: CallbackURL):
         plugin = OptimizerDemo.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -142,11 +157,13 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTIMIZER_DEMO_BLP.name}.{Setup.__name__}"
+                    f"{OPTIMIZER_DEMO_BLP.name}.{Setup.__name__}",
+                    **CallbackURLSchema().dump(callback_url),
                 ),  # URL of the processing step
                 help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
-                    f"{OPTIMIZER_DEMO_BLP.name}.{MicroFrontend.__name__}"
+                    f"{OPTIMIZER_DEMO_BLP.name}.{MicroFrontend.__name__}",
+                    **CallbackURLSchema().dump(callback_url),
                 ),  # URL of this endpoint
             )
         )
@@ -157,14 +174,20 @@ class Setup(MethodView):
     """Start the setup task."""
 
     @OPTIMIZER_DEMO_BLP.arguments(HyperparametersSchema(unknown=EXCLUDE), location="form")
+    @OPTIMIZER_DEMO_BLP.arguments(
+        CallbackURLSchema(unknown=EXCLUDE),
+        location="query",
+        required=False,
+    )
     @OPTIMIZER_DEMO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @OPTIMIZER_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, arguments: Hyperparameters, callback_url: CallbackURL):
         """Start the setup task."""
-        schema = HyperparametersSchema()
+        schema = InternalDataSchema()
+        internal_data = InternalData(hyperparameters=arguments, callback_url=callback_url)
 
         db_task = ProcessingTask(
-            task_name=setup_task.name, parameters=schema.dumps(arguments)
+            task_name=setup_task.name, parameters=schema.dumps(internal_data)
         )
         db_task.save(commit=True)
 
