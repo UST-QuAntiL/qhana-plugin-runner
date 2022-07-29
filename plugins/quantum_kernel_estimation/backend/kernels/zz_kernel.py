@@ -7,7 +7,11 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 class ZZKernel(Kernel):
-
+    """
+    This class creates the circuit proposed by Havlíček et al, but for any given feature map.
+    The name for this class is inspired by the name of qiskit's implementation.
+    Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). <a href=\"https://doi.org/10.1038/s41586-019-0980-2\">https://doi.org/10.1038/s41586-019-0980-2</a>
+    """
     def __init__(self, backend, n_qbits, reps, entanglement_pattern_enum):
         super().__init__(backend, n_qbits, reps, entanglement_pattern_enum)
 
@@ -19,7 +23,14 @@ class ZZKernel(Kernel):
         raise NotImplementedError("Method evaluate is not implemented yet!")
 
     def execute_circuit(self, X, Y, to_calculate, entanglement_pattern):
-
+        """
+        Executes circuits foreach entry in to_calculate. An entry in to_calculate contains the information of which data point
+        in X should be evaluated with which data point in Y and which qubits should be used for the resulting quantum circuit.
+        :param X: list of data points
+        :param Y: list of data points
+        :param to_calculate: list. Each entry contains an index for X, an index for Y and a set of qubits.
+        :param entanglement_pattern: Entanglement pattern that should be used.
+        """
         def CNOT_chain(wires: List[int]):
             for i in range(len(wires) - 1):
                 qml.CNOT(wires=[wires[i], wires[i + 1]])
@@ -58,6 +69,9 @@ class ZZKernel(Kernel):
 
         @qml.qnode(self.backend)
         def circuit():
+            """
+            Creates the circuit for evaluation
+            """
             # projections_and_wires = []
             wires_to_measure = []
             for entry in to_calculate:

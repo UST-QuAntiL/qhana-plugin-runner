@@ -11,6 +11,9 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 class EntanglementPatternEnum(enum.Enum):
+    """
+    Enum listing all available entanglement patterns
+    """
     full = "full"
     linear = "linear"
     circular = "circular"
@@ -27,6 +30,9 @@ class EntanglementPatternEnum(enum.Enum):
 
 
 class KernelEnum(enum.Enum):
+    """
+    Enum listing all available kernels
+    """
     havlicek_kernel = 'Havlíček Kernel'
     suzuki_kernel8 = 'Suzuki Kernel 8'
     suzuki_kernel9 = 'Suzuki Kernel 9'
@@ -76,14 +82,6 @@ class Kernel:
         self.reps = reps
         self.entanglement_pattern_enum = entanglement_pattern_enum
 
-    def get_projector_to_zero(self, n_qbits: int) -> pnp.array:
-        """
-        Returns projector to the zero state, i.e. density operator |0...0><0...0| of size 2^n_qbits x 2^n_qbits.
-        """
-        projector = pnp.array(np.zeros((2 ** n_qbits, 2 ** n_qbits)))
-        projector[0, 0] = 1
-        return projector
-
     @abstractmethod
     def execute_circuit(self, X, Y, to_calculate, entanglement_pattern) -> List[float]:
         raise NotImplementedError("Method evaluate is not implemented yet!")
@@ -94,10 +92,15 @@ class Kernel:
         Returns the number of qbits needed, to compute one quantum circuit
         """
 
-    """
-    This function returns a kernel-matrix with size len(y) x len(X)
-    """
     def evaluate(self, X, y):
+        """
+        This function computes the kernel matrix between input X and y.
+        If possible, it evaluates multiple entries at once, e.g. if we have 5 qubits available and need 2 qubits to
+        evaluate on entry, then the circuits of two entries will run in parallel.
+        :param X: A list of data points
+        :param y: A list of data points
+        :return: kernel-matrix of size len(y) x len(X)
+        """
         needed_qbits = self.get_qbits_needed(X, y)
         entanglement_pattern = self.entanglement_pattern_enum.get_pattern(needed_qbits)
         amount_of_circuits = 0
