@@ -64,12 +64,13 @@ class ParameterHandler:
         self.parameter_dict = parameter_dict
         # Prevents the log and check to throw an error, when there is no entity URL,
         # if we are using the precomputed kernel option
-        if self.parameter_dict.get("kernel", None) == KernelEnum.precomputed.value:
+        if self.parameter_dict.get("kernel", None) == KernelEnum.precomputed.value and \
+            self.parameter_dict.get("pcaType", None) != PCATypeEnum.kernel:
             self.parameter_dict["entityPointsUrl"] = "No URL"
         # Prevents the log and check to throw an error, when there is no kernel URL,
         # if we are NOT using the precomputed kernel option
         else:
-            self.parameter_dict["kernelURL"] = "No URL"
+            self.parameter_dict["kernelUrl"] = "No URL"
 
         # log and check input parameters
         not_provided_params = []
@@ -199,8 +200,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
     )
     kernel = EnumField(
         KernelEnum,
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={
             "label": "Kernel",
             "description": "Type of kernel that should be used, e.g. poly kernel \'k(x,y) = (ɣ x^T y + c)^d\'",
