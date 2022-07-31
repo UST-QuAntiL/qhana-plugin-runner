@@ -65,8 +65,18 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="principle-components",
+                        data_type="plot",
+                        content_type=["text/html"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="pca-metadata",
                         content_type=["application/json"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="entity-points",
+                        content_type=["text/csv"],
                         required=True,
                     )
                 ],
