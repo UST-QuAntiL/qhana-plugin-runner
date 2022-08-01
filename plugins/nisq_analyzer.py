@@ -67,7 +67,7 @@ class PluginsView(MethodView):
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{NISQ_BLP.name}.PluginsView"),
-                ui_href=url_for(f"{NISQ_BLP.name}.MicroFrontend"),
+                ui_href="http://localhost:80",
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[],
