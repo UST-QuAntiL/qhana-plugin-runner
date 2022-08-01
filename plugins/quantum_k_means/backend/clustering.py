@@ -1,6 +1,7 @@
 import enum
 from abc import ABCMeta
 from abc import abstractmethod
+from typing import Tuple
 
 import numpy as np
 import pennylane as qml
@@ -23,7 +24,7 @@ class Clustering(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def create_cluster(self, position_matrix: np.ndarray) -> np.ndarray:
+    def create_cluster(self, position_matrix: np.ndarray) -> Tuple[np.ndarray, str]:
         pass
 
 
@@ -100,7 +101,7 @@ class NegativeRotationQuantumKMeansClustering(Clustering):
         self.ibmq_custom_backend = ibmq_custom_backend
         return
 
-    def create_cluster(self, position_matrix: np.ndarray) -> np.ndarray:
+    def create_cluster(self, position_matrix: np.ndarray) -> Tuple[np.ndarray, str]:
         self.clusterAlgo.set_number_of_clusters(self.number_of_clusters)
         self.clusterAlgo.set_max_qubits(self.max_qubits)
         self.clusterAlgo.set_shots_each(self.shots_each)
@@ -116,13 +117,13 @@ class NegativeRotationQuantumKMeansClustering(Clustering):
         label = np.zeros(position_matrix.shape[0])
 
         # run
-        clusterMapping = self.clusterAlgo.Run(position_matrix)
+        clusterMapping, representative_circuit = self.clusterAlgo.Run(position_matrix)
 
         # write result into labels
         for i in range(0, len(label)):
             label[i] = int(clusterMapping[i])
 
-        return label.astype(np.int)
+        return label.astype(np.int), representative_circuit
 
 
 class DestructiveInterferenceQuantumKMeansClustering(Clustering):
@@ -150,7 +151,7 @@ class DestructiveInterferenceQuantumKMeansClustering(Clustering):
         self.ibmq_custom_backend = ibmq_custom_backend
         return
 
-    def create_cluster(self, position_matrix: np.ndarray) -> np.ndarray:
+    def create_cluster(self, position_matrix: np.ndarray) -> Tuple[np.ndarray, str]:
         self.clusterAlgo.set_number_of_clusters(self.number_of_clusters)
         self.clusterAlgo.set_max_qubits(self.max_qubits)
         self.clusterAlgo.set_shots_each(self.shots_each)
@@ -166,13 +167,13 @@ class DestructiveInterferenceQuantumKMeansClustering(Clustering):
         label = np.zeros(position_matrix.shape[0])
 
         # run
-        clusterMapping = self.clusterAlgo.Run(position_matrix)
+        clusterMapping, representative_circuit = self.clusterAlgo.Run(position_matrix)
 
         # write result into labels
         for i in range(0, len(label)):
             label[i] = int(clusterMapping[i])
 
-        return label.astype(np.int)
+        return label.astype(np.int), representative_circuit
 
 
 class StatePreparationQuantumKMeansClustering(Clustering):
@@ -200,7 +201,7 @@ class StatePreparationQuantumKMeansClustering(Clustering):
         self.ibmq_custom_backend = ibmq_custom_backend
         return
 
-    def create_cluster(self, position_matrix: np.ndarray) -> np.ndarray:
+    def create_cluster(self, position_matrix: np.ndarray) -> Tuple[np.ndarray, str]:
         self.clusterAlgo.set_number_of_clusters(self.number_of_clusters)
         self.clusterAlgo.set_max_qubits(self.max_qubits)
         self.clusterAlgo.set_shots_each(self.shots_each)
@@ -216,13 +217,13 @@ class StatePreparationQuantumKMeansClustering(Clustering):
         label = np.zeros(position_matrix.shape[0])
 
         # run
-        clusterMapping = self.clusterAlgo.Run(position_matrix)
+        clusterMapping, representative_circuit = self.clusterAlgo.Run(position_matrix)
 
         # write result into labels
         for i in range(0, len(label)):
             label[i] = int(clusterMapping[i])
 
-        return label.astype(np.int)
+        return label.astype(np.int), representative_circuit
 
 
 class PositiveCorrelationQuantumKMeansClustering(Clustering):
