@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from celery.utils.log import get_task_logger
 from math import *
 import numpy as np
@@ -57,7 +59,7 @@ class BaseQuantumKMeans:
         plotData,
         plotCircuit,
         whichCircuit="negrot",
-    ):
+    ) -> Tuple[np.ndarray, str]:
         """
         Executes the quantum k means cluster algorithm on the given
         quantum backend and the specified circuit.
@@ -105,6 +107,8 @@ class BaseQuantumKMeans:
         counter = 1
         notConverged = True
         globalAmountExecutedCircuits = 0
+        representative_circuit = ""
+
         while notConverged and counter < maxRuns:
             self.UpdateConsole(run=counter)
             # print("run no " + str(counter))
@@ -113,10 +117,12 @@ class BaseQuantumKMeans:
             shouldPlotCircuit = 1 if plotCircuit and counter == 1 else False
             newCentroidMapping = None
             amountExecutedCircuits = 0
+
             if whichCircuit == "negrot":
                 (
                     newCentroidMapping,
                     amountExecutedCircuits,
+                    representative_circuit,
                 ) = self.ApplyNegativeRotationCircuit(
                     centroidAngles,
                     dataAngles,
@@ -129,6 +135,7 @@ class BaseQuantumKMeans:
                 (
                     newCentroidMapping,
                     amountExecutedCircuits,
+                    representative_circuit,
                 ) = self.ApplyDestructiveInterferenceCircuit(
                     centroidAngles,
                     dataAngles,
@@ -141,6 +148,7 @@ class BaseQuantumKMeans:
                 (
                     newCentroidMapping,
                     amountExecutedCircuits,
+                    representative_circuit,
                 ) = self.ApplyStatePreparationQuantumKMeansCircuit(
                     centroids, data, maxQubits, shotsEach, backend, shouldPlotCircuit
                 )
@@ -254,7 +262,7 @@ class BaseQuantumKMeans:
                 whichCircuit,
             )
 
-        return newCentroidMapping
+        return newCentroidMapping, representative_circuit
 
     def GenerateRandomData(self, amount):
         """
@@ -384,7 +392,7 @@ class BaseQuantumKMeans:
 
     def ApplyNegativeRotationCircuit(
         self, centroidAngles, dataAngles, maxQubits, shotsEach, backend: qml.Device, plot
-    ):
+    ) -> Tuple[np.ndarray, int, str]:
         """
         Create and apply the negative rotation circuit.
         Note, that the lenght of centeroids is the same as k!
@@ -413,6 +421,7 @@ class BaseQuantumKMeans:
         # we store the results as [(t1,c1), (t1,c2), ..., (t1,cn), (t2,c1), ..., (tm,cn)]
         # while each (ti,cj) stands for one floating point number, i.e. P|0> for one qubit
         result = np.zeros(globalWorkAmount)
+        representative_circuit = ""
 
         # create tuples of parameters corresponding for each qubit,
         # i.e. create [t1,c1, t1,c2, ..., t1,cn, t2,c1, ..., tm,cn]
@@ -462,6 +471,9 @@ class BaseQuantumKMeans:
             histogram = pl_samples_to_counts(circuit())
             amountExecutedCircuits += 1
 
+            if representative_circuit == "":
+                representative_circuit = circuit.tape.to_openqasm()
+
             hits = self.CalculateP0Hits(histogram)
             for i in range(0, len(hits)):
                 result[index - qubitsForCircuit + i] = hits[i]
@@ -477,11 +489,11 @@ class BaseQuantumKMeans:
                     highestHitCentroidIndex = j
             centroidMapping[i] = highestHitCentroidIndex
 
-        return (centroidMapping, amountExecutedCircuits)
+        return centroidMapping, amountExecutedCircuits, representative_circuit
 
     def ApplyDestructiveInterferenceCircuit(
         self, centroidAngles, dataAngles, maxQubits, shotsEach, backend: qml.Device, plot
-    ):
+    ) -> Tuple[np.ndarray, int, str]:
         """
         Create and apply the distance calculation using
         destructive interference circuit.
@@ -512,6 +524,7 @@ class BaseQuantumKMeans:
         # while each (ti,cj) stands for one floating point number, i.e. P|1> for the second qubit
         # i.e. P|11> + P|10>, the distance (not normed, proportional to distance)
         result = np.zeros(globalWorkAmount)
+        representative_circuit = ""
 
         # create tuples of parameters corresponding for each qubit,
         # i.e. create [t1,c1, t1,c2, ..., t1,cn, t2,c1, ..., tm,cn]
@@ -566,6 +579,9 @@ class BaseQuantumKMeans:
             histogram = pl_samples_to_counts(circuit())
             amountExecutedCircuits += 1
 
+            if representative_circuit == "":
+                representative_circuit = circuit.tape.to_openqasm()
+
             distances = self.CalculateP1Hits(histogram)
             for i in range(0, len(distances)):
                 result[index - int(qubitsForCircuit / 2) + i] = distances[i]
@@ -579,11 +595,11 @@ class BaseQuantumKMeans:
                     lowestDistanceCentroidIndex = j
             centroidMapping[i] = lowestDistanceCentroidIndex
 
-        return (centroidMapping, amountExecutedCircuits)
+        return centroidMapping, amountExecutedCircuits, representative_circuit
 
     def ApplyStatePreparationQuantumKMeansCircuit(
         self, centroids, data, maxQubits, shotsEach, backend: qml.Device, plot
-    ):
+    ) -> Tuple[np.ndarray, int, str]:
         # this is also the amount of qubits that are needed in total.
         # note that this is not necessarily in parallel, also sequential
         # is possible here. He need at least 2 qubits that run in parallel.
@@ -592,6 +608,7 @@ class BaseQuantumKMeans:
         # while each (ti,cj) stands for one floating point number, i.e. P|0> for the second, resp.
         # the first qubit (P|0> = P|00>)
         result = np.zeros(globalWorkAmount)
+        representative_circuit = ""
 
         # create tuples of parameters corresponding for each qubit,
         # i.e. create [t1,c1, t1,c2, ..., t1,cn, t2,c1, ..., tm,cn]
@@ -646,6 +663,9 @@ class BaseQuantumKMeans:
             histogram = pl_samples_to_counts(circuit())
             amountExecutedCircuits += 1
 
+            if representative_circuit == "":
+                representative_circuit = circuit.tape.to_openqasm()
+
             distances = self.CalculateP0HitsOdd(histogram)
             for i in range(0, len(distances)):
                 result[index - int(qubitsForCircuit / 2) + i] = distances[i]
@@ -662,7 +682,7 @@ class BaseQuantumKMeans:
                     lowestDistanceCentroidIndex = j
             centroidMapping[i] = lowestDistanceCentroidIndex
 
-        return (centroidMapping, amountExecutedCircuits)
+        return centroidMapping, amountExecutedCircuits, representative_circuit
 
     def CalculateP0Hits(self, histogram):
         """
@@ -839,7 +859,7 @@ class NegativeRotationQuantumKMeans(BaseQuantumKMeans):
         super().__init__()
         return
 
-    def Run(self, data, plotData=False, plotCircuit=False):
+    def Run(self, data, plotData=False, plotCircuit=False) -> Tuple[np.ndarray, str]:
         """
         Runs the circuit and returns the cluster mapping, i.e.
         we return a list with a mapping from data indizes to cluster indizes,
@@ -849,7 +869,7 @@ class NegativeRotationQuantumKMeans(BaseQuantumKMeans):
         data vector with index 1 -> mapped to cluster 0
         data vector with index 2 -> mapped to cluster 1
         """
-        clusterMapping = self.ExecuteNegativeRotation(
+        clusterMapping, representative_circuit = self.ExecuteNegativeRotation(
             data,
             self.k,
             self.maxQubits,
@@ -861,7 +881,7 @@ class NegativeRotationQuantumKMeans(BaseQuantumKMeans):
             plotCircuit,
             "negrot",
         )
-        return clusterMapping
+        return clusterMapping, representative_circuit
 
 
 class DestructiveInterferenceQuantumKMeans(BaseQuantumKMeans):
@@ -874,7 +894,7 @@ class DestructiveInterferenceQuantumKMeans(BaseQuantumKMeans):
         super().__init__()
         return
 
-    def Run(self, data, plotData=False, plotCircuit=False):
+    def Run(self, data, plotData=False, plotCircuit=False) -> Tuple[np.ndarray, str]:
         """
         Runs the circuit and returns the cluster mapping, i.e.
         we return a list with a mapping from data indizes to cluster indizes,
@@ -884,7 +904,7 @@ class DestructiveInterferenceQuantumKMeans(BaseQuantumKMeans):
         data vector with index 1 -> mapped to cluster 0
         data vector with index 2 -> mapped to cluster 1
         """
-        clusterMapping = self.ExecuteNegativeRotation(
+        clusterMapping, representative_circuit = self.ExecuteNegativeRotation(
             data,
             self.k,
             self.maxQubits,
@@ -896,7 +916,7 @@ class DestructiveInterferenceQuantumKMeans(BaseQuantumKMeans):
             plotCircuit,
             "inter",
         )
-        return clusterMapping
+        return clusterMapping, representative_circuit
 
 
 class StatePreparationQuantumKMeans(BaseQuantumKMeans):
@@ -909,7 +929,7 @@ class StatePreparationQuantumKMeans(BaseQuantumKMeans):
         super().__init__()
         return
 
-    def Run(self, data, plotData=False, plotCircuit=False):
+    def Run(self, data, plotData=False, plotCircuit=False) -> Tuple[np.ndarray, str]:
         """
         Runs the circuit and returns the cluster mapping, i.e.
         we return a list with a mapping from data indizes to cluster indizes,
@@ -919,7 +939,7 @@ class StatePreparationQuantumKMeans(BaseQuantumKMeans):
         data vector with index 1 -> mapped to cluster 0
         data vector with index 2 -> mapped to cluster 1
         """
-        clusterMapping = self.ExecuteNegativeRotation(
+        clusterMapping, representative_circuit = self.ExecuteNegativeRotation(
             data,
             self.k,
             self.maxQubits,
@@ -931,7 +951,7 @@ class StatePreparationQuantumKMeans(BaseQuantumKMeans):
             plotCircuit,
             "custom",
         )
-        return clusterMapping
+        return clusterMapping, representative_circuit
 
 
 class PositiveCorrelationQuantumKmeans:
@@ -989,7 +1009,7 @@ class PositiveCorrelationQuantumKmeans:
         centroids_theta,
         backend: qml.Device,
         shots_each,
-    ):
+    ) -> Tuple[np.ndarray, str]:
         """
         Execute the quantum circuit(s) and returns the centroid mapping according to the result.
         We need 3 qubits per data point - centroid pair. Two for data encoding and one ancilla.
@@ -997,6 +1017,7 @@ class PositiveCorrelationQuantumKmeans:
 
         distances = np.zeros((len(data_phi), len(centroids_phi)))
         centroid_mapping = np.zeros(len(data_phi))
+        representative_circuit = ""
 
         for i in range(0, len(data_phi)):
             for j in range(0, len(centroids_phi)):
@@ -1013,6 +1034,9 @@ class PositiveCorrelationQuantumKmeans:
                 circuit = qml.QNode(circ_func, device=backend)
                 result = pl_samples_to_counts(circuit())
 
+                if representative_circuit == "":
+                    representative_circuit = circuit.tape.to_openqasm()
+
                 if "1" in result:
                     distances[i, j] = result["1"]
                 else:
@@ -1021,7 +1045,7 @@ class PositiveCorrelationQuantumKmeans:
         for i in range(0, len(distances)):
             centroid_mapping[i] = np.argmin(distances[i, :])
 
-        return centroid_mapping
+        return centroid_mapping, representative_circuit
 
     @staticmethod
     def check_convergence(old_centroid_mapping, new_centroid_mapping, tol):
