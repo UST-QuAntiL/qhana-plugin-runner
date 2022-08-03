@@ -384,11 +384,11 @@ class PluginMetadataSchema(MaBaseSchema):
 
 @dataclass
 class OptimizerCallbackData:
-    db_id: int
+    optimizer_start_url: str
 
 
 class OptimizerCallbackSchema(MaBaseSchema):
-    db_id = ma.fields.Integer(required=True, allow_none=False)
+    optimizer_start_url = ma.fields.Url(required=True, allow_none=False)
 
     @post_load
     def make_object(self, data, **kwargs):
@@ -413,14 +413,12 @@ class ObjectiveFunctionCallbackSchema(MaBaseSchema):
 @dataclass
 class OptimizationInput:
     dataset: str
-    optimizer_db_id: int
     number_of_parameters: int
     objective_function_calculation_url: str
 
 
 class OptimizationInputSchema(MaBaseSchema):
     dataset = ma.fields.Url(required=True, allow_none=False)
-    optimizer_db_id = ma.fields.Integer(required=True, allow_none=False)
     number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
     objective_function_calculation_url = ma.fields.Url(required=True, allow_none=False)
 

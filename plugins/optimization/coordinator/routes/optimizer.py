@@ -135,7 +135,7 @@ class OptimSetupProcess(MethodView):
         schema = InternalDataSchema()
         internal_data: InternalData = InternalData()
 
-        internal_data.optimizer_url = arguments.optimizer_url
+        internal_data.optimizer_plugin_url = arguments.optimizer_url
 
         db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)
@@ -147,7 +147,7 @@ class OptimSetupProcess(MethodView):
 
         # get metadata
         metadata_schema = PluginMetadataSchema()
-        resp = requests.get(internal_data.optimizer_url)
+        resp = requests.get(internal_data.optimizer_plugin_url)
 
         if resp.status_code >= 400:
             TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
@@ -156,10 +156,12 @@ class OptimSetupProcess(MethodView):
         plugin_metadata: PluginMetadata = metadata_schema.load(raw_metadata)
 
         # URL of the process endpoint of the objective function plugin
-        href = urljoin(internal_data.optimizer_url, plugin_metadata.entry_point.href)
+        href = urljoin(
+            internal_data.optimizer_plugin_url, plugin_metadata.entry_point.href
+        )
         # URL of the micro frontend endpoint of the objective function plugin
         ui_href = urljoin(
-            internal_data.optimizer_url, plugin_metadata.entry_point.ui_href
+            internal_data.optimizer_plugin_url, plugin_metadata.entry_point.ui_href
         )
 
         callback_schema = CallbackURLSchema()
@@ -223,7 +225,7 @@ class OptimCallback(MethodView):
         schema = InternalDataSchema()
         internal_data: InternalData = schema.loads(db_task.parameters)
 
-        internal_data.optim_db_id = arguments.db_id
+        internal_data.optimizer_start_url = arguments.optimizer_start_url
 
         db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)

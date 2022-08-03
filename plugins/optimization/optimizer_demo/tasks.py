@@ -31,12 +31,13 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 @CELERY.task(name=f"{OptimizerDemo.instance.identifier}.setup_task", bind=True)
-def setup_task(self, db_id: int) -> str:
+def setup_task(self, db_id: int, optimizer_start_url: str) -> str:
     """
     Retrieves the input data from the database and stores metadata and hyperparameters into files.
 
     :param self:
     :param db_id: database ID that will be used to retrieve the task data from the database
+    :param optimizer_start_url: URL to the optimization endpoint
     :return: log message
     """
     TASK_LOGGER.info(f"Starting setup task with db id '{db_id}'")
@@ -71,7 +72,7 @@ def setup_task(self, db_id: int) -> str:
         )
 
     callback_schema = OptimizerCallbackSchema()
-    callback_data = OptimizerCallbackData(db_id=db_id)
+    callback_data = OptimizerCallbackData(optimizer_start_url=optimizer_start_url)
 
     resp = requests.post(
         parameters.callback_url.callback_url,

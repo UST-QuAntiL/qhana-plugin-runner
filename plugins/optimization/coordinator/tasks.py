@@ -76,36 +76,16 @@ def start_optimization_task(self, db_id: int) -> str:
     schema = InternalDataSchema()
     internal_data: InternalData = schema.loads(task_data.parameters)
 
-    schema = PluginMetadataSchema()
-    resp = requests.get(internal_data.optimizer_url)
-
-    if resp.status_code >= 400:
-        TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
-
-    plugin_metadata: PluginMetadata = schema.loads(resp.text)
-    optimizer_start_url: Optional[str] = None
-
-    # TODO: make it more generic and move it to the plugin runner
-    for entry_point in plugin_metadata.entry_point.interaction_endpoints:
-        if entry_point.type == "start-optimization":
-            optimizer_start_url = urljoin(
-                internal_data.objective_function_url, entry_point.href
-            )
-
-    if optimizer_start_url is None:
-        raise ValueError("No interaction endpoint found with type start-optimization")
-
     request_schema = OptimizationInputSchema()
     request_data = OptimizationInput(
         dataset=internal_data.dataset_url,
-        optimizer_db_id=internal_data.optim_db_id,
         number_of_parameters=internal_data.number_of_parameters,
         objective_function_calculation_url=internal_data.objective_function_calculation_url,
     )
 
     response_schema = OptimizationOutputSchema()
     resp = requests.post(
-        optimizer_start_url,
+        internal_data.optimizer_start_url,
         json=request_schema.dump(request_data),
     )
 

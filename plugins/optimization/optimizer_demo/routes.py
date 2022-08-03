@@ -76,14 +76,7 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{OPTIMIZER_DEMO_BLP.name}.{Setup.__name__}"),
                 ui_href=url_for(f"{OPTIMIZER_DEMO_BLP.name}.{MicroFrontend.__name__}"),
-                interaction_endpoints=[
-                    InteractionEndpoint(
-                        type="start-optimization",
-                        href=url_for(
-                            f"{OPTIMIZER_DEMO_BLP.name}.{Optimization.__name__}"
-                        ),
-                    )
-                ],
+                interaction_endpoints=[],
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[
@@ -191,10 +184,16 @@ class Setup(MethodView):
         )
         db_task.save(commit=True)
 
-        # all tasks need to know about db id to load the db entry
-        task: chain = setup_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
+        optimizer_start_url = url_for(
+            f"{OPTIMIZER_DEMO_BLP.name}.{Optimization.__name__}",
+            db_id=db_task.id,
+            _external=True,
         )
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = setup_task.s(
+            db_id=db_task.id, optimizer_start_url=optimizer_start_url
+        ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -207,22 +206,20 @@ class Setup(MethodView):
         )
 
 
-@OPTIMIZER_DEMO_BLP.route("/optimization/")
+@OPTIMIZER_DEMO_BLP.route("/<int:db_id>/optimization/")
 class Optimization(MethodView):
     """Start the optimization."""
 
     @OPTIMIZER_DEMO_BLP.arguments(OptimizationInputSchema(unknown=EXCLUDE))
     @OPTIMIZER_DEMO_BLP.response(HTTPStatus.OK, OptimizationOutputSchema())
     @OPTIMIZER_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: OptimizationInput):
+    def post(self, arguments: OptimizationInput, db_id: int):
         """Start the optimization."""
 
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(
-            id_=arguments.optimizer_db_id
-        )
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
         if db_task is None:
-            msg = f"Could not load task data with id {arguments.optimizer_db_id} to read parameters!"
+            msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 

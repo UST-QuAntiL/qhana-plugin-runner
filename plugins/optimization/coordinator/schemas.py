@@ -33,18 +33,18 @@ class TaskResponseSchema(MaBaseSchema):
 @dataclass
 class InternalData:
     objective_function_url: Optional[str] = None
-    optimizer_url: Optional[str] = None
+    optimizer_plugin_url: Optional[str] = None
     dataset_url: Optional[str] = None
-    optim_db_id: Optional[int] = None
+    optimizer_start_url: Optional[str] = None
     number_of_parameters: Optional[int] = None
     objective_function_calculation_url: Optional[str] = None
 
 
 class InternalDataSchema(MaBaseSchema):
     objective_function_url = ma.fields.Url(required=False, allow_none=True)
-    optimizer_url = ma.fields.Url(required=False, allow_none=True)
+    optimizer_plugin_url = ma.fields.Url(required=False, allow_none=True)
     dataset_url = ma.fields.Url(required=False, allow_none=True)
-    optim_db_id = ma.fields.Integer(required=False, allow_none=True)
+    optimizer_start_url = ma.fields.Url(required=False, allow_none=True)
     number_of_parameters = ma.fields.Integer(required=False, allow_none=True)
     objective_function_calculation_url = ma.fields.URL(required=False, allow_none=True)
 
