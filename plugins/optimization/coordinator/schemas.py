@@ -37,7 +37,7 @@ class InternalData:
     dataset_url: Optional[str] = None
     optim_db_id: Optional[int] = None
     number_of_parameters: Optional[int] = None
-    obj_func_db_id: Optional[int] = None
+    objective_function_calculation_url: Optional[str] = None
 
 
 class InternalDataSchema(MaBaseSchema):
@@ -46,7 +46,7 @@ class InternalDataSchema(MaBaseSchema):
     dataset_url = ma.fields.Url(required=False, allow_none=True)
     optim_db_id = ma.fields.Integer(required=False, allow_none=True)
     number_of_parameters = ma.fields.Integer(required=False, allow_none=True)
-    obj_func_db_id = ma.fields.Integer(required=False, allow_none=True)
+    objective_function_calculation_url = ma.fields.URL(required=False, allow_none=True)
 
     @post_load
     def make_object(self, data, **kwargs):

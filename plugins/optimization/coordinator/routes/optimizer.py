@@ -147,7 +147,12 @@ class OptimSetupProcess(MethodView):
 
         # get metadata
         metadata_schema = PluginMetadataSchema()
-        raw_metadata = requests.get(internal_data.optimizer_url).json()
+        resp = requests.get(internal_data.optimizer_url)
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+
+        raw_metadata = resp.json()
         plugin_metadata: PluginMetadata = metadata_schema.load(raw_metadata)
 
         # URL of the process endpoint of the objective function plugin

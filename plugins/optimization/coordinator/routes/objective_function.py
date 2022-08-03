@@ -150,7 +150,12 @@ class ObjFuncSetupProcess(MethodView):
 
         # get metadata
         schema = PluginMetadataSchema()
-        raw_metadata = requests.get(internal_data.objective_function_url).json()
+        resp = requests.get(internal_data.objective_function_url)
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+
+        raw_metadata = resp.json()
         plugin_metadata: PluginMetadata = schema.load(raw_metadata)
 
         # URL of the process endpoint of the objective function plugin
@@ -223,7 +228,7 @@ class ObjFuncCallback(MethodView):
         schema = InternalDataSchema()
         internal_data: InternalData = schema.loads(db_task.parameters)
 
-        internal_data.obj_func_db_id = arguments.db_id
+        internal_data.objective_function_calculation_url = arguments.calculation_endpoint
         internal_data.number_of_parameters = arguments.number_of_parameters
 
         db_task.parameters = schema.dumps(internal_data)

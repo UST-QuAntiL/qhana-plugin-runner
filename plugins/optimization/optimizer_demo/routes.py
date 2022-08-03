@@ -230,7 +230,7 @@ class Optimization(MethodView):
         parameters = np.random.normal(size=(arguments.number_of_parameters,))
 
         obj_func = _objective_function_wrapper(
-            arguments.dataset, arguments.obj_func_calc_url, arguments.obj_func_db_id
+            arguments.dataset, arguments.objective_function_calculation_url
         )
 
         # optimization
@@ -247,7 +247,7 @@ class Optimization(MethodView):
 
 
 def _objective_function_wrapper(
-    dataset_url: str, objective_function_calculation_url: str, obj_func_db_id: int
+    dataset_url: str, objective_function_calculation_url: str
 ):
     """
     Provides the objective function with additional information that are needed to execute the requests to the objective
@@ -260,18 +260,19 @@ def _objective_function_wrapper(
     """
 
     def objective_function(x: np.ndarray) -> float:
-        request_data = ObjFuncCalcInput(
-            data_set=dataset_url, db_id=obj_func_db_id, parameters=x.tolist()
-        )
+        request_data = ObjFuncCalcInput(data_set=dataset_url, parameters=x.tolist())
         input_schema = ObjFuncCalcInputSchema()
 
-        res = requests.post(
+        resp = requests.post(
             objective_function_calculation_url,
             json=input_schema.dump(request_data),
-        ).json()
+        )
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
 
         output_schema = ObjFuncCalcOutputSchema()
-        output: ObjFuncCalcOutput = output_schema.load(res)
+        output: ObjFuncCalcOutput = output_schema.load(resp.json())
 
         return output.objective_value
 

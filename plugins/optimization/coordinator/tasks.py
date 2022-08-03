@@ -75,12 +75,14 @@ def start_optimization_task(self, db_id: int) -> str:
 
     schema = InternalDataSchema()
     internal_data: InternalData = schema.loads(task_data.parameters)
-    obj_func_calc_url = _get_calc_endpoint(internal_data.objective_function_url)
 
     schema = PluginMetadataSchema()
-    plugin_metadata: PluginMetadata = schema.loads(
-        requests.get(internal_data.optimizer_url).text
-    )
+    resp = requests.get(internal_data.optimizer_url)
+
+    if resp.status_code >= 400:
+        TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+
+    plugin_metadata: PluginMetadata = schema.loads(resp.text)
     optimizer_start_url: Optional[str] = None
 
     # TODO: make it more generic and move it to the plugin runner
@@ -98,17 +100,19 @@ def start_optimization_task(self, db_id: int) -> str:
         dataset=internal_data.dataset_url,
         optimizer_db_id=internal_data.optim_db_id,
         number_of_parameters=internal_data.number_of_parameters,
-        obj_func_db_id=internal_data.obj_func_db_id,
-        obj_func_calc_url=obj_func_calc_url,
+        objective_function_calculation_url=internal_data.objective_function_calculation_url,
     )
 
     response_schema = OptimizationOutputSchema()
-    response: OptimizationOutput = response_schema.load(
-        requests.post(
-            optimizer_start_url,
-            json=request_schema.dump(request_data),
-        ).json()
+    resp = requests.post(
+        optimizer_start_url,
+        json=request_schema.dump(request_data),
     )
+
+    if resp.status_code >= 400:
+        TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+
+    response: OptimizationOutput = response_schema.load(resp.json())
 
     with SpooledTemporaryFile(mode="w") as output:
         output.write(response_schema.dumps(response))
@@ -117,25 +121,3 @@ def start_optimization_task(self, db_id: int) -> str:
         )
 
     return ""
-
-
-# TODO: make it more generic and move to plugin runner
-def _get_calc_endpoint(objective_function_plugin_url: str) -> str:
-    schema = PluginMetadataSchema()
-    plugin_metadata: PluginMetadata = schema.loads(
-        requests.get(objective_function_plugin_url).text
-    )
-    objective_function_calculation_url: Optional[str] = None
-
-    for entry_point in plugin_metadata.entry_point.interaction_endpoints:
-        if entry_point.type == "objective-function-calculation":
-            objective_function_calculation_url = urljoin(
-                objective_function_plugin_url, entry_point.href
-            )
-
-    if objective_function_calculation_url is None:
-        raise ValueError(
-            "No interaction endpoint found in plugin with type objective-function-calculation"
-        )
-
-    return objective_function_calculation_url

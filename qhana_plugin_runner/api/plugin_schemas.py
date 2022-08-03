@@ -397,12 +397,12 @@ class OptimizerCallbackSchema(MaBaseSchema):
 
 @dataclass
 class ObjectiveFunctionCallbackData:
-    db_id: int
+    calculation_endpoint: str
     number_of_parameters: int
 
 
 class ObjectiveFunctionCallbackSchema(MaBaseSchema):
-    db_id = ma.fields.Integer(required=True, allow_none=False)
+    calculation_endpoint = ma.fields.URL(required=True, allow_none=False)
     number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
 
     @post_load
@@ -415,16 +415,14 @@ class OptimizationInput:
     dataset: str
     optimizer_db_id: int
     number_of_parameters: int
-    obj_func_db_id: int
-    obj_func_calc_url: str
+    objective_function_calculation_url: str
 
 
 class OptimizationInputSchema(MaBaseSchema):
     dataset = ma.fields.Url(required=True, allow_none=False)
     optimizer_db_id = ma.fields.Integer(required=True, allow_none=False)
     number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
-    obj_func_db_id = ma.fields.Integer(required=True, allow_none=False)
-    obj_func_calc_url = ma.fields.Url(required=True, allow_none=False)
+    objective_function_calculation_url = ma.fields.Url(required=True, allow_none=False)
 
     @post_load
     def make_obj(self, data, **kwargs):
@@ -451,13 +449,11 @@ class OptimizationOutputSchema(MaBaseSchema):
 @dataclass
 class ObjFuncCalcInput:
     data_set: str
-    db_id: int
     parameters: List[float]
 
 
 class ObjFuncCalcInputSchema(MaBaseSchema):
     data_set = ma.fields.Url(required=True, allow_none=False)
-    db_id = ma.fields.Integer(required=True, allow_none=False)
     parameters = ma.fields.List(ma.fields.Float(), required=True, allow_none=False)
 
     @post_load

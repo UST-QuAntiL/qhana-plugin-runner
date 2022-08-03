@@ -73,9 +73,12 @@ def setup_task(self, db_id: int) -> str:
     callback_schema = OptimizerCallbackSchema()
     callback_data = OptimizerCallbackData(db_id=db_id)
 
-    requests.post(
+    resp = requests.post(
         parameters.callback_url.callback_url,
         json=callback_schema.dump(callback_data),
     )
+
+    if resp.status_code >= 400:
+        TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
 
     return "Stored metadata and hyperparameters"

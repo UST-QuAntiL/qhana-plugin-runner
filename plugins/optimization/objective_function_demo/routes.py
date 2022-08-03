@@ -31,7 +31,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginType,
     EntryPoint,
-    InteractionEndpoint,
     ObjFuncCalcInputSchema,
     ObjFuncCalcOutputSchema,
     ObjFuncCalcInput,
@@ -73,12 +72,7 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.{Setup.__name__}"),
                 ui_href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.{MicroFrontend.__name__}"),
-                interaction_endpoints=[
-                    InteractionEndpoint(
-                        type="objective-function-calculation",
-                        href=url_for(f"{OBJ_FUNC_DEMO_BLP.name}.{Calculation.__name__}"),
-                    )
-                ],
+                interaction_endpoints=[],
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[
@@ -186,10 +180,16 @@ class Setup(MethodView):
         )
         db_task.save(commit=True)
 
-        # all tasks need to know about db id to load the db entry
-        task: chain = setup_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
+        calculation_endpoint = url_for(
+            f"{OBJ_FUNC_DEMO_BLP.name}.{Calculation.__name__}",
+            db_id=db_task.id,
+            _external=True,
         )
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = setup_task.s(
+            db_id=db_task.id, calculation_endpoint=calculation_endpoint
+        ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -202,21 +202,19 @@ class Setup(MethodView):
         )
 
 
-@OBJ_FUNC_DEMO_BLP.route("/calc/")
+@OBJ_FUNC_DEMO_BLP.route("/<int:db_id>/calc/")
 class Calculation(MethodView):
     """Objective function calculation resource."""
 
     @OBJ_FUNC_DEMO_BLP.arguments(ObjFuncCalcInputSchema())
     @OBJ_FUNC_DEMO_BLP.response(HTTPStatus.OK, ObjFuncCalcOutputSchema())
     @OBJ_FUNC_DEMO_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: ObjFuncCalcInput):
+    def post(self, arguments: ObjFuncCalcInput, db_id: int):
         """Endpoint calculating the objective value."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=arguments.db_id)
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
         if db_task is None:
-            msg = (
-                f"Could not load task data with id {arguments.db_id} to read parameters!"
-            )
+            msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
@@ -229,11 +227,20 @@ class Calculation(MethodView):
         if hyperparameter_url is None:
             raise ValueError("Hyperparameter file missing")
 
-        data_set = requests.get(arguments.data_set).json()
+        resp = requests.get(arguments.data_set)
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+
+        data_set = resp.json()
+
         schema = HyperparametersSchema()
-        hyperparameters: Hyperparameters = schema.load(
-            requests.get(hyperparameter_url).json()
-        )
+        resp = requests.get(hyperparameter_url)
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+
+        hyperparameters: Hyperparameters = schema.load(resp.json())
 
         model = NeuralNetwork(
             hyperparameters.number_of_input_values,
