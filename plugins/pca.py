@@ -271,7 +271,7 @@ class PCA(QHAnaPluginBase):
         return PCA_BLP
 
     def get_requirements(self) -> str:
-        return "scikit-learn~=0.24.2"
+        return "scikit-learn~=1.1"
 
 
 TASK_LOGGER = get_task_logger(__name__)
