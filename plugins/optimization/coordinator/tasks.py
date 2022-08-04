@@ -90,7 +90,9 @@ def start_optimization_task(self, db_id: int) -> str:
     )
 
     if resp.status_code >= 400:
-        TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+        TASK_LOGGER.error(
+            f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+        )
 
     response: OptimizationOutput = response_schema.load(resp.json())
 

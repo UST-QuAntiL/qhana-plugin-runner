@@ -50,7 +50,7 @@ from .schemas import (
     InternalData,
     InternalDataSchema,
 )
-from .tasks import setup_task
+from .tasks import setup_task, callback_task
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -187,9 +187,17 @@ class Setup(MethodView):
         )
 
         # all tasks need to know about db id to load the db entry
-        task: chain = setup_task.s(
-            db_id=db_task.id, calculation_endpoint=calculation_endpoint
-        ) | save_task_result.s(db_id=db_task.id)
+        task: chain = (
+            setup_task.s(db_id=db_task.id)
+            | save_task_result.s(db_id=db_task.id)
+            | callback_task.s(
+                callback_url=internal_data.callback_url.callback_url,
+                calculation_endpoint=calculation_endpoint,
+                task_url=url_for(
+                    "tasks-api.TaskView", task_id=str(db_task.id), _external=True
+                ),
+            )
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -230,7 +238,9 @@ class Calculation(MethodView):
         resp = requests.get(arguments.data_set)
 
         if resp.status_code >= 400:
-            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
 
         data_set = resp.json()
 
@@ -238,7 +248,9 @@ class Calculation(MethodView):
         resp = requests.get(hyperparameter_url)
 
         if resp.status_code >= 400:
-            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
 
         hyperparameters: Hyperparameters = schema.load(resp.json())
 

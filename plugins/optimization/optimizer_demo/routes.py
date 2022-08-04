@@ -54,7 +54,7 @@ from .schemas import (
     Hyperparameters,
     InternalData,
 )
-from .tasks import setup_task
+from .tasks import setup_task, callback_task
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -191,9 +191,14 @@ class Setup(MethodView):
         )
 
         # all tasks need to know about db id to load the db entry
-        task: chain = setup_task.s(
-            db_id=db_task.id, optimizer_start_url=optimizer_start_url
-        ) | save_task_result.s(db_id=db_task.id)
+        task: chain = (
+            setup_task.s(db_id=db_task.id)
+            | save_task_result.s(db_id=db_task.id)
+            | callback_task.s(
+                callback_url=callback_url.callback_url,
+                optimizer_start_url=optimizer_start_url,
+            )
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -266,7 +271,9 @@ def _objective_function_wrapper(
         )
 
         if resp.status_code >= 400:
-            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
 
         output_schema = ObjFuncCalcOutputSchema()
         output: ObjFuncCalcOutput = output_schema.load(resp.json())

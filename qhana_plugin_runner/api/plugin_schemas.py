@@ -397,13 +397,13 @@ class OptimizerCallbackSchema(MaBaseSchema):
 
 @dataclass
 class ObjectiveFunctionCallbackData:
-    calculation_endpoint: str
-    number_of_parameters: int
+    calculation_url: str
+    task_url: str
 
 
 class ObjectiveFunctionCallbackSchema(MaBaseSchema):
-    calculation_endpoint = ma.fields.URL(required=True, allow_none=False)
-    number_of_parameters = ma.fields.Integer(required=True, allow_none=False)
+    calculation_url = ma.fields.URL(required=True, allow_none=False)
+    task_url = ma.fields.URL(required=True, allow_none=False)
 
     @post_load
     def make_object(self, data, **kwargs):

@@ -31,7 +31,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 @CELERY.task(name=f"{OptimizerDemo.instance.identifier}.setup_task", bind=True)
-def setup_task(self, db_id: int, optimizer_start_url: str) -> str:
+def setup_task(self, db_id: int) -> str:
     """
     Retrieves the input data from the database and stores metadata and hyperparameters into files.
 
@@ -54,9 +54,6 @@ def setup_task(self, db_id: int, optimizer_start_url: str) -> str:
     TASK_LOGGER.info(
         f"Loaded data from db: optimizer='{parameters.hyperparameters.optimizer}'"
     )
-    TASK_LOGGER.info(
-        f"Loaded data from db: callback_url='{parameters.callback_url.callback_url}'"
-    )
 
     if parameters.hyperparameters is None or parameters.callback_url is None:
         raise ValueError("Input parameters incomplete")
@@ -71,15 +68,20 @@ def setup_task(self, db_id: int, optimizer_start_url: str) -> str:
             "application/json",
         )
 
+    return "Stored metadata and hyperparameters"
+
+
+@CELERY.task(name=f"{OptimizerDemo.instance.identifier}.callback_task", bind=True)
+def callback_task(self, _, callback_url: str, optimizer_start_url: str) -> None:
     callback_schema = OptimizerCallbackSchema()
     callback_data = OptimizerCallbackData(optimizer_start_url=optimizer_start_url)
 
     resp = requests.post(
-        parameters.callback_url.callback_url,
+        callback_url,
         json=callback_schema.dump(callback_data),
     )
 
     if resp.status_code >= 400:
-        TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
-
-    return "Stored metadata and hyperparameters"
+        TASK_LOGGER.error(
+            f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+        )

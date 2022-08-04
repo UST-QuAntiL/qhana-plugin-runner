@@ -80,9 +80,13 @@ class OutputDataMetadataSchema(MaBaseSchema):
             del data["name"]
         return data
 
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return OutputDataMetadata(**data)
+
 
 @dataclass()
-class TaskData:
+class TaskStatus:
     status: str
     log: Optional[str] = None
     progress: Optional[ProgressMetadata] = None
@@ -91,22 +95,18 @@ class TaskData:
 
 
 class TaskStatusSchema(MaBaseSchema):
-    status = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    log = ma.fields.String(required=False, allow_none=True, dump_only=True)
-    progress = ma.fields.Nested(
-        ProgressMetadataSchema, required=False, allow_none=True, dump_only=True
-    )
+    status = ma.fields.String(required=True, allow_none=False)
+    log = ma.fields.String(required=False, allow_none=True)
+    progress = ma.fields.Nested(ProgressMetadataSchema, required=False, allow_none=True)
     steps = ma.fields.List(
         ma.fields.Nested(StepMetadataSchema),
         required=False,
         allow_none=True,
-        dump_only=True,
     )
     outputs = ma.fields.List(
         ma.fields.Nested(OutputDataMetadataSchema()),
         required=False,
         allow_none=True,
-        dump_only=True,
     )
 
     @ma.post_dump()
@@ -120,6 +120,10 @@ class TaskStatusSchema(MaBaseSchema):
         if data["progress"] == None:
             del data["progress"]
         return data
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return TaskStatus(**data)
 
 
 @TASKS_API.route("/<int:task_id>/")
@@ -158,7 +162,7 @@ class TaskView(MethodView):
                 )
 
         if not task_data.is_finished:
-            return TaskData(
+            return TaskStatus(
                 progress=progress,
                 steps=steps,
                 status=task_data.status,
@@ -180,7 +184,7 @@ class TaskView(MethodView):
                 )
             )
 
-        return TaskData(
+        return TaskStatus(
             progress=progress,
             steps=steps,
             status=task_data.status,

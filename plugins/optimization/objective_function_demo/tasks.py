@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 
@@ -36,7 +37,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 @CELERY.task(name=f"{ObjectiveFunctionDemo.instance.identifier}.setup_task", bind=True)
-def setup_task(self, db_id: int, calculation_endpoint: str) -> str:
+def setup_task(self, db_id: int) -> str:
     """
     Retrieves the input data from the database and stores metadata and hyperparameters into files.
     @param self:
@@ -80,20 +81,39 @@ def setup_task(self, db_id: int, calculation_endpoint: str) -> str:
             "application/json",
         )
 
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(
+            json.dumps({"number_of_parameters": model.get_number_of_parameters()})
+        )
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "callback_data.json",
+            "callback-data",
+            "application/json",
+        )
+
+    return "Stored metadata and hyperparameters"
+
+
+@CELERY.task(name=f"{ObjectiveFunctionDemo.instance.identifier}.callback_task", bind=True)
+def callback_task(
+    self, _, callback_url: str, calculation_endpoint: str, task_url: str
+) -> None:
+
     callback_schema = ObjectiveFunctionCallbackSchema()
     callback_data = ObjectiveFunctionCallbackData(
-        calculation_endpoint=calculation_endpoint,
-        number_of_parameters=model.get_number_of_parameters(),
+        calculation_url=calculation_endpoint, task_url=task_url
     )
 
     TASK_LOGGER.info(callback_schema.dump(callback_data))
 
     resp = requests.post(
-        internal_data.callback_url.callback_url,
+        callback_url,
         json=callback_schema.dump(callback_data),
     )
 
     if resp.status_code >= 400:
-        TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
-
-    return "Stored metadata and hyperparameters"
+        TASK_LOGGER.error(
+            f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+        )

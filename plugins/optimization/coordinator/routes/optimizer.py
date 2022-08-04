@@ -150,7 +150,9 @@ class OptimSetupProcess(MethodView):
         resp = requests.get(internal_data.optimizer_plugin_url)
 
         if resp.status_code >= 400:
-            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
 
         raw_metadata = resp.json()
         plugin_metadata: PluginMetadata = metadata_schema.load(raw_metadata)

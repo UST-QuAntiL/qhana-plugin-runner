@@ -34,6 +34,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     CallbackURL,
     CallbackURLSchema,
 )
+from qhana_plugin_runner.api.tasks_api import TaskStatusSchema, TaskStatus
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error
 from .dataset_and_start import StartOptimization, DatasetSelectionUI
@@ -153,7 +154,9 @@ class ObjFuncSetupProcess(MethodView):
         resp = requests.get(internal_data.objective_function_url)
 
         if resp.status_code >= 400:
-            TASK_LOGGER.error(f"{resp.status_code} {resp.reason} {resp.text}")
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
 
         raw_metadata = resp.json()
         plugin_metadata: PluginMetadata = schema.load(raw_metadata)
@@ -228,9 +231,36 @@ class ObjFuncCallback(MethodView):
         schema = InternalDataSchema()
         internal_data: InternalData = schema.loads(db_task.parameters)
 
-        internal_data.objective_function_calculation_url = arguments.calculation_endpoint
-        internal_data.number_of_parameters = arguments.number_of_parameters
+        internal_data.objective_function_calculation_url = arguments.calculation_url
 
+        resp = requests.get(arguments.task_url)
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
+
+        schema = TaskStatusSchema()
+        task_status: TaskStatus = schema.load(resp.json())
+        callback_data_url = None
+
+        for output in task_status.outputs:
+            if output.data_type == "callback-data":
+                callback_data_url = output.href
+
+        if callback_data_url is None:
+            raise ValueError("No file of data type callback-data stored in task result.")
+
+        resp = requests.get(callback_data_url)
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
+
+        internal_data.number_of_parameters = resp.json()["number_of_parameters"]
+
+        schema = InternalDataSchema()
         db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)
 
