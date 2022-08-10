@@ -31,23 +31,15 @@ RUN mkdir /venv && mkdir --parents /app/instance &&  mkdir --parents /app/extra-
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
 RUN chmod +x /wait
 
-USER gunicorn
-
-# create and activate virtualenv as gunicorn user to allow installing additional dependencies later
-ARG VIRTUAL_ENV=/venv
-RUN python -m venv ${VIRTUAL_ENV}
-
-# change path to include virtualenv first (affects all following commands)
-ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
-
-RUN python -m pip install --upgrade pip && python -m pip install gunicorn poetry invoke
+RUN python -m pip install --upgrade pip && python -m pip install poetry
 
 COPY --chown=gunicorn . /app
 
-RUN python -m pip install .
+RUN python -m poetry install
+RUN poetry add gunicorn invoke
 
 VOLUME ["/app/instance"]
 
 EXPOSE 8080
 
-ENTRYPOINT ["python", "-m", "invoke", "start-docker"]
+ENTRYPOINT ["poetry", "run", "python", "-m", "invoke", "start-docker"]
