@@ -34,7 +34,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
-_plugin_name = "SVM"
+_plugin_name = "svm"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
@@ -46,10 +46,10 @@ SVM_BLP = SecurityBlueprint(
 )
 
 
-# class DemoResponseSchema(MaBaseSchema):
-#     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-#     version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-#     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
+class DemoResponseSchema(MaBaseSchema):
+    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -59,7 +59,6 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class SVMSchema(FrontendFormBaseSchema):
-    print("Schema")
     # INPUT....
     # print("TODO")  # TODO
     input_str = ma.fields.String(
@@ -76,8 +75,6 @@ class SVMSchema(FrontendFormBaseSchema):
 @SVM_BLP.route("/")
 class PluginView(MethodView):
     """Plugins collection resource."""
-
-    print("/")
 
     @SVM_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @SVM_BLP.require_jwt("jwt", optional=True)
@@ -113,8 +110,6 @@ class PluginView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the SVM plugin."""
 
-    print("/ui/")
-
     example_inputs = {
         "inputStr": "Sample input string.",
     }
@@ -126,13 +121,24 @@ class MicroFrontend(MethodView):
         required=False,
     )
     @SVM_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors):
-        """Return the micro frontend with prerendered inputs."""
-        print("POST")
+    def get(self, errors):
+        """Return micri frontend."""
         return self.render(request.args, errors)
 
+    @SVM_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the hello world plugin."
+    )
+    @SVM_BLP.arguments(
+        SVMSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="form",
+        required=False,
+    )
+    @SVM_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors)
+
     def render(self, data: Mapping, errors: dict):
-        print("RENDER")
         plugin = SVM.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -157,8 +163,6 @@ class MicroFrontend(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    print("/process/")
-
     @SVM_BLP.arguments(SVMSchema(unknown=EXCLUDE), location="form")
     @SVM_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @SVM_BLP.require_jwt("jwt", optional=True)
@@ -181,7 +185,7 @@ class ProcessView(MethodView):
 
 
 class SVM(QHAnaPluginBase):
-    print("SVM")
+
     name = _plugin_name
     version = __version__
 
@@ -197,7 +201,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{SVM.instance.identifier}.demo_task", bind=True)
 def demo_task(self, db_id: int) -> str:
-    print("TASK")
+
     TASK_LOGGER.info(f"Starting new demo task with db id '{db_id}'")
     return "DONE"
 
