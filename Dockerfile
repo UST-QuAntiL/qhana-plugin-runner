@@ -25,21 +25,24 @@ ENV CELERY_WORKER_POOL=threads
 
 # make directories and set user rights
 RUN mkdir /venv && mkdir --parents /app/instance &&  mkdir --parents /app/extra-plugins && mkdir --parents /app/git-plugins \
-    && chown --recursive gunicorn /app && chmod --recursive u+rw /app && chown --recursive gunicorn /venv
+    && chown --recursive gunicorn /app && chmod --recursive u+rw /app && chown --recursive gunicorn /venv \
+    && mkdir /home/gunicorn && chown --recursive gunicorn /home/gunicorn
 
 # Wait for database
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
 RUN chmod +x /wait
+
+USER gunicorn
 
 RUN python -m pip install --upgrade pip && python -m pip install poetry
 
 COPY --chown=gunicorn . /app
 
 RUN python -m poetry install
-RUN poetry add gunicorn invoke
+RUN python -m poetry add gunicorn invoke
 
 VOLUME ["/app/instance"]
 
 EXPOSE 8080
 
-ENTRYPOINT ["poetry", "run", "python", "-m", "invoke", "start-docker"]
+ENTRYPOINT ["python","-m", "poetry", "run", "python", "-m", "invoke", "start-docker"]
