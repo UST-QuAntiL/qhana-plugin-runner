@@ -1,4 +1,5 @@
 # Support Vector Machines (classical and quantum)
+from enum import Enum
 from http import HTTPStatus
 from typing import Optional, Mapping
 from json import dumps
@@ -15,6 +16,7 @@ from flask.templating import render_template
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 
+from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -58,14 +60,41 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+class ClassicalKernelEnum(Enum):
+    rbf = "rbf"
+    linear = "linear"
+    poly = "poly"
+    sigmoid = "sigmoid"
+
+
 class InputParameters:
     def __init__(
         self,
         # data_url: str,
-        use_quantum=True,
+        use_quantum=False,
+        regularization_C=float,
+        kernel=ClassicalKernelEnum,
+        degree=int,
     ):
         # self.data_url = data_url
         self.use_quantum = use_quantum
+        self.regularization_C = regularization_C
+        self.kernel = kernel
+        self.degree = degree
+
+    # parameters
+    # CSVM:
+    #   regularization parameter C=1.0
+    #   kernel = rbf (linear, poly, rbf, sigmoid)
+    #   degree of the poly kernel = 3 (irrelevant for all other kernels)
+    # QSVC: (qiskit)
+    #   backend = QuantumBackends.aer_statevector_simulator
+    #   Ibmq_token = ""
+    #   Ibmq_custom_backend = ""
+    #   Featuremap = "ZFeatureMap" (ZFeatureMap, ZZFeatureMap, PauliFeatureMap)
+    #   Entanglement = "linear" (full, linear)
+    #   Reps = 2
+    #   Shots = 1024
 
 
 class SVMSchema(FrontendFormBaseSchema):
@@ -78,8 +107,34 @@ class SVMSchema(FrontendFormBaseSchema):
             "input_type": "checkbox",
         },
     )
-
-    print("USE QUANTUM", use_quantum)
+    regularization_C = ma.fields.Float(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "regularization parameter C",
+            "description": "The strength of the regularization is inversely proportional to C. Must be strictly positive, the penalty is a squared l2 penalty.",
+            "input_type": "text",
+        },
+    )
+    kernel = EnumField(
+        ClassicalKernelEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Kernel",
+            "description": "Type of kernel to use for classical SVM.",
+            "input_type": "select",
+        },
+    )
+    degree = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Degree",
+            "description": "Degree of the polynomial kernel function (poly). Ignored by all other kernels.",
+            "input_type": "text",
+        },
+    )
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
@@ -162,12 +217,18 @@ class MicroFrontend(MethodView):
 
         # define default values
         default_values = {
-            schema.fields["use_quantum"].data_key: True,
+            schema.fields["use_quantum"].data_key: False,
+            schema.fields["regularization_C"].data_key: 1.0,
+            schema.fields["kernel"].data_key: ClassicalKernelEnum.rbf,
+            schema.fields["degree"].data_key: 3,
         }
 
+        print("datadict before", data_dict)
         # overwrite default values with other values
         default_values.update(data_dict)
         data_dict = default_values
+
+        print("datadict after", data_dict)
 
         return Response(
             render_template(
@@ -230,17 +291,20 @@ class SVM(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_classical_SVC(data, labels):
+def get_classical_SVC(data, labels, c=1.0, kernel="rbf", degree=3):  # TODO kernel
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
     from sklearn.svm import SVC
 
     TASK_LOGGER.info("classical supportvector machine")
 
-    csvc = make_pipeline(StandardScaler(), SVC(gamma="auto"))
+    # csvc = make_pipeline(
+    #     StandardScaler(), SVC(C=c, kernel=kernel, degree=degree, gamma="auto")
+    # )  # TODO gamma?
+    csvc = SVC(C=c, kernel=kernel, degree=degree)
     csvc.fit(data, labels)
 
-    return csvc
+    return csvc  # csvc.predict, classifier.support_vectors_
 
 
 def get_quantum_SVC(data, labels):
@@ -283,29 +347,25 @@ def demo_task(self, db_id: int) -> str:
 
     use_quantum = input_params.use_quantum
     TASK_LOGGER.info(f"Loaded input parameters from db: use_quantum='{use_quantum}'")
-    # parameters
-    # CSVM:
-    #   regularization parameter C=1.0
-    #   kernel = rbf (linear, poly, rbf, sigmoid)
-    #   degree of the poly kernel = 3 (irrelevant for all other kernels)
-    # QSVC: (qiskit)
-    #   backend = QuantumBackends.aer_statevector_simulator
-    #   Ibmq_token = ""
-    #   Ibmq_custom_backend = ""
-    #   Featuremap = "ZFeatureMap" (ZFeatureMap, ZZFeatureMap, PauliFeatureMap)
-    #   Entanglement = "linear" (full, linear)
-    #   Reps = 2
-    #   Shots = 1024
 
+    # get data (TODO!)
     data = np.array([[-1, -1], [-2, -1], [1, 1], [2, 1]])
     labels = np.array([1, 1, 2, 2])
     sample_test = [[-0.8, -1]]
 
     svm = None
     if use_quantum:
+
         svm = get_quantum_SVC(data, labels)
     else:
-        svm = get_classical_SVC(data, labels)
+        c = input_params.regularization_C
+        TASK_LOGGER.info(f"Loaded input parameters from db: c='{c}'")
+        kernel = input_params.kernel.value
+        TASK_LOGGER.info(f"Loaded input parameters from db: kernel='{kernel}'")
+        degree = input_params.degree
+        TASK_LOGGER.info(f"Loaded input parameters from db: degree='{degree}'")
+
+        svm = get_classical_SVC(data, labels, c=c, kernel=kernel, degree=degree)
 
     # TODO accuracy
 
