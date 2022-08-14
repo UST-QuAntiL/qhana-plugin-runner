@@ -65,6 +65,55 @@ def twospirals(n_points, noise=0.7, turns=1.52):
     )
 
 
+def get_optimizer(optimizer, model, step):
+    if optimizer == OptimizerEnum.adadelta:
+        TASK_LOGGER.info("adadelta")
+        return optim.Adadelta(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adagrad:
+        TASK_LOGGER.info("adagrad")
+        return optim.Adagrad(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adam:
+        TASK_LOGGER.info("adam")
+        return optim.Adam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adamW:
+        TASK_LOGGER.info("adamW")
+        return optim.AdamW(model.parameters(), lr=step)
+    elif (
+        optimizer == OptimizerEnum.sparse_adam
+    ):  # TODO check "RuntimeError: SparseAdam does not support dense gradients, please consider Adam instead"
+        TASK_LOGGER.info("SparseAdam")
+        return optim.SparseAdam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.adamax:
+        TASK_LOGGER.info("Adamax")
+        return optim.Adamax(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.asgd:
+        TASK_LOGGER.info("ASGD")
+        return optim.ASGD(model.parameters(), lr=step)
+    elif (
+        optimizer == OptimizerEnum.lbfgs
+    ):  # TODO step() missing 1 required argument: 'closure'
+        TASK_LOGGER.info("LBFGS")
+        return optim.LBFGS(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.n_adam:
+        TASK_LOGGER.info("NAdam")
+        return optim.NAdam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.r_adam:
+        TASK_LOGGER.info("RAdam")
+        return optim.RAdam(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.rms_prob:
+        TASK_LOGGER.info("RMSprop")
+        return optim.RMSprop(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.Rprop:
+        TASK_LOGGER.info("Rprop")
+        return optim.Rprop(model.parameters(), lr=step)
+    elif optimizer == OptimizerEnum.sdg:
+        TASK_LOGGER.info("SGD")
+        return optim.SGD(model.parameters(), lr=step)
+    else:
+        TASK_LOGGER.error("unknown optimizer")
+        return -1
+
+
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
 
@@ -193,52 +242,7 @@ def calculation_task(self, db_id: int) -> str:
     loss_fn = nn.CrossEntropyLoss()
 
     # select optimizer
-    opt = None
-    if optimizer == OptimizerEnum.adadelta:
-        TASK_LOGGER.info("adadelta")
-        opt = optim.Adadelta(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.adagrad:
-        TASK_LOGGER.info("adagrad")
-        opt = optim.Adagrad(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.adam:
-        TASK_LOGGER.info("adam")
-        opt = optim.Adam(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.adamW:
-        TASK_LOGGER.info("adamW")
-        opt = optim.AdamW(model.parameters(), lr=step)
-    elif (
-        optimizer == OptimizerEnum.sparse_adam
-    ):  # TODO check "RuntimeError: SparseAdam does not support dense gradients, please consider Adam instead"
-        TASK_LOGGER.info("SparseAdam")
-        opt = optim.SparseAdam(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.adamax:
-        TASK_LOGGER.info("Adamax")
-        opt = optim.Adamax(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.asgd:
-        TASK_LOGGER.info("ASGD")
-        opt = optim.ASGD(model.parameters(), lr=step)
-    elif (
-        optimizer == OptimizerEnum.lbfgs
-    ):  # TODO step() missing 1 required argument: 'closure'
-        TASK_LOGGER.info("LBFGS")
-        opt = optim.LBFGS(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.n_adam:
-        TASK_LOGGER.info("NAdam")
-        opt = optim.NAdam(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.r_adam:
-        TASK_LOGGER.info("RAdam")
-        opt = optim.RAdam(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.rms_prob:
-        TASK_LOGGER.info("RMSprop")
-        opt = optim.RMSprop(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.Rprop:
-        TASK_LOGGER.info("Rprop")
-        opt = optim.Rprop(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.sdg:
-        TASK_LOGGER.info("SGD")
-        opt = optim.SGD(model.parameters(), lr=step)
-    else:
-        TASK_LOGGER.info("unknown optimizer")
+    opt = get_optimizer(optimizer, model, step)
 
     # prepare data
     X, Y = dataset
@@ -384,6 +388,7 @@ def calculation_task(self, db_id: int) -> str:
 # TODO check if quantum device selection works as intended
 # TODO check if training still works
 # TODO ouput document with details for classical network parts
+# TODO error: cannot import name Basebackend from qiskit.providers
 
 # DONE save actual weights to file
 # DONE add references

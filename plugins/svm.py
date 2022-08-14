@@ -1,6 +1,7 @@
 # Support Vector Machines (classical and quantum)
 from enum import Enum
 from http import HTTPStatus
+from tempfile import SpooledTemporaryFile
 from typing import Optional, Mapping
 from json import dumps
 
@@ -30,11 +31,14 @@ from qhana_plugin_runner.api.util import (
     SecurityBlueprint,
     MaBaseSchema,
     FrontendFormBaseSchema,
+    FileUrl,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-
+from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import open_url
 
 _plugin_name = "svm"
 __version__ = "v0.1.0"
@@ -70,13 +74,15 @@ class ClassicalKernelEnum(Enum):
 class InputParameters:
     def __init__(
         self,
-        # data_url: str,
+        entity_points_url: str,
+        clusters_url: str,
         use_quantum=False,
         regularization_C=float,
         kernel=ClassicalKernelEnum,
         degree=int,
     ):
-        # self.data_url = data_url
+        self.entity_points_url = entity_points_url
+        self.clusters_url = clusters_url
         self.use_quantum = use_quantum
         self.regularization_C = regularization_C
         self.kernel = kernel
@@ -98,6 +104,28 @@ class InputParameters:
 
 
 class SVMSchema(FrontendFormBaseSchema):
+    entity_points_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity-points",
+        data_content_types="application/json",
+        metadata={
+            "label": "Entity points URL",
+            "description": "URL to a json file with the entity points.",
+            "input_type": "text",
+        },
+    )
+    clusters_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="clusters",
+        data_content_types="application/json",
+        metadata={
+            "label": "Clusters URL",
+            "description": "URL to a json file with the clusters.",
+            "input_type": "text",
+        },
+    )
     use_quantum = ma.fields.Boolean(
         required=False,
         allow_none=False,
@@ -298,13 +326,10 @@ def get_classical_SVC(data, labels, c=1.0, kernel="rbf", degree=3):  # TODO kern
 
     TASK_LOGGER.info("classical supportvector machine")
 
-    # csvc = make_pipeline(
-    #     StandardScaler(), SVC(C=c, kernel=kernel, degree=degree, gamma="auto")
-    # )  # TODO gamma?
     csvc = SVC(C=c, kernel=kernel, degree=degree)
     csvc.fit(data, labels)
 
-    return csvc  # csvc.predict, classifier.support_vectors_
+    return csvc
 
 
 def get_quantum_SVC(data, labels):
@@ -347,16 +372,39 @@ def demo_task(self, db_id: int) -> str:
 
     use_quantum = input_params.use_quantum
     TASK_LOGGER.info(f"Loaded input parameters from db: use_quantum='{use_quantum}'")
+    entity_points_url = input_params.entity_points_url
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
+    )
+    clusters_url = input_params.clusters_url
+    TASK_LOGGER.info(f"Loaded input parameters from db: clusters_url='{clusters_url}'")
+
+    # load data from file
+    entity_points = open_url(entity_points_url).json()
+    clusters_entities = open_url(clusters_url).json()
+
+    # get data
+    clusters = {}
+    for ent in clusters_entities:
+        clusters[ent["ID"]] = ent["cluster"]
+    points = []
+    labels = []
+    for ent in entity_points:
+        points.append(ent["point"])
+        labels.append(clusters[ent["ID"]])
+
+    # print("POINTS", points)  # [ [x0,y0], [x1,y1], ...]
+    # print("LABELS", labels)  # [ 1, 0, ...]
 
     # get data (TODO!)
-    data = np.array([[-1, -1], [-2, -1], [1, 1], [2, 1]])
-    labels = np.array([1, 1, 2, 2])
+    # data = np.array([[-1, -1], [-2, -1], [1, 1], [2, 1]])
+    # labels = np.array([1, 1, 2, 2])
     sample_test = [[-0.8, -1]]
 
     svm = None
     if use_quantum:
 
-        svm = get_quantum_SVC(data, labels)
+        svm = get_quantum_SVC(points, labels)
     else:
         c = input_params.regularization_C
         TASK_LOGGER.info(f"Loaded input parameters from db: c='{c}'")
@@ -365,13 +413,28 @@ def demo_task(self, db_id: int) -> str:
         degree = input_params.degree
         TASK_LOGGER.info(f"Loaded input parameters from db: degree='{degree}'")
 
-        svm = get_classical_SVC(data, labels, c=c, kernel=kernel, degree=degree)
+        svm = get_classical_SVC(points, labels, c=c, kernel=kernel, degree=degree)
 
     # TODO accuracy
 
     # TODO visualize
 
+    # save support vectors in a file
+    support_vectors = []  # TODO better solution? each support vector individually?
+    support_vectors.append({"support_vectors": svm.support_vectors_.tolist()})
+
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(support_vectors, output, "application/json")
+        STORE.persist_task_result(
+            db_id, output, "support-vectors.json", "support-vectors", "application/json"
+        )
+
     return "DONE " + str(svm.predict(sample_test)) + str(use_quantum)
 
 
-# TODO use_quantum is always True..
+# TODO quantum SVM supportvector list is empty!! why?
+# TODO visualize?
+# TODO split test train dataset
+# TODO compute accuracy on test data?
+# TODO quantum SVM parameters in GUI
+# TODO hide GUI elements when irrelevant
