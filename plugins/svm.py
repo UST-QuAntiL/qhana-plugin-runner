@@ -393,18 +393,32 @@ def demo_task(self, db_id: int) -> str:
         points.append(ent["point"])
         labels.append(clusters[ent["ID"]])
 
-    # print("POINTS", points)  # [ [x0,y0], [x1,y1], ...]
-    # print("LABELS", labels)  # [ 1, 0, ...]
+    # TODO randomly shuffle data?
 
-    # get data (TODO!)
-    # data = np.array([[-1, -1], [-2, -1], [1, 1], [2, 1]])
-    # labels = np.array([1, 1, 2, 2])
-    sample_test = [[-0.8, -1]]
+    # split training and test data
+    test_percentage = 0.2
+    n_data = len(labels)
+    n_test = int(n_data * test_percentage)  # number of test data elements
+    if n_test < 1:
+        n_test = 1
+    if n_test > n_data - 1:
+        n_test = n_data - 1
+    n_train = n_data - n_test  # Number of training points
+    TASK_LOGGER.info(
+        f"Number of data elements: n_train = '{n_train}', n_test = '{n_test}'"
+    )
 
+    train_data = points[:-n_test]
+    test_data = points[-n_test:]
+
+    train_labels = labels[:-n_test]
+    test_labels = labels[-n_test:]
+
+    # Support vector machine
     svm = None
     if use_quantum:
 
-        svm = get_quantum_SVC(points, labels)
+        svm = get_quantum_SVC(train_data, train_labels)
     else:
         c = input_params.regularization_C
         TASK_LOGGER.info(f"Loaded input parameters from db: c='{c}'")
@@ -413,9 +427,14 @@ def demo_task(self, db_id: int) -> str:
         degree = input_params.degree
         TASK_LOGGER.info(f"Loaded input parameters from db: degree='{degree}'")
 
-        svm = get_classical_SVC(points, labels, c=c, kernel=kernel, degree=degree)
+        svm = get_classical_SVC(
+            train_data, train_labels, c=c, kernel=kernel, degree=degree
+        )
 
-    # TODO accuracy
+    # Test SVM
+    predictions = svm.predict(test_data)
+    # accuracy
+    accuracy = np.sum(predictions == test_labels) / len(test_labels)
 
     # TODO visualize
 
@@ -429,12 +448,10 @@ def demo_task(self, db_id: int) -> str:
             db_id, output, "support-vectors.json", "support-vectors", "application/json"
         )
 
-    return "DONE " + str(svm.predict(sample_test)) + str(use_quantum)
+    return "DONE with accuracy: " + str(accuracy)
 
 
 # TODO quantum SVM supportvector list is empty!! why?
 # TODO visualize?
-# TODO split test train dataset
-# TODO compute accuracy on test data?
 # TODO quantum SVM parameters in GUI
 # TODO hide GUI elements when irrelevant
