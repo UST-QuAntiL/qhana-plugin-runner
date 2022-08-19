@@ -35,10 +35,15 @@ class QuantumBackends(Enum):
         qubit_cnt: int,
         shots: int,
     ) -> qml.Device:
+        print("BACKEND_ENUM", backend_enum)
+        print("IBMQ_TOKEN", ibmq_token)
+        print("CUSTOM_BACKEND_NAME", custom_backend_name)
+        print("QUBIT_CNT", qubit_cnt)
+        print("SHOTS", shots)
         if backend_enum.name.startswith("aer"):
             # Use local AER backend
             aer_backend_name = backend_enum.name[4:]
-
+            print("AER_BACKEND_NAME", aer_backend_name)
             return qml.device(
                 "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
             )  # TODO check if shots parameter exists

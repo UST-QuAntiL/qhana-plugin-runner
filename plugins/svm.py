@@ -313,7 +313,12 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.27\nqiskit-aer~=0.10.4\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
+        # return "qiskit~=0.27\nqiskit-aer~=0.10.4\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
+        # TODO different qisit aer version to make it compatible with qnn and quantum k means backends?? qiskit-aer 0.10.3!!!
+        return "qiskit~=0.27\nqiskit-aer~=0.10.3\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
+        # auf dem anderen Laptop funktioniert: qiskit-aer==0.10.3, qiskit-terra==0.19.2, qiskit==0.34.2, qiskit-machine-learning==0.4.0
+        # funktioniert nicht wenn qiskit-aer==0.10.4 und wenn qiskit-terra==0.21.0
+        # hier funktioniert es noch nicht (qnn plugin un quantum kmeans plugin)
 
 
 TASK_LOGGER = get_task_logger(__name__)

@@ -230,6 +230,7 @@ def calculation_task(self, db_id: int) -> str:
     dev = QuantumBackends.get_pennylane_backend(
         device, ibmq_token, custom_backend, n_qubits, shots
     )
+    print("DEVICE", dev)
     #  dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -388,7 +389,7 @@ def calculation_task(self, db_id: int) -> str:
 # TODO check if quantum device selection works as intended
 # TODO check if training still works
 # TODO ouput document with details for classical network parts
-# TODO error: cannot import name Basebackend from qiskit.providers
+# TODO error: cannot import name Basebackend from qiskit.providers (also happens in quantum k means... differnet qiskit versions??)
 
 # DONE save actual weights to file
 # DONE add references
