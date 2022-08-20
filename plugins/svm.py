@@ -17,6 +17,9 @@ from flask.templating import render_template
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 
+from qiskit import IBMQ
+from qiskit import Aer
+
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -71,6 +74,40 @@ class ClassicalKernelEnum(Enum):
     sigmoid = "sigmoid"
 
 
+class QuantumBackends(Enum):
+    # from https://github.com/UST-QuAntiL/qhana/blob/main/qhana/backend/clustering.py
+    custom_ibmq = "custom_ibmq"
+    aer_statevector_simulator = "aer_statevector_simulator"
+    aer_qasm_simulator = "aer_qasm_simulator"
+    ibmq_qasm_simulator = "ibmq_qasm_simulator"
+    ibmq_16_melbourne = "ibmq_16_melbourne"
+    ibmq_armonk = "ibmq_armonk"
+    ibmq_5_yorktown = "ibmq_5_yorktown"
+    ibmq_ourense = "ibmq_ourense"
+    ibmq_vigo = "ibmq_vigo"
+    ibmq_valencia = "ibmq_valencia"
+    ibmq_athens = "ibmq_athens"
+    ibmq_santiago = "ibmq_santiago"
+
+    @staticmethod
+    def get_quantum_backend(backendEnum, ibmqToken=None, customBackendName=None):
+        backend = None
+        if backendEnum.name.startswith("aer"):
+            # Use local AER backend
+            aerBackendName = backendEnum.name[4:]
+            backend = Aer.get_backend(aerBackendName)
+        elif backendEnum.name.startswith("ibmq"):
+            # Use IBMQ backend
+            provider = IBMQ.enable_account(ibmqToken)
+            backend = provider.get_backend(backendEnum.name)
+        elif backendEnum.name.startswith("custom_ibmq"):
+            provider = IBMQ.enable_account(ibmqToken)
+            backend = provider.get_backend(customBackendName)
+        else:
+            TASK_LOGGER.error("Unknown quantum backend specified!")
+        return backend
+
+
 class InputParameters:
     def __init__(
         self,
@@ -80,6 +117,9 @@ class InputParameters:
         regularization_C=float,
         kernel=ClassicalKernelEnum,
         degree=int,
+        backend=QuantumBackends.aer_statevector_simulator,
+        ibmq_token="",
+        ibmq_custom_backend="",
     ):
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
@@ -87,6 +127,9 @@ class InputParameters:
         self.regularization_C = regularization_C
         self.kernel = kernel
         self.degree = degree
+        self.backend = backend
+        self.ibmq_token = ibmq_token
+        self.ibmq_custom_backen = ibmq_custom_backend
 
     # parameters
     # CSVM:
@@ -133,6 +176,34 @@ class SVMSchema(FrontendFormBaseSchema):
             "label": "use quantum",
             "description": "whether to use quantum svm or classical svm",
             "input_type": "checkbox",
+        },
+    )
+    backend = EnumField(
+        QuantumBackends,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Backend",
+            "description": "QC or simulator that will be used.",
+            "input_type": "select",
+        },
+    )
+    ibmq_token = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "text",
+        },
+    )
+    ibmq_custom_backend = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Custom backend",
+            "description": "Custom backend for IBMQ.",
+            "input_type": "text",
         },
     )
     regularization_C = ma.fields.Float(
@@ -249,6 +320,9 @@ class MicroFrontend(MethodView):
             schema.fields["regularization_C"].data_key: 1.0,
             schema.fields["kernel"].data_key: ClassicalKernelEnum.rbf,
             schema.fields["degree"].data_key: 3,
+            schema.fields["backend"].data_key: QuantumBackends.aer_statevector_simulator,
+            schema.fields["ibmq_token"].data_key: "",
+            schema.fields["ibmq_custom_backend"].data_key: "",
         }
 
         print("datadict before", data_dict)
@@ -337,10 +411,30 @@ def get_classical_SVC(data, labels, c=1.0, kernel="rbf", degree=3):  # TODO kern
     return csvc
 
 
-def get_quantum_SVC(data, labels):
+def get_feature_map(feature_map, feature_dimension, reps, entanglement):
+    from qiskit.circuit.library import ZFeatureMap, ZZFeatureMap, PauliFeatureMap
+
+    # TODO enum instead of string??
+    if feature_map == "ZFeatureMap":
+        return ZFeatureMap(
+            feature_dimension=feature_dimension, reps=reps
+        )  # , entanglement=entanglement)
+    elif feature_map == "ZZFeatureMap":
+        return ZZFeatureMap(
+            feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
+        )
+    elif feature_map == "PauliFeatureMap":
+        return PauliFeatureMap(
+            feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
+        )
+    else:
+        TASK_LOGGER.error("No such feature map available: {}".format(feature_map))
+
+
+def get_quantum_SVC(data, labels, input_params):
     # more parameters: backend, quantum kernel?, featuremap?
 
-    from qiskit import Aer
+    # from qiskit import Aer
     from qiskit_machine_learning.algorithms import QSVC
     from qiskit.circuit.library import ZFeatureMap
     from qiskit.utils import QuantumInstance
@@ -348,10 +442,32 @@ def get_quantum_SVC(data, labels):
 
     TASK_LOGGER.info("quantum supportvector machine")
 
-    backend = Aer.get_backend("qasm_simulator")
-    feature_map = ZFeatureMap(feature_dimension=2, reps=2)
+    backend = input_params.backend
+    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
+    ibmq_token = input_params.ibmq_token
+    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token='{ibmq_token}'")
+    ibmq_custom_backend = input_params.ibmq_custom_backen
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: ibmq_custom_backend='{ibmq_custom_backend}'"
+    )
+
+    backend_device = QuantumBackends.get_quantum_backend(
+        backendEnum=backend,
+        ibmqToken=ibmq_token,
+        customBackendName=ibmq_custom_backend,
+    )  # backend_device = Aer.get_backend("qasm_simulator")
+
+    dimension = len(data[0])
+    print("DIMENSION", dimension)
+    feature_map = get_feature_map(
+        feature_map="ZFeatureMap",
+        feature_dimension=dimension,
+        reps=2,
+        entanglement="linear",
+    )  # TODO GUI Parameters
+    # feature_map = ZFeatureMap(feature_dimension=2, reps=2)
     quantum_instance = QuantumInstance(
-        backend, seed_simulator=9283712, seed_transpiler=9283712, shots=1024
+        backend_device, seed_simulator=9283712, seed_transpiler=9283712, shots=1024
     )
     qkernel = QuantumKernel(feature_map=feature_map, quantum_instance=quantum_instance)
 
@@ -423,7 +539,7 @@ def demo_task(self, db_id: int) -> str:
     svm = None
     if use_quantum:
 
-        svm = get_quantum_SVC(train_data, train_labels)
+        svm = get_quantum_SVC(train_data, train_labels, input_params)
     else:
         c = input_params.regularization_C
         TASK_LOGGER.info(f"Loaded input parameters from db: c='{c}'")
@@ -440,6 +556,10 @@ def demo_task(self, db_id: int) -> str:
     predictions = svm.predict(test_data)
     # accuracy
     accuracy = np.sum(predictions == test_labels) / len(test_labels)
+    # instead of predictions and accuracy:
+    score = svm.score(test_data, test_labels)
+
+    print("ACCURACY", accuracy, "SCORE", score)
 
     # TODO visualize
 
