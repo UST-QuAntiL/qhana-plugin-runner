@@ -74,6 +74,17 @@ class ClassicalKernelEnum(Enum):
     sigmoid = "sigmoid"
 
 
+class FeatureMap(Enum):
+    z_feature_map = "ZFeatureMap"
+    zz_feature_map = "ZZFeatureMap"
+    pauli_feature_map = "PauliFeatureMap"
+
+
+class Entanglement(Enum):
+    linear = "linear"
+    full = "full"
+
+
 class QuantumBackends(Enum):
     # from https://github.com/UST-QuAntiL/qhana/blob/main/qhana/backend/clustering.py
     custom_ibmq = "custom_ibmq"
@@ -118,8 +129,12 @@ class InputParameters:
         kernel=ClassicalKernelEnum,
         degree=int,
         backend=QuantumBackends.aer_statevector_simulator,
-        ibmq_token="",
-        ibmq_custom_backend="",
+        ibmq_token=str,
+        ibmq_custom_backend=str,
+        feature_map=FeatureMap.z_feature_map,
+        entanglement=Entanglement.linear,
+        reps=int,
+        shots=int,
     ):
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
@@ -130,6 +145,10 @@ class InputParameters:
         self.backend = backend
         self.ibmq_token = ibmq_token
         self.ibmq_custom_backen = ibmq_custom_backend
+        self.feature_map = feature_map
+        self.entanglement = entanglement
+        self.reps = reps
+        self.shots = shots
 
     # parameters
     # CSVM:
@@ -206,6 +225,45 @@ class SVMSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    feature_map = EnumField(
+        FeatureMap,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Featuremap",
+            "description": "Feature map module used to transform data.",
+            "input_type": "select",
+        },
+    )
+    entanglement = EnumField(
+        Entanglement,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Entanglement",
+            "description": "Specifies the entanglement structure.",
+            "input_type": "select",
+        },
+    )
+    reps = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Repetitions",
+            "description": "Number of repreated circuits.",
+            "input_type": "text",
+        },
+    )
+    shots = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Shots",
+            "description": "Number of repetitions of each circuits, for sampling.",
+            "input_type": "text",
+        },
+    )
+
     regularization_C = ma.fields.Float(
         required=True,
         allow_none=False,
@@ -323,6 +381,10 @@ class MicroFrontend(MethodView):
             schema.fields["backend"].data_key: QuantumBackends.aer_statevector_simulator,
             schema.fields["ibmq_token"].data_key: "",
             schema.fields["ibmq_custom_backend"].data_key: "",
+            schema.fields["feature_map"].data_key: FeatureMap.z_feature_map,
+            schema.fields["entanglement"].data_key: Entanglement.linear,
+            schema.fields["reps"].data_key: 2,
+            schema.fields["shots"].data_key: 1024,
         }
 
         print("datadict before", data_dict)
@@ -411,19 +473,19 @@ def get_classical_SVC(data, labels, c=1.0, kernel="rbf", degree=3):  # TODO kern
     return csvc
 
 
-def get_feature_map(feature_map, feature_dimension, reps, entanglement):
+def get_feature_map(feature_map_name, feature_dimension, reps, entanglement):
     from qiskit.circuit.library import ZFeatureMap, ZZFeatureMap, PauliFeatureMap
 
     # TODO enum instead of string??
-    if feature_map == "ZFeatureMap":
+    if feature_map_name == FeatureMap.z_feature_map:
         return ZFeatureMap(
             feature_dimension=feature_dimension, reps=reps
         )  # , entanglement=entanglement)
-    elif feature_map == "ZZFeatureMap":
+    elif feature_map_name == FeatureMap.zz_feature_map:
         return ZZFeatureMap(
             feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
         )
-    elif feature_map == "PauliFeatureMap":
+    elif feature_map_name == FeatureMap.pauli_feature_map:
         return PauliFeatureMap(
             feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
         )
@@ -451,23 +513,35 @@ def get_quantum_SVC(data, labels, input_params):
         f"Loaded input parameters from db: ibmq_custom_backend='{ibmq_custom_backend}'"
     )
 
+    # get quantum backend
     backend_device = QuantumBackends.get_quantum_backend(
         backendEnum=backend,
         ibmqToken=ibmq_token,
         customBackendName=ibmq_custom_backend,
     )  # backend_device = Aer.get_backend("qasm_simulator")
 
+    feature_map = input_params.feature_map
+    TASK_LOGGER.info(f"Loaded input parameters from db: feature_map='{feature_map}'")
+    entanglement = input_params.entanglement
+    TASK_LOGGER.info(f"Loaded input parameters from db: entanglement='{entanglement}'")
+    reps = input_params.reps
+    TASK_LOGGER.info(f"Loaded input parameters from db: reps='{reps}'")
+
     dimension = len(data[0])
-    print("DIMENSION", dimension)
+
+    # get feature map
     feature_map = get_feature_map(
-        feature_map="ZFeatureMap",
+        feature_map_name=feature_map,
         feature_dimension=dimension,
-        reps=2,
-        entanglement="linear",
-    )  # TODO GUI Parameters
-    # feature_map = ZFeatureMap(feature_dimension=2, reps=2)
+        reps=reps,
+        entanglement=entanglement.name,
+    )  # feature_map = ZFeatureMap(feature_dimension=2, reps=2)
+
+    shots = input_params.shots
+    TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
+
     quantum_instance = QuantumInstance(
-        backend_device, seed_simulator=9283712, seed_transpiler=9283712, shots=1024
+        backend_device, seed_simulator=9283712, seed_transpiler=9283712, shots=shots
     )
     qkernel = QuantumKernel(feature_map=feature_map, quantum_instance=quantum_instance)
 
