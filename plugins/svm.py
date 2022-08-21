@@ -19,6 +19,7 @@ from celery.utils.log import get_task_logger
 
 from qiskit import IBMQ
 from qiskit import Aer
+from qiskit.circuit.library import ZFeatureMap, ZZFeatureMap, PauliFeatureMap
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.celery import CELERY
@@ -78,6 +79,26 @@ class FeatureMap(Enum):
     z_feature_map = "ZFeatureMap"
     zz_feature_map = "ZZFeatureMap"
     pauli_feature_map = "PauliFeatureMap"
+
+    @staticmethod
+    def get_feature_map(feature_map_name, feature_dimension, reps, entanglement):
+
+        if feature_map_name == FeatureMap.z_feature_map:
+            return ZFeatureMap(
+                feature_dimension=feature_dimension, reps=reps
+            )  # , entanglement=entanglement)
+        elif feature_map_name == FeatureMap.zz_feature_map:
+            return ZZFeatureMap(
+                feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
+            )
+        elif feature_map_name == FeatureMap.pauli_feature_map:
+            return PauliFeatureMap(
+                feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
+            )
+        else:
+            TASK_LOGGER.error(
+                "No such feature map available: {}".format(feature_map_name)
+            )
 
 
 class Entanglement(Enum):
@@ -451,7 +472,7 @@ class SVM(QHAnaPluginBase):
     def get_requirements(self) -> str:
         # return "qiskit~=0.27\nqiskit-aer~=0.10.4\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
         # TODO different qisit aer version to make it compatible with qnn and quantum k means backends?? qiskit-aer 0.10.3!!!
-        return "qiskit~=0.27\nqiskit-aer~=0.10.3\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
+        return "qiskit~=0.27\nqiskit-aer~=0.10.3\nqiskit-terra~=0.19.2\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
         # auf dem anderen Laptop funktioniert: qiskit-aer==0.10.3, qiskit-terra==0.19.2, qiskit==0.34.2, qiskit-machine-learning==0.4.0
         # funktioniert nicht wenn qiskit-aer==0.10.4 und wenn qiskit-terra==0.21.0
         # hier funktioniert es noch nicht (qnn plugin un quantum kmeans plugin)
@@ -473,32 +494,9 @@ def get_classical_SVC(data, labels, c=1.0, kernel="rbf", degree=3):  # TODO kern
     return csvc
 
 
-def get_feature_map(feature_map_name, feature_dimension, reps, entanglement):
-    from qiskit.circuit.library import ZFeatureMap, ZZFeatureMap, PauliFeatureMap
-
-    # TODO enum instead of string??
-    if feature_map_name == FeatureMap.z_feature_map:
-        return ZFeatureMap(
-            feature_dimension=feature_dimension, reps=reps
-        )  # , entanglement=entanglement)
-    elif feature_map_name == FeatureMap.zz_feature_map:
-        return ZZFeatureMap(
-            feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
-        )
-    elif feature_map_name == FeatureMap.pauli_feature_map:
-        return PauliFeatureMap(
-            feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
-        )
-    else:
-        TASK_LOGGER.error("No such feature map available: {}".format(feature_map))
-
-
 def get_quantum_SVC(data, labels, input_params):
-    # more parameters: backend, quantum kernel?, featuremap?
-
     # from qiskit import Aer
     from qiskit_machine_learning.algorithms import QSVC
-    from qiskit.circuit.library import ZFeatureMap
     from qiskit.utils import QuantumInstance
     from qiskit_machine_learning.kernels.quantum_kernel import QuantumKernel
 
@@ -530,7 +528,7 @@ def get_quantum_SVC(data, labels, input_params):
     dimension = len(data[0])
 
     # get feature map
-    feature_map = get_feature_map(
+    feature_map = FeatureMap.get_feature_map(
         feature_map_name=feature_map,
         feature_dimension=dimension,
         reps=reps,
@@ -578,7 +576,7 @@ def demo_task(self, db_id: int) -> str:
     entity_points = open_url(entity_points_url).json()
     clusters_entities = open_url(clusters_url).json()
 
-    # get data
+    # get lists of data
     clusters = {}
     for ent in clusters_entities:
         clusters[ent["ID"]] = ent["cluster"]
@@ -652,5 +650,7 @@ def demo_task(self, db_id: int) -> str:
 
 # TODO quantum SVM supportvector list is empty!! why?
 # TODO visualize?
-# TODO quantum SVM parameters in GUI
 # TODO hide GUI elements when irrelevant
+
+# (TODO neues plugin für qnn/nn für classification)
+# (TODO neues plugin für visualization (wie? wenn ich nicht die classificator funktion übergeben kann?))
