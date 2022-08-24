@@ -202,13 +202,16 @@ poetry run flask drop-db
 
 ## Migrations
 
+ℹ️ Try to minimize the number of migrations and only create a new one when your changes are likely final.
+Altenatively merge all your new migration into one before submitting a pull request.
+
 If you have added new mapped dataclasses or modified existing ones, a migration script needs to be added.
 This script updates the tables and columns of the database to match the mapped dataclasses.
 To generate the migration script you need to do the following steps:
 
 ```bash
-# delete the content of the database
-poetry run flask drop-db
+# delete the database
+rm instance/qhana_plugin_runner.db
 # upgrade the database to the latest migration
 poetry run flask db upgrade
 # generate a new migration script for the changes you made (always manually review the created migration!)
@@ -219,7 +222,7 @@ poetry run flask db upgrade
 poetry run flask db --help
 ```
 
-This uses the [flask-migrate](https://flask-migrate.readthedocs.io/en/latest/index.html) tool which is based on [alembic](https://alembic.sqlalchemy.org/en/latest/index.html)
+The migrations are handled by [flask-migrate](https://flask-migrate.readthedocs.io/en/latest/index.html) which is based on [alembic](https://alembic.sqlalchemy.org/en/latest/index.html)
 
 ## Celery background tasks
 
