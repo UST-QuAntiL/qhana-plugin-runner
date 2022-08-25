@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Sequence, Union
 
-from sqlalchemy.orm import relation, relationship
+from sqlalchemy.orm import relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.sql import sqltypes as sql
@@ -24,10 +24,40 @@ from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.schema import (
     Column,
     ForeignKey,
+    Table,
+    ForeignKeyConstraint,
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from ..db import DB, REGISTRY
+
+
+@REGISTRY.mapped
+@dataclass
+class Link:
+    """Dataclass for the links of :class:`Step`
+
+    Attributes:
+        task_id (int): foreign key, id attribute of :class:`Step`
+        step_number (int): foreign key, number attribute of :class:`Step`
+        type (str): type of link (e.g. start-optimization)
+        link (str): URL
+    """
+
+    __table__ = Table(
+        "Link",
+        REGISTRY.metadata,
+        Column("task_id", primary_key=True, nullable=False),
+        Column("step_number", primary_key=True, nullable=False),
+        Column("type", sql.String(500)),
+        Column("link", sql.String(500)),
+        ForeignKeyConstraint(["task_id", "step_number"], ["Step.id", "Step.number"]),
+    )
+
+    task_id: int = field(init=False)
+    step_number: int = field(init=False)
+    type: str
+    link: str
 
 
 @REGISTRY.mapped
@@ -57,6 +87,22 @@ class Step:
     href: str = field(metadata={"sa": Column(sql.String(500))})
     ui_href: str = field(metadata={"sa": Column(sql.String(500))})
     cleared: bool = field(metadata={"sa": Column(sql.Boolean())}, default=False)
+    _links: dict = field(
+        default_factory=dict,
+        metadata={
+            "sa": relationship(
+                "Link",
+                collection_class=attribute_mapped_collection("type"),
+                cascade="all, delete-orphan",
+            )
+        },
+    )
+
+    links = association_proxy(
+        "_links",
+        "link",
+        creator=lambda key, value: Link(type=key, link=value),
+    )
 
 
 @REGISTRY.mapped
@@ -235,12 +281,7 @@ class ProcessingTask:
             self.multi_step = True
 
         self.current_step += 1
-        new_step: Step = Step(
-            id=self.id,
-            step_id=step_id,
-            href=href,
-            ui_href=ui_href,
-        )
+        new_step: Step = Step(id=self.id, step_id=step_id, href=href, ui_href=ui_href)
         self.steps.append(new_step)
 
         DB.session.add(new_step)
