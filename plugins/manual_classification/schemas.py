@@ -18,8 +18,11 @@ class LoadParametersSchema(FrontendFormBaseSchema):
     input_file_url = FileUrl(
         required=True,
         allow_none=False,
-        load_only=True,
-        metadata={"label": "Entities URL"},
+        metadata={
+            "label": "Entities URL",
+            "description": "URL to a json file with a list of entities.",
+            "input_type": "text",
+        },
     )
 
 

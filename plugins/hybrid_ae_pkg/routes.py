@@ -3,14 +3,13 @@ from json import dumps
 from typing import Mapping
 
 from celery import chain
-from celery.result import AsyncResult
 from flask import url_for, request, Response, render_template, redirect
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.hybrid_ae_pkg import HybridAutoencoderPlugin, HA_BLP
-from plugins.hybrid_ae_pkg.tasks import hybrid_autoencoder_pennylane_task
-from plugins.hybrid_ae_pkg.schemas import (
+from . import HybridAutoencoderPlugin, HA_BLP
+from .tasks import hybrid_autoencoder_pennylane_task
+from .schemas import (
     HybridAutoencoderTaskResponseSchema,
     HybridAutoencoderPennylaneRequestSchema,
 )
@@ -35,8 +34,8 @@ class PluginsView(MethodView):
         """Demo endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Hybrid Autoencoder",
-            description="Reduces the dimensionality of a given dataset with a combination of classical and quantum neural networks.",
-            name=HybridAutoencoderPlugin.instance.identifier,
+            description=HybridAutoencoderPlugin.instance.description,
+            name=HybridAutoencoderPlugin.instance.name,
             version=HybridAutoencoderPlugin.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
@@ -57,7 +56,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dimensionality-reduction"],
+            tags=HybridAutoencoderPlugin.instance.tags,
         )
 
 
@@ -104,11 +103,10 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        print(">>>", errors)
         schema = HybridAutoencoderPennylaneRequestSchema()
         return Response(
             render_template(
-                "hybrid_ae_template.html",
+                "simple_template.html",
                 name=HybridAutoencoderPlugin.instance.name,
                 version=HybridAutoencoderPlugin.instance.version,
                 schema=schema,

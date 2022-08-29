@@ -39,6 +39,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -96,18 +97,19 @@ class PluginsView(MethodView):
         """Wu Palmer cache endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Wu-Palmer cache generator",
-            description="Generates a cache of similarity values based on a taxonomy.",
-            name=WuPalmerCache.instance.identifier,
+            description=WuPalmerCache.instance.description,
+            name=WuPalmerCache.instance.name,
             version=WuPalmerCache.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="taxonomy",
                         content_type=["application/zip"],
                         required=True,
+                        parameter="taxonomiesZipUrl",
                     )
                 ],
                 data_output=[
@@ -118,17 +120,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["similarity-cache-generation"],
+            tags=WuPalmerCache.instance.tags,
         )
 
 
 @WU_PALMER_CACHE_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the Wu Palmer cache plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @WU_PALMER_CACHE_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Wu Palmer cache plugin."
@@ -171,9 +169,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{WU_PALMER_CACHE_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{WU_PALMER_CACHE_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -213,6 +208,8 @@ class WuPalmerCache(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Generates a cache of similarity values based on a taxonomy."
+    tags = ["similarity-cache-generation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

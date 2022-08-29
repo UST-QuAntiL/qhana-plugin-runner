@@ -26,9 +26,7 @@ services:
       POSTGRES_USER: user
       POSTGRES_DB: default_db
   muse-db:
-    image: "muse-db"
-    profiles:
-      - with_db
+    image: ghcr.io/ust-quantil/mini-muse:main
   worker:
     build: .
     image: qhana-plugin-runner

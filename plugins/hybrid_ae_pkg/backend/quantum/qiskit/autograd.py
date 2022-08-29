@@ -3,7 +3,7 @@ import math
 
 import torch
 
-from plugins.hybrid_ae_pkg.backend.quantum.qiskit.autoencoder import QuantumAutoencoder
+from .autoencoder import QuantumAutoencoder
 
 
 # TODO: measure performance

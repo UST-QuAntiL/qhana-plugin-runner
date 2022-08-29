@@ -5,7 +5,3 @@ qhana\_plugin\_runner.storage module
    :members:
    :undoc-members:
    :show-inheritance:
-
-   .. py:data:: STORE
-        :type: qhana_plugin_runner.storage.FileStoreRegistry
-        :value: FileStoreRegistry()

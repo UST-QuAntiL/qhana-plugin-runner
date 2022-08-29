@@ -11,12 +11,9 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.hello_worl_multi_step import HELLO_MULTI_BLP, HelloWorldMultiStep
-from plugins.hello_worl_multi_step.schemas import (
-    HelloWorldParametersSchema,
-    TaskResponseSchema,
-)
-from plugins.hello_worl_multi_step.tasks import preprocessing_task, processing_task
+from . import HELLO_MULTI_BLP, HelloWorldMultiStep
+from .schemas import HelloWorldParametersSchema, TaskResponseSchema
+from .tasks import preprocessing_task, processing_task
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginMetadata,
@@ -37,14 +34,17 @@ class PluginsView(MethodView):
         """Endpoint returning the plugin metadata."""
         return PluginMetadata(
             title=HelloWorldMultiStep.instance.name,
-            description=HELLO_MULTI_BLP.description,
-            name=HelloWorldMultiStep.instance.identifier,
+            description=HelloWorldMultiStep.instance.description,
+            name=HelloWorldMultiStep.instance.name,
             version=HelloWorldMultiStep.instance.version,
             type=PluginType.complex,
             entry_point=EntryPoint(
-                href="./process/", ui_href="./ui/", data_input=[], data_output=[]
+                href=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{HELLO_MULTI_BLP.name}.MicroFrontend"),
+                data_input=[],
+                data_output=[],
             ),
-            tags=[],
+            tags=HelloWorldMultiStep.instance.tags,
         )
 
 
@@ -97,6 +97,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
+                help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{HELLO_MULTI_BLP.name}.MicroFrontend", **self.example_inputs
                 ),

@@ -37,6 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -46,9 +47,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -158,18 +157,19 @@ class PluginsView(MethodView):
         """MDS endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Multidimensional Scaling (MDS)",
-            description="Converts distance values (distance matrix) to points in a space.",
-            name=MDS.instance.identifier,
+            description=MDS.instance.description,
+            name=MDS.instance.name,
             version=MDS.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{MDS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{MDS_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-distances",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entityDistancesUrl",
                     )
                 ],
                 data_output=[
@@ -180,17 +180,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dist-to-points"],
+            tags=MDS.instance.tags,
         )
 
 
 @MDS_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the MDS plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @MDS_BLP.html_response(
         HTTPStatus.OK,
@@ -250,9 +246,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{MDS_BLP.name}.CalcView"),
-                example_values=url_for(
-                    f"{MDS_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -290,6 +283,8 @@ class CalcView(MethodView):
 class MDS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Converts distance values (distance matrix) to points in a space."
+    tags = ["dist-to-points"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -298,7 +293,7 @@ class MDS(QHAnaPluginBase):
         return MDS_BLP
 
     def get_requirements(self) -> str:
-        return "scikit-learn~=0.24.2"
+        return "scikit-learn~=1.1"
 
 
 TASK_LOGGER = get_task_logger(__name__)

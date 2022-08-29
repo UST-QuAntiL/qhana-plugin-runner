@@ -21,8 +21,10 @@ celery = "^5.2.2"
 redis = "^3.5.3"
 requests = "^2.25.1"
 typing-extensions = "^3.10.0"
-psycopg2-binary = "^2.9.1"
 mistune = "^2.0.2"
+psycopg2 = "^2.9.3"
+jsonschema = "^4.6.1"
+sqlalchemy-json = "^0.5.0"
 
 [tool.poetry.dev-dependencies]
 black = "^21.5b1"
@@ -36,6 +38,7 @@ sphinx-click = "^3.0.0"
 myst-parser = "^0.15.1"
 invoke = "^1.5.0"
 sphinx-rtd-theme = "^0.5.2"
+sqlalchemy-json = "^0.5.0"
 hypothesis = "^6.14.3"
 pytest-cov = "^2.12.1"
 pip-licenses = "^3.5.3"
@@ -74,6 +77,8 @@ python_use_unqualified_type_names = true
 python = ["https://docs.python.org/3"]
 requests = ["https://docs.python-requests.org/en/master/"]
 celery = ["https://docs.celeryproject.org/en/stable/"]
+# user documentation
+qhana = ["https://qhana.readthedocs.io/en/latest/"]
 
 [tool.sphinx.autosectionlabel]
 prefix-document = true

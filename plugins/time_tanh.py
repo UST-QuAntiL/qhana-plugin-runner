@@ -39,6 +39,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -117,18 +118,19 @@ class PluginsView(MethodView):
         """Time tanh endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Time tanh similarities",
-            description="Compares elements and returns similarity values.",
-            name=TimeTanh.instance.identifier,
+            description=TimeTanh.instance.description,
+            name=TimeTanh.instance.name,
             version=TimeTanh.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{TIME_TANH_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{TIME_TANH_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entities",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entitiesUrl",
                     )
                 ],
                 data_output=[
@@ -139,7 +141,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["similarity-calculation"],
+            tags=TimeTanh.instance.tags,
         )
 
 
@@ -232,11 +234,13 @@ class TimeTanh(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Compares elements and returns similarity values."
+    tags = ["similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
-    def get_api_blueprint(self):
+    def get_api_blueprint(self) -> SecurityBlueprint:
         return TIME_TANH_BLP
 
     def get_requirements(self) -> str:
