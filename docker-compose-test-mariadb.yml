@@ -1,0 +1,50 @@
+services:
+  qhana-plugin-runner:
+    build: .
+    image: qhana-plugin-runner
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "5005:8080"
+    volumes:
+      - instance:/app/instance
+      - ./plugins:/app/plugins
+    environment:
+      CONCURRENCY: 2
+      BROKER_URL: redis://redis:6379
+      RESULT_BACKEND: redis://redis:6379
+      SQLALCHEMY_DATABASE_URI: "mysql+pymysql://user:password@mariadb:3306/default_db"
+      WAIT_HOSTS: redis:6379, mariadb:3306
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+  mariadb:
+    image: "mariadb:latest"
+    environment:
+      MARIADB_DATABASE: default_db
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_USER: user
+      MARIADB_PASSWORD: password
+    ports:
+      - 3308:3306
+  muse-db:
+    image: ghcr.io/ust-quantil/mini-muse:main
+  worker:
+    build: .
+    image: qhana-plugin-runner
+    depends_on:
+      - qhana-plugin-runner
+    volumes:
+      - instance:/app/instance
+      - ./plugins:/app/plugins
+    environment:
+      CONTAINER_MODE: worker
+      CONCURRENCY: 2
+      BROKER_URL: redis://redis:6379
+      RESULT_BACKEND: redis://redis:6379
+      SQLALCHEMY_DATABASE_URI: "mysql+pymysql://user:password@mariadb:3306/default_db"
+      WAIT_HOSTS: redis:6379, mariadb:3306
+volumes:
+  instance:
