@@ -1,8 +1,11 @@
 import dataclasses
 import json
 import uuid
-from dataclasses_json import dataclass_json
 from typing import Optional
+
+from dataclasses_json import (
+    dataclass_json,  # TODO maybe remove dependency after refactor
+)
 
 
 #
@@ -16,6 +19,7 @@ class ExternalTask:
     process_instance_id: The id of the process instance the external task belongs to
     topic_name: The topic name of the external task
     """
+
     id: str
     execution_id: Optional[str]
     process_instance_id: str
@@ -36,6 +40,7 @@ class HumanTask:
     """
     TODO: Docs for HumanTask
     """
+
     id: str
     name: str
     execution_id: str
@@ -63,6 +68,7 @@ class Deployment:
     id: The id of the deployment
     process_definition_id: The id of the process definition
     """
+
     id: str
     process_definition_id: str
 
@@ -70,7 +76,9 @@ class Deployment:
     def deserialize(cls, serialized):
         return cls(
             id=serialized["id"],
-            process_definition_id=list(serialized["deployedProcessDefinitions"].keys())[0]
+            process_definition_id=list(serialized["deployedProcessDefinitions"].keys())[
+                0
+            ],
         )
 
 
@@ -80,15 +88,13 @@ class ProcessInstance:
     id: The identifier of the process instance
     definition_id:
     """
+
     id: str
     definition_id: Optional[str]
 
     @classmethod
     def deserialize(cls, serialized):
-        return cls(
-            id=serialized["id"],
-            definition_id=serialized["definitionId"]
-        )
+        return cls(id=serialized["id"], definition_id=serialized["definitionId"])
 
 
 @dataclass_json

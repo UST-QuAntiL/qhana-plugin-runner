@@ -26,7 +26,9 @@ def form_variables_from_html(html):
     variables = []
     matches = re.findall(r'<input class="[^"]*" name="[^"]*"', html)
     for match in matches:
-        variable_name = re.search(r'"[^"]*"$', match).group()[1:-1]
+        variable_name = re.search(r'"[^"]*"$', match).group()[
+            1:-1
+        ]  # TODO check if this is ok
         variables.append(variable_name)
 
     return variables
@@ -36,8 +38,13 @@ def endpoint_found(response):
     """
     Checks if request was successful
     """
-    if not response or (response.status_code != 204 and (
-            'message' in response.json() and response.json()['message'] == "HTTP 404 Not Found")):
+    if not response or (
+        response.status_code != 204
+        and (
+            "message" in response.json()
+            and response.json()["message"] == "HTTP 404 Not Found"
+        )
+    ):
         TASK_LOGGER.warning(f"Endpoint not found or failed {response.url}")
         TASK_LOGGER.warning(f"{response.json} / {response.text}")
         raise Exception

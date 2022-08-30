@@ -133,6 +133,110 @@ def start_broker(c, port=None):
 
 
 @task
+def stop_camunda(c):
+    """Stop the previously started camunda container with docker or podman.
+
+    Discovers the container id from the environment variable CAMUNDA_CONTAINER_ID.
+    If the variable is not set ``--latest`` is used (this assumes that the latest
+    created container is the camunda container!).
+
+    To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
+
+    Args:
+        c (Context): task context
+    """
+    c = cast(Context, c)
+    docker_cmd = environ.get("DOCKER_CMD", "docker")
+    container_id = environ.get("CAMUNDA_CONTAINER_ID", "--latest")
+    c.run(join([docker_cmd, "stop", container_id]))
+
+
+@task(stop_broker)
+def reset_camunda(c):
+    """Remove the current camunda container and unset the CAMUNDA_CONTAINER_ID variable.
+
+    Discovers the container id from the environment variable CAMUNDA_CONTAINER_ID.
+    If the variable is not set this task does nothing.
+
+    To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
+
+    Args:
+        c (Context): task context
+    """
+    c = cast(Context, c)
+    docker_cmd = environ.get("DOCKER_CMD", "docker")
+    container_id = environ.get("CAMUNDA_CONTAINER_ID")
+    if not container_id:
+        return
+    c.run(join([docker_cmd, "rm", container_id]), echo=True)
+    dot_env_path = Path(".env")
+    unset_key(dot_env_path, "CAMUNDA_CONTAINER_ID")
+
+
+@task
+def start_camunda(c, port=None):
+    """Start the camunda container with docker or podman.
+
+    Resuses an existing container if the environment variable CAMUNDA_CONTAINER_ID is set.
+    The reused container ignores the port option!
+    Sets the environemnt variable in the .env file if a new container is created.
+
+    Camunda port is optionally read from CAMUNDA_PORT environment variable. Use the
+    ``reset-camunda`` task to remove the old container to create a new container
+    with a different port.
+
+    To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
+
+    Args:
+        c (Context): task context
+        port (str, optional): outside port for connections to camunda. Defaults to "8080".
+    """
+    c = cast(Context, c)
+    docker_cmd = environ.get("DOCKER_CMD", "docker")
+    container_id = environ.get("CAMUNDA_CONTAINER_ID", None)
+
+    if container_id:
+        res: Result = c.run(join([docker_cmd, "restart", container_id]), echo=True)
+        if res.failed:
+            print(f"Failed to start container with id {container_id}.")
+        return
+
+    if not port:
+        port = environ.get("CAMUNDA_PORT", "8080")
+    c.run(
+        join(
+            [
+                docker_cmd,
+                "run",
+                "-d",
+                "-p",
+                f"{port}:8080",
+                "camunda/camunda-bpm-platform:run-latest",
+            ]
+        ),
+        echo=True,
+    )
+    result: Result = c.run(join([docker_cmd, "ps", "-q", "--latest"]), hide=True)
+    result_container_id = result.stdout.strip()
+    dot_env_path = Path(".env")
+    if not dot_env_path.exists():
+        dot_env_path.touch()
+    set_key(dot_env_path, "CAMUNDA_CONTAINER_ID", result_container_id)
+
+
+@task(stop_broker, stop_camunda)
+def stop_containers(c):
+    """Stop both the camunda and the redis broker container."""
+    pass
+
+
+@task(start_broker, start_camunda)
+def start_containers(c):
+    """Start both the camunda and the redis broker container."""
+    pass
+
+
+@task
 def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
     """Run the celery worker, optionally starting the redis broker.
 
@@ -156,7 +260,7 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         str(concurrency),
         "--loglevel",
         log_level.upper(),
-        "-E"
+        "-E",
     ]
     if dev:
         c.run(join(cmd), echo=True)
@@ -460,9 +564,16 @@ def ensure_paths(c):
     Path("/app/instance").mkdir(parents=True, exist_ok=True)
 
 
-@task(ensure_paths, load_git_plugins, install_plugin_dependencies, await_db, upgrade_db)
+@task(ensure_paths)
 def start_docker(c):
     """Docker entry point task. Do not call!"""
+
+    def execute_pre_tasks(do_upgrade_db=False):
+        for task in (load_git_plugins, install_plugin_dependencies, await_db):
+            task(c)
+        if do_upgrade_db:
+            upgrade_db(c)
+
     if not environ.get("QHANA_SECRET_KEY"):
         environ["QHANA_SECRET_KEY"] = urandom(32).hex()
 
@@ -470,10 +581,14 @@ def start_docker(c):
     concurrency_env = environ.get("CONCURRENCY", "1")
     concurrency = int(concurrency_env) if concurrency_env.isdigit() else 1
     if environ.get("CONTAINER_MODE", "").lower() == "server":
+        execute_pre_tasks(do_upgrade_db=True)
         start_gunicorn(c, workers=concurrency, log_level=log_level, docker=True)
     elif environ.get("CONTAINER_MODE", "").lower() == "worker":
+        execute_pre_tasks()
         worker_pool = environ.get("CELERY_WORKER_POOL", "threds")
         worker(c, concurrency=concurrency, pool=worker_pool, log_level=log_level)
+    elif environ.get("CONTAINER_MODE", "").lower() == "beat":
+        beat(c, log_level=log_level)
     else:
         raise ValueError(
             "Environment variable 'CONTAINER_MODE' must be set to either 'server' or 'worker'!"

@@ -15,6 +15,8 @@ services:
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
+      CAMUNDA_API_URL: "http://host.docker.internal:8080/engine-rest"
+      PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
   redis:
     image: "redis:latest"
     ports:
@@ -37,9 +39,24 @@ services:
       - ./plugins:/app/plugins
     environment:
       CONTAINER_MODE: worker
-      CONCURRENCY: 2
+      CONCURRENCY: 16
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
+      CAMUNDA_API_URL: "http://host.docker.internal:8080/engine-rest"
+      PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
+  beat:
+    build: .
+    image: qhana-plugin-runner
+    depends_on:
+      - redis
+    environment:
+      CONTAINER_MODE: beat
+      BROKER_URL: redis://redis:6379
+      RESULT_BACKEND: redis://redis:6379
+  camunda:
+    image: camunda/camunda-bpm-platform:run-latest
+    ports:
+      - "8080:8080"
 volumes:
   instance:

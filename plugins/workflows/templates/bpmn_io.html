@@ -65,7 +65,6 @@
 
           {#canvas.addMarker('Activity_100bip4", 'highlight');#}
         } catch (err) {
-
           console.error('could not import BPMN 2.0 diagram', err);
         }
       }
@@ -78,10 +77,10 @@
       var json = $.getJSON(bpmn_xml_url, function (data) {
           $.each( data, function( key, val ) {
               if(key === "bpmn20Xml") {
-                  openDiagram(val)
+                  openDiagram(val);
               }
           });
-      })
+      });
     </script>
     <!--
       Thanks for trying out our BPMN toolkit!

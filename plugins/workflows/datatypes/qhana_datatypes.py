@@ -1,6 +1,10 @@
 import dataclasses
 from typing import List
-from dataclasses_json import dataclass_json
+
+from dataclasses_json import (
+    dataclass_json,  # TODO maybe remove dependency after refactor
+)
+
 from ..datatypes.camunda_datatypes import ExternalTask
 
 
@@ -17,6 +21,7 @@ class QhanaPlugin:
     name: Plugin name
     version: Plugin version
     """
+
     api_endpoint: str
     api_root: str
     process_endpoint: str
@@ -27,11 +32,11 @@ class QhanaPlugin:
     @classmethod
     def deserialize(cls, serialized, endpoint, process_endpoint):
         return cls(
-            api_root=serialized["apiRoot"][:-1],
+            api_root=serialized["apiRoot"].rstrip("/"),
             identifier=serialized["identifier"],
             name=serialized["name"],
             version=serialized["version"],
-            api_endpoint=endpoint[:-1],
+            api_endpoint=endpoint.rstrip("/"),
             process_endpoint=process_endpoint,
         )
 
@@ -46,6 +51,7 @@ class QhanaTask:
     status: QhanaTask status
     id: QhanaTask identifier
     """
+
     # TODO: Cannot store inputs until Human Tasks to collect inputs are also done in QHAna
     #  (Human Tasks in Camunda are missing href, contentType etc.)
     external_task: ExternalTask
@@ -65,9 +71,7 @@ class QhanaTask:
 
 @dataclasses.dataclass
 class QhanaInput:
-    """
-
-    """
+    """ """
 
     content_type: list[str]
     data_type: str
@@ -80,6 +84,7 @@ class QhanaInput:
             data_type=serialized["dataType"],
             required=serialized["required"],
         )
+
 
 @dataclasses.dataclass
 class QhanaOutput:
@@ -111,5 +116,6 @@ class QhanaResult:
     qhana_task: The QhanaTask which produced the result
     output_list: List containing all outputs
     """
+
     qhana_task: QhanaTask
     output_list: List[QhanaOutput]

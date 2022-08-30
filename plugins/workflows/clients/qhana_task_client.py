@@ -1,14 +1,25 @@
 from __future__ import annotations
+
 import http.client
 import json
 import re
+from typing import TYPE_CHECKING, List, Optional
+
 import requests
-from typing import List, TYPE_CHECKING
 from celery.utils.log import get_task_logger
-from .. import conf as config
+
+from .. import Workflows
 from ..datatypes.camunda_datatypes import ExternalTask
-from ..datatypes.qhana_datatypes import QhanaResult, QhanaPlugin, QhanaInput, QhanaOutput, QhanaTask
-from ..util.helper import  endpoint_found_simple, request_json
+from ..datatypes.qhana_datatypes import (
+    QhanaInput,
+    QhanaOutput,
+    QhanaPlugin,
+    QhanaResult,
+    QhanaTask,
+)
+from ..util.helper import endpoint_found_simple, request_json
+
+config = Workflows.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -30,7 +41,9 @@ class QhanaTaskClient:
         self.plugins: List[QhanaPlugin] = []
         self.get_plugins_from_endpoints()
 
-    def create_qhana_plugin_instance(self, camunda_client: CamundaClient, external_task: ExternalTask):
+    def create_qhana_plugin_instance(
+        self, camunda_client: CamundaClient, external_task: ExternalTask
+    ):
         """
         Console specific qhana plugin instance creator
         :param camunda_client: The camunda_client to be used
@@ -40,29 +53,42 @@ class QhanaTaskClient:
 
         plugin_name = ""
         if "." in external_task.topic_name:
-            plugin_name = external_task.topic_name.split('.', 1)[1]
+            plugin_name = external_task.topic_name.split(".", 1)[1]
         else:
-            TASK_LOGGER.warning("No plugin name found")
+            TASK_LOGGER.warning(
+                f"No plugin extracted from external task topic {external_task}"
+            )
 
         # Check if requested plugin exists
         plugin = self.resolve(plugin_name)
 
+        TASK_LOGGER.info(f"No plugin found for plugin name '{plugin_name}'")
+
         if plugin:
             local_variables = camunda_client.get_task_local_variables(external_task)
             try:
-                parameters = self.collect_input(external_task, camunda_client, local_variables)
+                parameters = self.collect_input(
+                    external_task, camunda_client, local_variables
+                )
             except ValueError:
                 return
 
-            qhana_task: QhanaTask = self.invoke_qhana_task(camunda_client, external_task, plugin, parameters)
+            qhana_task: QhanaTask = self.invoke_qhana_task(
+                camunda_client, external_task, plugin, parameters
+            )
 
             if qhana_task is None:
                 raise Exception
 
             return qhana_task
 
-    def invoke_qhana_task(self, camunda_client: CamundaClient, external_task: ExternalTask, plugin: QhanaPlugin,
-                          params):
+    def invoke_qhana_task(
+        self,
+        camunda_client: CamundaClient,
+        external_task: ExternalTask,
+        plugin: QhanaPlugin,
+        params,
+    ):
         """
         Starts a QHAna task
         :param external_task: The external task that resulted in the QHAna task
@@ -70,12 +96,13 @@ class QhanaTaskClient:
         :param plugin: The plugin to run
         :param params: Parameters for running the plugin
         """
+        TASK_LOGGER.info(f"Call plugin process endpoint '{plugin.process_endpoint}'")
         response = requests.post(plugin.process_endpoint, data=params)
         url = response.url
 
         if response.status_code == http.client.OK:
             response = response.json()
-            db_id = re.search("/\d+/", url).group(0)[1:-1]
+            db_id = re.search("/\d+/", url).group(0)[1:-1] # FIXME use flask to handle url parsing and pass it via g or via explicit parameters!
             TASK_LOGGER.info(f"Started QHAna plugin {plugin.identifier}")
 
             return QhanaTask.deserialize(response, db_id, external_task, plugin)
@@ -85,22 +112,27 @@ class QhanaTaskClient:
             camunda_client.external_task_bpmn_error(
                 task=external_task,
                 error_code="qhana-unprocessable-entity-error",
-                error_message="Plugin invocation received unprocessable entities and could not proceed."
+                error_message="Plugin invocation received unprocessable entities and could not proceed.",
             )
 
-    def complete_qhana_task(self, camunda_client: CamundaClient, qhana_result: QhanaResult):
+    def complete_qhana_task(
+        self, camunda_client: CamundaClient, qhana_result: QhanaResult
+    ):
         """
         Submits the result for a corresponding external task to Camunda
         :param camunda_client: Client to be used
         :param qhana_result: Result from finished QHAna plugin
         """
-        result = {"output":
-            {"value":
-                [
-                    {"name": output.name,
-                     "contentType": output.content_type,
-                     "dataType": output.data_type,
-                     "href": output.href} for output in qhana_result.output_list
+        result = {
+            "output": {
+                "value": [
+                    {
+                        "name": output.name,
+                        "contentType": output.content_type,
+                        "dataType": output.data_type,
+                        "href": output.href,
+                    }
+                    for output in qhana_result.output_list
                 ]
             }
         }
@@ -113,14 +145,24 @@ class QhanaTaskClient:
         for endpoint in self.plugin_runner_endpoints:
             response = request_json(f"{endpoint}/plugins/")
             for plugin in response["plugins"]:
-                response = request_json(plugin["apiRoot"])
-                href = response.get("entryPoint", {}).get("href", None)
-                if href:
-                    process_endpoint = f"{endpoint[:-1]}{href}"
-                else:
-                    process_endpoint = f'{plugin["apiRoot"]}/process/'
+                try:
+                    response = request_json(plugin["apiRoot"])
+                    href: Optional[str] = response.get("entryPoint", {}).get("href", None)
+                    if href:
+                        if href.startswith(("http://", "https://")):
+                            process_endpoint = href
+                        else:
+                            process_endpoint = (
+                                f"{endpoint.rstrip('/')}/{href.lstrip('/')}"
+                            )
+                    else:
+                        process_endpoint = f'{plugin["apiRoot"]}/process/'
 
-                self.plugins.append(QhanaPlugin.deserialize(plugin, endpoint, process_endpoint))
+                    self.plugins.append(
+                        QhanaPlugin.deserialize(plugin, endpoint, process_endpoint)
+                    )
+                except Exception:
+                    TASK_LOGGER.info(f"Failed to load plugin {plugin}")
 
     def resolve(self, plugin_name):
         """
@@ -145,7 +187,9 @@ class QhanaTaskClient:
         if endpoint_found_simple(response):
             return response.text
 
-    def collect_input(self, task: ExternalTask, camunda_client: CamundaClient, local_variables: dict):
+    def collect_input(
+        self, task: ExternalTask, camunda_client: CamundaClient, local_variables: dict
+    ):
         """
         TODO: Multistep plugins
         :param task: The task to use for input collection
@@ -153,17 +197,17 @@ class QhanaTaskClient:
         :param local_variables: Variables which may contain input for the QHAna plugin
         :return:
         """
-        prefix = config['qhana_input']['prefix']
-        workflow_result_prefix = config['workflow_out']['prefix']
-        input_mode_text = config['qhana_input']['mode_text']
-        input_mode_filename = config['qhana_input']['mode_filename']
-        input_mode_datatype = config['qhana_input']['mode_datatype']
+        prefix = config["qhana_input"]["prefix"]
+        workflow_result_prefix = config["workflow_out"]["prefix"]
+        input_mode_text = config["qhana_input"]["mode_text"]
+        input_mode_filename = config["qhana_input"]["mode_filename"]
+        input_mode_datatype = config["qhana_input"]["mode_datatype"]
         plugin_inputs = {}
 
         for key, item in local_variables.items():
             # Cut off result prefix if found
             if key.startswith(workflow_result_prefix):
-                key = key[len(workflow_result_prefix) + 1:len(key)]
+                key = key[len(workflow_result_prefix) + 1 : len(key)]
 
             # Check if variable is a qhana input
             if key.startswith(prefix):
@@ -182,7 +226,9 @@ class QhanaTaskClient:
                 if type(retrieved_output) == str and select != input_mode_text:
                     retrieved_output = [json.loads(retrieved_output)]
 
-                deserialized_outputs = [QhanaOutput.deserialize(output) for output in retrieved_output]
+                deserialized_outputs = [
+                    QhanaOutput.deserialize(output) for output in retrieved_output
+                ]
                 mode = select.split(":")[0]
                 mode_val = select.split(":")[1].strip()
 
@@ -193,13 +239,14 @@ class QhanaTaskClient:
                         camunda_client.external_task_bpmn_error(
                             task=task,
                             error_code="qhana-mode-error",
-                            error_message="Input mode is not name or dataType!"
+                            error_message="Input mode is not name or dataType!",
                         )
 
                         raise ValueError
 
-                    if (mode == "name" and output.name == mode_val) or \
-                        (mode == "dataType" and output.data_type == mode_val):
+                    if (mode == "name" and output.name == mode_val) or (
+                        mode == "dataType" and output.data_type == mode_val
+                    ):
                         plugin_inputs[input_parameter] = output.href
 
         return plugin_inputs

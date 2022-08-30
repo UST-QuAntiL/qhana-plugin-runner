@@ -1,11 +1,13 @@
-import yaml
-from typing import Optional
+from json import loads
+from os import environ
+from typing import Any, ClassVar, Dict, Optional
+
 from celery.utils.log import get_task_logger
 from flask import Flask
-from qhana_plugin_runner.api.util import SecurityBlueprint
-from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
-conf = yaml.safe_load(open("plugins/workflows/config.yml"))
+from qhana_plugin_runner.api.util import SecurityBlueprint
+from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+
 TASK_LOGGER = get_task_logger(__name__)
 
 _plugin_name = "workflows"
@@ -16,16 +18,75 @@ WORKFLOWS_BLP = SecurityBlueprint(
     _identifier,
     __name__,
     description="BPMN workflows plugin API.",
-    template_folder="templates"
+    template_folder="templates",
 )
 
 
 class Workflows(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "WIP Workflow plugin executing workflows using the camunda bpmn engine."
+    tags = ["workflow", "bpmn"]
+
+    instance: ClassVar["Workflows"]
+
+    config: Dict[str, Any] = None
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
+
+        camunda_url = app.config.get(
+            "CAMUNDA_API_URL",
+            environ.get("CAMUNDA_API_URL", "http://localhost:8080/engine-rest"),
+        )
+        plugin_runner_url = app.config.get(
+            "PLUGIN_RUNNER_URLS",
+            [
+                url.strip()
+                for url in environ.get(
+                    "PLUGIN_RUNNER_URLS", "http://localhost:5005;"
+                ).split(";")
+                if url.strip()
+            ],
+        )
+
+        workflow_config: Dict[str, float] = app.config.get("WORKFLOWs", {})
+        env_workflow_config = environ.get("PLUGIN_WORKFLOWS", None)
+        if env_workflow_config:
+            workflow_config = loads(env_workflow_config)
+
+        workflow_watcher_config: Dict[str, float] = app.config.get(
+            "WORKFLOW_WATCHERS", {}
+        )
+        env_workflow_watcher_config = environ.get("PLUGIN_WORKFLOW_WATCHERS", None)
+        if env_workflow_watcher_config:
+            workflow_watcher_config = loads(env_workflow_watcher_config)
+
+        conf = {
+            "CAMUNDA_BASE_URL": camunda_url,
+            "QHANA_PLUGIN_ENDPOINTS": plugin_runner_url,
+            "polling_rates": {"camunda_general": 5.0, "external_watcher": 5.0},
+            "qhana_input": {
+                "prefix": "qinput",
+                "prefix_value_choice": "choice",
+                "prefix_value_enum": "enum",
+                "prefix_value_file_url": "file_url",
+                "prefix_value_delimiter": "::",
+                "mode_text": "plain",
+                "mode_filename": "name",
+                "mode_datatype": "dataType",
+            },
+            "workflow_out": {
+                "camunda_user_task_name": "Workflow Return Variables",
+                "prefix": "return",
+            },
+        }
+
+        conf["polling_rates"].update(workflow_watcher_config)
+        conf["qhana_input"].update(workflow_config.get("qhana_input", {}))
+        conf["workflow_out"].update(workflow_config.get("workflow_out", {}))
+
+        self.config = conf
 
     def get_api_blueprint(self):
         return WORKFLOWS_BLP
@@ -37,9 +98,9 @@ class Workflows(QHAnaPluginBase):
 try:
     # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
     # accessed as soon as the routes are imported.
-    import plugins.workflows.routes
-    import plugins.workflows.watchers.external.schedule
-except ImportError:
+    from . import routes  # noqa
+    from .watchers.external import schedule  # noqa
+except ImportError as e:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.
     pass

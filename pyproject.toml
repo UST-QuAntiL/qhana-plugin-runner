@@ -27,7 +27,7 @@ jsonschema = "^4.6.1"
 sqlalchemy-json = "^0.5.0"
 
 [tool.poetry.dev-dependencies]
-black = "^21.5b1"
+black = "^22.6.0"
 flake8 = "^3.9.2"
 pytest = "^6.2.4"
 flake8-docstrings = "^1.6.0"
