@@ -21,6 +21,8 @@ from qiskit import IBMQ
 from qiskit import Aer
 from qiskit.circuit.library import ZFeatureMap, ZZFeatureMap, PauliFeatureMap
 
+import numpy as np  # TODO
+
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -470,17 +472,7 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        # return "qiskit~=0.27\nqiskit-aer~=0.10.4\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
-        # TODO different qisit aer version to make it compatible with qnn and quantum k means backends?? qiskit-aer 0.10.3!!!
-        return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=0.24.2\nqiskit-machine-learning"  # "qiskit~=0.27\nqiskit-aer~=0.10.3\nqiskit-terra~=0.19.2\nqiskit-machine-learning~=0.4.0\nscikit-learn~=0.24.2"  # sklearn and version like in other plugins
-        # auf dem anderen Laptop funktioniert: qiskit-aer==0.10.3, qiskit-terra==0.19.2, qiskit==0.34.2, qiskit-machine-learning==0.4.0
-        # funktioniert nicht wenn qiskit-aer==0.10.4 und wenn qiskit-terra==0.21.0
-        # hier funktioniert es noch nicht (qnn plugin un quantum kmeans plugin)
-        # qiskit-aer 0.8.2
-        #   The user requested qiskit-aer==0.10.3
-        #   qiskit 0.27.0 depends on qiskit-aer==0.8.2
-        # successfully uninstalled qiskit terra 0.21.1
-        # INSTALLED: qiskit-machine-learning-0.1.0
+        return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=0.24.2\nqiskit-machine-learning"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -538,7 +530,7 @@ def get_quantum_SVC(data, labels, input_params):
         feature_dimension=dimension,
         reps=reps,
         entanglement=entanglement.name,
-    )  # feature_map = ZFeatureMap(feature_dimension=2, reps=2)
+    )
 
     shots = input_params.shots
     TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
@@ -553,9 +545,146 @@ def get_quantum_SVC(data, labels, input_params):
     return qsvc
 
 
+def get_visualization(svm, train_data, test_data, train_labels, test_labels, score):
+    # Matplotlib
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    from matplotlib.lines import Line2D
+
+    # number of classes
+    classes = list(set(list(train_labels) + list(test_labels)))
+    n_classes = len(classes)
+
+    # color map for scatter plots
+    colors = cm.get_cmap("rainbow", n_classes)
+
+    # figure and subplot
+    fig, ax = plt.subplots()
+
+    # draw decision boundaries
+
+    train_x = [element[0] for element in train_data]
+    train_y = [element[1] for element in train_data]
+
+    test_x = [element[0] for element in test_data]
+    test_y = [element[1] for element in test_data]
+
+    # bounds of the figure and grid
+    factor = 2  # TODO
+    x_values = np.append(train_x, test_x)
+    y_values = np.append(train_y, test_y)
+
+    x_min = np.min(x_values) * factor
+    x_max = np.max(x_values) * factor
+    y_min = np.min(y_values) * factor
+    y_max = np.max(y_values) * factor
+    print(x_min, x_max, y_min, y_max)
+
+    # generate gridpoints
+    h = 0.1  # how fine grained the background contour should be
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+    grid_points = np.c_[xx.ravel(), yy.ravel()]
+
+    # calculate class predictions for gridpoints
+    grid_results = svm.predict(grid_points)
+    Z = grid_results.reshape(xx.shape)
+
+    # draw class predictions for grid as background
+    ax.contourf(
+        xx, yy, Z, levels=n_classes - 1, linestyles=["-"], cmap="winter", alpha=0.3
+    )
+
+    # draw training data
+    ax.scatter(
+        train_x,
+        train_y,
+        c=train_labels,
+        s=100,
+        lw=0,
+        vmin=0,
+        vmax=n_classes,
+        cmap=colors,
+    )
+    # mark train data
+    ax.scatter(train_x, train_y, c="b", s=50, marker="x")
+
+    # scatter test set
+    ax.scatter(
+        test_x,
+        test_y,
+        c=test_labels,
+        s=100,
+        lw=0,
+        vmin=0,
+        vmax=n_classes,
+        cmap=colors,
+    )
+
+    support = svm.support_vectors_
+
+    # mark support vectors
+    # print("SUPPORT VECTORS", support)
+    supp_x = [x[0] for x in support]
+    supp_y = [x[1] for x in support]
+    ax.scatter(supp_x, supp_y, s=150, linewidth=0.5, facecolors="none", edgecolors="g")
+
+    # create legend elements
+
+    # legend elements for classes
+    legend_elements = [
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            label=i,
+            markerfacecolor=colors(i),
+            markersize=10,
+            ls="",
+        )
+        for i in range(n_classes)
+    ]
+    # legend element for training element crosses
+    legend_elements = legend_elements + [
+        Line2D(
+            [0],
+            [0],
+            marker="x",
+            color="b",
+            label="train data",
+            markerfacecolor="g",
+            markersize=8,
+            ls="",
+        )
+    ]
+
+    # legend element for support vector circles
+    legend_elements = legend_elements + [
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            label="support vectors",
+            markerfacecolor="none",
+            markeredgecolor="g",
+            markersize=8,
+            ls="",
+        )
+    ]
+
+    # add legend elements to plot
+    ax.legend(handles=legend_elements, loc="upper left")
+
+    # set pot title
+    ax.set_title("Classification \naccuracy on test data={}".format(score))
+
+    return fig
+
+
 @CELERY.task(name=f"{SVM.instance.identifier}.demo_task", bind=True)
 def demo_task(self, db_id: int) -> str:
-    import numpy as np  # TODO
+    import base64
+    from io import BytesIO
 
     TASK_LOGGER.info(f"Starting new demo task with db id '{db_id}'")
 
@@ -639,6 +768,27 @@ def demo_task(self, db_id: int) -> str:
     print("ACCURACY", accuracy, "SCORE", score)
 
     # TODO visualize
+
+    figure_main = get_visualization(
+        svm, train_data, test_data, train_labels, test_labels, score
+    )
+
+    # plot to html
+    tmpfile = BytesIO()
+    figure_main.savefig(tmpfile, format="png")
+    encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
+    html = "<img src='data:image/png;base64,{}'>".format(encoded)
+
+    # show plot
+    with SpooledTemporaryFile(mode="wt") as output:
+        output.write(html)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "plot.html",
+            "plot",
+            "text/html",
+        )
 
     # save support vectors in a file
     support_vectors = []  # TODO better solution? each support vector individually?
