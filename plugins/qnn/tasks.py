@@ -185,6 +185,8 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(
         f"Loaded input parameters from db: randomly_shuffle='{randomly_shuffle}'"
     )
+    visualize = input_params.visualize
+    TASK_LOGGER.info(f"Loaded input parameters from db: visualize='{visualize}'")
 
     # load or generate dataset
     dataset = None
@@ -231,7 +233,7 @@ def calculation_task(self, db_id: int) -> str:
         device, ibmq_token, custom_backend, n_qubits, shots
     )
     print("DEVICE", dev)
-    #  dev = qml.device("default.qubit", wires=n_qubits, shots=shots)
+    dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # TODO remove
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -294,27 +296,29 @@ def calculation_task(self, db_id: int) -> str:
     )
     # test network
     accuracy_on_test_data = test(model, X_test, Y_test, loss_fn, n_classes)
-    # plot results (for grid)
-    figure_main = plot_classification(
-        model, X, X_train, X_test, Y_train, Y_test, accuracy_on_test_data
-    )
 
-    # plot to html
-    tmpfile = BytesIO()
-    figure_main.savefig(tmpfile, format="png")
-    encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
-    html = "<img src='data:image/png;base64,{}'>".format(encoded)
-
-    # show plot
-    with SpooledTemporaryFile(mode="wt") as output:
-        output.write(html)
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "plot.html",
-            "plot",
-            "text/html",
+    if visualize:
+        # plot results (for grid)
+        figure_main = plot_classification(
+            model, X, X_train, X_test, Y_train, Y_test, accuracy_on_test_data
         )
+
+        # plot to html
+        tmpfile = BytesIO()
+        figure_main.savefig(tmpfile, format="png")
+        encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
+        html = "<img src='data:image/png;base64,{}'>".format(encoded)
+
+        # show plot
+        with SpooledTemporaryFile(mode="wt") as output:
+            output.write(html)
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "plot.html",
+                "plot",
+                "text/html",
+            )
 
     # save weights
 
@@ -389,7 +393,7 @@ def calculation_task(self, db_id: int) -> str:
 # TODO check if quantum device selection works as intended
 # TODO check if training still works
 # TODO ouput document with details for classical network parts
-# TODO error: cannot import name Basebackend from qiskit.providers (also happens in quantum k means... differnet qiskit versions??)
+# TODO visualize? is always true...
 
 # DONE save actual weights to file
 # DONE add references
@@ -407,3 +411,4 @@ def calculation_task(self, db_id: int) -> str:
 # DONE prints -> task logger info
 # DONE visualize circuit?? openqasm file?
 # DONE turn off gradient calculation for some parts?
+# DONE error: cannot import name Basebackend from qiskit.providers (also happens in quantum k means... differnet qiskit versions??)

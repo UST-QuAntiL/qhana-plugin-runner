@@ -4,6 +4,7 @@ from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Optional, Mapping
 from json import dumps
+from xmlrpc.client import Boolean
 
 import marshmallow as ma
 from marshmallow import EXCLUDE, post_load
@@ -148,6 +149,7 @@ class InputParameters:
         entity_points_url: str,
         clusters_url: str,
         use_quantum=False,
+        visualize=False,
         regularization_C=float,
         kernel=ClassicalKernelEnum,
         degree=int,
@@ -162,6 +164,7 @@ class InputParameters:
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.use_quantum = use_quantum
+        self.visualize = visualize
         self.regularization_C = regularization_C
         self.kernel = kernel
         self.degree = degree
@@ -217,6 +220,15 @@ class SVMSchema(FrontendFormBaseSchema):
         metadata={
             "label": "use quantum",
             "description": "whether to use quantum svm or classical svm",
+            "input_type": "checkbox",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "visualize classification",
+            "description": "plot the decision boundary and the support vectors for the trained classifier",
             "input_type": "checkbox",
         },
     )
@@ -398,6 +410,7 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             schema.fields["use_quantum"].data_key: False,
+            schema.fields["visualize"].data_key: False,
             schema.fields["regularization_C"].data_key: 1.0,
             schema.fields["kernel"].data_key: ClassicalKernelEnum.rbf,
             schema.fields["degree"].data_key: 3,
@@ -699,6 +712,8 @@ def demo_task(self, db_id: int) -> str:
 
     use_quantum = input_params.use_quantum
     TASK_LOGGER.info(f"Loaded input parameters from db: use_quantum='{use_quantum}'")
+    visualize = input_params.visualize
+    TASK_LOGGER.info(f"Loaded input parameters from db: visualize='{visualize}'")
     entity_points_url = input_params.entity_points_url
     TASK_LOGGER.info(
         f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
@@ -767,28 +782,28 @@ def demo_task(self, db_id: int) -> str:
 
     print("ACCURACY", accuracy, "SCORE", score)
 
-    # TODO visualize
-
-    figure_main = get_visualization(
-        svm, train_data, test_data, train_labels, test_labels, score
-    )
-
-    # plot to html
-    tmpfile = BytesIO()
-    figure_main.savefig(tmpfile, format="png")
-    encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
-    html = "<img src='data:image/png;base64,{}'>".format(encoded)
-
-    # show plot
-    with SpooledTemporaryFile(mode="wt") as output:
-        output.write(html)
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "plot.html",
-            "plot",
-            "text/html",
+    if visualize:
+        # visualize classification
+        figure_main = get_visualization(
+            svm, train_data, test_data, train_labels, test_labels, score
         )
+
+        # plot to html
+        tmpfile = BytesIO()
+        figure_main.savefig(tmpfile, format="png")
+        encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
+        html = "<img src='data:image/png;base64,{}'>".format(encoded)
+
+        # show plot
+        with SpooledTemporaryFile(mode="wt") as output:
+            output.write(html)
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "plot.html",
+                "plot",
+                "text/html",
+            )
 
     # save support vectors in a file
     support_vectors = []  # TODO better solution? each support vector individually?
@@ -804,8 +819,6 @@ def demo_task(self, db_id: int) -> str:
 
 
 # TODO quantum SVM supportvector list is empty!! why?
-# TODO visualize?
 # TODO hide GUI elements when irrelevant
 
 # (TODO neues plugin für qnn/nn für classification)
-# (TODO neues plugin für visualization (wie? wenn ich nicht die classificator funktion übergeben kann?))

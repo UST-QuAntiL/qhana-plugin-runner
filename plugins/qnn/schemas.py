@@ -114,6 +114,7 @@ class InputParameters:
         batch_size: int,
         use_default_dataset=False,
         randomly_shuffle=True,
+        visualize=True,
     ):
         self.use_default_dataset = use_default_dataset
         self.entity_points_url = entity_points_url
@@ -131,6 +132,7 @@ class InputParameters:
         self.batch_size = batch_size
         self.weight_init = weight_init
         self.randomly_shuffle = randomly_shuffle
+        self.visualize = visualize
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -169,6 +171,15 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Clusters URL",
             "description": "URL to a json file with the clusters.",
             "input_type": "text",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Visualize",
+            "description": "Plot the decision boundary for the trained classifier",
+            "input_type": "checkbox",
         },
     )
     randomly_shuffle = ma.fields.Boolean(
