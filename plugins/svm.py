@@ -526,7 +526,7 @@ def get_quantum_SVC(data, labels, input_params):
         backendEnum=backend,
         ibmqToken=ibmq_token,
         customBackendName=ibmq_custom_backend,
-    )  # backend_device = Aer.get_backend("qasm_simulator")
+    )
 
     feature_map = input_params.feature_map
     TASK_LOGGER.info(f"Loaded input parameters from db: feature_map='{feature_map}'")
@@ -822,3 +822,81 @@ def demo_task(self, db_id: int) -> str:
 # TODO hide GUI elements when irrelevant
 
 # (TODO neues plugin für qnn/nn für classification)
+
+# TODO (neues plugin mit Pegasos QSVC könnte interessant sein)
+# https://qiskit.org/documentation/machine-learning/tutorials/07_pegasos_qsvc.html
+
+
+# TODO read? https://medium.com/qiskit/training-quantum-kernels-for-machine-learning-using-qiskit-617f6e4ed9ac
+
+
+# https://medium.com/@patrick.huembeli/introduction-into-quantum-support-vector-machines-727f3ccfa2b4
+# ----------------------------------------------------
+# supervised classification on a quantum computer
+# ----------------------------------------------------
+#   need:
+#       datapoint X. translated into quantum datapoint by a circuit V
+#       parameterised circuit W to process data (parameters theta)
+#       measure -> return classification value
+
+# => ansatz: W(theta)V(phi(x))|0>
+# = quantum variational circuit
+
+# ------
+# QSVM
+# ------
+
+# quantum feature maps V(phi(x)) to translate classical data x into quantum states
+# build the kernel of the SVM out of these quantum states
+
+# calculate kernel matrix on the quantum computer
+# then train QSVM the same way as classical SVM
+# (there are also QSVMs where also training on quantum computer.. not useful yet)
+
+
+# Define quantum kernel
+#   inner product of the (quantum) feature maps 𝐾(𝑥⃗,𝑧⃗)=|⟨Φ(𝑥⃗)|Φ(𝑧⃗)⟩|²
+#   (idea: choose a quantum feature map that is not easy to simulate with classical computers => quantum advantage?)
+
+# Feature map
+#   ansatz: V(Φ(𝑥⃗)) = U(Φ(𝑥⃗))⊗𝐻ⁿ
+#       (simplifies a lot when we only let two qubits interact at a time
+#           => interactions ZZ and non interacting terms Z)
+#       𝐻ⁿ is the Hadamard gate applied to each qubits (n = number of qubits)
+#   classical functions:  Φᵤ(𝑥⃗) = xᵤ and Φᵤᵥ(𝑥⃗) = (π-xᵤ)(π-xᵥ).
+#   ansatz for n=2 qubits and classical data vector 𝑥⃗= (x₁, x₂):
+#       feature map: U(Φ(𝑥⃗)) = exp(i {x₁ Z₁ + x₂ Z₂ + (π - x₁)( π - x₂) Z₁ Z₂})
+#   depth of the circuits (depth 2 means we repeat the ansatz two times: V(Φ(𝑥⃗)) = U(Φ(𝑥⃗))⊗𝐻ⁿ⊗U(Φ(𝑥⃗))⊗𝐻ⁿ)
+
+# Measuring the Quantum Kernel
+#   extract info about quantum kernel from quantum circuit and feed into classical SVM algorithm
+#   we want to measure overlap f 2 states 𝐾(𝑥⃗,𝑧⃗)=|⟨Φ(𝑥⃗)|Φ(𝑧⃗)⟩|²
+#   use specific circuit and
+#   measure ourput, frequency of the measurement string [0,0,0,0,...] gives estimate of overlap  |⟨Φ(𝑥⃗)|Φ(𝑧⃗)⟩|²
+
+# Build qiskit circuit for feature map
+#   qiskit aqua:
+#       pre-built function to construct quantum circuit for V(Φ(𝑥⃗))
+#       second order expansion = the number of interacting qubits
+#       function SecondOrderExpansion:
+#           arguments:
+#               feature_dimension (dimension of the input data  𝑥⃗ == number of qubits n)
+#               depth (number of repetitions of the feature map)
+
+# QSVM Algorithm in QISKIT
+#   qiskit aqua provides pre-defined function to train the whole QSVM
+#       we have to provide: featuremap, training and test set
+#       similar to classical SVM except but Kernels come from a quantum distribution
+#   minimizes the loss 𝐿(𝑊)=∑ᵤ𝑤ᵤ−½ ∑ᵤᵥ𝑦ᵤ𝑦ᵥαᵤαᵥ 𝐾(𝑥⃗ᵤ,𝑥⃗ᵥ) by optimizing parameters W
+#   after training we can predict a label 𝑦′ of a data instance 𝑠⃗ with 𝑦′=sign(∑ᵤ𝑦ᵤαᵤ𝐾(𝑥⃗ᵤ,𝑠⃗)).
+
+# from qiskit.aqua.algorithms import QSVM
+# from qiskit.aqua import run_algorithm, QuantumInstance
+# from qiskit import BasicAer
+
+# qsvm = QSVM(feature_map, training_input, test_input)
+# backend = BasicAer.get_backend('qasm_simulator')
+# quantum_instance = QuantumInstance(backend, shots=1024, seed_simulator=10598, seed_transpiler=10598)
+# result = qsvm.run(quantum_instance)
+# print("test accuracy", result['testing_accuracy'])
+# y_test = qsvm.predict(test_set, quantum_instance)
