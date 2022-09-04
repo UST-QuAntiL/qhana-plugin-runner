@@ -13,15 +13,12 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from typing import Mapping, Optional
+from typing import Optional
 
 from flask import abort
 from flask.app import Flask
-from flask.globals import request
 from flask.helpers import url_for
-from flask.templating import render_template
 from flask.views import MethodView
-from flask.wrappers import Response
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -74,41 +71,6 @@ class PluginsView(MethodView):
             ),
             tags=NisqAnalyzer.instance.tags,
         )
-
-
-@NISQ_BLP.route("/ui/")
-class MicroFrontend(MethodView):
-    """Micro frontend for the NISQ Analyzer plugin."""
-
-    @NISQ_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the NISQ Analyzer plugin."
-    )
-    @NISQ_BLP.arguments(
-        FrontendFormBaseSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="query",
-        required=False,
-    )
-    @NISQ_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors):
-        """Return the micro frontend."""
-        return self.render(request.args, errors)
-
-    def render(self, data: Mapping, errors: dict):
-        plugin = NisqAnalyzer.instance
-        if plugin is None:
-            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-        return Response(
-            render_template(
-                "nisq_analyzer.html",
-                name=plugin.name,
-                version=plugin.version,
-                values=data,
-                errors=errors
-            )
-        )
-
 
 class NisqAnalyzer(QHAnaPluginBase):
 
