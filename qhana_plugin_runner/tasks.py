@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Dict
 
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
@@ -27,6 +28,8 @@ def add_step(
     prog_start: int = 0,
     prog_target: int = 100,
     prog_unit: str = "%",
+    links: Dict[str, str] = None,
+    forget_result: bool = True,
 ):
     """Add next step in a multi-step plugin to the database.
 
@@ -38,6 +41,8 @@ def add_step(
         prog_start (int): progress start value.
         prog_target (int): progress target value.
         prog_unit (str): progress unit(default: "%").
+        links (Dict[str, str]: keys: type of link, values: URL.
+        forget_result (bool): must be true, if this is used as the last task in a chain.
     """
     if not isinstance(task_log, str):
         raise TypeError(
@@ -54,7 +59,7 @@ def add_step(
     task_data.progress_target = prog_target
     task_data.progress_unit = prog_unit
     task_data.progress_value = prog_value
-    task_data.add_next_step(href=href, ui_href=ui_href, step_id=step_id)
+    task_data.add_next_step(href=href, ui_href=ui_href, step_id=step_id, links=links)
 
     if isinstance(task_log, str):
         task_data.add_task_log_entry(task_log)
@@ -64,7 +69,8 @@ def add_step(
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
 
-    AsyncResult(self.request.parent_id, app=CELERY).forget()
+    if forget_result:
+        AsyncResult(self.request.parent_id, app=CELERY).forget()
 
 
 @CELERY.task(name=f"{_name}.save-result", bind=True, ignore_result=True)

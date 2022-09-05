@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union, Dict
 
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
@@ -71,6 +71,7 @@ class Step:
         href (str): The URL of the REST entry point resource.
         ui_href (str): The URL of the micro frontend that corresponds to the REST entry point resource.
         cleared (bool): ``false`` if step is awaiting input, only last step in list can be marked as ``false``.
+        links (Dict[str, str]): dictionary with link type as keys and the URLs as values
     """
 
     __tablename__ = "Step"
@@ -260,7 +261,14 @@ class ProcessingTask:
         except:
             pass
 
-    def add_next_step(self, href: str, ui_href: str, step_id: str, commit: bool = False):
+    def add_next_step(
+        self,
+        href: str,
+        ui_href: str,
+        step_id: str,
+        commit: bool = False,
+        links: Dict[str, str] = None,
+    ):
         """Adds new step for multi-step plugin.
 
         Args:
@@ -280,8 +288,12 @@ class ProcessingTask:
         else:
             self.multi_step = True
 
+        if links is None:
+            links = {}
+
         self.current_step += 1
         new_step: Step = Step(id=self.id, step_id=step_id, href=href, ui_href=ui_href)
+        new_step.links = links
         self.steps.append(new_step)
 
         DB.session.add(new_step)

@@ -158,6 +158,7 @@ class TaskView(MethodView):
                         uiHref=step.ui_href,
                         stepId=step.step_id,
                         cleared=step.cleared,
+                        links=step.links,
                     )
                 )
 

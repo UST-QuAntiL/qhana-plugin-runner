@@ -209,6 +209,10 @@ class StepMetadataSchema(MaBaseSchema):
         },
     )
 
+    links = ma.fields.Dict(
+        required=False, allow_none=False, keys=ma.fields.Str(), values=ma.fields.Url()
+    )
+
     @post_load
     def make_object(self, data, **kwargs):
         return StepMetadata(**data)
@@ -266,6 +270,7 @@ class StepMetadata:
     uiHref: str
     stepId: str
     cleared: bool = False
+    links: Dict[str, str] = field(default_factory=dict)
 
 
 class EntryPointSchema(MaBaseSchema):
