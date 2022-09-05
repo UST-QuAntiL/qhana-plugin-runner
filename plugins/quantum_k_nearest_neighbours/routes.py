@@ -3,7 +3,6 @@ from http import HTTPStatus
 from typing import Mapping
 
 from celery.canvas import chain
-from celery.result import AsyncResult
 from flask import Response
 from flask import redirect
 from flask.globals import request
@@ -13,7 +12,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import QKNN_BLP, QKNN
-from .backend.clustering import QuantumBackends
+from .backend.quantum_backends import QuantumBackends
 from .schemas import InputParametersSchema, TaskResponseSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -108,8 +107,9 @@ class MicroFrontend(MethodView):
 
         # define default values
         default_values = {
-            fields["clusters_cnt"].data_key: 2,
+            fields["k"].data_key: 1,
             fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+            fields["shots"].data_key: 1024,
         }
 
         if "IBMQ_BACKEND" in os.environ:
