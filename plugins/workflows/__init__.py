@@ -1,5 +1,6 @@
 from json import loads
 from os import environ
+from pathlib import Path
 from typing import Any, ClassVar, Dict, Optional
 
 from celery.utils.log import get_task_logger
@@ -30,16 +31,28 @@ class Workflows(QHAnaPluginBase):
 
     instance: ClassVar["Workflows"]
 
-    config: Dict[str, Any] = None
+    config: Dict[str, Any]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
-        camunda_url = app.config.get(
+        app_config = app.config if app else {}
+
+        workflow_folder = Path(
+            app_config.get(
+                "WORKFLOW_FOLDER",
+                environ.get("WORKFLOW_FOLDER", "./workflows"),
+            )
+        )
+        if not workflow_folder.is_absolute() and app is not None:
+            workflow_folder = Path(app.instance_path) / workflow_folder
+            workflow_folder = workflow_folder.resolve()
+
+        camunda_url = app_config.get(
             "CAMUNDA_API_URL",
             environ.get("CAMUNDA_API_URL", "http://localhost:8080/engine-rest"),
         )
-        plugin_runner_url = app.config.get(
+        plugin_runner_url = app_config.get(
             "PLUGIN_RUNNER_URLS",
             [
                 url.strip()
@@ -50,12 +63,12 @@ class Workflows(QHAnaPluginBase):
             ],
         )
 
-        workflow_config: Dict[str, float] = app.config.get("WORKFLOWs", {})
+        workflow_config: Dict[str, float] = app_config.get("WORKFLOWs", {})
         env_workflow_config = environ.get("PLUGIN_WORKFLOWS", None)
         if env_workflow_config:
             workflow_config = loads(env_workflow_config)
 
-        workflow_watcher_config: Dict[str, float] = app.config.get(
+        workflow_watcher_config: Dict[str, float] = app_config.get(
             "WORKFLOW_WATCHERS", {}
         )
         env_workflow_watcher_config = environ.get("PLUGIN_WORKFLOW_WATCHERS", None)
@@ -63,6 +76,7 @@ class Workflows(QHAnaPluginBase):
             workflow_watcher_config = loads(env_workflow_watcher_config)
 
         conf = {
+            "WORKFLOW_FOLDER": workflow_folder,
             "CAMUNDA_BASE_URL": camunda_url,
             "QHANA_PLUGIN_ENDPOINTS": plugin_runner_url,
             "polling_rates": {"camunda_general": 5.0, "external_watcher": 5.0},

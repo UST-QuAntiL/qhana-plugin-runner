@@ -102,9 +102,9 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
             task_data.save(commit=True)
 
             # TODO: Remove
-            href = f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-process/"
+            href = f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-process/" # FIXME hardcoded href
             ui_href = (
-                f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-ui/"
+                f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-ui/" # FIXME hardcoded href
             )
 
             # Add new sub-step task for input gathering

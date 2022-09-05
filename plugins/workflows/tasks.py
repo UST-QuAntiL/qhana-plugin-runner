@@ -1,4 +1,5 @@
 import ast
+from pathlib import Path
 from typing import Optional
 
 from celery.utils.log import get_task_logger
@@ -10,7 +11,6 @@ from . import Workflows
 from .clients.camunda_client import CamundaClient
 from .datatypes.camunda_datatypes import CamundaConfig, ProcessInstance
 from .schemas import InputParameters, WorkflowsParametersSchema
-from .util.bpmn_handler import BpmnHandler
 from .watchers.human_task_watcher import run_human_task_watcher
 
 config = Workflows.instance.config
@@ -22,23 +22,41 @@ TASK_LOGGER = get_task_logger(__name__)
 def start_workflow(self, db_id: int) -> None:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
+    if task_data is None:
+        TASK_LOGGER.error(f"Could not load task data for task id '{db_id}'!")
+        raise ValueError(f"Task {db_id} was not found!")
+
     param_schema = WorkflowsParametersSchema()
+
     input_params: InputParameters = param_schema.loads(task_data.parameters)
 
     # BPMN file
-    bpmn = BpmnHandler(f"{input_params.input_bpmn}.bpmn")
+    bpmn_folder: Path = config["WORKFLOW_FOLDER"]
+    bpmn_path = bpmn_folder / (Path("test.bpmn").with_name(input_params.input_bpmn))
+    bpmn_path = bpmn_path.with_suffix(".bpmn").resolve()
+
+    if not bpmn_path.exists():
+        builtin_path = Path(__file__).parent / Path("bpmn")
+        bpmn_path = builtin_path / (Path("test.bpmn").with_name(input_params.input_bpmn))
+        bpmn_path = bpmn_path.with_suffix(".bpmn").resolve()
+
+    if not bpmn_path.exists() or not bpmn_path.is_file():
+        TASK_LOGGER.error(
+            f"Requested BPMN file '{input_params.input_bpmn}' does not exist."
+        )
+        raise ValueError("BPMN file does not exist!")
 
     # Config
     camunda_config = CamundaConfig(
         base_url=config["CAMUNDA_BASE_URL"],
         poll_interval=config["polling_rates"]["camunda_general"],
     )
-
     # Client
-    camunda_client = CamundaClient(camunda_config, bpmn)
+    camunda_client = CamundaClient(camunda_config, bpmn_path)
     # Deploy BPMN file and create workflow instance
     camunda_client.build()
 
+    assert isinstance(task_data.data, dict)
     # Set the process instance id used to create Camunda configs in sub-steps
     task_data.data["camunda_process_instance_id"] = camunda_config.process_instance.id
     task_data.data[
@@ -57,7 +75,13 @@ def process_input(self, db_id: int) -> None:
 
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
-    input_params: dict = ast.literal_eval(task_data.parameters)
+    if task_data is None:
+        TASK_LOGGER.error(f"Could not load task data for task id '{db_id}'!")
+        raise ValueError(f"Task {db_id} was not found!")
+
+    assert isinstance(task_data.data, dict)
+
+    input_params: dict = ast.literal_eval(task_data.parameters)  # FIXME use json!!!
     process_instance_id = task_data.data["camunda_process_instance_id"]
     process_instance_definition_key = task_data.data["process_instance_definition_key"]
     human_task_id = task_data.data["human_task_id"]

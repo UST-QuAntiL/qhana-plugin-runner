@@ -1,5 +1,6 @@
 import datetime
 import logging
+from pathlib import Path
 from typing import Optional
 
 import requests
@@ -12,7 +13,6 @@ from ..datatypes.camunda_datatypes import (
     ExternalTask,
     ProcessInstance,
 )
-from ..util.bpmn_handler import BpmnHandler
 from ..util.helper import endpoint_found, endpoint_found_simple, request_json
 
 config = Workflows.instance.config
@@ -29,10 +29,10 @@ class CamundaClient:
     def __init__(
         self,
         camunda_config: CamundaConfig,
-        bpmn_handler: Optional[BpmnHandler] = None,
+        bpmn_path: Optional[Path] = None,
     ):
         self.camunda_config = camunda_config
-        self.bpmn_handler = bpmn_handler
+        self.bpmn_path = bpmn_path
 
     def base_url(self, url):
         """
@@ -49,11 +49,11 @@ class CamundaClient:
         self.camunda_config.poll_interval = timeout
         return self
 
-    def resource(self, bpmn: BpmnHandler):
+    def resource(self, bpmn: Path):
         """
         :param bpmn: BPMN model for deployment
         """
-        self.bpmn_handler = bpmn
+        self.bpmn_path = bpmn
         return self
 
     def build(self):
@@ -225,13 +225,16 @@ class CamundaClient:
         """
         Deploy a BPMN model to the Camunda Engine
         """
-        response = request_json(
-            url=f"{self.camunda_config.base_url}/deployment/create",
-            post=True,
-            files={self.bpmn_handler.filename: self.bpmn_handler.bpmn},
-        )
+        if self.bpmn_path is None:
+            raise ValueError("No BPMN File specified!")
+        with self.bpmn_path.open(mode="rb") as bpmn:
+            response = request_json(
+                url=f"{self.camunda_config.base_url}/deployment/create",
+                post=True,
+                files={self.bpmn_path.name: bpmn},
+            )
 
-        self.camunda_config.deployment = Deployment.deserialize(response)
+            self.camunda_config.deployment = Deployment.deserialize(response)
 
     def create_instance(self):
         """
