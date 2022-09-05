@@ -389,11 +389,11 @@ class PluginMetadataSchema(MaBaseSchema):
 
 @dataclass
 class OptimizerCallbackData:
-    optimizer_start_url: str
+    task_url: str
 
 
 class OptimizerCallbackSchema(MaBaseSchema):
-    optimizer_start_url = ma.fields.Url(required=True, allow_none=False)
+    task_url = ma.fields.Url(required=True, allow_none=False)
 
     @post_load
     def make_object(self, data, **kwargs):
