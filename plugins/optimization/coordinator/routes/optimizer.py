@@ -34,6 +34,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     CallbackURLSchema,
     CallbackURL,
 )
+from qhana_plugin_runner.api.tasks_api import TaskStatusSchema, TaskStatus
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error
 from .objective_function import ObjFuncSetupProcess, ObjFuncSelectionUI
@@ -224,10 +225,17 @@ class OptimCallback(MethodView):
 
         db_task.clear_previous_step()
 
+        task_schema = TaskStatusSchema()
+        task_status: TaskStatus = task_schema.load(
+            requests.get(arguments.task_url).json()
+        )
+
         schema = InternalDataSchema()
         internal_data: InternalData = schema.loads(db_task.parameters)
 
-        internal_data.optimizer_start_url = arguments.optimizer_start_url
+        optimizer_start_url = task_status.steps[-1].href
+
+        internal_data.optimizer_start_url = optimizer_start_url
 
         db_task.parameters = schema.dumps(internal_data)
         db_task.save(commit=True)

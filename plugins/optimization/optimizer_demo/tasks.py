@@ -15,6 +15,7 @@ from tempfile import SpooledTemporaryFile
 from typing import Optional
 
 import requests
+from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -72,16 +73,18 @@ def setup_task(self, db_id: int) -> str:
 
 
 @CELERY.task(name=f"{OptimizerDemo.instance.identifier}.callback_task", bind=True)
-def callback_task(self, _, callback_url: str, optimizer_start_url: str) -> None:
-    callback_schema = OptimizerCallbackSchema()
-    callback_data = OptimizerCallbackData(optimizer_start_url=optimizer_start_url)
+def callback_task(self, _, callback_url: str, task_url: str) -> None:
+    TASK_LOGGER.info("Starting callback task")
 
-    resp = requests.post(
-        callback_url,
-        json=callback_schema.dump(callback_data),
-    )
+    callback_schema = OptimizerCallbackSchema()
+    callback_data = OptimizerCallbackData(task_url=task_url)
+
+    resp = requests.post(callback_url, json=callback_schema.dump(callback_data))
 
     if resp.status_code >= 400:
         TASK_LOGGER.error(
             f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
         )
+
+    # TODO: add comment why this line is necessary
+    AsyncResult(self.request.parent_id, app=CELERY).forget()

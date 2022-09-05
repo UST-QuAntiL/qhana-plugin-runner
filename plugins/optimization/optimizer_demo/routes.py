@@ -45,7 +45,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     CallbackURL,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import save_task_error, save_task_result, add_step
 from . import OPTIMIZER_DEMO_BLP, OptimizerDemo
 from .schemas import (
     HyperparametersSchema,
@@ -190,13 +190,22 @@ class Setup(MethodView):
             _external=True,
         )
 
+        task_url = url_for("tasks-api.TaskView", task_id=str(db_task.id), _external=True)
+
         # all tasks need to know about db id to load the db entry
         task: chain = (
             setup_task.s(db_id=db_task.id)
-            | save_task_result.s(db_id=db_task.id)
+            | add_step.s(
+                db_id=db_task.id,
+                step_id="optimization",
+                href=optimizer_start_url,
+                ui_href="",
+                prog_value=50,
+                forget_result=False,
+            )
             | callback_task.s(
                 callback_url=callback_url.callback_url,
-                optimizer_start_url=optimizer_start_url,
+                task_url=task_url,
             )
         )
         # save errors to db
@@ -228,6 +237,9 @@ class Optimization(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
         # randomly initialize parameters
         parameters = np.random.normal(size=(arguments.number_of_parameters,))
 
@@ -242,6 +254,8 @@ class Optimization(MethodView):
         optimized_parameters: np.ndarray = result.x
         last_objective_value = obj_func(optimized_parameters)
         parameter_list: List[float] = optimized_parameters.tolist()
+
+        # TODO: save_task_result
 
         return OptimizationOutput(
             last_objective_value=last_objective_value, optimized_parameters=parameter_list
