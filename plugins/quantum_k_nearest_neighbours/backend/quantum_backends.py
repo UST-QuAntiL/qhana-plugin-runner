@@ -3,7 +3,7 @@ import enum
 import pennylane as qml
 from celery.utils.log import get_task_logger
 from qiskit import IBMQ
-from qiskit import BasicAer
+from qiskit import Aer
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -78,7 +78,7 @@ class QuantumBackends(enum.Enum):
     ):
         if self.name.startswith("aer"):
             aer_backend_name = self.name[4:]
-            return BasicAer(aer_backend_name)
+            return Aer.get_backend(aer_backend_name)
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             provider = IBMQ.enable_account(ibmq_token)
