@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 from urllib.parse import urljoin
@@ -26,6 +27,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     OptimizationOutputSchema,
     OptimizationOutput,
 )
+from qhana_plugin_runner.api.tasks_api import TaskStatusSchema, TaskStatus
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
@@ -65,7 +67,7 @@ def start_optimization_task(self, db_id: int) -> str:
     @param db_id: database ID that will be used to retrieve the task data from the database
     @return: log message
     """
-    TASK_LOGGER.info(f"Starting optimization task with db id '{db_id}'")
+    TASK_LOGGER.info(f"Coordinator starting optimization task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -83,7 +85,6 @@ def start_optimization_task(self, db_id: int) -> str:
         objective_function_calculation_url=internal_data.objective_function_calculation_url,
     )
 
-    response_schema = OptimizationOutputSchema()
     resp = requests.post(
         internal_data.optimizer_start_url,
         json=request_schema.dump(request_data),
@@ -94,10 +95,39 @@ def start_optimization_task(self, db_id: int) -> str:
             f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
         )
 
-    response: OptimizationOutput = response_schema.load(resp.json())
+    task_url = resp.url
+    task_status_schema = TaskStatusSchema()
+    optimization_output_url: Optional[str] = None
+
+    while True:
+        resp = requests.get(task_url)
+
+        if resp.status_code >= 400:
+            TASK_LOGGER.error(
+                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+            )
+
+        task_status: TaskStatus = task_status_schema.load(resp.json())
+
+        TASK_LOGGER.info(f"task status of optimizer plugin: {task_status.status}")
+
+        if task_status.status == "SUCCESS":
+            for output in task_status.outputs:
+                if output.data_type == "optimization-output":
+                    optimization_output_url = output.href
+            break
+        else:
+            time.sleep(1)
+
+    resp = requests.get(optimization_output_url)
+
+    if resp.status_code >= 400:
+        TASK_LOGGER.error(
+            f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
+        )
 
     with SpooledTemporaryFile(mode="w") as output:
-        output.write(response_schema.dumps(response))
+        output.write(resp.text)
         STORE.persist_task_result(
             db_id, output, "result.json", "optimization-result", "application/json"
         )

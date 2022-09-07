@@ -54,7 +54,7 @@ from .schemas import (
     Hyperparameters,
     InternalData,
 )
-from .tasks import setup_task, callback_task
+from .tasks import setup_task, callback_task, optimization_task
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -240,58 +240,23 @@ class Optimization(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        # randomly initialize parameters
-        parameters = np.random.normal(size=(arguments.number_of_parameters,))
+        schema = InternalDataSchema()
+        parameters: InternalData = schema.loads(db_task.parameters)
 
-        obj_func = _objective_function_wrapper(
-            arguments.dataset, arguments.objective_function_calculation_url
+        parameters.optimization_input = arguments
+
+        db_task.parameters = schema.dumps(parameters)
+        db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = optimization_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_id
         )
 
-        # optimization
-        result = minimize(obj_func, parameters, method="COBYLA")
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
 
-        # get results
-        optimized_parameters: np.ndarray = result.x
-        last_objective_value = obj_func(optimized_parameters)
-        parameter_list: List[float] = optimized_parameters.tolist()
-
-        # TODO: save_task_result
-
-        return OptimizationOutput(
-            last_objective_value=last_objective_value, optimized_parameters=parameter_list
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )
-
-
-def _objective_function_wrapper(
-    dataset_url: str, objective_function_calculation_url: str
-):
-    """
-    Provides the objective function with additional information that are needed to execute the requests to the objective
-    function plugins.
-
-    :param dataset_url:
-    :param objective_function_calculation_url:
-    :param obj_func_db_id:
-    :return: the wrapped objective function that can be used with scipy optimizers
-    """
-
-    def objective_function(x: np.ndarray) -> float:
-        request_data = ObjFuncCalcInput(data_set=dataset_url, parameters=x.tolist())
-        input_schema = ObjFuncCalcInputSchema()
-
-        resp = requests.post(
-            objective_function_calculation_url,
-            json=input_schema.dump(request_data),
-        )
-
-        if resp.status_code >= 400:
-            TASK_LOGGER.error(
-                f"{resp.request.url} {resp.status_code} {resp.reason} {resp.text}"
-            )
-
-        output_schema = ObjFuncCalcOutputSchema()
-        output: ObjFuncCalcOutput = output_schema.load(resp.json())
-
-        return output.objective_value
-
-    return objective_function

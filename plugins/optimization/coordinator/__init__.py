@@ -26,7 +26,7 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 OPTI_COORD_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Optimization coordinator API.",
+    description="Optimization coordinator API. WARNING: Your celery worker needs to be able to run two task concurrently. Otherwise there will be a deadlock.",
     template_folder="hello_world_templates",
 )
 

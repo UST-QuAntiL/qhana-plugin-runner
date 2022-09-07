@@ -13,12 +13,18 @@
 # limitations under the License.
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
 import marshmallow as ma
 from marshmallow import post_load
 
 from qhana_plugin_runner.api import MaBaseSchema, EnumField
-from qhana_plugin_runner.api.plugin_schemas import CallbackURL, CallbackURLSchema
+from qhana_plugin_runner.api.plugin_schemas import (
+    CallbackURL,
+    CallbackURLSchema,
+    OptimizationInput,
+    OptimizationInputSchema,
+)
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 
 
@@ -59,6 +65,7 @@ class HyperparametersSchema(FrontendFormBaseSchema):
 class InternalData:
     hyperparameters: Hyperparameters
     callback_url: CallbackURL
+    optimization_input: Optional[OptimizationInput] = None
 
 
 class InternalDataSchema(MaBaseSchema):
@@ -66,6 +73,9 @@ class InternalDataSchema(MaBaseSchema):
         HyperparametersSchema, required=True, allow_none=False
     )
     callback_url = ma.fields.Nested(CallbackURLSchema, required=True, allow_none=False)
+    optimization_input = ma.fields.Nested(
+        OptimizationInputSchema(), required=False, allow_none=True
+    )
 
     @post_load
     def make_object(self, data, **kwargs):
