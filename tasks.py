@@ -451,7 +451,7 @@ def start_docker(c):
     if environ.get("CONTAINER_MODE", "").lower() == "server":
         start_gunicorn(c, workers=concurrency, log_level=log_level, docker=True)
     elif environ.get("CONTAINER_MODE", "").lower() == "worker":
-        worker_pool = environ.get("CELERY_WORKER_POOL", "threds")
+        worker_pool = environ.get("CELERY_WORKER_POOL", "threads")
         worker(c, concurrency=concurrency, pool=worker_pool, log_level=log_level)
     else:
         raise ValueError(
