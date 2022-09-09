@@ -237,7 +237,9 @@ def start_containers(c):
 
 
 @task
-def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
+def worker(
+    c, pool="solo", concurrency=1, dev=False, log_level="INFO", periodic_scheduler=False
+):
     """Run the celery worker, optionally starting the redis broker.
 
     Args:
@@ -246,6 +248,7 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         concurrency (int, optional): the number of concurrent workers (defaults to 1 for development)
         dev (bool, optional): If true the redis docker container will be started before the worker and stopped after the workers finished. Defaults to False.
         log_level (str, optional): The log level of the celery logger in the worker (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
+        periodic_scheduler (bool, optional): If true a celery beat scheduler will be started alongside the worker. This is needed for periodic tasks. Should only be set to True for one worker otherwise the periodic tasks get executed too often (see readme file).
     """
     if dev:
         start_broker(c)
@@ -262,6 +265,10 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         log_level.upper(),
         "-E",
     ]
+
+    if periodic_scheduler:
+        cmd += ["-B"]
+
     if dev:
         c.run(join(cmd), echo=True)
         stop_broker(c)
@@ -269,26 +276,6 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         # if not in dev mode completely replace the current process with the started process
         print(join(cmd))
         replace_process(cmd[0], cmd, environ)
-
-
-@task
-def beat(c, log_level="INFO"):
-    """Run the celery beat required for periodic tasks.
-
-    Args:
-        c (Context): task context
-        log_level (str, optional): The log level of the celery logger for the beat scheduler (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
-    """
-    cmd = [
-        "celery",
-        "--app",
-        CELERY_WORKER,
-        "beat",
-        "--loglevel",
-        log_level.upper(),
-    ]
-    print(join(cmd))
-    replace_process(cmd[0], cmd, environ)
 
 
 @task
@@ -585,10 +572,15 @@ def start_docker(c):
         start_gunicorn(c, workers=concurrency, log_level=log_level, docker=True)
     elif environ.get("CONTAINER_MODE", "").lower() == "worker":
         execute_pre_tasks()
-        worker_pool = environ.get("CELERY_WORKER_POOL", "threds")
-        worker(c, concurrency=concurrency, pool=worker_pool, log_level=log_level)
-    elif environ.get("CONTAINER_MODE", "").lower() == "beat":
-        beat(c, log_level=log_level)
+        worker_pool = environ.get("CELERY_WORKER_POOL", "threads")
+        periodic_scheduler = bool(environ.get("PERIODIC_SCHEDULER", False))
+        worker(
+            c,
+            concurrency=concurrency,
+            pool=worker_pool,
+            log_level=log_level,
+            periodic_scheduler=periodic_scheduler,
+        )
     else:
         raise ValueError(
             "Environment variable 'CONTAINER_MODE' must be set to either 'server' or 'worker'!"

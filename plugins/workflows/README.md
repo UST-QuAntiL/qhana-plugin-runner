@@ -6,22 +6,21 @@ Plugin: workflows@v0.5.1 ([changelog](#changelog))
 
 Python >= 3.9
 
-Celery beat is required in order to run workflow instances.
+Celery beat is required in order to run workflow instances and can be started together with the worker with the
+`--periodic-scheduler` flag.
+For more information see the readme file of the qhana-plugin-runner.
 
-```bash
-# Run Celery beat
-poetry run invoke beat
-```
 
 Additionally, [Camunda](https://camunda.com/) BPMN run is needed.
 
 Celery workers completing workflow tasks should use a non-solo pool, e.g., gevent or eventlet.
 Set the concurrency flag to allow for multiple celery task instances.
-Example:
+
+Example with pool, concurrency and celery beat:
 
 ```bash
 # Run worker
-poetry run invoke worker --pool=gevent  --concurrency=10
+poetry run invoke worker --pool=gevent  --concurrency=10 --periodic-scheduler
 ```
 
 ## Creating workflows

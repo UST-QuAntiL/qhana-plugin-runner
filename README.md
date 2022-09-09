@@ -247,6 +247,21 @@ poetry run invoke --list
 poetry run invoke worker --help
 ```
 
+### Worker arguments
+
+- `--pool=...`
+  - for possible values see [celery docs](https://celery-safwan.readthedocs.io/en/latest/reference/cli.html#cmdoption-celery-worker-P)
+  - don't use `solo` if you want multiple tasks to be able to be executed concurrently
+- `--concurrency=...`
+  - number of tasks that can be executed concurrently
+- `--log_level=...`
+  - see [Python docs](https://docs.python.org/3/howto/logging.html) for possible values
+- `--periodic-scheduler`
+  - add this flag to run the Celery beat scheduler alongside the worker
+  - this is needed for periodic tasks
+  - If a plugin is run by multiple workers, only one of these workers should start with a celery beat scheduler,
+  otherwise the periodic tasks get scheduled by all of these schedulers and executed too many times.
+
 
 ## Compiling the Documentation
 
