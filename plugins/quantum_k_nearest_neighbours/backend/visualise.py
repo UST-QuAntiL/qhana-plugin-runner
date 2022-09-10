@@ -2,13 +2,8 @@ import pandas as pd
 import plotly.express as px
 
 
-def plot_data(train_data, train_labels, test_data, test_labels, only_first_100=True):
-    dim = len(train_data[0]["point"])
-    label_dict = {}
-    for label_entry in train_data:
-        label_dict[label_entry["ID"]] = int(label_entry["label"])
-    for label_entry in test_labels:
-        label_dict[label_entry["ID"]] = int(label_entry["label"])
+def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels, only_first_100=True):
+    dim = len(train_data[0])
     train_end = len(train_data)
     test_end = len(test_data)
     if only_first_100:
@@ -21,23 +16,25 @@ def plot_data(train_data, train_labels, test_data, test_labels, only_first_100=T
         ids = []
         label = []
         test_or_train = []
-        for i in range(train_end):
-            entity = train_data[i]
-            point = entity["point"]
+        for id, idx in train_id_to_idx.items():
+            if idx >= train_end:
+                break
+            point = train_data[idx]
             points_x.append(float(point[0]))
             points_y.append(float(point[1]))
             points_z.append(float(point[2]))
-            ids.append(entity["ID"])
-            label.append(label_dict[entity["ID"]])
+            ids.append(id)
+            label.append(train_labels[idx])
             test_or_train.append('train')
-        for i in range(test_end):
-            entity = test_data[i]
-            point = entity["point"]
+        for id, idx in test_id_to_idx.items():
+            if idx >= test_end:
+                break
+            point = test_data[idx]
             points_x.append(float(point[0]))
             points_y.append(float(point[1]))
             points_z.append(float(point[2]))
-            ids.append(entity["ID"])
-            label.append(label_dict[entity["ID"]])
+            ids.append(id)
+            label.append(test_labels[idx])
             test_or_train.append('test')
         df = pd.DataFrame(
             {
@@ -59,21 +56,23 @@ def plot_data(train_data, train_labels, test_data, test_labels, only_first_100=T
         ids = []
         label = []
         test_or_train = []
-        for i in range(train_end):
-            entity = train_data[i]
-            point = entity["point"]
+        for id, idx in train_id_to_idx.items():
+            if idx >= train_end:
+                break
+            point = train_data[idx]
             points_x.append(float(point[0]))
             points_y.append(float(point[1]))
-            ids.append(entity["ID"])
-            label.append(label_dict[entity["ID"]])
+            ids.append(id)
+            label.append(train_labels[idx])
             test_or_train.append('train')
-        for i in range(test_end):
-            entity = test_data[i]
-            point = entity["point"]
+        for id, idx in test_id_to_idx.items():
+            if idx >= test_end:
+                break
+            point = test_data[idx]
             points_x.append(float(point[0]))
             points_y.append(float(point[1]))
-            ids.append(entity["ID"])
-            label.append(label_dict[entity["ID"]])
+            ids.append(id)
+            label.append(test_labels[idx])
             test_or_train.append('test')
         df = pd.DataFrame(
             {
@@ -93,20 +92,22 @@ def plot_data(train_data, train_labels, test_data, test_labels, only_first_100=T
         ids = []
         label = []
         test_or_train = []
-        for i in range(train_end):
-            entity = train_data[i]
-            point = entity["point"]
+        for id, idx in train_id_to_idx.items():
+            if idx >= train_end:
+                break
+            point = train_data[idx]
             points_x.append(float(point[0]))
-            ids.append(entity["ID"])
-            label.append(label_dict[entity["ID"]])
-            test_or_train.append("train")
-        for i in range(test_end):
-            entity = test_data[i]
-            point = entity["point"]
+            ids.append(id)
+            label.append(train_labels[idx])
+            test_or_train.append('train')
+        for id, idx in test_id_to_idx.items():
+            if idx >= test_end:
+                break
+            point = test_data[idx]
             points_x.append(float(point[0]))
-            ids.append(entity["ID"])
-            label.append(label_dict[entity["ID"]])
-            test_or_train.append("test")
+            ids.append(id)
+            label.append(test_labels[idx])
+            test_or_train.append('test')
         df = pd.DataFrame(
             {
                 "x": points_x,
