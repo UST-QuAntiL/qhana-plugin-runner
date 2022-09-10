@@ -1,0 +1,159 @@
+import pennylane as qml
+import numpy as np
+from ..ccnot import clean_ccnot
+from ..controlled_unitaries import get_controlled_one_qubit_unitary
+
+
+class QAM:
+    def __init__(self, X, register_wires, load_and_control_wire, compare_register, amplitudes=None, additional_bits=None, additional_wires=None):
+        if not isinstance(X, np.ndarray):
+            X = np.array(X)
+        self.X = X
+        self.xor_X = self.create_xor_X(X)
+        if additional_bits is not None:
+            if not isinstance(additional_bits, np.ndarray):
+                additional_bits = np.array(additional_bits)
+            self.xor_additional_bits = self.create_xor_X(additional_bits)
+        else:
+            self.xor_additional_bits = additional_bits
+        self.register_wires = list(register_wires)
+        self.load_and_control_wire = list(load_and_control_wire)
+        self.compare_register = list(compare_register)
+        self.additional_wires = additional_wires
+        if amplitudes is None:
+            self.amplitudes = [1/np.sqrt(X.shape[0], dtype=np.float64)]*X.shape[0]
+        else:
+            self.amplitudes = amplitudes
+
+        if any(wire in register_wires for wire in load_and_control_wire):
+            raise qml.QuantumFunctionError(
+                "The load and control wires must be different from the register wires"
+            )
+        if any(wire in compare_register for wire in load_and_control_wire):
+            raise qml.QuantumFunctionError(
+                "The load and control wires must be different from the compare register's wires"
+            )
+        if any(wire in register_wires for wire in compare_register):
+            raise qml.QuantumFunctionError(
+                "The wire in the compare register must be different from the register wires"
+            )
+        if len(register_wires) < X.shape[1]:
+            raise qml.QuantumFunctionError(
+                "The number of register wires must be at least the same as the dimension of the data points"
+            )
+        if len(load_and_control_wire) < 2:
+            raise qml.QuantumFunctionError(
+                "2 ancilla wires are required."
+            )
+        if len(X[0]) > 2:
+            if len(compare_register) < X.shape[1]-2:
+                raise qml.QuantumFunctionError(
+                    "The number of compare register wires must be at least the same as the dimension of the data points minus 2."
+                )
+        if additional_bits is not None:
+            if additional_wires is None or len(additional_wires) < additional_bits.shape[1]:
+                raise qml.QuantumFunctionError(
+                    "The number of additional wires must be at least the same as the dimension of the additional bits."
+                )
+
+        self.rotation_circuits = self.prepare_rotation_circuits()
+
+    def create_xor_X(self, X):
+        xor_X = np.zeros(X.shape)
+        for i in range(X.shape[0]-1, 0, -1):
+            xor_X[i] = np.bitwise_xor(X[i], X[i-1])
+        xor_X[0] = X[0]
+        return xor_X
+
+    def abs2(self, x):
+        return x.real**2 + x.imag**2
+
+    def prepare_rotation_circuits(self) -> List:
+        # rotation_matrices = np.zeros((self.xor_X.shape[0], 4), dtype=np.float64)
+        rotation_circuits = []
+        prev_sum = 1
+        rotation_matrix = np.zeros((2, 2), dtype=np.complex128)
+        for i in range(self.xor_X.shape[0]-1):
+            next_sum = prev_sum - self.abs2(self.amplitudes[i])
+            # print(f"prev_sum = {prev_sum}")
+            # print(f"next_sum = {next_sum}")
+            diag = np.sqrt(next_sum / prev_sum)
+            rotation_matrix[0, 0] = diag
+            rotation_matrix[1, 1] = diag
+
+            sqrt_prev_sum = np.sqrt(prev_sum)
+            rotation_matrix[0, 1] = self.amplitudes[i] / sqrt_prev_sum
+            rotation_matrix[1, 0] = -self.amplitudes[i].conjugate() / sqrt_prev_sum
+            # rotation_matrices[i] = np.array(compute_zyz_decomposition(rotation_matrix))
+            rotation_circuits.append(get_controlled_one_qubit_unitary(rotation_matrix))
+            prev_sum = next_sum
+
+        rotation_matrix[0, 0] = 0
+        rotation_matrix[1, 1] = 0
+
+        sqrt_prev_sum = np.sqrt(prev_sum)
+        rotation_matrix[0, 1] = self.amplitudes[-1] / sqrt_prev_sum
+        rotation_matrix[1, 0] = -self.amplitudes[-1].conjugate() / sqrt_prev_sum
+        # rotation_matrices[-1] = np.array(compute_zyz_decomposition(rotation_matrix))
+        rotation_circuits.append(get_controlled_one_qubit_unitary(rotation_matrix))
+
+        return rotation_circuits
+
+    def flip_control_if_reg_equals_x(self, x):
+        # Flip all wires to one, if reg == x
+        for i in range(len(x)):
+            if x[i] == 0:
+                qml.PauliX(self.register_wires[i])
+        # Check if all wires are one
+        clean_ccnot(self.register_wires, self.compare_register, self.load_and_control_wire[1])
+        # Uncompute flips
+        for i in range(len(x)):
+            if x[i] == 0:
+                qml.PauliX(self.register_wires[i])
+
+    def load_x(self, x):
+        for idx in range(len(x)):
+            if x[idx] == 1:
+                qml.CNOT((self.load_and_control_wire[0], self.register_wires[idx]))
+
+    def load_additional_bits(self, bits):
+        for idx in range(len(bits)):
+            if bits[idx] == 1:
+                qml.CNOT((self.load_and_control_wire[0], self.additional_wires[idx]))
+
+    def circuit(self):
+        qml.PauliX(self.load_and_control_wire[0])
+        for i in range(self.xor_X.shape[0]):
+
+            # Load xi
+            self.load_x(self.xor_X[i])
+            if self.xor_additional_bits is not None:
+                self.load_additional_bits(self.xor_additional_bits[i])
+            # qml.Snapshot(f"{i}: loaded {self.X[i]}")  # Debug
+
+            # CNOT load to control
+            qml.CNOT(wires=self.load_and_control_wire)
+            # qml.Snapshot(f"{i}: set control to load") # Debug
+
+            # Controlled rotation i from control on load
+            self.rotation_circuits[i](self.load_and_control_wire[1], self.load_and_control_wire[0])
+            # qml.Snapshot(f"{i}: controlled rotation on load") # Debug
+
+            # Flip control wire, if register == xi
+            self.flip_control_if_reg_equals_x(self.X[i])
+            # qml.Snapshot(f"{i}: controlled flipped, if reg equals {self.X[i]}")   # Debug
+
+            # Since we are using xor_X, we don't need to uncompute the register, if load == 1
+            # xor_X[0] = X[0], but xor_X[i] = X[i] xor X[i-1] for all i > 0
+            # After iteration i, reg=X[i]. Now loading xor_X[i+1] results in
+            # reg = X[i] xor xor_X[i+1] = X[i] xor (X[i+1] xor X[i]) = (X[i] xor X[i]) xor X[i+1] = 0 xor X[i+1] = X[i+1]
+            # qml.Snapshot(f"{i}: qam after {i}'th data point") # Debug
+
+    def get_circuit(self):
+        return self.circuit
+
+    def inv_circuit(self):
+        self.get_inv_circuit()()
+
+    def get_inv_circuit(self):
+        return qml.adjoint(self.circuit)
