@@ -45,7 +45,7 @@ def load_entity_points_from_url(entity_points_url: str):
     for ent in entity_points:
         idx = id_to_idx[ent["ID"]]
         points_arr[idx] = ent["point"]
-    return points_arr, entity_points
+    return points_arr, id_to_idx
 
 
 def load_labels_from_url(labels_url: str, id_to_idx: dict):
@@ -56,7 +56,9 @@ def load_labels_from_url(labels_url: str, id_to_idx: dict):
     num_labels = len(id_to_idx)
     label_arr = np.empty((num_labels,))
 
+    TASK_LOGGER.info(f"id_to_idx: {id_to_idx}")
     for label in labels:
+        TASK_LOGGER.info(f"id: {label['ID']}")
         idx = id_to_idx[label["ID"]]
         label_arr[idx] = label["label"]
     return label_arr
@@ -121,8 +123,9 @@ def calculation_task(self, db_id: int) -> str:
     else:
         max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
         if max_qbits is None:
-            max_qbits = 6
+            max_qbits = 29
         backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
+        backend.shots = shots
 
     train_data, train_id_to_idx = load_entity_points_from_url(train_points_url)
     train_labels = load_labels_from_url(label_points_url, train_id_to_idx)
@@ -132,13 +135,13 @@ def calculation_task(self, db_id: int) -> str:
 
     test_labels = qknn.label_points(test_data)
 
-    entity_clusters = []
+    output_labels = []
 
     for ent_id, idx in test_id_to_idx.items():
-        entity_clusters.append({"ID": ent_id, "href": "", "label": int(test_labels[idx])})
+        output_labels.append({"ID": ent_id, "href": "", "label": int(test_labels[idx])})
 
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(entity_clusters, output, "application/json")
+        save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
@@ -147,7 +150,7 @@ def calculation_task(self, db_id: int) -> str:
             "application/json",
         )
 
-    fig = plot_data(train_data, train_labels, test_data, test_labels)
+    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels)
     if fig is not None:
         fig.update_layout(showlegend=False)
 
