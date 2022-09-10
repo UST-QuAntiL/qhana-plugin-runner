@@ -30,7 +30,7 @@ class QKNN(QHAnaPluginBase):
         return QKNN_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit-quantum-knn~=1.0.1\nqiskit-aqua~=0.9.5\nqiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16"
+        return "qiskit-quantum-knn~=1.0.1\nqiskit==0.30.0\nqiskit-aqua>=0.9.2\npennylane~=0.16\npennylane-qiskit~=0.16"
 
 
 try:
