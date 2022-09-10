@@ -20,6 +20,7 @@ class QuantumBackends(enum.Enum):
     ibmq_belem = "ibmq_belem"
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
+    pennylane_default = "pennylane_default"
 
     def get_max_num_qbits(
             self,
@@ -68,6 +69,8 @@ class QuantumBackends(enum.Enum):
                 backend=custom_backend_name,
                 provider=provider,
             )
+        elif self.name == 'pennylane_default':
+            return qml.device('default.qubit', wires=qubit_cnt)
         else:
             TASK_LOGGER.error("Unknown pennylane backend specified!")
 
