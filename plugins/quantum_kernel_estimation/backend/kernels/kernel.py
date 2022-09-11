@@ -14,8 +14,6 @@
 from abc import abstractmethod
 from typing import List
 from pennylane import Device
-from pennylane import numpy as pnp
-from pennylane.qnode import QNode
 import numpy as np
 import enum
 from celery.utils.log import get_task_logger

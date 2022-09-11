@@ -33,7 +33,6 @@ from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
 from .backend.qiskit_backends import QiskitBackends
-from .backend.kernel import KernelEnum
 import numpy as np
 
 

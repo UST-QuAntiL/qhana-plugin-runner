@@ -32,8 +32,6 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
-from .backend.quantum_backends import QuantumBackends
-from .backend.kernels.kernel import KernelEnum
 import numpy as np
 
 

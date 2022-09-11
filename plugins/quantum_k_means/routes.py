@@ -16,7 +16,6 @@ from http import HTTPStatus
 from typing import Mapping
 
 from celery.canvas import chain
-from celery.result import AsyncResult
 from flask import Response
 from flask import redirect
 from flask.globals import request

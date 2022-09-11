@@ -11,16 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from collections import namedtuple
 from enum import Enum
 from http import HTTPStatus
-from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List, Iterator
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
 from flask.app import Flask
@@ -57,7 +54,6 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.requests import open_url
 
-from csv import reader
 
 _plugin_name = "entity-points-converter"
 __version__ = "v0.1.0"

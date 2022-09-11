@@ -11,16 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import abstractmethod
-from typing import List
 from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, ZFeatureMap
 from qiskit_machine_learning.kernels import QuantumKernel
-from qiskit.utils import QuantumInstance
-import numpy as np
 import enum
-# from celery.utils.log import get_task_logger
-#
-# TASK_LOGGER = get_task_logger(__name__)
 
 
 class EntanglementPatternEnum(enum.Enum):

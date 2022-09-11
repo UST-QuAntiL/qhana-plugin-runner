@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import Enum
 from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List
@@ -19,7 +18,6 @@ from typing import Mapping, Optional, List
 import flask
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -30,7 +28,6 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
-from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginMetadata,
