@@ -34,6 +34,7 @@ services:
     image: qhana-plugin-runner
     depends_on:
       - qhana-plugin-runner
+      - redis
     volumes:
       - instance:/app/instance
       - ./plugins:/app/plugins
@@ -46,6 +47,9 @@ services:
       CAMUNDA_API_URL: "http://host.docker.internal:8080/engine-rest"
       PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
       PERIODIC_SCHEDULER: "True"
+      WAIT_HOSTS: redis:6379, camunda:8080
+      WAIT_TIMEOUT: 300
+      WAIT_SLEEP_INTERVAL: 5
   camunda:
     image: camunda/camunda-bpm-platform:run-latest
     ports:
