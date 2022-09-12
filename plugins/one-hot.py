@@ -222,8 +222,6 @@ class MicroFrontend(MethodView):
 
     def render(self, data: Mapping, errors: dict):
         data_dict = dict(data)
-        fields = InputParametersSchema().fields
-        app = flask.current_app
 
         return Response(
             render_template(

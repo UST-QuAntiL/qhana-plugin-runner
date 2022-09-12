@@ -479,7 +479,6 @@ def calculation_task(self, db_id: int) -> str:
 
     entity_points_url = input_params.get("entityPointsUrl")
     kernel_url = input_params.get("kernelUrl")
-    output_dimensions = input_params.get("dimensions")
 
     # Compute pca
     pca = get_correct_pca(input_params)

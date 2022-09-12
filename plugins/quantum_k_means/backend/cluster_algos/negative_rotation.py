@@ -95,7 +95,7 @@ class NegativeRotationQuantumKMeans(Clustering):
         next_qbit = 0  # this tracks the next free qbit
         amount_executed_circuits = 0
         current_distances_calculated = []
-        circuits = []
+
         for i in range(len(preped_data)):
             for j in range(len(centroid_angles)):
                 # Not enough qbits left to execute prepare another quantum circuit.
