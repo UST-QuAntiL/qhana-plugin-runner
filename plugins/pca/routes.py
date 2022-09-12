@@ -23,7 +23,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import PCA_BLP, PCA, sklearn_version
+from . import PCA_BLP, PCA
 from .schemas import (
     InputParametersSchema,
     TaskResponseSchema,
@@ -45,11 +45,6 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from .tasks import calculation_task
 
 
-description = "The PCA Plugin reduces the number of dimensions by computing the principle components.\n" \
-              "The new orthonormal basis consists of the k first principle components. " \
-              "The methods implemented here are from scikit-learn. " \
-              f"Currently this plugin uses scikit-learn version {sklearn_version}."
-
 @PCA_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
@@ -61,7 +56,7 @@ class PluginsView(MethodView):
 
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
-            description=description,
+            description=PCA.instance.description,
             name=PCA.instance.identifier,
             version=PCA.instance.version,
             type=PluginType.simple,
