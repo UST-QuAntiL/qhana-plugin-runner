@@ -88,7 +88,6 @@ class InputParameters:
         self.output_format = output_format
 
 
-
 class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
