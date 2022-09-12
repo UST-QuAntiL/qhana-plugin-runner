@@ -53,7 +53,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 import json
 
-_plugin_name = "one-hot"
+_plugin_name = "one-hot encoding"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
@@ -61,7 +61,7 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 ONEHOT_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="One-hot plugin API.",
+    description="One-hot encoding plugin API.",
 )
 
 
@@ -141,7 +141,7 @@ class PluginsView(MethodView):
     @ONEHOT_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        """MDS endpoint returning the plugin metadata."""
+        """One-hot encoding endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="One-Hot Encoding",
             description=OneHot.instance.description,
@@ -185,7 +185,7 @@ class PluginsView(MethodView):
 
 @ONEHOT_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the MDS plugin."""
+    """Micro frontend for the One-Hot encoding plugin."""
 
     @ONEHOT_BLP.html_response(
         HTTPStatus.OK,
@@ -205,7 +205,7 @@ class MicroFrontend(MethodView):
 
     @ONEHOT_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the one-hot plugin.",
+        description="Micro frontend of the one-hot encoding plugin.",
     )
     @ONEHOT_BLP.arguments(
         InputParametersSchema(
@@ -368,7 +368,7 @@ def prepare_stream_output(entities, attributes, attribute_ref_targets, taxonomie
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(f"Starting new one-hot calculation task with db id '{db_id}'")
+    TASK_LOGGER.info(f"Starting new one-hot encoding calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -395,7 +395,7 @@ def calculation_task(self, db_id: int) -> str:
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
     entities = open_url(entities_url).json()
-    dim = get_dim(attributes, attribute_refTargets, taxonomies)
+    dim = get_dim(attributes, attribute_ref_targets, taxonomies)
     csv_attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
     entity_points = prepare_stream_output(entities, attributes, attribute_ref_targets, taxonomies)
 
