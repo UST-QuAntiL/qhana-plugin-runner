@@ -34,13 +34,13 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         """
         Gets k random 2D points, then standardize and normalize them.
         """
-        return self.Normalize(np.random.uniform(size=(k, 2), low=-1, high=1))
+        return self.normalize(np.random.uniform(size=(k, 2), low=-1, high=1))
 
     def prep_centroids(self, centroids) -> np.ndarray:
         """
         Normalizes the centroids.
         """
-        return self.Normalize(centroids)
+        return self.normalize(centroids)
 
     def map_to_zero_to_2pi(self, cartesian_points):
         """

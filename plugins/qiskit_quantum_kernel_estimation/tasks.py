@@ -18,7 +18,7 @@ from typing import Optional, List
 
 from celery.utils.log import get_task_logger
 
-from . import Qiskit_QKE
+from . import QiskitQKE
 
 from .schemas import (
     InputParameters,
@@ -39,7 +39,7 @@ import numpy as np
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_indices_and_pointArr(entity_points_url: str) -> (dict, List[List[float]]):
+def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]]):
     entity_points = open_url(entity_points_url).json()
     id_to_idx = {}
 
@@ -63,7 +63,7 @@ def get_indices_and_pointArr(entity_points_url: str) -> (dict, List[List[float]]
     return id_to_idx, points_arr
 
 
-@CELERY.task(name=f"{Qiskit_QKE.instance.identifier}.calculation_task", bind=True)
+@CELERY.task(name=f"{QiskitQKE.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
@@ -118,8 +118,8 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
 
-    id_to_idx_X, points_arr_X = get_indices_and_pointArr(entity_points_url1)
-    id_to_idx_Y, points_arr_Y = get_indices_and_pointArr(entity_points_url2)
+    id_to_idx_X, points_arr_X = get_indices_and_point_arr(entity_points_url1)
+    id_to_idx_Y, points_arr_Y = get_indices_and_point_arr(entity_points_url2)
 
     backend = QiskitBackends.get_qiskit_backend(backend, ibmq_token, custom_backend)
     backend.shots = shots

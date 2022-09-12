@@ -15,7 +15,6 @@ from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List
 
-import flask
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
@@ -285,7 +284,7 @@ class OneHot(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_attribute_refTarget(entities_metadata_url: str, attributes: List[str]):
+def get_attribute_ref_target(entities_metadata_url: str, attributes: List[str]):
     result = dict()
     entities_metadata = open_url(entities_metadata_url).json()
     for attribute in attributes:
@@ -296,22 +295,22 @@ def get_attribute_refTarget(entities_metadata_url: str, attributes: List[str]):
     return result
 
 
-def get_taxonomies_by_refTarget(attribute_refTargets: dict, taxonomies_zip_url: str):
-    refTargets = set()
-    for refTarget in attribute_refTargets.values():
-        refTargets.add(refTarget)
+def get_taxonomies_by_ref_target(attribute_ref_targets: dict, taxonomies_zip_url: str):
+    ref_targets = set()
+    for ref_target in attribute_ref_targets.values():
+        ref_targets.add(ref_target)
 
     taxonomies = {}
     for zipped_file, file_name in get_files_from_zip_url(taxonomies_zip_url, mode="t"):
-        if file_name[:-5] in refTargets:
+        if file_name[:-5] in ref_targets:
             taxonomy = json.load(zipped_file)
             taxonomies[file_name[:-5]] = taxonomy
 
     return taxonomies
 
 
-def attribute_to_onehot(entity, attribute: str, attribute_refTargets: dict, taxonomies) -> List[int]:
-    taxonomy = taxonomies[attribute_refTargets[attribute]]
+def attribute_to_onehot(entity, attribute: str, attribute_ref_targets: dict, taxonomies) -> List[int]:
+    taxonomy = taxonomies[attribute_ref_targets[attribute]]
     values = entity[attribute]
     sub_attributes = set()
     if type(values) == list:
@@ -337,31 +336,31 @@ def attribute_to_onehot(entity, attribute: str, attribute_refTargets: dict, taxo
     return vector
 
 
-def entity_to_onehot(entity, attributes, attribute_refTargets: dict, taxonomies) -> List[int]:
+def entity_to_onehot(entity, attributes, attribute_ref_targets: dict, taxonomies) -> List[int]:
     vector = []
     for attribute in attributes:
-        attribute_vector = attribute_to_onehot(entity, attribute, attribute_refTargets, taxonomies)
+        attribute_vector = attribute_to_onehot(entity, attribute, attribute_ref_targets, taxonomies)
         vector += attribute_vector
     return vector
 
 
-def get_dim(attributes, attribute_refTargets: dict, taxonomies):
+def get_dim(attributes, attribute_ref_targets: dict, taxonomies):
     dim = 0
     for attribute in attributes:
-        dim += len(taxonomies[attribute_refTargets[attribute]]['entities'])
+        dim += len(taxonomies[attribute_ref_targets[attribute]]['entities'])
     return dim
 
 
-def get_entity_dict(ID, point):
-    ent = {"ID": ID, "href": ""}
+def get_entity_dict(id, point):
+    ent = {"ID": id, "href": ""}
     for d in range(len(point)):
         ent[f"dim{d}"] = point[d]
     return ent
 
 
-def prepare_stream_output(entities, attributes, attribute_refTargets, taxonomies):
+def prepare_stream_output(entities, attributes, attribute_ref_targets, taxonomies):
     for entity in entities:
-        onehot = entity_to_onehot(entity, attributes, attribute_refTargets, taxonomies)
+        onehot = entity_to_onehot(entity, attributes, attribute_ref_targets, taxonomies)
         yield get_entity_dict(entity["ID"], onehot)
 
 
@@ -392,13 +391,13 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
     attributes = attributes.replace('\r', '').split('\n')
-    attribute_refTargets = get_attribute_refTarget(entities_metadata_url, attributes)
-    taxonomies = get_taxonomies_by_refTarget(attribute_refTargets, taxonomies_zip_url)
+    attribute_ref_targets = get_attribute_ref_target(entities_metadata_url, attributes)
+    taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
     entities = open_url(entities_url).json()
     dim = get_dim(attributes, attribute_refTargets, taxonomies)
     csv_attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
-    entity_points = prepare_stream_output(entities, attributes, attribute_refTargets, taxonomies)
+    entity_points = prepare_stream_output(entities, attributes, attribute_ref_targets, taxonomies)
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "text/csv", attributes=csv_attributes)

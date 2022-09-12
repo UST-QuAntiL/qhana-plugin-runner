@@ -33,13 +33,13 @@ class NegativeRotationQuantumKMeans(Clustering):
         """
         Gets k random 2D points, then standardize and normalize them.
         """
-        return self.Normalize(np.random.uniform(size=(k, 2), low=-1, high=1))
+        return self.normalize(np.random.uniform(size=(k, 2), low=-1, high=1))
 
     def prep_centroids(self, centroids) -> np.ndarray:
         """
         Normalizes the centroids.
         """
-        return self.Normalize(centroids)
+        return self.normalize(centroids)
 
     def calculate_angles(self, cartesian_points):
         """
@@ -59,7 +59,7 @@ class NegativeRotationQuantumKMeans(Clustering):
         """
         Prepares data, by standardizing and normalizing it.
         """
-        return self.Normalize(self.Standardize(data))
+        return self.normalize(self.standardize(data))
 
     def prep_data_for_circuit(self, data: np.ndarray) -> np.ndarray:
         """

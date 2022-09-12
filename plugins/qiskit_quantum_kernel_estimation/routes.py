@@ -24,7 +24,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import QISKIT_QKE_BLP, Qiskit_QKE
+from . import QISKIT_QKE_BLP, QiskitQKE
 from .backend.qiskit_backends import QiskitBackends
 from .schemas import InputParametersSchema, TaskResponseSchema
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -60,9 +60,9 @@ class PluginsView(MethodView):
         """Qiskit quantum kernel estimation endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Qiskit Quantum Kernel Estimation",
-            description=Qiskit_QKE.instance.description,
-            name=Qiskit_QKE.instance.name,
-            version=Qiskit_QKE.instance.version,
+            description=QiskitQKE.instance.description,
+            name=QiskitQKE.instance.name,
+            version=QiskitQKE.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{QISKIT_QKE_BLP.name}.CalcView"),
@@ -89,7 +89,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=Qiskit_QKE.instance.tags,
+            tags=QiskitQKE.instance.tags,
         )
 
 
@@ -154,8 +154,8 @@ class MicroFrontend(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=Qiskit_QKE.instance.name,
-                version=Qiskit_QKE.instance.version,
+                name=QiskitQKE.instance.name,
+                version=QiskitQKE.instance.version,
                 schema=InputParametersSchema(),
                 values=data_dict,
                 errors=errors,

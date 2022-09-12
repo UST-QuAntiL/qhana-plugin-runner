@@ -33,7 +33,6 @@ class ClusteringEnum(enum.Enum):
     state_preparation = "State Preparation"
     positive_correlation = "Positive Correlation"
 
-
     def get_cluster_algo(self,
                          backend: Device,
                          tol: float,
@@ -66,36 +65,36 @@ class Clustering:
         self.tol = tol
         self.max_runs = max_runs
 
-    def Normalize(self, data):
+    def normalize(self, data):
         """
         Normalize the data, i.e. every entry of data has length 1.
         Note, that a copy of the data will be done.
         """
         return np.array([point / np.linalg.norm(point) for point in data])
 
-    def Standardize(self, data):
+    def standardize(self, data):
         """
         Standardize all the points, i.e. they have zero mean and unit variance.
         Note that a copy of the data points will be created.
         """
-        dataX = np.zeros(len(data))
-        dataY = np.zeros(len(data))
-        preprocessedData = np.array([None] * len(data))
+        data_x = np.zeros(len(data))
+        data_y = np.zeros(len(data))
+        preprocessed_data = np.array([None] * len(data))
 
         # create x and y coordinate arrays
         for i in range(0, len(data)):
-            dataX[i] = data[i][0]
-            dataY[i] = data[i][1]
+            data_x[i] = data[i][0]
+            data_y[i] = data[i][1]
 
         # make zero mean and unit variance, i.e. standardize
-        tempDataX = (dataX - dataX.mean(axis=0)) / dataX.std(axis=0)
-        tempDataY = (dataY - dataY.mean(axis=0)) / dataY.std(axis=0)
+        temp_data_x = (data_x - data_x.mean(axis=0)) / data_x.std(axis=0)
+        temp_data_y = (data_y - data_y.mean(axis=0)) / data_y.std(axis=0)
 
         # create tuples and normalize
         for i in range(0, len(data)):
-            preprocessedData[i] = [tempDataX[i], tempDataY[i]]
+            preprocessed_data[i] = [temp_data_x[i], temp_data_y[i]]
 
-        return preprocessedData
+        return preprocessed_data
 
     def check_convergence(self, old_centroid_mapping, new_centroid_mapping):
         """
@@ -191,23 +190,23 @@ class Clustering:
 
         circuit_data = self.prep_data_for_circuit(preped_data)
 
-        newCentroidMapping = np.zeros(len(data))
+        new_centroid_mapping = np.zeros(len(data))
         iterations = 0
         not_converged = True
-        globalAmountExecutedCircuits = 0
+        global_amount_executed_circuits = 0
         while not_converged and iterations < self.max_runs:
-            oldCentroidMapping = newCentroidMapping.copy()
-            newCentroidMapping, amountExecutedCircuits = self.compute_new_centroid_mapping(circuit_data, preped_centroids)
-            globalAmountExecutedCircuits += amountExecutedCircuits
+            old_centroid_mapping = new_centroid_mapping.copy()
+            new_centroid_mapping, amount_executed_circuits = self.compute_new_centroid_mapping(circuit_data, preped_centroids)
+            global_amount_executed_circuits += amount_executed_circuits
 
-            centroids = self.get_mean_centroids_from_mapping(newCentroidMapping, preped_data, k)
+            centroids = self.get_mean_centroids_from_mapping(new_centroid_mapping, preped_data, k)
             preped_centroids = self.prep_centroids(centroids)
 
-            not_converged = not self.check_convergence(oldCentroidMapping, newCentroidMapping)
+            not_converged = not self.check_convergence(old_centroid_mapping, new_centroid_mapping)
             iterations += 1
             TASK_LOGGER.info(f"Iteration {iterations} done")
 
-        return np.array(newCentroidMapping, dtype=int)
+        return np.array(new_centroid_mapping, dtype=int)
 
 
     # These methods were for debug purposes

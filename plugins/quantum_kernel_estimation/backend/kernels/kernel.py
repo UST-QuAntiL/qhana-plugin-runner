@@ -94,45 +94,45 @@ class Kernel:
         self.entanglement_pattern_enum = entanglement_pattern_enum
 
     @abstractmethod
-    def execute_circuit(self, X, Y, to_calculate, entanglement_pattern) -> List[float]:
+    def execute_circuit(self, data_x, Y, to_calculate, entanglement_pattern) -> List[float]:
         raise NotImplementedError("Method evaluate is not implemented yet!")
 
     @abstractmethod
-    def get_qbits_needed(self, X, y) -> int:
+    def get_qbits_needed(self, data_x, data_y) -> int:
         """
         Returns the number of qbits needed, to compute one quantum circuit
         """
 
-    def evaluate(self, X, y):
+    def evaluate(self, data_x, data_y):
         """
-        This function computes the kernel matrix between input X and y.
+        This function computes the kernel matrix between input data_x and data_y.
         If possible, it evaluates multiple entries at once, e.g. if we have 5 qubits available and need 2 qubits to
         evaluate on entry, then the circuits of two entries will run in parallel.
-        :param X: A list of data points
-        :param y: A list of data points
-        :return: kernel-matrix of size len(y) x len(X)
+        :param data_x: A list of data points
+        :param data_y: A list of data points
+        :return: kernel-matrix of size len(data_y) x len(data_x)
         """
-        needed_qbits = self.get_qbits_needed(X, y)
+        needed_qbits = self.get_qbits_needed(data_x, data_y)
         entanglement_pattern = self.entanglement_pattern_enum.get_pattern(needed_qbits)
         amount_of_circuits = 0
 
         is_symmetric = True
-        if not np.array_equal(X, y):
+        if not np.array_equal(data_x, data_y):
             is_symmetric = False
 
-        kernel_matrix = np.zeros((len(y), len(X)))
+        kernel_matrix = np.zeros((len(data_y), len(data_x)))
         start = 0
         to_calculate = []
         next_qbit = 0
         if needed_qbits > self.max_qbits:
             raise ValueError(f"The number of needed qubits exceeds the number given qubits.")
-        for idx_x in range(len(X)):
+        for idx_x in range(len(data_x)):
             if is_symmetric:
                 start = idx_x + 1
                 kernel_matrix[idx_x, idx_x] = 1
-            for idx_y in range(start, len(y)):
+            for idx_y in range(start, len(data_y)):
                 if next_qbit + needed_qbits > self.max_qbits:
-                    result = self.execute_circuit(X, y, to_calculate, entanglement_pattern)
+                    result = self.execute_circuit(data_x, data_y, to_calculate, entanglement_pattern)
                     amount_of_circuits += 1
                     for i in range(len(result)):
                         result_idx_x = to_calculate[i][0]
@@ -146,15 +146,15 @@ class Kernel:
                 next_qbit += needed_qbits
 
         if next_qbit != 0:
-            result = self.execute_circuit(X, y, to_calculate, entanglement_pattern)
+            result = self.execute_circuit(data_x, data_y, to_calculate, entanglement_pattern)
             amount_of_circuits += 1
             for i in range(len(result)):
                 result_idx_x = to_calculate[i][0]
                 result_idx_y = to_calculate[i][1]
                 kernel_matrix[result_idx_y, result_idx_x] = result[i]
-        # TASK_LOGGER.info(qml.draw(circuit)(X[1], y[2]))  # DEBUG: draw circuit for X[1] and y[2]
+        # TASK_LOGGER.info(qml.draw(circuit)(data_x[1], data_y[2]))  # DEBUG: draw circuit for data_x[1] and data_y[2]
         if is_symmetric:
-            for idx_x in range(len(X)):
+            for idx_x in range(len(data_x)):
                 for idx_y in range(idx_x):
                     kernel_matrix[idx_y, idx_x] = kernel_matrix[idx_x, idx_y]
         TASK_LOGGER.info(f"It took {amount_of_circuits} quantum circuits")

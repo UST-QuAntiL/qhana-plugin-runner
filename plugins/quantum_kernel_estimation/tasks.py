@@ -38,7 +38,7 @@ import numpy as np
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_indices_and_pointArr(entity_points_url: str) -> (dict, List[List[float]]):
+def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]]):
     entity_points = open_url(entity_points_url).json()
     id_to_idx = {}
 
@@ -117,8 +117,8 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
 
-    id_to_idx_X, points_arr_X = get_indices_and_pointArr(entity_points_url1)
-    id_to_idx_Y, points_arr_Y = get_indices_and_pointArr(entity_points_url2)
+    id_to_idx_x, points_arr_x = get_indices_and_point_arr(entity_points_url1)
+    id_to_idx_y, points_arr_y = get_indices_and_point_arr(entity_points_url2)
 
     max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
     if max_qbits is None:
@@ -129,13 +129,13 @@ def calculation_task(self, db_id: int) -> str:
 
     # entanglement_pattern = entanglement_pattern.get_pattern(n_qbits)
     kernel = kernel_enum.get_kernel(backend, n_qbits, reps, entanglement_pattern)
-    # kernel_matrix is size len(points_arrY) x len(points_arrX)
-    kernel_matrix = kernel.evaluate(points_arr_X, points_arr_Y)
+    # kernel_matrix is size len(points_arr_y) x len(points_arr_x)
+    kernel_matrix = kernel.evaluate(points_arr_x, points_arr_y)
 
     kernel_json = []
-    for ent_id_X, idx_X in id_to_idx_X.items():
-        for ent_id_Y, idx_Y in id_to_idx_Y.items():
-            kernel_json.append({"entity_1_ID": ent_id_Y, "entity_2_ID": ent_id_X, "kernel": kernel_matrix[idx_Y, idx_X]})
+    for ent_id_x, idx_x in id_to_idx_x.items():
+        for ent_id_y, idx_y in id_to_idx_y.items():
+            kernel_json.append({"entity_1_ID": ent_id_y, "entity_2_ID": ent_id_x, "kernel": kernel_matrix[idx_y, idx_x]})
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(kernel_json, output, "application/json")

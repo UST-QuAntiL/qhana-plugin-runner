@@ -20,41 +20,41 @@ In other scikit-learn versions the value names could change!
 """
 
 
-def PCA_output(pca: PCA) -> (dict, int):
-    PCA_out = {
+def pca_output(pca: PCA) -> (dict, int):
+    pca_out = {
         "type": "normal",
         "components": pca.components_.tolist(),
         "mean": pca.mean_.tolist(),
         "explained_variance": pca.explained_variance_.tolist()
     }
     dim = pca.n_components_
-    return PCA_out, dim
+    return pca_out, dim
 
 
-def IncrementalPCA_output(pca: IncrementalPCA) -> (dict, int):
-    incrementalPCA_out = {
+def incremental_pca_output(pca: IncrementalPCA) -> (dict, int):
+    incremental_pca_out = {
         "type": "incremental",
         "components": pca.components_.tolist(),
         "mean": pca.mean_.tolist(),
         "explained_variance": pca.explained_variance_.tolist()
     }
     dim = pca.n_components_
-    return incrementalPCA_out, dim
+    return incremental_pca_out, dim
 
 
-def SparsePCA_output(pca: SparsePCA) -> (dict, int):
-    SparsePCA_out = {
+def sparse_pca_output(pca: SparsePCA) -> (dict, int):
+    sparse_pca_out = {
         "type": "sparse",
         "components": pca.components_.tolist(),
         "mean": pca.mean_.tolist(),
         "regularization_strength": pca.ridge_alpha
     }
     dim = pca.n_components_
-    return SparsePCA_out, dim
+    return sparse_pca_out, dim
 
 
-def KernelPCA_output(pca: KernelPCA) -> (dict, int):
-    KernelPCA_out = {
+def kernel_pca_output(pca: KernelPCA) -> (dict, int):
+    kernel_pca_out = {
         "type": "kernel",
         "eigenvalues": pca.lambdas_.tolist(),
         "eigenvectors": pca.alphas_.tolist(),
@@ -67,12 +67,12 @@ def KernelPCA_output(pca: KernelPCA) -> (dict, int):
     }
     # These values are for the get_kernel methode of KernelPCA.
     # This might has to be expanded/changed, if more functionality is added
-    KernelPCA_out["kernel"] = pca.kernel
-    KernelPCA_out["gamma"] = pca.gamma
-    KernelPCA_out["degree"] = pca.degree
-    KernelPCA_out["coef0"] = pca.coef0
+    kernel_pca_out["kernel"] = pca.kernel
+    kernel_pca_out["gamma"] = pca.gamma
+    kernel_pca_out["degree"] = pca.degree
+    kernel_pca_out["coef0"] = pca.coef0
     dim = len(pca.alphas_[0])
-    return KernelPCA_out, dim
+    return kernel_pca_out, dim
 
 
 # dim = num features of output. Return dim here, since input params of the plugin can be <= 0
@@ -84,12 +84,12 @@ def pca_to_output(pca: BaseEstimator) -> (dict, int):
     :return: (dict, int) a dictionary to save the current state of the PCA and an integer equal to the output's number of dimensions
     """
     if type(pca) == PCA:
-        return PCA_output(pca)
+        return pca_output(pca)
     elif type(pca) == IncrementalPCA:
-        return IncrementalPCA_output(pca)
+        return incremental_pca_output(pca)
     elif type(pca) == SparsePCA:
-        return SparsePCA_output(pca)
+        return sparse_pca_output(pca)
     elif type(pca) == KernelPCA:
-        return KernelPCA_output(pca)
+        return kernel_pca_output(pca)
     else:
         raise ValueError(f"Creating an output for object type {type(pca)} is not implemented!")

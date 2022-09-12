@@ -30,7 +30,7 @@ QISKIT_QKE_BLP = SecurityBlueprint(
 )
 
 
-class Qiskit_QKE(QHAnaPluginBase):
+class QiskitQKE(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Produces a kernel matrix from a quantum kernel. " \

@@ -28,20 +28,20 @@ class ZZKernel(Kernel):
     def __init__(self, backend, n_qbits, reps, entanglement_pattern_enum):
         super().__init__(backend, n_qbits, reps, entanglement_pattern_enum)
 
-    def get_qbits_needed(self, X, y) -> int:
-        return len(X[0])
+    def get_qbits_needed(self, data_x, data_y) -> int:
+        return len(data_x[0])
 
     @staticmethod
     def feature_map(x) -> float:
         raise NotImplementedError("Method evaluate is not implemented yet!")
 
-    def execute_circuit(self, X, Y, to_calculate, entanglement_pattern):
+    def execute_circuit(self, data_x, data_y, to_calculate, entanglement_pattern):
         """
         Executes circuits foreach entry in to_calculate. An entry in to_calculate contains the information of which data point
-        in X should be evaluated with which data point in Y and which qubits should be used for the resulting quantum circuit.
-        :param X: list of data points
-        :param Y: list of data points
-        :param to_calculate: list. Each entry contains an index for X, an index for Y and a set of qubits.
+        in data_x should be evaluated with which data point in data_y and which qubits should be used for the resulting quantum circuit.
+        :param data_x: list of data points
+        :param data_y: list of data points
+        :param to_calculate: list. Each entry contains an index for data_x, an index for data_y and a set of qubits.
         :param entanglement_pattern: Entanglement pattern that should be used.
         """
         def CNOT_chain(wires: List[int]):
@@ -88,8 +88,8 @@ class ZZKernel(Kernel):
             # projections_and_wires = []
             wires_to_measure = []
             for entry in to_calculate:
-                x = X[entry[0]]
-                y = Y[entry[1]]
+                x = data_x[entry[0]]
+                y = data_y[entry[1]]
                 wires_to_use = entry[2]
                 for i in range(self.reps):
                     full_Hadamard_layer(wires_to_use)

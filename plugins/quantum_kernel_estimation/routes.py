@@ -48,7 +48,6 @@ description = "This plugin produces the matrix for a quantum kernel. Since this 
               "[1] Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).<a href=\"https://doi.org/10.1007/s42484-020-00020-y\">https://doi.org/10.1007/s42484-020-00020-y</a>"
 
 
-
 @QKE_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""

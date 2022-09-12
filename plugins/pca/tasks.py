@@ -69,7 +69,7 @@ def get_entity_generator(entity_points_url: str, stream=False):
 
 
 # loads in the complete dataset as entity_points and idx_to_id
-def load_entityPoints_and_idxToId(entity_points_url: str):
+def load_entity_points_and_idx_to_id(entity_points_url: str):
     """
     Loads in entity points, given their url.
     :param entity_points_url: url to the entity points
@@ -258,7 +258,7 @@ def complete_fitting(entity_points_url, pca):
     :return: list of the transformed data points
     """
     # load data from file
-    (entity_points, id_to_idx) = load_entityPoints_and_idxToId(entity_points_url)
+    (entity_points, id_to_idx) = load_entity_points_and_idx_to_id(entity_points_url)
     pca.fit(entity_points)
     transformed_points = pca.transform(entity_points)
     return prepare_static_output(transformed_points, id_to_idx)
@@ -426,7 +426,7 @@ def save_outputs(db_id, pca_output, entity_points, attributes, entity_points_for
     """
     TASK_LOGGER.info(f"entity_points_for_plot is not None = {entity_points_for_plot is not None}")
     if entity_points_for_plot is not None:
-        fig = plot_data(entity_points_for_plot, dim, only_first_100=(pca_output[0]["type"]=='incremental'))
+        fig = plot_data(entity_points_for_plot, dim, only_first_100=(pca_output[0]["type"] == 'incremental'))
 
         with SpooledTemporaryFile(mode="wt") as output:
             html = fig.to_html()
