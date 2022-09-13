@@ -180,7 +180,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Use quantum",
-            "description": "use dressed quantum neural net or classical net",
+            "description": "use dressed quantum neural net instead of classical net",
             "input_type": "checkbox",
         },
     )

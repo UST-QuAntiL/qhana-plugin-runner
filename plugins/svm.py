@@ -85,6 +85,14 @@ class FeatureMap(Enum):
 
     @staticmethod
     def get_feature_map(feature_map_name, feature_dimension, reps, entanglement):
+        """
+        select and return a FeatureMap based on the given parameters
+
+        feature_map_name: type of feature map (FeatureMap enum)
+        feature_dimension: numbre of qubits in the circuit (int)
+        reps: the number of repeated circuits (int)
+        entanglement: specifies the entanglement structure (string)
+        """
 
         if feature_map_name == FeatureMap.z_feature_map:
             return ZFeatureMap(
@@ -127,6 +135,13 @@ class QuantumBackends(Enum):
 
     @staticmethod
     def get_quantum_backend(backendEnum, ibmqToken=None, customBackendName=None):
+        """
+        select and return a quantum backend based on the given parameters
+
+        backendEnum: quantum backend type to selct (QuantumBackends Enum)
+        ibmqToken:
+        customBackendName:
+        """
         backend = None
         if backendEnum.name.startswith("aer"):
             # Use local AER backend
@@ -493,8 +508,15 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_classical_SVC(data, labels, c=1.0, kernel="rbf", degree=3):  # TODO kernel
-    from sklearn.pipeline import make_pipeline
-    from sklearn.preprocessing import StandardScaler
+    """
+    train classical support vector classifier with the given parameters and data
+
+    data: training data
+    labels: training labels
+    c: regularization parameter. The lower C the stronger the regularization (float)
+    kernel: kernel type used for the support vector machine (string)
+    degree: defree of the polynomial kernel function ('poly'). Ignored by all oterh kernels (int)
+    """
     from sklearn.svm import SVC
 
     TASK_LOGGER.info("classical supportvector machine")
@@ -506,6 +528,13 @@ def get_classical_SVC(data, labels, c=1.0, kernel="rbf", degree=3):  # TODO kern
 
 
 def get_quantum_SVC(data, labels, input_params):
+    """
+    train quantum support vector classifier with the given parameters and data
+
+    data: training data
+    labels: training labels
+    input_params: containing quantum backend parameters, feature map parameters, shots
+    """
     # from qiskit import Aer
     from qiskit_machine_learning.algorithms import QSVC
     from qiskit.utils import QuantumInstance
@@ -513,6 +542,7 @@ def get_quantum_SVC(data, labels, input_params):
 
     TASK_LOGGER.info("quantum supportvector machine")
 
+    # load quantum backend parameters
     backend = input_params.backend
     TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     ibmq_token = input_params.ibmq_token
@@ -529,6 +559,7 @@ def get_quantum_SVC(data, labels, input_params):
         customBackendName=ibmq_custom_backend,
     )
 
+    # load feature map parameters
     feature_map = input_params.feature_map
     TASK_LOGGER.info(f"Loaded input parameters from db: feature_map='{feature_map}'")
     entanglement = input_params.entanglement
@@ -549,17 +580,30 @@ def get_quantum_SVC(data, labels, input_params):
     shots = input_params.shots
     TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
 
+    # get quantum instance
     quantum_instance = QuantumInstance(
         backend_device, seed_simulator=9283712, seed_transpiler=9283712, shots=shots
     )
+    # get quantum kernel
     qkernel = QuantumKernel(feature_map=feature_map, quantum_instance=quantum_instance)
 
+    # get and train quantum support vector machine
     qsvc = QSVC(quantum_kernel=qkernel)
     qsvc.fit(data, labels)
     return qsvc
 
 
 def get_visualization(svm, train_data, test_data, train_labels, test_labels, score):
+    """
+    plot the classification results for training and test data and furthermore draw the decision boundary between classes
+
+    svm: classifying function
+    train_data: data that was used during training
+    test_data: data used to test accuracy of classifier
+    train_labels: ground truth classification for train_data
+    test_labels: ground truth classification for test_data
+    score: classification accuracy value on the train data
+    """
     # Matplotlib
     import matplotlib.pyplot as plt
     from matplotlib import cm
@@ -584,7 +628,7 @@ def get_visualization(svm, train_data, test_data, train_labels, test_labels, sco
     test_y = [element[1] for element in test_data]
 
     # bounds of the figure and grid
-    factor = 2  # TODO
+    factor = 2  # TODO # to create margin between data points and border of the plot
     x_values = np.append(train_x, test_x)
     y_values = np.append(train_y, test_y)
 
@@ -637,7 +681,6 @@ def get_visualization(svm, train_data, test_data, train_labels, test_labels, sco
     support = svm.support_vectors_
 
     # mark support vectors
-    # print("SUPPORT VECTORS", support)
     supp_x = [x[0] for x in support]
     supp_y = [x[1] for x in support]
     ax.scatter(supp_x, supp_y, s=150, linewidth=0.5, facecolors="none", edgecolors="g")
@@ -711,6 +754,9 @@ def twospirals(n_points, noise=0.7, turns=1.52):
 
 @CELERY.task(name=f"{SVM.instance.identifier}.demo_task", bind=True)
 def demo_task(self, db_id: int) -> str:
+    """
+    train and test a classical or quantum support vector classifier
+    """
     import base64
     from io import BytesIO
 
@@ -839,6 +885,8 @@ def demo_task(self, db_id: int) -> str:
 
 # TODO quantum SVM supportvector list is empty!! why?
 # TODO hide GUI elements when irrelevant
+
+# TODO "use default dataset" gui element
 
 # (TODO neues plugin für qnn/nn für classification)
 

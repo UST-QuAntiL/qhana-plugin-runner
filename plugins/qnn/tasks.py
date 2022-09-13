@@ -66,6 +66,13 @@ def twospirals(n_points, noise=0.7, turns=1.52):
 
 
 def get_optimizer(optimizer, model, step):
+    """
+    returns the optimizer specified by the enum
+
+    optimizer: optimizer type (OptimizerEnum)
+    model: the network to optimize
+    step: learning rate (float)
+    """
     if optimizer == OptimizerEnum.adadelta:
         TASK_LOGGER.info("adadelta")
         return optim.Adadelta(model.parameters(), lr=step)
@@ -116,6 +123,9 @@ def get_optimizer(optimizer, model, step):
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
+    """
+    train and test a classical or dressed quantum classification network
+    """
 
     # ------------------------------
     #        get input data
@@ -146,8 +156,8 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(
         f"Loaded input parameters from db: use_default_dataset='{use_default_dataset}'"
     )
-    # use_quantum = input_params.use_quantum
-    # TASK_LOGGER.info(f"Loaded input parameters from db: use_quantum='{use_quantum}'")
+    use_quantum = input_params.use_quantum
+    TASK_LOGGER.info(f"Loaded input parameters from db: use_quantum='{use_quantum}'")
     N_total_iterations = (
         input_params.N_total_iterations  # Number of optimization steps (step= 1 batch)
     )
@@ -162,8 +172,8 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     optimizer = input_params.optimizer
     TASK_LOGGER.info(f"Loaded input parameters from db: optimizer='{optimizer}'")
-    device = input_params.device
-    TASK_LOGGER.info(f"Loaded input parameters from db: device='{device}'")
+    q_device = input_params.device
+    TASK_LOGGER.info(f"Loaded input parameters from db: device='{q_device}'")
     ibmq_token = input_params.ibmq_token
     TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
 
@@ -234,12 +244,10 @@ def calculation_task(self, db_id: int) -> str:
 
     model = None
     # print("USE QUANTUM", use_quantum)
-    use_quantum = False
-    print("SET FALSE!")
     if use_quantum:
         # choose quantum backend
         dev = QuantumBackends.get_pennylane_backend(
-            device, ibmq_token, custom_backend, n_qubits, shots
+            q_device, ibmq_token, custom_backend, n_qubits, shots
         )
         print("DEVICE", dev)
         dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # TODO remove
@@ -402,10 +410,12 @@ def calculation_task(self, db_id: int) -> str:
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
 # TODO check if quantum device selection works as intended
-# TODO check if training still works... not really??
+# TODO check if training still works... not really?? (qnn yes kina? classical no?)
 # TODO ouput document with details for classical network parts
 # TODO visualize? is always true...
 # TODO really slow with default dataset ?? (with other one too??)
+# TODO check if classical network works (when zero weight init then whole plot background blue)
+# TODO use quantum always true?
 
 # DONE save actual weights to file
 # DONE add references
