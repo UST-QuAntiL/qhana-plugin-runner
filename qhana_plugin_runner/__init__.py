@@ -113,6 +113,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
         if "DEFAULT_FILE_STORE" in os.environ:
             config["DEFAULT_FILE_STORE"] = os.environ["DEFAULT_FILE_STORE"]
+
+        if "SERVER_NAME" in os.environ:
+            config["SERVER_NAME"] = os.environ["SERVER_NAME"]
     else:
         # load the test config if passed in
         config.from_mapping(test_config)

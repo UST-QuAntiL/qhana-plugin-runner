@@ -374,6 +374,8 @@ Database drivers can be installed by using plugins that specify that driver as a
 The default file store can be configured with the `DEFAULT_FILE_STORE` environment variable.
 This defaults to `local_filesystem`.
 
+When a worker (or plugin in the worker) tries to generate a URL with `flask.url_for` and `_external=True`, it can fail with the error `Application was not able to create a URL adapter for request independent URL generation. You might be able to fix this by setting the SERVER_NAME config variable.`.
+You can set the environment variable `SERVER_NAME` for the worker container and the value will be set in the flask configuration.
 
 ### Running the Plugin-Runner with Docker Compose
 

@@ -4,13 +4,14 @@ from typing import Optional
 
 import requests
 from celery.utils.log import get_task_logger
+from flask import url_for
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .. import Workflows
+from .. import Workflows, WORKFLOWS_BLP
 from ..clients.camunda_client import CamundaClient
 from ..datatypes.camunda_datatypes import CamundaConfig, HumanTask
 from ..util.helper import get_form_variables, request_json
@@ -102,9 +103,15 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
             task_data.save(commit=True)
 
             # TODO: Remove
-            href = f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-process/" # FIXME hardcoded href
-            ui_href = (
-                f"http://localhost:5005/plugins/workflows@v0-5-1/{db_id}/human-task-ui/" # FIXME hardcoded href
+            href = url_for(
+                f"{WORKFLOWS_BLP.name}.HumanTaskProcessView",
+                db_id=db_id,
+                _external=True,
+            )
+            ui_href = url_for(
+                f"{WORKFLOWS_BLP.name}.HumanTaskFrontend",
+                db_id=db_id,
+                _external=True,
             )
 
             # Add new sub-step task for input gathering
