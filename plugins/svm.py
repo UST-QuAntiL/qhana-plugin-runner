@@ -88,8 +88,9 @@ class FeatureMap(Enum):
 
         if feature_map_name == FeatureMap.z_feature_map:
             return ZFeatureMap(
-                feature_dimension=feature_dimension, reps=reps
-            )  # , entanglement=entanglement)
+                feature_dimension=feature_dimension,
+                reps=reps,
+            )  # no entanglement parameter
         elif feature_map_name == FeatureMap.zz_feature_map:
             return ZZFeatureMap(
                 feature_dimension=feature_dimension, entanglement=entanglement, reps=reps
@@ -276,7 +277,7 @@ class SVMSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Entanglement",
-            "description": "Specifies the entanglement structure.",
+            "description": "Specifies the entanglement structure. (For feature map. not for ZFeatureMap)",
             "input_type": "select",
         },
     )
@@ -694,6 +695,20 @@ def get_visualization(svm, train_data, test_data, train_labels, test_labels, sco
     return fig
 
 
+# ------------------------------
+#       dataset generation
+# ------------------------------
+def twospirals(n_points, noise=0.7, turns=1.52):
+    """Returns the two spirals dataset."""
+    n = np.sqrt(np.random.rand(n_points, 1)) * turns * (2 * np.pi)
+    d1x = -np.cos(n) * n + np.random.rand(n_points, 1) * noise
+    d1y = np.sin(n) * n + np.random.rand(n_points, 1) * noise
+    return (
+        np.vstack((np.hstack((d1x, d1y)), np.hstack((-d1x, -d1y)))),
+        np.hstack((np.zeros(n_points).astype(int), np.ones(n_points).astype(int))),
+    )
+
+
 @CELERY.task(name=f"{SVM.instance.identifier}.demo_task", bind=True)
 def demo_task(self, db_id: int) -> str:
     import base64
@@ -721,19 +736,23 @@ def demo_task(self, db_id: int) -> str:
     clusters_url = input_params.clusters_url
     TASK_LOGGER.info(f"Loaded input parameters from db: clusters_url='{clusters_url}'")
 
-    # load data from file
-    entity_points = open_url(entity_points_url).json()
-    clusters_entities = open_url(clusters_url).json()
+    use_default_data = False  # TODO set parameter in GUI
+    if use_default_data:
+        points, labels = twospirals(20, turns=1.52)  # qsvm aer_statevector very slow!
+    else:
+        # load data from file
+        entity_points = open_url(entity_points_url).json()
+        clusters_entities = open_url(clusters_url).json()
 
-    # get lists of data
-    clusters = {}
-    for ent in clusters_entities:
-        clusters[ent["ID"]] = ent["cluster"]
-    points = []
-    labels = []
-    for ent in entity_points:
-        points.append(ent["point"])
-        labels.append(clusters[ent["ID"]])
+        # get lists of data
+        clusters = {}
+        for ent in clusters_entities:
+            clusters[ent["ID"]] = ent["cluster"]
+        points = []
+        labels = []
+        for ent in entity_points:
+            points.append(ent["point"])
+            labels.append(clusters[ent["ID"]])
 
     # TODO randomly shuffle data?
 

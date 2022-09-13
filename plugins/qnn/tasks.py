@@ -27,7 +27,7 @@ from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
-from plugins.qnn.backend.model import DressedQuantumNet
+from plugins.qnn.backend.model import DressedQuantumNet, ClassicalNet
 from plugins.qnn.backend.train_and_test import train, test
 from plugins.qnn.backend.visualization import plot_classification
 
@@ -146,6 +146,8 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(
         f"Loaded input parameters from db: use_default_dataset='{use_default_dataset}'"
     )
+    # use_quantum = input_params.use_quantum
+    # TASK_LOGGER.info(f"Loaded input parameters from db: use_quantum='{use_quantum}'")
     N_total_iterations = (
         input_params.N_total_iterations  # Number of optimization steps (step= 1 batch)
     )
@@ -228,17 +230,25 @@ def calculation_task(self, db_id: int) -> str:
     torch.manual_seed(42)  # TODO doesn't work?
     np.random.seed(42)  # TODO doesn't work?
 
-    # choose quantum backend
-    dev = QuantumBackends.get_pennylane_backend(
-        device, ibmq_token, custom_backend, n_qubits, shots
-    )
-    print("DEVICE", dev)
-    dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # TODO remove
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # dressed quantum network
-    model = DressedQuantumNet(n_qubits, dev, q_depth, weight_init)
+    model = None
+    # print("USE QUANTUM", use_quantum)
+    use_quantum = False
+    print("SET FALSE!")
+    if use_quantum:
+        # choose quantum backend
+        dev = QuantumBackends.get_pennylane_backend(
+            device, ibmq_token, custom_backend, n_qubits, shots
+        )
+        print("DEVICE", dev)
+        dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # TODO remove
+
+        # dressed quantum network
+        model = DressedQuantumNet(n_qubits, dev, q_depth, weight_init)
+    else:
+        model = ClassicalNet(n_qubits, q_depth, weight_init)
+
     model = model.to(device)
 
     # loss function
@@ -360,23 +370,24 @@ def calculation_task(self, db_id: int) -> str:
     # save quantum circuit as qasm file
     # requires pennylane-qiskit
     # TODO check if it works (try catch????)
-    try:
-        with SpooledTemporaryFile(mode="wt") as output:
-            qasm_str = (
-                dev._circuit.qasm()
-            )  # formatted=True) # formatted only works with pygments>2.4
-            output.write(qasm_str)
+    if use_quantum:
+        try:
+            with SpooledTemporaryFile(mode="wt") as output:
+                qasm_str = (
+                    dev._circuit.qasm()
+                )  # formatted=True) # formatted only works with pygments>2.4
+                output.write(qasm_str)
 
-            STORE.persist_task_result(
-                db_id,
-                output,
-                "qasm-quantum-circuit.html",
-                "qasm-quantum-circuit",
-                "text/html",
-            )
-    except Exception as e:
-        print("Couldn't save circuit as qasm file")  # TODO
-        print(e)  # TODO
+                STORE.persist_task_result(
+                    db_id,
+                    output,
+                    "qasm-quantum-circuit.html",
+                    "qasm-quantum-circuit",
+                    "text/html",
+                )
+        except Exception as e:
+            print("Couldn't save circuit as qasm file")  # TODO
+            print(e)  # TODO
 
     # Print final time
     total_time = time.time() - start_time
@@ -391,9 +402,10 @@ def calculation_task(self, db_id: int) -> str:
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
 # TODO check if quantum device selection works as intended
-# TODO check if training still works
+# TODO check if training still works... not really??
 # TODO ouput document with details for classical network parts
 # TODO visualize? is always true...
+# TODO really slow with default dataset ?? (with other one too??)
 
 # DONE save actual weights to file
 # DONE add references

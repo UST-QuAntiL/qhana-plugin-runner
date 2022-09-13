@@ -115,8 +115,10 @@ class InputParameters:
         use_default_dataset=False,
         randomly_shuffle=True,
         visualize=True,
+        use_quantum=True,
     ):
         self.use_default_dataset = use_default_dataset
+        self.use_quantum = use_quantum
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.test_percentage = test_percentage
@@ -171,6 +173,15 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Clusters URL",
             "description": "URL to a json file with the clusters.",
             "input_type": "text",
+        },
+    )
+    use_quantum = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Use quantum",
+            "description": "use dressed quantum neural net or classical net",
+            "input_type": "checkbox",
         },
     )
     visualize = ma.fields.Boolean(

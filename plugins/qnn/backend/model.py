@@ -125,3 +125,50 @@ class DressedQuantumNet(nn.Module):
 
         # two-dimensional prediction from the postprocessing layer
         return self.post_net(q_out)
+
+
+class ClassicalNet(nn.Module):
+    """
+    Torch module implementing the classical net.
+    """
+
+    def __init__(self, n_qubits, q_depth, weight_init):
+        """
+        Initialize network with preprocessing, classical and postprocessing layers
+
+        n_qubits: number of qubits
+        quantum_device: device for quantum network
+        q_depth: amount of quantum layers
+        weight_init: type of (random) initialization of the models weights (WeightInitEnum)
+        """
+
+        super().__init__()
+
+        self.pre_net = nn.Linear(2, n_qubits)
+
+        self.classical_net = nn.ModuleList()
+        self.classical_net = nn.ModuleList(
+            [nn.Linear(n_qubits, n_qubits) for i in range(q_depth)]
+        )  # TODO how many layers?
+
+        self.post_net = nn.Linear(n_qubits, 2)
+        # TODO check..
+        # TODO weight init
+
+    def forward(self, input_features):
+        """
+        pass input features through classical layers
+        """
+
+        # preprocessing layer
+        pre_out = self.pre_net(input_features)
+        # TODO tanh?
+
+        # classical net
+        c_out = pre_out
+        for i, layer in enumerate(self.classical_net):
+            c_out = layer(c_out)
+        c_out = torch.tanh(c_out)
+
+        # postprocessing layer
+        return self.post_net(c_out)

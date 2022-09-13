@@ -131,6 +131,7 @@ class MicroFrontend(MethodView):
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
             schema.fields["use_default_dataset"].data_key: False,
+            schema.fields["use_quantum"].data_key: True,
             schema.fields["randomly_shuffle"].data_key: True,
             schema.fields["visualize"].data_key: True,
             schema.fields["weight_init"].data_key: WeightInitEnum.uniform,
