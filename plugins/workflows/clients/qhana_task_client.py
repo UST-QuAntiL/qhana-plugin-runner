@@ -62,8 +62,6 @@ class QhanaTaskClient:
         # Check if requested plugin exists
         plugin = self.resolve(plugin_name)
 
-        TASK_LOGGER.info(f"No plugin found for plugin name '{plugin_name}'")
-
         if plugin:
             local_variables = camunda_client.get_task_local_variables(external_task)
             try:
