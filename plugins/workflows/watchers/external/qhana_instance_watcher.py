@@ -1,3 +1,5 @@
+import time
+
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
@@ -96,3 +98,5 @@ def qhana_instance_watcher(camunda_external_task: str):
             )
 
             return
+
+        time.sleep(1)
