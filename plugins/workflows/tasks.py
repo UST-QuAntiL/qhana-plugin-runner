@@ -1,4 +1,5 @@
 import ast
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -81,7 +82,7 @@ def process_input(self, db_id: int) -> None:
 
     assert isinstance(task_data.data, dict)
 
-    input_params: dict = ast.literal_eval(task_data.parameters)  # FIXME use json!!!
+    input_params: dict = json.loads(task_data.parameters)
     process_instance_id = task_data.data["camunda_process_instance_id"]
     process_instance_definition_key = task_data.data["process_instance_definition_key"]
     human_task_id = task_data.data["human_task_id"]
