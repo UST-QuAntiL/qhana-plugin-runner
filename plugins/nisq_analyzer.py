@@ -14,6 +14,7 @@
 
 from http import HTTPStatus
 from typing import Optional
+from os import environ
 
 from flask import abort
 from flask.app import Flask
@@ -64,13 +65,14 @@ class PluginsView(MethodView):
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{NISQ_BLP.name}.PluginsView"),
-                ui_href="http://localhost:80",
+                ui_href=f"http://localhost:{plugin.port}",
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[],
             ),
             tags=NisqAnalyzer.instance.tags,
         )
+
 
 class NisqAnalyzer(QHAnaPluginBase):
 
@@ -81,6 +83,9 @@ class NisqAnalyzer(QHAnaPluginBase):
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
+
+        self.port = app.config.get("NISQ_ANALYZER_UI_PORT", "80")
+        self.port = environ.get("NISQ_ANALYZER_UI_PORT", self.port)
 
     def get_api_blueprint(self):
         return NISQ_BLP
