@@ -123,6 +123,20 @@ class ProcessView(MethodView):
             parameters=WorkflowsParametersSchema().dumps(input_params),
         )
         db_task.save(commit=True)
+
+        db_task.data["href"] = url_for(
+            f"{WORKFLOWS_BLP.name}.{HumanTaskProcessView.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+        db_task.data["ui_href"] = url_for(
+            f"{WORKFLOWS_BLP.name}.{HumanTaskFrontend.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+
+        db_task.save(commit=True)
+
         task: chain = start_workflow.s(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
 

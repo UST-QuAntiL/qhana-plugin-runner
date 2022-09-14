@@ -39,6 +39,13 @@ def run_human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
 
 @CELERY.task(name=f"{Workflows.instance.identifier}.human_task_watcher", bind=True)
 def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
+    db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if db_task is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
     # Client
     camunda_client = CamundaClient(CamundaConfig.from_dict(camunda_config))
 
@@ -102,24 +109,12 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
             task_data.data["human_task_id"] = human_task.id
             task_data.save(commit=True)
 
-            # TODO: Remove
-            href = url_for(
-                f"{WORKFLOWS_BLP.name}.HumanTaskProcessView",
-                db_id=db_id,
-                _external=True,
-            )
-            ui_href = url_for(
-                f"{WORKFLOWS_BLP.name}.HumanTaskFrontend",
-                db_id=db_id,
-                _external=True,
-            )
-
             # Add new sub-step task for input gathering
             new_sub_step_task = add_step.s(
                 db_id=db_id,
                 step_id=human_task.id,
-                href=href,
-                ui_href=ui_href,
+                href=db_task.data["href"],
+                ui_href=db_task.data["ui_href"],
                 prog_value=42,
                 task_log="",
             )
