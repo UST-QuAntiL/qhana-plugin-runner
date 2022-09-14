@@ -36,7 +36,7 @@ class PluginType(Enum):
     simple = "simple"
     complex = "complex"
     processing = "processing"
-    visalization = "visalization"
+    visualization = "visualization"
     conversion = "conversion"
 
 
@@ -264,7 +264,7 @@ class PluginMetadata:
     name: str
     version: str
     # TODO replace literal with PluginType after removing deprecated values
-    type: Literal[PluginType.processing, PluginType.visalization, PluginType.conversion]
+    type: Literal[PluginType.processing, PluginType.visualization, PluginType.conversion]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
 

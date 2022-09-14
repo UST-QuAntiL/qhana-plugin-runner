@@ -29,9 +29,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.requests import open_url
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
@@ -39,6 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -144,18 +143,19 @@ class PluginsView(MethodView):
 
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
-            description="Reduces number of dimensions. (New ONB are the d first principle components)",
-            name=PCA.instance.identifier,
+            description=PCA.instance.description,
+            name=PCA.instance.name,
             version=PCA.instance.version,
             type=PluginType.simple,
             entry_point=EntryPoint(
                 href=url_for(f"{PCA_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{PCA_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity-points",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entityPointsUrl",
                     )
                 ],
                 data_output=[
@@ -166,17 +166,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["dimension-reduction"],
+            tags=PCA.instance.tags,
         )
 
 
 @PCA_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the PCA plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
     @PCA_BLP.arguments(
@@ -228,9 +224,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{PCA_BLP.name}.ProcessView"),
-                example_values=url_for(
-                    f"{PCA_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -268,6 +261,10 @@ class ProcessView(MethodView):
 class PCA(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = (
+        "Reduces number of dimensions. (New ONB are the d first principle components)"
+    )
+    tags = ["dimension-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -276,7 +273,7 @@ class PCA(QHAnaPluginBase):
         return PCA_BLP
 
     def get_requirements(self) -> str:
-        return "scikit-learn~=0.24.2"
+        return "scikit-learn~=1.1"
 
 
 TASK_LOGGER = get_task_logger(__name__)

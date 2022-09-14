@@ -20,15 +20,15 @@ from sqlalchemy.orm import relation, relationship
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.sql import sqltypes as sql
-from sqlalchemy.sql.expression import null, select
+from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.schema import (
     Column,
     ForeignKey,
-    ForeignKeyConstraint,
-    PrimaryKeyConstraint,
 )
-from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.event import listens_for
 
+from .mutable_json import MutableJSON
 from ..db import DB, REGISTRY
 
 
@@ -63,34 +63,6 @@ class Step:
 
 @REGISTRY.mapped
 @dataclass
-class TaskData:
-    """Dataclass for key-value store of :class:`ProcessingTask`
-
-    Attributes:
-        id (int): ID of corresponding :class:`ProcessingTask` entry. Use the id to fetch this information from the database.
-        key (str): a key in dict
-        value (str, optional): a corresponding value in dict
-    """
-
-    __tablename__ = "TaskData"
-
-    __sa_dataclass_metadata_key__ = "sa"
-
-    id: int = field(
-        metadata={
-            "sa": Column(
-                ForeignKey("ProcessingTask.id"), primary_key=True, nullable=False
-            )
-        },
-    )
-    key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
-    value: Union[dict, list, str, float, int, bool, None] = field(
-        metadata={"sa": Column(sql.JSON())}
-    )
-
-
-@REGISTRY.mapped
-@dataclass
 class ProcessingTask:
     """Dataclass for persisting (logical) task information.
 
@@ -100,7 +72,7 @@ class ProcessingTask:
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
-        data (dict): dict-like key-value store for additional lightweight task data. New elements of type :class:`TaskData` can be added or retrieved as in a dict using ``key`` as key.
+        data (Union[dict, list, str, float, int, bool, None]): mutable JSON-like store for additional lightweight task data. Default value is empty dict.
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
         progress_value (float): current progress value. ``None`` by default.
@@ -128,19 +100,8 @@ class ProcessingTask:
 
     parameters: str = field(default="", metadata={"sa": Column(sql.Text())})
 
-    _data: dict = field(
-        default_factory=dict,
-        metadata={
-            "sa": relationship(
-                "TaskData",
-                collection_class=attribute_mapped_collection("key"),
-                cascade="all, delete-orphan",
-            )
-        },
-    )
-
-    data = association_proxy(
-        "_data", "value", creator=lambda key, value: TaskData(id=id, key=key, value=value)
+    data: Union[dict, list, str, float, int, bool, None] = field(
+        default_factory=dict, metadata={"sa": Column(MutableJSON)}
     )
 
     multi_step: bool = field(default=False, metadata={"sa": Column(sql.Boolean())})

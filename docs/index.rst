@@ -6,12 +6,17 @@
 Welcome to QHAna-Plugin-Runner's documentation!
 ===============================================
 
+.. note::
+    This is the developer documentation for the QHAna :term:`Plugin Runner`.
+    The :external+qhana:doc:`user documentation <index>` for QHAna can be found :external+qhana:doc:`here <index>`.
+
 .. toctree::
     :maxdepth: 2
     :caption: Contents:
 
     readme
     plugins
+    templates
     data-formats/index
     cli
     adr/index

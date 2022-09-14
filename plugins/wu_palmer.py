@@ -38,6 +38,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -130,7 +131,7 @@ class PluginsView(MethodView):
         """Time tanh endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Wu Palmer similarities",
-            description="Compares elements and returns similarity values.",
+            description=WuPalmer.instance.description,
             name=WuPalmer.instance.name,
             version=WuPalmer.instance.version,
             type=PluginType.simple,
@@ -138,20 +139,23 @@ class PluginsView(MethodView):
                 href=url_for(f"{WU_PALMER_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{WU_PALMER_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entities",
                         content_type=["application/json"],
                         required=True,
+                        parameter="entitiesUrl",
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="wu-palmer-cache",
                         content_type=["application/zip"],
                         required=True,
+                        parameter="entitiesMetadataUrl",
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="attribute-metadata",
                         content_type=["application/json"],
                         required=True,
+                        parameter="wuPalmerCacheUrl",
                     ),
                 ],
                 data_output=[
@@ -162,17 +166,13 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["similarity-calculation"],
+            tags=WuPalmer.instance.tags,
         )
 
 
 @WU_PALMER_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the Wu Palmer plugin."""
-
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
 
     @WU_PALMER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Wu Palmer plugin."
@@ -215,9 +215,6 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{WU_PALMER_BLP.name}.CalcSimilarityView"),
-                example_values=url_for(
-                    f"{WU_PALMER_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
             )
         )
 
@@ -254,6 +251,8 @@ class CalcSimilarityView(MethodView):
 class WuPalmer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Compares elements and returns similarity values."
+    tags = ["similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

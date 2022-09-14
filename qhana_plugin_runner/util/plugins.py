@@ -15,7 +15,7 @@
 import sys
 from importlib import import_module
 from pathlib import Path
-from typing import ClassVar, Dict, Optional, Union
+from typing import ClassVar, Dict, List, Optional, Union
 
 from flask import Flask
 from flask.blueprints import Blueprint
@@ -36,6 +36,9 @@ class QHAnaPluginBase:
     name: ClassVar[str]
     version: ClassVar[str]
     instance: ClassVar["QHAnaPluginBase"]
+    description: str
+    tags: ClassVar[List[str]] = []
+    has_api: ClassVar[bool] = False
 
     __app__: Optional[Flask] = None
     __plugins__: Dict[str, "QHAnaPluginBase"] = {}
@@ -128,7 +131,7 @@ def _append_source_path(app: Flask, source_path: Union[str, Path]):
     source_path = str(source_path)
     if source_path in sys.path:
         return
-    app.logger.debug("Adding new source path to the python path: '{}'", source_path)
+    app.logger.debug(f"Adding new source path to the python path: '{source_path}'")
     sys.path.append(source_path)
 
 
@@ -243,8 +246,13 @@ def register_plugins(app: Flask):
 
     # register API blueprints (only do this after the API is registered with flask!)
     for plugin in QHAnaPluginBase.get_plugins().values():
-        plugin_blueprint: Optional[Blueprint] = plugin.get_api_blueprint()
+        plugin_blueprint: Optional[Blueprint] = None
+        try:
+            plugin_blueprint = plugin.get_api_blueprint()
+        except NotImplementedError:
+            pass
         if plugin_blueprint:
+            type(plugin).has_api = True
             ROOT_API.register_blueprint(
                 plugin_blueprint, url_prefix=f"{url_prefix}/plugins/{plugin.identifier}/"
             )

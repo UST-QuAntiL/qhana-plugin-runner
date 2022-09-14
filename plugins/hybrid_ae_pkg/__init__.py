@@ -34,6 +34,8 @@ HA_BLP = SecurityBlueprint(
 class HybridAutoencoderPlugin(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Reduces the dimensionality of a given dataset with a combination of classical and quantum neural networks."
+    tags = ["dimensionality-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -48,7 +50,7 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
 try:
     # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
     # accessed as soon as the routes are imported.
-    import plugins.hybrid_ae_pkg.routes
+    from . import routes
 except ImportError:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.

@@ -6,7 +6,7 @@ from typing import Tuple
 from sqlalchemy import text
 from sqlalchemy.sql.elements import TextClause
 
-from plugins.costume_loader_pkg.backend.database import Database
+from .database import Database
 
 
 class TaxonomyType(Enum):

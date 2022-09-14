@@ -5,7 +5,7 @@ from typing import Dict
 from celery.utils.log import get_task_logger
 from sqlalchemy import select
 
-from plugins.hybrid_ae_pkg import HybridAutoencoderPlugin
+from . import HybridAutoencoderPlugin
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -22,7 +22,7 @@ TASK_LOGGER = get_task_logger(__name__)
 )
 def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     import numpy as np
-    from plugins.hybrid_ae_pkg.backend import simple_api
+    from .backend import simple_api
 
     TASK_LOGGER.info(
         f"Starting new hybrid autoencoder pennylane task with db id '{db_id}'"

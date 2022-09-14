@@ -42,6 +42,8 @@ class PluginData:
     version: str
     identifier: str
     api_root: Optional[str]
+    description: str
+    tags: List[str]
 
 
 @dataclass()
@@ -54,6 +56,8 @@ class PluginSchema(MaBaseSchema):
     version = ma.fields.String(required=True, allow_none=False, dump_only=True)
     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
     api_root = ma.fields.Url(required=False, allow_none=False, dump_only=True)
+    description = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    tags = ma.fields.List(ma.fields.String(), required=True, dump_only=True)
 
 
 class PluginCollectionSchema(MaBaseSchema):
@@ -68,7 +72,7 @@ class PluginsView(MethodView):
     def get(self):
         """Get all loaded plugins."""
         plugins = sorted(
-            QHAnaPluginBase.get_plugins().values(),
+            (p for p in QHAnaPluginBase.get_plugins().values() if p.has_api),
             key=lambda p: (p.name, p.parsed_version),
         )
         return PluginCollectionData(
@@ -80,6 +84,8 @@ class PluginsView(MethodView):
                     url_for(
                         "plugins-api.PluginView", plugin=p.identifier, _external=True
                     ),
+                    p.description,
+                    p.tags,
                 )
                 for p in plugins
             ]

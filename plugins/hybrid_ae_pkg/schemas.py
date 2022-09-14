@@ -17,7 +17,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         load_only=True,
         metadata={
             "label": "Input Data",
-            "description": "URL to the input data.",
+            "description": "A URL to the data input file. Example: `data:text/plain,0,0,0,0,0,0,0,0,0,0` ",
             "input_type": "text",
         },
     )
@@ -27,7 +27,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         load_only=True,
         metadata={
             "label": "Number of Qubits",
-            "description": "Number of qubits that will be used.",
+            "description": "The total number of qubits used for the quantum-neural-network. Example: `3`",
             "input_type": "text",
         },
     )
@@ -37,7 +37,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         load_only=True,
         metadata={
             "label": "Embedding Size",
-            "description": "Size the embeddings will have (number of values).",
+            "description": "The dimensionality of the embedding (number of values). Example: `2`",
             "input_type": "text",
         },
     )
@@ -47,7 +47,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         load_only=True,
         metadata={
             "label": "QNN Name",
-            "description": "Name of the QNN that will be used.",
+            "description": "The name of the quantum-neural-network to use as the autoencoder. Example: `QNN3`",
             "input_type": "text",
         },
     )
@@ -57,7 +57,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         load_only=True,
         metadata={
             "label": "Training Steps",
-            "description": "Number of training steps",
+            "description": "The number of training steps to train the autoencoder. Example: `100`",
             "input_type": "text",
         },
     )

@@ -97,8 +97,8 @@ class PluginsView(MethodView):
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
             title=plugin.name,
-            description=HELLO_BLP.description,
-            name=plugin.identifier,
+            description=plugin.description,
+            name=plugin.name,
             version=plugin.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
@@ -114,7 +114,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=[],
+            tags=HelloWorld.instance.tags,
         )
 
 
@@ -170,6 +170,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_BLP.name}.ProcessView"),
+                help_text="This is an example help text with basic **Markdown** support.",
                 example_values=url_for(
                     f"{HELLO_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
@@ -206,6 +207,8 @@ class HelloWorld(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Tests the connection of all components by printing some text."
+    tags = ["hello-world"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

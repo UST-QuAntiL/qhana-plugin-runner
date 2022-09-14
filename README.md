@@ -202,14 +202,27 @@ poetry run flask drop-db
 
 ## Migrations
 
+ℹ️ Try to minimize the number of migrations and only create a new one when your changes are likely final.
+Altenatively merge all your new migration into one before submitting a pull request.
+
+If you have added new mapped dataclasses or modified existing ones, a migration script needs to be added.
+This script updates the tables and columns of the database to match the mapped dataclasses.
+To generate the migration script you need to do the following steps:
+
 ```bash
-# create a new migration after changes in the db (Always manually review the created migration!)
-poetry run flask db migrate -m "Initial migration."
-# upgrade db to the newest migration
+# delete the database
+rm instance/qhana_plugin_runner.db
+# upgrade the database to the latest migration
 poetry run flask db upgrade
-# help
+# generate a new migration script for the changes you made (always manually review the created migration!)
+poetry run flask db migrate -m "changelog message"
+# upgrade the database to reflect your changes
+poetry run flask db upgrade
+# if you need help with the commands
 poetry run flask db --help
 ```
+
+The migrations are handled by [flask-migrate](https://flask-migrate.readthedocs.io/en/latest/index.html) which is based on [alembic](https://alembic.sqlalchemy.org/en/latest/index.html)
 
 ## Celery background tasks
 
@@ -340,17 +353,14 @@ Server and worker containers with the same plugin configuration need to use the 
 The broker can be configured using the `BROKER_URL` and the `RESULT_BACKEND` environment variable.
 
 The database to use can be configured using the `SQLALCHEMY_DATABASE_URI` environment variable.
-SQLAlchemy is used wich supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.
+SQLAlchemy is used which supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.
 Database drivers can be installed by using plugins that specify that driver as an install requirement.
+
+The default file store can be configured with the `DEFAULT_FILE_STORE` environment variable.
+This defaults to `local_filesystem`.
 
 
 ### Running the Plugin-Runner with Docker Compose
-
-If you are using an M1 processor you need to build the plugin runner image for the amd64 platform if the plugins you want to use have dependencies that don't have arm64 builds:
-
-```
-docker buildx build --load -t qhana-plugin-runner --platform linux/amd64 --no-cache .
-```
 
 Start the docker compose with:
 
@@ -365,16 +375,6 @@ docker-compose down
 ```
 
 To also delete the volume containing the output files add the flag `-v`.
-
-#### Docker Compose with MUSE database
-
-If you want to start the MUSE database as well you need to build the muse-db image. 
-As a prerequisite you need to have a `mini-muse.sql` file in `plugins/costume_loader_pkg/db_container` and build the Dockerfile that is in the same folder with `docker build -t muse-db plugins/costume_loader_pkg/db_container`.
-Then you can start everything with
-
-```
-docker-compose --profile with_db up
-```
 
 
 ## Acknowledgements

@@ -5,24 +5,18 @@ from typing import Optional
 
 from celery.utils.log import get_task_logger
 
-from plugins.quantum_k_means import QKMeans
-from plugins.quantum_k_means.backend.clustering import (
+from . import QKMeans
+from .backend.clustering import (
     Clustering,
     NegativeRotationQuantumKMeansClustering,
     DestructiveInterferenceQuantumKMeansClustering,
     StatePreparationQuantumKMeansClustering,
     PositiveCorrelationQuantumKMeansClustering,
 )
-from plugins.quantum_k_means.schemas import (
-    InputParameters,
-    InputParametersSchema,
-    VariantEnum,
-)
+from .schemas import InputParameters, InputParametersSchema, VariantEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
@@ -129,7 +123,7 @@ def calculation_task(self, db_id: int) -> str:
     else:
         raise ValueError("Unknown variant.")
 
-    clusters = algo.create_cluster(points_arr)
+    clusters, representative_circuit = algo.create_cluster(points_arr)
 
     entity_clusters = []
 
@@ -144,6 +138,16 @@ def calculation_task(self, db_id: int) -> str:
             "clusters.json",
             "clusters",
             "application/json",
+        )
+
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(representative_circuit)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "representative_circuit.qasm",
+            "representative-circuit",
+            "application/qasm",
         )
 
     return "Result stored in file"

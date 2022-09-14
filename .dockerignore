@@ -9,6 +9,9 @@ git-plugins/
 
 .flaskenv
 
+Dockerfile
+.dockerignore
+
 
 
 # Ignores from Template:

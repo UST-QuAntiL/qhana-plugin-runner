@@ -15,8 +15,10 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Module containing default config values."""
+import re
 from logging import INFO, WARNING
 from os import urandom
+from typing import Sequence, Tuple
 
 from .celery_config import CELERY_DEBUG_CONFIG, CELERY_PRODUCTION_CONFIG
 from .smorest_config import SmorestDebugConfig, SmorestProductionConfig
@@ -24,6 +26,7 @@ from .sqlalchemy_config import SQLAchemyDebugConfig, SQLAchemyProductionConfig
 
 
 class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
+    ENV="production"
     SECRET_KEY = urandom(32)
 
     REVERSE_PROXY_COUNT = 0
@@ -46,8 +49,13 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     DEFAULT_FILE_STORE = "local_filesystem"
     FILE_STORE_ROOT_PATH = "files"
 
+    # URL rewrite rules are (pattern, replacement) pairs that are applied
+    # in order to URLs opened with qhana_plugin_runner.requests.open_url
+    URL_REWRITE_RULES: Sequence[Tuple[re.Pattern, str]] = []
+
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
+    ENV="development"
     DEBUG = True
     SECRET_KEY = "debug_secret"  # FIXME make sure this NEVER! gets used in production!!!
 
@@ -56,4 +64,4 @@ class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
     CELERY = CELERY_DEBUG_CONFIG
 
     # TODO allow specifying this as a Environment variable
-    PLUGIN_FOLDERS = ["./plugins"]
+    PLUGIN_FOLDERS = ["./plugins", "./local_plugins"]
