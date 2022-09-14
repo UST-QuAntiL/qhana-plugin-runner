@@ -493,6 +493,9 @@ class SVM(QHAnaPluginBase):
 
     name = _plugin_name
     version = __version__
+    description = "Classifies data with a classical or quantum support vector machine"
+
+    tags = ["classification"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -501,7 +504,10 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=0.24.2\nqiskit-machine-learning"
+        # return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=0.24.2\nqiskit-machine-learning"
+        return (
+            "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=1.1\nqiskit-machine-learning"
+        )
 
 
 TASK_LOGGER = get_task_logger(__name__)

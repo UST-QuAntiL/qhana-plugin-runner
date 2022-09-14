@@ -20,6 +20,9 @@ QNN_BLP = SecurityBlueprint(
 class QNN(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
+    description = "Classifies data with a dressed quantum or a classical neural network"
+
+    tags = ["classification"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -29,7 +32,7 @@ class QNN(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         # return "numpy~=1.22.2\nmatplotlib~=3.5.1\nqiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16\nscikit-learn~=0.24.2\ntorch~=1.11.0"
-        return "numpy~=1.22.2\nmatplotlib~=3.5.1\nqiskit==0.27\npennylane==0.16\npennylane-qiskit==0.16\nscikit-learn~=0.24.2\ntorch~=1.11.0"
+        return "numpy~=1.22.2\nmatplotlib~=3.5.1\nqiskit==0.27\npennylane==0.16\npennylane-qiskit==0.16\nscikit-learn~=1.1\ntorch~=1.11.0"
 
 
 try:
