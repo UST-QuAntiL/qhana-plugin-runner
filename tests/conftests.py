@@ -33,7 +33,6 @@ DEFAULT_TEST_CONFIG = {
     "SECRET_KEY": "test",
     "DEBUG": False,
     "TESTING": True,
-
     "JSON_SORT_KEYS": True,
     "JSONIFY_PRETTYPRINT_REGULAR": False,
     "DEFAULT_LOG_SEVERITY": INFO,
