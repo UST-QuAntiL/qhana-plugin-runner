@@ -15,9 +15,9 @@ from qiskit import IBMQ
 # TODO additional pennylane devices?
 #   default.qubit, default.gaussian, default.qubit.tf, default.qubit.autograd
 class QuantumBackends(Enum):
+    custom_ibmq = "custom_ibmq"
     aer_statevector_simulator = "aer_statevector_simulator"
     aer_qasm_simulator = "aer_qasm_simulator"
-    custom_ibmq = "custom_ibmq"
     ibmq_qasm_simulator = "ibmq_qasm_simulator"
     ibmq_santiago = "ibmq_santiago"
     ibmq_manila = "ibmq_manila"
@@ -151,7 +151,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Use default dataset",
-            "description": "Use internally generated dataset (no input files required)",
+            "description": "Use internally generated dataset (no input files required).",
             "input_type": "checkbox",
         },
     )
@@ -161,8 +161,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         data_input_type="entity-points",
         data_content_types="application/json",
         metadata={
-            "label": "Entity points URL",
-            "description": "URL to a json file with the entity points.",
+            "label": "Data points URL",
+            "description": "URL to a json file with the data points.",
             "input_type": "text",
         },
     )
@@ -172,8 +172,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         data_input_type="clusters",
         data_content_types="application/json",
         metadata={
-            "label": "Clusters URL",
-            "description": "URL to a json file with the clusters.",
+            "label": "Labels URL",
+            "description": "URL to a json file with the labels.",
             "input_type": "text",
         },
     )
@@ -182,7 +182,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Use quantum",
-            "description": "use dressed quantum neural net instead of classical net",
+            "description": "Use dressed quantum neural net instead of classical net.",
             "input_type": "checkbox",
         },
     )
@@ -191,7 +191,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Visualize",
-            "description": "Plot the decision boundary for the trained classifier",
+            "description": "Plot the decision boundary for the trained classifier.",
             "input_type": "checkbox",
         },
     )
@@ -209,7 +209,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Shuffle",
-            "description": "Randomly shuffle data before training",
+            "description": "Randomly shuffle data before training.",
             "input_type": "checkbox",
         },
     )
@@ -218,7 +218,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Amount of test data",
-            "description": "1 - only test data, 0 - only training data",
+            "description": "How much of the data is used as test data. 1 - only test data, 0 - only training data.",
             "input_type": "text",
         },
     )
@@ -255,7 +255,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Shots",
-            "description": "Number of shots",
+            "description": "Number of shots.",
             "input_type": "text",
         },
     )
@@ -265,7 +265,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Optimizer",
-            "description": "Type of optimizer used for training",
+            "description": "Type of optimizer used for training.",
             "input_type": "select",
         },
     )
@@ -274,7 +274,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Learning Rate",
-            "description": "Learning rate for the training of the hybrid NN",
+            "description": "Learning rate for the training of the hybrid NN.",
             "input_type": "text",
         },
     )
@@ -282,8 +282,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Number of Qubits",
-            "description": "Number of Qubits used for the quantum circuit",
+            "label": "Number of qubits",
+            "description": "Number of qubits used for the quantum circuit.",
             "input_type": "text",
         },
     )
@@ -292,7 +292,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Number of iterations",
-            "description": "Number of total training iterations",
+            "description": "Number of total training iterations.",
             "input_type": "text",
         },
     )
@@ -301,7 +301,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Depth",
-            "description": "Depth of the quantum circuit",
+            "description": "Depth of the quantum circuit.",
             "input_type": "text",
         },
     )
@@ -309,8 +309,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Batch Size",
-            "description": "Size of training batches",
+            "label": "Batch size",
+            "description": "Size of training batches.",
             "input_type": "text",
         },
     )
@@ -320,12 +320,11 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Weight initialization strategy",
-            "description": "Distribution of (random) initialization of weigths",
+            "description": "Distribution of (random) initialization of weigths.",
             "input_type": "select",
         },
     )
 
-    # ?????????????????
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
         return InputParameters(**data)

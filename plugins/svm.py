@@ -3,8 +3,7 @@ from enum import Enum
 from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Optional, Mapping
-from json import dumps
-from xmlrpc.client import Boolean
+import os
 
 import marshmallow as ma
 from marshmallow import EXCLUDE, post_load
@@ -168,12 +167,12 @@ class InputParameters:
         kernel: ClassicalKernelEnum,
         degree: int,
         ibmq_token: str,
-        ibmq_custom_backend: str,
+        custom_backend: str,
         reps: int,
         shots: int,
-        backend=QuantumBackends.aer_statevector_simulator,
-        feature_map=FeatureMap.z_feature_map,
-        entanglement=Entanglement.linear,
+        backend: QuantumBackends,
+        feature_map: FeatureMap,
+        entanglement: Entanglement,
         use_quantum=False,
         use_default_data=False,
         visualize=False,
@@ -189,7 +188,7 @@ class InputParameters:
         self.degree = degree
         self.backend = backend
         self.ibmq_token = ibmq_token
-        self.ibmq_custom_backen = ibmq_custom_backend
+        self.custom_backend = custom_backend
         self.feature_map = feature_map
         self.entanglement = entanglement
         self.reps = reps
@@ -216,7 +215,7 @@ class SVMSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Use default dataset",
-            "description": "Use internally generated dataset (no input files required)",
+            "description": "Use internally generated dataset (no input files required).",
             "input_type": "checkbox",
         },
     )
@@ -226,8 +225,8 @@ class SVMSchema(FrontendFormBaseSchema):
         data_input_type="entity-points",
         data_content_types="application/json",
         metadata={
-            "label": "Entity points URL",
-            "description": "URL to a json file with the entity points.",
+            "label": "Data points URL",
+            "description": "URL to a json file with the data points.",
             "input_type": "text",
         },
     )
@@ -237,8 +236,8 @@ class SVMSchema(FrontendFormBaseSchema):
         data_input_type="clusters",
         data_content_types="application/json",
         metadata={
-            "label": "Clusters URL",
-            "description": "URL to a json file with the clusters.",
+            "label": "Labels URL",
+            "description": "URL to a json file with the labels.",
             "input_type": "text",
         },
     )
@@ -246,8 +245,8 @@ class SVMSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=False,
         metadata={
-            "label": "use quantum",
-            "description": "whether to use quantum svm or classical svm",
+            "label": "Use quantum",
+            "description": "Whether to use quantum svm or classical svm.",
             "input_type": "checkbox",
         },
     )
@@ -255,8 +254,8 @@ class SVMSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=False,
         metadata={
-            "label": "visualize classification",
-            "description": "plot the decision boundary and the support vectors for the trained classifier",
+            "label": "Visualize classification",
+            "description": "Plot the decision boundary and the support vectors for the trained classifier.",
             "input_type": "checkbox",
         },
     )
@@ -288,7 +287,7 @@ class SVMSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    ibmq_custom_backend = ma.fields.String(
+    custom_backend = ma.fields.String(
         required=False,
         allow_none=False,
         metadata={
@@ -313,7 +312,7 @@ class SVMSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Entanglement",
-            "description": "Specifies the entanglement structure. (For feature map. not for ZFeatureMap)",
+            "description": "Specifies the entanglement structure. (For feature map. Except for ZFeatureMap)",
             "input_type": "select",
         },
     )
@@ -340,7 +339,7 @@ class SVMSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "regularization parameter C",
+            "label": "Regularization parameter C",
             "description": "The strength of the regularization is inversely proportional to C. Must be strictly positive, the penalty is a squared l2 penalty.",
             "input_type": "text",
         },
@@ -451,16 +450,22 @@ class MicroFrontend(MethodView):
             schema.fields["visualize"].data_key: False,
             schema.fields["resolution"].data_key: 80,
             schema.fields["regularization_C"].data_key: 1.0,
-            schema.fields["kernel"].data_key: ClassicalKernelEnum.rbf,
+            schema.fields["kernel"].data_key: ClassicalKernelEnum.rbf.value,
             schema.fields["degree"].data_key: 3,
-            schema.fields["backend"].data_key: QuantumBackends.aer_statevector_simulator,
-            schema.fields["ibmq_token"].data_key: "",
-            schema.fields["ibmq_custom_backend"].data_key: "",
-            schema.fields["feature_map"].data_key: FeatureMap.z_feature_map,
-            schema.fields["entanglement"].data_key: Entanglement.linear,
+            schema.fields[
+                "backend"
+            ].data_key: QuantumBackends.aer_statevector_simulator.value,
+            schema.fields["feature_map"].data_key: FeatureMap.z_feature_map.value,
+            schema.fields["entanglement"].data_key: Entanglement.linear.value,
             schema.fields["reps"].data_key: 2,
             schema.fields["shots"].data_key: 1024,
         }
+
+        if "IBMQ_BACKEND" in os.environ:
+            default_values[schema.fields["backend"].data_key] = os.environ["IBMQ_BACKEND"]
+
+        if "IBMQ_TOKEN" in os.environ:
+            default_values[schema.fields["ibmq_token"].data_key] = "****"
 
         print("datadict before", data_dict)
         # overwrite default values with other values
@@ -574,16 +579,16 @@ def get_quantum_SVC(data, labels, input_params):
     TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     ibmq_token = input_params.ibmq_token
     TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token='{ibmq_token}'")
-    ibmq_custom_backend = input_params.ibmq_custom_backen
+    custom_backend = input_params.custom_backend
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: ibmq_custom_backend='{ibmq_custom_backend}'"
+        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
     )
 
     # get quantum backend
     backend_device = QuantumBackends.get_quantum_backend(
         backendEnum=backend,
         ibmqToken=ibmq_token,
-        customBackendName=ibmq_custom_backend,
+        customBackendName=custom_backend,
     )
 
     # load feature map parameters

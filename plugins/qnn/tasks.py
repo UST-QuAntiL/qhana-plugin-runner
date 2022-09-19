@@ -415,3 +415,4 @@ def calculation_task(self, db_id: int) -> str:
 # TODO check if classical network works (when zero weight init then whole plot background blue)
 # TODO resolution GUI parameter
 # TODO really slow with aer statevector device? (with default dataset)
+# TODO default enum values are not shown in gui....
