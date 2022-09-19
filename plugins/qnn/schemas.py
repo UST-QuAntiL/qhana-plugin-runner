@@ -15,9 +15,9 @@ from qiskit import IBMQ
 # TODO additional pennylane devices?
 #   default.qubit, default.gaussian, default.qubit.tf, default.qubit.autograd
 class QuantumBackends(Enum):
-    custom_ibmq = "custom_ibmq"
     aer_statevector_simulator = "aer_statevector_simulator"
     aer_qasm_simulator = "aer_qasm_simulator"
+    custom_ibmq = "custom_ibmq"
     ibmq_qasm_simulator = "ibmq_qasm_simulator"
     ibmq_santiago = "ibmq_santiago"
     ibmq_manila = "ibmq_manila"
@@ -112,13 +112,15 @@ class InputParameters:
         N_total_iterations: int,
         q_depth: int,
         batch_size: int,
+        resolution: int,
         use_default_dataset=False,
         randomly_shuffle=True,
-        visualize=True,
-        use_quantum=True,
+        visualize=False,
+        use_quantum=False,
     ):
         self.use_default_dataset = use_default_dataset
         self.use_quantum = use_quantum
+        self.resolution = resolution
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.test_percentage = test_percentage
@@ -191,6 +193,15 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Visualize",
             "description": "Plot the decision boundary for the trained classifier",
             "input_type": "checkbox",
+        },
+    )
+    resolution = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Resolution",
+            "description": "Resolution of the visualization. How finegrained the evaluation of the classifier should be.",
+            "input_type": "text",
         },
     )
     randomly_shuffle = ma.fields.Boolean(

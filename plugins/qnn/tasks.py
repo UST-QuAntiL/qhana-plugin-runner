@@ -148,9 +148,7 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: step='{step}'")
     batch_size = input_params.batch_size  # Numbre of samples (points) for each mini-batch
     TASK_LOGGER.info(f"Loaded input parameters from db: batch_size='{batch_size}'")
-    q_depth = (
-        input_params.q_depth
-    )  # Depth of the quantum circuit (number of variational layers)
+    q_depth = input_params.q_depth  # number of variational layers
     TASK_LOGGER.info(f"Loaded input parameters from db: q_depth='{q_depth}'")
     use_default_dataset = input_params.use_default_dataset
     TASK_LOGGER.info(
@@ -172,24 +170,6 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     optimizer = input_params.optimizer
     TASK_LOGGER.info(f"Loaded input parameters from db: optimizer='{optimizer}'")
-    q_device = input_params.device
-    TASK_LOGGER.info(f"Loaded input parameters from db: device='{q_device}'")
-    ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
-
-    if ibmq_token == "****":
-        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
-
-        if "IBMQ_TOKEN" in os.environ:
-            ibmq_token = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
-        else:
-            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
-
-    custom_backend = input_params.custom_backend
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
-    )
 
     weight_init = input_params.weight_init
     TASK_LOGGER.info(f"Loaded input parameters from db: weight_init='{weight_init}'")
@@ -208,7 +188,7 @@ def calculation_task(self, db_id: int) -> str:
         dataset = twospirals(200, turns=1.52)  # TODO set number of data elements in GUI??
     else:
         TASK_LOGGER.info("Load dataset from files")
-        # get data from file
+        # get files
         entity_points_url = input_params.entity_points_url
         TASK_LOGGER.info(
             f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
@@ -243,14 +223,34 @@ def calculation_task(self, db_id: int) -> str:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = None
-    # print("USE QUANTUM", use_quantum)
     if use_quantum:
+
+        q_device = input_params.device
+        TASK_LOGGER.info(f"Loaded input parameters from db: device='{q_device}'")
+        ibmq_token = input_params.ibmq_token
+        TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+
+        if ibmq_token == "****":
+            TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+
+            if "IBMQ_TOKEN" in os.environ:
+                ibmq_token = os.environ["IBMQ_TOKEN"]
+                TASK_LOGGER.info(
+                    f"IBMQ token successfully loaded from environment variable"
+                )
+            else:
+                TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+
+        custom_backend = input_params.custom_backend
+        TASK_LOGGER.info(
+            f"Loaded input parameters from db: custom_backend='{custom_backend}'"
+        )
         # choose quantum backend
         dev = QuantumBackends.get_pennylane_backend(
             q_device, ibmq_token, custom_backend, n_qubits, shots
         )
         print("DEVICE", dev)
-        dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # TODO remove
+        # dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # TODO remove
 
         # dressed quantum network
         model = DressedQuantumNet(n_qubits, dev, q_depth, weight_init)
@@ -316,9 +316,10 @@ def calculation_task(self, db_id: int) -> str:
     accuracy_on_test_data = test(model, X_test, Y_test, loss_fn, n_classes)
 
     if visualize:
+        resolution = input_params.resolution
         # plot results (for grid)
         figure_main = plot_classification(
-            model, X, X_train, X_test, Y_train, Y_test, accuracy_on_test_data
+            model, X, X_train, X_test, Y_train, Y_test, accuracy_on_test_data, resolution
         )
 
         # plot to html
@@ -409,28 +410,8 @@ def calculation_task(self, db_id: int) -> str:
 # TODO hidden layers for preprocessing and postprocessing? GUI..
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
-# TODO check if quantum device selection works as intended
 # TODO check if training still works... not really?? (qnn yes kina? classical no?)
 # TODO ouput document with details for classical network parts
-# TODO visualize? is always true...
-# TODO really slow with default dataset ?? (with other one too??)
 # TODO check if classical network works (when zero weight init then whole plot background blue)
-# TODO use quantum always true?
-
-# DONE save actual weights to file
-# DONE add references
-# DONE optimizers
-#       old qhana: Adadelta, Adagrad, Adam, AdamW, SparseAdam, Adamax, ASGD, SGD, Rprop, RMSprop, LBFGS
-#       default: Adam
-# DONE option to initialize weights (different random inits, zero init, with weights file)
-#   standard_normal, uniform, zero (distribution for (random) initialization of weights)
-#   default: uniform
-# DONE quantum devices
-#   QuantumBackend
-#       enum default: aer_statevector_simulator (aer_qasm_simulator)
-#   IBMQ-Custom-Backend: str default "", name of a custom backend of ibmq
-#   IBMQ-Token: str default "", IBMQ-Token for access to IBMQ online service
-# DONE prints -> task logger info
-# DONE visualize circuit?? openqasm file?
-# DONE turn off gradient calculation for some parts?
-# DONE error: cannot import name Basebackend from qiskit.providers (also happens in quantum k means... differnet qiskit versions??)
+# TODO resolution GUI parameter
+# TODO really slow with aer statevector device? (with default dataset)

@@ -96,8 +96,7 @@ class FeatureMap(Enum):
 
         if feature_map_name == FeatureMap.z_feature_map:
             return ZFeatureMap(
-                feature_dimension=feature_dimension,
-                reps=reps,
+                feature_dimension=feature_dimension, reps=reps
             )  # no entanglement parameter
         elif feature_map_name == FeatureMap.zz_feature_map:
             return ZZFeatureMap(
@@ -164,23 +163,27 @@ class InputParameters:
         self,
         entity_points_url: str,
         clusters_url: str,
-        use_quantum=False,
-        visualize=False,
-        regularization_C=float,
-        kernel=ClassicalKernelEnum,
-        degree=int,
+        resolution: int,
+        regularization_C: float,
+        kernel: ClassicalKernelEnum,
+        degree: int,
+        ibmq_token: str,
+        ibmq_custom_backend: str,
+        reps: int,
+        shots: int,
         backend=QuantumBackends.aer_statevector_simulator,
-        ibmq_token=str,
-        ibmq_custom_backend=str,
         feature_map=FeatureMap.z_feature_map,
         entanglement=Entanglement.linear,
-        reps=int,
-        shots=int,
+        use_quantum=False,
+        use_default_data=False,
+        visualize=False,
     ):
         self.entity_points_url = entity_points_url
         self.clusters_url = clusters_url
         self.use_quantum = use_quantum
+        self.use_default_data = use_default_data
         self.visualize = visualize
+        self.resolution = resolution
         self.regularization_C = regularization_C
         self.kernel = kernel
         self.degree = degree
@@ -208,6 +211,15 @@ class InputParameters:
 
 
 class SVMSchema(FrontendFormBaseSchema):
+    use_default_data = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Use default dataset",
+            "description": "Use internally generated dataset (no input files required)",
+            "input_type": "checkbox",
+        },
+    )
     entity_points_url = FileUrl(
         required=False,
         allow_none=True,
@@ -246,6 +258,15 @@ class SVMSchema(FrontendFormBaseSchema):
             "label": "visualize classification",
             "description": "plot the decision boundary and the support vectors for the trained classifier",
             "input_type": "checkbox",
+        },
+    )
+    resolution = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Resolution",
+            "description": "Resolution of the visualization. How finegrained the evaluation of the classifier should be.",
+            "input_type": "text",
         },
     )
     backend = EnumField(
@@ -426,7 +447,9 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             schema.fields["use_quantum"].data_key: False,
+            schema.fields["use_default_data"].data_key: False,
             schema.fields["visualize"].data_key: False,
+            schema.fields["resolution"].data_key: 80,
             schema.fields["regularization_C"].data_key: 1.0,
             schema.fields["kernel"].data_key: ClassicalKernelEnum.rbf,
             schema.fields["degree"].data_key: 3,
@@ -505,9 +528,7 @@ class SVM(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         # return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=0.24.2\nqiskit-machine-learning"
-        return (
-            "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=1.1\nqiskit-machine-learning"
-        )
+        return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=1.1\nqiskit-machine-learning"  # qiskit-terra==0.17.4 (for qiskit==0.27) but qiskit-machine-learning needs newer version?
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -599,7 +620,9 @@ def get_quantum_SVC(data, labels, input_params):
     return qsvc
 
 
-def get_visualization(svm, train_data, test_data, train_labels, test_labels, score):
+def get_visualization(
+    svm, train_data, test_data, train_labels, test_labels, score, resolution
+):
     """
     plot the classification results for training and test data and furthermore draw the decision boundary between classes
 
@@ -609,6 +632,7 @@ def get_visualization(svm, train_data, test_data, train_labels, test_labels, sco
     train_labels: ground truth classification for train_data
     test_labels: ground truth classification for test_data
     score: classification accuracy value on the train data
+    resolution: how many evaluations of the classifier in each dimension
     """
     # Matplotlib
     import matplotlib.pyplot as plt
@@ -642,11 +666,18 @@ def get_visualization(svm, train_data, test_data, train_labels, test_labels, sco
     x_max = np.max(x_values) * factor
     y_min = np.min(y_values) * factor
     y_max = np.max(y_values) * factor
-    print(x_min, x_max, y_min, y_max)
+    TASK_LOGGER.info(x_min, x_max, y_min, y_max)
 
     # generate gridpoints
-    h = 0.1  # how fine grained the background contour should be
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+
+    # how fine grained the background contour should be
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+    hx = x_range / resolution
+    hy = y_range / resolution
+    TASK_LOGGER.info("how fine grained?", hx, hy)
+
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, hx), np.arange(y_min, y_max, hy))
     grid_points = np.c_[xx.ravel(), yy.ravel()]
 
     # calculate class predictions for gridpoints
@@ -781,17 +812,22 @@ def demo_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: use_quantum='{use_quantum}'")
     visualize = input_params.visualize
     TASK_LOGGER.info(f"Loaded input parameters from db: visualize='{visualize}'")
-    entity_points_url = input_params.entity_points_url
+    use_default_data = input_params.use_default_data
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
+        f"Loaded input parameters from db: use_default_data='{use_default_data}'"
     )
-    clusters_url = input_params.clusters_url
-    TASK_LOGGER.info(f"Loaded input parameters from db: clusters_url='{clusters_url}'")
 
-    use_default_data = False  # TODO set parameter in GUI
     if use_default_data:
         points, labels = twospirals(20, turns=1.52)  # qsvm aer_statevector very slow!
     else:
+        entity_points_url = input_params.entity_points_url
+        TASK_LOGGER.info(
+            f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
+        )
+        clusters_url = input_params.clusters_url
+        TASK_LOGGER.info(
+            f"Loaded input parameters from db: clusters_url='{clusters_url}'"
+        )
         # load data from file
         entity_points = open_url(entity_points_url).json()
         clusters_entities = open_url(clusters_url).json()
@@ -855,8 +891,11 @@ def demo_task(self, db_id: int) -> str:
 
     if visualize:
         # visualize classification
+        resolution = input_params.resolution
+        TASK_LOGGER.info(f"Loaded input parameters from db: resolution='{resolution}'")
+
         figure_main = get_visualization(
-            svm, train_data, test_data, train_labels, test_labels, score
+            svm, train_data, test_data, train_labels, test_labels, score, resolution
         )
 
         # plot to html
@@ -889,87 +928,10 @@ def demo_task(self, db_id: int) -> str:
     return "DONE with accuracy: " + str(accuracy)
 
 
-# TODO quantum SVM supportvector list is empty!! why?
+# TODO quantum SVM supportvector list is empty!! why? not supposed to be used?
 # TODO hide GUI elements when irrelevant
-
-# TODO "use default dataset" gui element
 
 # (TODO neues plugin für qnn/nn für classification)
 
 # TODO (neues plugin mit Pegasos QSVC könnte interessant sein)
 # https://qiskit.org/documentation/machine-learning/tutorials/07_pegasos_qsvc.html
-
-
-# TODO read? https://medium.com/qiskit/training-quantum-kernels-for-machine-learning-using-qiskit-617f6e4ed9ac
-
-
-# https://medium.com/@patrick.huembeli/introduction-into-quantum-support-vector-machines-727f3ccfa2b4
-# ----------------------------------------------------
-# supervised classification on a quantum computer
-# ----------------------------------------------------
-#   need:
-#       datapoint X. translated into quantum datapoint by a circuit V
-#       parameterised circuit W to process data (parameters theta)
-#       measure -> return classification value
-
-# => ansatz: W(theta)V(phi(x))|0>
-# = quantum variational circuit
-
-# ------
-# QSVM
-# ------
-
-# quantum feature maps V(phi(x)) to translate classical data x into quantum states
-# build the kernel of the SVM out of these quantum states
-
-# calculate kernel matrix on the quantum computer
-# then train QSVM the same way as classical SVM
-# (there are also QSVMs where also training on quantum computer.. not useful yet)
-
-
-# Define quantum kernel
-#   inner product of the (quantum) feature maps 𝐾(𝑥⃗,𝑧⃗)=|⟨Φ(𝑥⃗)|Φ(𝑧⃗)⟩|²
-#   (idea: choose a quantum feature map that is not easy to simulate with classical computers => quantum advantage?)
-
-# Feature map
-#   ansatz: V(Φ(𝑥⃗)) = U(Φ(𝑥⃗))⊗𝐻ⁿ
-#       (simplifies a lot when we only let two qubits interact at a time
-#           => interactions ZZ and non interacting terms Z)
-#       𝐻ⁿ is the Hadamard gate applied to each qubits (n = number of qubits)
-#   classical functions:  Φᵤ(𝑥⃗) = xᵤ and Φᵤᵥ(𝑥⃗) = (π-xᵤ)(π-xᵥ).
-#   ansatz for n=2 qubits and classical data vector 𝑥⃗= (x₁, x₂):
-#       feature map: U(Φ(𝑥⃗)) = exp(i {x₁ Z₁ + x₂ Z₂ + (π - x₁)( π - x₂) Z₁ Z₂})
-#   depth of the circuits (depth 2 means we repeat the ansatz two times: V(Φ(𝑥⃗)) = U(Φ(𝑥⃗))⊗𝐻ⁿ⊗U(Φ(𝑥⃗))⊗𝐻ⁿ)
-
-# Measuring the Quantum Kernel
-#   extract info about quantum kernel from quantum circuit and feed into classical SVM algorithm
-#   we want to measure overlap f 2 states 𝐾(𝑥⃗,𝑧⃗)=|⟨Φ(𝑥⃗)|Φ(𝑧⃗)⟩|²
-#   use specific circuit and
-#   measure ourput, frequency of the measurement string [0,0,0,0,...] gives estimate of overlap  |⟨Φ(𝑥⃗)|Φ(𝑧⃗)⟩|²
-
-# Build qiskit circuit for feature map
-#   qiskit aqua:
-#       pre-built function to construct quantum circuit for V(Φ(𝑥⃗))
-#       second order expansion = the number of interacting qubits
-#       function SecondOrderExpansion:
-#           arguments:
-#               feature_dimension (dimension of the input data  𝑥⃗ == number of qubits n)
-#               depth (number of repetitions of the feature map)
-
-# QSVM Algorithm in QISKIT
-#   qiskit aqua provides pre-defined function to train the whole QSVM
-#       we have to provide: featuremap, training and test set
-#       similar to classical SVM except but Kernels come from a quantum distribution
-#   minimizes the loss 𝐿(𝑊)=∑ᵤ𝑤ᵤ−½ ∑ᵤᵥ𝑦ᵤ𝑦ᵥαᵤαᵥ 𝐾(𝑥⃗ᵤ,𝑥⃗ᵥ) by optimizing parameters W
-#   after training we can predict a label 𝑦′ of a data instance 𝑠⃗ with 𝑦′=sign(∑ᵤ𝑦ᵤαᵤ𝐾(𝑥⃗ᵤ,𝑠⃗)).
-
-# from qiskit.aqua.algorithms import QSVM
-# from qiskit.aqua import run_algorithm, QuantumInstance
-# from qiskit import BasicAer
-
-# qsvm = QSVM(feature_map, training_input, test_input)
-# backend = BasicAer.get_backend('qasm_simulator')
-# quantum_instance = QuantumInstance(backend, shots=1024, seed_simulator=10598, seed_transpiler=10598)
-# result = qsvm.run(quantum_instance)
-# print("test accuracy", result['testing_accuracy'])
-# y_test = qsvm.predict(test_set, quantum_instance)

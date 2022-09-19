@@ -15,7 +15,7 @@ from matplotlib.lines import Line2D
 
 
 def plot_classification(
-    model, X, X_train, X_test, y_train, y_test, accuracy_on_test_data
+    model, X, X_train, X_test, y_train, y_test, accuracy_on_test_data, resolution
 ):
     """
     visualize the classification results of the given model
@@ -27,6 +27,7 @@ def plot_classification(
     y_train: training labels
     y_test: test labels
     accuracy_on_test_data: (previously computed) accuracy of the models predictions on test data
+    resolution: how many evaluations of the classifier in each dimension
     """
     # number of classes
     classes = list(set(list(y_train) + list(y_test)))
@@ -49,8 +50,14 @@ def plot_classification(
     print(x_min, x_max, y_min, y_max)
 
     # generate gridpoints
-    h = 0.1  # how fine grained the background contour should be
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+
+    # how fine grained the background contour should be
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+    hx = x_range / resolution
+    hy = y_range / resolution
+
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, hx), np.arange(y_min, y_max, hy))
     grid_points = np.c_[xx.ravel(), yy.ravel()]
 
     # calculate class predictions for gridpoints

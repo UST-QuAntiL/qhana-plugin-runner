@@ -127,13 +127,14 @@ class MicroFrontend(MethodView):
             schema.fields["optimizer"].data_key: OptimizerEnum.adam,
             schema.fields["step"].data_key: 0.07,
             schema.fields["n_qubits"].data_key: 5,
+            schema.fields["resolution"].data_key: 80,
             schema.fields["N_total_iterations"].data_key: 2,
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
             schema.fields["use_default_dataset"].data_key: False,
-            schema.fields["use_quantum"].data_key: True,
+            schema.fields["use_quantum"].data_key: False,
             schema.fields["randomly_shuffle"].data_key: True,
-            schema.fields["visualize"].data_key: True,
+            schema.fields["visualize"].data_key: False,
             schema.fields["weight_init"].data_key: WeightInitEnum.uniform,
         }
 
