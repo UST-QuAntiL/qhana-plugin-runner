@@ -53,7 +53,7 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     # in order to URLs opened with qhana_plugin_runner.requests.open_url
     URL_REWRITE_RULES: Sequence[Tuple[re.Pattern, str]] = []
 
-    NISQ_ANALYZER_UI_PORT = 4201
+    NISQ_ANALYZER_UI_URL = "http://localhost:4201"
 
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):

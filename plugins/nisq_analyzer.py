@@ -1,4 +1,4 @@
-# Copyright 2021 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ class PluginsView(MethodView):
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{NISQ_BLP.name}.PluginsView"),
-                ui_href=f"http://localhost:{plugin.port}",
+                ui_href=plugin.url,
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[],
@@ -84,8 +84,8 @@ class NisqAnalyzer(QHAnaPluginBase):
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
-        self.port = app.config.get("NISQ_ANALYZER_UI_PORT", "80")
-        self.port = environ.get("NISQ_ANALYZER_UI_PORT", self.port)
+        self.url = app.config.get("NISQ_ANALYZER_UI_URL")
+        self.url = environ.get("NISQ_ANALYZER_UI_URL", self.url)
 
     def get_api_blueprint(self):
         return NISQ_BLP
