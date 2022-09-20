@@ -122,9 +122,11 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             schema.fields["test_percentage"].data_key: 0.05,
-            schema.fields["device"].data_key: QuantumBackends.aer_statevector_simulator,
-            schema.fields["shots"].data_key: 10,
-            schema.fields["optimizer"].data_key: OptimizerEnum.adam,
+            schema.fields[
+                "device"
+            ].data_key: QuantumBackends.aer_statevector_simulator.value,
+            schema.fields["shots"].data_key: 1000,
+            schema.fields["optimizer"].data_key: OptimizerEnum.adam.value,
             schema.fields["step"].data_key: 0.07,
             schema.fields["n_qubits"].data_key: 5,
             schema.fields["resolution"].data_key: 80,
@@ -135,7 +137,7 @@ class MicroFrontend(MethodView):
             schema.fields["use_quantum"].data_key: False,
             schema.fields["randomly_shuffle"].data_key: True,
             schema.fields["visualize"].data_key: False,
-            schema.fields["weight_init"].data_key: WeightInitEnum.uniform,
+            schema.fields["weight_init"].data_key: WeightInitEnum.uniform.value,
         }
 
         if "IBMQ_BACKEND" in os.environ:

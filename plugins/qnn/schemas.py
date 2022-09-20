@@ -283,7 +283,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Number of qubits",
-            "description": "Number of qubits used for the quantum circuit.",
+            "description": "Number of qubits used for the quantum circuit. Or number of features per layer of the classical NN",
             "input_type": "text",
         },
     )
@@ -292,7 +292,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Number of iterations",
-            "description": "Number of total training iterations.",
+            "description": "Number of total training iterations. I.e. number of batches used during training",
             "input_type": "text",
         },
     )
@@ -301,7 +301,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Depth",
-            "description": "Depth of the quantum circuit.",
+            "description": "Depth of the quantum circuit or classical network (number of layers)",
             "input_type": "text",
         },
     )

@@ -132,27 +132,26 @@ class ClassicalNet(nn.Module):
     Torch module implementing the classical net.
     """
 
-    def __init__(self, n_qubits, q_depth, weight_init):
+    def __init__(self, n_features, depth, weight_init):
         """
         Initialize network with preprocessing, classical and postprocessing layers
 
-        n_qubits: number of qubits
-        quantum_device: device for quantum network
-        q_depth: amount of quantum layers
+        n_features: number of features per layer
+        depth: number of layers
         weight_init: type of (random) initialization of the models weights (WeightInitEnum)
         """
 
         super().__init__()
 
-        self.pre_net = nn.Linear(2, n_qubits)
+        self.pre_net = nn.Linear(2, n_features)
 
         self.classical_net = nn.ModuleList()
         self.classical_net = nn.ModuleList(
-            [nn.Linear(n_qubits, n_qubits) for i in range(q_depth)]
+            [nn.Linear(n_features, n_features) for i in range(depth)]
+            # TODO (n_features * n_features) features instead of n_features features?
         )  # TODO how many layers?
 
-        self.post_net = nn.Linear(n_qubits, 2)
-        # TODO check..
+        self.post_net = nn.Linear(n_features, 2)
 
         # weight initialization
         self.weight_init = weight_init

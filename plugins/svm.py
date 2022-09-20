@@ -823,7 +823,18 @@ def demo_task(self, db_id: int) -> str:
     )
 
     if use_default_data:
-        points, labels = twospirals(20, turns=1.52)  # qsvm aer_statevector very slow!
+        points, labels = twospirals(50, turns=0.52)
+        # points, labels = twospirals(50, turns=1.52)
+        # shuffle (so that train and test data will both have all kinds of data)
+
+        from sklearn.preprocessing import StandardScaler
+
+        # points = StandardScaler().fit_transform(points)  # TODO remove?
+
+        indices = np.arange(len(labels))
+        np.random.shuffle(indices)  # TODO Gui element: shuffle?
+        points = points[indices]
+        labels = labels[indices]
     else:
         entity_points_url = input_params.entity_points_url
         TASK_LOGGER.info(
@@ -936,7 +947,7 @@ def demo_task(self, db_id: int) -> str:
 # TODO quantum SVM supportvector list is empty!! why? not supposed to be used?
 # TODO hide GUI elements when irrelevant
 
-# (TODO neues plugin für qnn/nn für classification)
 
+# (TODO neues plugin für qnn/nn für classification)
 # TODO (neues plugin mit Pegasos QSVC könnte interessant sein)
 # https://qiskit.org/documentation/machine-learning/tutorials/07_pegasos_qsvc.html
