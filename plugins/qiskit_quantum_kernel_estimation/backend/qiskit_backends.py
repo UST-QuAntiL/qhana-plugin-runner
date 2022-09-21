@@ -16,6 +16,7 @@ import enum
 from celery.utils.log import get_task_logger
 from qiskit import IBMQ, Aer
 
+
 TASK_LOGGER = get_task_logger(__name__)
 
 

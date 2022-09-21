@@ -17,6 +17,7 @@ import pennylane as qml
 from celery.utils.log import get_task_logger
 from qiskit import IBMQ
 
+
 TASK_LOGGER = get_task_logger(__name__)
 
 
