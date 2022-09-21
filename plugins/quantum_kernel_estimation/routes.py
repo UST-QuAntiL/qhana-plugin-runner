@@ -40,13 +40,6 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .tasks import calculation_task
 
-description = "This plugin produces the matrix for a quantum kernel. Since this depends on the expected values of " \
-              "the quantum circuit, we can only estimate it and therefore call it Quantum Kernel Estimation. " \
-              "The Plugin implements the kernels by Havlíček et al [0] and Suzuki et al [1].\n\n" \
-              "Source:\n" \
-              "[0] Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). <a href=\"https://doi.org/10.1038/s41586-019-0980-2\">https://doi.org/10.1038/s41586-019-0980-2</a>\n" \
-              "[1] Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).<a href=\"https://doi.org/10.1007/s42484-020-00020-y\">https://doi.org/10.1007/s42484-020-00020-y</a>"
-
 
 @QKE_BLP.route("/")
 class PluginsView(MethodView):
