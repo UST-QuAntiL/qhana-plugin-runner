@@ -271,9 +271,13 @@ def get_point(ent) -> List[float]:
 
 def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
     gen = load_entities(file_, mimetype=file_type)
+
+    # Yield the first element twice. This will be used to later get the dimensionality of the point attribute
     first_ent = next(gen)._asdict()
     first_ent = {'ID': first_ent['ID'], 'href': first_ent['href'], 'point': get_point(first_ent)}
     yield first_ent
+
+    # Yield all elements once in json format
     yield first_ent
     for ent in gen:
         ent = ent._asdict()
@@ -282,8 +286,12 @@ def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
 
 def json_to_json_gen(file_, file_type) -> Iterator[dict]:
     gen = load_entities(file_, mimetype=file_type)
+
+    # Yield the first element twice. This will be used to later get the dimensionality of the point attribute
     first_ent = next(gen)
     yield first_ent
+
+    # Yield all elements once in json format
     yield first_ent
     for ent in gen:
         yield ent
@@ -293,20 +301,33 @@ def json_to_json_gen(file_, file_type) -> Iterator[dict]:
 def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
     file_.encoding = "utf-8"
     input_format = file_.headers['Content-Type']
+
+    # Check input format and convert it to json format
     if input_format == 'text/csv':
         gen = csv_to_json_gen(file_, input_format)
     elif input_format == 'application/json':
         gen = json_to_json_gen(file_, input_format)
     else:
         raise ValueError(f"Converting input format {input_format} is not implemented!")
+
+    # Check the dimensionality of the points.
+    # Since all points should have the same dimensionality, checking the first point suffices.
     first_ent = next(gen)
     dim = len(first_ent['point'])
+
     return dim, gen
 
 
 def get_output(entities_url, output_format) -> (List[str], Iterator[dict], str):
+    """
+    This method first converts every input into the json format and from that it converts it to the specified output
+    format. This saves converters, but there are always two converters involved.
+    """
     file_ = open_url(entities_url, stream=True)
+    # First we load in the data and convert it into json format
     dim, json_gen = get_dim_and_json_gen(file_)
+
+    # Since everything is in json format, we can now convert it to the desired output format
     if output_format == 'text/csv':
         attributes = ['ID', 'href'] + [f"dim{d}" for d in range(dim)]
         return attributes, json_to_csv(json_gen), '.csv'
