@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, ZFeatureMap
 from qiskit_machine_learning.kernels import QuantumKernel
 import enum
