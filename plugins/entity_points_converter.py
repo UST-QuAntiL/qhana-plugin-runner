@@ -364,9 +364,9 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "converted_entity_points"+file_ending,
+            "converted_entity_points" + file_ending,
             "entity-points",
             output_format,
-            )
+        )
 
     return "Result stored in file"
