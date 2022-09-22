@@ -144,12 +144,14 @@ class ClassicalNet(nn.Module):
         super().__init__()
 
         self.pre_net = nn.Linear(2, n_features)
-
         self.classical_net = nn.ModuleList()
-        self.classical_net = nn.ModuleList(
-            [nn.Linear(n_features, n_features) for i in range(depth)]
-            # TODO (n_features * n_features) features instead of n_features features?
-        )  # TODO how many layers?
+        for i in range(depth):
+            self.classical_net.append(nn.Linear(n_features, n_features))
+            self.classical_net.append(nn.ReLU())  # TODO change?
+        # self.classical_net = nn.ModuleList(
+        #     [nn.Linear(n_features, n_features) for i in range(depth)]
+        #     # TODO (n_features * n_features) features instead of n_features features?
+        # )  # TODO how many layers?
 
         self.post_net = nn.Linear(n_features, 2)
 
@@ -164,7 +166,7 @@ class ClassicalNet(nn.Module):
                 module.weight.data.normal_(mean=0.0, std=1.0)
             elif self.weight_init == WeightInitEnum.uniform:
                 module.weight.data.uniform_()
-            elif self.weight_init == WeightInitEnum.zero:  # TODO plot completely blue
+            elif self.weight_init == WeightInitEnum.zero:  # TODO plot is completely blue?
                 module.weight.data.zero_()
             else:
                 print("unknown weight init method")

@@ -46,7 +46,7 @@ class QuantumBackends(Enum):
             print("AER_BACKEND_NAME", aer_backend_name)
             return qml.device(
                 "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
-            )  # TODO check if shots parameter exists
+            )
         elif backend_enum.name.startswith("ibmq"):
             # Use IBMQ backend
             provider = IBMQ.enable_account(ibmq_token)
@@ -57,8 +57,9 @@ class QuantumBackends(Enum):
                 backend=backend_enum.name,
                 provider=provider,
                 shots=shots,
-            )  # TODO check if shots parameter exists??
+            )
         elif backend_enum.name.startswith("custom_ibmq"):
+            # Use custom IBMQ backend
             provider = IBMQ.enable_account(ibmq_token)
 
             return qml.device(
@@ -67,7 +68,7 @@ class QuantumBackends(Enum):
                 backend=custom_backend_name,
                 provider=provider,
                 shots=shots,
-            )  # TODO check if shots parameter exists??
+            )
         else:
             # TASK_LOGGER.error
             print("Unknown pennylane backend specified!")  # TODO
@@ -76,7 +77,7 @@ class QuantumBackends(Enum):
 class OptimizerEnum(Enum):
     adadelta = "Adadelta"
     adagrad = "Adagrad"
-    adam = "Adam"  # TODO default
+    adam = "Adam"
     adamW = "AdamW"
     sparse_adam = "SparseAdam"
     adamax = "Adamax"

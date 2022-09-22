@@ -932,9 +932,11 @@ def demo_task(self, db_id: int) -> str:
             )
 
     # save support vectors in a file
-    support_vectors = []  # TODO better solution? each support vector individually?
-    support_vectors.append({"support_vectors": svm.support_vectors_.tolist()})
-
+    support_vectors = []
+    id = 0
+    for support_vector in svm.support_vectors_.tolist():
+        id += 1  # TODO id?
+        support_vectors.append({"ID": id, "href": "", "support_vector": support_vector})
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(support_vectors, output, "application/json")
         STORE.persist_task_result(
@@ -947,7 +949,12 @@ def demo_task(self, db_id: int) -> str:
 # TODO quantum SVM supportvector list is empty!! why? not supposed to be used?
 # TODO hide GUI elements when irrelevant
 
+# TODO save something else beside support vectors to file (especially for qsvm)
 
 # (TODO neues plugin für qnn/nn für classification)
 # TODO (neues plugin mit Pegasos QSVC könnte interessant sein)
 # https://qiskit.org/documentation/machine-learning/tutorials/07_pegasos_qsvc.html
+
+
+# test svc supportvector file
+# test qnn qasm file

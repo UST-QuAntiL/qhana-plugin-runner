@@ -127,6 +127,9 @@ def calculation_task(self, db_id: int) -> str:
     train and test a classical or dressed quantum classification network
     """
 
+    torch.manual_seed(42)  # TODO doesn't work?
+    np.random.seed(42)  # TODO doesn't work?
+
     # ------------------------------
     #        get input data
     # ------------------------------
@@ -217,9 +220,6 @@ def calculation_task(self, db_id: int) -> str:
     # ------------------------------
     start_time = time.time()  # Start the computation timer
 
-    torch.manual_seed(42)  # TODO doesn't work?
-    np.random.seed(42)  # TODO doesn't work?
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = None
@@ -249,8 +249,8 @@ def calculation_task(self, db_id: int) -> str:
         dev = QuantumBackends.get_pennylane_backend(
             q_device, ibmq_token, custom_backend, n_qubits, shots
         )
-        print("DEVICE", dev)
-        # dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # TODO remove
+        TASK_LOGGER.info(f"DEVICE '{dev}'")
+        # dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # pennylane simulator. faster! # TODO remove
 
         # dressed quantum network
         model = DressedQuantumNet(n_qubits, dev, q_depth, weight_init)
@@ -374,29 +374,25 @@ def calculation_task(self, db_id: int) -> str:
             "application/json",
         )
 
-    # TODO Qasm output (requires pygments>2.4 library)
-
     # save quantum circuit as qasm file
     # requires pennylane-qiskit
-    # TODO check if it works (try catch????)
     if use_quantum:
         try:
-            with SpooledTemporaryFile(mode="wt") as output:
-                qasm_str = (
-                    dev._circuit.qasm()
-                )  # formatted=True) # formatted only works with pygments>2.4
-                output.write(qasm_str)
-
+            qasm_string = dev._circuit.qasm()
+            print("QASM")
+            print(qasm_string)
+            with SpooledTemporaryFile(mode="w") as output:
+                output.write(qasm_string)
                 STORE.persist_task_result(
                     db_id,
                     output,
-                    "qasm-quantum-circuit.html",
+                    "qasm-quantum-circuit.qasm",
                     "qasm-quantum-circuit",
-                    "text/html",
+                    "application/qasm",
                 )
         except Exception as e:
-            print("Couldn't save circuit as qasm file")  # TODO
-            print(e)  # TODO
+            TASK_LOGGER.error("Couldn't save circuit as qasm file")  # TODO
+            TASK_LOGGER.error(e)  # TODO
 
     # Print final time
     total_time = time.time() - start_time
@@ -416,3 +412,8 @@ def calculation_task(self, db_id: int) -> str:
 # TODO resolution GUI parameter
 # TODO really slow with aer statevector device? (with default dataset)
 # TODO default enum values are not shown in gui....
+# TODO print -> TASKLOGGER
+
+
+# TODO separate input of training and test data
+# TODO output labels for test data?

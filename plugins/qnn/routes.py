@@ -85,9 +85,9 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the QNN plugin."""
 
-    example_inputs = {  # TODO?
-        "inputStr": "Sample input string.",
-    }
+    # example_inputs = {
+    #     "inputStr": "Sample input string.",
+    # }
 
     @QNN_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the QNN plugin.")
     @QNN_BLP.arguments(
@@ -150,10 +150,6 @@ class MicroFrontend(MethodView):
         default_values.update(data_dict)
         data_dict = default_values
 
-        # schema.fields["use_default_dataset"].data_key: True,
-        # schema.entity_points_url.data_key: "http://host.docker.internal:9090/experiments/1/data/entity_points.json/download?version=1",
-        # schema.clusters_url.data_key: "http://host.docker.internal:9090/experiments/1/data/clusters.json/download?version=1",
-
         return Response(
             render_template(
                 "simple_template.html",
@@ -163,9 +159,9 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QNN_BLP.name}.ProcessView"),
-                example_values=url_for(
-                    f"{QNN_BLP.name}.MicroFrontend", **self.example_inputs
-                ),
+                # example_values=url_for(
+                #    f"{QNN_BLP.name}.MicroFrontend", **self.example_inputs
+                # ),
             )
         )
 
