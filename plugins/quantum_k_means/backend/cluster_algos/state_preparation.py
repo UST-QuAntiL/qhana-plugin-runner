@@ -19,13 +19,7 @@ from typing import List
 
 
 class StatePreparationQuantumKMeans(Clustering):
-
-    def __init__(
-        self,
-        backend: qml.Device,
-        tol,
-        max_runs
-    ):
+    def __init__(self, backend: qml.Device, tol, max_runs):
         super(StatePreparationQuantumKMeans, self).__init__(backend, tol, max_runs)
         # Number of qbits needed to calculate "distance" between one data point and one centroid
         self.needed_qbits = 2
@@ -34,7 +28,7 @@ class StatePreparationQuantumKMeans(Clustering):
         """
         Gets k random 2D points, then standardize and normalize them.
         """
-        return self. normalize(np.random.uniform(size=(k, 2), low=-1, high=1))
+        return self.normalize(np.random.uniform(size=(k, 2), low=-1, high=1))
 
     def prep_centroids(self, centroids) -> np.ndarray:
         """
@@ -55,7 +49,9 @@ class StatePreparationQuantumKMeans(Clustering):
         """
         return np.arccos(data[:, 0])
 
-    def quantum_circuit(self, wires_to_use: List[int], data_angle: float, centroid_angle: float):
+    def quantum_circuit(
+        self, wires_to_use: List[int], data_angle: float, centroid_angle: float
+    ):
         measure_wire = wires_to_use[0]
         ancilla_wire = wires_to_use[1]
         qml.Hadamard(measure_wire)
@@ -65,23 +61,30 @@ class StatePreparationQuantumKMeans(Clustering):
         qml.CNOT(wires=[measure_wire, ancilla_wire])
         qml.Hadamard(measure_wire)
 
-    def execute_circuit(self, current_distances_calculated, data_angles: List[float], centroid_angles: np.ndarray):
+    def execute_circuit(
+        self,
+        current_distances_calculated,
+        data_angles: List[float],
+        centroid_angles: np.ndarray,
+    ):
         @qml.qnode(self.backend)
         def circuit():
             wires_to_measure = []
             for wires_to_use, indices in current_distances_calculated:
                 data_idx, centroid_idx = indices
-                self.quantum_circuit(wires_to_use, data_angles[data_idx], centroid_angles[centroid_idx])
+                self.quantum_circuit(
+                    wires_to_use, data_angles[data_idx], centroid_angles[centroid_idx]
+                )
                 wires_to_measure.append(wires_to_use[1])
             return [qml.probs(wires=[wire]) for wire in wires_to_measure]
+
         result = circuit()
         # Probability of measuring |1>
         return [probs[1] for probs in result]
 
-    def compute_new_centroid_mapping(self,
-                                     preped_data: List[float],
-                                     centroids: List[List[float]]
-                                     ) -> (List[List[int]], int):
+    def compute_new_centroid_mapping(
+        self, preped_data: List[float], centroids: List[List[float]]
+    ) -> (List[List[int]], int):
         centroid_angles = self.prep_data_for_circuit(np.array(centroids))
         centroid_mapping = np.zeros(len(preped_data), dtype=int)
         # Since we want the minimum result of our quantum circuits and the results lie within [0, 1],
@@ -98,7 +101,9 @@ class StatePreparationQuantumKMeans(Clustering):
                 if next_qbit + self.needed_qbits > self.max_qbits:
                     amount_executed_circuits += 1
                     # This adds the measurements and executes the circuits
-                    results = self.execute_circuit(current_distances_calculated, preped_data, centroid_angles)
+                    results = self.execute_circuit(
+                        current_distances_calculated, preped_data, centroid_angles
+                    )
                     # Update centroid mapping
                     for k in range(len(results)):
                         data_idx, centroid_idx = current_distances_calculated[k][1]
@@ -120,7 +125,9 @@ class StatePreparationQuantumKMeans(Clustering):
         if next_qbit != 0:
             amount_executed_circuits += 1
             # This adds the measurements and executes the circuits
-            results = self.execute_circuit(current_distances_calculated, preped_data, centroid_angles)
+            results = self.execute_circuit(
+                current_distances_calculated, preped_data, centroid_angles
+            )
             # Update centroid mapping
             for k in range(len(results)):
                 data_idx, centroid_idx = current_distances_calculated[k][1]
@@ -169,21 +176,28 @@ class StatePreparationQuantumKMeans(Clustering):
         )
 
         fig = px.scatter(
-            df, x="x", y="y", hover_name="ID", color="cluster", symbol="cluster", size="size"
+            df,
+            x="x",
+            y="y",
+            hover_name="ID",
+            color="cluster",
+            symbol="cluster",
+            size="size",
         )
         fig.show()
 
     def simpler_plot(self, preped_data, preped_centroids, centroid_mapping):
         import matplotlib.pyplot as plt
+
         clusters = [[], []]
         for i in range(len(centroid_mapping)):
             clusters[centroid_mapping[i]].append(list(preped_data[i]))
         c0 = np.array(clusters[0])
         c1 = np.array(clusters[1])
-        plt.scatter(c0[:, 0], c0[:, 1], c="blue", marker='.')
-        plt.scatter(c1[:, 0], c1[:, 1], c="red", marker='s')
-        colors = ["green"]*len(preped_centroids)
-        plt.scatter(preped_centroids[:, 0], preped_centroids[:, 1], c=colors, marker='<')
-        plt.axis('square')
+        plt.scatter(c0[:, 0], c0[:, 1], c="blue", marker=".")
+        plt.scatter(c1[:, 0], c1[:, 1], c="red", marker="s")
+        colors = ["green"] * len(preped_centroids)
+        plt.scatter(preped_centroids[:, 0], preped_centroids[:, 1], c=colors, marker="<")
+        plt.axis("square")
         plt.show()
         plt.cla()

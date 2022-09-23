@@ -71,16 +71,16 @@ def calculation_task(self, db_id: int) -> str:
     shots = input_params.shots
     TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+    TASK_LOGGER.info("Loaded input parameters from db: ibmq_token")
 
     if ibmq_token == "****":
-        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+        TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
         if "IBMQ_TOKEN" in os.environ:
             ibmq_token = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
-            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+            TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
     custom_backend = input_params.custom_backend
     TASK_LOGGER.info(

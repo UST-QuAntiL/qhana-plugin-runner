@@ -49,7 +49,7 @@ class InputParameters:
         self.variant = variant
         if tol < 0:
             raise ValueError("The tolerance must be positive")
-        self.tol = tol / 100.
+        self.tol = tol / 100.0
         self.max_runs = max_runs
         self.backend = backend
         self.shots = shots
@@ -94,10 +94,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Tolerance for Convergence Criteria",
             "description": "The tolerance is given in percentage, i.e. an input of 5 = 5%.\n"
-                           "The algorithm does multiple iterations and after each iteration it checks how the cluster assignments for our data points "
-                           "have changed. If the input tolerance is 5%, then the algorithm stops, if less than 5% of the "
-                           "assignments have changed."
-        }
+            "The algorithm does multiple iterations and after each iteration it checks how the cluster assignments for our data points "
+            "have changed. If the input tolerance is 5%, then the algorithm stops, if less than 5% of the "
+            "assignments have changed.",
+        },
     )
     max_runs = ma.fields.Integer(
         required=True,
@@ -105,7 +105,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Maximum Number of Iterations",
             "description": "The algorithms does multiple iterations. After reaching the maximum number of iterations, "
-                           "the algorithm terminates, even if the tolerance isn't reached.",
+            "the algorithm terminates, even if the tolerance isn't reached.",
             "input_type": "text",
         },
     )
@@ -126,7 +126,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "Number of times a quantum circuit gets repeatedly executed.",
             "input_type": "text",
-        }
+        },
     )
     ibmq_token = ma.fields.String(
         required=False,

@@ -32,9 +32,9 @@ class QuantumBackends(enum.Enum):
     ibmq_armonk = "ibmq_armonk"
 
     def get_max_num_qbits(
-            self,
-            ibmq_token: str,
-            custom_backend_name: str,
+        self,
+        ibmq_token: str,
+        custom_backend_name: str,
     ):
         if self.name.startswith("aer"):
             return None
@@ -49,10 +49,10 @@ class QuantumBackends(enum.Enum):
             return backend.configuration().n_qubits
 
     def get_pennylane_backend(
-            self,
-            ibmq_token: str,
-            custom_backend_name: str,
-            qubit_cnt: int,
+        self,
+        ibmq_token: str,
+        custom_backend_name: str,
+        qubit_cnt: int,
     ) -> qml.Device:
         if self.name.startswith("aer"):
             # Use local AER backend

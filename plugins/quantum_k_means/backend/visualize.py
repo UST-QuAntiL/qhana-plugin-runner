@@ -50,12 +50,19 @@ def plot_data(data_points, clusters, only_first_100=True):
                 "y": points_y,
                 "z": points_z,
                 "ID": ids,
-                "size": [10]*len(ids),
-                "cluster": cluster
+                "size": [10] * len(ids),
+                "cluster": cluster,
             }
         )
         return px.scatter_3d(
-            df, x="x", y="y", z="z", hover_name="ID", size="size", color="cluster", symbol="cluster"
+            df,
+            x="x",
+            y="y",
+            z="z",
+            hover_name="ID",
+            size="size",
+            color="cluster",
+            symbol="cluster",
         )
     elif dim == 2:
         points_x = []
@@ -83,11 +90,17 @@ def plot_data(data_points, clusters, only_first_100=True):
                 "y": points_y,
                 "ID": ids,
                 "size": [10] * len(ids),
-                "cluster": cluster
+                "cluster": cluster,
             }
         )
         return px.scatter(
-            df, x="x", y="y", hover_name="ID", size="size", color="cluster", symbol="cluster"
+            df,
+            x="x",
+            y="y",
+            hover_name="ID",
+            size="size",
+            color="cluster",
+            symbol="cluster",
         )
     else:
         points_x = []
@@ -112,9 +125,15 @@ def plot_data(data_points, clusters, only_first_100=True):
                 "y": [0] * len(ids),
                 "ID": ids,
                 "size": [10] * len(ids),
-                "cluster": cluster
+                "cluster": cluster,
             }
         )
         return px.scatter(
-            df, x="x", y="y", hover_name="ID", size="size", color="cluster", symbol="cluster"
+            df,
+            x="x",
+            y="y",
+            hover_name="ID",
+            size="size",
+            color="cluster",
+            symbol="cluster",
         )

@@ -34,29 +34,29 @@ class ClusteringEnum(enum.Enum):
     state_preparation = "State Preparation"
     positive_correlation = "Positive Correlation"
 
-    def get_cluster_algo(self,
-                         backend: Device,
-                         tol: float,
-                         max_runs: int
-                         ):
+    def get_cluster_algo(self, backend: Device, tol: float, max_runs: int):
         if self == ClusteringEnum.negative_rotation:
             from .negative_rotation import NegativeRotationQuantumKMeans
+
             return NegativeRotationQuantumKMeans(backend, tol, max_runs)
 
         elif self == ClusteringEnum.destructive_interference:
             from .destructive_interference import DestructiveInterferenceQuantumKMeans
+
             return DestructiveInterferenceQuantumKMeans(backend, tol, max_runs)
 
         elif self == ClusteringEnum.positive_correlation:
             from .positive_correlation import PositiveCorrelationQuantumKmeans
+
             return PositiveCorrelationQuantumKmeans(backend, tol, max_runs)
 
         elif self == ClusteringEnum.state_preparation:
             from .state_preparation import StatePreparationQuantumKMeans
+
             return StatePreparationQuantumKMeans(backend, tol, max_runs)
 
         else:
-            raise ValueError(f"Unkown clustering algorithm!")
+            raise ValueError("Unkown clustering algorithm!")
 
 
 class Clustering:
@@ -144,14 +144,12 @@ class Clustering:
         Returns new centroid mapping, depending on the prepared data and the current centroids
         """
 
-    def get_mean_centroids_from_mapping(self,
-                                        centroid_mapping: List[int],
-                                        preped_data: np.ndarray,
-                                        k: int
-                                        ) -> np.ndarray:
+    def get_mean_centroids_from_mapping(
+        self, centroid_mapping: List[int], preped_data: np.ndarray, k: int
+    ) -> np.ndarray:
         centroid_mapping = np.array(centroid_mapping)
         centroids = np.zeros((k, len(preped_data[0])))
-        num_points = [0]*k
+        num_points = [0] * k
         # Sum points up
         for i in range(len(centroid_mapping)):
             c = centroid_mapping[i]
@@ -197,18 +195,24 @@ class Clustering:
         global_amount_executed_circuits = 0
         while not_converged and iterations < self.max_runs:
             old_centroid_mapping = new_centroid_mapping.copy()
-            new_centroid_mapping, amount_executed_circuits = self.compute_new_centroid_mapping(circuit_data, preped_centroids)
+            (
+                new_centroid_mapping,
+                amount_executed_circuits,
+            ) = self.compute_new_centroid_mapping(circuit_data, preped_centroids)
             global_amount_executed_circuits += amount_executed_circuits
 
-            centroids = self.get_mean_centroids_from_mapping(new_centroid_mapping, preped_data, k)
+            centroids = self.get_mean_centroids_from_mapping(
+                new_centroid_mapping, preped_data, k
+            )
             preped_centroids = self.prep_centroids(centroids)
 
-            not_converged = not self.check_convergence(old_centroid_mapping, new_centroid_mapping)
+            not_converged = not self.check_convergence(
+                old_centroid_mapping, new_centroid_mapping
+            )
             iterations += 1
             TASK_LOGGER.info(f"Iteration {iterations} done")
 
         return np.array(new_centroid_mapping, dtype=int)
-
 
     # These methods were for debug purposes
     @abstractmethod

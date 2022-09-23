@@ -20,13 +20,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 class PositiveCorrelationQuantumKmeans(Clustering):
-
-    def __init__(
-            self,
-            backend: qml.Device,
-            tol,
-            max_runs
-    ):
+    def __init__(self, backend: qml.Device, tol, max_runs):
         super(PositiveCorrelationQuantumKmeans, self).__init__(backend, tol, max_runs)
         # Number of qbits needed to calculate "distance" between one data point and one centroid
         self.needed_qbits = 3
@@ -52,8 +46,8 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         """
         mapped_data = []
         for d_point in cartesian_points:
-            phi = (d_point[0] + 1) * np.pi / 2.
-            theta = (d_point[1] + 1) * np.pi / 2.
+            phi = (d_point[0] + 1) * np.pi / 2.0
+            theta = (d_point[1] + 1) * np.pi / 2.0
             mapped_data.append([phi, theta])
         return np.array(mapped_data)
 
@@ -70,7 +64,9 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         """
         return self.map_to_zero_to_2pi(data)
 
-    def quantum_circuit(self, wires_to_use: List[int], data: List[float], centroid: List[float]):
+    def quantum_circuit(
+        self, wires_to_use: List[int], data: List[float], centroid: List[float]
+    ):
         centroid_wire = wires_to_use[0]
         data_wire = wires_to_use[1]
         measure_wire = wires_to_use[2]
@@ -80,23 +76,30 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         qml.CSWAP(wires=[measure_wire, centroid_wire, data_wire])
         qml.Hadamard(measure_wire)
 
-    def execute_circuit(self, current_distances_calculated, data_angles: List[float], centroid_angles: np.ndarray):
+    def execute_circuit(
+        self,
+        current_distances_calculated,
+        data_angles: List[float],
+        centroid_angles: np.ndarray,
+    ):
         @qml.qnode(self.backend)
         def circuit():
             wires_to_measure = []
             for wires_to_use, indices in current_distances_calculated:
                 data_idx, centroid_idx = indices
-                self.quantum_circuit(wires_to_use, data_angles[data_idx], centroid_angles[centroid_idx])
+                self.quantum_circuit(
+                    wires_to_use, data_angles[data_idx], centroid_angles[centroid_idx]
+                )
                 wires_to_measure.append(wires_to_use[2])
             return [qml.probs(wires=[wire]) for wire in wires_to_measure]
+
         result = circuit()
         # Probability of measuring |1>
         return [probs[1] for probs in result]
 
-    def compute_new_centroid_mapping(self,
-                                     preped_data: List[float],
-                                     centroids: List[List[float]]
-                                     ) -> (List[List[int]], int):
+    def compute_new_centroid_mapping(
+        self, preped_data: List[float], centroids: List[List[float]]
+    ) -> (List[List[int]], int):
         """
         Performs the positive correlation quantum KMeans accordingly to
         https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76
@@ -117,7 +120,9 @@ class PositiveCorrelationQuantumKmeans(Clustering):
                 if next_qbit + self.needed_qbits > self.max_qbits:
                     amount_executed_circuits += 1
                     # This adds the measurements and executes the circuits
-                    results = self.execute_circuit(current_distances_calculated, preped_data, centroid_angles)
+                    results = self.execute_circuit(
+                        current_distances_calculated, preped_data, centroid_angles
+                    )
                     # Update centroid mapping
                     for k in range(len(results)):
                         data_idx, centroid_idx = current_distances_calculated[k][1]
@@ -139,7 +144,9 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         if next_qbit != 0:
             amount_executed_circuits += 1
             # This adds the measurements and executes the circuits
-            results = self.execute_circuit(current_distances_calculated, preped_data, centroid_angles)
+            results = self.execute_circuit(
+                current_distances_calculated, preped_data, centroid_angles
+            )
             # Update centroid mapping
             for k in range(len(results)):
                 data_idx, centroid_idx = current_distances_calculated[k][1]
@@ -188,7 +195,13 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         )
 
         fig = px.scatter(
-            df, x="x", y="y", hover_name="ID", color="cluster", symbol="cluster", size="size"
+            df,
+            x="x",
+            y="y",
+            hover_name="ID",
+            color="cluster",
+            symbol="cluster",
+            size="size",
         )
         fig.show()
 

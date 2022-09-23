@@ -19,13 +19,7 @@ from typing import List
 
 
 class DestructiveInterferenceQuantumKMeans(Clustering):
-
-    def __init__(
-        self,
-        backend: qml.Device,
-        tol,
-        max_runs
-    ):
+    def __init__(self, backend: qml.Device, tol, max_runs):
         super(DestructiveInterferenceQuantumKMeans, self).__init__(backend, tol, max_runs)
         # Number of qbits needed to calculate "distance" between one data point and one centroid
         self.needed_qbits = 2
@@ -68,7 +62,9 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
         """
         return self.calculate_angles(data)
 
-    def quantum_circuit(self, wires_to_use: List[int], data_angle: float, centroid_angle: float):
+    def quantum_circuit(
+        self, wires_to_use: List[int], data_angle: float, centroid_angle: float
+    ):
         measure_wire = wires_to_use[0]
         ancilla_wire = wires_to_use[1]
         relative_angle = np.abs(data_angle - centroid_angle)
@@ -79,23 +75,30 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
         qml.RY(relative_angle, wires=ancilla_wire)
         qml.Hadamard(measure_wire)
 
-    def execute_circuit(self, current_distances_calculated, data_angles: List[float], centroid_angles: np.ndarray):
+    def execute_circuit(
+        self,
+        current_distances_calculated,
+        data_angles: List[float],
+        centroid_angles: np.ndarray,
+    ):
         @qml.qnode(self.backend)
         def circuit():
             wires_to_measure = []
             for wires_to_use, indices in current_distances_calculated:
                 data_idx, centroid_idx = indices
-                self.quantum_circuit(wires_to_use, data_angles[data_idx], centroid_angles[centroid_idx])
+                self.quantum_circuit(
+                    wires_to_use, data_angles[data_idx], centroid_angles[centroid_idx]
+                )
                 wires_to_measure.append(wires_to_use[0])
             return [qml.probs(wires=[wire]) for wire in wires_to_measure]
+
         result = circuit()
         # Probability of measuring |1>
         return [probs[1] for probs in result]
 
-    def compute_new_centroid_mapping(self,
-                                     preped_data: List[float],
-                                     centroids: List[List[float]]
-                                     ) -> (List[List[int]], int):
+    def compute_new_centroid_mapping(
+        self, preped_data: List[float], centroids: List[List[float]]
+    ) -> (List[List[int]], int):
         centroid_angles = self.calculate_angles(centroids)
         centroid_mapping = np.zeros(len(preped_data), dtype=int)
         # Since we want the minimum result of our quantum circuits and the results lie within [0, 1],
@@ -112,7 +115,9 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
                 if next_qbit + self.needed_qbits > self.max_qbits:
                     amount_executed_circuits += 1
                     # This adds the measurements and executes the circuits
-                    results = self.execute_circuit(current_distances_calculated, preped_data, centroid_angles)
+                    results = self.execute_circuit(
+                        current_distances_calculated, preped_data, centroid_angles
+                    )
                     # Update centroid mapping
                     for k in range(len(results)):
                         data_idx, centroid_idx = current_distances_calculated[k][1]
@@ -134,7 +139,9 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
         if next_qbit != 0:
             amount_executed_circuits += 1
             # This adds the measurements and executes the circuits
-            results = self.execute_circuit(current_distances_calculated, preped_data, centroid_angles)
+            results = self.execute_circuit(
+                current_distances_calculated, preped_data, centroid_angles
+            )
             # Update centroid mapping
             for k in range(len(results)):
                 data_idx, centroid_idx = current_distances_calculated[k][1]
@@ -188,7 +195,13 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
         )
 
         fig = px.scatter(
-            df, x="x", y="y", hover_name="ID", color="cluster", symbol="cluster", size="size"
+            df,
+            x="x",
+            y="y",
+            hover_name="ID",
+            color="cluster",
+            symbol="cluster",
+            size="size",
         )
         fig.show()
 
