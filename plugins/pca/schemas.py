@@ -57,6 +57,7 @@ class ParameterHandler:
     """
     This class takes all the parameters set in the front end, prepares them and makes them available via a get method.
     """
+
     def __init__(self, parameter_dict: dict, TASK_LOGGER: Logger):
         self.parameter_keys = [
             "entityPointsUrl",  # general parameters
@@ -73,13 +74,15 @@ class ParameterHandler:
             "kernelCoef",
             "maxItr",
             "tol",
-            "iteratedPower"
+            "iteratedPower",
         ]
         self.parameter_dict = parameter_dict
         # Prevents the log and check to throw an error, when there is no entity URL,
         # if we are using the precomputed kernel option
-        if self.parameter_dict.get("kernel", None) == KernelEnum.precomputed.value and \
-            self.parameter_dict.get("pcaType", None) != PCATypeEnum.kernel:
+        if (
+            self.parameter_dict.get("kernel", None) == KernelEnum.precomputed.value
+            and self.parameter_dict.get("pcaType", None) != PCATypeEnum.kernel
+        ):
             self.parameter_dict["entityPointsUrl"] = "No URL"
         # Prevents the log and check to throw an error, when there is no kernel URL,
         # if we are NOT using the precomputed kernel option
@@ -119,7 +122,7 @@ class ParameterHandler:
         if self.parameter_dict["dimensions"] <= 0:
             self.parameter_dict["dimensions"] = None
             if self.parameter_dict["pcaType"] == PCATypeEnum.normal:
-                self.parameter_dict["dimensions"] = 'mle'
+                self.parameter_dict["dimensions"] = "mle"
         # If tolerance tol is set to <= 0, then we set it as follows
         if self.parameter_dict["tol"] <= 0:
             # 1e-8 for sparse PCA
@@ -132,7 +135,7 @@ class ParameterHandler:
 
         # If iterated power is set to <= 0, then it should be chosen automatically
         if self.parameter_dict["iteratedPower"] <= 0:
-            self.parameter_dict["iteratedPower"] = 'auto'
+            self.parameter_dict["iteratedPower"] = "auto"
 
     def get(self, key):
         return self.parameter_dict[key]
@@ -169,7 +172,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Dimensions",
             "description": "Number of dimensions k that the output will have."
-                           "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
+            "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
             "input_type": "text",
         },
     )
@@ -189,7 +192,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Batch Size",
             "description": "Batch size used when executing Incremental PCA. "
-                           "The batch size will be automatically set to at least the number of dimensions k.",
+            "The batch size will be automatically set to at least the number of dimensions k.",
             "input_type": "text",
         },
     )
@@ -208,7 +211,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Ridge shrinkage",
             "description": "To avoid instability issues in case the system is under-determined, "
-                            "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
+            "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
             "input_type": "text",
         },
     )
@@ -218,7 +221,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Kernel",
-            "description": "Type of kernel that should be used, e.g. poly kernel \'k(x,y) = (ɣ x^T y + c)^d\'",
+            "description": "Type of kernel that should be used, e.g. poly kernel 'k(x,y) = (ɣ x^T y + c)^d'",
             "input_type": "select",
         },
     )
@@ -230,8 +233,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Kernel matrix URL",
             "description": "URL to a json file, containing the kernel matrix."
-                           "Note that only kernel matrices between the same set of points X can be processed here, "
-                           "i.e. K(X, X)",
+            "Note that only kernel matrices between the same set of points X can be processed here, "
+            "i.e. K(X, X)",
             "input_type": "text",
         },
     )
@@ -240,7 +243,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Degree",
-            "description": "Degree \'d\' of poly kernel.",
+            "description": "Degree 'd' of poly kernel.",
             "input_type": "text",
         },
     )
@@ -249,7 +252,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Kernel Coefficient",
-            "description": f"Kernel coefficient \'ɣ\' in rbf, poly and sigmoid kernel.",
+            "description": "Kernel coefficient 'ɣ' in rbf, poly and sigmoid kernel.",
             "input_type": "text",
         },
     )
@@ -258,7 +261,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Independent Term in Kernel",
-            "description": f"Independent term \'c\' in poly and sigmoid kernel.",
+            "description": "Independent term 'c' in poly and sigmoid kernel.",
             "input_type": "text",
         },
     )
@@ -267,7 +270,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_None=False,
         metadata={
             "label": "Max Number of Iterations",
-            "description": f"The maximum number of iterations that sparse PCA performs.",
+            "description": "The maximum number of iterations that sparse PCA performs.",
             "input_type": "text",
         },
     )
@@ -276,8 +279,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_None=False,
         metadata={
             "label": "Error Tolerance",
-            "description": f"Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
-                           f"If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
+            "description": "Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
+            "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
             "input_type": "text",
         },
     )
@@ -286,8 +289,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_None=False,
         metadata={
             "label": "Iterated Power",
-            "description": f"This sets the iterated power parameter for the randomized solver. \n"
-                           f"If it is set to <= 0, the iterated power will be chosen automatically.",
+            "description": "This sets the iterated power parameter for the randomized solver. \n"
+            "If it is set to <= 0, the iterated power will be chosen automatically.",
             "input_type": "text",
         },
     )

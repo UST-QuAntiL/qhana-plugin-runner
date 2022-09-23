@@ -36,10 +36,12 @@ sklearn_version = "0.24.2"
 class PCA(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "The PCA Plugin reduces the number of dimensions by computing the principle components.\n" \
-                  "The new orthonormal basis consists of the k first principle components. " \
-                  "The methods implemented here are from scikit-learn. " \
-                  f"Currently this plugin uses scikit-learn version {sklearn_version}."
+    description = (
+        "The PCA Plugin reduces the number of dimensions by computing the principle components.\n"
+        "The new orthonormal basis consists of the k first principle components. "
+        "The methods implemented here are from scikit-learn. "
+        f"Currently this plugin uses scikit-learn version {sklearn_version}."
+    )
     tags = ["dimension-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -49,9 +51,7 @@ class PCA(QHAnaPluginBase):
         return PCA_BLP
 
     def get_requirements(self) -> str:
-        return f"scikit-learn~={sklearn_version}\n" \
-               "plotly~=5.3.1\n" \
-               "pandas~=1.4.1"
+        return f"scikit-learn~={sklearn_version}\nplotly~=5.3.1\npandas~=1.4.1"
 
 
 try:

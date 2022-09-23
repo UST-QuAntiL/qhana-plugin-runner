@@ -26,7 +26,7 @@ def pca_output(pca: PCA) -> (dict, int):
         "type": "normal",
         "components": pca.components_.tolist(),
         "mean": pca.mean_.tolist(),
-        "explained_variance": pca.explained_variance_.tolist()
+        "explained_variance": pca.explained_variance_.tolist(),
     }
     dim = pca.n_components_
     return pca_out, dim
@@ -37,7 +37,7 @@ def incremental_pca_output(pca: IncrementalPCA) -> (dict, int):
         "type": "incremental",
         "components": pca.components_.tolist(),
         "mean": pca.mean_.tolist(),
-        "explained_variance": pca.explained_variance_.tolist()
+        "explained_variance": pca.explained_variance_.tolist(),
     }
     dim = pca.n_components_
     return incremental_pca_out, dim
@@ -48,7 +48,7 @@ def sparse_pca_output(pca: SparsePCA) -> (dict, int):
         "type": "sparse",
         "components": pca.components_.tolist(),
         "mean": pca.mean_.tolist(),
-        "regularization_strength": pca.ridge_alpha
+        "regularization_strength": pca.ridge_alpha,
     }
     dim = pca.n_components_
     return sparse_pca_out, dim
@@ -59,12 +59,11 @@ def kernel_pca_output(pca: KernelPCA) -> (dict, int):
         "type": "kernel",
         "eigenvalues": pca.lambdas_.tolist(),
         "eigenvectors": pca.alphas_.tolist(),
-        "kernel_centerer":
-            {
-                "K_fit_rows": pca._centerer.K_fit_rows_.tolist(),
-                "K_fit_all": pca._centerer.K_fit_all_.tolist()
-            },
-        "training_data": pca.X_fit_.tolist()
+        "kernel_centerer": {
+            "K_fit_rows": pca._centerer.K_fit_rows_.tolist(),
+            "K_fit_all": pca._centerer.K_fit_all_.tolist(),
+        },
+        "training_data": pca.X_fit_.tolist(),
     }
     # These values are for the get_kernel methode of KernelPCA.
     # This might has to be expanded/changed, if more functionality is added
@@ -93,4 +92,6 @@ def pca_to_output(pca: BaseEstimator) -> (dict, int):
     elif type(pca) == KernelPCA:
         return kernel_pca_output(pca)
     else:
-        raise ValueError(f"Creating an output for object type {type(pca)} is not implemented!")
+        raise ValueError(
+            f"Creating an output for object type {type(pca)} is not implemented!"
+        )

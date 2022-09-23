@@ -57,15 +57,15 @@ def get_entity_generator(entity_points_url: str, stream=False):
     file_ = open_url(entity_points_url, stream=stream)
     file_.encoding = "utf-8"
     # if entity_points_url[-3:] == "csv":
-    file_type = file_.headers['Content-Type']
-    if file_type == 'text/csv':
+    file_type = file_.headers["Content-Type"]
+    if file_type == "text/csv":
         for ent in load_entities(file_, mimetype=file_type):
             ent = ent._asdict()
             point = get_points(ent)
             prepared_ent = {"ID": ent["ID"], "href": ent["href"], "point": point}
             yield prepared_ent
         # return load_entities(file_, mimetype="text/csv")
-    elif file_type == 'application/json':
+    elif file_type == "application/json":
         for ent in load_entities(file_, mimetype=file_type):
             yield ent
 
@@ -158,10 +158,10 @@ def get_correct_pca(input_params: ParameterHandler):
         #                  f"\n\ttol={input_params.get('tol')}"
         #                  f"\n\titerated_power={input_params.get('iteratedPower')}")
         return PCA(
-            n_components=input_params.get('dimensions'),
+            n_components=input_params.get("dimensions"),
             svd_solver=input_params.get("solver"),
-            tol=input_params.get('tol'),
-            iterated_power=input_params.get('iteratedPower')
+            tol=input_params.get("tol"),
+            iterated_power=input_params.get("iteratedPower"),
         )
     elif pca_type == PCATypeEnum.incremental.value:
         # For Debugging
@@ -169,7 +169,7 @@ def get_correct_pca(input_params: ParameterHandler):
         #                  f"\n\tn_components={input_params.get('dimensions')}"
         #                  f"\n\tbatch_size={input_params.get('batchSize')}")
         return IncrementalPCA(
-            n_components=input_params.get('dimensions'),
+            n_components=input_params.get("dimensions"),
             batch_size=input_params.get("batchSize"),
         )
     elif pca_type == PCATypeEnum.sparse.value:
@@ -181,16 +181,16 @@ def get_correct_pca(input_params: ParameterHandler):
         #                  f"\n\tmax_iter={input_params.get('maxItr')}"
         #                  f"\n\ttol={input_params.get('tol')}")
         return SparsePCA(
-            n_components=input_params.get('dimensions'),
+            n_components=input_params.get("dimensions"),
             alpha=input_params.get("sparsityAlpha"),
             ridge_alpha=input_params.get("ridgeAlpha"),
-            max_iter=input_params.get('maxItr'),
-            tol=input_params.get('tol')
+            max_iter=input_params.get("maxItr"),
+            tol=input_params.get("tol"),
         )
     elif pca_type == PCATypeEnum.kernel.value:
         eigen_solver = input_params.get("solver")
-        if eigen_solver == 'full':
-            eigen_solver = 'dense'
+        if eigen_solver == "full":
+            eigen_solver = "dense"
         # For Debugging
         # TASK_LOGGER.info(f"\nKernel PCA with parameters:"
         #                 f"\n\tn_components={input_params.get('dimensions')}"
@@ -201,13 +201,13 @@ def get_correct_pca(input_params: ParameterHandler):
         #                 f"\n\teigen_solver={eigen_solver}"
         #                 f"\n\ttol={input_params.get('tol')}")
         return KernelPCA(
-            n_components=input_params.get('dimensions'),
+            n_components=input_params.get("dimensions"),
             kernel=input_params.get("kernel"),
             degree=input_params.get("degree"),
             gamma=input_params.get("kernelGamma"),
             coef0=input_params.get("kernelCoef"),
             eigen_solver=eigen_solver,
-            tol=input_params.get('tol'),
+            tol=input_params.get("tol"),
             # iterated_power=input_params.get('iteratedPower')  # This parameter is available in scikit-learn version ~= 1.0.2
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
@@ -283,6 +283,7 @@ def precomputed_kernel_fitting(kernel_url: str, pca):
     # Here we only allow kernel matrices between the same points. K(X, X)
     return prepare_static_output(transformed_points, id_to_idx_X)
 
+
 # This is used, when the pca can be incrementally fitted via batches
 # In this method the input data is loaded in batchwise
 def batch_fitting(entity_points_url, pca, batch_size):
@@ -340,13 +341,14 @@ def plot_data(entity_points, dim, only_first_100):
     """
     import pandas as pd
     import plotly.express as px
+
     if dim >= 3:
         points_x = []
         points_y = []
         points_z = []
         ids = []
         if only_first_100:
-            for i in range(100):
+            for _ in range(100):
                 entity = next(entity_points)
                 points_x.append(float(entity["dim0"]))
                 points_y.append(float(entity["dim1"]))
@@ -364,18 +366,16 @@ def plot_data(entity_points, dim, only_first_100):
                 "y": points_y,
                 "z": points_z,
                 "ID": ids,
-                "size": [10]*len(ids),
+                "size": [10] * len(ids),
             }
         )
-        return px.scatter_3d(
-            df, x="x", y="y", z="z", hover_name="ID", size="size"
-        )
+        return px.scatter_3d(df, x="x", y="y", z="z", hover_name="ID", size="size")
     elif dim == 2:
         points_x = []
         points_y = []
         ids = []
         if only_first_100:
-            for i in range(100):
+            for _ in range(100):
                 entity = next(entity_points)
                 points_x.append(float(entity["dim0"]))
                 points_y.append(float(entity["dim1"]))
@@ -393,14 +393,12 @@ def plot_data(entity_points, dim, only_first_100):
                 "size": [10] * len(ids),
             }
         )
-        return px.scatter(
-            df, x="x", y="y", hover_name="ID", size="size"
-        )
+        return px.scatter(df, x="x", y="y", hover_name="ID", size="size")
     else:
         points_x = []
         ids = []
         if only_first_100:
-            for i in range(100):
+            for _ in range(100):
                 entity = next(entity_points)
                 points_x.append(float(entity["dim0"]))
                 ids.append(entity["ID"])
@@ -416,19 +414,25 @@ def plot_data(entity_points, dim, only_first_100):
                 "size": [10] * len(ids),
             }
         )
-        return px.scatter(
-            df, x="x", y="y", hover_name="ID", size="size"
-        )
+        return px.scatter(df, x="x", y="y", hover_name="ID", size="size")
 
 
-def save_outputs(db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim):
+def save_outputs(
+    db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim
+):
     """
     Saves the plugin's ouput into files. This includes a plot of the transformed data, the pca's parameters and
     the transformed points themselves.
     """
-    TASK_LOGGER.info(f"entity_points_for_plot is not None = {entity_points_for_plot is not None}")
+    TASK_LOGGER.info(
+        f"entity_points_for_plot is not None = {entity_points_for_plot is not None}"
+    )
     if entity_points_for_plot is not None:
-        fig = plot_data(entity_points_for_plot, dim, only_first_100=(pca_output[0]["type"] == 'incremental'))
+        fig = plot_data(
+            entity_points_for_plot,
+            dim,
+            only_first_100=(pca_output[0]["type"] == "incremental"),
+        )
 
         with SpooledTemporaryFile(mode="wt") as output:
             html = fig.to_html()
@@ -489,9 +493,16 @@ def calculation_task(self, db_id: int) -> str:
     if input_params.get("pcaType") == PCATypeEnum.incremental.value:
         batch_size = input_params.get("batchSize")
         batch_fitting(entity_points_url, pca, batch_size)
-        entity_points = prepare_stream_output(get_entity_generator(entity_points_url, stream=True), pca)
-        entity_points_for_plot = prepare_stream_output(get_entity_generator(entity_points_url, stream=True), pca)
-    elif input_params.get("pcaType") == PCATypeEnum.kernel.value and input_params.get("kernel") == KernelEnum.precomputed.value:
+        entity_points = prepare_stream_output(
+            get_entity_generator(entity_points_url, stream=True), pca
+        )
+        entity_points_for_plot = prepare_stream_output(
+            get_entity_generator(entity_points_url, stream=True), pca
+        )
+    elif (
+        input_params.get("pcaType") == PCATypeEnum.kernel.value
+        and input_params.get("kernel") == KernelEnum.precomputed.value
+    ):
         entity_points = precomputed_kernel_fitting(kernel_url, pca)
         entity_points_for_plot = entity_points
     # Since the other PCAs need the complete dataset at once, we load it in at once
@@ -507,6 +518,8 @@ def calculation_task(self, db_id: int) -> str:
         entity_points_for_plot = None
     # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
     attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
-    save_outputs(db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim)
+    save_outputs(
+        db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim
+    )
 
     return "Result stored in file"
