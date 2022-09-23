@@ -297,12 +297,12 @@ def json_to_json_gen(file_, file_type) -> Iterator[dict]:
         yield ent
 
 
-# Generators provided here, must include the first entity twice, to extract the dimensionality from it
 def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
     file_.encoding = "utf-8"
     input_format = file_.headers['Content-Type']
 
     # Check input format and convert it to json format
+    # Generators provided here, must include the first entity twice, to extract the dimensionality from it!
     if input_format == 'text/csv':
         gen = csv_to_json_gen(file_, input_format)
     elif input_format == 'application/json':
