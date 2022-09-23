@@ -73,6 +73,7 @@ class NegativeRotationQuantumKMeans(Clustering):
         qml.RY(-centroid_angle, wires=wires_to_use)  # negative centeroid angle rotation
 
     def execute_circuit(self, current_distances_calculated, data_angles: List[float], centroid_angles: np.ndarray):
+
         @qml.qnode(self.backend)
         def circuit():
             wires_to_measure = []
@@ -81,8 +82,9 @@ class NegativeRotationQuantumKMeans(Clustering):
                 self.quantum_circuit(wires_to_use, data_angles[data_idx], centroid_angles[centroid_idx])
                 wires_to_measure.append(wires_to_use[0])
             return [qml.probs(wires=[wire]) for wire in wires_to_measure]
+
         result = circuit()
-        # Probability of measuring |0>
+        # return probability of measuring |0>
         return [probs[0] for probs in result]
 
     def compute_new_centroid_mapping(self,
