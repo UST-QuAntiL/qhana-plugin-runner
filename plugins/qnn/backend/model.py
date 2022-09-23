@@ -144,14 +144,11 @@ class ClassicalNet(nn.Module):
         super().__init__()
 
         self.pre_net = nn.Linear(2, n_features)
-        self.classical_net = nn.ModuleList()
-        for i in range(depth):
-            self.classical_net.append(nn.Linear(n_features, n_features))
-            self.classical_net.append(nn.ReLU())  # TODO change?
-        # self.classical_net = nn.ModuleList(
-        #     [nn.Linear(n_features, n_features) for i in range(depth)]
-        #     # TODO (n_features * n_features) features instead of n_features features?
-        # )  # TODO how many layers?
+
+        self.relu = nn.ReLU()
+        self.classical_net = nn.ModuleList(
+            [nn.Linear(n_features, n_features) for i in range(depth)]
+        )
 
         self.post_net = nn.Linear(n_features, 2)
 
@@ -181,12 +178,13 @@ class ClassicalNet(nn.Module):
         """
 
         # preprocessing layer
-        pre_out = self.pre_net(input_features)
-        out = torch.tanh(pre_out)
+        out = self.pre_net(input_features)
+        # out = torch.tanh(out)
 
         # classical net
         for i, layer in enumerate(self.classical_net):
-            out = layer(out)
+            out = self.relu(layer(out))
+
         c_out = torch.tanh(out)
 
         # postprocessing layer
