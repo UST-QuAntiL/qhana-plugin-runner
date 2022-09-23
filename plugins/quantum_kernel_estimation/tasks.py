@@ -90,7 +90,9 @@ def calculation_task(self, db_id: int) -> str:
     kernel_enum = input_params.kernel
     TASK_LOGGER.info(f"Loaded input parameters from db: kernel_enum='{kernel_enum}'")
     entanglement_pattern = input_params.entanglement_pattern
-    TASK_LOGGER.info(f"Loaded input parameters from db: entanglement_pattern='{entanglement_pattern}'")
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: entanglement_pattern='{entanglement_pattern}'"
+    )
     n_qbits = input_params.n_qbits
     TASK_LOGGER.info(f"Loaded input parameters from db: n_qbits='{n_qbits}'")
     reps = input_params.reps
@@ -100,16 +102,16 @@ def calculation_task(self, db_id: int) -> str:
     backend = input_params.backend
     TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+    TASK_LOGGER.info("Loaded input parameters from db: ibmq_token")
 
     if ibmq_token == "****":
-        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+        TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
         if "IBMQ_TOKEN" in os.environ:
             ibmq_token = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
-            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+            TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
     custom_backend = input_params.custom_backend
     TASK_LOGGER.info(
@@ -136,7 +138,13 @@ def calculation_task(self, db_id: int) -> str:
     kernel_json = []
     for ent_id_x, idx_x in id_to_idx_x.items():
         for ent_id_y, idx_y in id_to_idx_y.items():
-            kernel_json.append({"entity_1_ID": ent_id_y, "entity_2_ID": ent_id_x, "kernel": kernel_matrix[idx_y, idx_x]})
+            kernel_json.append(
+                {
+                    "entity_1_ID": ent_id_y,
+                    "entity_2_ID": ent_id_x,
+                    "kernel": kernel_matrix[idx_y, idx_x],
+                }
+            )
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(kernel_json, output, "application/json")

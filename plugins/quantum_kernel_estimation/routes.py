@@ -71,7 +71,7 @@ class PluginsView(MethodView):
                         content_type=["application/json"],
                         required=True,
                         parameter="entityPointsUrl2",
-                    )
+                    ),
                 ],
                 data_output=[
                     DataMetadata(

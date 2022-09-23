@@ -26,7 +26,6 @@ import numpy as np
 
 
 class SuzukiKernelEq8(ZZKernel):
-
     def __init__(self, backend, n_qbits, reps, entanglement_pattern):
         super().__init__(backend, n_qbits, reps, entanglement_pattern)
 
@@ -40,21 +39,19 @@ class SuzukiKernelEq8(ZZKernel):
 
 
 class SuzukiKernelEq9(ZZKernel):
-
     def __init__(self, backend, n_qbits, reps, entanglement_pattern):
         super().__init__(backend, n_qbits, reps, entanglement_pattern)
 
     def feature_map(self, x) -> float:
-        result = np.pi/2.
+        result = np.pi / 2.0
         if len(x) == 1:
             return x[0]
         for x_i in x:
-            result *= (1 - x_i)
+            result *= 1 - x_i
         return result
 
 
 class SuzukiKernelEq10(ZZKernel):
-
     def __init__(self, backend, n_qbits, reps, entanglement_pattern):
         super().__init__(backend, n_qbits, reps, entanglement_pattern)
 
@@ -67,23 +64,21 @@ class SuzukiKernelEq10(ZZKernel):
                 if i != j:
                     square_diff.append((x_i - x_j) * (x_j - x_i))
         mean = np.array(square_diff).mean()
-        return np.pi * np.exp(mean / 8.)
+        return np.pi * np.exp(mean / 8.0)
 
 
 class SuzukiKernelEq11(ZZKernel):
-
     def __init__(self, backend, n_qbits, reps, entanglement_pattern):
         super().__init__(backend, n_qbits, reps, entanglement_pattern)
 
     def feature_map(self, x) -> float:
         if len(x) == 1:
             return x[0]
-        x = 1. / np.cos(x)
-        return np.pi / 3. * np.product(x)
+        x = 1.0 / np.cos(x)
+        return np.pi / 3.0 * np.product(x)
 
 
 class SuzukiKernelEq12(ZZKernel):
-
     def __init__(self, backend, n_qbits, reps, entanglement_pattern):
         super().__init__(backend, n_qbits, reps, entanglement_pattern)
 

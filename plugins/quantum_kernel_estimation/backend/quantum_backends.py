@@ -36,9 +36,9 @@ class QuantumBackends(enum.Enum):
     ibmq_armonk = "ibmq_armonk"
 
     def get_max_num_qbits(
-            self,
-            ibmq_token: str,
-            custom_backend_name: str,
+        self,
+        ibmq_token: str,
+        custom_backend_name: str,
     ):
         if self.name.startswith("aer"):
             return None
@@ -68,10 +68,7 @@ class QuantumBackends(enum.Enum):
             provider = IBMQ.enable_account(ibmq_token)
 
             return qml.device(
-                "qiskit.ibmq",
-                wires=qubit_cnt,
-                backend=self.name,
-                provider=provider
+                "qiskit.ibmq", wires=qubit_cnt, backend=self.name, provider=provider
             )
         elif self.name.startswith("custom_ibmq"):
             provider = IBMQ.enable_account(ibmq_token)

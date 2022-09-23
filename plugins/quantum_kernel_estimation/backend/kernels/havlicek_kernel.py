@@ -24,7 +24,6 @@ import numpy as np
 
 
 class HavlicekKernel(ZZKernel):
-
     def __init__(self, backend, n_qbits, reps, entanglement_pattern_enum):
         super().__init__(backend, n_qbits, reps, entanglement_pattern_enum)
 
@@ -33,5 +32,5 @@ class HavlicekKernel(ZZKernel):
         if len(x) == 1:
             return x[0]
         for x_i in x:
-            result *= (np.pi - x_i)
+            result *= np.pi - x_i
         return result
