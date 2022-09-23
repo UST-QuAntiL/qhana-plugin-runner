@@ -122,7 +122,7 @@ def calculation_task(self, db_id: int) -> str:
     id_to_idx_x, points_arr_x = get_indices_and_point_arr(entity_points_url1)
     id_to_idx_y, points_arr_y = get_indices_and_point_arr(entity_points_url2)
 
-    backend = QiskitBackends.get_qiskit_backend(backend, ibmq_token, custom_backend)
+    backend = backend.get_qiskit_backend(ibmq_token, custom_backend)
     backend.shots = shots
 
     entanglement_pattern = entanglement_pattern.get_pattern()

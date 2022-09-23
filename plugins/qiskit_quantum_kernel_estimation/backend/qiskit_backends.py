@@ -34,23 +34,22 @@ class QiskitBackends(enum.Enum):
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
 
-    @staticmethod
     def get_qiskit_backend(
-        backend_enum: "QuantumBackends",
+        self,
         ibmq_token: str,
         custom_backend_name: str,
     ):
-        if backend_enum.name.startswith("aer"):
+        if self.name.startswith("aer"):
             # Use local AER backend
-            aer_backend_name = backend_enum.name[4:]
+            aer_backend_name = self.name[4:]
 
             return Aer.get_backend(aer_backend_name)
-        elif backend_enum.name.startswith("ibmq"):
+        elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             provider = IBMQ.enable_account(ibmq_token)
 
-            return provider.get_backend(backend_enum.name)
-        elif backend_enum.name.startswith("custom_ibmq"):
+            return provider.get_backend(self.name)
+        elif self.name.startswith("custom_ibmq"):
             # Use custom IBMQ backend
             provider = IBMQ.enable_account(ibmq_token)
 
