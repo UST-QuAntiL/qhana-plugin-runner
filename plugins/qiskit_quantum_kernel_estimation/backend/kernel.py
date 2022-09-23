@@ -27,27 +27,30 @@ class EntanglementPatternEnum(enum.Enum):
 
 
 class KernelEnum(enum.Enum):
-    z_feature_map = 'ZFeatureMap'
-    zz_feature_map = 'ZZFeatureMap'
-    pauli_feature_map = 'PauliFeatureMap'
+    z_feature_map = "ZFeatureMap"
+    zz_feature_map = "ZZFeatureMap"
+    pauli_feature_map = "PauliFeatureMap"
 
-    def get_kernel(self,
-                   backend,
-                   n_qbits: int,
-                   reps: int,
-                   entanglement_pattern: str) -> QuantumKernel:
+    def get_kernel(
+        self, backend, n_qbits: int, reps: int, entanglement_pattern: str
+    ) -> QuantumKernel:
         # backend = QuantumInstance(backend, shots)
         if self == KernelEnum.z_feature_map:
-            feature_map = ZFeatureMap(feature_dimension=n_qbits, reps=reps)  # This FeatureMap has no entanglement
+            feature_map = ZFeatureMap(
+                feature_dimension=n_qbits, reps=reps
+            )  # This FeatureMap has no entanglement
 
         elif self == KernelEnum.zz_feature_map:
-            feature_map = ZZFeatureMap(feature_dimension=n_qbits, entanglement=entanglement_pattern, reps=reps)
+            feature_map = ZZFeatureMap(
+                feature_dimension=n_qbits, entanglement=entanglement_pattern, reps=reps
+            )
 
         elif self == KernelEnum.pauli_feature_map:
-            feature_map = PauliFeatureMap(feature_dimension=n_qbits, entanglement=entanglement_pattern, reps=reps)
+            feature_map = PauliFeatureMap(
+                feature_dimension=n_qbits, entanglement=entanglement_pattern, reps=reps
+            )
 
         else:
-            raise ValueError(f"Unkown kernel!")
+            raise ValueError("Unkown kernel!")
 
         return QuantumKernel(feature_map=feature_map, quantum_instance=backend)
-

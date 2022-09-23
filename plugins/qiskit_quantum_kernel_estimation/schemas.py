@@ -102,14 +102,14 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entanglement Pattern",
             "description": "This determines how the different Qubits will be entangled."
-                           "In case of 3 qubits, the patterns are as follows:\n"
-                           "- full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]\n"
-                           "- linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]\n"
-                           "- circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]\n"
-                           "To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets"
-                           "{0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the"
-                           "feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to"
-                           "the feature map and so on for {0, 2} and {1, 2}.",
+            "In case of 3 qubits, the patterns are as follows:\n"
+            "- full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]\n"
+            "- linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]\n"
+            "- circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]\n"
+            "To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets"
+            "{0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the"
+            "feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to"
+            "the feature map and so on for {0, 2} and {1, 2}.",
             "input_type": "select",
         },
     )

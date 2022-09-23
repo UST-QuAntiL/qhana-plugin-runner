@@ -64,14 +64,14 @@ class PluginsView(MethodView):
                         data_type="entity-points",
                         content_type=["application/json"],
                         required=True,
-                        parameter='entityPointsUrl1'
+                        parameter="entityPointsUrl1",
                     ),
                     InputDataMetadata(
                         data_type="entity-points",
                         content_type=["application/json"],
                         required=True,
-                        parameter='entityPointsUrl2'
-                    )
+                        parameter="entityPointsUrl2",
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
