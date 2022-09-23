@@ -75,16 +75,12 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class FormatEnum(Enum):
-    application_json = 'application/json'
-    text_csv = 'text/csv'
+    application_json = "application/json"
+    text_csv = "text/csv"
 
 
 class InputParameters:
-    def __init__(
-        self,
-        entities_url: str,
-        output_format: FormatEnum
-    ):
+    def __init__(self, entities_url: str, output_format: FormatEnum):
         self.entities_url = entities_url
         self.output_format = output_format
 
@@ -255,8 +251,8 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def json_to_csv(json_gen) -> Iterator[dict]:
     for ent in json_gen:
-        ent_dict = {'ID': ent['ID'], 'href': ent['href']}
-        ent_dict.update({f"dim{d}": ent['point'][d] for d in range(len(ent['point']))})
+        ent_dict = {"ID": ent["ID"], "href": ent["href"]}
+        ent_dict.update({f"dim{d}": ent["point"][d] for d in range(len(ent["point"]))})
         yield ent_dict
 
 
@@ -274,14 +270,18 @@ def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
 
     # Yield the first element twice. This will be used to later get the dimensionality of the point attribute
     first_ent = next(gen)._asdict()
-    first_ent = {'ID': first_ent['ID'], 'href': first_ent['href'], 'point': get_point(first_ent)}
+    first_ent = {
+        "ID": first_ent["ID"],
+        "href": first_ent["href"],
+        "point": get_point(first_ent),
+    }
     yield first_ent
 
     # Yield all elements once in json format
     yield first_ent
     for ent in gen:
         ent = ent._asdict()
-        yield {'ID': ent['ID'], 'href': ent['href'], 'point': get_point(ent)}
+        yield {"ID": ent["ID"], "href": ent["href"], "point": get_point(ent)}
 
 
 def json_to_json_gen(file_, file_type) -> Iterator[dict]:
@@ -299,13 +299,13 @@ def json_to_json_gen(file_, file_type) -> Iterator[dict]:
 
 def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
     file_.encoding = "utf-8"
-    input_format = file_.headers['Content-Type']
+    input_format = file_.headers["Content-Type"]
 
     # Check input format and convert it to json format
     # Generators provided here, must include the first entity twice, to extract the dimensionality from it!
-    if input_format == 'text/csv':
+    if input_format == "text/csv":
         gen = csv_to_json_gen(file_, input_format)
-    elif input_format == 'application/json':
+    elif input_format == "application/json":
         gen = json_to_json_gen(file_, input_format)
     else:
         raise ValueError(f"Converting input format {input_format} is not implemented!")
@@ -313,7 +313,7 @@ def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
     # Check the dimensionality of the points.
     # Since all points should have the same dimensionality, checking the first point suffices.
     first_ent = next(gen)
-    dim = len(first_ent['point'])
+    dim = len(first_ent["point"])
 
     return dim, gen
 
@@ -328,13 +328,15 @@ def get_output(entities_url, output_format) -> (List[str], Iterator[dict], str):
     dim, json_gen = get_dim_and_json_gen(file_)
 
     # Since everything is in json format, we can now convert it to the desired output format
-    if output_format == 'text/csv':
-        attributes = ['ID', 'href'] + [f"dim{d}" for d in range(dim)]
-        return attributes, json_to_csv(json_gen), '.csv'
-    elif output_format == 'application/json':
-        return [], json_gen, '.json'
+    if output_format == "text/csv":
+        attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
+        return attributes, json_to_csv(json_gen), ".csv"
+    elif output_format == "application/json":
+        return [], json_gen, ".json"
     else:
-        raise ValueError(f"Converting into output format {output_format} is not implemented!")
+        raise ValueError(
+            f"Converting into output format {output_format} is not implemented!"
+        )
 
 
 @CELERY.task(name=f"{Converter.instance.identifier}.calculation_task", bind=True)
@@ -352,9 +354,7 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entities_url = input_params.entities_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entities_url='{entities_url}'"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: entities_url='{entities_url}'")
     output_format = input_params.output_format.value
     TASK_LOGGER.info(f"Loaded input parameters from db: output_format='{output_format}'")
 
