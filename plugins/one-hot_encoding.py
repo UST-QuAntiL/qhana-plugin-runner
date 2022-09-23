@@ -157,19 +157,19 @@ class PluginsView(MethodView):
                         data_type="entities",
                         content_type=["application/json"],
                         required=True,
-                        parameter="entitiesUrl"
+                        parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
                         data_type="taxonomy",
                         content_type=["application/zip"],
                         required=True,
-                        parameter="taxonomiesZipUrl"
+                        parameter="taxonomiesZipUrl",
                     ),
                     InputDataMetadata(
                         data_type="attribute-metadata",
                         content_type=["application/json"],
                         required=True,
-                        parameter="entitiesMetadataUrl"
+                        parameter="entitiesMetadataUrl",
                     ),
                 ],
                 data_output=[
@@ -310,37 +310,56 @@ def get_taxonomies_by_ref_target(attribute_ref_targets: dict, taxonomies_zip_url
     return taxonomies
 
 
-def attribute_to_onehot(entity, attribute: str, attribute_ref_targets: dict, taxonomies) -> List[int]:
+def attribute_to_onehot(
+    entity, attribute: str, attribute_ref_targets: dict, taxonomies
+) -> List[int]:
     taxonomy = taxonomies[attribute_ref_targets[attribute]]
     values = entity[attribute]
+
     sub_attributes = set()
-    if type(values) == list:
+    if isinstance(values, list):
         sub_attributes = set(values)
     else:
         sub_attributes.add(values)
+
+    # Now walk up the taxonomy tree of each sub-attribute and add each attribute encountered on the way up to the set
+    # of attributes
     new_sub_a = set(sub_attributes.copy())
     while len(new_sub_a) != 0:
         old_sub_a = new_sub_a.copy()
         new_sub_a = set()
+
+        # Foreach sub-attribute sub_a in old_sub_a get it's parent attribute and add it to the set of new sub-attributes
         for sub_a in old_sub_a:
-            for relation in taxonomy['relations']:
-                if relation['target'] == sub_a:
-                    if relation['source'] != "":
-                        new_sub_a.add(relation['source'])
+            for relation in taxonomy["relations"]:
+                if relation["target"] == sub_a:
+                    if relation["source"] != "":
+                        new_sub_a.add(relation["source"])
+
+        # Add these newly found attributes to the set of all sub-attributes
         for new_a in new_sub_a:
             sub_attributes.add(new_a)
 
-    vector = [0]*len(taxonomy['entities'])
+    # Create a vector that has as many dimension as the taxonomy has entities, i.e. the vector has as many entries
+    # as the taxonomy defines attributes.
+    vector = [0] * len(taxonomy["entities"])
+
+    # taxonomy['entities'] is a list and therefore already ordered. Set dimension i to one, if it is part of the
+    # previously identified sub-attributes
     for i in range(len(vector)):
-        if taxonomy['entities'][i] in sub_attributes:
+        if taxonomy["entities"][i] in sub_attributes:
             vector[i] = 1
     return vector
 
 
-def entity_to_onehot(entity, attributes, attribute_ref_targets: dict, taxonomies) -> List[int]:
+def entity_to_onehot(
+    entity, attributes, attribute_ref_targets: dict, taxonomies
+) -> List[int]:
     vector = []
     for attribute in attributes:
-        attribute_vector = attribute_to_onehot(entity, attribute, attribute_ref_targets, taxonomies)
+        attribute_vector = attribute_to_onehot(
+            entity, attribute, attribute_ref_targets, taxonomies
+        )
         vector += attribute_vector
     return vector
 
@@ -348,7 +367,7 @@ def entity_to_onehot(entity, attributes, attribute_ref_targets: dict, taxonomies
 def get_dim(attributes, attribute_ref_targets: dict, taxonomies):
     dim = 0
     for attribute in attributes:
-        dim += len(taxonomies[attribute_ref_targets[attribute]]['entities'])
+        dim += len(taxonomies[attribute_ref_targets[attribute]]["entities"])
     return dim
 
 
@@ -369,7 +388,9 @@ def prepare_stream_output(entities, attributes, attribute_ref_targets, taxonomie
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(f"Starting new one-hot encoding calculation task with db id '{db_id}'")
+    TASK_LOGGER.info(
+        f"Starting new one-hot encoding calculation task with db id '{db_id}'"
+    )
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -380,25 +401,31 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entities_url = input_params.entities_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entities_url='{entities_url}'"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: entities_url='{entities_url}'")
     entities_metadata_url = input_params.entities_metadata_url
-    TASK_LOGGER.info(f"Loaded input parameters from db: entities_metadata_url='{entities_metadata_url}'")
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: entities_metadata_url='{entities_metadata_url}'"
+    )
     taxonomies_zip_url = input_params.taxonomies_zip_url
-    TASK_LOGGER.info(f"Loaded input parameters from db: taxonomies_zip_url='{taxonomies_zip_url}'")
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: taxonomies_zip_url='{taxonomies_zip_url}'"
+    )
     attributes = input_params.attributes
-    TASK_LOGGER.info(f"Loaded input parameters from db: entities_metadata_url='{attributes}'")
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: entities_metadata_url='{attributes}'"
+    )
 
     # load data from file
-    attributes = attributes.replace('\r', '').split('\n')
+    attributes = attributes.replace("\r", "").split("\n")
     attribute_ref_targets = get_attribute_ref_target(entities_metadata_url, attributes)
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
     entities = open_url(entities_url).json()
     dim = get_dim(attributes, attribute_ref_targets, taxonomies)
     csv_attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
-    entity_points = prepare_stream_output(entities, attributes, attribute_ref_targets, taxonomies)
+    entity_points = prepare_stream_output(
+        entities, attributes, attribute_ref_targets, taxonomies
+    )
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "text/csv", attributes=csv_attributes)
