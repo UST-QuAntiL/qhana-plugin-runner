@@ -133,7 +133,7 @@ def calculation_task(self, db_id: int) -> str:
     # entanglement_pattern = entanglement_pattern.get_pattern(n_qbits)
     kernel = kernel_enum.get_kernel(backend, n_qbits, reps, entanglement_pattern)
     # kernel_matrix is size len(points_arr_y) x len(points_arr_x)
-    kernel_matrix = kernel.evaluate(points_arr_x, points_arr_y)
+    kernel_matrix, representative_circuit = kernel.evaluate(points_arr_x, points_arr_y)
 
     kernel_json = []
     for ent_id_x, idx_x in id_to_idx_x.items():
@@ -154,6 +154,16 @@ def calculation_task(self, db_id: int) -> str:
             "kernel.json",
             "kernel-matrix",
             "application/json",
+        )
+
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(representative_circuit)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "representative_circuit.qasm",
+            "representative-circuit",
+            "application/qasm",
         )
 
     return "Result stored in file"

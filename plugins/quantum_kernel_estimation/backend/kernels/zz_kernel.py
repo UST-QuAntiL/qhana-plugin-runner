@@ -113,5 +113,7 @@ class ZZKernel(Kernel):
                 qml.probs(wires=wires_to_measure[i]) for i in range(len(wires_to_measure))
             ]
 
-        # return circuit()
-        return [result[0] for result in circuit()]
+        results = circuit()
+
+        # Probs for measured wires to be |0> and open qasm
+        return [result[0] for result in results], circuit.tape.to_openqasm()

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List
+from typing import List, Tuple
 from pennylane import Device
 import numpy as np
 import enum
@@ -121,7 +121,7 @@ class Kernel:
     @abstractmethod
     def execute_circuit(
         self, data_x, Y, to_calculate, entanglement_pattern
-    ) -> List[float]:
+    ) -> Tuple[List[float], str]:
         raise NotImplementedError("Method evaluate is not implemented yet!")
 
     @abstractmethod
@@ -130,7 +130,7 @@ class Kernel:
         Returns the number of qbits needed, to compute one quantum circuit
         """
 
-    def evaluate(self, data_x, data_y):
+    def evaluate(self, data_x, data_y) -> Tuple[np.ndarray, str]:
         """
         This function computes the kernel matrix between input data_x and data_y.
         If possible, it evaluates multiple entries at once, e.g. if we have 5 qubits available and need 2 qubits to
@@ -139,6 +139,9 @@ class Kernel:
         :param data_y: A list of data points
         :return: kernel-matrix of size len(data_y) x len(data_x)
         """
+        # Need a representative circuit in openqasm format
+        representative_circuit = ""
+
         needed_qbits = self.get_qbits_needed(data_x, data_y)
         entanglement_pattern = self.entanglement_pattern_enum.get_pattern(needed_qbits)
         amount_of_circuits = 0
@@ -161,7 +164,7 @@ class Kernel:
                 kernel_matrix[idx_x, idx_x] = 1
             for idx_y in range(start, len(data_y)):
                 if next_qbit + needed_qbits > self.max_qbits:
-                    result = self.execute_circuit(
+                    result, representative_circuit = self.execute_circuit(
                         data_x, data_y, to_calculate, entanglement_pattern
                     )
                     amount_of_circuits += 1
@@ -177,7 +180,7 @@ class Kernel:
                 next_qbit += needed_qbits
 
         if next_qbit != 0:
-            result = self.execute_circuit(
+            result, representative_circuit = self.execute_circuit(
                 data_x, data_y, to_calculate, entanglement_pattern
             )
             amount_of_circuits += 1
@@ -191,4 +194,4 @@ class Kernel:
                 for idx_y in range(idx_x):
                     kernel_matrix[idx_y, idx_x] = kernel_matrix[idx_x, idx_y]
         TASK_LOGGER.info(f"It took {amount_of_circuits} quantum circuits")
-        return kernel_matrix
+        return kernel_matrix, representative_circuit
