@@ -208,7 +208,7 @@ def get_correct_pca(input_params: ParameterHandler):
             coef0=input_params.get("kernelCoef"),
             eigen_solver=eigen_solver,
             tol=input_params.get("tol"),
-            # iterated_power=input_params.get('iteratedPower')  # This parameter is available in scikit-learn version ~= 1.0.2
+            iterated_power=input_params.get('iteratedPower')  # This parameter is available in scikit-learn version ~= 1.0.2
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
