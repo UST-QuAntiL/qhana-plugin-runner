@@ -17,7 +17,7 @@ from abc import abstractmethod
 from celery.utils.log import get_task_logger
 
 from pennylane import Device
-from typing import List
+from typing import List, Tuple
 import numpy as np
 
 
@@ -139,7 +139,7 @@ class Clustering:
         """
 
     @abstractmethod
-    def compute_new_centroid_mapping(self, preped_data, centroids) -> (List[int], int):
+    def compute_new_centroid_mapping(self, preped_data, centroids) -> (List[int], int, str):
         """
         Returns new centroid mapping, depending on the prepared data and the current centroids
         """
@@ -165,7 +165,7 @@ class Clustering:
 
         return centroids
 
-    def create_clusters(self, data: List[List[float]], k: int) -> np.ndarray:
+    def create_clusters(self, data: List[List[float]], k: int) -> Tuple[np.ndarray, str]:
         """
         Executes the quantum k means cluster algorithm on the given
         quantum backend and the specified circuit.
@@ -177,6 +177,9 @@ class Clustering:
         data vector with index 1 -> mapped to centroid 0
         data vector with index 2 -> mapped to centroid 1
         """
+        # Get a representative_circuit
+        representative_circuit = ""
+
         # The circuit version diverge on how the data and the centroids get preprocessed and how the centroid mappings
         # get computed, but the outer loop with the convergence criteria is the same.
 
@@ -198,6 +201,7 @@ class Clustering:
             (
                 new_centroid_mapping,
                 amount_executed_circuits,
+                representative_circuit,
             ) = self.compute_new_centroid_mapping(circuit_data, preped_centroids)
             global_amount_executed_circuits += amount_executed_circuits
 
@@ -212,7 +216,7 @@ class Clustering:
             iterations += 1
             TASK_LOGGER.info(f"Iteration {iterations} done")
 
-        return np.array(new_centroid_mapping, dtype=int)
+        return np.array(new_centroid_mapping, dtype=int), representative_circuit
 
     # These methods were for debug purposes
     @abstractmethod

@@ -15,7 +15,7 @@
 from .clustering import Clustering
 import pennylane as qml
 import numpy as np
-from typing import List
+from typing import List, Tuple
 
 
 class StatePreparationQuantumKMeans(Clustering):
@@ -66,7 +66,7 @@ class StatePreparationQuantumKMeans(Clustering):
         current_distances_calculated,
         data_angles: List[float],
         centroid_angles: np.ndarray,
-    ):
+    ) -> Tuple[List[float], str]:
         @qml.qnode(self.backend)
         def circuit():
             wires_to_measure = []
@@ -79,12 +79,15 @@ class StatePreparationQuantumKMeans(Clustering):
             return [qml.probs(wires=[wire]) for wire in wires_to_measure]
 
         result = circuit()
-        # Probability of measuring |1>
-        return [probs[1] for probs in result]
+        # Probability of measuring |1> and open qasm
+        return [probs[1] for probs in result], circuit.tape.to_openqasm()
 
     def compute_new_centroid_mapping(
         self, preped_data: List[float], centroids: List[List[float]]
-    ) -> (List[List[int]], int):
+    ) -> Tuple[np.ndarray, int, str]:
+        # Need to return one of the quantum circuits
+        representative_circuit = ""
+
         centroid_angles = self.prep_data_for_circuit(np.array(centroids))
         centroid_mapping = np.zeros(len(preped_data), dtype=int)
         # Since we want the minimum result of our quantum circuits and the results lie within [0, 1],
@@ -101,7 +104,7 @@ class StatePreparationQuantumKMeans(Clustering):
                 if next_qbit + self.needed_qbits > self.max_qbits:
                     amount_executed_circuits += 1
                     # This adds the measurements and executes the circuits
-                    results = self.execute_circuit(
+                    results, representative_circuit = self.execute_circuit(
                         current_distances_calculated, preped_data, centroid_angles
                     )
                     # Update centroid mapping
@@ -136,7 +139,7 @@ class StatePreparationQuantumKMeans(Clustering):
                     mapping_distance[data_idx] = results[k]
                     centroid_mapping[data_idx] = centroid_idx
 
-        return centroid_mapping, amount_executed_circuits
+        return centroid_mapping, amount_executed_circuits, representative_circuit
 
     def plot(self, preped_data, preped_centroids, centroid_mapping):
         import plotly.express as px
