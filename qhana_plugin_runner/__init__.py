@@ -41,8 +41,8 @@ from .storage import register_file_store
 from .util.config import DebugConfig, ProductionConfig
 from .util.jinja_helpers import register_helpers
 from .util.plugins import register_plugins
-from .util.templates import register_templates
 from .util.request_helpers import register_additional_schemas
+from .util.templates import register_templates
 
 # change this to change tha flask app name and the config env var prefix
 # must not contain any spaces!
@@ -70,11 +70,15 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     # load defaults
     config = cast(Config, app.config)
-    flask_env = cast(Optional[str], config.get("ENV"))
-    if flask_env == "production":
-        config.from_object(ProductionConfig)
-    elif flask_env == "development":
-        config.from_object(DebugConfig)
+    flask_debug = (
+        app.config.get("DEBUG", False)
+        or environ.get("FLASK_ENV", "production").lower() == "development"
+    )
+    if flask_debug:
+        app.config.from_object(DebugConfig)
+    elif test_config is None:
+        # only load production defaults if no special test config is given
+        app.config.from_object(ProductionConfig)
 
     if test_config is None:
         # load the instance config, if it exists, when not testing

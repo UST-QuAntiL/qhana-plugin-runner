@@ -25,6 +25,7 @@ def upgrade():
         sa.Column("started_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("finished_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("parameters", sa.Text(), nullable=True),
+        sa.Column("data", sa.JSON(), nullable=True),
         sa.Column("multi_step", sa.Boolean(), nullable=True),
         sa.Column("current_step", sa.Integer(), nullable=True),
         sa.Column("progress_value", sa.Float(), nullable=True),
