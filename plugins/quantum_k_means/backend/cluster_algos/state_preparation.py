@@ -128,7 +128,7 @@ class StatePreparationQuantumKMeans(Clustering):
         if next_qbit != 0:
             amount_executed_circuits += 1
             # This adds the measurements and executes the circuits
-            results = self.execute_circuit(
+            results, representative_circuit = self.execute_circuit(
                 current_distances_calculated, preped_data, centroid_angles
             )
             # Update centroid mapping
