@@ -30,7 +30,7 @@ PCA_BLP = SecurityBlueprint(
     description="PCA plugin API",
 )
 
-sklearn_version = "0.24.2"
+sklearn_version = "1.1"
 
 
 class PCA(QHAnaPluginBase):

@@ -15,6 +15,11 @@
 from sklearn.decomposition import PCA, KernelPCA, IncrementalPCA, SparsePCA
 from sklearn.base import BaseEstimator
 
+from celery.utils.log import get_task_logger
+
+
+TASK_LOGGER = get_task_logger(__name__)
+
 """
 This file prepares a dictionary with all the necessary parameters of the PCA, to do more transformations.
 In other scikit-learn versions the value names could change!
@@ -57,8 +62,8 @@ def sparse_pca_output(pca: SparsePCA) -> (dict, int):
 def kernel_pca_output(pca: KernelPCA) -> (dict, int):
     kernel_pca_out = {
         "type": "kernel",
-        "eigenvalues": pca.lambdas_.tolist(),
-        "eigenvectors": pca.alphas_.tolist(),
+        "eigenvalues": pca.eigenvalues_.tolist(),
+        "eigenvectors": pca.eigenvectors_.tolist(),
         "kernel_centerer": {
             "K_fit_rows": pca._centerer.K_fit_rows_.tolist(),
             "K_fit_all": pca._centerer.K_fit_all_.tolist(),
@@ -71,7 +76,7 @@ def kernel_pca_output(pca: KernelPCA) -> (dict, int):
     kernel_pca_out["gamma"] = pca.gamma
     kernel_pca_out["degree"] = pca.degree
     kernel_pca_out["coef0"] = pca.coef0
-    dim = len(pca.alphas_[0])
+    dim = len(pca.eigenvectors_[0])
     return kernel_pca_out, dim
 
 
