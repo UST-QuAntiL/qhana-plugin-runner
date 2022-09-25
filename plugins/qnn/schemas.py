@@ -115,7 +115,7 @@ class InputParameters:
         batch_size: int,
         resolution: int,
         use_default_dataset=False,
-        randomly_shuffle=True,
+        randomly_shuffle=False,
         visualize=False,
         use_quantum=False,
     ):

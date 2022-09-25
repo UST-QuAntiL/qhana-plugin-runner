@@ -188,7 +188,7 @@ def calculation_task(self, db_id: int) -> str:
     if use_default_dataset:
         TASK_LOGGER.info("Use default dataset")
         # spiral dataset
-        dataset = twospirals(200, turns=1.52)  # TODO set number of data elements in GUI??
+        dataset = twospirals(200, turns=1.52)
     else:
         TASK_LOGGER.info("Load dataset from files")
         # get files
@@ -225,6 +225,7 @@ def calculation_task(self, db_id: int) -> str:
     model = None
     if use_quantum:
 
+        # load quantum parameters
         q_device = input_params.device
         TASK_LOGGER.info(f"Loaded input parameters from db: device='{q_device}'")
         ibmq_token = input_params.ibmq_token
@@ -252,9 +253,10 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.info(f"DEVICE '{dev}'")
         # dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # pennylane simulator. faster! # TODO remove
 
-        # dressed quantum network
+        # get dressed quantum network
         model = DressedQuantumNet(n_qubits, dev, q_depth, weight_init)
     else:
+        # get classical neural network
         model = ClassicalNet(n_qubits, q_depth, weight_init)
 
     model = model.to(device)
@@ -275,11 +277,9 @@ def calculation_task(self, db_id: int) -> str:
     X = StandardScaler().fit_transform(X)
 
     indices = np.arange(n_data)
-
     if randomly_shuffle:
         # randomly shuffle data
         np.random.shuffle(indices)
-
     X_shuffle = X[indices]
     Y_shuffle = Y[indices]
 
@@ -339,16 +339,7 @@ def calculation_task(self, db_id: int) -> str:
                 "text/html",
             )
 
-    # save weights
-
-    # model.state_dict()
-    #   q_params
-    #   pre_net.weight
-    #   pre_net.bias
-    #   post_net.weight
-    #   post_net.bias
-
-    # prepare output
+    # prepare weights output
     weights_dict = model.state_dict()
     out_weights_dict = {}
     for key in weights_dict:
@@ -379,8 +370,6 @@ def calculation_task(self, db_id: int) -> str:
     if use_quantum:
         try:
             qasm_string = dev._circuit.qasm()
-            print("QASM")
-            print(qasm_string)
             with SpooledTemporaryFile(mode="w") as output:
                 output.write(qasm_string)
                 STORE.persist_task_result(
@@ -391,8 +380,8 @@ def calculation_task(self, db_id: int) -> str:
                     "application/qasm",
                 )
         except Exception as e:
-            TASK_LOGGER.error("Couldn't save circuit as qasm file")  # TODO
-            TASK_LOGGER.error(e)  # TODO
+            TASK_LOGGER.error("Couldn't save circuit as qasm file")
+            TASK_LOGGER.error(e)
 
     # Print final time
     total_time = time.time() - start_time
@@ -402,18 +391,14 @@ def calculation_task(self, db_id: int) -> str:
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
 
 
-# TODO cleanup and comments, documentation
 # TODO hidden layers for preprocessing and postprocessing? GUI..
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
-# TODO check if training still works... not really?? (qnn yes kina? classical no?)
 # TODO ouput document with details for classical network parts
-# TODO check if classical network works (when zero weight init then whole plot background blue)
-# TODO resolution GUI parameter
 # TODO really slow with aer statevector device? (with default dataset)
-# TODO default enum values are not shown in gui....
-# TODO print -> TASKLOGGER
+# TODO default enum value for optimizer not shown in gui....
 
 
-# TODO separate input of training and test data
-# TODO output labels for test data?
+# print -> TASKLOGGER
+# zero initialization => completely blue background for classical network. but works well for qnn
+# cleanup and comments, documentation

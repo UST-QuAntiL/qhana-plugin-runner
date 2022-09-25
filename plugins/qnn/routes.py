@@ -85,10 +85,6 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the QNN plugin."""
 
-    # example_inputs = {
-    #     "inputStr": "Sample input string.",
-    # }
-
     @QNN_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the QNN plugin.")
     @QNN_BLP.arguments(
         QNNParametersSchema(
@@ -126,17 +122,19 @@ class MicroFrontend(MethodView):
                 "device"
             ].data_key: QuantumBackends.aer_statevector_simulator.value,
             schema.fields["shots"].data_key: 1000,
-            schema.fields["optimizer"].data_key: OptimizerEnum.adam.value,
+            schema.fields[
+                "optimizer"
+            ].data_key: OptimizerEnum.adam.value,  # why not default in GUI?
             schema.fields["step"].data_key: 0.07,
             schema.fields["n_qubits"].data_key: 5,
             schema.fields["resolution"].data_key: 80,
             schema.fields["N_total_iterations"].data_key: 2,
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
-            schema.fields["use_default_dataset"].data_key: False,
+            schema.fields["use_default_dataset"].data_key: True,
             schema.fields["use_quantum"].data_key: False,
             schema.fields["randomly_shuffle"].data_key: True,
-            schema.fields["visualize"].data_key: False,
+            schema.fields["visualize"].data_key: True,
             schema.fields["weight_init"].data_key: WeightInitEnum.uniform.value,
         }
 
@@ -159,9 +157,6 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QNN_BLP.name}.ProcessView"),
-                # example_values=url_for(
-                #    f"{QNN_BLP.name}.MicroFrontend", **self.example_inputs
-                # ),
             )
         )
 
