@@ -81,9 +81,7 @@ class HtmlResponseMixin:
             if success:
                 # Indicate this code is a success status code
                 # Helps other decorators documenting success responses
-                wrapper._apidoc.setdefault("success_status_codes", []).append(
-                    status_code
-                )
+                wrapper._apidoc.setdefault("success_status_codes", []).append(status_code)
             return wrapper
 
         return decorator
