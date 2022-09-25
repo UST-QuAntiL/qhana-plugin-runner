@@ -18,7 +18,7 @@ from qhana_plugin_runner.storage import STORE
 
 import numpy as np
 
-from .backend.visualise import plot_data
+from .backend.visualize import plot_data
 
 TASK_LOGGER = get_task_logger(__name__)
 
