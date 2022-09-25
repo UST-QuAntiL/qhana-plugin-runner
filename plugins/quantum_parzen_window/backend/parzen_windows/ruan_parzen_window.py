@@ -97,3 +97,8 @@ class RuanParzenWindow(ParzenWindow):
             k = int(np.ceil(np.log2(len(train_data[0]))))
             return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), 2*k + 5
         return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), len(train_data[0])
+
+    def get_representative_circuit(self, X) -> str:
+        circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
+        circuit.construct([], {})
+        return circuit.qtape.to_openqasm()

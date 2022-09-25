@@ -46,6 +46,9 @@ class ParzenWindow:
         self.unique_labels = list(set(self.train_labels))
         self.distance_threshold = distance_threshold
 
+    def get_representative_circuit(self, X) -> str:
+        return ""
+
     @abstractmethod
     def label_point(self, X) -> int:
         """

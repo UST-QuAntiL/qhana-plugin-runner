@@ -138,16 +138,20 @@ def calculation_task(self, db_id: int) -> str:
     # train_data = complete_data[:len(train_data)]
     # test_data = complete_data[len(train_data):]
 
-
     parzen_window = variant.get_parzen_window(train_data, train_labels, window_size, backend, shots)
 
     test_labels = parzen_window.label_points(test_data)
 
+    # Prepare labels to be saved
     output_labels = []
 
     for ent_id, idx in test_id_to_idx.items():
         output_labels.append({"ID": ent_id, "href": "", "label": int(test_labels[idx])})
 
+    # Get representative circuit
+    representative_circuit = parzen_window.get_representative_circuit(test_data)
+
+    # Output the data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
@@ -173,5 +177,15 @@ def calculation_task(self, db_id: int) -> str:
                 "plot",
                 "text/html",
             )
+
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(representative_circuit)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "representative_circuit.qasm",
+            "representative-circuit",
+            "application/qasm",
+        )
 
     return "Result stored in file"
