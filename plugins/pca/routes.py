@@ -151,7 +151,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "pca_template.html",
                 name=PCA.instance.name,
                 version=PCA.instance.version,
                 schema=InputParametersSchema(),
