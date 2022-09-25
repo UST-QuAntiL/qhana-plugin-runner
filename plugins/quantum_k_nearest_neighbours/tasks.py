@@ -121,7 +121,7 @@ def calculation_task(self, db_id: int) -> str:
     else:
         max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
         if max_qbits is None:
-            max_qbits = 29
+            max_qbits = 12
         backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
         backend.shots = shots
 
@@ -133,11 +133,16 @@ def calculation_task(self, db_id: int) -> str:
 
     test_labels = qknn.label_points(test_data)
 
+    # Prepare labels to be saved
     output_labels = []
 
     for ent_id, idx in test_id_to_idx.items():
         output_labels.append({"ID": ent_id, "href": "", "label": int(test_labels[idx])})
 
+    # Get representative circuit
+    representative_circuit = qknn.get_representative_circuit(test_data)
+
+    # Output the data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
@@ -163,5 +168,15 @@ def calculation_task(self, db_id: int) -> str:
                 "plot",
                 "text/html",
             )
+
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(representative_circuit)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "representative_circuit.qasm",
+            "representative-circuit",
+            "application/qasm",
+        )
 
     return "Result stored in file"

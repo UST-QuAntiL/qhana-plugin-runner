@@ -91,7 +91,7 @@ class SchuldQkNN(QkNN):
         print(label_probs / len(samples))
         return self.unique_labels[label_probs.argmax()]
 
-    def get_circuit_results(self, x):
+    def get_quantum_circuit(self, x):
         rot_angle = np.pi / self.train_data.shape[1]
         @qml.qnode(self.backend)
         def circuit():
@@ -103,12 +103,17 @@ class SchuldQkNN(QkNN):
                 # QAM ancilla wires are 0 after QAM -> use one of those wires
                 qml.CRX(rot_angle, wires=(self.train_wires[i], self.qam_ancilla_wires[0]))
             return qml.sample(wires=[self.qam_ancilla_wires[0]] + self.label_wires)
-        return circuit()
+        return circuit
 
     def label_point(self, x):
-        samples = self.get_circuit_results(x)
+        samples = self.get_quantum_circuit(x)()
         return self.get_label_from_samples(samples)
 
     @staticmethod
     def get_necessary_wires(train_data, train_labels):
         return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), len(train_data[0])
+
+    def get_representative_circuit(self, X) -> str:
+        circuit = self.get_quantum_circuit(X[0])
+        circuit.construct([], {})
+        return circuit.qtape.to_openqasm()

@@ -7,9 +7,11 @@ from ..data_loading_circuits.quantum_associative_memory import QAM
 from ..utils import bitlist_to_int, check_if_values_are_binary
 from collections import Counter
 
-
 from celery.utils.log import get_task_logger
+
+
 TASK_LOGGER = get_task_logger(__name__)
+
 
 class SimpleQkNN(QkNN):
     def __init__(self, train_data, train_labels, k: int, backend: qml.Device):
@@ -55,9 +57,11 @@ class SimpleHammingQkNN(SimpleQkNN):
         error_msgs = ["the points' dimensionality.", "the points' dimensionality."]
         self.check_wires(wire_types)
         self.check_num_wires(wire_types, num_wires, error_msgs)
-        self.qam = QAM(self.train_data, train_wires, qam_ancilla_wires[:2], qam_ancilla_wires[2:])
+        self.qam = QAM(self.train_data, self.train_wires, self.qam_ancilla_wires[:2], self.qam_ancilla_wires[2:])
 
-    def get_quantum_circuit(self, x, rot_angle):
+    def get_quantum_circuit(self, x):
+        rot_angle = np.pi / len(x)
+
         def quantum_circuit():
             self.qam.circuit()
             for i in range(len(x)):
@@ -70,11 +74,11 @@ class SimpleHammingQkNN(SimpleQkNN):
                 if x[i] == 0:
                     qml.PauliX((self.train_wires[i],))
             return qml.sample(wires=self.train_wires + [self.qam_ancilla_wires[0]])
+
         return quantum_circuit
 
     def calculate_distances(self, x) -> List[float]:
-        rot_angle = np.pi / self.train_data.shape[1]
-        samples = qml.QNode(self.get_quantum_circuit(x, rot_angle), self.backend)().tolist()
+        samples = qml.QNode(self.get_quantum_circuit(x), self.backend)().tolist()
         num_zero_ancilla = [0]*len(self.train_data)
         total_ancilla = [0]*len(self.train_data)
         # Count how often a certain point was measured (total_ancilla)
@@ -94,3 +98,8 @@ class SimpleHammingQkNN(SimpleQkNN):
     @staticmethod
     def get_necessary_wires(train_data):
         return len(train_data[0]), len(train_data[0])
+
+    def get_representative_circuit(self, X) -> str:
+        circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
+        circuit.construct([], {})
+        return circuit.qtape.to_openqasm()

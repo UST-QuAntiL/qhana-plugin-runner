@@ -58,6 +58,9 @@ class QkNN:
         self.backend = backend
         self.shots = shots
 
+    def get_representative_circuit(self, X) -> str:
+        return ""
+
     @abstractmethod
     def label_point(self, X) -> int:
         """
