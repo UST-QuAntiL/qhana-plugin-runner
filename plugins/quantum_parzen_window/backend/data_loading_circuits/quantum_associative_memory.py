@@ -1,7 +1,9 @@
 import pennylane as qml
 import numpy as np
+from typing import List
 from ..ccnot import clean_ccnot
 from ..controlled_unitaries import get_controlled_one_qubit_unitary
+from ..utils import check_if_values_are_binary
 
 
 class QAM:
@@ -9,17 +11,24 @@ class QAM:
         if not isinstance(X, np.ndarray):
             X = np.array(X)
         self.X = X
+        if not check_if_values_are_binary(self.X):
+            raise ValueError("A QAM (Quantum Associative Memory) can only load binary data")
         self.xor_X = self.create_xor_X(X)
+
         if additional_bits is not None:
+            if not check_if_values_are_binary(additional_bits):
+                raise ValueError("A QAM (Quantum Associative Memory) can only load binary additional bits")
             if not isinstance(additional_bits, np.ndarray):
                 additional_bits = np.array(additional_bits)
             self.xor_additional_bits = self.create_xor_X(additional_bits)
         else:
             self.xor_additional_bits = additional_bits
+
         self.register_wires = list(register_wires)
         self.load_and_control_wire = list(load_and_control_wire)
         self.compare_register = list(compare_register)
         self.additional_wires = additional_wires
+
         if amplitudes is None:
             self.amplitudes = [1/np.sqrt(X.shape[0], dtype=np.float64)]*X.shape[0]
         else:
