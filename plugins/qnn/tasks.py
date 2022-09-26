@@ -85,22 +85,22 @@ def get_optimizer(optimizer, model, step):
     elif optimizer == OptimizerEnum.adamW:
         TASK_LOGGER.info("adamW")
         return optim.AdamW(model.parameters(), lr=step)
-    elif (
-        optimizer == OptimizerEnum.sparse_adam
-    ):  # TODO check "RuntimeError: SparseAdam does not support dense gradients, please consider Adam instead"
-        TASK_LOGGER.info("SparseAdam")
-        return optim.SparseAdam(model.parameters(), lr=step)
+    # elif (
+    #     optimizer == OptimizerEnum.sparse_adam
+    # ):  # "RuntimeError: SparseAdam does not support dense gradients, please consider Adam instead"
+    #     TASK_LOGGER.info("SparseAdam")
+    #     return optim.SparseAdam(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.adamax:
         TASK_LOGGER.info("Adamax")
         return optim.Adamax(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.asgd:
         TASK_LOGGER.info("ASGD")
         return optim.ASGD(model.parameters(), lr=step)
-    elif (
-        optimizer == OptimizerEnum.lbfgs
-    ):  # TODO step() missing 1 required argument: 'closure'
-        TASK_LOGGER.info("LBFGS")
-        return optim.LBFGS(model.parameters(), lr=step)
+    # elif (
+    #     optimizer == OptimizerEnum.lbfgs
+    # ):  # step() missing 1 required argument: 'closure'
+    #     TASK_LOGGER.info("LBFGS")
+    #     return optim.LBFGS(model.parameters(), lr=step)
     elif optimizer == OptimizerEnum.n_adam:
         TASK_LOGGER.info("NAdam")
         return optim.NAdam(model.parameters(), lr=step)
@@ -110,12 +110,14 @@ def get_optimizer(optimizer, model, step):
     elif optimizer == OptimizerEnum.rms_prob:
         TASK_LOGGER.info("RMSprop")
         return optim.RMSprop(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.Rprop:
-        TASK_LOGGER.info("Rprop")
-        return optim.Rprop(model.parameters(), lr=step)
-    elif optimizer == OptimizerEnum.sdg:
-        TASK_LOGGER.info("SGD")
-        return optim.SGD(model.parameters(), lr=step)
+    # elif optimizer == OptimizerEnum.Rprop:
+    #     TASK_LOGGER.info("Rprop")
+    #     # AttributeError('Rprop')
+    #     return optim.Rprop(model.parameters(), lr=step)
+    # elif optimizer == OptimizerEnum.sdg:
+    #     TASK_LOGGER.info("SGD")
+    #     # AttributeError('Rprop')
+    #     return optim.SGD(model.parameters(), lr=step)
     else:
         TASK_LOGGER.error("unknown optimizer")
         return -1
@@ -395,10 +397,10 @@ def calculation_task(self, db_id: int) -> str:
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
 # TODO ouput document with details for classical network parts
-# TODO really slow with aer statevector device? (with default dataset)
 # TODO default enum value for optimizer not shown in gui....
 
 
 # print -> TASKLOGGER
 # zero initialization => completely blue background for classical network. but works well for qnn
 # cleanup and comments, documentation
+# really slow with aer statevector device? (with default dataset) -> resolution

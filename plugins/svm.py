@@ -54,7 +54,6 @@ SVM_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Support Vector Machine API",
-    # template_folder="hello_world_templates",
 )
 
 
@@ -446,8 +445,8 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             schema.fields["use_quantum"].data_key: False,
-            schema.fields["use_default_data"].data_key: False,
-            schema.fields["visualize"].data_key: False,
+            schema.fields["use_default_data"].data_key: True,
+            schema.fields["visualize"].data_key: True,
             schema.fields["resolution"].data_key: 80,
             schema.fields["regularization_C"].data_key: 1.0,
             schema.fields["kernel"].data_key: ClassicalKernelEnum.rbf.value,
@@ -532,8 +531,9 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        # return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=0.24.2\nqiskit-machine-learning"
-        return "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=1.1\nqiskit-machine-learning"  # qiskit-terra==0.17.4 (for qiskit==0.27) but qiskit-machine-learning needs newer version?
+        return (
+            "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=1.1\nqiskit-machine-learning"
+        )
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -823,7 +823,7 @@ def demo_task(self, db_id: int) -> str:
     )
 
     if use_default_data:
-        points, labels = twospirals(50, turns=0.52)
+        points, labels = twospirals(100, turns=0.52)
         # points, labels = twospirals(50, turns=1.52)
         # shuffle (so that train and test data will both have all kinds of data)
 
@@ -954,7 +954,3 @@ def demo_task(self, db_id: int) -> str:
 # (TODO neues plugin für qnn/nn für classification)
 # TODO (neues plugin mit Pegasos QSVC könnte interessant sein)
 # https://qiskit.org/documentation/machine-learning/tutorials/07_pegasos_qsvc.html
-
-
-# test svc supportvector file
-# test qnn qasm file

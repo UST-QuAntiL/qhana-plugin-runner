@@ -79,15 +79,15 @@ class OptimizerEnum(Enum):
     adagrad = "Adagrad"
     adam = "Adam"
     adamW = "AdamW"
-    sparse_adam = "SparseAdam"
+    # sparse_adam = "SparseAdam"     # "Does not support dense gradiente, please consider Adam instead"
     adamax = "Adamax"
     asgd = "ASGD"
-    lbfgs = "LBFGS"
+    # lbfgs = "LBFGS"                # "Step() missing 1 required positional argument: closure"
     n_adam = "NAdam"
     r_adam = "RAdam"
     rms_prob = "RMSprop"
-    r_prop = "Rprop"
-    sdg = "SDG"
+    # r_prop = "Rprop"               # AttributeError('Rprop')
+    # sdg = "SDG"                    # AttributeError('Rprop')
 
 
 class WeightInitEnum(Enum):
