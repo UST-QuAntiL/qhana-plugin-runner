@@ -181,7 +181,7 @@ class BaseQuantumKMeans:
                 + " shots in total using "
                 + str(maxQubits)
                 + " qubits in parallel on "
-                + backend.name()
+                + backend.name
                 + " backend."
             )
             TASK_LOGGER.info(loggingString)
