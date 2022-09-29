@@ -13,10 +13,51 @@ See :ref:`data-formats/data-model:entities` for more details.
 
 .. note:: The examples in this document can (and should) be replaced with shortened real world examples once they are available to make testing new plugins easier.
 
+Data Types
+----------
 
+entity/list
+^^^^^^^^^^^
+
+The data contains a list of entities.
+
+
+entity/stream
+^^^^^^^^^^^^^
+
+The data contains a streamable list of entities that can be consumed line by line.
+
+Allowed serialization formats for this type are: ``text/csv`` and ``application/X-lines+json``.
+
+Plugins may treat ``application/json`` as ``application/X-lines+json`` if this data type is set.
+However, they must fall back to processing the file in a non streaming manner if that fails.
+
+
+entity/numeric
+^^^^^^^^^^^^^^
+
+Aside from the entity ``ID`` and ``href`` attributes every other attribute must be numeric (or a list of numbers).
+
+
+entity/vector
+^^^^^^^^^^^^^
+
+Stronger than ``numeric``, as every attribute aside from ``ID`` and ``href`` must be a single number.
+The dimensions must be ordered lexicographically if order is important and the serialization format may not preserve attribute order (e.g. JSON).
+
+
+entity/attribute-metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The entities should be interpreted as attribute metadata entities describing properties of attributes of other entities.
+
+
+
+Content Types
+-------------
 
 Entities ``text/csv``
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
 Download: :download:`entities.csv <example_files/entities.csv>` 
 
@@ -29,7 +70,7 @@ Download: :download:`entities.csv <example_files/entities.csv>`
 
 
 Entities ``application/json``
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Download: :download:`entities.json <example_files/entities.json>` 
 
@@ -42,7 +83,7 @@ Download: :download:`entities.json <example_files/entities.json>`
 
 
 Entities ``application/X-lines+json``
--------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Download: :download:`entities-lines.json <example_files/entities-lines.json>` 
 
