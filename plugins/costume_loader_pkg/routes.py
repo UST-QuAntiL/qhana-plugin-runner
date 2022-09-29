@@ -11,7 +11,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import COSTUME_LOADER_BLP, CostumeLoader
-from .schemas import InputParameters, InputParametersSchema, TaskResponseSchema
+from .schemas import InputParameters, InputParametersSchema
 from .tasks import loading_task
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -19,6 +19,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    TaskResponseSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result

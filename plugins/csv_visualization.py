@@ -17,7 +17,6 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
-import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
@@ -36,11 +35,11 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -60,18 +59,6 @@ CSV_BLP = SecurityBlueprint(
     description="CSV visualization API.",
     template_folder="csv_visualization_templates",
 )
-
-
-class DemoResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class CsvInputParametersSchema(FrontendFormBaseSchema):

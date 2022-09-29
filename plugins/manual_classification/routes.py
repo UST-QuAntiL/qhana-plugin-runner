@@ -19,12 +19,11 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     DataMetadata,
     InputDataMetadata,
+    TaskResponseSchema,
 )
 
 from . import MANUAL_CLASSIFICATION_BLP, ManualClassification
 from .schemas import (
-    ResponseSchema,
-    TaskResponseSchema,
     LoadParametersSchema,
     ClassificationSchema,
 )

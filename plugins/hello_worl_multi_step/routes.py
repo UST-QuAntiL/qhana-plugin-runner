@@ -12,13 +12,14 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import HELLO_MULTI_BLP, HelloWorldMultiStep
-from .schemas import HelloWorldParametersSchema, TaskResponseSchema
+from .schemas import HelloWorldParametersSchema
 from .tasks import preprocessing_task, processing_task
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    TaskResponseSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result

@@ -3,7 +3,6 @@ from http import HTTPStatus
 from typing import Mapping
 
 from celery.canvas import chain
-from celery.result import AsyncResult
 from flask import Response
 from flask import redirect
 from flask.globals import request
@@ -14,7 +13,7 @@ from marshmallow import EXCLUDE
 
 from . import QKMEANS_BLP, QKMeans
 from .backend.clustering import QuantumBackends
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import InputParametersSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -22,6 +21,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
     InputDataMetadata,
+    TaskResponseSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result

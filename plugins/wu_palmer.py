@@ -21,7 +21,6 @@ from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -39,10 +38,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     DataMetadata,
     InputDataMetadata,
+    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -68,12 +67,6 @@ WU_PALMER_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Wu Palmer plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):

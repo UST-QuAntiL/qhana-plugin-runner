@@ -14,15 +14,13 @@
 import json
 import math
 from http import HTTPStatus
-from io import BytesIO, StringIO
+from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 from zipfile import ZipFile
 
-import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -40,10 +38,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     DataMetadata,
     InputDataMetadata,
+    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -65,12 +63,6 @@ WU_PALMER_CACHE_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Wu-Palmer cache plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class CalcSimilarityParametersSchema(FrontendFormBaseSchema):

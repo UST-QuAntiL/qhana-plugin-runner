@@ -317,3 +317,9 @@ class PluginMetadataSchema(MaBaseSchema):
             "description": "A list of tags describing the plugin (e.g. classical-algorithm, quantum-algorithm, hybrid-algorithm)."
         },
     )
+
+
+class TaskResponseSchema(MaBaseSchema):
+    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
+    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)

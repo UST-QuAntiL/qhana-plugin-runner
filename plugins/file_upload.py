@@ -35,10 +35,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -58,12 +58,6 @@ FILE_UPLOAD_BLP = SecurityBlueprint(
     description="File upload plugin API.",
     template_folder="file_upload_templates",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):  # TODO: move to plugin runner?
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class FileUploadParametersSchema(FrontendFormBaseSchema):
