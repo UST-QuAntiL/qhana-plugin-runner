@@ -475,7 +475,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "svm_template.html",  # "simple_template.html",
                 name=plugin.name,
                 version=plugin.version,
                 schema=schema,
@@ -599,7 +599,9 @@ def get_quantum_SVC(data, labels, input_params):
     reps = input_params.reps
     TASK_LOGGER.info(f"Loaded input parameters from db: reps='{reps}'")
 
-    dimension = len(data[0])
+    dimension = len(
+        data[0]
+    )  # = 2 because 2d data (just like in old qhana)... TODO should user be able to manually change dimension aka number of qubits?
 
     # get feature map
     feature_map = FeatureMap.get_feature_map(
