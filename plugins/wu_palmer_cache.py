@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import math
+import os
 from http import HTTPStatus
-from io import BytesIO, StringIO
+from itertools import combinations
 from json import dumps, loads
-from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional
+from tempfile import SpooledTemporaryFile, NamedTemporaryFile
+from typing import Mapping, Optional, Dict, Tuple
 from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -218,51 +217,92 @@ class WuPalmerCache(QHAnaPluginBase):
         return WU_PALMER_CACHE_BLP
 
     def get_requirements(self) -> str:
-        return "networkx~=2.5.1"
+        return ""
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def load_taxonomy(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
+    nodes: Dict[str, Tuple[str, ...]] = {}
+    edges: Dict[str, str] = {}
+    root_node: Optional[str] = ""
+
+    if taxonomy["type"] != "tree":
+        return
+
+    for relation in taxonomy["relations"]:
+        edges[relation["target"]] = relation["source"]
+
+    for node in taxonomy["entities"]:
+        node_id: str
+
+        if isinstance(node, str):
+            node_id = node
+        elif isinstance(node, dict):
+            node_id = node["ID"]
+        elif isinstance(node, tuple):
+            node_id = node[0]
+        else:
+            continue  # TODO: warning
+
+        ancestors = [node_id]
+        visited = {node_id}
+        current_node_id = node_id
+
+        for _ in range(len(edges)):
+            current_node_id = edges.get(current_node_id, None)
+
+            if current_node_id is None:
+                break
+
+            if current_node_id in visited:
+                return None  # TODO: warning
+
+            ancestors.append(current_node_id)
+            visited.add(current_node_id)
+
+        if root_node is not None:
+            if root_node == ancestors[-1]:
+                root_node = None
+
+            if not root_node:
+                root_node = ancestors[-1]
+
+        nodes[node_id] = tuple(ancestors)[::-1]
+
+    return nodes
+
+
+def wu_palmer_generator(nodes: Dict[str, Tuple[str, ...]]):
+    node_list = sorted(nodes.keys())
+
+    for node_a, node_b in combinations(node_list, 2):
+        ancestors_a = nodes[node_a]
+        ancestors_b = nodes[node_b]
+
+        assert ancestors_a[0] == ancestors_b[0]
+
+        common_ancestor_depth = -1
+
+        for a, b in zip(ancestors_a, ancestors_b):
+            if a != b:
+                break
+
+            common_ancestor_depth += 1
+
+        denominator = len(ancestors_a) + len(ancestors_b) - 2
+
+        if denominator == 0:
+            yield node_a, node_b, 1
+        else:
+            wu_palmer_similarity = (2 * common_ancestor_depth) / denominator
+
+            yield node_a, node_b, wu_palmer_similarity
+
+
 @CELERY.task(name=f"{WuPalmerCache.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
-    import networkx as nx
-
-    def compare_inner(first: str, second: str, graph: nx.DiGraph) -> float:
-        """
-        Applies wu palmer similarity measure on two taxonomie elements
-        """
-
-        # Get undirected graph
-        ud_graph = graph.to_undirected()
-
-        # Get lowest reachable node from both
-        lowest_common_ancestor = (
-            nx.algorithms.lowest_common_ancestors.lowest_common_ancestor(
-                graph, first, second
-            )
-        )
-
-        # Get root of graph
-        root = [n for n, d in graph.in_degree() if d == 0][0]
-
-        # Count edges - weight is 1 per default
-        d1 = nx.algorithms.shortest_paths.generic.shortest_path_length(
-            ud_graph, first, lowest_common_ancestor
-        )
-        d2 = nx.algorithms.shortest_paths.generic.shortest_path_length(
-            ud_graph, second, lowest_common_ancestor
-        )
-        d3 = nx.algorithms.shortest_paths.generic.shortest_path_length(
-            ud_graph, lowest_common_ancestor, root
-        )
-
-        # if first and second, both is the root
-        if d1 + d2 + 2 * d3 == 0.0:
-            return 0.0
-
-        return 2 * d3 / (d1 + d2 + 2 * d3)
-
     # get parameters
 
     TASK_LOGGER.info(f"Starting new Wu Palmer calculation task with db id '{db_id}'")
@@ -295,48 +335,27 @@ def calculation_task(self, db_id: int) -> str:
     zip_file = ZipFile(tmp_zip_file, "w")
 
     for tax_name in taxonomies.keys():
-        taxonomy = taxonomies[tax_name]
-        TASK_LOGGER.info("Start caching " + tax_name)
+        tax = load_taxonomy(taxonomies[tax_name])
 
-        # create graph from taxonomy
-        graph = nx.DiGraph()
+        if tax is None:
+            TASK_LOGGER.warning(f"taxonomy {tax_name} could not be loaded correctly")
+            print(f"tax {tax_name} is none")
+            continue
 
-        for entity in taxonomy["entities"]:
-            graph.add_node(entity)
+        try:
+            tax_file = NamedTemporaryFile(mode="wt", delete=False)
 
-        for relation in taxonomy["relations"]:
-            if not relation["source"] == relation["target"]:
-                graph.add_edge(relation["source"], relation["target"])
+            save_entities(
+                wu_palmer_generator(tax),
+                tax_file,
+                mimetype="text/csv",
+                attributes=["source", "target", "wu_palmer"],
+            )
 
-        amount = int(math.pow(len(taxonomy["entities"]), 2) / 2)
-        index = 1
-        every_n_steps = 100
-        cache = []
-
-        nodes = list(graph.nodes())
-
-        for i in range(len(nodes)):
-            for j in range(i, len(nodes)):
-                first = nodes[i]
-                second = nodes[j]
-
-                cache.append(
-                    {
-                        "ID": first + "__" + second,
-                        "first_node": first,
-                        "second_node": second,
-                        "similarity": compare_inner(first, second, graph),
-                    }
-                )
-                index += 1
-
-                if index % every_n_steps == 0:
-                    TASK_LOGGER.info(str(index) + " from " + str(amount))
-
-        with StringIO() as file:
-            save_entities(cache, file, "application/json")
-            file.seek(0)
-            zip_file.writestr(tax_name + ".json", file.read())
+            tax_file.close()
+            zip_file.write(tax_file.name, f"{tax_name}.csv")
+        finally:
+            os.unlink(tax_file.name)
 
     zip_file.close()
 
@@ -349,3 +368,22 @@ def calculation_task(self, db_id: int) -> str:
     )
 
     return "Result stored in file"
+
+
+def test_wu_palmer_generator():
+    nodes1 = {
+        "y": ("w", "1", "2", "3.1", "4.1", "y"),
+        "x": ("w", "1", "2", "3.2", "4.2", "x"),
+    }
+    nodes2 = {
+        "y": ("w", "1", "2.1", "y"),
+        "x": ("w", "1", "2.2", "3.2", "x"),
+    }
+    nodes3 = {
+        "y": ("w", "1.1", "2.1", "y"),
+        "x": ("w", "1.2", "x"),
+    }
+
+    assert list(wu_palmer_generator(nodes1))[0][2] == 2 / 5
+    assert list(wu_palmer_generator(nodes2))[0][2] == 2 / 7
+    assert list(wu_palmer_generator(nodes3))[0][2] == 0
