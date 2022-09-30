@@ -86,14 +86,37 @@
     var custom_backend = document.getElementById("custom_backend").parentNode.parentNode;
     var shots = document.getElementById("shots").parentNode.parentNode;
 
+
+
+    // if backendname starts with "aer" ->hide ibmqtoken and custombackendname
+    // if backendname starts with "ibmq" -> hide custombackendname
+    // if backendname starts with "custom_ibmq" -> show all
+    backend_type = document.getElementById("device");
+    function backend_type_change() {
+        if (use_quantum.checked == true) {
+            if (backend_type.value.startsWith("aer")) {
+                console.log("aer")
+                ibmq_token.style.display = 'none';
+                custom_backend.style.display = 'none';
+            } else if (backend_type.value.startsWith("ibmq")) {
+                console.log("ibmq")
+                ibmq_token.style.display = 'block';
+                custom_backend.style.display = 'none';
+            } else {
+                console.log("other")
+                ibmq_token.style.display = 'block';
+                custom_backend.style.display = 'block';
+            }
+        }
+    }
+
     function use_quantum_change() {
         console.log("use_quantum.checked", use_quantum.checked)
         if (use_quantum.checked == true) {
             console.log("quantum")
             // show quantum elements
             backend.style.display = 'block';
-            ibmq_token.style.display = 'block';
-            custom_backend.style.display = 'block';
+            backend_type_change();
             shots.style.display = 'block';
         } else {
             console.log("classical")
@@ -108,10 +131,12 @@
     use_quantum_change();
     use_default_dataset_change();
     visualize_classification_change();
+    backend_type_change();
 
     // react to changes
     use_quantum.onchange = use_quantum_change;
     use_default_dataset.onchange = use_default_dataset_change;
     visualize_classification.onchange = visualize_classification_change;
+    backend_type.onchange = backend_type_change;
 
 </script>
