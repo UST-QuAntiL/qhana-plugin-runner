@@ -47,7 +47,6 @@ def get_points(ent):
     return point
 
 
-# Creates a generator for loading in entities
 def get_entity_generator(entity_points_url: str, stream=False):
     """
     Return a generator for the entity points, given a url to them. This is useful, if not all points have to be loaded in
