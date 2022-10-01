@@ -56,6 +56,8 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.requests import open_url
 
+from itertools import chain as itr_chain
+
 
 _plugin_name = "entity-points-converter"
 __version__ = "v0.1.0"
@@ -287,15 +289,9 @@ def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
 
 def json_to_json_gen(file_, file_type) -> Iterator[dict]:
     gen = load_entities(file_, mimetype=file_type)
-
     # Yield the first element twice. This will be used to later get the dimensionality of the point attribute
-    first_ent = next(gen)
-    yield first_ent
-
-    # Yield all elements once in json format
-    yield first_ent
-    for ent in gen:
-        yield ent
+    first = next(gen)
+    return itr_chain((first, first), gen)
 
 
 def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
