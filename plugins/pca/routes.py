@@ -60,7 +60,7 @@ class PluginsView(MethodView):
             description=PCA.instance.description,
             name=PCA.instance.identifier,
             version=PCA.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{PCA_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{PCA_BLP.name}.MicroFrontend"),
