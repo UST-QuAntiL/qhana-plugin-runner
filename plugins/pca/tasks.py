@@ -26,6 +26,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
+    ensure_dict,
 )
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
@@ -58,8 +59,9 @@ def get_entity_generator(entity_points_url: str, stream=False):
     # if entity_points_url[-3:] == "csv":
     file_type = file_.headers["Content-Type"]
     if file_type == "text/csv":
-        for ent in load_entities(file_, mimetype=file_type):
-            ent = ent._asdict()
+        entities_generator = load_entities(file_, mimetype=file_type)
+        entities_generator = ensure_dict(entities_generator)
+        for ent in entities_generator:
             point = get_points(ent)
             prepared_ent = {"ID": ent["ID"], "href": ent["href"], "point": point}
             yield prepared_ent
@@ -81,7 +83,6 @@ def load_entity_points_and_idx_to_id(entity_points_url: str):
 
     ent = None
     for ent in entity_generator:
-        ent = dict(ent)
         if ent["ID"] in id_to_idx:
             raise ValueError("Duplicate ID: ", ent["ID"])
 
