@@ -31,6 +31,7 @@ from marshmallow import EXCLUDE, post_load
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
+    ensure_dict,
 )
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -267,9 +268,10 @@ def get_point(ent) -> List[float]:
 
 def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
     gen = load_entities(file_, mimetype=file_type)
+    gen = ensure_dict(gen)
 
     # Yield the first element twice. This will be used to later get the dimensionality of the point attribute
-    first_ent = next(gen)._asdict()
+    first_ent = next(gen)
     first_ent = {
         "ID": first_ent["ID"],
         "href": first_ent["href"],
@@ -280,7 +282,6 @@ def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
     # Yield all elements once in json format
     yield first_ent
     for ent in gen:
-        ent = ent._asdict()
         yield {"ID": ent["ID"], "href": ent["href"], "point": get_point(ent)}
 
 
