@@ -298,8 +298,17 @@ def json_to_json_gen(file_, file_type) -> Iterator[dict]:
 
 
 def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
-    file_.encoding = "utf-8"
-    input_format = file_.headers["Content-Type"]
+    header = file_.headers["Content-Type"]
+    # Header might contain more than just the input format
+    header = header.split(';')
+    input_format = header[0]
+
+    # If header contains the encoding type (charset), then take it. Otherwise, set it to utf-8
+    encoding = "utf-8"
+    for i in range(len(header)):
+        if "charset=" in header[i]:
+            encoding = header[i].split("charset=")[1]
+    file_.encoding = encoding
 
     # Check input format and convert it to json format
     # Generators provided here, must include the first entity twice, to extract the dimensionality from it!
