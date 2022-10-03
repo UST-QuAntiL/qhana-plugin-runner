@@ -272,26 +272,14 @@ def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
     gen = load_entities(file_, mimetype=file_type)
     gen = ensure_dict(gen)
 
-    # Yield the first element twice. This will be used to later get the dimensionality of the point attribute
-    first_ent = next(gen)
-    first_ent = {
-        "ID": first_ent["ID"],
-        "href": first_ent["href"],
-        "point": get_point(first_ent),
-    }
-    yield first_ent
-
     # Yield all elements once in json format
-    yield first_ent
     for ent in gen:
         yield {"ID": ent["ID"], "href": ent["href"], "point": get_point(ent)}
 
 
 def json_to_json_gen(file_, file_type) -> Iterator[dict]:
-    gen = load_entities(file_, mimetype=file_type)
-    # Yield the first element twice. This will be used to later get the dimensionality of the point attribute
-    first = next(gen)
-    return itr_chain((first, first), gen)
+    # Yield all elements once in json format
+    return load_entities(file_, mimetype=file_type)
 
 
 def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
@@ -320,6 +308,9 @@ def get_dim_and_json_gen(file_) -> (int, Iterator[dict]):
     # Since all points should have the same dimensionality, checking the first point suffices.
     first_ent = next(gen)
     dim = len(first_ent["point"])
+
+    # Gen should contain all elements
+    gen = itr_chain((first_ent,), gen)
 
     return dim, gen
 
