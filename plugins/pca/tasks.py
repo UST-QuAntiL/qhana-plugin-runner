@@ -151,12 +151,6 @@ def get_pca(input_params: ParameterHandler):
     # Exception for normal PCA we set n_components to 'mle', which automatically will choose the number of dimensions.
 
     if pca_type == PCATypeEnum.normal.value:
-        # For Debugging
-        # TASK_LOGGER.info(f"\nNormal PCA with parameters:"
-        #                  f"\n\tn_components={input_params.get('dimensions')}"
-        #                  f"\n\tsvd_solver={input_params.get('solver')}"
-        #                  f"\n\ttol={input_params.get('tol')}"
-        #                  f"\n\titerated_power={input_params.get('iteratedPower')}")
         return PCA(
             n_components=input_params.get("dimensions"),
             svd_solver=input_params.get("solver"),
@@ -164,22 +158,11 @@ def get_pca(input_params: ParameterHandler):
             iterated_power=input_params.get("iteratedPower"),
         )
     elif pca_type == PCATypeEnum.incremental.value:
-        # For Debugging
-        # TASK_LOGGER.info(f"\nIncremental PCA with parameters:"
-        #                  f"\n\tn_components={input_params.get('dimensions')}"
-        #                  f"\n\tbatch_size={input_params.get('batchSize')}")
         return IncrementalPCA(
             n_components=input_params.get("dimensions"),
             batch_size=input_params.get("batchSize"),
         )
     elif pca_type == PCATypeEnum.sparse.value:
-        # For Debugging
-        # TASK_LOGGER.info(f"\nSparse PCA with parameters:"
-        #                  f"\n\tn_components={input_params.get('dimensions')}"
-        #                  f"\n\talpha={input_params.get('sparsityAlpha')} (Sparsity Alpha)"
-        #                  f"\n\tridge_alpha={input_params.get('ridgeAlpha')}"
-        #                  f"\n\tmax_iter={input_params.get('maxItr')}"
-        #                  f"\n\ttol={input_params.get('tol')}")
         return SparsePCA(
             n_components=input_params.get("dimensions"),
             alpha=input_params.get("sparsityAlpha"),
@@ -191,15 +174,6 @@ def get_pca(input_params: ParameterHandler):
         eigen_solver = input_params.get("solver")
         if eigen_solver == "full":
             eigen_solver = "dense"
-        # For Debugging
-        # TASK_LOGGER.info(f"\nKernel PCA with parameters:"
-        #                 f"\n\tn_components={input_params.get('dimensions')}"
-        #                 f"\n\tkernel={input_params.get('kernel')}"
-        #                 f"\n\tdegree={input_params.get('degree')}"
-        #                 f"\n\tgamma={input_params.get('kernelGamma')}"
-        #                 f"\n\tcoef0={input_params.get('kernelCoef')}"
-        #                 f"\n\teigen_solver={eigen_solver}"
-        #                 f"\n\ttol={input_params.get('tol')}")
         return KernelPCA(
             n_components=input_params.get("dimensions"),
             kernel=input_params.get("kernel"),
