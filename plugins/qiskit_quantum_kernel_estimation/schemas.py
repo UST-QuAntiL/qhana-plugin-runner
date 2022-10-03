@@ -42,6 +42,7 @@ class InputParameters:
         kernel: KernelEnum,
         entanglement_pattern: EntanglementPatternEnum,
         n_qbits: int,
+        paulis: str,
         reps: int,
         shots: int,
         backend: QiskitBackends,
@@ -55,11 +56,17 @@ class InputParameters:
         self.kernel = kernel
         self.entanglement_pattern = entanglement_pattern
         self.n_qbits = n_qbits
+        self.paulis = paulis
         self.reps = reps
         self.shots = shots
         self.backend = backend
         self.ibmq_token = ibmq_token
         self.custom_backend = custom_backend
+
+    def __str__(self):
+        variables = self.__dict__.copy()
+        variables["ibmq_token"] = ""
+        return str(variables)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -124,15 +131,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    # paulis = ma.fields.String(
-    #     required=False,
-    #     allow_none=True,
-    #     metadata={
-    #         "label": "Pauli Matrices",
-    #         "description": "",
-    #         "input_type": "text",
-    #     }
-    # )
+    paulis = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Pauli Matrices",
+            "description": """By default the pauli kernel only uses the Z and ZZ matrices, as described 
+            in [0]. With this parameter, other pauli matrices (X, Y, Z) can be used, e.g. `Z,XX,XZ,ZYZ` is a possible 
+            input.""",
+            "input_type": "text",
+        }
+    )
     reps = ma.fields.Integer(
         required=True,
         allow_none=False,

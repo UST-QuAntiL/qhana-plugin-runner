@@ -15,6 +15,7 @@
 from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, ZFeatureMap
 from qiskit_machine_learning.kernels import QuantumKernel
 import enum
+from typing import List
 
 
 class EntanglementPatternEnum(enum.Enum):
@@ -27,12 +28,12 @@ class EntanglementPatternEnum(enum.Enum):
 
 
 class KernelEnum(enum.Enum):
-    z_feature_map = "ZFeatureMap"
-    zz_feature_map = "ZZFeatureMap"
-    pauli_feature_map = "PauliFeatureMap"
+    z_feature_map = "Z Kernel"
+    zz_feature_map = "ZZ Kernel"
+    pauli_feature_map = "Pauli Kernel"
 
     def get_kernel(
-        self, backend, n_qbits: int, reps: int, entanglement_pattern: str
+        self, backend, n_qbits: int, paulis: List[str], reps: int, entanglement_pattern: str
     ) -> QuantumKernel:
         # backend = QuantumInstance(backend, shots)
         if self == KernelEnum.z_feature_map:
@@ -47,7 +48,7 @@ class KernelEnum(enum.Enum):
 
         elif self == KernelEnum.pauli_feature_map:
             feature_map = PauliFeatureMap(
-                feature_dimension=n_qbits, entanglement=entanglement_pattern, reps=reps
+                feature_dimension=n_qbits, paulis=paulis, entanglement=entanglement_pattern, reps=reps
             )
 
         else:

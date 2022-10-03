@@ -80,29 +80,20 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entity_points_url1 = input_params.entity_points_url1
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url1='{entity_points_url1}'"
-    )
     entity_points_url2 = input_params.entity_points_url2
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url2='{entity_points_url2}'"
-    )
     kernel_enum = input_params.kernel
-    TASK_LOGGER.info(f"Loaded input parameters from db: kernel_enum='{kernel_enum}'")
     entanglement_pattern = input_params.entanglement_pattern
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entanglement_pattern='{entanglement_pattern}'"
-    )
     n_qbits = input_params.n_qbits
-    TASK_LOGGER.info(f"Loaded input parameters from db: n_qbits='{n_qbits}'")
+    paulis = input_params.paulis
     reps = input_params.reps
-    TASK_LOGGER.info(f"Loaded input parameters from db: reps='{reps}'")
     shots = input_params.shots
-    TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     backend = input_params.backend
-    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info("Loaded input parameters from db: ibmq_token")
+    custom_backend = input_params.custom_backend
+
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(input_params)}"
+    )
 
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
@@ -113,9 +104,6 @@ def calculation_task(self, db_id: int) -> str:
         else:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
-    custom_backend = input_params.custom_backend
-    TASK_LOGGER.info("Loaded input parameters from db: custom_backend='{custom_backend}'")
-
     # load data from file
 
     id_to_idx_x, points_arr_x = get_indices_and_point_arr(entity_points_url1)
@@ -125,7 +113,9 @@ def calculation_task(self, db_id: int) -> str:
     backend.shots = shots
 
     entanglement_pattern = entanglement_pattern.get_pattern()
-    kernel = kernel_enum.get_kernel(backend, n_qbits, reps, entanglement_pattern)
+    paulis = paulis.replace(" ", "").split(",")
+
+    kernel = kernel_enum.get_kernel(backend, n_qbits, paulis, reps, entanglement_pattern)
     # kernel_matrix is size len(points_arr_y) x len(points_arr_x)
     kernel_matrix = kernel.evaluate(x_vec=points_arr_x, y_vec=points_arr_y).T
     TASK_LOGGER.info(f"kernel_matrix.shape = {kernel_matrix.shape}")
