@@ -174,6 +174,7 @@ def get_pca(input_params: ParameterHandler):
         eigen_solver = input_params.get("solver")
         if eigen_solver == "full":
             eigen_solver = "dense"
+
         return KernelPCA(
             n_components=input_params.get("dimensions"),
             kernel=input_params.get("kernel"),
