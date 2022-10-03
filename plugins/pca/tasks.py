@@ -137,7 +137,7 @@ def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
 
 
 # This method returns a pca, depending on the input parameters input_params
-def get_correct_pca(input_params: ParameterHandler):
+def get_pca(input_params: ParameterHandler):
     """
     Returns the correct pca model, given by the frontend's input paramters.
     :param input_params: ParameterHandler containing the frontend's input parameters
@@ -487,7 +487,7 @@ def calculation_task(self, db_id: int) -> str:
     kernel_url = input_params.get("kernelUrl")
 
     # Compute pca
-    pca = get_correct_pca(input_params)
+    pca = get_pca(input_params)
 
     # Since incremental pca uses batches, we want to load in the data in batches
     if input_params.get("pcaType") == PCATypeEnum.incremental.value:
