@@ -95,7 +95,7 @@ class Clustering:
         """
         n_different_labels = 0
         n_data_points = len(new_centroid_mapping)
-        for i in range(0, len(old_centroid_mapping)):
+        for i in range(len(old_centroid_mapping)):
             if old_centroid_mapping[i] != new_centroid_mapping[i]:
                 n_different_labels += 1
 
