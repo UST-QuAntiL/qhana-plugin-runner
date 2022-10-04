@@ -25,7 +25,7 @@ class ZZKernel(Kernel):
     """
     This class creates the circuit proposed by Havlíček et al., but for any given feature map.
     The name for this class is inspired by the name of qiskit's implementation.
-    Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). <a href=\"https://doi.org/10.1038/s41586-019-0980-2\">https://doi.org/10.1038/s41586-019-0980-2</a>
+    Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). https://doi.org/10.1038/s41586-019-0980-2
     """
 
     def __init__(self, backend, n_qbits, reps, entanglement_pattern_enum):
