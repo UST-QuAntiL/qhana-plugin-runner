@@ -47,8 +47,6 @@ class InputParameters:
         self.entity_points_url = entity_points_url
         self.clusters_cnt = clusters_cnt
         self.variant = variant
-        if tol < 0:
-            raise ValueError("The tolerance must be positive")
         self.tol = tol / 100.0
         self.max_runs = max_runs
         self.backend = backend
@@ -98,6 +96,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "have changed. If the input tolerance is 5%, then the algorithm stops, if less than 5% of the "
             "assignments have changed.",
         },
+        validate=ma.validate.Range(min=0, min_inclusive=True, error="The tolerance must be positive")
     )
     max_runs = ma.fields.Integer(
         required=True,
