@@ -146,9 +146,7 @@ class Kernel(metaclass=ABCMeta):
         entanglement_pattern = self.entanglement_pattern_enum.get_pattern(needed_qbits)
         amount_of_circuits = 0
 
-        is_symmetric = True
-        if not np.array_equal(data_x, data_y):
-            is_symmetric = False
+        is_symmetric = np.array_equal(data_x, data_y)
 
         kernel_matrix = np.zeros((len(data_y), len(data_x)))
         start = 0
