@@ -296,7 +296,6 @@ def load_taxonomy(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
         ancestors = [node_id]
         visited = {node_id}
         current_node_id = node_id
-        cycle_detected = False
 
         for _ in range(len(edges)):
             current_node_id = edges.get(current_node_id, None)
