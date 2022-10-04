@@ -99,10 +99,7 @@ class Clustering:
             if old_centroid_mapping[i] != new_centroid_mapping[i]:
                 n_different_labels += 1
 
-        if n_different_labels - n_data_points * self.tol <= 0:
-            return True
-        else:
-            return False
+        return (n_different_labels - (n_data_points * self.tol)) <= 0
 
     @abstractmethod
     def init_centroids(self, k) -> np.ndarray:
