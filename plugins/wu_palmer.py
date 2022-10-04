@@ -308,14 +308,10 @@ def load_taxonomy(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
                 TASK_LOGGER.warn(
                     f"cycle detected, node {current_node_id} already visited"
                 )
-                cycle_detected = True
-                break
+                return None
 
             ancestors.append(current_node_id)
             visited.add(current_node_id)
-
-        if cycle_detected:
-            continue
 
         if root_node is not None:
             if root_node == ancestors[-1]:
@@ -412,7 +408,6 @@ def calculation_task(self, db_id: int) -> str:
     cached_similarities = {}
 
     for tax_name, tax in taxonomies.items():
-        TASK_LOGGER.info(f"tax: {tax_name}")
         nodes = load_taxonomy(tax)
         similarity_gen = wu_palmer_generator(nodes)
 
