@@ -78,22 +78,12 @@ class Clustering:
         Standardize all the points, i.e. they have zero mean and unit variance.
         Note that a copy of the data points will be created.
         """
-        data_x = np.zeros(len(data))
-        data_y = np.zeros(len(data))
-        preprocessed_data = np.array([None] * len(data))
+        preprocessed_data = np.empty(data.shape)
 
-        # create x and y coordinate arrays
-        for i in range(0, len(data)):
-            data_x[i] = data[i][0]
-            data_y[i] = data[i][1]
-
-        # make zero mean and unit variance, i.e. standardize
-        temp_data_x = (data_x - data_x.mean(axis=0)) / data_x.std(axis=0)
-        temp_data_y = (data_y - data_y.mean(axis=0)) / data_y.std(axis=0)
-
-        # create tuples and normalize
-        for i in range(0, len(data)):
-            preprocessed_data[i] = [temp_data_x[i], temp_data_y[i]]
+        for d in range(data.shape[1]):
+            # Go through each dimension and give it a zero mean and unit variance
+            data_d = data[:, d].copy()
+            preprocessed_data[:, d] = (data_d - data_d.mean(axis=0)) / data_d.std(axis=0)
 
         return preprocessed_data
 
@@ -165,7 +155,7 @@ class Clustering:
 
         return centroids
 
-    def create_clusters(self, data: List[List[float]], k: int) -> Tuple[np.ndarray, str]:
+    def create_clusters(self, data: np.ndarray, k: int) -> Tuple[np.ndarray, str]:
         """
         Executes the quantum k means cluster algorithm on the given
         quantum backend and the specified circuit.
