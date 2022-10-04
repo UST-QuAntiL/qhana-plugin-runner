@@ -18,7 +18,9 @@ import numpy as np
 
 
 def plot_data(data_points, clusters, only_first_100=True):
-    data_points = data_points[:100]
+    if only_first_100:
+        data_points = data_points[:100]
+
     dim = len(data_points[0]["point"])
     cluster_dict = {}
     for cluster_entry in clusters:
