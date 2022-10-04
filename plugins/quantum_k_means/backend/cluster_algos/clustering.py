@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import enum
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 from celery.utils.log import get_task_logger
 
 from pennylane import Device
@@ -59,7 +59,7 @@ class ClusteringEnum(enum.Enum):
             raise ValueError("Unkown clustering algorithm!")
 
 
-class Clustering:
+class Clustering(metaclass=ABCMeta):
     def __init__(self, backend: Device, tol, max_runs):
         self.backend = backend
         self.max_qbits = backend.num_wires
@@ -206,13 +206,11 @@ class Clustering:
         return np.array(new_centroid_mapping, dtype=int), representative_circuit
 
     # These methods were for debug purposes
-    @abstractmethod
     def plot(self, preped_data, preped_centroids, centroid_mapping):
         """
         Plot data and centroids
         """
 
-    @abstractmethod
     def simpler_plot(self, preped_data, preped_centroids, centroid_mapping):
         """
         Plot data and centroids
