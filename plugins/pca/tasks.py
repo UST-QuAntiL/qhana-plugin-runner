@@ -34,6 +34,7 @@ from qhana_plugin_runner.storage import STORE
 from .pca_output import pca_to_output
 
 import numpy as np
+from itertools import islice
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -317,74 +318,40 @@ def plot_data(entity_points, dim, only_first_100):
     import pandas as pd
     import plotly.express as px
 
+    # if only_first 100 == True, then this ensures that only the first 100 entities are returned by entity_points
+    # else it returns all the entity_points
+    entity_points = islice(entity_points, 100 if only_first_100 else None)
+
+    points = []
+    ids = []
+    for entity in entity_points:
+        point = [float(entity[f"dim{d}"]) for d in range(dim)]
+        points.append(point)
+        ids.append(entity["ID"])
+
+    points = np.array(points)
+
     if dim >= 3:
-        points_x = []
-        points_y = []
-        points_z = []
-        ids = []
-        if only_first_100:
-            for _ in range(100):
-                entity = next(entity_points)
-                points_x.append(float(entity["dim0"]))
-                points_y.append(float(entity["dim1"]))
-                points_z.append(float(entity["dim2"]))
-                ids.append(entity["ID"])
-        else:
-            for entity in entity_points:
-                points_x.append(float(entity["dim0"]))
-                points_y.append(float(entity["dim1"]))
-                points_z.append(float(entity["dim2"]))
-                ids.append(entity["ID"])
         df = pd.DataFrame(
             {
-                "x": points_x,
-                "y": points_y,
-                "z": points_z,
+                "x": points[:, 0],
+                "y": points[:, 1],
+                "z": points[:, 2],
                 "ID": ids,
                 "size": [10] * len(ids),
             }
         )
         return px.scatter_3d(df, x="x", y="y", z="z", hover_name="ID", size="size")
-    elif dim == 2:
-        points_x = []
-        points_y = []
-        ids = []
-        if only_first_100:
-            for _ in range(100):
-                entity = next(entity_points)
-                points_x.append(float(entity["dim0"]))
-                points_y.append(float(entity["dim1"]))
-                ids.append(entity["ID"])
-        else:
-            for entity in entity_points:
-                points_x.append(float(entity["dim0"]))
-                points_y.append(float(entity["dim1"]))
-                ids.append(entity["ID"])
-        df = pd.DataFrame(
-            {
-                "x": points_x,
-                "y": points_y,
-                "ID": ids,
-                "size": [10] * len(ids),
-            }
-        )
-        return px.scatter(df, x="x", y="y", hover_name="ID", size="size")
     else:
-        points_x = []
-        ids = []
-        if only_first_100:
-            for _ in range(100):
-                entity = next(entity_points)
-                points_x.append(float(entity["dim0"]))
-                ids.append(entity["ID"])
+        if dim == 1:
+            points_y = [0]*len(ids)
         else:
-            for entity in entity_points:
-                points_x.append(float(entity["dim0"]))
-                ids.append(entity["ID"])
+            points_y = points[:, 1]
+
         df = pd.DataFrame(
             {
-                "x": points_x,
-                "y": [0] * len(ids),
+                "x": points[:, 0],
+                "y": points_y,
                 "ID": ids,
                 "size": [10] * len(ids),
             }
