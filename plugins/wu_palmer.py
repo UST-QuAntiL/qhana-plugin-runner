@@ -14,14 +14,14 @@
 import json
 from http import HTTPStatus
 from io import StringIO
+from itertools import combinations, combinations_with_replacement
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List
+from typing import Mapping, Optional, List, Dict, Tuple, Generator
 from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -99,14 +99,14 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    wu_palmer_cache_url = FileUrl(
+    taxonomies_zip_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="wu-palmer-cache",
+        data_input_type="taxonomy",
         data_content_types="application/zip",
         metadata={
-            "label": "Cache URL",
-            "description": "URL to a file with the Wu Palmer cache.",
+            "label": "Taxonomies URL",
+            "description": "URL to zip file with taxonomies.",
             "input_type": "text",
         },
     )
@@ -146,16 +146,16 @@ class PluginsView(MethodView):
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="wu-palmer-cache",
-                        content_type=["application/zip"],
+                        data_type="attribute-metadata",
+                        content_type=["application/json"],
                         required=True,
                         parameter="entitiesMetadataUrl",
                     ),
                     InputDataMetadata(
-                        data_type="attribute-metadata",
-                        content_type=["application/json"],
+                        data_type="taxonomy",
+                        content_type=["application/zip"],
                         required=True,
-                        parameter="wuPalmerCacheUrl",
+                        parameter="taxonomiesZipUrl",
                     ),
                 ],
                 data_output=[
@@ -267,6 +267,97 @@ class WuPalmer(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def load_taxonomy(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
+    nodes: Dict[str, Tuple[str, ...]] = {}
+    edges: Dict[str, str] = {}
+    root_node: Optional[str] = ""
+
+    if taxonomy["type"] != "tree":
+        TASK_LOGGER.warn("taxonomy is not a tree")
+        return None
+
+    for relation in taxonomy["relations"]:
+        if relation["target"] != relation["source"]:
+            edges[relation["target"]] = relation["source"]
+
+    for node in taxonomy["entities"]:
+        node_id: str
+
+        if isinstance(node, str):
+            node_id = node
+        elif isinstance(node, dict):
+            node_id = node["ID"]
+        elif isinstance(node, tuple):
+            node_id = node[0]
+        else:
+            TASK_LOGGER.warn("entity has an unsupported type")
+            continue
+
+        ancestors = [node_id]
+        visited = {node_id}
+        current_node_id = node_id
+        cycle_detected = False
+
+        for _ in range(len(edges)):
+            current_node_id = edges.get(current_node_id, None)
+
+            if current_node_id is None:
+                break
+
+            if current_node_id in visited:
+                TASK_LOGGER.warn(
+                    f"cycle detected, node {current_node_id} already visited"
+                )
+                cycle_detected = True
+                break
+
+            ancestors.append(current_node_id)
+            visited.add(current_node_id)
+
+        if cycle_detected:
+            continue
+
+        if root_node is not None:
+            if root_node == ancestors[-1]:
+                root_node = None
+
+            if not root_node:
+                root_node = ancestors[-1]
+
+        nodes[node_id] = tuple(ancestors)[::-1]
+
+    return nodes
+
+
+def wu_palmer_generator(
+    nodes: Dict[str, Tuple[str, ...]]
+) -> Generator[Tuple[str, str, float], None, None]:
+    node_list = sorted(nodes.keys())
+
+    for node_a, node_b in combinations_with_replacement(node_list, 2):
+        ancestors_a = nodes[node_a]
+        ancestors_b = nodes[node_b]
+
+        assert ancestors_a[0] == ancestors_b[0]
+
+        common_ancestor_depth = -1
+
+        for a, b in zip(ancestors_a, ancestors_b):
+            if a != b:
+                break
+
+            common_ancestor_depth += 1
+
+        denominator = len(ancestors_a) + len(ancestors_b) - 2
+
+        if denominator == 0:
+            yield node_a, node_b, 1
+        else:
+            wu_palmer_similarity = (2 * common_ancestor_depth) / denominator
+
+            yield node_a, node_b, wu_palmer_similarity
+
+
 @CELERY.task(name=f"{WuPalmer.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -289,11 +380,11 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(
         f"Loaded input parameters from db: entities_metadata_url='{entities_metadata_url}'"
     )
-    wu_palmer_cache_url: Optional[str] = loads(task_data.parameters or "{}").get(
-        "wu_palmer_cache_url", None
+    taxonomies_zip_url: Optional[str] = loads(task_data.parameters or "{}").get(
+        "taxonomies_zip_url", None
     )
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: wu_palmer_cache_url='{wu_palmer_cache_url}'"
+        f"Loaded input parameters from db: taxonomies_zip_url='{taxonomies_zip_url}'"
     )
     attributes: Optional[str] = loads(task_data.parameters or "{}").get(
         "attributes", None
@@ -312,11 +403,29 @@ def calculation_task(self, db_id: int) -> str:
         )
         entities_metadata = {element["ID"]: element for element in entities_metadata_list}
 
+    taxonomies = {}
+
+    for zipped_file, file_name in get_files_from_zip_url(taxonomies_zip_url, mode="t"):
+        taxonomy: Dict = json.load(zipped_file)
+        taxonomies[file_name[:-5]] = taxonomy
+
     cached_similarities = {}
 
-    for file, file_name in get_files_from_zip_url(wu_palmer_cache_url):
-        cached_similarities[file_name[:-5]] = {
-            element["ID"]: element for element in json.load(file)
+    for tax_name, tax in taxonomies.items():
+        TASK_LOGGER.info(f"tax: {tax_name}")
+        nodes = load_taxonomy(tax)
+        similarity_gen = wu_palmer_generator(nodes)
+
+        cached_similarities[tax_name] = {
+            element[0]
+            + "__"
+            + element[1]: {
+                "ID": element[0] + "__" + element[1],
+                "first_node": element[0],
+                "second_node": element[1],
+                "similarity": element[2],
+            }
+            for element in similarity_gen
         }
 
     # calculate similarity values for all possible value pairs
