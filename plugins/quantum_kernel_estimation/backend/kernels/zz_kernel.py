@@ -16,12 +16,13 @@ from typing import List
 import pennylane as qml
 from .kernel import Kernel
 from celery.utils.log import get_task_logger
+from abc import abstractmethod, ABCMeta
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-class ZZKernel(Kernel):
+class ZZKernel(Kernel, metaclass=ABCMeta):
     """
     This class creates the circuit proposed by Havlíček et al., but for any given feature map.
     The name for this class is inspired by the name of qiskit's implementation.
@@ -34,8 +35,8 @@ class ZZKernel(Kernel):
     def get_qbits_needed(self, data_x, data_y) -> int:
         return len(data_x[0])
 
-    @staticmethod
-    def feature_map(x) -> float:
+    @abstractmethod
+    def feature_map(self, x) -> float:
         raise NotImplementedError("Method evaluate is not implemented yet!")
 
     def execute_circuit(self, data_x, data_y, to_calculate, entanglement_pattern):
