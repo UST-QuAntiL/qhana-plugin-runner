@@ -55,7 +55,7 @@ class PluginsView(MethodView):
             description=QKE.instance.description,
             name=QKE.instance.name,
             version=QKE.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{QKE_BLP.name}.CalcView"),
                 ui_href=url_for(f"{QKE_BLP.name}.MicroFrontend"),
