@@ -126,27 +126,27 @@ class Clustering(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def compute_new_centroid_mapping(self, preped_data, centroids) -> (List[int], int, str):
+    def compute_new_centroid_mapping(self, prepped_data, centroids) -> (List[int], int, str):
         """
         Returns new centroid mapping, depending on the prepared data and the current centroids
         """
 
     def get_mean_centroids_from_mapping(
-        self, centroid_mapping: List[int], preped_data: np.ndarray, k: int
+        self, centroid_mapping: List[int], prepped_data: np.ndarray, k: int
     ) -> np.ndarray:
         centroid_mapping = np.array(centroid_mapping)
-        centroids = np.zeros((k, len(preped_data[0])))
+        centroids = np.zeros((k, len(prepped_data[0])))
         num_points = [0] * k
         # Sum points up
         for i in range(len(centroid_mapping)):
             c = centroid_mapping[i]
-            centroids[c] += preped_data[i]
+            centroids[c] += prepped_data[i]
             num_points[c] += 1
 
         # Average sum
         for c in range(k):
             if num_points[c] == 0:
-                centroids[c] = preped_data[c]
+                centroids[c] = prepped_data[c]
             else:
                 centroids[c] = centroids[c] / num_points[c]
 
@@ -171,13 +171,13 @@ class Clustering(metaclass=ABCMeta):
         # get computed, but the outer loop with the convergence criteria is the same.
 
         # Init centroids and Prepare data
-        preped_centroids = self.prep_centroids(self.init_centroids(k))
+        prepped_centroids = self.prep_centroids(self.init_centroids(k))
         # Data gets prepared twice, since we need a version, to compute the new centroids after each iteration
         # and we might need a different version as input for the quantum circuits. Since the data points never change,
         # we compute both versions right here
-        preped_data = self.prep_data(data)
+        prepped_data = self.prep_data(data)
 
-        circuit_data = self.prep_data_for_circuit(preped_data)
+        circuit_data = self.prep_data_for_circuit(prepped_data)
 
         new_centroid_mapping = np.zeros(len(data))
         iterations = 0
@@ -189,13 +189,13 @@ class Clustering(metaclass=ABCMeta):
                 new_centroid_mapping,
                 amount_executed_circuits,
                 representative_circuit,
-            ) = self.compute_new_centroid_mapping(circuit_data, preped_centroids)
+            ) = self.compute_new_centroid_mapping(circuit_data, prepped_centroids)
             global_amount_executed_circuits += amount_executed_circuits
 
             centroids = self.get_mean_centroids_from_mapping(
-                new_centroid_mapping, preped_data, k
+                new_centroid_mapping, prepped_data, k
             )
-            preped_centroids = self.prep_centroids(centroids)
+            prepped_centroids = self.prep_centroids(centroids)
 
             not_converged = not self.check_convergence(
                 old_centroid_mapping, new_centroid_mapping
@@ -206,12 +206,12 @@ class Clustering(metaclass=ABCMeta):
         return np.array(new_centroid_mapping, dtype=int), representative_circuit
 
     # These methods were for debug purposes
-    def plot(self, preped_data, preped_centroids, centroid_mapping):
+    def plot(self, prepped_data, prepped_centroids, centroid_mapping):
         """
         Plot data and centroids
         """
 
-    def simpler_plot(self, preped_data, preped_centroids, centroid_mapping):
+    def simpler_plot(self, prepped_data, prepped_centroids, centroid_mapping):
         """
         Plot data and centroids
         """

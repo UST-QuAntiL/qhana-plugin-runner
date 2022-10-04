@@ -98,7 +98,7 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         return [probs[1] for probs in result], circuit.tape.to_openqasm()
 
     def compute_new_centroid_mapping(
-        self, preped_data: List[float], centroids: List[List[float]]
+        self, prepped_data: List[float], centroids: List[List[float]]
     ) -> Tuple[np.ndarray, int, str]:
         """
         Performs the positive correlation quantum KMeans accordingly to
@@ -108,15 +108,15 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         representative_circuit = ""
 
         centroid_angles = self.map_to_zero_to_2pi(centroids)
-        centroid_mapping = np.zeros(len(preped_data), dtype=int)
+        centroid_mapping = np.zeros(len(prepped_data), dtype=int)
         # Since we want the minimum result of our quantum circuits and the results lie within [0, 1],
         # we can start out with 1.
-        mapping_distance = np.ones(len(preped_data))
+        mapping_distance = np.ones(len(prepped_data))
 
         next_qbit = 0  # this tracks the next free qbit
         amount_executed_circuits = 0
         current_distances_calculated = []
-        for i in range(len(preped_data)):
+        for i in range(len(prepped_data)):
             for j in range(len(centroid_angles)):
                 # If if-statement is true, then we don't have enough qbits left to prepare another circuit
                 # Therefore execute the circuits on a quantum computer
@@ -124,7 +124,7 @@ class PositiveCorrelationQuantumKmeans(Clustering):
                     amount_executed_circuits += 1
                     # This adds the measurements and executes the circuits
                     results, representative_circuit = self.execute_circuit(
-                        current_distances_calculated, preped_data, centroid_angles
+                        current_distances_calculated, prepped_data, centroid_angles
                     )
                     # Update centroid mapping
                     for k in range(len(results)):
@@ -148,7 +148,7 @@ class PositiveCorrelationQuantumKmeans(Clustering):
             amount_executed_circuits += 1
             # This adds the measurements and executes the circuits
             results, representative_circuit = self.execute_circuit(
-                current_distances_calculated, preped_data, centroid_angles
+                current_distances_calculated, prepped_data, centroid_angles
             )
             # Update centroid mapping
             for k in range(len(results)):
@@ -160,7 +160,7 @@ class PositiveCorrelationQuantumKmeans(Clustering):
 
         return centroid_mapping, amount_executed_circuits, representative_circuit
 
-    def plot(self, preped_data, preped_centroids, centroid_mapping):
+    def plot(self, prepped_data, prepped_centroids, centroid_mapping):
         import plotly.express as px
         import pandas as pd
 
@@ -169,9 +169,9 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         colors = []
         ids = []
 
-        for i in range(len(preped_data)):
-            points_x.append(preped_data[i][0])
-            points_y.append(preped_data[i][1])
+        for i in range(len(prepped_data)):
+            points_x.append(prepped_data[i][0])
+            points_y.append(prepped_data[i][1])
             ids.append(str(i))
 
             if centroid_mapping[i] == 0:
@@ -181,9 +181,9 @@ class PositiveCorrelationQuantumKmeans(Clustering):
             else:
                 raise ValueError("Too many clusters.")
 
-        for c in range(len(preped_centroids)):
-            points_x.append(preped_centroids[c][0])
-            points_y.append(preped_centroids[c][1])
+        for c in range(len(prepped_centroids)):
+            points_x.append(prepped_centroids[c][0])
+            points_y.append(prepped_centroids[c][1])
             colors.append("green")
             ids.append(f"c{c}")
 
@@ -209,9 +209,9 @@ class PositiveCorrelationQuantumKmeans(Clustering):
         fig.show()
 
         # colors = ["blue" if c == 0 else "red" for c in centroid_mapping]
-        # plt.scatter(preped_data[:, 0], preped_data[:, 1], c=colors)
-        # colors = ["green"]*len(preped_centroids)
-        # plt.scatter(preped_centroids[:, 0], preped_centroids[:, 1], c=colors)
+        # plt.scatter(prepped_data[:, 0], prepped_data[:, 1], c=colors)
+        # colors = ["green"]*len(prepped_centroids)
+        # plt.scatter(prepped_centroids[:, 0], prepped_centroids[:, 1], c=colors)
         # circle = plt.Circle((0, 0), 1, color="black", fill=False)
         # plt.gca().add_patch(circle)
         # plt.axis('square')
