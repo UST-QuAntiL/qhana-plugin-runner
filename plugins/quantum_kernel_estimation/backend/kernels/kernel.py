@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 from typing import List, Tuple
 from pennylane import Device
 import numpy as np
@@ -104,7 +104,7 @@ class KernelEnum(enum.Enum):
             raise ValueError("Unkown kernel!")
 
 
-class Kernel:
+class Kernel(metaclass=ABCMeta):
     def __init__(
         self,
         backend: Device,
