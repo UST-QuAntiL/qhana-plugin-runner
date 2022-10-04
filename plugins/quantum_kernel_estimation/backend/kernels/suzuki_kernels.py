@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-The Kernels stem from the paper by Suzuki et al
+The Kernels stem from the paper by Suzuki et al.
 Suzuki, Y., Yano, H., Gao, Q. et al.
 Analysis and synthesis of feature map for kernel-based quantum classifier.
 Quantum Mach. Intell. 2, 9 (2020). https://doi.org/10.1007/s42484-020-00020-y
