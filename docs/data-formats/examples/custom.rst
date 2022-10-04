@@ -13,13 +13,9 @@ Custom types can be used for data that has very few specific uses or that is onl
 Data Types
 ----------
 
-custom/wu-palmer-cache
-^^^^^^^^^^^^^^^^^^^^^^
-
-A cache for precomputed Wu-Palmer metric.
-
 
 custom/kernel-matrix
 ^^^^^^^^^^^^^^^^^^^^
 
 .. TODO:: fill in information about custom data types in use
+
