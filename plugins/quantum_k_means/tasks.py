@@ -55,23 +55,17 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entity_points_url = input_params.entity_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
-    )
     clusters_cnt = input_params.clusters_cnt
-    TASK_LOGGER.info(f"Loaded input parameters from db: clusters='{clusters_cnt}'")
     variant = input_params.variant
-    TASK_LOGGER.info(f"Loaded input parameters from db: variant='{variant}'")
     tol = input_params.tol
-    TASK_LOGGER.info(f"Loaded input parameters from db: tolerance='{tol}'")
     max_runs = input_params.max_runs
-    TASK_LOGGER.info(f"Loaded input parameters from db: max_runs='{max_runs}'")
     backend = input_params.backend
-    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     shots = input_params.shots
-    TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info("Loaded input parameters from db: ibmq_token")
+
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(input_params)}"
+    )
 
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
@@ -113,6 +107,7 @@ def calculation_task(self, db_id: int) -> str:
     if max_qbits is None:
         max_qbits = 6
     backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
+    backend.shots = shots
 
     cluster_algo = variant.get_cluster_algo(backend, tol, max_runs)
 

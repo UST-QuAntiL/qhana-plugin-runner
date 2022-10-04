@@ -54,6 +54,11 @@ class InputParameters:
         self.ibmq_token = ibmq_token
         self.custom_backend = custom_backend
 
+    def __str__(self):
+        variables = self.__dict__.copy()
+        variables["ibmq_token"] = ""
+        return str(variables)
+
 
 class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
