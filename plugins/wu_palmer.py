@@ -119,6 +119,16 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "textarea",
         },
     )
+    root_has_meaning_in_taxonomy = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Root node has meaning in the taxonomy",
+            "description": "Whether the value of the root node of a taxonomy has a meaning in the taxonomy"
+            "e.g. a taxonomy about colors and the root node represents a color",
+            "input_type": "checkbox",
+        },
+    )
 
 
 @WU_PALMER_BLP.route("/")
@@ -325,18 +335,19 @@ def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
 
 
 class WuPalmerCache:
-    def __init__(self, taxonomies: Dict[str, Dict]):
-        self.taxonomies = taxonomies
-        self.node_path_cache: Dict[str, Dict[str, Tuple[str, ...]]] = {}
+    def __init__(self, taxonomies: Dict[str, Dict], root_has_meaning_in_taxonomy: bool):
+        self._taxonomies = taxonomies
+        self._node_path_cache: Dict[str, Dict[str, Tuple[str, ...]]] = {}
+        self._root_has_meaning_in_taxonomy = root_has_meaning_in_taxonomy
 
     @lru_cache
     def calculate_similarity(self, tax_name: str, node_a: str, node_b: str) -> float:
-        if tax_name not in self.node_path_cache:
-            self.node_path_cache[tax_name] = load_taxonomy_as_node_paths(
-                self.taxonomies[tax_name]
+        if tax_name not in self._node_path_cache:
+            self._node_path_cache[tax_name] = load_taxonomy_as_node_paths(
+                self._taxonomies[tax_name]
             )
 
-        node_paths = self.node_path_cache[tax_name]
+        node_paths = self._node_path_cache[tax_name]
 
         if node_a not in node_paths:
             raise RuntimeError(f"node {node_a} not in node paths of taxonomy {tax_name}")
@@ -347,7 +358,7 @@ class WuPalmerCache:
         ancestors_a = node_paths[node_a]
         ancestors_b = node_paths[node_b]
 
-        common_ancestor_depth = -1
+        common_ancestor_depth = 0 if self._root_has_meaning_in_taxonomy else -1
 
         for a, b in zip(ancestors_a, ancestors_b):
             if a != b:
@@ -355,7 +366,10 @@ class WuPalmerCache:
 
             common_ancestor_depth += 1
 
-        denominator = len(ancestors_a) + len(ancestors_b) - 2
+        if self._root_has_meaning_in_taxonomy:
+            denominator = len(ancestors_a) + len(ancestors_b)
+        else:
+            denominator = len(ancestors_a) + len(ancestors_b) - 2
 
         if denominator == 0:
             return 1
@@ -438,6 +452,12 @@ def calculation_task(self, db_id: int) -> str:
     )
     TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes}'")
     attributes: List[str] = attributes.splitlines()
+    root_has_meaning_in_taxonomy: Optional[bool] = loads(
+        task_data.parameters or "{}"
+    ).get("root_has_meaning_in_taxonomy", None)
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: root_has_meaning_in_taxonomy='{root_has_meaning_in_taxonomy}'"
+    )
 
     # load data from file
 
@@ -456,7 +476,7 @@ def calculation_task(self, db_id: int) -> str:
         tax_name: Dict = json.load(zipped_file)
         taxonomies[file_name[:-5]] = tax_name
 
-    wu_palmer_cache = WuPalmerCache(taxonomies)
+    wu_palmer_cache = WuPalmerCache(taxonomies, root_has_meaning_in_taxonomy)
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     zip_file = ZipFile(tmp_zip_file, "w")
