@@ -39,7 +39,7 @@ class QKMeans(QHAnaPluginBase):
         "Currently there are four implemented algorithms. Destructive interference and negative rotation are from [0], "
         "positive correlation is from [1] and state preparation is from a previous colleague.\n\n"
         "Source:\n"
-        '[0] [S. Khan and A. Awan and G. Vall-Llosera. K-Means Clustering on Noisy Intermediate Scale Quantum Computers.arXiv](https://doi.org/10.48550/ARXIV.1909.12183).\n'
+        '[0] [S. Khan and A. Awan and G. Vall-Llosera. K-Means Clustering on Noisy Intermediate Scale Quantum Computers.arXiv.](https://doi.org/10.48550/ARXIV.1909.12183)\n'
         "[1] <https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76>"
     )
     tags = ["points-to-clusters", "k-means"]
