@@ -80,29 +80,19 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entity_points_url1 = input_params.entity_points_url1
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url1='{entity_points_url1}'"
-    )
     entity_points_url2 = input_params.entity_points_url2
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url2='{entity_points_url2}'"
-    )
     kernel_enum = input_params.kernel
-    TASK_LOGGER.info(f"Loaded input parameters from db: kernel_enum='{kernel_enum}'")
     entanglement_pattern = input_params.entanglement_pattern
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entanglement_pattern='{entanglement_pattern}'"
-    )
     n_qbits = input_params.n_qbits
-    TASK_LOGGER.info(f"Loaded input parameters from db: n_qbits='{n_qbits}'")
     reps = input_params.reps
-    TASK_LOGGER.info(f"Loaded input parameters from db: reps='{reps}'")
     shots = input_params.shots
-    TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     backend = input_params.backend
-    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info("Loaded input parameters from db: ibmq_token")
+    custom_backend = input_params.custom_backend
+
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(input_params)}"
+    )
 
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
@@ -113,10 +103,6 @@ def calculation_task(self, db_id: int) -> str:
         else:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
-    custom_backend = input_params.custom_backend
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
-    )
 
     # load data from file
 
