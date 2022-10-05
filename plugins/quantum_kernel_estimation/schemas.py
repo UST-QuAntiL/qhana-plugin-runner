@@ -81,7 +81,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types="application/json",
         metadata={
             "label": "Entity points URL 2",
-            "description": "URL to a json file with the second entity points.",
+            "description": "URL to a json file with the second entity points. If not provided, then entity points URL 1 will be used.",
             "input_type": "text",
         },
     )
