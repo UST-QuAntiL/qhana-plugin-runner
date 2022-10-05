@@ -367,6 +367,46 @@ class WuPalmerCache:
             return wu_palmer_similarity
 
 
+def add_similarities_for_entities(
+    similarities: Dict[Tuple[any, any], Dict],
+    entity1: Dict[str, any],
+    entity2: Dict[str, any],
+    attribute: str,
+    entities_metadata: Dict,
+    wu_palmer_cache: WuPalmerCache,
+):
+    if attribute in entity1 and attribute in entity2:
+        values1 = entity1[attribute]
+        values2 = entity2[attribute]
+
+        # extract taxonomy name from refTarget
+        tax_name: str = entities_metadata[attribute]["refTarget"].split(":")[1][:-5]
+
+        if not isinstance(values1, list):
+            values1 = [values1]
+
+        if not isinstance(values2, list):
+            values2 = [values2]
+
+        for val1 in values1:
+            for val2 in values2:
+                sim = None
+                # sorting the values reduces cache misses and is possible because
+                # Wu-Palmer is commutative
+                va1, val2 = sorted((val1, val2))
+
+                if val1 is not None and val2 is not None:
+                    sim = wu_palmer_cache.calculate_similarity(tax_name, val1, val2)
+
+                similarities[(val1, val2)] = {
+                    "ID": str(val1) + "_" + str(val2),
+                    "href": "",
+                    "value_1": val1,
+                    "value_2": val2,
+                    "similarity": sim,
+                }
+
+
 @CELERY.task(name=f"{WuPalmer.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -420,8 +460,6 @@ def calculation_task(self, db_id: int) -> str:
 
     wu_palmer_cache = WuPalmerCache(taxonomies)
 
-    # calculate similarity values for all possible value pairs
-
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     zip_file = ZipFile(tmp_zip_file, "w")
 
@@ -430,43 +468,14 @@ def calculation_task(self, db_id: int) -> str:
 
         for i in range(len(entities)):
             for j in range(i, len(entities)):
-                ent1 = entities[i]
-                ent2 = entities[j]
-
-                if attribute in ent1 and attribute in ent2:
-                    values1 = ent1[attribute]
-                    values2 = ent2[attribute]
-
-                    # extract taxonomy name from refTarget
-                    tax_name: str = entities_metadata[attribute]["refTarget"].split(":")[
-                        1
-                    ][:-5]
-
-                    if not isinstance(values1, list):
-                        values1 = [values1]
-
-                    if not isinstance(values2, list):
-                        values2 = [values2]
-
-                    for val1 in values1:
-                        for val2 in values2:
-                            sim = None
-                            # sorting the values reduces cache misses and is possible because
-                            # Wu-Palmer is commutative
-                            va1, val2 = sorted((val1, val2))
-
-                            if val1 is not None and val2 is not None:
-                                sim = wu_palmer_cache.calculate_similarity(
-                                    tax_name, val1, val2
-                                )
-
-                            similarities[(val1, val2)] = {
-                                "ID": str(val1) + "_" + str(val2),
-                                "href": "",
-                                "value_1": val1,
-                                "value_2": val2,
-                                "similarity": sim,
-                            }
+                add_similarities_for_entities(
+                    similarities,
+                    entities[i],
+                    entities[j],
+                    attribute,
+                    entities_metadata,
+                    wu_palmer_cache,
+                )
 
         with StringIO() as file:
             save_entities(similarities.values(), file, "application/json")
