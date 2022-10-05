@@ -387,42 +387,44 @@ def add_similarities_for_entities(
     entities_metadata: Dict,
     wu_palmer_cache: WuPalmerCache,
 ):
-    if attribute in entity1 and attribute in entity2:
-        values1 = entity1[attribute]
-        values2 = entity2[attribute]
+    if attribute not in entity1 or attribute not in entity2:
+        return
 
-        # extract taxonomy name from refTarget
-        tax_name: str = entities_metadata[attribute]["refTarget"].split(":")[1][:-5]
+    values1 = entity1[attribute]
+    values2 = entity2[attribute]
 
-        if not isinstance(values1, list):
-            values1 = [values1]
+    # extract taxonomy name from refTarget
+    tax_name: str = entities_metadata[attribute]["refTarget"].split(":")[1][:-5]
 
-        if not isinstance(values2, list):
-            values2 = [values2]
+    if not isinstance(values1, list):
+        values1 = [values1]
 
-        for val1 in values1:
-            for val2 in values2:
+    if not isinstance(values2, list):
+        values2 = [values2]
+
+    for val1 in values1:
+        for val2 in values2:
+            # sorting the values reduces cache misses and is possible because
+            # Wu-Palmer is commutative
+            va1, val2 = sorted((val1, val2))
+
+            if val1 is None or val2 is None:
                 sim = None
-                # sorting the values reduces cache misses and is possible because
-                # Wu-Palmer is commutative
-                va1, val2 = sorted((val1, val2))
+            else:
+                sim = wu_palmer_cache.calculate_similarity(tax_name, val1, val2)
 
-                if val1 is not None and val2 is not None:
-                    sim = wu_palmer_cache.calculate_similarity(tax_name, val1, val2)
-
-                similarities[(val1, val2)] = {
-                    "ID": str(val1) + "_" + str(val2),
-                    "href": "",
-                    "value_1": val1,
-                    "value_2": val2,
-                    "similarity": sim,
-                }
+            similarities[(val1, val2)] = {
+                "ID": str(val1) + "_" + str(val2),
+                "href": "",
+                "value_1": val1,
+                "value_2": val2,
+                "similarity": sim,
+            }
 
 
-@CELERY.task(name=f"{WuPalmer.instance.identifier}.calculation_task", bind=True)
-def calculation_task(self, db_id: int) -> str:
-    # get parameters
-
+def load_input_parameters(
+    db_id: int,
+) -> Tuple[Optional[str], Optional[str], Optional[str], List[str], Optional[bool]]:
     TASK_LOGGER.info(f"Starting new Wu Palmer calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -459,8 +461,26 @@ def calculation_task(self, db_id: int) -> str:
         f"Loaded input parameters from db: root_has_meaning_in_taxonomy='{root_has_meaning_in_taxonomy}'"
     )
 
-    # load data from file
+    return (
+        entities_url,
+        entities_metadata_url,
+        taxonomies_zip_url,
+        attributes,
+        root_has_meaning_in_taxonomy,
+    )
 
+
+@CELERY.task(name=f"{WuPalmer.instance.identifier}.calculation_task", bind=True)
+def calculation_task(self, db_id: int) -> str:
+    (
+        entities_url,
+        entities_metadata_url,
+        taxonomies_zip_url,
+        attributes,
+        root_has_meaning_in_taxonomy,
+    ) = load_input_parameters(db_id)
+
+    # load data from file
     with open_url(entities_url) as entities_data:
         entities = list(load_entities(entities_data, "application/json"))
 
