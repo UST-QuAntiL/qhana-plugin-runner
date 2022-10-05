@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import time
+from functools import lru_cache
 from http import HTTPStatus
 from io import StringIO
 from itertools import combinations, combinations_with_replacement
@@ -267,7 +269,7 @@ class WuPalmer(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def load_taxonomy(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
+def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
     nodes: Dict[str, Tuple[str, ...]] = {}
     edges: Dict[str, str] = {}
     root_node: Optional[str] = ""
@@ -324,16 +326,28 @@ def load_taxonomy(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
     return nodes
 
 
-def wu_palmer_generator(
-    nodes: Dict[str, Tuple[str, ...]]
-) -> Generator[Tuple[str, str, float], None, None]:
-    node_list = sorted(nodes.keys())
+class WuPalmerCache:
+    def __init__(self, taxonomies: Dict[str, Dict]):
+        self.taxonomies = taxonomies
+        self.node_path_cache: Dict[str, Dict[str, Tuple[str, ...]]] = {}
 
-    for node_a, node_b in combinations_with_replacement(node_list, 2):
-        ancestors_a = nodes[node_a]
-        ancestors_b = nodes[node_b]
+    @lru_cache
+    def calculate_similarity(self, tax_name: str, node_a: str, node_b: str) -> float:
+        if tax_name not in self.node_path_cache:
+            self.node_path_cache[tax_name] = load_taxonomy_as_node_paths(
+                self.taxonomies[tax_name]
+            )
 
-        assert ancestors_a[0] == ancestors_b[0]
+        node_paths = self.node_path_cache[tax_name]
+
+        if node_a not in node_paths:
+            raise RuntimeError(f"node {node_a} not in node paths of taxonomy {tax_name}")
+
+        if node_b not in node_paths:
+            raise RuntimeError(f"node {node_b} not in node paths of taxonomy {tax_name}")
+
+        ancestors_a = node_paths[node_a]
+        ancestors_b = node_paths[node_b]
 
         common_ancestor_depth = -1
 
@@ -346,11 +360,11 @@ def wu_palmer_generator(
         denominator = len(ancestors_a) + len(ancestors_b) - 2
 
         if denominator == 0:
-            yield node_a, node_b, 1
+            return 1
         else:
             wu_palmer_similarity = (2 * common_ancestor_depth) / denominator
 
-            yield node_a, node_b, wu_palmer_similarity
+            return wu_palmer_similarity
 
 
 @CELERY.task(name=f"{WuPalmer.instance.identifier}.calculation_task", bind=True)
@@ -401,26 +415,10 @@ def calculation_task(self, db_id: int) -> str:
     taxonomies = {}
 
     for zipped_file, file_name in get_files_from_zip_url(taxonomies_zip_url, mode="t"):
-        taxonomy: Dict = json.load(zipped_file)
-        taxonomies[file_name[:-5]] = taxonomy
+        tax_name: Dict = json.load(zipped_file)
+        taxonomies[file_name[:-5]] = tax_name
 
-    cached_similarities = {}
-
-    for tax_name, tax in taxonomies.items():
-        nodes = load_taxonomy(tax)
-        similarity_gen = wu_palmer_generator(nodes)
-
-        cached_similarities[tax_name] = {
-            element[0]
-            + "__"
-            + element[1]: {
-                "ID": element[0] + "__" + element[1],
-                "first_node": element[0],
-                "second_node": element[1],
-                "similarity": element[2],
-            }
-            for element in similarity_gen
-        }
+    wu_palmer_cache = WuPalmerCache(taxonomies)
 
     # calculate similarity values for all possible value pairs
 
@@ -440,10 +438,9 @@ def calculation_task(self, db_id: int) -> str:
                     values2 = ent2[attribute]
 
                     # extract taxonomy name from refTarget
-                    taxonomy: str = entities_metadata[attribute]["refTarget"].split(":")[
+                    tax_name: str = entities_metadata[attribute]["refTarget"].split(":")[
                         1
                     ][:-5]
-                    tax_sims = cached_similarities[taxonomy]
 
                     if not isinstance(values1, list):
                         values1 = [values1]
@@ -453,36 +450,23 @@ def calculation_task(self, db_id: int) -> str:
 
                     for val1 in values1:
                         for val2 in values2:
-                            if val1 is None or val2 is None:
-                                sim = None
-                            else:
-                                if str(val1) + "__" + str(val2) in tax_sims:
-                                    sim = tax_sims[str(val1) + "__" + str(val2)][
-                                        "similarity"
-                                    ]
-                                elif str(val2) + "__" + str(val1) in tax_sims:
-                                    sim = tax_sims[str(val2) + "__" + str(val1)][
-                                        "similarity"
-                                    ]
-                                else:
-                                    raise ValueError(
-                                        "No similarity value cached for the values "
-                                        + str(val1)
-                                        + " and "
-                                        + str(val2)
-                                    )
+                            sim = None
+                            # sorting the values reduces cache misses and is possible because
+                            # Wu-Palmer is commutative
+                            va1, val2 = sorted((val1, val2))
 
-                            if (val1, val2) not in similarities and (
-                                val2,
-                                val1,
-                            ) not in similarities:
-                                similarities[(val1, val2)] = {
-                                    "ID": str(val1) + "_" + str(val2),
-                                    "href": "",
-                                    "value_1": val1,
-                                    "value_2": val2,
-                                    "similarity": sim,
-                                }
+                            if val1 is not None and val2 is not None:
+                                sim = wu_palmer_cache.calculate_similarity(
+                                    tax_name, val1, val2
+                                )
+
+                            similarities[(val1, val2)] = {
+                                "ID": str(val1) + "_" + str(val2),
+                                "href": "",
+                                "value_1": val1,
+                                "value_2": val2,
+                                "similarity": sim,
+                            }
 
         with StringIO() as file:
             save_entities(similarities.values(), file, "application/json")
