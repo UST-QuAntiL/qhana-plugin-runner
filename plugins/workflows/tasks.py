@@ -1,4 +1,3 @@
-import ast
 import json
 from pathlib import Path
 from typing import Optional
@@ -12,7 +11,7 @@ from . import Workflows
 from .clients.camunda_client import CamundaClient
 from .datatypes.camunda_datatypes import CamundaConfig, ProcessInstance
 from .schemas import InputParameters, WorkflowsParametersSchema
-from .watchers.human_task_watcher import run_human_task_watcher
+from .watchers.human_task_watcher import human_task_watcher
 
 config = Workflows.instance.config
 
@@ -65,7 +64,7 @@ def start_workflow(self, db_id: int) -> None:
     ] = camunda_config.process_instance.definition_id
     task_data.save(commit=True)
 
-    run_human_task_watcher.s(db_id, camunda_config.to_dict()).delay()
+    human_task_watcher.s(db_id, camunda_config.to_dict()).delay()
 
     TASK_LOGGER.info(f"Started new workflow task with db_id: '{db_id}'")
 
@@ -111,4 +110,4 @@ def process_input(self, db_id: int) -> None:
     task_data.clear_previous_step()
     task_data.save(commit=True)
 
-    run_human_task_watcher.s(db_id, camunda_config.to_dict()).delay()
+    human_task_watcher.s(db_id, camunda_config.to_dict()).delay()

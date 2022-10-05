@@ -3,7 +3,7 @@ from __future__ import annotations
 import http.client
 import json
 import re
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Sequence
 
 import requests
 from celery.utils.log import get_task_logger
@@ -14,7 +14,6 @@ from ..datatypes.qhana_datatypes import (
     QhanaInput,
     QhanaOutput,
     QhanaPlugin,
-    QhanaResult,
     QhanaTask,
 )
 from ..util.helper import endpoint_found_simple, request_json
@@ -100,7 +99,9 @@ class QhanaTaskClient:
 
         if response.status_code == http.client.OK:
             response = response.json()
-            db_id = re.search("/\d+/", url).group(0)[1:-1] # FIXME use flask to handle url parsing and pass it via g or via explicit parameters!
+            db_id = re.search("/\d+/", url).group(0)[
+                1:-1
+            ]  # FIXME use flask to handle url parsing and pass it via g or via explicit parameters!
             TASK_LOGGER.info(f"Started QHAna plugin {plugin.identifier}")
 
             return QhanaTask.deserialize(response, db_id, external_task, plugin)
@@ -114,7 +115,10 @@ class QhanaTaskClient:
             )
 
     def complete_qhana_task(
-        self, camunda_client: CamundaClient, qhana_result: QhanaResult
+        self,
+        camunda_client: CamundaClient,
+        outputs: Sequence[QhanaOutput],
+        external_task: ExternalTask,
     ):
         """
         Submits the result for a corresponding external task to Camunda
@@ -130,11 +134,11 @@ class QhanaTaskClient:
                         "dataType": output.data_type,
                         "href": output.href,
                     }
-                    for output in qhana_result.output_list
+                    for output in outputs
                 ]
             }
         }
-        camunda_client.complete_task(qhana_result.qhana_task.external_task, result)
+        camunda_client.complete_task(external_task, result)
 
     def get_plugins_from_endpoints(self):
         """

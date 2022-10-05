@@ -59,6 +59,7 @@ def camunda_task_watcher():
             TASK_LOGGER.debug(f"Start watcher for camunda task {external_task}.")
             # Spawn new watcher for the external task
             instance_task = qhana_instance_watcher.s(external_task)
+            # FIXME unlocked tasks should not be started again/moved to a dead letter queue after x tries.../after certain errors...
             instance_task.link_error(unlock_task.si(camunda_external_task=external_task))
             instance_task.apply_async()
 

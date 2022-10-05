@@ -4,14 +4,13 @@ from typing import Optional
 
 import requests
 from celery.utils.log import get_task_logger
-from flask import url_for
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .. import Workflows, WORKFLOWS_BLP
+from .. import Workflows
 from ..clients.camunda_client import CamundaClient
 from ..datatypes.camunda_datatypes import CamundaConfig, HumanTask
 from ..util.helper import get_form_variables, request_json
@@ -21,23 +20,18 @@ config = Workflows.instance.config
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{Workflows.instance.identifier}.run_human_task_watcher", bind=True)
-def run_human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
-    # Config
-    camunda_config = CamundaConfig.from_dict(camunda_config)
-    # Client
-    camunda_client = CamundaClient(camunda_config)
-
-    # Spawn new human task watcher if workflow instance is still active
-    if camunda_client.is_process_active():
-        human_task_watcher.s(db_id, camunda_config.to_dict()).apply_async(
-            countdown=config["polling_rates"]["external_watcher"]
-        )
-
-        TASK_LOGGER.info(f"Started human task watcher with db_id: '{db_id}'")
+class NoHumanTaskError(Exception):
+    pass
 
 
-@CELERY.task(name=f"{Workflows.instance.identifier}.human_task_watcher", bind=True)
+@CELERY.task(
+    name=f"{Workflows.instance.identifier}.human_task_watcher",
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(NoHumanTaskError,),
+    retry_backoff=True,
+    max_retries=None,
+)
 def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -48,6 +42,12 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
 
     # Client
     camunda_client = CamundaClient(CamundaConfig.from_dict(camunda_config))
+
+    # Spawn new human task watcher if workflow instance is still active
+    if not camunda_client.is_process_active():
+        db_task.add_task_log_entry("Workflow process instance was stopped.")
+        db_task.save(commit=True)  # FIXME store workflow output
+        return
 
     # Get all Camunda human tasks
     human_tasks = request_json(f"{camunda_client.camunda_config.base_url}/task")
@@ -67,6 +67,7 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
 
             # Save result file with workflow instance variables marked as output
             if human_task.name == config["workflow_out"]["camunda_user_task_name"]:
+                # FIXME reading workflow outputs should be done if workflow completes, not in a human task...
                 return_variables = camunda_client.get_instance_return_variables()
 
                 with SpooledTemporaryFile(mode="w") as result:
@@ -80,7 +81,7 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
                     )
 
                 save_task_result.s(
-                    task_log="",
+                    task_log="Stored workflow output.",
                     db_id=db_id,
                 ).delay()
 
@@ -103,11 +104,11 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
                 "human_task_definition_key": human_task.task_definition_key,
             }
 
-            task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-            task_data.data["form_params"] = str(form_variables)
-            task_data.data["bpmn"] = str(bpmn_properties)
-            task_data.data["human_task_id"] = human_task.id
-            task_data.save(commit=True)
+            db_task.add_task_log_entry(f"Found new human task '{human_task.id}'.")
+            db_task.data["form_params"] = str(form_variables)
+            db_task.data["bpmn"] = str(bpmn_properties)
+            db_task.data["human_task_id"] = human_task.id
+            db_task.save(commit=True)
 
             # Add new sub-step task for input gathering
             new_sub_step_task = add_step.s(
@@ -123,10 +124,6 @@ def human_task_watcher(self, db_id: int, camunda_config: dict) -> None:
             new_sub_step_task.apply_async()
 
             TASK_LOGGER.info(f"Started step...")
-
             return
 
-    run_human_task_watcher.apply_async(
-        (db_id, camunda_config),
-        countdown=config["polling_rates"]["external_watcher"],
-    )
+    raise NoHumanTaskError  # retry

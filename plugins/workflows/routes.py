@@ -19,11 +19,11 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
+from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error
 
 from . import WORKFLOWS_BLP, Workflows
-from . import Workflows
 from .schemas import (
     AnyInputSchema,
     InputParameters,
@@ -122,7 +122,8 @@ class ProcessView(MethodView):
             task_name=start_workflow.name,
             parameters=WorkflowsParametersSchema().dumps(input_params),
         )
-        db_task.save(commit=True)
+        db_task.save(commit=False)
+        DB.session.flush()  # flsuh to DB to get db_task id populated
 
         db_task.data["href"] = url_for(
             f"{WORKFLOWS_BLP.name}.{HumanTaskProcessView.__name__}",
@@ -197,7 +198,6 @@ class HumanTaskFrontend(MethodView):
             except:
                 form_params = None
 
-        # TODO: Cleanup
         data = {}
         for key, val in form_params.items():
             prefix_file_url = config["qhana_input"]["prefix_value_file_url"]
@@ -285,7 +285,7 @@ class HumanTaskProcessView(MethodView):
     @WORKFLOWS_BLP.response(HTTPStatus.OK, WorkflowsTaskResponseSchema())
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)  # FIXME??
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)

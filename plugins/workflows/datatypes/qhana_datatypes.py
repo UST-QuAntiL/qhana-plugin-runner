@@ -108,14 +108,3 @@ class QhanaOutput:
             href=serialized["href"],
             name=serialized["name"],
         )
-
-
-@dataclasses.dataclass
-class QhanaResult:
-    """
-    qhana_task: The QhanaTask which produced the result
-    output_list: List containing all outputs
-    """
-
-    qhana_task: QhanaTask
-    output_list: List[QhanaOutput]
