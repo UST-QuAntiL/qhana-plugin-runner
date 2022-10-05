@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import time
 from functools import lru_cache
 from http import HTTPStatus
 from io import StringIO
-from itertools import combinations, combinations_with_replacement
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict, Tuple, Generator
+from typing import Mapping, Optional, List, Dict, Tuple
 from zipfile import ZipFile
 
 import marshmallow as ma
