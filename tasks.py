@@ -149,6 +149,8 @@ def stop_camunda(c):
     docker_cmd = environ.get("DOCKER_CMD", "docker")
     container_id = environ.get("CAMUNDA_CONTAINER_ID", "--latest")
     c.run(join([docker_cmd, "stop", container_id]))
+    if docker_cmd == "podman":
+        reset_camunda(c)
 
 
 @task(stop_broker)
@@ -168,7 +170,7 @@ def reset_camunda(c):
     container_id = environ.get("CAMUNDA_CONTAINER_ID")
     if not container_id:
         return
-    c.run(join([docker_cmd, "rm", container_id]), echo=True)
+    c.run(join([docker_cmd, "rm", container_id]), echo=True, warn=True)
     dot_env_path = Path(".env")
     unset_key(dot_env_path, "CAMUNDA_CONTAINER_ID")
 
@@ -195,6 +197,9 @@ def start_camunda(c, port=None):
     docker_cmd = environ.get("DOCKER_CMD", "docker")
     container_id = environ.get("CAMUNDA_CONTAINER_ID", None)
 
+    if container_id and docker_cmd == "podman":
+        reset_camunda(c)
+        container_id = None
     if container_id:
         res: Result = c.run(join([docker_cmd, "restart", container_id]), echo=True)
         if res.failed:
