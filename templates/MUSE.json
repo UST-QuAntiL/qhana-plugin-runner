@@ -24,7 +24,12 @@
         {
           "name": "Quantum Part",
           "description": "Plugin for Quantum Algorithm",
-          "filter": "points-to-clusters"
+          "filter": {
+            "or": [
+              "points-to-clusters",
+              "nisq-analyzer"
+            ]
+          }
         },
         {
           "name": "Visualization",
