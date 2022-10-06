@@ -1,3 +1,4 @@
+import requests
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
@@ -6,7 +7,6 @@ from .qhana_instance_watcher import qhana_instance_watcher
 from ... import Workflows
 from ...clients.camunda_client import CamundaClient
 from ...datatypes.camunda_datatypes import CamundaConfig, ExternalTask
-from ...util.helper import request_json
 
 config = Workflows.instance.config
 
@@ -21,6 +21,7 @@ def camunda_task_watcher():
     """
     Watches for new Camunda external task. For each new task found a qhana_watcher celery task is spawned.
     """
+    # TODO later: rate limit the jobs a single worker takes on at once and don't lock jobs until they are actually started
 
     # Client
     camunda_client = CamundaClient(
@@ -30,9 +31,15 @@ def camunda_task_watcher():
         )
     )
 
-    external_tasks = request_json(
-        f"{camunda_client.camunda_config.base_url}/external-task"
+    response = requests.get(
+        f"{camunda_client.camunda_config.base_url}/external-task",
+        timeout=config.get("request_timeout", 5 * 60),
     )
+    if response.status_code != 200:
+        # no external tasks found => try again next time
+        return  # TODO backoff?
+
+    external_tasks = response.json()
     external_tasks = [
         ExternalTask.deserialize(external_task) for external_task in external_tasks
     ]
@@ -46,7 +53,6 @@ def camunda_task_watcher():
 
         # Check if task is already locked
         if camunda_client.is_locked(external_task):
-            # unlock_task.s(camunda_external_task=external_task.to_dict()).apply_async()
             continue
 
         # Check if the external task represents a qhana plugin

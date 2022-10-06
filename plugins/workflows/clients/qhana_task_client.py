@@ -2,28 +2,29 @@ from __future__ import annotations
 
 import http.client
 import json
-import re
 from typing import TYPE_CHECKING, List, Optional, Sequence
 
 import requests
 from celery.utils.log import get_task_logger
+from requests import HTTPError, JSONDecodeError
 
 from .. import Workflows
 from ..datatypes.camunda_datatypes import ExternalTask
-from ..datatypes.qhana_datatypes import (
-    QhanaInput,
-    QhanaOutput,
-    QhanaPlugin,
-    QhanaTask,
-)
-from ..util.helper import endpoint_found_simple, request_json
+from ..datatypes.qhana_datatypes import QhanaInput, QhanaOutput, QhanaPlugin
 
 config = Workflows.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 
 if TYPE_CHECKING:
-    from camunda_client import CamundaClient
+    from .camunda_client import CamundaClient
+
+
+class ParameterParsingError(ValueError):
+    def __init__(self, *args: object, **kwargs) -> None:
+        self.parameter = kwargs.pop("parameter", "UNKNOWN")
+        self.mode = kwargs.pop("mode", "UNKNOWN")
+        super().__init__(*args, **kwargs)
 
 
 class QhanaTaskClient:
@@ -37,82 +38,26 @@ class QhanaTaskClient:
         plugin_runner_endpoints: List[str],
     ):
         self.plugin_runner_endpoints = plugin_runner_endpoints
-        self.plugins: List[QhanaPlugin] = []
-        self.get_plugins_from_endpoints()
+        self._plugins: Optional[List[QhanaPlugin]] = None
+        self.timeout: int = config.get("request_timeout", 5 * 60)
 
-    def create_qhana_plugin_instance(
-        self, camunda_client: CamundaClient, external_task: ExternalTask
-    ):
-        """
-        Console specific qhana plugin instance creator
-        :param camunda_client: The camunda_client to be used
-        :param external_task: External task to use for creating the qhana plugin instance
-        :return: Qhana task
-        """
+    def call_qhana_plugin(self, plugin: QhanaPlugin, params):
+        response = requests.post(
+            plugin.process_endpoint, data=params, timeout=self.timeout
+        )
 
-        plugin_name = ""
-        if "." in external_task.topic_name:
-            plugin_name = external_task.topic_name.split(".", 1)[1]
-        else:
-            TASK_LOGGER.warning(
-                f"No plugin extracted from external task topic {external_task}"
-            )
+        response.raise_for_status()
 
-        # Check if requested plugin exists
-        plugin = self.resolve(plugin_name)
-
-        if plugin:
-            local_variables = camunda_client.get_task_local_variables(external_task)
-            try:
-                parameters = self.collect_input(
-                    external_task, camunda_client, local_variables
-                )
-            except ValueError:
-                return
-
-            qhana_task: QhanaTask = self.invoke_qhana_task(
-                camunda_client, external_task, plugin, parameters
-            )
-
-            if qhana_task is None:
-                raise Exception
-
-            return qhana_task
-
-    def invoke_qhana_task(
-        self,
-        camunda_client: CamundaClient,
-        external_task: ExternalTask,
-        plugin: QhanaPlugin,
-        params,
-    ):
-        """
-        Starts a QHAna task
-        :param external_task: The external task that resulted in the QHAna task
-        :param camunda_client: Camunda client
-        :param plugin: The plugin to run
-        :param params: Parameters for running the plugin
-        """
-        TASK_LOGGER.info(f"Call plugin process endpoint '{plugin.process_endpoint}'")
-        response = requests.post(plugin.process_endpoint, data=params)
+        if response.status_code != http.client.OK:
+            raise HTTPError("Unknown status code.", response=response)
         url = response.url
 
-        if response.status_code == http.client.OK:
-            response = response.json()
-            db_id = re.search("/\d+/", url).group(0)[
-                1:-1
-            ]  # FIXME use flask to handle url parsing and pass it via g or via explicit parameters!
-            TASK_LOGGER.info(f"Started QHAna plugin {plugin.identifier}")
+        try:
+            status = response.json().get("status", "UNKNOWN")
+        except JSONDecodeError:
+            status = "UNKNOWN"
 
-            return QhanaTask.deserialize(response, db_id, external_task, plugin)
-        elif response.status_code == http.client.UNPROCESSABLE_ENTITY:
-            TASK_LOGGER.warning(f"Received unprocessable entity on endpoint {url}")
-
-            camunda_client.external_task_bpmn_error(
-                task=external_task,
-                error_code="qhana-unprocessable-entity-error",
-                error_message="Plugin invocation received unprocessable entities and could not proceed.",
-            )
+        return status, url
 
     def complete_qhana_task(
         self,
@@ -140,16 +85,22 @@ class QhanaTaskClient:
         }
         camunda_client.complete_task(external_task, result)
 
-    def get_plugins_from_endpoints(self):
+    def _get_plugins_from_endpoints(self):
         """
         Retrieves the hosted plugins from the specified QHAna endpoints
         """
+        plugin_list: List[QhanaPlugin] = []
         for endpoint in self.plugin_runner_endpoints:
-            response = request_json(f"{endpoint}/plugins/")
-            for plugin in response["plugins"]:
+            response = requests.get(f"{endpoint}/plugins/", timeout=self.timeout)
+            response.raise_for_status()
+            for plugin in response.json()["plugins"]:
                 try:
-                    response = request_json(plugin["apiRoot"])
-                    href: Optional[str] = response.get("entryPoint", {}).get("href", None)
+                    plugin_response = requests.get(
+                        plugin["apiRoot"], timeout=self.timeout
+                    )
+                    href: Optional[str] = (
+                        plugin_response.json().get("entryPoint", {}).get("href", None)
+                    )
                     if href:
                         if href.startswith(("http://", "https://")):
                             process_endpoint = href
@@ -160,11 +111,19 @@ class QhanaTaskClient:
                     else:
                         process_endpoint = f'{plugin["apiRoot"]}/process/'
 
-                    self.plugins.append(
+                    plugin_list.append(
                         QhanaPlugin.deserialize(plugin, endpoint, process_endpoint)
                     )
                 except Exception:
                     TASK_LOGGER.info(f"Failed to load plugin {plugin}")
+        self._plugins = plugin_list
+
+    def get_plugins(self) -> Sequence[QhanaPlugin]:
+        if self._plugins is not None:
+            return self._plugins
+        self._get_plugins_from_endpoints()
+        assert self._plugins is not None
+        return self._plugins if self._plugins is not None else []
 
     def resolve(self, plugin_name):
         """
@@ -172,10 +131,14 @@ class QhanaTaskClient:
         :param plugin_name: Name of the plugin
         :return: Plugin
         """
-        plugin = next((pl for pl in self.plugins if pl.name == plugin_name), None)
 
-        if plugin is None:
-            TASK_LOGGER.warning(f"Could not find plugin {plugin_name} in plugin list")
+        def match_plugin(plugin: QhanaPlugin) -> bool:
+            # TODO replace this matcher with a more sophisticated version once
+            # the plugin registry is integrated
+            return plugin.name == plugin_name or plugin.identifier == plugin_name
+
+        self.get_plugins()
+        plugin = next(filter(match_plugin, self.get_plugins()), None)
 
         return plugin
 
@@ -185,9 +148,9 @@ class QhanaTaskClient:
         :param plugin: Plugin for retrieving the micro frontend
         :return:
         """
-        response = requests.get(f"{plugin.api_root}/ui/")
-        if endpoint_found_simple(response):
-            return response.text
+        response = requests.get(f"{plugin.api_root}/ui/", timeout=self.timeout)
+        response.raise_for_status()
+        return response.text
 
     def collect_input(
         self, task: ExternalTask, camunda_client: CamundaClient, local_variables: dict
@@ -234,20 +197,12 @@ class QhanaTaskClient:
                 mode = select.split(":")[0]
                 mode_val = select.split(":")[1].strip()
 
+                if mode != input_mode_filename and mode != input_mode_datatype:
+                    raise ParameterParsingError(parameter=input_parameter, mode=mode)
+
                 for output in deserialized_outputs:
-                    if mode != input_mode_filename and mode != input_mode_datatype:
-                        TASK_LOGGER.warning("mode is not name or dataType")
-
-                        camunda_client.external_task_bpmn_error(
-                            task=task,
-                            error_code="qhana-mode-error",
-                            error_message="Input mode is not name or dataType!",
-                        )
-
-                        raise ValueError
-
-                    if (mode == "name" and output.name == mode_val) or (
-                        mode == "dataType" and output.data_type == mode_val
+                    if (mode == input_mode_filename and output.name == mode_val) or (
+                        mode == input_mode_datatype and output.data_type == mode_val
                     ):
                         plugin_inputs[input_parameter] = output.href
 
@@ -259,11 +214,9 @@ class QhanaTaskClient:
         :param plugin: The plugin to get inputs for
         :return:
         """
-        response = request_json(f"{plugin.api_root}/")
-        inputs = response["entryPoint"]["dataInput"]
-        result = []
+        url = plugin.api_root if plugin.api_root.endswith("/") else f"{plugin.api_root}/"
+        response = requests.get(url, timeout=self.timeout)
+        response.raise_for_status()
+        inputs = response.json()["entryPoint"]["dataInput"]
 
-        for input in inputs:
-            result.append(QhanaInput.deserialize(input))
-
-        return result
+        return [QhanaInput.deserialize(i) for i in inputs]

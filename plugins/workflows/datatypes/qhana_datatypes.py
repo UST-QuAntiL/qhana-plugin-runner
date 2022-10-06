@@ -49,7 +49,7 @@ class QhanaTask:
     plugin: QhanaPlugin executing the QhanaTask
     name: Name of the QhanaTask
     status: QhanaTask status
-    id: QhanaTask identifier
+    url: the url of the qhana task result resource
     """
 
     # TODO: Cannot store inputs until Human Tasks to collect inputs are also done in QHAna
@@ -57,16 +57,7 @@ class QhanaTask:
     external_task: ExternalTask
     plugin: QhanaPlugin
     status: str
-    id: str
-
-    @classmethod
-    def deserialize(cls, serialized, db_id, external_task, plugin):
-        return cls(
-            status=serialized["status"],
-            id=db_id,
-            external_task=external_task,
-            plugin=plugin,
-        )
+    url: str
 
 
 @dataclasses.dataclass
