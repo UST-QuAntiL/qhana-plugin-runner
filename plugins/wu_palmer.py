@@ -340,7 +340,11 @@ class WuPalmerCache:
     def __init__(self, taxonomies: Dict[str, Dict], root_has_meaning_in_taxonomy: bool):
         self._taxonomies = taxonomies
         self._node_path_cache: Dict[str, Dict[str, Tuple[str, ...]]] = {}
-        self._root_has_meaning_in_taxonomy = root_has_meaning_in_taxonomy
+
+        if root_has_meaning_in_taxonomy:
+            self._root_node_depth = 0
+        else:
+            self._root_node_depth = 1
 
     @lru_cache
     def calculate_similarity(self, tax_name: str, node_a: str, node_b: str) -> float:
@@ -360,7 +364,8 @@ class WuPalmerCache:
         ancestors_a = node_paths[node_a]
         ancestors_b = node_paths[node_b]
 
-        common_ancestor_depth = 0 if self._root_has_meaning_in_taxonomy else -1
+        common_ancestor_depth = 0
+        common_ancestor_depth -= self._root_node_depth
 
         for a, b in zip(ancestors_a, ancestors_b):
             if a != b:
@@ -368,10 +373,7 @@ class WuPalmerCache:
 
             common_ancestor_depth += 1
 
-        if self._root_has_meaning_in_taxonomy:
-            denominator = len(ancestors_a) + len(ancestors_b)
-        else:
-            denominator = len(ancestors_a) + len(ancestors_b) - 2
+        denominator = len(ancestors_a) + len(ancestors_b) - (2 * self._root_node_depth)
 
         if denominator == 0:
             return 1
