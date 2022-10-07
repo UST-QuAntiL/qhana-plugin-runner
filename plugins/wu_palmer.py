@@ -16,6 +16,7 @@ from functools import lru_cache
 from http import HTTPStatus
 from io import StringIO
 from json import dumps, loads
+from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List, Dict, Tuple
 from zipfile import ZipFile
@@ -398,7 +399,8 @@ def add_similarities_for_entities(
     values2 = entity2[attribute]
 
     # extract taxonomy name from refTarget
-    tax_name: str = entities_metadata[attribute]["refTarget"].split(":")[1][:-5]
+    file_name: str = entities_metadata[attribute]["refTarget"].split(":")[1]
+    tax_name: str = PurePath(file_name).stem
 
     if not isinstance(values1, list):
         values1 = [values1]
