@@ -352,10 +352,10 @@ class WuPalmerCache:
         node_paths = self._node_path_cache[tax_name]
 
         if node_a not in node_paths:
-            raise RuntimeError(f"node {node_a} not in node paths of taxonomy {tax_name}")
+            raise KeyError(f"node {node_a} not in node paths of taxonomy {tax_name}")
 
         if node_b not in node_paths:
-            raise RuntimeError(f"node {node_b} not in node paths of taxonomy {tax_name}")
+            raise KeyError(f"node {node_b} not in node paths of taxonomy {tax_name}")
 
         ancestors_a = node_paths[node_a]
         ancestors_b = node_paths[node_b]
