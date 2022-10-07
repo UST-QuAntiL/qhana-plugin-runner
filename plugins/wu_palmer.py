@@ -421,7 +421,6 @@ def add_similarities_for_entities(
 
             similarities[(val1, val2)] = {
                 "ID": str(val1) + "_" + str(val2),
-                "href": "",
                 "value_1": val1,
                 "value_2": val2,
                 "similarity": sim,
