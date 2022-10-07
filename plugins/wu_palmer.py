@@ -410,14 +410,14 @@ def add_similarities_for_entities(
 
     for val1 in values1:
         for val2 in values2:
-            # sorting the values reduces cache misses and is possible because
-            # Wu-Palmer is commutative
-            va1, val2 = sorted((val1, val2))
-
             if val1 is None or val2 is None:
                 sim = None
             else:
-                sim = wu_palmer_cache.calculate_similarity(tax_name, val1, val2)
+                # sorting the values reduces cache misses and is possible because Wu-Palmer is commutative
+                sorted_val1, sorted_val2 = sorted((val1, val2))
+                sim = wu_palmer_cache.calculate_similarity(
+                    tax_name, sorted_val1, sorted_val2
+                )
 
             similarities[(val1, val2)] = {
                 "source": val1,
