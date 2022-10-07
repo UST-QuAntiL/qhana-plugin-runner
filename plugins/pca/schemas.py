@@ -101,12 +101,6 @@ class ParameterHandler:
                 f"The following inputs were not provided: {str(not_provided_params)[1:-1]}"
             )
 
-        # Maximum number of iterations for sparse PCA should be non-negativ
-        if self.parameter_dict["maxItr"] <= 0:
-            raise ValueError(
-                f"The maximum number of iterations should be greater than 0, but was: {str(self.parameter_dict['maxItr'])}"
-            )
-
         # Set parameters correctly
         self.set_parameters_correctly()
 
@@ -273,6 +267,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The maximum number of iterations that sparse PCA performs.",
             "input_type": "text",
         },
+        validate=ma.validate.Range(min=0, min_inclusive=False)
     )
     tol = ma.fields.Float(
         required=True,
