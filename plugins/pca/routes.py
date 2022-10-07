@@ -122,6 +122,14 @@ class MicroFrontend(MethodView):
     @PCA_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
+        # Render schema errors on fields
+        schema_error = errors.get("_schema", None)
+        if schema_error:
+            if "Entity points url must not be none." in schema_error:
+                errors["entityPointsUrl"] = errors.get("entityPointsUrl", []) + ["Field may not be null."]
+            elif "Kernel url must not be none." in schema_error:
+                errors["kernelUrl"] = errors.get("kernelUrl", []) + ["Field may not be null."]
+
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):

@@ -77,17 +77,6 @@ class ParameterHandler:
             "iteratedPower",
         ]
         self.parameter_dict = parameter_dict
-        # Prevents the log and check to throw an error, when there is no entity URL,
-        # if we are using the precomputed kernel option
-        if (
-            self.parameter_dict.get("kernel", None) == KernelEnum.precomputed.value
-            and self.parameter_dict.get("pcaType", None) != PCATypeEnum.kernel
-        ):
-            self.parameter_dict["entityPointsUrl"] = "No URL"
-        # Prevents the log and check to throw an error, when there is no kernel URL,
-        # if we are NOT using the precomputed kernel option
-        else:
-            self.parameter_dict["kernelUrl"] = "No URL"
 
         # log and check input parameters
         not_provided_params = []
@@ -289,3 +278,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+
+    @ma.validates_schema
+    def validate_kernel_and_entity_points_urls(self, data, **kwargs):
+        # complex errors: Depending on the case, either kernelUrl is not None or entityPointsUrl
+        if data:
+            if (
+                data.get("kernel", None) == KernelEnum.precomputed.value
+                and data.get("pca_type", None) == PCATypeEnum.kernel.value
+            ):
+                if data["kernel_url"] is None:
+                    raise ma.ValidationError("Kernel url must not be none.")
+            else:
+                if data["entity_points_url"] is None:
+                    raise ma.ValidationError("Entity points url must not be none.")
