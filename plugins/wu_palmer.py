@@ -420,9 +420,8 @@ def add_similarities_for_entities(
                 sim = wu_palmer_cache.calculate_similarity(tax_name, val1, val2)
 
             similarities[(val1, val2)] = {
-                "ID": str(val1) + "_" + str(val2),
-                "value_1": val1,
-                "value_2": val2,
+                "source": val1,
+                "target": val2,
                 "similarity": sim,
             }
 
