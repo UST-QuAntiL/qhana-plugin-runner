@@ -119,13 +119,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "textarea",
         },
     )
-    root_has_meaning_in_taxonomy = ma.fields.Boolean(
+    root_is_part_of_hierarchy = ma.fields.Boolean(
         required=False,
         allow_none=False,
         metadata={
-            "label": "Root node has meaning in the taxonomy",
-            "description": "Whether the value of the root node of a taxonomy has a meaning in the taxonomy"
-            "e.g. a taxonomy about colors and the root node represents a color",
+            "label": "Consider root node as part of the hierarchy",
+            "description": "If the root node is part of the hierarchy, then items that are direct descendants of the "
+            "root node are considered similar to a certain degree. Otherwise they will be considered as not similar. "
+            "e.g. when the root node of a color taxonomy also represents a color, it should be considered as part of "
+            "the hierarchy",
             "input_type": "checkbox",
         },
     )
