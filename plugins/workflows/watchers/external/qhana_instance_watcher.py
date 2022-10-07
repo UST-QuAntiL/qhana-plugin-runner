@@ -6,6 +6,14 @@ from requests.exceptions import ConnectionError, HTTPError
 from qhana_plugin_runner.celery import CELERY
 
 from ... import Workflows
+from ...exceptions import (
+    BadTaskDefinitionError,
+    BadInputsError,
+    InvocationError,
+    PluginFailureError,
+    PluginNotFoundError,
+    ResultError,
+)
 from ...clients.camunda_client import CamundaClient
 from ...clients.qhana_task_client import ParameterParsingError, QhanaTaskClient
 from ...datatypes.camunda_datatypes import CamundaConfig, ExternalTask
@@ -36,23 +44,12 @@ def extract_plugin_name(topic: str):
     return split_topic[1]
 
 
-def finish_task_with_error(
-    external_task: ExternalTask, error_code: str, error_message: str
-):
-    camunda_client = get_camunda_client()
-
-    # Throw bpmn error
-    camunda_client.external_task_bpmn_error(
-        task=external_task,
-        error_code=error_code,
-        error_message=error_message,
-    )
-
-
 @CELERY.task(
     name=f"{Workflows.instance.identifier}.external.qhana_instance_watcher",
     bind=True,
-    ignore_result=True,
+    autoretry_for=(ConnectionError,),
+    retry_backoff=True,
+    max_retries=10,
 )
 def qhana_instance_watcher(self, camunda_external_task: str):
     """
@@ -72,21 +69,13 @@ def qhana_instance_watcher(self, camunda_external_task: str):
     try:
         plugin_name = extract_plugin_name(external_task.topic_name)
     except ValueError:
-        finish_task_with_error(
-            external_task=external_task,
-            error_code="qhana-unprocessable-entity-error",
-            error_message=f"Malformed task topic name '{external_task.topic_name}'. Name must contain a '.' separating the plugin name!",
+        raise BadTaskDefinitionError(
+            message=f"Malformed task topic name '{external_task.topic_name}'. Name must contain a '.' separating the plugin name!"
         )
-        return
 
     plugin = qhana_client.resolve(plugin_name)
     if plugin is None:
-        finish_task_with_error(
-            external_task=external_task,
-            error_code="qhana-plugin-not-found-error",
-            error_message=f"Plugin {plugin_name} could not be found!",
-        )
-        return
+        raise PluginNotFoundError(message=f"Plugin {plugin_name} could not be found!")
 
     workflow_local_variables = camunda_client.get_task_local_variables(external_task)
     try:
@@ -96,23 +85,30 @@ def qhana_instance_watcher(self, camunda_external_task: str):
             workflow_local_variables if workflow_local_variables else {},
         )
     except ParameterParsingError as err:
-        finish_task_with_error(
-            external_task=external_task,
-            error_code="qhana-mode-error",
-            error_message=f"Unsupported input mode '{err.mode}' of input '{err.parameter}'!",
+        raise BadTaskDefinitionError(
+            message=f"Unsupported input mode '{err.mode}' of input '{err.parameter}'!"
         )
-        return
 
     try:
         status, url = qhana_client.call_qhana_plugin(plugin, parameters)
-    except HTTPError:
-        # TODO retries on timeouts and server errors
-        finish_task_with_error(
-            external_task=external_task,
-            error_code="qhana-unprocessable-entity-error",
-            error_message="Plugin invocation received unprocessable entities and could not proceed.",
+    except HTTPError as err:
+        if err.response and err.response.status_code:
+            response_status: int = err.response.status_code
+            if response_status == 404:
+                raise PluginNotFoundError(
+                    message=f"Plugin {plugin_name} endpoint could not be found at the registered url!"
+                )
+            if 400 <= response_status < 500:
+                raise BadInputsError(
+                    message="Plugin invocation received unprocessable entities and could not proceed."
+                )
+            if 500 <= response_status < 600:
+                raise InvocationError(
+                    message="Plugin invocation failed because of a server error."
+                )
+        raise InvocationError(
+            message="Plugin invocation received unprocessable entities and could not proceed."
         )
-        return
 
     qhana_instance = QhanaTask(
         status=status,
@@ -139,7 +135,6 @@ def qhana_instance_watcher(self, camunda_external_task: str):
 @CELERY.task(
     name=f"{Workflows.instance.identifier}.external.check_task_status",
     bind=True,
-    ignore_result=True,
     autoretry_for=(TaskNotFinishedError,),
     retry_backoff=True,
     max_retries=None,
@@ -147,7 +142,7 @@ def qhana_instance_watcher(self, camunda_external_task: str):
 def check_task_status(self, url: str, camunda_external_task: str):
     external_task: ExternalTask = ExternalTask.from_dict(camunda_external_task)
 
-    # TODO: Timeout if no result after a long time
+    # TODO: Timeout if no result after a long time (or workflow task removed)
     try:
         response = requests.get(url, timeout=config.get("request_timeout", 5 * 60))
         response.raise_for_status()
@@ -159,13 +154,11 @@ def check_task_status(self, url: str, camunda_external_task: str):
             f"QHAna plugin result under '{url}' could not be reached. Throwing BPMN exception...",
             exc_info=True,
         )
-
-        finish_task_with_error(
-            external_task=external_task,
-            error_code="qhana-plugin-unreachable",
-            error_message="QHAna plugin result endpoint could not be reached.",
+        return self.retry(
+            countdown=5 * 60,
+            max_retries=5,
+            exc=ResultError(message="QHAna plugin result endpoint could not be reached."),
         )
-        return
     except HTTPError as err:
         status: int = err.response.status_code
         if 500 <= status < 600:
@@ -177,12 +170,9 @@ def check_task_status(self, url: str, camunda_external_task: str):
         if status == 404:
             error_message = "QHAna plugin result was not found."
 
-        finish_task_with_error(
-            external_task=external_task,
-            error_code="qhana-plugin-failure",
-            error_message=error_message,
-        )
-        return
+        raise ResultError(message=error_message)
+
+    # TODO check for substeps!
 
     # Check if qhana task completed successfully
     if qhana_instance_status == "SUCCESS":
@@ -204,15 +194,7 @@ def check_task_status(self, url: str, camunda_external_task: str):
             f"QHAna plugin failed, throwing BPMN exception. Result Resource: {url}"
         )
 
-        camunda_client = get_camunda_client()
-
         # Throw bpmn error
-        camunda_client.external_task_bpmn_error(
-            task=external_task,
-            error_code="qhana-plugin-failure",
-            error_message="QHAna plugin failed execution.",
-        )
-
-        return
+        raise PluginFailureError(message="QHAna plugin failed execution.")
 
     raise TaskNotFinishedError  # retry task

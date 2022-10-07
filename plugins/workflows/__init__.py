@@ -81,6 +81,7 @@ class Workflows(QHAnaPluginBase):
             "QHANA_PLUGIN_ENDPOINTS": plugin_runner_url,
             "polling_rates": {"camunda_general": 5.0, "external_watcher": 5.0},
             "request_timeout": 5*60,  # TODO add default timeout to plugin runner settings
+            "workflow_error_prefix": "qhana",
             "qhana_input": {
                 "prefix": "qinput",
                 "prefix_value_choice": "choice",

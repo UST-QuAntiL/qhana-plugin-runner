@@ -1,3 +1,5 @@
+from typing import Optional
+
 import requests
 from celery.utils.log import get_task_logger
 
@@ -7,6 +9,15 @@ from .qhana_instance_watcher import qhana_instance_watcher
 from ... import Workflows
 from ...clients.camunda_client import CamundaClient
 from ...datatypes.camunda_datatypes import CamundaConfig, ExternalTask
+from ...exceptions import (
+    BadInputsError,
+    BadTaskDefinitionError,
+    ExecutionError,
+    InvocationError,
+    PluginNotFoundError,
+    ResultError,
+    WorkflowTaskError,
+)
 
 config = Workflows.instance.config
 
@@ -66,8 +77,59 @@ def camunda_task_watcher():
             # Spawn new watcher for the external task
             instance_task = qhana_instance_watcher.s(external_task)
             # FIXME unlocked tasks should not be started again/moved to a dead letter queue after x tries.../after certain errors...
+            instance_task.link_error(
+                process_workflow_error.s(camunda_external_task=external_task)
+            )
             instance_task.link_error(unlock_task.si(camunda_external_task=external_task))
             instance_task.apply_async()
+
+
+@CELERY.task(
+    name=f"{Workflows.instance.identifier}.external.process_workflow_error",
+    ignore_result=True,
+)
+def process_workflow_error(request, exc, traceback, camunda_external_task: dict):
+    TASK_LOGGER.error(f"Inputs: exc={exc}, external_task={camunda_external_task}")
+    if "hello" in camunda_external_task:
+        return
+    external_task: ExternalTask = ExternalTask.from_dict(camunda_external_task)
+
+    camunda_client = CamundaClient(
+        CamundaConfig(
+            base_url=config["CAMUNDA_BASE_URL"],
+            poll_interval=config["polling_rates"]["camunda_general"],
+        )
+    )
+
+    error_code_prefix = config["workflow_error_prefix"]
+
+    error_code = "unknown-error"
+    message: Optional[str] = None
+
+    if isinstance(exc, WorkflowTaskError):
+        message = exc.message
+
+    if isinstance(exc, BadTaskDefinitionError):
+        error_code = "unprocessable-task-definition-error"
+    elif isinstance(exc, BadInputsError):
+        error_code = "unprocessable-entity-error"
+    elif isinstance(exc, PluginNotFoundError):
+        error_code = "plugin-not-found-error"
+    elif isinstance(exc, InvocationError):
+        error_code = "unprocessable-entity-error"
+    elif isinstance(exc, ResultError):
+        error_code = "unprocessable-plugin-result-error"
+    elif isinstance(exc, ExecutionError):
+        error_code = "plugin-failure"
+
+    if message is None:
+        message = str(exc)
+
+    camunda_client.external_task_bpmn_error(
+        task=external_task,
+        error_code=f"{error_code_prefix}-{error_code}",
+        error_message=message,
+    )
 
 
 @CELERY.task(
@@ -83,5 +145,8 @@ def unlock_task(camunda_external_task: dict):
             poll_interval=config["polling_rates"]["camunda_general"],
         )
     )
-
-    camunda_client.unlock(external_task)
+    try:
+        camunda_client.unlock(external_task)
+    except:
+        # FIXME fix exception handling in client function (should throw more specific exception)
+        pass
