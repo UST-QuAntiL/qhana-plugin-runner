@@ -16,6 +16,7 @@ from enum import Enum
 from logging import Logger
 
 import marshmallow as ma
+from marshmallow import post_load, validate
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -53,75 +54,48 @@ class KernelEnum(Enum):
     precomputed = "precomputed"
 
 
-class ParameterHandler:
-    """
-    This class takes all the parameters set in the front end, prepares them and makes them available via a get method.
-    """
+class InputParameters:
+    def __init__(
+        self,
+        entity_points_url,
+        pca_type,
+        dimensions,
+        solver,
+        batch_size,
+        sparsity_alpha,
+        ridge_alpha,
+        kernel,
+        kernel_url,
+        degree,
+        kernel_gamma,
+        kernel_coef,
+        max_itr,
+        tol,
+        iterated_power,
+    ):
+        # general parameters
+        self.entity_points_url = entity_points_url
+        self.pca_type = pca_type
+        self.dimensions = dimensions
+        # normal PCA
+        self.solver = solver
+        # incremental PCA
+        self.batch_size = batch_size
+        # sparse PCA
+        self.sparsity_alpha = sparsity_alpha
+        self.ridge_alpha = ridge_alpha
+        # kernel PCA
+        self.kernel = kernel
+        self.kernel_url = kernel_url
+        self.degree = degree
+        self.kernel_gamma = kernel_gamma
+        self.kernel_coef = kernel_coef
+        self.max_itr = max_itr
+        self.tol = tol
+        self.iterated_power = iterated_power
 
-    def __init__(self, parameter_dict: dict, TASK_LOGGER: Logger):
-        self.parameter_keys = [
-            "entityPointsUrl",  # general parameters
-            "pcaType",
-            "dimensions",
-            "solver",  # normal PCA
-            "batchSize",  # incremental PCA
-            "sparsityAlpha",  # sparse PCA
-            "ridgeAlpha",
-            "kernel",  # kernel PCA
-            "kernelUrl",
-            "degree",
-            "kernelGamma",
-            "kernelCoef",
-            "maxItr",
-            "tol",
-            "iteratedPower",
-        ]
-        self.parameter_dict = parameter_dict
-
-        # log and check input parameters
-        not_provided_params = []
-        for key in self.parameter_keys:
-            parameter = self.parameter_dict.get(key, None)
-            TASK_LOGGER.info(f"Loaded input parameters from db: {key}='{parameter}'")
-            if parameter is None:
-                not_provided_params.append(key)
-        if len(not_provided_params) != 0:
-            raise ValueError(
-                f"The following inputs were not provided: {str(not_provided_params)[1:-1]}"
-            )
-
-        # Set parameters correctly
-        self.set_parameters_correctly()
-
-    # Sets parameters to correct values
-    # E.g. if dimensions <= 0, we want it to be chosen automatically => set it to None or 'mle'
-    def set_parameters_correctly(self):
-        # Set parameters to correct conditions
-        # batch size needs to be at least the size of the dimensions
-        self.parameter_dict["batchSize"] = max(
-            self.parameter_dict["batchSize"], self.parameter_dict["dimensions"]
-        )
-        # If dimensions <= 0, then dimensions should be chosen automatically
-        if self.parameter_dict["dimensions"] <= 0:
-            self.parameter_dict["dimensions"] = None
-            if self.parameter_dict["pcaType"] == PCATypeEnum.normal:
-                self.parameter_dict["dimensions"] = "mle"
-        # If tolerance tol is set to <= 0, then we set it as follows
-        if self.parameter_dict["tol"] <= 0:
-            # 1e-8 for sparse PCA
-            if self.parameter_dict["pcaType"] == PCATypeEnum.sparse:
-                self.parameter_dict["tol"] = 1e-8
-            # 0 for normal and kernel PCA
-            else:
-                self.parameter_dict["tol"] = 0
-            # Incremental PCA does not use this parameter
-
-        # If iterated power is set to <= 0, then it should be chosen automatically
-        if self.parameter_dict["iteratedPower"] <= 0:
-            self.parameter_dict["iteratedPower"] = "auto"
-
-    def get(self, key):
-        return self.parameter_dict[key]
+    def __str__(self):
+        return str(self.__dict__)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -155,7 +129,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Dimensions",
             "description": "Number of dimensions k that the output will have."
-            "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
+                           "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
             "input_type": "text",
         },
     )
@@ -175,7 +149,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Batch Size",
             "description": "Batch size used when executing Incremental PCA. "
-            "The batch size will be automatically set to at least the number of dimensions k.",
+                           "The batch size will be automatically set to at least the number of dimensions k.",
             "input_type": "text",
         },
     )
@@ -194,7 +168,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Ridge shrinkage",
             "description": "To avoid instability issues in case the system is under-determined, "
-            "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
+                           "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
             "input_type": "text",
         },
     )
@@ -216,8 +190,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Kernel matrix URL",
             "description": "URL to a json file, containing the kernel matrix."
-            "Note that only kernel matrices between the same set of points X can be processed here, "
-            "i.e. K(X, X)",
+                           "Note that only kernel matrices between the same set of points X can be processed here, "
+                           "i.e. K(X, X)",
             "input_type": "text",
         },
     )
@@ -256,7 +230,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The maximum number of iterations that sparse PCA performs.",
             "input_type": "text",
         },
-        validate=ma.validate.Range(min=0, min_inclusive=False)
+        validate=validate.Range(min=0, min_inclusive=False)
     )
     tol = ma.fields.Float(
         required=True,
@@ -264,7 +238,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Error Tolerance",
             "description": "Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
-            "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
+                           "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
             "input_type": "text",
         },
     )
@@ -274,10 +248,14 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Iterated Power",
             "description": "This sets the iterated power parameter for the randomized solver. \n"
-            "If it is set to <= 0, the iterated power will be chosen automatically.",
+                           "If it is set to <= 0, the iterated power will be chosen automatically.",
             "input_type": "text",
         },
     )
+
+    @post_load
+    def make_input_params(self, data, **kwargs) -> InputParameters:
+        return InputParameters(**data)
 
     @ma.validates_schema
     def validate_kernel_and_entity_points_urls(self, data, **kwargs):

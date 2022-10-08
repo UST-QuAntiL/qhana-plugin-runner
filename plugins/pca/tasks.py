@@ -20,7 +20,7 @@ from json import loads
 from celery.utils.log import get_task_logger
 
 from . import PCA
-from .schemas import ParameterHandler, PCATypeEnum, KernelEnum
+from .schemas import InputParameters, InputParametersSchema, PCATypeEnum, KernelEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
@@ -138,53 +138,54 @@ def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
 
 
 # This method returns a pca, depending on the input parameters input_params
-def get_pca(input_params: ParameterHandler):
+def get_pca(input_params: dict):
     """
     Returns the correct pca model, given by the frontend's input paramters.
     :param input_params: ParameterHandler containing the frontend's input parameters
     """
     from sklearn.decomposition import PCA, IncrementalPCA, SparsePCA, KernelPCA
 
-    pca_type = input_params.get("pcaType")
+
+    pca_type = input_params["pca_type"]
 
     # Result can't have dim <= 0. If this is entered, set to None.
     # If set to None all PCA types will compute as many components as possible
     # Exception for normal PCA we set n_components to 'mle', which automatically will choose the number of dimensions.
 
-    if pca_type == PCATypeEnum.normal.value:
+    if pca_type == PCATypeEnum.normal:
         return PCA(
-            n_components=input_params.get("dimensions"),
-            svd_solver=input_params.get("solver"),
-            tol=input_params.get("tol"),
-            iterated_power=input_params.get("iteratedPower"),
+            n_components=input_params["dimensions"],
+            svd_solver=input_params["solver"].value,
+            tol=input_params["tol"],
+            iterated_power=input_params["iterated_power"],
         )
-    elif pca_type == PCATypeEnum.incremental.value:
+    elif pca_type == PCATypeEnum.incremental:
         return IncrementalPCA(
-            n_components=input_params.get("dimensions"),
-            batch_size=input_params.get("batchSize"),
+            n_components=input_params["dimensions"],
+            batch_size=input_params["batch_size"],
         )
-    elif pca_type == PCATypeEnum.sparse.value:
+    elif pca_type == PCATypeEnum.sparse:
         return SparsePCA(
-            n_components=input_params.get("dimensions"),
-            alpha=input_params.get("sparsityAlpha"),
-            ridge_alpha=input_params.get("ridgeAlpha"),
-            max_iter=input_params.get("maxItr"),
-            tol=input_params.get("tol"),
+            n_components=input_params["dimensions"],
+            alpha=input_params["sparsity_alpha"],
+            ridge_alpha=input_params["ridge_alpha"],
+            max_iter=input_params["max_itr"],
+            tol=input_params["tol"],
         )
-    elif pca_type == PCATypeEnum.kernel.value:
-        eigen_solver = input_params.get("solver")
+    elif pca_type == PCATypeEnum.kernel:
+        eigen_solver = input_params["solver"].value
         if eigen_solver == "full":
             eigen_solver = "dense"
 
         return KernelPCA(
-            n_components=input_params.get("dimensions"),
-            kernel=input_params.get("kernel"),
-            degree=input_params.get("degree"),
-            gamma=input_params.get("kernelGamma"),
-            coef0=input_params.get("kernelCoef"),
+            n_components=input_params["dimensions"],
+            kernel=input_params["kernel"].value,
+            degree=input_params["degree"],
+            gamma=input_params["kernel_gamma"],
+            coef0=input_params["kernel_coef"],
             eigen_solver=eigen_solver,
-            tol=input_params.get("tol"),
-            iterated_power=input_params.get('iteratedPower')  # This parameter is available in scikit-learn version ~= 1.0.2
+            tol=input_params["tol"],
+            iterated_power=input_params['iterated_power']  # This parameter is available in scikit-learn version ~= 1.0.2
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
@@ -410,6 +411,37 @@ def save_outputs(
         )
 
 
+# Sets parameters to correct values
+# E.g. if dimensions <= 0, we want it to be chosen automatically => set it to None or 'mle'
+def prep_input_parameters(input_params: InputParameters) -> dict:
+    input_params = input_params.__dict__
+    # Set parameters to correct conditions
+    # batch size needs to be at least the size of the dimensions
+    input_params["batch_size"] = max(
+        input_params["batch_size"], input_params["dimensions"]
+    )
+    # If dimensions <= 0, then dimensions should be chosen automatically
+    if input_params["dimensions"] <= 0:
+        input_params["dimensions"] = None
+        if input_params["pca_type"] == PCATypeEnum.normal:
+            input_params["dimensions"] = "mle"
+    # If tolerance tol is set to <= 0, then we set it as follows
+    if input_params["tol"] <= 0:
+        # 1e-8 for sparse PCA
+        if input_params["pca_type"] == PCATypeEnum.sparse:
+            input_params["tol"] = 1e-8
+        # 0 for normal and kernel PCA
+        else:
+            input_params["tol"] = 0
+        # Incremental PCA does not use this parameter
+
+    # If iterated power is set to <= 0, then it should be chosen automatically
+    if input_params["iterated_power"] <= 0:
+        input_params["iterated_ower"] = "auto"
+
+    return input_params
+
+
 @CELERY.task(name=f"{PCA.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -421,19 +453,21 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: ParameterHandler = ParameterHandler(
-        loads(task_data.parameters or "{}"), TASK_LOGGER
+    input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(input_params)}"
     )
+    input_params = prep_input_parameters(input_params)
 
-    entity_points_url = input_params.get("entityPointsUrl")
-    kernel_url = input_params.get("kernelUrl")
+    entity_points_url = input_params["entity_points_url"]
+    kernel_url = input_params["kernel_url"]
 
     # Compute pca
     pca = get_pca(input_params)
 
     # Since incremental pca uses batches, we want to load in the data in batches
-    if input_params.get("pcaType") == PCATypeEnum.incremental.value:
-        batch_size = input_params.get("batchSize")
+    if input_params["pca_type"] == PCATypeEnum.incremental.value:
+        batch_size = input_params["batch_size"]
         batch_fitting(entity_points_url, pca, batch_size)
         entity_points = prepare_stream_output(
             get_entity_generator(entity_points_url, stream=True), pca
@@ -442,8 +476,8 @@ def calculation_task(self, db_id: int) -> str:
             get_entity_generator(entity_points_url, stream=True), pca
         )
     elif (
-        input_params.get("pcaType") == PCATypeEnum.kernel.value
-        and input_params.get("kernel") == KernelEnum.precomputed.value
+        input_params["pca_type"] == PCATypeEnum.kernel.value
+        and input_params["kernel"] == KernelEnum.precomputed.value
     ):
         entity_points = precomputed_kernel_fitting(kernel_url, pca)
         entity_points_for_plot = entity_points
@@ -456,8 +490,7 @@ def calculation_task(self, db_id: int) -> str:
     # dim = num features of output. Get dim here, since input params can be <= 0
     pca_output, dim = pca_to_output(pca)
     pca_output = [pca_output]
-    if dim > 3:
-        entity_points_for_plot = None
+
     # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
     attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
     save_outputs(
