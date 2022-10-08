@@ -81,6 +81,7 @@ def load_entity_points_and_idx_to_id(entity_points_url: str):
     id_to_idx = {}
     idx = 0
 
+    # Check for duplicates and set index for elements
     ent = None
     for ent in entity_generator:
         if ent["ID"] in id_to_idx:
@@ -89,10 +90,12 @@ def load_entity_points_and_idx_to_id(entity_points_url: str):
         id_to_idx[ent["ID"]] = idx
         idx += 1
 
+    # Set array with correct size
     points_cnt = len(id_to_idx)
     dimensions = len(ent["point"])
-    points_arr = np.zeros((points_cnt, dimensions))
+    points_arr = np.empty((points_cnt, dimensions))
 
+    # Go through elements again and insert them at the correct index
     entity_generator = get_entity_generator(entity_points_url)
     for ent in entity_generator:
         idx = id_to_idx[ent["ID"]]
