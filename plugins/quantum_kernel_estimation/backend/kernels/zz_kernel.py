@@ -94,7 +94,6 @@ class ZZKernel(Kernel, metaclass=ABCMeta):
             """
             Creates the circuit for evaluation
             """
-            # projections_and_wires = []
             wires_to_measure = []
             for entry in to_calculate:
                 x = data_x[entry[0]]
@@ -106,10 +105,7 @@ class ZZKernel(Kernel, metaclass=ABCMeta):
                 for _ in range(self.reps):
                     adj_ansatz(y, wires_to_use)
                     full_Hadamard_layer(wires_to_use)
-                # projections_and_wires.append((self.get_projector_to_zero(len(wires_to_use)), wires_to_use))
-                # TASK_LOGGER.info(f"wires_to_use = {wires_to_use}")
                 wires_to_measure.append(wires_to_use)
-            # return [qml.expval(qml.Hermitian(projections_and_wires[i][0], wires=projections_and_wires[i][1])) for i in range(len(projections_and_wires))]
             return [
                 qml.probs(wires=wires_to_measure[i]) for i in range(len(wires_to_measure))
             ]

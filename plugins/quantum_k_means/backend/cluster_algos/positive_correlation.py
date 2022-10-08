@@ -207,13 +207,3 @@ class PositiveCorrelationQuantumKmeans(Clustering):
             size="size",
         )
         fig.show()
-
-        # colors = ["blue" if c == 0 else "red" for c in centroid_mapping]
-        # plt.scatter(prepped_data[:, 0], prepped_data[:, 1], c=colors)
-        # colors = ["green"]*len(prepped_centroids)
-        # plt.scatter(prepped_centroids[:, 0], prepped_centroids[:, 1], c=colors)
-        # circle = plt.Circle((0, 0), 1, color="black", fill=False)
-        # plt.gca().add_patch(circle)
-        # plt.axis('square')
-        # plt.show()
-        # plt.cla()

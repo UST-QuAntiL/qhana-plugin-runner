@@ -72,7 +72,6 @@ def get_entity_generator(entity_points_url: str, stream=False):
             yield ent
 
 
-# loads in the complete dataset as entity_points and idx_to_id
 def load_entity_points_and_idx_to_id(entity_points_url: str):
     """
     Loads in entity points, given their url.
@@ -137,7 +136,6 @@ def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
     return id_to_idx_X, id_to_idx_Y, kernel_matrix
 
 
-# This method returns a pca, depending on the input parameters input_params
 def get_pca(input_params: dict):
     """
     Returns the correct pca model, given by the frontend's input paramters.
@@ -185,7 +183,7 @@ def get_pca(input_params: dict):
             coef0=input_params["kernel_coef"],
             eigen_solver=eigen_solver,
             tol=input_params["tol"],
-            iterated_power=input_params['iterated_power']  # This parameter is available in scikit-learn version ~= 1.0.2
+            iterated_power=input_params['iterated_power']
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
@@ -203,16 +201,20 @@ def get_entity_dict(ID, point):
     return ent
 
 
-# This method is used, when we can avoid that the whole output data is in memory
-# It creates a generator, transforming each input element into the output element
 def prepare_stream_output(entity_generator, pca):
+    """
+    This method is a generator, preparing each entity point for the final output. This method is used, when using the
+    incremental pca. Since the advantage of the incremental pca is that not every point has to be in memory at once,
+    this method loads in each point one by one and therefore keeps the advantage of the incremental pca.
+    :param entity_generator: generator of points
+    :pca: a fitted pca
+    """
     for ent in entity_generator:
         point = ent["point"]
         transformed_ent = pca.transform([point])[0]
         yield get_entity_dict(ent["ID"], transformed_ent)
 
 
-# This method is used, when the whole output data is in memory
 def prepare_static_output(transformed_points, id_to_idx):
     """
     This method takes a set of points and prepares them for the final output. Each point gets converted to a dictionary
@@ -226,8 +228,6 @@ def prepare_static_output(transformed_points, id_to_idx):
     return entity_points
 
 
-# This is used, when the pca needs the whole dataset in memory to be fitted
-# In this method the input data is completely loaded into memory
 def complete_fitting(entity_points_url, pca):
     """
     This method loads in the entity points from the url. Then it fits the pca instance, transforms the entity points
@@ -261,8 +261,6 @@ def precomputed_kernel_fitting(kernel_url: str, pca):
     return prepare_static_output(transformed_points, id_to_idx_X)
 
 
-# This is used, when the pca can be incrementally fitted via batches
-# In this method the input data is loaded in batchwise
 def batch_fitting(entity_points_url, pca, batch_size):
     """
     This method loads in the entity points in batches of size batch_size from the entity_points_url and fits the
@@ -364,7 +362,7 @@ def save_outputs(
     db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim
 ):
     """
-    Saves the plugin's ouput into files. This includes a plot of the transformed data, the pca's parameters and
+    Saves the plugin's output into files. This includes a plot of the transformed data, the pca's parameters and
     the transformed points themselves.
     """
     TASK_LOGGER.info(
@@ -411,8 +409,6 @@ def save_outputs(
         )
 
 
-# Sets parameters to correct values
-# E.g. if dimensions <= 0, we want it to be chosen automatically => set it to None or 'mle'
 def prep_input_parameters(input_params: InputParameters) -> dict:
     input_params = input_params.__dict__
     # Set parameters to correct conditions

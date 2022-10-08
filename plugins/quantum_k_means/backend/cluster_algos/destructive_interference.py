@@ -153,11 +153,6 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
                     mapping_distance[data_idx] = results[k]
                     centroid_mapping[data_idx] = centroid_idx
 
-        # print(self.execute_circuit([[[0], [39, 0]]], prepped_data, centroid_angles))
-        # print(self.execute_circuit([[[0], [39, 1]]], prepped_data, centroid_angles))
-        # print(f"centroid_angles = {centroid_angles}")
-        # print(f"prepped_data[39] = {prepped_data[39]}")
-        # print(f"diff = {centroid_angles - prepped_data[39]}")
         return centroid_mapping, amount_executed_circuits, representative_circuit
 
     def plot(self, prepped_data, prepped_centroids, centroid_mapping):
@@ -207,13 +202,3 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
             size="size",
         )
         fig.show()
-
-        # colors = ["blue" if c == 0 else "red" for c in centroid_mapping]
-        # plt.scatter(prepped_data[:, 0], prepped_data[:, 1], c=colors)
-        # colors = ["green"]*len(prepped_centroids)
-        # plt.scatter(prepped_centroids[:, 0], prepped_centroids[:, 1], c=colors)
-        # circle = plt.Circle((0, 0), 1, color="black", fill=False)
-        # plt.gca().add_patch(circle)
-        # plt.axis('square')
-        # plt.show()
-        # plt.cla()

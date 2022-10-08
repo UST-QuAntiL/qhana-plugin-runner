@@ -35,7 +35,6 @@ class KernelEnum(enum.Enum):
     def get_kernel(
         self, backend, n_qbits: int, paulis: List[str], reps: int, entanglement_pattern: str
     ) -> QuantumKernel:
-        # backend = QuantumInstance(backend, shots)
         if self == KernelEnum.z_feature_map:
             feature_map = ZFeatureMap(
                 feature_dimension=n_qbits, reps=reps

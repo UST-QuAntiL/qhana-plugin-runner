@@ -278,9 +278,6 @@ class OneHot(QHAnaPluginBase):
     def get_api_blueprint(self):
         return ONEHOT_BLP
 
-    # def get_requirements(self) -> str:
-    #     return "scikit-learn~=0.24.2"
-
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -290,7 +287,6 @@ def get_attribute_ref_target(entities_metadata_url: str, attributes: List[str]):
     entities_metadata = open_url(entities_metadata_url).json()
     for attribute in attributes:
         for metadata in entities_metadata:
-            # TASK_LOGGER.info(f"metadata[ID]: {metadata['ID']}")
             if metadata["ID"] == attribute:
                 result[attribute] = metadata["refTarget"].split(":")[1][:-5]
     return result

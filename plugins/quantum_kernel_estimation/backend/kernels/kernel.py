@@ -186,7 +186,7 @@ class Kernel(metaclass=ABCMeta):
                 result_idx_x = to_calculate[i][0]
                 result_idx_y = to_calculate[i][1]
                 kernel_matrix[result_idx_y, result_idx_x] = result[i]
-        # TASK_LOGGER.info(qml.draw(circuit)(data_x[1], data_y[2]))  # DEBUG: draw circuit for data_x[1] and data_y[2]
+
         if is_symmetric:
             for idx_x in range(len(data_x)):
                 for idx_y in range(idx_x):
