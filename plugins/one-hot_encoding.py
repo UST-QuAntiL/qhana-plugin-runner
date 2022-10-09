@@ -125,7 +125,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Attributes",
-            "description": "Attributes for which the similarity shall be computed.",
+            "description": "Attributes for which the one-hot encoding shall be computed.",
             "input_type": "textarea",
         },
     )
@@ -412,7 +412,7 @@ def calculation_task(self, db_id: int) -> str:
     )
 
     # load data from file
-    attributes = attributes.replace("\r", "").split("\n")
+    attributes = attributes.splitlines()
     attribute_ref_targets = get_attribute_ref_target(entities_metadata_url, attributes)
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
