@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING, List, Optional, Sequence
 
 import requests
 from celery.utils.log import get_task_logger
-from requests import HTTPError, JSONDecodeError
+from requests import HTTPError
 
 from .. import Workflows
-from ..datatypes.camunda_datatypes import ExternalTask
 from ..datatypes.qhana_datatypes import QhanaInput, QhanaOutput, QhanaPlugin
 
 config = Workflows.instance.config
@@ -50,40 +49,8 @@ class QhanaTaskClient:
 
         if response.status_code != http.client.OK:
             raise HTTPError("Unknown status code.", response=response)
-        url = response.url
 
-        try:
-            status = response.json().get("status", "UNKNOWN")
-        except JSONDecodeError:
-            status = "UNKNOWN"
-
-        return status, url
-
-    def complete_qhana_task(
-        self,
-        camunda_client: CamundaClient,
-        outputs: Sequence[QhanaOutput],
-        external_task: ExternalTask,
-    ):
-        """
-        Submits the result for a corresponding external task to Camunda
-        :param camunda_client: Client to be used
-        :param qhana_result: Result from finished QHAna plugin
-        """
-        result = {
-            "output": {
-                "value": [
-                    {
-                        "name": output.name,
-                        "contentType": output.content_type,
-                        "dataType": output.data_type,
-                        "href": output.href,
-                    }
-                    for output in outputs
-                ]
-            }
-        }
-        camunda_client.complete_task(external_task, result)
+        return response.url
 
     def _get_plugins_from_endpoints(self):
         """
@@ -153,13 +120,16 @@ class QhanaTaskClient:
         return response.text
 
     def collect_input(
-        self, task: ExternalTask, camunda_client: CamundaClient, local_variables: dict
+        self,
+        local_variables: dict,
+        process_instance_id: str,
+        camunda_client: CamundaClient,
     ):
         """
         TODO: Multistep plugins
-        :param task: The task to use for input collection
-        :param camunda_client: Client to be used
         :param local_variables: Variables which may contain input for the QHAna plugin
+        :param process_instance_id: The instance id of the running process
+        :param camunda_client: Client to be used
         :return:
         """
         prefix = config["qhana_input"]["prefix"]
@@ -180,7 +150,9 @@ class QhanaTaskClient:
                 output_name, select = list(item["value"].items())[0]
 
                 # Retrieves the contents of an output that is used as input
-                retrieved_output = camunda_client.get_global_variable(output_name, task)
+                retrieved_output = camunda_client.get_global_variable(
+                    output_name, process_instance_id=process_instance_id
+                )
 
                 # Treat output as plain text
                 if select == input_mode_text:

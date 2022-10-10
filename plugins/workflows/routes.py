@@ -1,4 +1,3 @@
-import ast
 import json
 from http import HTTPStatus
 from typing import Mapping, Optional
@@ -14,7 +13,6 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
-    InputDataMetadata,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -31,6 +29,7 @@ from .schemas import (
     WorkflowsTaskResponseSchema,
 )
 from .tasks import process_input, start_workflow
+from .watchers.human_task_watcher import human_task_watcher
 
 config = Workflows.instance.config
 
@@ -125,6 +124,8 @@ class ProcessView(MethodView):
         db_task.save(commit=False)
         DB.session.flush()  # flsuh to DB to get db_task id populated
 
+        assert isinstance(db_task.data, dict)
+
         db_task.data["href"] = url_for(
             f"{WORKFLOWS_BLP.name}.{HumanTaskProcessView.__name__}",
             db_id=db_task.id,
@@ -138,7 +139,9 @@ class ProcessView(MethodView):
 
         db_task.save(commit=True)
 
-        task: chain = start_workflow.s(db_id=db_task.id)
+        task: chain = start_workflow.s(db_id=db_task.id) | human_task_watcher.si(
+            db_id=db_task.id
+        )
         task.link_error(save_task_error.s(db_id=db_task.id))
 
         task.apply_async()
@@ -193,10 +196,11 @@ class HumanTaskFrontend(MethodView):
         form_params = None
 
         if not data:
+            assert isinstance(db_task.data, dict)
             try:
-                form_params = ast.literal_eval(db_task.data["form_params"])
+                form_params = json.loads(db_task.data["form_params"])
             except:
-                form_params = None
+                form_params = None  # TODO raise proper error here (will throw generic one two lines later)
 
         data = {}
         for key, val in form_params.items():
@@ -263,9 +267,12 @@ class HumanTaskBPMNVisualizationFrontend(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
+        bpmn_properties = None
+
         if not data:
             try:
-                bpmn_properties = ast.literal_eval(db_task.data["bpmn"])
+                assert isinstance(db_task.data, dict)
+                bpmn_properties = json.loads(db_task.data["bpmn"])  # FIXME!!!
             except:
                 bpmn_properties = None
 
@@ -295,7 +302,9 @@ class HumanTaskProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = process_input.s(db_id=db_task.id)
+        task: chain = process_input.s(db_id=db_task.id) | human_task_watcher.si(
+            db_id=db_task.id
+        )
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))

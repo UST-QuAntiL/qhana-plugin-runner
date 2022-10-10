@@ -6,18 +6,18 @@ from requests.exceptions import ConnectionError, HTTPError
 from qhana_plugin_runner.celery import CELERY
 
 from ... import Workflows
+from ...clients.camunda_client import CamundaClient
+from ...clients.qhana_task_client import ParameterParsingError, QhanaTaskClient
+from ...datatypes.camunda_datatypes import CamundaConfig
+from ...datatypes.qhana_datatypes import QhanaOutput
 from ...exceptions import (
-    BadTaskDefinitionError,
     BadInputsError,
+    BadTaskDefinitionError,
     InvocationError,
     PluginFailureError,
     PluginNotFoundError,
     ResultError,
 )
-from ...clients.camunda_client import CamundaClient
-from ...clients.qhana_task_client import ParameterParsingError, QhanaTaskClient
-from ...datatypes.camunda_datatypes import CamundaConfig, ExternalTask
-from ...datatypes.qhana_datatypes import QhanaOutput, QhanaTask
 
 config = Workflows.instance.config
 
@@ -26,15 +26,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 class TaskNotFinishedError(Exception):
     pass
-
-
-def get_camunda_client():
-    return CamundaClient(
-        CamundaConfig(
-            base_url=config["CAMUNDA_BASE_URL"],
-            poll_interval=config["polling_rates"]["camunda_general"],
-        )
-    )
 
 
 def extract_plugin_name(topic: str):
@@ -51,38 +42,43 @@ def extract_plugin_name(topic: str):
     retry_backoff=True,
     max_retries=10,
 )
-def qhana_instance_watcher(self, camunda_external_task: str):
+def qhana_instance_watcher(
+    self,
+    topic_name: str,
+    external_task_id: str,
+    execution_id: str,
+    process_instance_id: str,
+):
     """
     Creates new qhana plugin instances and watches for results.
     """
-    TASK_LOGGER.info(f"Received task from camunda queue: {camunda_external_task}")
+    TASK_LOGGER.info(f"Received task {external_task_id} from camunda queue {topic_name}.")
 
     # Clients
-    camunda_client = get_camunda_client()
+    camunda_client = CamundaClient(CamundaConfig.from_config(config))
     TASK_LOGGER.debug(f"Searching for plugins")
     qhana_client = QhanaTaskClient(config["QHANA_PLUGIN_ENDPOINTS"])
 
     # Deserialize
-    external_task: ExternalTask = ExternalTask.from_dict(camunda_external_task)
     TASK_LOGGER.debug(f"Invoke plugin")
 
     try:
-        plugin_name = extract_plugin_name(external_task.topic_name)
+        plugin_name = extract_plugin_name(topic_name)
     except ValueError:
         raise BadTaskDefinitionError(
-            message=f"Malformed task topic name '{external_task.topic_name}'. Name must contain a '.' separating the plugin name!"
+            message=f"Malformed task topic name '{topic_name}'. Name must contain a '.' separating the plugin name!"
         )
 
     plugin = qhana_client.resolve(plugin_name)
     if plugin is None:
         raise PluginNotFoundError(message=f"Plugin {plugin_name} could not be found!")
 
-    workflow_local_variables = camunda_client.get_task_local_variables(external_task)
+    workflow_local_variables = camunda_client.get_task_local_variables(execution_id)
     try:
         parameters = qhana_client.collect_input(
-            external_task,
-            camunda_client,
             workflow_local_variables if workflow_local_variables else {},
+            process_instance_id=process_instance_id,
+            camunda_client=camunda_client,
         )
     except ParameterParsingError as err:
         raise BadTaskDefinitionError(
@@ -90,7 +86,7 @@ def qhana_instance_watcher(self, camunda_external_task: str):
         )
 
     try:
-        status, url = qhana_client.call_qhana_plugin(plugin, parameters)
+        url = qhana_client.call_qhana_plugin(plugin, parameters)
     except HTTPError as err:
         if err.response and err.response.status_code:
             response_status: int = err.response.status_code
@@ -110,20 +106,13 @@ def qhana_instance_watcher(self, camunda_external_task: str):
             message="Plugin invocation received unprocessable entities and could not proceed."
         )
 
-    qhana_instance = QhanaTask(
-        status=status,
-        url=url,
-        external_task=external_task,
-        plugin=plugin,
-    )
-
     TASK_LOGGER.info(
-        f"Created QHAna plugin instance {qhana_instance.plugin.name} with result url: {qhana_instance.url}"
+        f"Created QHAna plugin instance {plugin.name} with result url: {url}"
     )
 
     watch_task = check_task_status.s(
-        url=qhana_instance.url,
-        camunda_external_task=camunda_external_task,
+        url=url,
+        external_task_id=external_task_id,
     )
     errbacks = maybe_list(self.request.errbacks)
     if errbacks:
@@ -139,9 +128,7 @@ def qhana_instance_watcher(self, camunda_external_task: str):
     retry_backoff=True,
     max_retries=None,
 )
-def check_task_status(self, url: str, camunda_external_task: str):
-    external_task: ExternalTask = ExternalTask.from_dict(camunda_external_task)
-
+def check_task_status(self, url: str, external_task_id: str):
     # TODO: Timeout if no result after a long time (or workflow task removed)
     try:
         response = requests.get(url, timeout=config.get("request_timeout", 5 * 60))
@@ -180,13 +167,23 @@ def check_task_status(self, url: str, camunda_external_task: str):
 
         outputs = [QhanaOutput.deserialize(output) for output in contents["outputs"]]
 
-        qhana_client = QhanaTaskClient(config["QHANA_PLUGIN_ENDPOINTS"])
-        camunda_client = get_camunda_client()
+        camunda_client = CamundaClient(CamundaConfig.from_config(config))
 
         # Complete external task with qhana task result
-        qhana_client.complete_qhana_task(
-            camunda_client, outputs=outputs, external_task=external_task
-        )
+        external_task_result = {
+            "output": {
+                "value": [
+                    {
+                        "name": output.name,
+                        "contentType": output.content_type,
+                        "dataType": output.data_type,
+                        "href": output.href,
+                    }
+                    for output in outputs
+                ]
+            }
+        }
+        camunda_client.complete_task(external_task_id, external_task_result)
 
         return
     elif qhana_instance_status == "FAILURE":

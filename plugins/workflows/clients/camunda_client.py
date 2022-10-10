@@ -1,19 +1,14 @@
 import datetime
 import logging
+import re
 from pathlib import Path
-from typing import Optional
+from typing import List, Sequence
 
 import requests
-from dateutil import parser
+from requests.exceptions import HTTPError
 
 from .. import Workflows
-from ..datatypes.camunda_datatypes import (
-    CamundaConfig,
-    Deployment,
-    ExternalTask,
-    ProcessInstance,
-)
-from ..util.helper import endpoint_found, endpoint_found_simple, request_json
+from ..datatypes.camunda_datatypes import CamundaConfig, ExternalTask, HumanTask
 
 config = Workflows.instance.config
 
@@ -29,72 +24,59 @@ class CamundaClient:
     def __init__(
         self,
         camunda_config: CamundaConfig,
-        bpmn_path: Optional[Path] = None,
+        timeout: int = config.get("request_timeout", 5 * 60),
     ):
         self.camunda_config = camunda_config
-        self.bpmn_path = bpmn_path
+        self.timeout = timeout
 
-    def base_url(self, url):
-        """
-        :param url: The camunda endpoint used for all worker related requests
-        """
-        self.camunda_config.base_url = url
-        return self
-
-    def poll_interval(self, timeout):
-        """
-        Sets the poll interval for the Camunda REST API
-        :param timeout: The interval in milliseconds
-        """
-        self.camunda_config.poll_interval = timeout
-        return self
-
-    def resource(self, bpmn: Path):
-        """
-        :param bpmn: BPMN model for deployment
-        """
-        self.bpmn_path = bpmn
-        return self
-
-    def build(self):
-        """
-        Deploys the model, creates a model instance and polls for external tasks in the specified interval.
-        After the instance terminates the model is undeployed
-        """
-        self.deploy()
-        self.create_instance()
-        return self
-
-    def lock(self, task: ExternalTask):
+    def lock(self, external_task_id: str):
         """
         Locks an external task so that the worker can use it
         :param task: The task to be locked
         """
         # TODO: Instead of just setting a high lock duration, automatically re-lock when expired
         response = requests.post(
-            f"{self.camunda_config.base_url}/external-task/{task.id}/lock",
+            f"{self.camunda_config.base_url}/external-task/{external_task_id}/lock",
             json={"workerId": self.camunda_config.worker_id, "lockDuration": "999999999"},
+            timeout=self.timeout,
         )
-        endpoint_found(response)
+        response.raise_for_status()
 
-    def unlock(self, task: ExternalTask):
+    def get_external_tasks(self):
+        response = requests.get(
+            f"{self.camunda_config.base_url}/external-task",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+        external_tasks = response.json()
+        return [
+            ExternalTask.deserialize(external_task) for external_task in external_tasks
+        ]
+
+    def unlock(self, external_task_id: str):
         """
         Unlocks an external task so that other workers can use it
         :param task: The task to be locked
         """
         response = requests.post(
-            f"{self.camunda_config.base_url}/external-task/{task.id}/unlock",
+            f"{self.camunda_config.base_url}/external-task/{external_task_id}/unlock",
+            timeout=self.timeout,
         )
-        endpoint_found(response)
+        response.raise_for_status()
 
-    def is_locked(self, task: ExternalTask):
+    def is_locked(self, external_task_id: str):
         """
         Check if a task is locked
         :return: Locked status
         """
-        task_data = request_json(
-            f"{self.camunda_config.base_url}/external-task/{task.id}"
+        response = requests.get(
+            f"{self.camunda_config.base_url}/external-task/{external_task_id}",
+            timeout=self.timeout,
         )
+        response.raise_for_status()
+
+        task_data = response.json()
 
         if task_data["lockExpirationTime"] is None:
             return False
@@ -102,9 +84,7 @@ class CamundaClient:
         lock_expiration_time = datetime.datetime.strptime(
             task_data["lockExpirationTime"], "%Y-%m-%dT%H:%M:%S.%f%z"
         )
-        current_time = parser.parse(
-            datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
-        )
+        current_time = datetime.datetime.now(datetime.timezone.utc)
 
         if lock_expiration_time > current_time:
             return True
@@ -112,11 +92,11 @@ class CamundaClient:
         return False
 
     def external_task_bpmn_error(
-        self, task: ExternalTask, error_code: str, error_message: str
+        self, external_task_id: str, error_code: str, error_message: str
     ):
         """
         Throws a bpmn error
-        :param task: The failed task
+        :param external_task_id: The id of the failed task
         :param error_code: Code for exception
         :param error_message: Description of the exception
         """
@@ -125,27 +105,29 @@ class CamundaClient:
         # used, instead refer to error_code and error_message for further exception handling.
         output_variables = {"output": {"value": "Exception thrown.", "type": "String"}}
         response = requests.post(
-            url=f"{self.camunda_config.base_url}/external-task/{task.id}/bpmnError",
+            url=f"{self.camunda_config.base_url}/external-task/{external_task_id}/bpmnError",
             json={
                 "workerId": self.camunda_config.worker_id,
                 "errorCode": error_code,
                 "errorMessage": error_message,
                 "variables": output_variables,
             },
+            timeout=self.timeout,
         )
-        endpoint_found(response)
+        response.raise_for_status()
 
-    def complete_task(self, task: ExternalTask, result: dict):
+    def complete_task(self, external_task_id: str, result: dict):
         """
         External task is removed from the external tasks list from the workflow instance
+        :param external_task_id: The id of the completed task
         :param result: Return values for the external task
-        :param task: The completed task
         """
         response = requests.post(
-            f"{self.camunda_config.base_url}/external-task/{task.id}/complete",
+            f"{self.camunda_config.base_url}/external-task/{external_task_id}/complete",
             json={"workerId": self.camunda_config.worker_id, "variables": result},
+            timeout=self.timeout,
         )
-        endpoint_found(response)
+        response.raise_for_status()
 
     def complete_human_task(self, human_task_id: str, result: dict):
         """
@@ -156,48 +138,109 @@ class CamundaClient:
         response = requests.post(
             f"{self.camunda_config.base_url}/task/{human_task_id}/complete",
             json={"workerId": self.camunda_config.worker_id, "variables": result},
+            timeout=self.timeout,
         )
-        endpoint_found(response)
+        response.raise_for_status()
 
-    def get_task_local_variables(self, task: ExternalTask):
+    def get_human_tasks(self, process_instance_id: str) -> Sequence[HumanTask]:
+        """Get all active human tasks of a given process instance."""
+        response = requests.get(
+            f"{self.camunda_config.base_url}/task",
+            params={
+                "processInstanceId": process_instance_id,
+                "active": "true",
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return [HumanTask.deserialize(t) for t in response.json()]
+
+    def get_human_task_form_variables(self, human_task_id: str):
+        response = requests.get(
+            f"{self.camunda_config.base_url}/task/{human_task_id}/form-variables",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        instance_variables = response.json()
+
+        try:
+            rendered_form = self.get_human_task_rendered_form(human_task_id)
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                return {}  # no form variables if no rendered form!
+            raise  # otherwise reraise
+
+        # Extract form variables from the rendered form. Cannot use only camunda endpoint for form variables (broken)  # TODO link issue
+        matches: List[str] = re.findall(
+            r'<input[^\>]*cam-variable-name="(?P<name>[^"]*)"', rendered_form
+        )  # returns a list of strings matching the 'name' group only
+        form_variables = set(matches)
+
+        return {k: v for k, v in instance_variables.items() if k in form_variables}
+
+    def get_task_local_variables(self, external_task_execution_id: str):
         """
         Gets all local variables of an external task
-        :param task: The external task
+        :param external_task_execution_id: The execution_id of the external task
         :return: Local variables
         """
-        response = request_json(
-            f"{self.camunda_config.base_url}/execution/{task.execution_id}/localVariables"
+        response = requests.get(
+            f"{self.camunda_config.base_url}/execution/{external_task_execution_id}/localVariables",
+            timeout=self.timeout,
         )
-        return response
+        response.raise_for_status()
+        return response.json()
 
-    def get_global_variable(self, name: str, external_task: ExternalTask):
+    def get_global_variable(self, name: str, process_instance_id: str):
         """
         Retrieves the global variable for a given name
         :param name: The global variable name
         :param external_task
         :return: The value for a global variable
         """
-        response = request_json(
-            f"{self.camunda_config.base_url}/process-instance/{external_task.process_instance_id}/variables/{name}"
+        response = requests.get(
+            f"{self.camunda_config.base_url}/process-instance/{process_instance_id}/variables/{name}",
+            timeout=self.timeout,
         )
+        response.raise_for_status()
 
-        return response["value"]
+        return response.json()["value"]
 
-    def get_instance_return_variables(self):
+    def get_instance_return_variables(self, process_instance_id: str):
         """
         Retrieves all workflow instance variables marked as workflow output
         :return: workflow output variables
         """
-        variables = request_json(
-            f"{self.camunda_config.base_url}/process-instance/{self.camunda_config.process_instance.id}/variables"
+        response = requests.get(
+            f"{self.camunda_config.base_url}/process-instance/{process_instance_id}/variables",
+            timeout=self.timeout,
         )
-        return_variables = []
+        response.raise_for_status()
 
-        for variable_key in variables.keys():
-            if variable_key.startswith(config["workflow_out"]["prefix"]):
-                return_variables.append({variable_key: variables[variable_key]})
+        prefix = config["workflow_out"]["prefix"]
+
+        return_variables = [
+            {key: val} for key, val in response.json().items() if key.startswith(prefix)
+        ]
 
         return return_variables
+
+    def get_historic_process_instance_variables(self, process_instance_id: str):
+        """
+        Retrieves all workflow instance variables marked as workflow output from a completed workflow.
+        :return: workflow output variables
+        """
+        response = requests.get(
+            f"{self.camunda_config.base_url}/history/variable-instance",
+            params={
+                "processInstanceId": process_instance_id,
+                "variableNameLike": f'{config["workflow_out"]["prefix"]}%',
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+        return response.json()
 
     def get_task_execution_id(self, task_id: str):
         """
@@ -205,9 +248,13 @@ class CamundaClient:
         :param task_id: The task to get the execution id for
         :return: The execution id of an external task
         """
-        response = request_json(f"{self.camunda_config.base_url}/external-task/{task_id}")
+        response = requests.get(
+            f"{self.camunda_config.base_url}/external-task/{task_id}",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
 
-        return response["executionId"]
+        return response.json()["executionId"]
 
     def get_human_task_rendered_form(self, task_id: str):
         """
@@ -216,70 +263,96 @@ class CamundaClient:
         :return: Rendered HTML form
         """
         response = requests.get(
-            f"{self.camunda_config.base_url}/task/{task_id}/rendered-form"
+            f"{self.camunda_config.base_url}/task/{task_id}/rendered-form",
+            timeout=self.timeout,
         )
-        if endpoint_found_simple(response):
-            return response.text
+        response.raise_for_status()
+        return response.text
 
-    def deploy(self):
+    def deploy(self, bpmn_location: Path) -> str:
         """
-        Deploy a BPMN model to the Camunda Engine
+        Deploy a BPMN model to the Camunda Engine.
+        Return the process definition id.
         """
-        if self.bpmn_path is None:
+        if bpmn_location is None:
             raise ValueError("No BPMN File specified!")
-        with self.bpmn_path.open(mode="rb") as bpmn:
-            response = request_json(
+        with bpmn_location.open(mode="rb") as bpmn:
+            response = requests.post(
                 url=f"{self.camunda_config.base_url}/deployment/create",
-                post=True,
-                files={self.bpmn_path.name: bpmn},
+                params={
+                    "deployment-name": bpmn_location.name,
+                    "enable-duplicate-filtering": "true",
+                    "deployment-source": self.camunda_config.worker_id,  # TODO add path to deployment source? hashing?
+                },
+                files={bpmn_location.name: bpmn},
+                timeout=self.timeout,
             )
+            response.raise_for_status()
 
-            self.camunda_config.deployment = Deployment.deserialize(response)
+        deployment_id = response.json().get("id", None)
+        process_def_response = requests.get(
+            url=f"{self.camunda_config.base_url}/process-definition",
+            params={
+                "deploymentId": deployment_id,
+            },
+            timeout=self.timeout,
+        )
+        process_def_response.raise_for_status()
+        deployed_process_defs = process_def_response.json()
+        if len(deployed_process_defs) != 1:
+            raise Exception(
+                "The deployed BPMN file did not contain a process definition!"
+            )  # TODO add camunda specific exceptions
 
-    def create_instance(self):
+        process_definition_id = deployed_process_defs[0]["id"]
+        return process_definition_id
+
+    def create_instance(self, process_definition_id: str):
         """
         Create a workflow instance from the deployed BPMN model
         """
-        response = request_json(
-            url=f"{self.camunda_config.base_url}/process-definition/{self.camunda_config.deployment.process_definition_id}/start",
-            post=True,
+        response = requests.post(
+            url=f"{self.camunda_config.base_url}/process-definition/{process_definition_id}/start",
             json={"variables": {}},
+            timeout=self.timeout,
         )
+        response.raise_for_status()
 
-        self.camunda_config.process_instance = ProcessInstance.deserialize(response)
+        process_instance_id = response.json()["id"]
 
-    def is_process_active(self):
+        return process_instance_id
+
+    def is_process_active(self, process_instance_id: str):
         """
         Checks if the process is still in the process list and thus active
         :return: Process status
         """
-        response = request_json(f"{self.camunda_config.base_url}/process-instance")
+        response = requests.get(
+            f"{self.camunda_config.base_url}/process-instance/{process_instance_id}",
+            timeout=self.timeout,
+        )
 
-        for process in response:
-            if process["id"] == self.camunda_config.process_instance.id:
-                self.camunda_config.process_instance = ProcessInstance.deserialize(
-                    process
-                )
-                return True
-
+        if response.status_code == 200:
+            # TODO check what ended/suspended booleans in response mean
+            return True
+        if response.status_code == 404:
+            return False
+        response.raise_for_status()
         return False
 
-    def undeploy(self, cascade: bool):
+    def has_process_completed(self, process_instance_id: str):
         """
-        Deletes the active deployment
-        :param cascade: Deletes all potentially active workflow instances
-        Applying cascade to json doesn't work for some reason, multiple bug reports on the camunda forum open...
+        Checks if the process instance was completed successully.
+        :return: Process status
         """
-        response = requests.delete(
-            f"{self.camunda_config.base_url}/deployment/{self.camunda_config.deployment.id}?cascade={str(cascade).lower()}"
+        response = requests.get(
+            f"{self.camunda_config.base_url}/history/process-instance/{process_instance_id}",
+            timeout=self.timeout,
         )
-        try:
-            endpoint_found(response)
-        except:
-            return
 
-    def stop(self):
-        """
-        Stops the camunda client and signals end
-        """
-        self.undeploy(cascade=True)
+        if response.status_code == 200:
+            return response.json().get("state", "ERROR") == "COMPLETED"
+        if response.status_code == 404:
+            return False
+        response.raise_for_status()
+        return False

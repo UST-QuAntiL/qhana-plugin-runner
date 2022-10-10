@@ -9,7 +9,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from . import Workflows
 from .clients.camunda_client import CamundaClient
-from .datatypes.camunda_datatypes import CamundaConfig, ProcessInstance
+from .datatypes.camunda_datatypes import CamundaConfig
 from .schemas import InputParameters, WorkflowsParametersSchema
 from .watchers.human_task_watcher import human_task_watcher
 
@@ -46,25 +46,20 @@ def start_workflow(self, db_id: int) -> None:
         )
         raise ValueError("BPMN file does not exist!")
 
-    # Config
-    camunda_config = CamundaConfig(
-        base_url=config["CAMUNDA_BASE_URL"],
-        poll_interval=config["polling_rates"]["camunda_general"],
-    )
     # Client
-    camunda_client = CamundaClient(camunda_config, bpmn_path)
+    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+
     # Deploy BPMN file and create workflow instance
-    camunda_client.build()
+    process_definition_id = camunda_client.deploy(bpmn_path)
+    process_instance_id = camunda_client.create_instance(
+        process_definition_id=process_definition_id
+    )
 
     assert isinstance(task_data.data, dict)
     # Set the process instance id used to create Camunda configs in sub-steps
-    task_data.data["camunda_process_instance_id"] = camunda_config.process_instance.id
-    task_data.data[
-        "process_instance_definition_key"
-    ] = camunda_config.process_instance.definition_id
+    task_data.data["camunda_process_instance_id"] = process_instance_id
+    task_data.data["camunda_process_definition_id"] = process_definition_id
     task_data.save(commit=True)
-
-    human_task_watcher.s(db_id, camunda_config.to_dict()).delay()
 
     TASK_LOGGER.info(f"Started new workflow task with db_id: '{db_id}'")
 
@@ -82,21 +77,10 @@ def process_input(self, db_id: int) -> None:
     assert isinstance(task_data.data, dict)
 
     input_params: dict = json.loads(task_data.parameters)
-    process_instance_id = task_data.data["camunda_process_instance_id"]
-    process_instance_definition_key = task_data.data["process_instance_definition_key"]
     human_task_id = task_data.data["human_task_id"]
 
-    # Config
-    camunda_config = CamundaConfig(
-        base_url=config["CAMUNDA_BASE_URL"],
-        poll_interval=config["polling_rates"]["camunda_general"],
-        process_instance=ProcessInstance(
-            process_instance_id, process_instance_definition_key
-        ),
-    )
-
     # Client
-    camunda_client = CamundaClient(CamundaConfig.from_dict(camunda_config))
+    camunda_client = CamundaClient(CamundaConfig.from_config(config))
 
     variables = {
         key: {
@@ -109,5 +93,3 @@ def process_input(self, db_id: int) -> None:
 
     task_data.clear_previous_step()
     task_data.save(commit=True)
-
-    human_task_watcher.s(db_id, camunda_config.to_dict()).delay()

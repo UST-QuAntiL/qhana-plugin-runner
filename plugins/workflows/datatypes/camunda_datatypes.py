@@ -1,18 +1,11 @@
 import dataclasses
-import json
-import uuid
-from typing import Optional
-
-from dataclasses_json import (
-    dataclass_json,  # TODO maybe remove dependency after refactor
-)
+from typing import Any, Dict, Optional
 
 
 #
 # CAMUNDA
 # https://docs.camunda.org/manual/latest/reference/rest/
 #
-@dataclass_json
 @dataclasses.dataclass
 class ExternalTask:
     """
@@ -63,49 +56,16 @@ class HumanTask:
 
 
 @dataclasses.dataclass
-class Deployment:
-    """
-    id: The id of the deployment
-    process_definition_id: The id of the process definition
-    """
-
-    id: str
-    process_definition_id: str
-
-    @classmethod
-    def deserialize(cls, serialized):
-        return cls(
-            id=serialized["id"],
-            process_definition_id=list(serialized["deployedProcessDefinitions"].keys())[
-                0
-            ],
-        )
-
-
-@dataclasses.dataclass
-class ProcessInstance:
-    """
-    id: The identifier of the process instance
-    definition_id:
-    """
-
-    id: str
-    definition_id: Optional[str]
-
-    @classmethod
-    def deserialize(cls, serialized):
-        return cls(id=serialized["id"], definition_id=serialized["definitionId"])
-
-
-@dataclass_json
-@dataclasses.dataclass
 class CamundaConfig:
     base_url: str
     poll_interval: int
-    deployment: Optional[Deployment] = None
-    process_instance: Optional[ProcessInstance] = None
+    worker_id: str
     plugin_prefix: str = "plugin"
-    worker_id: str = str(uuid.uuid4())
 
-    def serialize(self):
-        return json.dumps(self)
+    @staticmethod
+    def from_config(config: Dict[str, Any]):
+        return CamundaConfig(
+            base_url=config["CAMUNDA_BASE_URL"],
+            poll_interval=config["polling_rates"]["camunda_general"],
+            worker_id=config["worker_id"],
+        )

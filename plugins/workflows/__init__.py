@@ -122,9 +122,6 @@ class Workflows(QHAnaPluginBase):
     def get_api_blueprint(self):
         return WORKFLOWS_BLP
 
-    def get_requirements(self) -> str:
-        return "dataclasses-json~=0.5.7"
-
 
 try:
     # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are

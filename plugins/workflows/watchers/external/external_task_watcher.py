@@ -1,6 +1,6 @@
 from typing import Optional
 
-import requests
+from requests.exceptions import RequestException
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
@@ -8,7 +8,7 @@ from qhana_plugin_runner.celery import CELERY
 from .qhana_instance_watcher import qhana_instance_watcher
 from ... import Workflows
 from ...clients.camunda_client import CamundaClient
-from ...datatypes.camunda_datatypes import CamundaConfig, ExternalTask
+from ...datatypes.camunda_datatypes import CamundaConfig
 from ...exceptions import (
     BadInputsError,
     BadTaskDefinitionError,
@@ -33,27 +33,16 @@ def camunda_task_watcher():
     Watches for new Camunda external task. For each new task found a qhana_watcher celery task is spawned.
     """
     # TODO later: rate limit the jobs a single worker takes on at once and don't lock jobs until they are actually started
+    # implement rate limiting by querying locked task count for this worker? A: yes
 
     # Client
-    camunda_client = CamundaClient(
-        CamundaConfig(
-            base_url=config["CAMUNDA_BASE_URL"],
-            poll_interval=config["polling_rates"]["camunda_general"],
-        )
-    )
+    camunda_client = CamundaClient(CamundaConfig.from_config(config))
 
-    response = requests.get(
-        f"{camunda_client.camunda_config.base_url}/external-task",
-        timeout=config.get("request_timeout", 5 * 60),
-    )
-    if response.status_code != 200:
-        # no external tasks found => try again next time
-        return  # TODO backoff?
-
-    external_tasks = response.json()
-    external_tasks = [
-        ExternalTask.deserialize(external_task) for external_task in external_tasks
-    ]
+    try:
+        external_tasks = camunda_client.get_external_tasks()
+    except RequestException as err:
+        TASK_LOGGER.info(f"Error retrieving external tasks from camunda: {err}")
+        return
 
     TASK_LOGGER.debug(
         f"Searching external task topics with prefix '{camunda_client.camunda_config.plugin_prefix}.'"
@@ -63,24 +52,32 @@ def camunda_task_watcher():
         topic_name = external_task.topic_name
 
         # Check if task is already locked
-        if camunda_client.is_locked(external_task):
+        if camunda_client.is_locked(external_task.id):
             continue
 
         # Check if the external task represents a qhana plugin
         if topic_name.startswith(f"{camunda_client.camunda_config.plugin_prefix}."):
             # Lock task for usage and to block other watchers from access
-            camunda_client.lock(external_task)
 
-            # Serialize
-            external_task = external_task.to_dict()
+            if external_task.execution_id is None:
+                raise BadTaskDefinitionError(
+                    message=f"External task {external_task} has no execution id!"
+                )
+            camunda_client.lock(external_task.id)
+
             TASK_LOGGER.debug(f"Start watcher for camunda task {external_task}.")
             # Spawn new watcher for the external task
-            instance_task = qhana_instance_watcher.s(external_task)
+            instance_task = qhana_instance_watcher.s(
+                topic_name=external_task.topic_name,
+                external_task_id=external_task.id,
+                execution_id=external_task.execution_id,
+                process_instance_id=external_task.process_instance_id,
+            )
             # FIXME unlocked tasks should not be started again/moved to a dead letter queue after x tries.../after certain errors...
             instance_task.link_error(
-                process_workflow_error.s(camunda_external_task=external_task)
+                process_workflow_error.s(external_task_id=external_task.id)
             )
-            instance_task.link_error(unlock_task.si(camunda_external_task=external_task))
+            instance_task.link_error(unlock_task.si(external_task_id=external_task.id))
             instance_task.apply_async()
 
 
@@ -88,18 +85,8 @@ def camunda_task_watcher():
     name=f"{Workflows.instance.identifier}.external.process_workflow_error",
     ignore_result=True,
 )
-def process_workflow_error(request, exc, traceback, camunda_external_task: dict):
-    TASK_LOGGER.error(f"Inputs: exc={exc}, external_task={camunda_external_task}")
-    if "hello" in camunda_external_task:
-        return
-    external_task: ExternalTask = ExternalTask.from_dict(camunda_external_task)
-
-    camunda_client = CamundaClient(
-        CamundaConfig(
-            base_url=config["CAMUNDA_BASE_URL"],
-            poll_interval=config["polling_rates"]["camunda_general"],
-        )
-    )
+def process_workflow_error(request, exc, traceback, external_task_id: str):
+    camunda_client = CamundaClient(CamundaConfig.from_config(config=config))
 
     error_code_prefix = config["workflow_error_prefix"]
 
@@ -126,7 +113,7 @@ def process_workflow_error(request, exc, traceback, camunda_external_task: dict)
         message = str(exc)
 
     camunda_client.external_task_bpmn_error(
-        task=external_task,
+        external_task_id=external_task_id,
         error_code=f"{error_code_prefix}-{error_code}",
         error_message=message,
     )
@@ -136,17 +123,10 @@ def process_workflow_error(request, exc, traceback, camunda_external_task: dict)
     name=f"{Workflows.instance.identifier}.external.camunda_unlock_task",
     ignore_result=True,
 )
-def unlock_task(camunda_external_task: dict):
-    external_task: ExternalTask = ExternalTask.from_dict(camunda_external_task)
-
-    camunda_client = CamundaClient(
-        CamundaConfig(
-            base_url=config["CAMUNDA_BASE_URL"],
-            poll_interval=config["polling_rates"]["camunda_general"],
-        )
-    )
+def unlock_task(external_task_id: str):
+    camunda_client = CamundaClient(CamundaConfig.from_config(config=config))
     try:
-        camunda_client.unlock(external_task)
+        camunda_client.unlock(external_task_id)
     except:
         # FIXME fix exception handling in client function (should throw more specific exception)
         pass

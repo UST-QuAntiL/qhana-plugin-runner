@@ -1,17 +1,6 @@
 import dataclasses
-from typing import List
-
-from dataclasses_json import (
-    dataclass_json,  # TODO maybe remove dependency after refactor
-)
-
-from ..datatypes.camunda_datatypes import ExternalTask
 
 
-#
-# QHAna
-# https://<endpoint>/rapidoc
-#
 @dataclasses.dataclass
 class QhanaPlugin:
     """
@@ -39,25 +28,6 @@ class QhanaPlugin:
             api_endpoint=endpoint.rstrip("/"),
             process_endpoint=process_endpoint,
         )
-
-
-@dataclass_json
-@dataclasses.dataclass
-class QhanaTask:
-    """
-    external_task: The corresponding external camunda task
-    plugin: QhanaPlugin executing the QhanaTask
-    name: Name of the QhanaTask
-    status: QhanaTask status
-    url: the url of the qhana task result resource
-    """
-
-    # TODO: Cannot store inputs until Human Tasks to collect inputs are also done in QHAna
-    #  (Human Tasks in Camunda are missing href, contentType etc.)
-    external_task: ExternalTask
-    plugin: QhanaPlugin
-    status: str
-    url: str
 
 
 @dataclasses.dataclass
