@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 from collections.abc import Sized
 from datetime import timedelta
 from json import loads
@@ -95,10 +96,15 @@ class MinioStore(FileStore, name="minio"):
 
     def persist_file(
         self,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         target: Union[str, Path],
         mimetype: str = "application/octet-stream",
     ):
+        if isinstance(file_, str):
+            file_ = io.BytesIO(file_.encode(encoding="utf8"))
+        elif isinstance(file_, bytes):
+            file_ = io.BytesIO(file_)
+
         is_text = isinstance(file_, TextIO) or (
             hasattr(file_, "mode") and "b" not in file_.mode
         )
@@ -122,7 +128,7 @@ class MinioStore(FileStore, name="minio"):
 
         if length < 0:
             # part size >5MiB must be set if the size is unknown
-            extra_args["part_size"] = 2 ** 25
+            extra_args["part_size"] = 2**25
 
         self._client.put_object(
             self._minio_bucket,
