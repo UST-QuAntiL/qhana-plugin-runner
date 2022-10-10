@@ -1,3 +1,4 @@
+import uuid
 from json import loads
 from os import environ
 from pathlib import Path
@@ -63,6 +64,19 @@ class Workflows(QHAnaPluginBase):
             ],
         )
 
+        default_timout: str = app_config.get(
+            "REQUEST_TIMEOUT",
+            environ.get("REQUEST_TIMEOUT", str(5 * 60)),
+        )
+        timout_int = 5 * 60
+        if default_timout.isdigit():
+            timout_int = int(default_timout)
+
+        worker_id: str = app_config.get(
+            "CAMUNDA_WORKER_ID",
+            environ.get("CAMUNDA_WORKER_ID", str(uuid.uuid4())),
+        )
+
         workflow_config: Dict[str, float] = app_config.get("WORKFLOWs", {})
         env_workflow_config = environ.get("PLUGIN_WORKFLOWS", None)
         if env_workflow_config:
@@ -79,8 +93,9 @@ class Workflows(QHAnaPluginBase):
             "WORKFLOW_FOLDER": workflow_folder,
             "CAMUNDA_BASE_URL": camunda_url,
             "QHANA_PLUGIN_ENDPOINTS": plugin_runner_url,
+            "worker_id": worker_id,
             "polling_rates": {"camunda_general": 5.0, "external_watcher": 5.0},
-            "request_timeout": 5*60,  # TODO add default timeout to plugin runner settings
+            "request_timeout": timout_int,
             "workflow_error_prefix": "qhana",
             "qhana_input": {
                 "prefix": "qinput",
