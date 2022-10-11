@@ -8,6 +8,7 @@ import requests
 from requests.exceptions import HTTPError
 
 from .. import Workflows
+from ..exceptions import WorkflowDeploymentError
 from ..datatypes.camunda_datatypes import CamundaConfig, ExternalTask, HumanTask
 
 config = Workflows.instance.config
@@ -328,9 +329,9 @@ class CamundaClient:
         process_def_response.raise_for_status()
         deployed_process_defs = process_def_response.json()
         if len(deployed_process_defs) != 1:
-            raise Exception(
+            raise WorkflowDeploymentError(
                 "The deployed BPMN file did not contain a process definition!"
-            )  # TODO add camunda specific exceptions
+            )
 
         process_definition_id = deployed_process_defs[0]["id"]
         return process_definition_id

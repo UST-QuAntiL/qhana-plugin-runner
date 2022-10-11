@@ -12,6 +12,7 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 from .. import Workflows
+from ..exceptions import WorkflowStoppedError
 from ..clients.camunda_client import CamundaClient
 from ..datatypes.camunda_datatypes import CamundaConfig
 
@@ -118,9 +119,9 @@ def human_task_watcher(self, db_id: int) -> None:
                 "Workflow process instance was stopped unexpectedly."
             )
             db_task.save(commit=True)
-            raise Exception(
+            raise WorkflowStoppedError(
                 "Workflow process instance was stopped unexpectedly."
-            )  # TODO better error class
+            )
         persist_workflow_output(db_task, camunda_client, process_instance_id)
 
         save_task_result.s(

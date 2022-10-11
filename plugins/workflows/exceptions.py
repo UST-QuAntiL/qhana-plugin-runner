@@ -1,7 +1,24 @@
 from typing import Optional
 
 
-class WorkflowTaskError(Exception):
+class CamundaError(Exception):
+    """Base exception for errors during interaction with camunda."""
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+
+class WorkflowDeploymentError(CamundaError):
+    """The workflow could not be deployed."""
+
+
+class WorkflowStoppedError(CamundaError):
+    """The workflow was stopped unexpectedly."""
+
+
+class WorkflowTaskError(CamundaError):
+    """Base error class for errors while executing an external task."""
+
     def __init__(self, *args: object, message: Optional[str] = None, **kwargs) -> None:
         self.message = message
         super().__init__(message, *args)
