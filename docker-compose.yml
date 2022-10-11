@@ -17,6 +17,7 @@ services:
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
       CAMUNDA_API_URL: "http://host.docker.internal:8081/engine-rest"
       PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
+      WAIT_HOSTS: redis:6379, postgres:5432
   redis:
     image: "redis:latest"
     ports:
@@ -47,7 +48,7 @@ services:
       CAMUNDA_API_URL: "http://host.docker.internal:8081/engine-rest"
       PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
       PERIODIC_SCHEDULER: "True"
-      WAIT_HOSTS: redis:6379, camunda:8080
+      WAIT_HOSTS: redis:6379, postgres:5432, camunda:8080
       WAIT_TIMEOUT: 300
       WAIT_SLEEP_INTERVAL: 5
   camunda:

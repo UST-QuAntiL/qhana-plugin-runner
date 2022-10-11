@@ -26,6 +26,7 @@ from .sqlalchemy_config import SQLAchemyDebugConfig, SQLAchemyProductionConfig
 
 
 class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
+    ENV = "production"
     SECRET_KEY = urandom(32)
 
     REVERSE_PROXY_COUNT = 0
@@ -52,8 +53,11 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     # in order to URLs opened with qhana_plugin_runner.requests.open_url
     URL_REWRITE_RULES: Sequence[Tuple[re.Pattern, str]] = []
 
+    NISQ_ANALYZER_UI_URL = "http://localhost:4201"
+
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
+    ENV = "development"
     DEBUG = True
     SECRET_KEY = "debug_secret"  # FIXME make sure this NEVER! gets used in production!!!
 
@@ -61,5 +65,4 @@ class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
 
     CELERY = CELERY_DEBUG_CONFIG
 
-    # TODO allow specifying this as a Environment variable
     PLUGIN_FOLDERS = ["./plugins", "./local_plugins"]

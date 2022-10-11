@@ -1,4 +1,4 @@
-FROM python:3.9
+FROM python:3.10
 
 LABEL org.opencontainers.image.source="https://github.com/UST-QuAntiL/qhana-plugin-runner"
 
@@ -12,7 +12,6 @@ RUN useradd gunicorn
 
 
 ENV FLASK_APP=qhana_plugin_runner
-ENV FLASK_ENV=production
 ENV PLUGIN_FOLDERS=/app/plugins:/app/extra-plugins:/app/git-plugins
 ENV TEMPLATE_FOLDERS=/app/templates
 
@@ -24,25 +23,26 @@ ENV CONCURRENCY=2
 ENV CELERY_WORKER_POOL=threads
 
 # make directories and set user rights
-RUN mkdir /venv && mkdir --parents /app/instance &&  mkdir --parents /app/extra-plugins && mkdir --parents /app/git-plugins \
-    && chown --recursive gunicorn /app && chmod --recursive u+rw /app && chown --recursive gunicorn /venv \
+RUN mkdir /venv && mkdir --parents /app/instance \
+    &&  mkdir --parents /app/extra-plugins && \
+    mkdir --parents /app/git-plugins \
+    && chown --recursive gunicorn /app \
+    && chmod --recursive u+rw /app \
     && mkdir /home/gunicorn && chown --recursive gunicorn /home/gunicorn
 
 # Wait for database
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
 RUN chmod +x /wait
 
-USER gunicorn
-
-RUN python -m pip install --upgrade pip && python -m pip install poetry
+RUN python -m pip install poetry gunicorn
 
 COPY --chown=gunicorn . /app
 
-RUN python -m poetry install
-RUN python -m poetry add gunicorn invoke
+RUN python -m poetry export --without-hashes --extras=psycopg2 --extras=PyMySQL --format=requirements.txt -o requirements.txt && python -m pip install -r requirements.txt
 
 VOLUME ["/app/instance"]
+ENV QHANA_PLUGIN_RUNNER_INSTANCE_FOLDER="/app/instance"
 
 EXPOSE 8080
 
-ENTRYPOINT ["python","-m", "poetry", "run", "python", "-m", "invoke", "start-docker"]
+ENTRYPOINT ["python","-m", "invoke", "start-docker"]

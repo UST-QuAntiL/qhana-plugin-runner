@@ -17,7 +17,7 @@
 from collections import namedtuple
 from json import loads
 from keyword import iskeyword
-from typing import Any, Iterable, Iterator, Sequence, TextIO
+from typing import Any, Dict, Iterable, Iterator, NamedTuple, Sequence, TextIO, Type
 
 from hypothesis import given
 from hypothesis import strategies as st
@@ -26,8 +26,8 @@ from utils import assert_sequence_equals, assert_sequence_partial_equals
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     ensure_tuple,
+    get_entity_tuple_class,
     load_entities,
-    normalize_attribute_name,
     save_entities,
 )
 
@@ -35,7 +35,9 @@ CSV_UNSAFE_CHARACTERS = ["\x00"]
 
 DEFAULT_ATTRIBUTES = ["ID", "href", "integer", "number", "boolean"]
 
-DEFAULT_ENTITY_TUPLE = namedtuple("DefaultEntityTuple", DEFAULT_ATTRIBUTES)
+DEFAULT_ENTITY_TUPLE: Type[NamedTuple] = get_entity_tuple_class(
+    DEFAULT_ATTRIBUTES, name="DefaultEntityTuple"
+)
 
 DEFAULT_ENTITY_STRATEGY = st.fixed_dictionaries(
     {
@@ -79,16 +81,18 @@ class ReadWriteDummy(TextIO):
         self.data += "".join(lines)
 
 
-@given(name=st.text(min_size=1))
-def test_normalize_attribute_name(name):
-    """Test the attribute name normalization."""
-    normalized = normalize_attribute_name(name)
-    assert (
-        normalized.isidentifier()
-    ), f'Attribute "{name}" was not normalized to a valid identifier! (Normalized: "{normalized}")'
-    assert not iskeyword(
-        normalized
-    ), f'Attribute "{name}" was normalized to a python keyword!'
+@given(entity_dict=DEFAULT_ENTITY_STRATEGY)
+def test_entity_tuple_mixin(entity_dict: Dict[str, Any]):
+    entity = DEFAULT_ENTITY_TUPLE.from_dict(**entity_dict)
+    assert isinstance(entity, DEFAULT_ENTITY_TUPLE)
+    get_by_index = [entity.get(i) for i in range(len(entity))]
+    assert all(
+        v is not None for v in get_by_index
+    ), "subscripting with numbers is not working"
+    get_by_key_get = [entity.get(key) for key in DEFAULT_ATTRIBUTES]
+    assert all(v is not None for v in get_by_key_get), "get with keys is not working"
+    assert_sequence_equals(get_by_index, entity)
+    assert_sequence_equals(get_by_key_get, entity)
 
 
 @given(start=st.lists(DEFAULT_ENTITY_STRATEGY))

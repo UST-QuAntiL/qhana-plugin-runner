@@ -50,6 +50,9 @@
             },
             {
               "$ref": "#/components/messages/requestPluginUrlInfo"
+            },
+            {
+              "$ref": "#/components/messages/requestImplementations"
             }
           ]
         }
@@ -86,6 +89,9 @@
             },
             {
               "$ref": "#/components/messages/pluginUrlResponse"
+            },
+            {
+              "$ref": "#/components/messages/implementationsResponse"
             }
           ]
         }
@@ -353,6 +359,13 @@
           ]
         }
       },
+      "requestImplementations": {
+        "summary": "The plugin requests information about quantum circuits that were produced by other plugins. (Response: 'implementations-response')",
+        "payload": {
+          "type": "string",
+          "const": "implementations-request"
+        }
+      },
       "loadCss": {
         "summary": "A request to the plugin to also load the following css files. A plugin may choose to ignore this message. The message is sent directly after the uiLoaded message is received by the plugin host.",
         "payload": {
@@ -440,6 +453,48 @@
             "type",
             "inputKey",
             "pluginUrl"
+          ]
+        }
+      },
+      "implementationsResponse": {
+        "summary": "The response to a previously received requestImplementations message from the plugin.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "implementations-response"
+            },
+            "implementations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "download": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "number"
+                  },
+                  "type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "download",
+                  "version",
+                  "type"
+                ]
+              }
+            }
+          },
+          "required": [
+            "type",
+            "implementations"
           ]
         }
       }

@@ -43,6 +43,7 @@ class HtmlResponseMixin:
         example=None,
         examples=None,
         headers: dict = None,
+        success=True,
     ):
         """Decorator documenting a html response adapted from :py:func:`ResponseMixin.alt_response`.
 
@@ -64,6 +65,7 @@ class HtmlResponseMixin:
                 "headers": headers,
             }
         )
+        resp_doc["content_type"] = "text/html"
 
         def decorator(func):
             @wraps(func)
@@ -76,7 +78,10 @@ class HtmlResponseMixin:
             wrapper._apidoc.setdefault("response", {}).setdefault("responses", {})[
                 status_code
             ] = resp_doc
-
+            if success:
+                # Indicate this code is a success status code
+                # Helps other decorators documenting success responses
+                wrapper._apidoc.setdefault("success_status_codes", []).append(status_code)
             return wrapper
 
         return decorator
