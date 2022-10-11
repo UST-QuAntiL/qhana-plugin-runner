@@ -333,50 +333,11 @@ def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict) -> Set:
         return ancestor_nodes_dict[attribute]
     else:
         parent = parent_node_dict[attribute]
-        result = get_ancestor_nodes(parent_node_dict, parent, ancestor_nodes_dict)
+        result = get_ancestor_nodes(parent_node_dict, parent, ancestor_nodes_dict).copy()
         if parent != "":
             result.add(parent)
         ancestor_nodes_dict[attribute] = result
         return result
-
-
-def new_prepare_stream_output(entities, attributes, attribute_ref_targets, taxonomies):
-    one_hot_encodings = {ent["ID"]: [] for ent in entities}
-    for attribute in attributes:
-        taxonomy = taxonomies[attribute_ref_targets[attribute]]
-        parent_node_dict = taxonomy_node_to_parent(taxonomy)
-        # A dictionary. Given a node, the dict returns all the ancestry nodes
-        ancestor_nodes_dict = dict()
-        tax_entities = taxonomy["entities"]
-        if tax_entities[0] == "":
-            tax_entities = tax_entities[1:]
-        attr_to_idx = dict(zip(tax_entities, count()))
-        for entity in entities:
-            values = entity[attribute]
-
-            sub_attributes = set()
-            if isinstance(values, list):
-                sub_attributes = set(values)
-            else:
-                sub_attributes.add(values)
-
-            all_attributes = set()
-            for sub_attribute in sub_attributes:
-                route_to_root = get_ancestor_nodes(parent_node_dict, sub_attribute, ancestor_nodes_dict)
-                route_to_root.add(sub_attribute)
-                all_attributes = all_attributes.union(route_to_root)
-
-            vector = [0]*len(attr_to_idx)
-            for attr in all_attributes:
-                vector[attr_to_idx[attr]] = 1
-            one_hot_encodings[entity["ID"]] += vector
-
-    def generator():
-        for entity in entities:
-            id = entity["ID"]
-            yield get_entity_dict(id, one_hot_encodings[id])
-
-    return generator(), len(next(iter(one_hot_encodings.values())))
 
 
 def compute_ancestors_and_index_dict(entities, attributes, attribute_ref_targets, taxonomies) -> Tuple[List, List, int]:
@@ -426,7 +387,6 @@ def prepare_stream_output(entities, attributes, taxonomies_ancestors_list, attr_
         id = entity["ID"]
         one_hot_encodings = np.zeros((dim, ))
         for attribute, attr_to_idx_dict, taxonomies_ancestors in zip(attributes, attr_to_idx_dict_list, taxonomies_ancestors_list):
-            # print(attr_to_idx_dict)
             values = entity[attribute]
 
             sub_attributes = set()
@@ -437,10 +397,10 @@ def prepare_stream_output(entities, attributes, taxonomies_ancestors_list, attr_
 
             for sub_attribute in sub_attributes:
                 for ancestor in taxonomies_ancestors[sub_attribute]:
-                    # print(f"get {ancestor}")
                     one_hot_encodings[attr_to_idx_dict[ancestor]] = 1
-                # print(f"get {sub_attribute}")
+
                 one_hot_encodings[attr_to_idx_dict[sub_attribute]] = 1
+
         yield get_entity_dict(id, one_hot_encodings)
 
 
@@ -461,18 +421,12 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entities_url = input_params.entities_url
-    TASK_LOGGER.info(f"Loaded input parameters from db: entities_url='{entities_url}'")
     entities_attribute_metadata_url = input_params.entities_metadata_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entities_metadata_url='{entities_attribute_metadata_url}'"
-    )
     taxonomies_zip_url = input_params.taxonomies_zip_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: taxonomies_zip_url='{taxonomies_zip_url}'"
-    )
     attributes = input_params.attributes
+
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: entities_metadata_url='{attributes}'"
+        f"Loaded input parameters from db: entities_url='{entities_url}', entities_metadata_url='{entities_attribute_metadata_url}', taxonomies_zip_url='{taxonomies_zip_url}', entities_metadata_url='{attributes}'"
     )
 
     # load data from file
