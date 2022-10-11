@@ -3,7 +3,7 @@
     "description": "Template for MUSE workflow",
     "categories": [
         {
-          "name": "Load data",
+          "name": "Load Data",
           "description": "Plugin for loading costume data",
           "filter": "costume-loader"
         },
