@@ -61,6 +61,7 @@ class CamundaConfig:
     poll_interval: int
     worker_id: str
     plugin_prefix: str = "plugin"
+    plugin_step_prefix: str = "plugin-step"
 
     @staticmethod
     def from_config(config: Dict[str, Any]):

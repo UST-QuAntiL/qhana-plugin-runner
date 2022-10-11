@@ -15,6 +15,10 @@ class PluginNotFoundError(InvocationError):
     """Error for when the task failed because the plugin could not be found."""
 
 
+class StepNotFoundError(InvocationError):
+    """Error for when the task failed because a plugin step could not be found."""
+
+
 class BadTaskDefinitionError(InvocationError):
     """Error for when the task failed because the task definition in the workflow file contained errors."""
 

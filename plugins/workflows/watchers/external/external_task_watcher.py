@@ -1,14 +1,14 @@
 from typing import Optional
 
-from requests.exceptions import RequestException
 from celery.utils.log import get_task_logger
+from requests.exceptions import RequestException
 
 from qhana_plugin_runner.celery import CELERY
 
-from .qhana_instance_watcher import qhana_instance_watcher
+from .qhana_instance_watcher import qhana_instance_watcher, qhana_step_watcher
 from ... import Workflows
 from ...clients.camunda_client import CamundaClient
-from ...datatypes.camunda_datatypes import CamundaConfig
+from ...datatypes.camunda_datatypes import CamundaConfig, ExternalTask
 from ...exceptions import (
     BadInputsError,
     BadTaskDefinitionError,
@@ -22,6 +22,28 @@ from ...exceptions import (
 config = Workflows.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def execute_task(external_task: ExternalTask, camunda_client: CamundaClient, watcher):
+    if external_task.execution_id is None:
+        raise BadTaskDefinitionError(
+            message=f"External task {external_task} has no execution id!"
+        )
+    # Lock task for usage and to block other watchers from access
+    camunda_client.lock(external_task.id)
+
+    TASK_LOGGER.debug(f"Start watcher for camunda task {external_task}.")
+    # Spawn new watcher for the external task
+    instance_task = watcher.s(
+        topic_name=external_task.topic_name,
+        external_task_id=external_task.id,
+        execution_id=external_task.execution_id,
+        process_instance_id=external_task.process_instance_id,
+    )
+    # FIXME unlocked tasks should not be started again/moved to a dead letter queue after x tries.../after certain errors...
+    instance_task.link_error(process_workflow_error.s(external_task_id=external_task.id))
+    instance_task.link_error(unlock_task.si(external_task_id=external_task.id))
+    instance_task.apply_async()
 
 
 @CELERY.task(
@@ -55,30 +77,20 @@ def camunda_task_watcher():
         if camunda_client.is_locked(external_task.id):
             continue
 
-        # Check if the external task represents a qhana plugin
-        if topic_name.startswith(f"{camunda_client.camunda_config.plugin_prefix}."):
-            # Lock task for usage and to block other watchers from access
-
-            if external_task.execution_id is None:
-                raise BadTaskDefinitionError(
-                    message=f"External task {external_task} has no execution id!"
-                )
-            camunda_client.lock(external_task.id)
-
-            TASK_LOGGER.debug(f"Start watcher for camunda task {external_task}.")
-            # Spawn new watcher for the external task
-            instance_task = qhana_instance_watcher.s(
-                topic_name=external_task.topic_name,
-                external_task_id=external_task.id,
-                execution_id=external_task.execution_id,
-                process_instance_id=external_task.process_instance_id,
+        if topic_name.startswith(f"{camunda_client.camunda_config.plugin_step_prefix}."):
+            # task is a qhana step
+            execute_task(
+                external_task=external_task,
+                camunda_client=camunda_client,
+                watcher=qhana_step_watcher,
             )
-            # FIXME unlocked tasks should not be started again/moved to a dead letter queue after x tries.../after certain errors...
-            instance_task.link_error(
-                process_workflow_error.s(external_task_id=external_task.id)
+        elif topic_name.startswith(f"{camunda_client.camunda_config.plugin_prefix}."):
+            # task is a qhana plugin
+            execute_task(
+                external_task=external_task,
+                camunda_client=camunda_client,
+                watcher=qhana_instance_watcher,
             )
-            instance_task.link_error(unlock_task.si(external_task_id=external_task.id))
-            instance_task.apply_async()
 
 
 @CELERY.task(

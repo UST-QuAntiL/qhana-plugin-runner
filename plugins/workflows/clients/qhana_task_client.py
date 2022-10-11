@@ -52,6 +52,10 @@ class QhanaTaskClient:
 
         return response.url
 
+    def call_plugin_step(self, href: str, params):
+        response = requests.post(href, data=params, timeout=self.timeout)
+        response.raise_for_status()
+
     def _get_plugins_from_endpoints(self):
         """
         Retrieves the hosted plugins from the specified QHAna endpoints
