@@ -12,7 +12,6 @@
           "description": "Plugins for Data Preperation",
           "filter": {
                 "or": [
-                    "similarity-cache-generation",
                     "wu-palmer",
                     "attribute-similarity-calculation",
                     "sim-to-dist",
