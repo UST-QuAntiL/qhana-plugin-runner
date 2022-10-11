@@ -13,7 +13,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 TASK_LOGGER = get_task_logger(__name__)
 
 _plugin_name = "workflows"
-__version__ = "v0.5.1"
+__version__ = "v0.6.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 WORKFLOWS_BLP = SecurityBlueprint(

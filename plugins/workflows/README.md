@@ -13,7 +13,7 @@ For more information see the readme file of the qhana-plugin-runner.
 
 Additionally, [Camunda](https://camunda.com/) BPMN run is needed.
 
-Celery workers completing workflow tasks should use a non-solo pool, e.g., gevent or eventlet.
+It is recommended to use celery workers with a non-solo pool, e.g., gevent or eventlet.
 Set the concurrency flag to allow for multiple celery task instances.
 
 Example with pool, concurrency and celery beat:
@@ -27,12 +27,12 @@ poetry run invoke worker --pool=gevent  --concurrency=10 --periodic-scheduler
 
 ### Service Tasks
 
-QHAna plugins are represented as Service Tasks in the modeler.
+QHAna plugins (and plugin steps) are represented as Service Tasks in the modeler.
 Note: You can choose the name of the service task freely.
 
 ![Example Service Task](./docs/service-task.png)
 
-### Linking
+### Linking Plugin Tasks
 
 In order for the workflow plugin to know which QHAna plugin should be called when a
 token reaches the service task, set the Implementation option of the service task
@@ -40,6 +40,11 @@ to `External` and the topic to `plugin.name`, where `plugin.` is the prefix and 
 the name of the plugin.
 
 ![Example Linking](./docs/linking.png)
+
+### Linking Plugin Step Tasks
+
+Plugin step tasks must be in a topic starting with `plugin-step.`. After the dot
+follows a workflow variable name that contains the step information.
 
 ### Plugin Output
 
@@ -56,6 +61,11 @@ Note: The variable will contain all results of the plugin. The [Inputs](#inputs)
 section discusses how to select a specific result as input.
 
 ![Example Output](./docs/output.png)
+
+If the plugin needs additional user inputs (i.e. when a new uncleared step is added
+to the steps list of the plugin result) the external task will complete with that
+added step as output instead. Every step of a multi-step plugin invocation must be
+modeled as an individual external task. 
 
 ### Plugin Inputs
 
@@ -78,7 +88,7 @@ from a QHAna output
 - `dataType: wu-palmer-cache` - With `dataType` you can select the result by the data
 type property from a QHAna output
 - `plain` - Use this option if the input is not from the output of a QHAna 
-plugin. (Variable name is not `qoutput.name`)
+plugin.
 
 You can add multiple inputs to the Input Parameters option of the service task.
 
@@ -132,17 +142,24 @@ an error boundary event is added to the service task.
 
 Currently, following exception error codes are supported:
 
-- qhana-plugin-failure: Thrown when a QHAna plugin fails
-- qhana-unprocessable-entity-error: Thrown when the input of a QHAna plugin is
-an unprocessable entity
-- qhana-mode-error: Thrown when the input mode is not one specified in 
-[Inputs](#inputs)
+- qhana-unknown-error: An unknown exception occured
+- qhana-unprocessable-task-definition-error: The task definition in the workflow could not be processed (e.g. because the topic name was malformed)
+- qhana-unprocessable-entity-error: The plugin rejected the inputs as unprocessable
+- qhana-plugin-not-found-error: The plugin was not found in the plugin registry
+- qhana-unprocessable-plugin-result-error: There was some (technical) error with the result endpoint of the plugin invocation
+- qhana-plugin-failure: The plugin result indicates a failure condition
 
 ### Example Workflows
 
 You can find examples in the `/bpmn` directory of the workflows plugin to get started.
 
 ## Changelog
+
+### v0.6.0
+- Refactor sourcecode
+- Add better error handling
+- Refactor long blocking tasks into repeatable tasks
+- Add support for multi step plugins
 
 ### v0.5.0
 - Preview BPMN diagrams with bpmn.io when completing human tasks
