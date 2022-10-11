@@ -72,6 +72,14 @@ class Workflows(QHAnaPluginBase):
         if default_timout.isdigit():
             timout_int = int(default_timout)
 
+        max_parrallelism: str = app_config.get(
+            "EXTERNAL_TASK_CONCURRENCY",
+            environ.get("EXTERNAL_TASK_CONCURRENCY", str(10)),
+        )
+        max_parrallelism_int = 10
+        if max_parrallelism.isdigit():
+            max_parrallelism_int = int(max_parrallelism)
+
         worker_id: str = app_config.get(
             "CAMUNDA_WORKER_ID",
             environ.get("CAMUNDA_WORKER_ID", str(uuid.uuid4())),
@@ -96,6 +104,7 @@ class Workflows(QHAnaPluginBase):
             "worker_id": worker_id,
             "polling_rates": {"camunda_general": 5.0, "external_watcher": 5.0},
             "request_timeout": timout_int,
+            "external_task_concurrency": max_parrallelism_int,
             "workflow_error_prefix": "qhana",
             "qhana_input": {
                 "prefix": "qinput",

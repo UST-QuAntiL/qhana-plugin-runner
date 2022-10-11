@@ -2,7 +2,7 @@ import datetime
 import logging
 import re
 from pathlib import Path
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 import requests
 from requests.exceptions import HTTPError
@@ -42,14 +42,42 @@ class CamundaClient:
         )
         response.raise_for_status()
 
-    def get_external_tasks(self):
+    def get_locked_external_tasks_count(self) -> int:
+        response = requests.get(
+            f"{self.camunda_config.base_url}/external-task/count",
+            params={
+                "workerId": self.camunda_config.worker_id,
+                "locked": "true",
+                "active": "true",
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()["count"]
+
+    def get_external_tasks(self, limit: Optional[int] = None):
+        """Get unlocked external tasks from the task queue.
+
+        Args:
+            limit (Optional[int], optional): limit the number of unlocked external tasks to fetch. If set at most limit external tasks will be returned. Defaults to None.
+
+        Raises:
+            ValueError: the limits have illegal values
+        """
+        params = {"active": "true", "notLocked": "true"}
+        if limit is not None:
+            if limit < 1:
+                raise ValueError("The limit must not be smaller than 1!")
+            params["maxResults"] = str(limit)
         response = requests.get(
             f"{self.camunda_config.base_url}/external-task",
+            params=params,
             timeout=self.timeout,
         )
         response.raise_for_status()
 
         external_tasks = response.json()
+
         return [
             ExternalTask.deserialize(external_task) for external_task in external_tasks
         ]
@@ -65,6 +93,17 @@ class CamundaClient:
         )
         response.raise_for_status()
 
+    def check_lock_expired(self, lock_expiration_time: Optional[str]):
+        if not lock_expiration_time:
+            return True
+
+        lock_time = datetime.datetime.strptime(
+            lock_expiration_time, "%Y-%m-%dT%H:%M:%S.%f%z"
+        )
+        current_time = datetime.datetime.now(datetime.timezone.utc)
+
+        return lock_time < current_time
+
     def is_locked(self, external_task_id: str):
         """
         Check if a task is locked
@@ -78,18 +117,7 @@ class CamundaClient:
 
         task_data = response.json()
 
-        if task_data["lockExpirationTime"] is None:
-            return False
-
-        lock_expiration_time = datetime.datetime.strptime(
-            task_data["lockExpirationTime"], "%Y-%m-%dT%H:%M:%S.%f%z"
-        )
-        current_time = datetime.datetime.now(datetime.timezone.utc)
-
-        if lock_expiration_time > current_time:
-            return True
-
-        return False
+        return not self.check_lock_expired(task_data["lockExpirationTime"])
 
     def external_task_bpmn_error(
         self, external_task_id: str, error_code: str, error_message: str

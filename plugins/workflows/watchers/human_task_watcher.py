@@ -139,7 +139,7 @@ def human_task_watcher(self, db_id: int) -> None:
         # camunda could not be reached/produced an error => retry later
         raise NoHumanTaskError  # retry
 
-    TASK_LOGGER.info(f"Human Tasks: {human_tasks}")
+    TASK_LOGGER.debug(f"Human Tasks: {human_tasks}")
 
     for human_task in human_tasks:
         assert (

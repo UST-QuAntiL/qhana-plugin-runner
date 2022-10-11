@@ -40,7 +40,6 @@ def execute_task(external_task: ExternalTask, camunda_client: CamundaClient, wat
         execution_id=external_task.execution_id,
         process_instance_id=external_task.process_instance_id,
     )
-    # FIXME unlocked tasks should not be started again/moved to a dead letter queue after x tries.../after certain errors...
     instance_task.link_error(process_workflow_error.s(external_task_id=external_task.id))
     instance_task.link_error(unlock_task.si(external_task_id=external_task.id))
     instance_task.apply_async()
@@ -54,14 +53,25 @@ def camunda_task_watcher():
     """
     Watches for new Camunda external task. For each new task found a qhana_watcher celery task is spawned.
     """
-    # TODO later: rate limit the jobs a single worker takes on at once and don't lock jobs until they are actually started
-    # implement rate limiting by querying locked task count for this worker? A: yes
-
     # Client
     camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    max_concurrent_external_tasks = config["external_task_concurrency"]
+
+    TASK_LOGGER.info(
+        f"Polling for external tasks as worker '{camunda_client.camunda_config.worker_id}'."
+    )
 
     try:
-        external_tasks = camunda_client.get_external_tasks()
+        locked_task_count = camunda_client.get_locked_external_tasks_count()
+        max_tasks = max_concurrent_external_tasks - locked_task_count
+        if max_tasks < 1:
+            TASK_LOGGER.debug("Reached external task concurrency limit!")
+            return  # only lock x tasks in parallel, retry until some tasks are finished
+        TASK_LOGGER.debug(
+            f"Waiting on {locked_task_count} external tasks, fetching <= {max_tasks} new tasks."
+        )
+        external_tasks = camunda_client.get_external_tasks(limit=max_tasks)
+        TASK_LOGGER.info(f"Received {len(external_tasks)} tasks.")
     except RequestException as err:
         TASK_LOGGER.info(f"Error retrieving external tasks from camunda: {err}")
         return
