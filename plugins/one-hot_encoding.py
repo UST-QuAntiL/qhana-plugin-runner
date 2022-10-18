@@ -151,7 +151,7 @@ class PluginsView(MethodView):
             description=OneHot.instance.description,
             name=OneHot.instance.identifier,
             version=OneHot.instance.version,
-            type=PluginType.conversion,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{ONEHOT_BLP.name}.CalcView"),
                 ui_href=url_for(f"{ONEHOT_BLP.name}.MicroFrontend"),

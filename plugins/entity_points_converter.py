@@ -133,7 +133,7 @@ class PluginsView(MethodView):
             description=Converter.instance.description,
             name=Converter.instance.identifier,
             version=Converter.instance.version,
-            type=PluginType.processing,
+            type=PluginType.conversion,
             entry_point=EntryPoint(
                 href=url_for(f"{CONVERTER_BLP.name}.CalcView"),
                 ui_href=url_for(f"{CONVERTER_BLP.name}.MicroFrontend"),
