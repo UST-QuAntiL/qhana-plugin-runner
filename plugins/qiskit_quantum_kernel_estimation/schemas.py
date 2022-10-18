@@ -73,8 +73,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url1 = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
-        data_content_types="application/json",
+        data_input_type="entity/vector",
+        data_content_types=[
+            "application/json",
+            "text/csv",
+        ],
         metadata={
             "label": "Entity points URL 1",
             "description": "URL to a json file with the first set of entity points.",
@@ -84,8 +87,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url2 = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="entity-points",
-        data_content_types="application/json",
+        data_input_type="entity/vector",
+        data_content_types=[
+            "application/json",
+            "text/csv",
+        ],
         metadata={
             "label": "Entity points URL 2",
             "description": "URL to a json file with the second entity points. If not provided, then 'entity points URL 1' will be used. \\"
