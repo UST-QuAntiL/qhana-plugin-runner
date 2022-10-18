@@ -64,8 +64,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
-        data_content_types="application/json",
+        data_input_type="entity/vector",
+        data_content_types=[
+            "application/json",
+            "text/csv",
+        ],
         metadata={
             "label": "Entity points URL",
             "description": "URL to a json file with the entity points.",

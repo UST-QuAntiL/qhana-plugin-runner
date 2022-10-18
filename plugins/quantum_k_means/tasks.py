@@ -26,7 +26,9 @@ from .schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    save_entities, load_entities, ensure_dict
+)
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
@@ -36,6 +38,32 @@ from .backend.visualize import plot_data
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_point(ent):
+    dimension_keys = list(ent.keys())
+    dimension_keys.remove("ID")
+    dimension_keys.remove("href")
+
+    dimension_keys.sort()
+    point = np.empty((len(dimension_keys, )))
+    for idx, d in enumerate(dimension_keys):
+        point[idx] = ent[d]
+    return point
+
+
+def get_entity_generator(entity_points_url: str, stream=False):
+    """
+    Return a generator for the entity points, given an url to them.
+    :param entity_points_url: url to the entity points
+    """
+    file_ = open_url(entity_points_url, stream=stream)
+    file_.encoding = "utf-8"
+    file_type = file_.headers["Content-Type"]
+    entities_generator = load_entities(file_, mimetype=file_type)
+    entities_generator = ensure_dict(entities_generator)
+    for ent in entities_generator:
+        yield {"ID": ent["ID"], "href": ent["href"], "point": get_point(ent)}
 
 
 @CELERY.task(name=f"{QKMeans.instance.identifier}.calculation_task", bind=True)
@@ -83,7 +111,7 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
 
-    entity_points = open_url(entity_points_url).json()
+    entity_points = list(get_entity_generator(entity_points_url))
     id_to_idx = {}
 
     idx = 0

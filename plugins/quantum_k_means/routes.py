@@ -61,8 +61,11 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
-                        content_type=["application/json"],
+                        data_type="entity/vector",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entityPointsUrl",
                     )
