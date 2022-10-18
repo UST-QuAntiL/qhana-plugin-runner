@@ -33,8 +33,7 @@ def pca_output(pca: PCA) -> (dict, int):
         "mean": pca.mean_.tolist(),
         "explained_variance": pca.explained_variance_.tolist(),
     }
-    dim = pca.n_components_
-    return pca_out, dim
+    return pca_out
 
 
 def incremental_pca_output(pca: IncrementalPCA) -> (dict, int):
@@ -44,8 +43,7 @@ def incremental_pca_output(pca: IncrementalPCA) -> (dict, int):
         "mean": pca.mean_.tolist(),
         "explained_variance": pca.explained_variance_.tolist(),
     }
-    dim = pca.n_components_
-    return incremental_pca_out, dim
+    return incremental_pca_out
 
 
 def sparse_pca_output(pca: SparsePCA) -> (dict, int):
@@ -55,8 +53,7 @@ def sparse_pca_output(pca: SparsePCA) -> (dict, int):
         "mean": pca.mean_.tolist(),
         "regularization_strength": pca.ridge_alpha,
     }
-    dim = pca.n_components_
-    return sparse_pca_out, dim
+    return sparse_pca_out
 
 
 def kernel_pca_output(pca: KernelPCA) -> (dict, int):
@@ -76,12 +73,11 @@ def kernel_pca_output(pca: KernelPCA) -> (dict, int):
     kernel_pca_out["gamma"] = pca.gamma
     kernel_pca_out["degree"] = pca.degree
     kernel_pca_out["coef0"] = pca.coef0
-    dim = len(pca.eigenvectors_[0])
-    return kernel_pca_out, dim
+    return kernel_pca_out
 
 
 # dim = num features of output. Return dim here, since input params of the plugin can be <= 0
-def pca_to_output(pca: BaseEstimator) -> (dict, int):
+def pca_to_output(pca: BaseEstimator) -> dict:
     """
     This method takes a fitted pca by sklearn as an input and converts its state into a dictionary inorder to save it.
     Additionally, it returns the dimensionality of a transformed data point.
@@ -100,3 +96,16 @@ def pca_to_output(pca: BaseEstimator) -> (dict, int):
         raise ValueError(
             f"Creating an output for object type {type(pca)} is not implemented!"
         )
+
+
+def get_output_dimensionality(pca):
+    """
+    This method takes a fitted pca by sklearn as an input and returns the dimensionality of a point after transformation.
+    :param pca: one of sklearns pca types, e.g. PCA or KernelPCA
+    :return: int an integer equal to the output's number of dimensions
+    """
+    if type(pca) == KernelPCA:
+        return len(pca.eigenvectors_[0])
+    else:
+        # dimensions for normal, incremental and sparse pca
+        return pca.n_components_

@@ -31,7 +31,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
-from .pca_output import pca_to_output
+from .pca_output import pca_to_output, get_output_dimensionality
 
 import numpy as np
 from itertools import islice
@@ -191,68 +191,85 @@ def get_pca(input_params: dict):
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
 
-def get_entity_dict(ID, point):
+def get_entity_dict(ID, point, dim_attributes):
     """
     Converts a point to the correct output format
     :param ID: The points ID
     :param point: The point
+    :param dim_attributes: List of dimension attributes
     :return: dict
     """
     ent = {"ID": ID, "href": ""}
     for (index, value) in enumerate(point):
-        ent[f"dim{index}"] = value
+        ent[dim_attributes[index]] = value
     return ent
 
 
-def prepare_stream_output(entity_generator, pca):
+def get_dim_attributes(dim):
+    # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
+    # Using the zero padding, we ensure that every dim<int> has the same length, e.g. dim00, dim01, ..., dim10, dim11
+    zero_padding = len(str(dim - 1))
+    dim_attributes = [f"dim{str(d).rjust(zero_padding, '0')}" for d in range(dim)]
+    return dim_attributes
+
+
+def prepare_stream_output(entity_generator, pca, dim_attributes):
     """
     This method is a generator, preparing each entity point for the final output. This method is used, when using the
     incremental pca. Since the advantage of the incremental pca is that not every point has to be in memory at once,
     this method loads in each point one by one and therefore keeps the advantage of the incremental pca.
     :param entity_generator: generator of points
-    :pca: a fitted pca
+    :param pca: a fitted pca
+    :param dim_attributes: List of dimension attributes
     """
     for ent in entity_generator:
         point = ent["point"]
         transformed_ent = pca.transform([point])[0]
-        yield get_entity_dict(ent["ID"], transformed_ent)
+        yield get_entity_dict(ent["ID"], transformed_ent, dim_attributes)
 
 
-def prepare_static_output(transformed_points, id_to_idx):
+def prepare_static_output(transformed_points, id_to_idx, dim_attributes):
     """
     This method takes a set of points and prepares them for the final output. Each point gets converted to a dictionary
     with 'ID', 'href' and an entry for each dimension 'dim0', 'dim1', ...
     :param transformed_points: set of points
     :param id_to_idx: list converting a points id to the idx in the list transformed_points
+    :param dim_attributes: List of dimension attributes
     """
     entity_points = []
     for ID, i in id_to_idx.items():
-        entity_points.append(get_entity_dict(ID, transformed_points[i]))
+        entity_points.append(get_entity_dict(ID, transformed_points[i], dim_attributes))
     return entity_points
 
 
 def complete_fitting(entity_points_url, pca):
     """
     This method loads in the entity points from the url. Then it fits the pca instance, transforms the entity points
-    and returns a generator for the transformed entity points
+    and returns a generator for the transformed entity points. Additionally, it returns a list of attributes for the
+    output's dimensionality.
     :param entity_points_url: url to the entity points
     :param pca: pca instance
-    :return: list of the transformed data points
+    :return: list of the transformed data points, list of dimension attributes, int of number of dimensions
     """
     # load data from file
     (entity_points, id_to_idx) = load_entity_points_and_idx_to_id(entity_points_url)
     pca.fit(entity_points)
     transformed_points = pca.transform(entity_points)
-    return prepare_static_output(transformed_points, id_to_idx)
+
+    dim = get_output_dimensionality(pca)
+    dim_attributes = get_dim_attributes(dim)
+
+    return prepare_static_output(transformed_points, id_to_idx, dim_attributes), dim_attributes
 
 
 def precomputed_kernel_fitting(kernel_url: str, pca):
     """
-    This method takes a url to the kernel matrix and loads it. Afterwards it fits the pca model with the help of the
-    kernel matrix and returns a generator of the already transformed data points.
+    This method takes an url to the kernel matrix and loads it. Afterwards it fits the pca model with the help of the
+    kernel matrix and returns a generator of the already transformed data points. Additionally, it returns a list of
+    attributes for the output's dimensionality.
     :param kernel_url: A url to the kernel matrix file
     :param pca: pca instance of sklearn
-    :return: list of the transformed data points
+    :return: list of the transformed data points, list of dimension attributes, int of number of dimensions
     """
     # load data from file
     id_to_idx_X, id_to_idx_Y, kernel_matrix = load_kernel_matrix(kernel_url)
@@ -260,18 +277,21 @@ def precomputed_kernel_fitting(kernel_url: str, pca):
     pca.fit(kernel_matrix)
     # transform
     transformed_points = pca.transform(kernel_matrix)
+    dim = get_output_dimensionality(pca)
+    dim_attributes = get_dim_attributes(dim)
     # Here we only allow kernel matrices between the same points. K(X, X)
-    return prepare_static_output(transformed_points, id_to_idx_X)
+    return prepare_static_output(transformed_points, id_to_idx_X, dim_attributes), dim_attributes
 
 
 def batch_fitting(entity_points_url, pca, batch_size):
     """
     This method loads in the entity points in batches of size batch_size from the entity_points_url and fits the
-    pca with these batches. This is used for the IncrementalPCA class in sklearn.
+    pca with these batches. This is used for the IncrementalPCA class in sklearn. The method returns a list of
+    attributes for the output's dimensionality.
     :param entity_points_url: url to the entity_points
-    :param pca: a unfitted pca model
+    :param pca: an unfitted pca model
     :param batch_size: int how big the batchs for fitting should be.
-    :return: None
+    :return: list of dimension attributes
     """
     entity_generator = get_entity_generator(entity_points_url, stream=True)
     # get First element to get the correct array size
@@ -307,13 +327,18 @@ def batch_fitting(entity_points_url, pca, batch_size):
             batch = batch[:idx]
         pca.partial_fit(batch)
 
+    dim = get_output_dimensionality(pca)
+    dim_attributes = get_dim_attributes(dim)
 
-def plot_data(entity_points, dim, only_first_100):
+    return dim_attributes
+
+
+def plot_data(entity_points, dim_attributes, only_first_100):
     """
     This method creates a 1d, 2d or 3d plot of the given data. If the data is higher dimensional, then only the first three
     dimensions will be used to plot it.
     :param entity_points: List[dict]. Each point is a dictionary, with ID, href and its dimensions (e.g. dim0, dim1, ...).
-    :param dim: int.
+    :param dim_attributes: List of dimension attributes
     :param only_first_100: If set to true, then only the first 100 points will be included in the plot.
     :return: plotly.express figure
     """
@@ -327,13 +352,13 @@ def plot_data(entity_points, dim, only_first_100):
     points = []
     ids = []
     for entity in entity_points:
-        point = [float(entity[f"dim{d}"]) for d in range(dim)]
+        point = [float(entity[d]) for d in dim_attributes]
         points.append(point)
         ids.append(entity["ID"])
 
     points = np.array(points)
 
-    if dim >= 3:
+    if len(dim_attributes) >= 3:
         df = pd.DataFrame(
             {
                 "x": points[:, 0],
@@ -345,7 +370,7 @@ def plot_data(entity_points, dim, only_first_100):
         )
         return px.scatter_3d(df, x="x", y="y", z="z", hover_name="ID", size="size")
     else:
-        if dim == 1:
+        if len(dim_attributes) == 1:
             points_y = [0]*len(ids)
         else:
             points_y = points[:, 1]
@@ -362,7 +387,7 @@ def plot_data(entity_points, dim, only_first_100):
 
 
 def save_outputs(
-    db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim
+    db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim_attributes
 ):
     """
     Saves the plugin's output into files. This includes a plot of the transformed data, the pca's parameters and
@@ -374,7 +399,7 @@ def save_outputs(
     if entity_points_for_plot is not None:
         fig = plot_data(
             entity_points_for_plot,
-            dim,
+            dim_attributes,
             only_first_100=(pca_output[0]["type"] == "incremental"),
         )
 
@@ -467,33 +492,32 @@ def calculation_task(self, db_id: int) -> str:
     # Since incremental pca uses batches, we want to load in the data in batches
     if input_params["pca_type"] == PCATypeEnum.incremental.value:
         batch_size = input_params["batch_size"]
-        batch_fitting(entity_points_url, pca, batch_size)
+        dim_attributes = batch_fitting(entity_points_url, pca, batch_size)
         entity_points = prepare_stream_output(
-            get_entity_generator(entity_points_url, stream=True), pca
+            get_entity_generator(entity_points_url, stream=True), pca, dim_attributes
         )
         entity_points_for_plot = prepare_stream_output(
-            get_entity_generator(entity_points_url, stream=True), pca
+            get_entity_generator(entity_points_url, stream=True), pca, dim_attributes
         )
     elif (
         input_params["pca_type"] == PCATypeEnum.kernel.value
         and input_params["kernel"] == KernelEnum.precomputed.value
     ):
-        entity_points = precomputed_kernel_fitting(kernel_url, pca)
+        entity_points, dim_attributes = precomputed_kernel_fitting(kernel_url, pca)
         entity_points_for_plot = entity_points
     # Since the other PCAs need the complete dataset at once, we load it in at once
     else:
-        entity_points = complete_fitting(entity_points_url, pca)
+        entity_points, dim_attributes = complete_fitting(entity_points_url, pca)
         entity_points_for_plot = entity_points
 
     # Prepare output for pca file
     # dim = num features of output. Get dim here, since input params can be <= 0
-    pca_output, dim = pca_to_output(pca)
+    pca_output = pca_to_output(pca)
     pca_output = [pca_output]
 
-    # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
-    attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
+    attributes = ["ID", "href"] + dim_attributes
     save_outputs(
-        db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim
+        db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim_attributes
     )
 
     return "Result stored in file"
