@@ -57,6 +57,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.requests import open_url
 
 from itertools import chain as itr_chain
+import numpy as np
 
 
 _plugin_name = "entity-points-converter"
@@ -132,7 +133,7 @@ class PluginsView(MethodView):
             description=Converter.instance.description,
             name=Converter.instance.identifier,
             version=Converter.instance.version,
-            type=PluginType.conversion,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{CONVERTER_BLP.name}.CalcView"),
                 ui_href=url_for(f"{CONVERTER_BLP.name}.MicroFrontend"),
@@ -252,29 +253,46 @@ class Converter(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def json_to_csv(json_gen) -> Iterator[dict]:
+def json_to_csv(json_gen, dim_attributes: List[str]) -> Iterator[dict]:
     for ent in json_gen:
         ent_dict = {"ID": ent["ID"], "href": ent["href"]}
-        ent_dict.update({f"dim{d}": ent["point"][d] for d in range(len(ent["point"]))})
+        ent_dict.update({d_str: ent["point"][idx] for idx, d_str in enumerate(dim_attributes)})
         yield ent_dict
 
 
-def get_point(ent) -> List[float]:
-    point = []
-    d = 0
-    while f"dim{d}" in ent.keys():
-        point.append(float(ent[f"dim{d}"]))
-        d += 1
+def get_point(ent, dim_attributes) -> List[float]:
+    point = [0.]*len(dim_attributes)
+    for idx, d in enumerate(dim_attributes):
+        # d is a string dim<int>
+        point[idx] = float(ent[d])
     return point
+
+
+def get_dimensionality(entity):
+    return sum(map(lambda key: key.startswith("dim"), entity.keys()))
+
+
+def get_dim_attributes(dim):
+    # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
+    # Using the zero padding, we ensure that every dim<int> has the same length, e.g. dim00, dim01, ..., dim10, dim11
+    zero_padding = len(str(dim - 1))
+    dim_attributes = [f"dim{str(d).rjust(zero_padding, '0')}" for d in range(dim)]
+    return dim_attributes
 
 
 def csv_to_json_gen(file_, file_type) -> Iterator[dict]:
     gen = load_entities(file_, mimetype=file_type)
     gen = ensure_dict(gen)
 
+    first_ent = next(gen)
+    gen = itr_chain((first_ent, ), gen)
+    dim = get_dimensionality(first_ent)
+    dim_attributes = get_dim_attributes(dim)
+
+
     # Yield all elements once in json format
     for ent in gen:
-        yield {"ID": ent["ID"], "href": ent["href"], "point": get_point(ent)}
+        yield {"ID": ent["ID"], "href": ent["href"], "point": get_point(ent, dim_attributes)}
 
 
 def json_to_json_gen(file_, file_type) -> Iterator[dict]:
@@ -326,8 +344,11 @@ def get_output(entities_url, output_format) -> (List[str], Iterator[dict], str):
 
     # Since everything is in json format, we can now convert it to the desired output format
     if output_format == "text/csv":
-        attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
-        return attributes, json_to_csv(json_gen), ".csv"
+        # Ensure that all dim<int> attributes have the same length, e.g. dim00, dim01, ..., dim10, dim11
+        # instead of dim0, dim1, ..., dim10, dim11
+        dim_attributes = get_dim_attributes(dim)
+        attributes = ["ID", "href"] + dim_attributes
+        return attributes, json_to_csv(json_gen, dim_attributes), ".csv"
     elif output_format == "application/json":
         return [], json_gen, ".json"
     else:
