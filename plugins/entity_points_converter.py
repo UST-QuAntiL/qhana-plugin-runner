@@ -93,7 +93,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
+        data_input_type="entity/vector",
         data_content_types=[
             "application/json",
             "text/csv",
@@ -139,7 +139,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{CONVERTER_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["text/csv", "application/json"],
                         required=True,
                         parameter="entitiesUrl",
@@ -147,7 +147,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["text/csv", "application/json"],
                         required=True,
                     )
@@ -383,7 +383,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "converted_entity_points" + file_ending,
-            "entity-points",
+            "entity/vector",
             output_format,
         )
 
