@@ -66,7 +66,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{PCA_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["text/csv", "application/json"],
                         required=True,
                         parameter="entityPointsUrl",
@@ -84,7 +84,7 @@ class PluginsView(MethodView):
                         required=True,
                     ),
                     DataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["text/csv"],
                         required=True,
                     ),

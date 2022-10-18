@@ -102,7 +102,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="entity-points",
+        data_input_type="entity/vector",
         data_content_types=[
             "application/json",
             "text/csv",

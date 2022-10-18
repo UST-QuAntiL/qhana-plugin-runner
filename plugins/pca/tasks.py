@@ -40,36 +40,29 @@ from itertools import islice
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_points(ent):
-    point = []
-    d = 0
-    while f"dim{d}" in ent.keys():
-        point.append(ent[f"dim{d}"])
-        d += 1
+def get_point(ent):
+    dimension_keys = list(ent.keys())
+    dimension_keys.remove("ID")
+    dimension_keys.remove("href")
+
+    dimension_keys.sort()
+    point = np.empty((len(dimension_keys, )))
+    for idx, d in enumerate(dimension_keys):
+        point[idx] = ent[d]
     return point
 
 
 def get_entity_generator(entity_points_url: str, stream=False):
     """
-    Return a generator for the entity points, given a url to them. This is useful, if not all points have to be loaded in
-    at once, e.g. in IncrementalPCA.
+    Return a generator for the entity points, given an url to them.
     :param entity_points_url: url to the entity points
     """
     file_ = open_url(entity_points_url, stream=stream)
     file_.encoding = "utf-8"
-    # if entity_points_url[-3:] == "csv":
     file_type = file_.headers["Content-Type"]
-    if file_type == "text/csv":
-        entities_generator = load_entities(file_, mimetype=file_type)
-        entities_generator = ensure_dict(entities_generator)
-        for ent in entities_generator:
-            point = get_points(ent)
-            prepared_ent = {"ID": ent["ID"], "href": ent["href"], "point": point}
-            yield prepared_ent
-        # return load_entities(file_, mimetype="text/csv")
-    elif file_type == "application/json":
-        for ent in load_entities(file_, mimetype=file_type):
-            yield ent
+    entities_generator = load_entities(file_, mimetype=file_type)
+    entities_generator = ensure_dict(entities_generator)
+    return entities_generator
 
 
 def load_entity_points_and_idx_to_id(entity_points_url: str):
@@ -92,14 +85,14 @@ def load_entity_points_and_idx_to_id(entity_points_url: str):
 
     # Set array with correct size
     points_cnt = len(id_to_idx)
-    dimensions = len(ent["point"])
+    dimensions = len(ent.keys()) - 2    # -2 for ID and href
     points_arr = np.empty((points_cnt, dimensions))
 
     # Go through elements again and insert them at the correct index
     entity_generator = get_entity_generator(entity_points_url)
     for ent in entity_generator:
         idx = id_to_idx[ent["ID"]]
-        points_arr[idx] = ent["point"]
+        points_arr[idx] = get_point(ent)
 
     return points_arr, id_to_idx
 
@@ -295,7 +288,7 @@ def batch_fitting(entity_points_url, pca, batch_size):
     """
     entity_generator = get_entity_generator(entity_points_url, stream=True)
     # get First element to get the correct array size
-    el = next(entity_generator)["point"]
+    el = get_point(next(entity_generator)["point"])
     batch = np.empty((batch_size, len(el)))
     prev_batch = np.empty((batch_size, len(el)))
     prev_batch[0] = el
@@ -303,7 +296,7 @@ def batch_fitting(entity_points_url, pca, batch_size):
     # Init prev_batch
     for el in entity_generator:
         # append element
-        prev_batch[idx] = el["point"].copy()
+        prev_batch[idx] = get_point(el["point"])
         idx += 1
         # check if we reached the batch_size
         if idx == batch_size:
@@ -317,7 +310,7 @@ def batch_fitting(entity_points_url, pca, batch_size):
             prev_batch = batch.copy()
             idx = 0
         # append element
-        batch[idx] = el["point"].copy()
+        batch[idx] = get_point(el["point"])
         idx += 1
     if idx != 0:
         if idx < pca.n_components:
