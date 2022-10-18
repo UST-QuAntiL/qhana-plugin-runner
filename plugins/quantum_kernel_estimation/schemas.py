@@ -141,8 +141,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Number of Qubits",
             "description": "The number of qubits for the embedding that will be used.",
-            "input_type": "text",
+            "input_type": "number",
         },
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     reps = ma.fields.Integer(
         required=True,
@@ -151,8 +152,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Number of Repetitions",
             "description": """The kernel proposed by Havlíček [0] works by creating an ansatz, which is a specific
                             quantum circuit. The final quantum circuit contains this ansatz number of repetitions times.""",
-            "input_type": "text",
+            "input_type": "number",
         },
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     shots = ma.fields.Integer(
         required=True,
@@ -161,8 +163,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Number of Shots",
             "description": """The number of times the quantum circuit gets executed. The higher, the more accurate our 
                             results get.""",
-            "input_type": "text",
+            "input_type": "number",
         },
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     backend = EnumField(
         QuantumBackends,

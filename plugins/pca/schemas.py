@@ -130,7 +130,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Dimensions",
             "description": "Number of dimensions k that the output will have."
                            "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     solver = EnumField(
@@ -150,7 +150,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Batch Size",
             "description": "Batch size used when executing Incremental PCA. "
                            "The batch size will be automatically set to at least the number of dimensions k.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     sparsity_alpha = ma.fields.Float(
@@ -159,7 +159,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Sparsity control",
             "description": "Sparsity controlling parameter. Higher values lead to sparser components.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     ridge_alpha = ma.fields.Float(
@@ -169,7 +169,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Ridge shrinkage",
             "description": "To avoid instability issues in case the system is under-determined, "
                            "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     kernel = EnumField(
@@ -201,7 +201,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Degree",
             "description": "Degree 'd' of poly kernel.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     kernel_gamma = ma.fields.Float(
@@ -210,7 +210,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Kernel Coefficient",
             "description": "Kernel coefficient 'ɣ' in rbf, poly and sigmoid kernel.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     kernel_coef = ma.fields.Float(
@@ -219,7 +219,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Independent Term in Kernel",
             "description": "Independent term 'c' in poly and sigmoid kernel.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     max_itr = ma.fields.Integer(
@@ -228,7 +228,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Max Number of Iterations",
             "description": "The maximum number of iterations that sparse PCA performs.",
-            "input_type": "text",
+            "input_type": "number",
         },
         validate=validate.Range(min=0, min_inclusive=False)
     )
@@ -239,7 +239,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Error Tolerance",
             "description": "Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
                            "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
     iterated_power = ma.fields.Integer(
@@ -249,7 +249,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Iterated Power",
             "description": "This sets the iterated power parameter for the randomized solver. \n"
                            "If it is set to <= 0, the iterated power will be chosen automatically.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
 

@@ -78,9 +78,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Number of clusters",
             "description": "Number of clusters that shall be found.",
-            "input_type": "text",
+            "input_type": "number",
         },
-        validate=ma.validate.Range(min=1, min_inclusive=True, error="The number of clusters must be at least 1")
+        validate=ma.validate.Range(min=1, min_inclusive=True)
     )
     variant = EnumField(
         ClusteringEnum,
@@ -101,8 +101,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "The algorithm does multiple iterations and after each iteration it checks how the cluster assignments for our data points "
             "have changed. If the input tolerance is 5%, then the algorithm stops, if less than 5% of the "
             "assignments have changed.",
+            "input_type": "number",
         },
-        validate=ma.validate.Range(min=0, min_inclusive=True, error="The tolerance must be positive")
+        validate=ma.validate.Range(min=0, min_inclusive=True)
     )
     max_runs = ma.fields.Integer(
         required=True,
@@ -111,9 +112,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Maximum Number of Iterations",
             "description": "The algorithms does multiple iterations. After reaching the maximum number of iterations, "
             "the algorithm terminates, even if the tolerance isn't reached.",
-            "input_type": "text",
+            "input_type": "number",
         },
-        validate=ma.validate.Range(min=0, min_inclusive=True, error="The maximum number of iterations must be positive")
+        validate=ma.validate.Range(min=0, min_inclusive=True)
     )
     backend = EnumField(
         QuantumBackends,
@@ -131,9 +132,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Shots",
             "description": "Number of times a quantum circuit gets repeatedly executed.",
-            "input_type": "text",
+            "input_type": "number",
         },
-        validate=ma.validate.Range(min=1, min_inclusive=True, error="The amount of shots must be at least 1")
+        validate=ma.validate.Range(min=1, min_inclusive=True)
     )
     ibmq_token = ma.fields.String(
         required=False,

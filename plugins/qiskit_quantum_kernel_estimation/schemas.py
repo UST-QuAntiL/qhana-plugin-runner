@@ -131,8 +131,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": """The number of qubits for the embedding that will be used. This directly corresponds with 
                             the features (the dimensions of our points) that will be used, i.e. number of qubits is 2, 
                             then the first two dimensions will be considered.""",
-            "input_type": "text",
+            "input_type": "number",
         },
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     paulis = ma.fields.String(
         required=False,
@@ -152,8 +153,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Number of Repetitions",
             "description": """The kernel proposed by Havlíček [0] works by creating an ansatz, which is a specific
                             quantum circuit. The final quantum circuit contains this ansatz number of repetitions times.""",
-            "input_type": "text",
+            "input_type": "number",
         },
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     shots = ma.fields.Integer(
         required=True,
@@ -162,8 +164,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Number of Shots",
             "description": """The number of times the quantum circuit gets executed. The higher, the more accurate our 
                             results get.""",
-            "input_type": "text",
+            "input_type": "number",
         },
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     backend = EnumField(
         QiskitBackends,
