@@ -57,6 +57,47 @@ from itertools import count, chain
 import numpy as np
 
 
+""" 
+This Plugin can be further improved!
+The below comments were taken from a PR review
+
+Plugin currently works as follows:
+    Instead of doing a tree traversal to flatten the tree, the plugin simply uses the entities entry in each taxonomy as 
+    the flatten version. The plugin also ignores the "" node, i.e. root, since it provides no additional information.
+
+    Lets assume we have the following taxonomy a[b,c,d[e]] and the entities attribute lists them like this [a, b, c, d, e].
+    If we now have an entity that has e as an attribute, then we return the vector [1, 0, 0, 1, 1] for this entity. 
+    In other words, we also set the ancestors of e to 1 (the ancestors being a,d).
+
+    The idea of why we also set the ancestors to one becomes clear, when looking at colors. Lets assume the following 
+    taxonomy color[red, green, blue[light_blue, dark_blue]. In this case the one-hot encodings of light_blue and dark_blue 
+    should be closer to each other, than they are to the one-hot encoding of red. Therefore, we should also set each 
+    dimension of our ancestors to 1.
+    That is also why the ancestors for each attribute, that we use later on, gets precomputed.
+
+Improvements:
+    So you essentially need to store the set of indices to set to one for each vector. 
+    (preferably as a tuple but the datastructure used here will not be big anyway).
+    Using the already flat entities list in the the graph as tree traversal is OK (but make sure you allow for not 
+    only entity ids to be in the entities list [see the refactored wu palmer plugin for how to read in the graph]). 
+    The only requirement is that the order is stable (which it should be). The ancestors can be built from the relations 
+    of the graph (same code as in the wu-palmer plugin).
+    We may want to add an option to which depth we want to flag ancestors (or if we want them at all) to the plugin 
+    (if that makes sense for one hot encoding). [if we do this should we count from root or from the node?]
+
+
+    About the depth idea:
+    If I set the depth to n, then we ignore all nodes with an depth < n, right?
+    So in our previous example r[a[b,c,d[e]]] with a root r added, if we set the depth to be 1 and we don't count the 
+    root r, we get the following one-hot encoding for e [0, 0, 0, 1, 1], i.e. we ignore a. We could go even further and 
+    just use [0, 0, 1, 1], completly removing a's dimension. (we always ignore the root).
+    Since we always ignore the root, not counting the root makes more sense, but I will add this information to the 
+    plugin's description anyways.
+
+    If adding this depth parameter is useful or not, is for the user to determine. Currently I can't think of an example.
+"""
+
+
 _plugin_name = "one-hot encoding"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
