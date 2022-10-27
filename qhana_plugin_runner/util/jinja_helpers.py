@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Sequence, Union
+from typing import List, Optional, Sequence, Union
 
 from flask import Flask
 from marshmallow import fields
+from marshmallow.validate import Length, Range
 
 
 def marshmallow_field_to_input_type(field: fields.Field) -> Optional[str]:
@@ -49,9 +50,35 @@ def marshmallow_field_to_input_type(field: fields.Field) -> Optional[str]:
 def marshmallow_field_to_step_attr(field: fields.Field) -> Optional[str]:
     if field.metadata.get("step") is not None:
         return field.metadata.get("step")
+    if isinstance(field, fields.Integer):
+        return "1"
     if isinstance(field, fields.Decimal) or isinstance(field, fields.Float):
         return "any"
     return None
+
+
+def marshmallow_validators_to_field_attrs(field: fields.Field) -> str:
+    attrs: List[str] = []
+    step = marshmallow_field_to_step_attr(field)
+    if step:
+        attrs.append(f"step={step}")
+
+    for validator in field.validators:
+        if isinstance(validator, Range):
+            if validator.min is not None:
+                attrs.append(f"min={validator.min}")
+            if validator.max is not None:
+                attrs.append(f"max={validator.max}")
+        if isinstance(validator, Length):
+            if validator.min is not None:
+                attrs.append(f"minlength={validator.min}")
+            if validator.max is not None:
+                attrs.append(f"maxlength={validator.max}")
+
+    if attrs:
+        return " ".join(attrs)
+
+    return ""
 
 
 def space_delimited_list(
@@ -67,4 +94,5 @@ def space_delimited_list(
 def register_helpers(app: Flask):
     app.jinja_env.globals["get_input_type"] = marshmallow_field_to_input_type
     app.jinja_env.globals["get_input_attr_step"] = marshmallow_field_to_step_attr
+    app.jinja_env.globals["get_validation_attrs"] = marshmallow_validators_to_field_attrs
     app.jinja_env.globals["space_delimited_list"] = space_delimited_list
