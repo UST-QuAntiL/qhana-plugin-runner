@@ -226,12 +226,12 @@ function instrumentForm() {
         });
         form.querySelectorAll('button.qhana-choose-file-button').forEach(chooseButton => {
             var inputId = chooseButton.getAttribute("data-input-id");
-            var dataType = chooseButton.getAttribute("data-input-type") ?? "*";
+            var dataType = chooseButton.getAttribute("data-input") ?? "*";
             var contentTypes = chooseButton.getAttribute("data-content-type");
             if (contentTypes == null) {
                 contentTypes = ["*"];
             } else {
-                contentTypes = contentTypes.split();
+                contentTypes = contentTypes.split(/\s+/g);
             }
             chooseButton.addEventListener("click", (event) => {
                 event.preventDefault();
