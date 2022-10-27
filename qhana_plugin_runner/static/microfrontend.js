@@ -314,6 +314,8 @@ function onFormSubmit(event, dataInputs, privateInputs) {
             }
         });
 
+        inputDataUrls.delete(""); // remove empty string if present (e.g. from non required form values)
+
         if (window._qhana_microfrontend_state.preventSubmit) {
             sendMessage({
                 type: "form-submit",
