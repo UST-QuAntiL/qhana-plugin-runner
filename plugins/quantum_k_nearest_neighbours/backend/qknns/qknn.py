@@ -6,14 +6,11 @@ from pennylane import QuantumFunctionError
 
 
 class QkNNEnum(Enum):
-    qiskit_qknn = "qiskit qknn"
     schuld_qknn = "schuld qknn"
     simple_hamming_qknn = "simple hamming qknn"
+    simple_fidelity_qknn = "simple fidelity qknn"
 
-    def get_qknn(self, train_data, train_labels, k, backend, shots):
-        if self == QkNNEnum.qiskit_qknn:
-            from .qiskit_qknn import QiskitQkNN
-            return QiskitQkNN(train_data, train_labels, k, backend, shots)
+    def get_qknn(self, train_data, train_labels, k, backend):
         if self == QkNNEnum.schuld_qknn:
             from .schuld_hamming import SchuldQkNN
             wires = self.check_and_get_qubits(SchuldQkNN, backend, train_data=train_data, train_labels=train_labels)
@@ -22,6 +19,10 @@ class QkNNEnum(Enum):
             from .simpleQkNN import SimpleHammingQkNN
             wires = self.check_and_get_qubits(SimpleHammingQkNN, backend, train_data=train_data)
             return SimpleHammingQkNN(train_data, train_labels, k, wires[0], wires[1], backend)
+        elif self == QkNNEnum.simple_fidelity_qknn:
+            from .simpleQkNN import SimpleFidelityQkNN
+            wires = self.check_and_get_qubits(SimpleFidelityQkNN, backend, train_data=train_data)
+            return SimpleFidelityQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], wires[4], backend)
 
     def check_and_get_qubits(self, qknn_class, backend, **kwargs):
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)

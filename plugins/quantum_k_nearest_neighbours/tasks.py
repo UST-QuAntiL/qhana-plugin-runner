@@ -115,21 +115,17 @@ def calculation_task(self, db_id: int) -> str:
         f"Loaded input parameters from db: custom_backend='{custom_backend}'"
     )
 
-
-    if variant.get_preferred_backend() == 'qiskit':
-        backend = backend.get_qiskit_backend(ibmq_token, custom_backend)
-    else:
-        max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
-        if max_qbits is None:
-            max_qbits = 12
-        backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
-        backend.shots = shots
+    max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
+    if max_qbits is None:
+        max_qbits = 14
+    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
+    backend.shots = shots
 
     train_data, train_id_to_idx = load_entity_points_from_url(train_points_url)
     train_labels = load_labels_from_url(label_points_url, train_id_to_idx)
     test_data, test_id_to_idx = load_entity_points_from_url(test_points_url)
 
-    qknn = variant.get_qknn(train_data, train_labels, k, backend, shots)
+    qknn = variant.get_qknn(train_data, train_labels, k, backend)
 
     test_labels = qknn.label_points(test_data)
 
