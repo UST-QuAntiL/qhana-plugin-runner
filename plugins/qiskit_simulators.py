@@ -269,7 +269,7 @@ class QiskitSimulator(QHAnaPluginBase):
     description = (
         "Allows execution of quantum circuits using a simulator packaged with qiskit."
     )
-    tags = ["circuit-executor", "qc-simulator", "qiskit"]
+    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
