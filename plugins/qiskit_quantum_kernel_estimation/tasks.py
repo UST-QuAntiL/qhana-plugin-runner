@@ -51,12 +51,12 @@ def get_point(ent):
     return point
 
 
-def get_entity_generator(entity_points_url: str, stream=False):
+def get_entity_generator(entity_points_url: str):
     """
     Return a generator for the entity points, given an url to them.
     :param entity_points_url: url to the entity points
     """
-    file_ = open_url(entity_points_url, stream=stream)
+    file_ = open_url(entity_points_url)
     file_.encoding = "utf-8"
     file_type = file_.headers["Content-Type"]
     entities_generator = load_entities(file_, mimetype=file_type)
