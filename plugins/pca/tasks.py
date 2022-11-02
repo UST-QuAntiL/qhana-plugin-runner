@@ -199,8 +199,13 @@ def get_entity_dict(ID, point, dim_attributes):
 
 
 def get_dim_attributes(dim):
-    # for each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
-    # Using the zero padding, we ensure that every dim<int> has the same length, e.g. dim00, dim01, ..., dim10, dim11
+    """
+    Returns the attributes for each dimension, with the correct length.
+    For each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
+    This method adds a zero padding to ensure that every dim<int> has the same length, e.g. dim00, dim01, ..., dim10, dim11
+    :params dim: int number of dimensions
+    :return: list[str]
+    """
     zero_padding = len(str(dim - 1))
     dim_attributes = [f"dim{d:0{zero_padding}}" for d in range(dim)]
     return dim_attributes
