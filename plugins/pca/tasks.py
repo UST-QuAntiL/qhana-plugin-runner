@@ -46,7 +46,7 @@ def get_point(ent):
     dimension_keys.remove("href")
 
     dimension_keys.sort()
-    point = np.empty((len(dimension_keys, )))
+    point = np.empty(len(dimension_keys))
     for idx, d in enumerate(dimension_keys):
         point[idx] = ent[d]
     return point
