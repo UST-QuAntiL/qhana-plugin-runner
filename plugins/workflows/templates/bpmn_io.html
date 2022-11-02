@@ -27,11 +27,11 @@
       }
 
       .highlight:not(.djs-connection) .djs-visual > :nth-child(1) {
-          fill: #673AB74D !important; /* color elements as green */
+          fill: #b488ff !important;
         }
 
       .needs-discussion:not(.djs-connection) .djs-visual > :nth-child(1) {
-        stroke: rgba(66, 180, 21, 0.7) !important; /* color elements as red */
+        stroke: rgba(66, 180, 21, 0.7) !important;
       }
     </style>
   </head>
@@ -62,8 +62,6 @@
 
           canvas.zoom('fit-viewport');
           canvas.addMarker("{{ values.get('human_task_definition_key', ' ') }}", 'highlight');
-
-          {#canvas.addMarker('Activity_100bip4", 'highlight');#}
         } catch (err) {
           console.error('could not import BPMN 2.0 diagram', err);
         }
