@@ -52,12 +52,12 @@ def get_point(ent):
     return point
 
 
-def get_entity_generator(entity_points_url: str, stream=False):
+def get_entity_generator(entity_points_url: str):
     """
     Return a generator for the entity points, given an url to them.
     :param entity_points_url: url to the entity points
     """
-    file_ = open_url(entity_points_url, stream=stream)
+    file_ = open_url(entity_points_url)
     file_.encoding = "utf-8"
     file_type = file_.headers["Content-Type"]
     entities_generator = load_entities(file_, mimetype=file_type)
@@ -286,7 +286,7 @@ def batch_fitting(entity_points_url, pca, batch_size):
     :param batch_size: int how big the batchs for fitting should be.
     :return: list of dimension attributes
     """
-    entity_generator = get_entity_generator(entity_points_url, stream=True)
+    entity_generator = get_entity_generator(entity_points_url)
     # get First element to get the correct array size
     el = get_point(next(entity_generator)["point"])
     batch = np.empty((batch_size, len(el)))
@@ -487,10 +487,10 @@ def calculation_task(self, db_id: int) -> str:
         batch_size = input_params["batch_size"]
         dim_attributes = batch_fitting(entity_points_url, pca, batch_size)
         entity_points = prepare_stream_output(
-            get_entity_generator(entity_points_url, stream=True), pca, dim_attributes
+            get_entity_generator(entity_points_url), pca, dim_attributes
         )
         entity_points_for_plot = prepare_stream_output(
-            get_entity_generator(entity_points_url, stream=True), pca, dim_attributes
+            get_entity_generator(entity_points_url), pca, dim_attributes
         )
     elif (
         input_params["pca_type"] == PCATypeEnum.kernel.value
