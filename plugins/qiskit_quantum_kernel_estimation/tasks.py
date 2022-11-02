@@ -78,7 +78,7 @@ def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]
         idx += 1
 
     points_cnt = len(id_to_idx)
-    dimensions = len(entity_points[0].keys()) - 2  # -2 for ID and href
+    dimensions = len(entity_points[0].keys()-{"ID", "href"})
     points_arr = np.zeros((points_cnt, dimensions))
 
     for ent in entity_points:
