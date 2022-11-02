@@ -85,7 +85,7 @@ def load_entity_points_and_idx_to_id(entity_points_url: str):
 
     # Set array with correct size
     points_cnt = len(id_to_idx)
-    dimensions = len(ent.keys()-{"ID", "href"})   # -2 for ID and href
+    dimensions = len(ent.keys()-{"ID", "href"})
     points_arr = np.empty((points_cnt, dimensions))
 
     # Go through elements again and insert them at the correct index
