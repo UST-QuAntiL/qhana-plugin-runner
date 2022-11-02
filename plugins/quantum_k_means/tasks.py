@@ -147,7 +147,7 @@ def calculation_task(self, db_id: int) -> str:
             output,
             "representative_circuit.qasm",
             "representative-circuit",
-            "application/qasm",
+            "text/x-qasm",
         )
 
     return "Result stored in file"
