@@ -193,8 +193,8 @@ def get_entity_dict(ID, point, dim_attributes):
     :return: dict
     """
     ent = {"ID": ID, "href": ""}
-    for (index, value) in enumerate(point):
-        ent[dim_attributes[index]] = value
+    for attr_key, value in zip(dim_attributes, point):
+        ent[attr_key] = value
     return ent
 
 
