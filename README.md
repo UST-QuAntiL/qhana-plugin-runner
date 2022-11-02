@@ -349,8 +349,10 @@ Currently the local file system is used as result store by default, meaning that
 This restriction also applies if the default sqlite database is used.
 
 For communication between server and worker containers, a redis or amqp broker need to be setup.
-Server and worker containers with the same plugin configuration need to use the same broker.
+Server and worker containers with the same plugin configuration need to use the same broker and queue name.
+Server and worker containers that use different sets of plugins need to use different brokers or the same broker but different queue names.
 The broker can be configured using the `BROKER_URL` and the `RESULT_BACKEND` environment variable.
+The environment variable `CELERY_QUEUE` can be used to set the queue name.
 
 The database to use can be configured using the `SQLALCHEMY_DATABASE_URI` environment variable.
 SQLAlchemy is used which supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.
