@@ -57,7 +57,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qiskit-simulator"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -73,7 +73,7 @@ class QiskitSimulatorParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="executable/circuit",
-        data_content_types="text/x-openquasm",
+        data_content_types="text/x-qasm",
         metadata={
             "label": "OpenQASM Circuit",
             "description": "URL to a quantum circuit in the OpenQASM format.",
@@ -129,7 +129,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="executable/circuit",
-                        content_type=["text/x-openquasm"],
+                        content_type=["text/x-qasm"],
                         required=True,
                         parameter="circuit",
                     ),
@@ -155,7 +155,13 @@ class PluginsView(MethodView):
                         data_type="entity/vector",
                         content_type=["application/json"],
                         required=False,
-                        name="result-state.json",
+                        name="result-statevector.json",
+                    ),
+                    OutputDataMetadata(
+                        data_type="provenance/trace",
+                        content_type=["application/json"],
+                        required=True,
+                        name="result-trace.json",
                     ),
                     OutputDataMetadata(
                         data_type="provenance/execution-options",
@@ -286,7 +292,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from qiskit import QiskitError, QuantumCircuit, execute
-    from qiskit.result.result import Result
+    from qiskit.result.result import ExperimentResult, Result
     from qiskit_aer import StatevectorSimulator
 
     backend = StatevectorSimulator()  # TODO noise model?
@@ -294,6 +300,42 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 
     result: Result = execute(circuit, backend, shots=execution_options["shots"]).result()
+    if not result.success:
+        # TODO better error
+        raise ValueError("Circuit could not be simulated!", result)
+
+    experiment_result: ExperimentResult = result.results[0]
+    extra_metadata = result.metadata
+
+    time_taken = result.time_taken
+    time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
+    shots = experiment_result.shots
+    if isinstance(shots, tuple):
+        assert (
+            len(shots) == 2
+        ), "If untrue, check with qiskit documentation what has changed!"
+        shots = abs(shots[-1] - shots[0])
+    seed = experiment_result.seed_simulator
+
+    metadata = {
+        # trace ids (specific to IBM qiskit jobs)
+        "jobId": result.job_id,
+        "qobjId": result.qobj_id,
+        # QPU/Simulator information
+        "qpuType": "simulator",
+        "qpuVendor": "IBM",
+        "qpuName": result.backend_name,
+        "qpuVersion": result.backend_version,
+        "seed": seed,  # only for simulators
+        "shots": shots,
+        # Time information
+        "date": result.date,
+        "timeTaken": time_taken,  # total job time
+        "timeTakenIdle": 0,  # idle/waiting time
+        "timeTakenQpu": time_taken,  # total qpu time
+        "timeTakenQpuPrepare": time_taken - time_taken_execute,
+        "timeTakenQpuExecute": time_taken_execute,
+    }
 
     counts = result.get_counts()
 
@@ -303,7 +345,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     except QiskitError:
         pass
 
-    return dict(counts), state_vector
+    return metadata, dict(counts), state_vector
 
 
 @CELERY.task(name=f"{QiskitSimulator.instance.identifier}.demo_task", bind=True)
@@ -326,8 +368,6 @@ def execute_circuit(self, db_id: int) -> str:
         Optional[str], task_options.get("executionOptions", None)
     )
 
-    import qiskit
-
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
     }
@@ -339,7 +379,7 @@ def execute_circuit(self, db_id: int) -> str:
             except KeyError:
                 mimetype = mimetypes.MimeTypes().guess_type(url=execution_options_url)[0]
             if mimetype is None:
-                msg = f"Could not guess execution options mime type!"
+                msg = "Could not guess execution options mime type!"
                 TASK_LOGGER.error(msg)
                 raise ValueError(msg)  # TODO better error
             entities = ensure_dict(
@@ -354,9 +394,16 @@ def execute_circuit(self, db_id: int) -> str:
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
 
-    counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
+    metadata, counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
 
     experiment_id = str(uuid4())
+
+    with SpooledTemporaryFile(mode="w") as output:
+        metadata["ID"] = experiment_id
+        dump(metadata, output)
+        STORE.persist_task_result(
+            db_id, output, "result-trace.json", "provenance/trace", "application/json"
+        )
 
     with SpooledTemporaryFile(mode="w") as output:
         counts["ID"] = experiment_id
@@ -374,20 +421,27 @@ def execute_circuit(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             dump(state_vector_ent, output)
             STORE.persist_task_result(
-                db_id, output, "result-state.json", "entity/vector", "application/json"
+                db_id,
+                output,
+                "result-statevector.json",
+                "entity/vector",
+                "application/json",
             )
 
-    execution_options.update(
-        {
-            "ID": experiment_id,
-            # backend specific data
-            "executorPlugin": execution_options.get("executorPlugin", []) + [_identifier],
-            "provider": "IBM",
-            "qpu": "aer-statevector",  # TODO check these IDs to match qiskit
-            "sdk": "qiskit",
-            "sdkVersion": qiskit.__version__,
-        }
-    )
+    extra_execution_options = {
+        "ID": experiment_id,
+        "executorPlugin": execution_options.get("executorPlugin", []) + [_identifier],
+        "shots": metadata.get("shots", execution_options["shots"]),
+        "qpuType": metadata["qpuType"],
+        "qpuVendor": metadata["qpuVendor"],
+        "qpuName": metadata["qpuName"],
+        "qpuVersion": metadata["qpuVersion"],
+    }
+
+    if "seed" in metadata:
+        extra_execution_options["seed"] = metadata["seed"]
+
+    execution_options.update(extra_execution_options)
 
     with SpooledTemporaryFile(mode="w") as output:
         dump(execution_options, output)
@@ -398,7 +452,5 @@ def execute_circuit(self, db_id: int) -> str:
             "provenance/execution-options",
             "application/json",
         )
-
-    # TODO output more provenance data (e.g. timings as an execution-trace)
 
     return "Finished simulating circuit."
