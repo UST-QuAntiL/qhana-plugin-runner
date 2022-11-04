@@ -38,12 +38,50 @@ entity/numeric
 
 Aside from the entity ``ID`` and ``href`` attributes every other attribute must be numeric (or a list of numbers).
 
+Example:
+
+.. code-block:: text
+
+    ID,x,y,z
+    entA,1,0.7,5
+    entB,0.5,1,3
+
 
 entity/vector
 ^^^^^^^^^^^^^
 
 Stronger than ``numeric``, as every attribute aside from ``ID`` and ``href`` must be a single number.
 The dimensions must be ordered lexicographically if order is important and the serialization format may not preserve attribute order (e.g. JSON).
+
+Example:
+
+.. code-block:: text
+
+    ID,x,y,z
+    entA,1,0.7,5
+    entB,0.5,1,3
+
+
+entity/matrix
+^^^^^^^^^^^^^
+
+Same as ``numeric``, every attribute aside from ``ID`` and ``href`` must be a single number (or a list of numbers).
+Additionally, every attribute aside from ``ID`` and ``href`` must be an entity id.
+Indexing the matrix should be done row first, meaning that the first index is for the row and the second for the column.
+
+Example:
+
+.. code-block:: text
+
+    ID,entA,entB
+    entA,1,0.7
+    entB,0.5,1
+
+.. code-block:: python
+
+    matrix["entA"]          # Entity(ID="entA", entA=1, entB=0.7)
+    matrix["entA"]["entB"]  # 0.7
+    matrix["entB"]["entA"]  # 0.5
 
 
 entity/attribute-metadata
