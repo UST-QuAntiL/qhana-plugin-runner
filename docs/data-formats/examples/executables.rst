@@ -5,7 +5,7 @@ Executables (``executable/*``)
 | data type       | executable/*                                                 |
 +-----------------+--------------------------------------------------------------+
 | content types   | text/x-python, text/javascript, application/java-archive,    |
-|                 | text/x-openquasm                                             |
+|                 | text/x-qasm                                                  |
 +-----------------+--------------------------------------------------------------+
 
 The ``executable/*`` data type describes executable code.
