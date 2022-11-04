@@ -178,6 +178,45 @@ Additional files and folders:
     A folder to place plugins in during initial development. Mature plugins should be relocated into seperate repositories eventually.
 
 
+## Poetry Commands
+
+```bash
+# install dependencies from lock file in a virtualenv
+poetry install
+
+# open a shell in the virtualenv
+poetry shell
+
+# update dependencies
+poetry update
+poetry run invoke update-dependencies # to update other dependencies in the repository
+
+# run a command in the virtualenv (replace cmd with the command to run without quotes)
+poetry run cmd
+```
+
+## Invoke Tasks
+
+[Invoke](http://www.pyinvoke.org) is a python tool for scripting cli commands.
+It allows to define complex commands in simple python functions in the `tasks.py` file.
+
+:warning: Make sure to update the module name in `tasks.py` after renaming the `qhana_plugin_registry` module!
+
+```bash
+# list available commands
+poetry run invoke --list
+
+# update dependencies (requirements.txt in ./docs and licenses template)
+poetry run invoke update-dependencies
+
+# Compile the documentation
+poetry run invoke doc
+
+# Open the documentation in the default browser
+poetry run invoke browse-doc
+```
+
+
 ## Babel
 
 ```bash
@@ -251,12 +290,17 @@ poetry run invoke worker --help
 ## Compiling the Documentation
 
 ```bash
-poetry shell
-cd docs
-make html
+# compile documentation
+poetry run invoke doc
 
-# list all targets (only available after build!)
-python -m sphinx.ext.intersphinx _build/html/objects.inv
+# update source code documentation
+poetry run invoke update-source-doc
+
+# Open the documentation in the default browser
+poetry run invoke browse-doc
+
+# Find reference targets defined in the documentation
+poetry run invoke doc-index --filter=searchtext
 
 # export/update requirements.txt from poetry dependencies (for readthedocs build)
 poetry run invoke update-dependencies
