@@ -13,6 +13,7 @@ Submodules
    qhana_plugin_runner.api.plugin_schemas
    qhana_plugin_runner.api.plugins_api
    qhana_plugin_runner.api.tasks_api
+   qhana_plugin_runner.api.templates_api
    qhana_plugin_runner.api.util
 
 Module contents
