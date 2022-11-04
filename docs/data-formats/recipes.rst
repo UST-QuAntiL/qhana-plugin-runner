@@ -24,22 +24,22 @@ Plugin recipes provide a way to describe how to execute a plugin or a sequence o
         },
         "captureOutputs": {
             "pluginOutput": {
-                "name": { "pattern": "output(\.csv)?"},
+                "name": { "pattern": "output(\\.csv)?" },
                 "dataType": "entity/stream",
                 "contentTypes": [
                     "text/csv",
                     "application/x-lines+json"
                 ],
-                "isOptional": False
+                "isOptional": false
             },
             "visualization": {
                 "name": "plot.html",
                 "dataType": "custom/plot",
                 "contentType": "text/html",
-                "isOptional": True
+                "isOptional": true
             }
         },
-        steps: [
+        "steps": [
             {
                 "ID": "main",
                 "inputs": {
