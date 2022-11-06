@@ -69,9 +69,9 @@ class NisqAnalyzerParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Input String",
-            "description": "A simple string input.",
-            "input_type": "textarea",
+            "label": "Result as String",
+            "description": "The analysis result as string.",
+            "input_type": "text",
         },
     )
 
@@ -100,8 +100,8 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="txt",
-                        content_type=["text/plain"],
+                        data_type="nisq-analyzer-result",
+                        content_type=["application/json"],
                         required=True,
                     )
                 ],
@@ -119,7 +119,6 @@ class ProcessView(MethodView):
     @NISQ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
-        print('\n'*100, arguments, '\n'*100)
         db_task = ProcessingTask(task_name=demo_task.name, parameters=dumps(arguments))
         db_task.save(commit=True)
 
@@ -175,7 +174,7 @@ def demo_task(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "nisq_analyzer.txt", "nisq-analyzer-analysis", "text/plain"
+                db_id, output, "nisq_analysis.json", "nisq-analyzer-result", "application/json"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"
