@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
+from urllib.parse import urljoin, urlencode, urlsplit, urlunsplit
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
@@ -85,6 +86,16 @@ class PluginsView(MethodView):
     def get(self):
         """Endpoint returning the plugin metadata."""
         plugin = NisqAnalyzer.instance
+
+        scheme, netloc, path, _, _ = urlsplit(plugin.url)
+        path += '/#/algorithms'
+        query_string = urlencode({
+            "plugin-endpoint-url": url_for(
+                "plugins-api.PluginView", plugin=plugin.identifier, _external=True
+            )
+        })
+        url = urlunsplit((scheme, netloc, path, query_string, None))
+
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
@@ -95,7 +106,7 @@ class PluginsView(MethodView):
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{NISQ_BLP.name}.ProcessView"),
-                ui_href=plugin.url,
+                ui_href=url,
                 plugin_dependencies=[],
                 data_input=[],
                 data_output=[
@@ -147,7 +158,6 @@ class NisqAnalyzer(QHAnaPluginBase):
 
         self.url = app.config.get("NISQ_ANALYZER_UI_URL")
         self.url = environ.get("NISQ_ANALYZER_UI_URL", self.url)
-        self.url += "/#/algorithms"
 
     def get_api_blueprint(self):
         return NISQ_BLP
