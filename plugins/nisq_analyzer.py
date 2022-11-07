@@ -125,7 +125,7 @@ class PluginsView(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @NISQ_BLP.arguments(NisqAnalyzerParametersSchema(unknown=EXCLUDE), location="form")
+    @NISQ_BLP.arguments(NisqAnalyzerParametersSchema(unknown=EXCLUDE), location="json")
     @NISQ_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @NISQ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
