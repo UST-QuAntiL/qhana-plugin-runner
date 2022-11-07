@@ -53,6 +53,9 @@
             },
             {
               "$ref": "#/components/messages/requestImplementations"
+            },
+            {
+              "$ref": "#/components/messages/nisqAnalyzerResults"
             }
           ]
         }
@@ -495,6 +498,29 @@
           "required": [
             "type",
             "implementations"
+          ]
+        }
+      },
+      "nisqAnalyzerResults": {
+        "summary": "Notifies the UI, that the nisq analyzer results were exported.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "nisq-analyzer-result"
+            },
+            "circuitUrl": {
+              "type": "string"
+            },
+            "responseURL": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "circuitURL",
+            "responseURL"
           ]
         }
       }
