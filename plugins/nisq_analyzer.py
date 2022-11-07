@@ -65,7 +65,7 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class NisqAnalyzerParametersSchema(FrontendFormBaseSchema):
-    input_str = ma.fields.String(
+    results = ma.fields.String(
         required=True,
         allow_none=False,
         metadata={
@@ -118,12 +118,12 @@ class ProcessView(MethodView):
     @NISQ_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @NISQ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        """Start the demo task."""
-        db_task = ProcessingTask(task_name=demo_task.name, parameters=dumps(arguments))
+        """Start the task."""
+        db_task = ProcessingTask(task_name=store_results_task.name, parameters=dumps(arguments))
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = demo_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = store_results_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -155,9 +155,9 @@ class NisqAnalyzer(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{NisqAnalyzer.instance.identifier}.demo_task", bind=True)
-def demo_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(f"Starting new demo task with db id '{db_id}'")
+@CELERY.task(name=f"{NisqAnalyzer.instance.identifier}.store_results_task", bind=True)
+def store_results_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting new store results task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -165,16 +165,16 @@ def demo_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_str: Optional[str] = loads(task_data.parameters or "{}").get("input_str", None)
-    TASK_LOGGER.info(f"Loaded input parameters from db: input_str='{input_str}'")
-    if input_str is None:
+    results: Optional[str] = loads(task_data.parameters or "{}").get("results", None)
+    TASK_LOGGER.info(f"Loaded input parameters from db: results='{results}'")
+
+    if not results:
         raise ValueError("No input argument provided!")
-    if input_str:
-        out_str = input_str.replace("input", "output")
-        with SpooledTemporaryFile(mode="w") as output:
-            output.write(out_str)
-            STORE.persist_task_result(
-                db_id, output, "nisq_analysis.json", "nisq-analyzer-result", "application/json"
-            )
-        return "result: " + repr(out_str)
-    return "Empty input string, no output could be generated!"
+
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(results)
+        STORE.persist_task_result(
+            db_id, output, "nisq_analysis.json", "nisq-analyzer-result", "application/json"
+        )
+
+    return "result: " + repr(results)
