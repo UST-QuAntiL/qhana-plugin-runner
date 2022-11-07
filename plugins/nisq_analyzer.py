@@ -147,6 +147,7 @@ class NisqAnalyzer(QHAnaPluginBase):
 
         self.url = app.config.get("NISQ_ANALYZER_UI_URL")
         self.url = environ.get("NISQ_ANALYZER_UI_URL", self.url)
+        self.url += "/#/algorithms"
 
     def get_api_blueprint(self):
         return NISQ_BLP
