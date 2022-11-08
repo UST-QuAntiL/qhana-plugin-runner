@@ -115,13 +115,15 @@ class PluginsView(MethodView):
         plugin = NisqAnalyzer.instance
 
         scheme, netloc, path, _, _ = urlsplit(plugin.url)
-        path += '/#/algorithms'
-        query_string = urlencode({
+        if not path.endswith("/"):
+            path += "/"
+        query = urlencode({
             "plugin-endpoint-url": url_for(
                 "plugins-api.PluginView", plugin=plugin.identifier, _external=True
             )
         })
-        url = urlunsplit((scheme, netloc, path, query_string, None))
+        fragment = f'algorithms?{query}' # workaround since nisq-analyzer-ui disregards query parameters before fragments
+        url = urlunsplit((scheme, netloc, path, None, fragment))
 
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
