@@ -65,17 +65,44 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class NisqAnalyzerParametersSchema(FrontendFormBaseSchema):
-    results = ma.fields.String(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Result as String",
-            "description": "The analysis result as string.",
-            "input_type": "text",
-        },
-    )
+class NisqAnalyzerResultsRow(MaBaseSchema):
+    id = ma.fields.String(required=True, allow_none=False)
+    provider = ma.fields.String(required=True, allow_none=False)
+    qpu = ma.fields.String(required=True, allow_none=False)
+    compiler = ma.fields.String(required=True, allow_none=False)
+    analyzedDepth = ma.fields.Int(required=True, allow_none=False)
+    analyzedWidth = ma.fields.Int(required=True, allow_none=False)
+    analyzedTotalNumberOfOperations = ma.fields.Int(required=True, allow_none=False)
+    analyzedNumberOfSingleQubitGates = ma.fields.Int(required=True, allow_none=False)
+    analyzedNumberOfMultiQubitGates = ma.fields.Int(required=True, allow_none=False)
+    analyzedNumberOfMeasurementOperations = ma.fields.Int(required=True, allow_none=False)
+    analyzedMultiQubitGateDepth = ma.fields.Int(required=True, allow_none=False)
+    numberOfQubits = ma.fields.Int(required=True, allow_none=False)
+    t1 = ma.fields.Float(required=True, allow_none=False)
+    t2 = ma.fields.Float(required=True, allow_none=False)
+    avgReadoutError = ma.fields.Float(required=True, allow_none=False)
+    avgSingleQubitGateError = ma.fields.Float(required=True, allow_none=False)
+    avgMultiQubitGateError = ma.fields.Float(required=True, allow_none=False)
+    avgSingleQubitGateTime = ma.fields.Float(required=True, allow_none=False)
+    avgMultiQubitGateTime = ma.fields.Float(required=True, allow_none=False)
+    maxGateTime = ma.fields.Float(required=True, allow_none=False)
+    simulator = ma.fields.Bool(required=True, allow_none=False)
+    time = ma.fields.String(required=True, allow_none=False)
+    queueSize = ma.fields.Int(required=True, allow_none=False)
+    transpiledCircuit = ma.fields.String(required=True, allow_none=False)
+    transpiledLanguage = ma.fields.String(required=True, allow_none=False)
+    circuitName = ma.fields.String(required=True, allow_none=False)
+    qpuSelectionJobId = ma.fields.String(required=True, allow_none=False)
+    userId = ma.fields.String(required=True, allow_none=True)
 
+class NisqAnalyzerResults(MaBaseSchema):
+    results = ma.fields.List(
+        ma.fields.Nested(
+            NisqAnalyzerResultsRow,
+            required=True,
+            allow_none=False
+        )
+    )
 
 @NISQ_BLP.route("/")
 class PluginsView(MethodView):
@@ -125,7 +152,7 @@ class PluginsView(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @NISQ_BLP.arguments(NisqAnalyzerParametersSchema(unknown=EXCLUDE), location="json")
+    @NISQ_BLP.arguments(NisqAnalyzerResults(unknown=EXCLUDE), location="json")
     @NISQ_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @NISQ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -176,16 +203,18 @@ def store_results_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    results: Optional[str] = loads(task_data.parameters or "{}").get("results", None)
+    results: Optional[List] = loads(task_data.parameters or "{}").get("results", None)
     TASK_LOGGER.info(f"Loaded input parameters from db: results='{results}'")
 
     if not results:
         raise ValueError("No input argument provided!")
 
+    results_str: str = dumps(results)
+
     with SpooledTemporaryFile(mode="w") as output:
-        output.write(results)
+        output.write(results_str)
         STORE.persist_task_result(
             db_id, output, "nisq_analysis.json", "nisq-analyzer-result", "application/json"
         )
 
-    return "result: " + repr(results)
+    return "result: " + repr(results_str)
