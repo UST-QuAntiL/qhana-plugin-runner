@@ -7,7 +7,7 @@ license = "Apache-2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 flask = { extras = ["dotenv"], version = "^2.0.0" }
 Flask-JWT-Extended = "^4.0.0"
 Flask-Cors = "^3.0.10"

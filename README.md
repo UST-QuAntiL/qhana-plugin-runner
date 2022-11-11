@@ -2,7 +2,7 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![GitHub license](https://img.shields.io/github/license/UST-QuAntiL/qhana-plugin-runner)](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/LICENSE)
-![Python: >= 3.7](https://img.shields.io/badge/python-^3.7-blue)
+![Python: >= 3.8](https://img.shields.io/badge/python-^3.8-blue)
 [![Documentation Status](https://readthedocs.org/projects/qhana-plugin-runner/badge/?version=latest)](https://qhana-plugin-runner.readthedocs.io/en/latest/?badge=latest)
 
 This package uses Poetry ([documentation](https://python-poetry.org/docs/)).
