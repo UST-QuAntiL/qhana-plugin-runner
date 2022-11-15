@@ -1,15 +1,15 @@
+from typing import List
+import numpy as np
+import re
+
 import pennylane as qml
 from ..data_loading_circuits import QAM
 from .qknn import QkNN
-from typing import List
-import numpy as np
 from ..utils import bitlist_to_int, int_to_bitlist, check_if_values_are_binary
-
+from ..check_wires import check_wires_uniqueness, check_num_wires
 
 from celery.utils.log import get_task_logger
 TASK_LOGGER = get_task_logger(__name__)
-
-import re
 
 
 def num_decimal_places(value):
@@ -63,8 +63,8 @@ class SchuldQkNN(QkNN):
         wire_types = ['train', 'qam_ancilla', 'label']
         num_wires = [self.train_data.shape[1], self.train_data.shape[1], self.label_indices.shape[1]]
         error_msgs = ["the points' dimensionality.", "the points' dimensionality.", "ceil(log2(len(unique labels)))."]
-        self.check_wires(wire_types)
-        self.check_num_wires(wire_types, num_wires, error_msgs)
+        check_wires_uniqueness(self, wire_types)
+        check_num_wires(self, wire_types, num_wires, error_msgs)
 
         self.qam = QAM(
             self.train_data, train_wires, qam_ancilla_wires[:2], qam_ancilla_wires[2:],

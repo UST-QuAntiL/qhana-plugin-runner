@@ -1,12 +1,15 @@
 import pennylane as qml
 import numpy as np
 from typing import List, Tuple
+
 from ..data_loading_circuits import TreeLoader
 from ..utils import int_to_bitlist, bitlist_to_int
 from ..q_arithmetic import cc_increment_register
 from ..ccnot import unclean_ccnot, one_ancilla_ccnot
 from .qknn import QkNN
 from ..amplitude_amplification import exp_searching_amplitude_amplification
+from ..check_wires import check_wires_uniqueness, check_num_wires
+
 from collections import Counter
 
 
@@ -53,8 +56,8 @@ class BasheerHammingQkNN(QkNN):
         wire_types = ["train", "idx", "ancilla"]
         num_wires = [self.train_data.shape[1], np.ceil(np.log2(self.train_data.shape[0])), 2*int(np.ceil(np.log2(self.train_data.shape[1]))) + 5]
         error_msgs = ["the points' dimensionality.", "ceil(log2(size of train_data)).", "ceil(log2(the points' dimensionality)))."]
-        self.check_wires(wire_types)
-        self.check_num_wires(wire_types, num_wires, error_msgs)
+        check_wires_uniqueness(self, wire_types)
+        check_num_wires(self, wire_types, num_wires, error_msgs)
 
         self.tree_loader = TreeLoader(
             self.prepare_data_for_treeloader(self.train_data), idx_wires, train_wires, ancilla_wires,

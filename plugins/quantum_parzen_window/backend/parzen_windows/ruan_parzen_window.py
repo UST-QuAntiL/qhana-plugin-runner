@@ -6,6 +6,7 @@ from ..data_loading_circuits.quantum_associative_memory import QAM
 from ..ccnot import unclean_ccnot
 from ..utils import int_to_bitlist, bitlist_to_int, check_if_values_are_binary
 from ..q_arithmetic import cc_increment_register
+from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class RuanParzenWindow(ParzenWindow):
@@ -31,8 +32,8 @@ class RuanParzenWindow(ParzenWindow):
         wire_types = ['train', 'qam_ancilla', 'label']
         num_wires = [self.train_data.shape[1], self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels)))))]
         error_msgs = ["the points' dimensionality.", "the points' dimensionality.", "ceil(log2(len(unique labels)))."]
-        self.check_wires(wire_types)
-        self.check_num_wires(wire_types, num_wires, error_msgs)
+        check_wires_uniqueness(self, wire_types)
+        check_num_wires(self, wire_types, num_wires, error_msgs)
 
         self.qam = QAM(
             self.train_data, self.train_wires, self.qam_ancilla_wires[:2], self.qam_ancilla_wires[2:],

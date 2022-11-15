@@ -1,12 +1,15 @@
-from .qknn import QkNN
 import pennylane as qml
+import numpy as np
+from collections import Counter
 from abc import abstractmethod
 from typing import List
-import numpy as np
+
+from .qknn import QkNN
 from ..data_loading_circuits import QAM
 from ..data_loading_circuits import TreeLoader
 from ..utils import bitlist_to_int, check_if_values_are_binary
-from collections import Counter
+from ..check_wires import check_wires_uniqueness, check_num_wires
+
 
 from celery.utils.log import get_task_logger
 
@@ -56,8 +59,8 @@ class SimpleHammingQkNN(SimpleQkNN):
         wire_types = ['train', 'qam_ancilla']
         num_wires = [self.train_data.shape[1], self.train_data.shape[1]]
         error_msgs = ["the points' dimensionality.", "the points' dimensionality."]
-        self.check_wires(wire_types)
-        self.check_num_wires(wire_types, num_wires, error_msgs)
+        check_wires_uniqueness(self, wire_types)
+        check_num_wires(self, wire_types, num_wires, error_msgs)
         self.qam = QAM(self.train_data, self.train_wires, self.qam_ancilla_wires[:2], self.qam_ancilla_wires[2:])
 
     def get_quantum_circuit(self, x):

@@ -4,12 +4,14 @@ from typing import List
 from ..ccnot import clean_ccnot
 from ..controlled_unitaries import get_controlled_one_qubit_unitary
 from ..utils import check_if_values_are_binary
+from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class QAM:
-    def __init__(self, X, register_wires, load_and_control_wire, compare_register, amplitudes=None, additional_bits=None, additional_wires=None):
+    def __init__(self, X, register_wires, load_and_control_wires, compare_register_wires, amplitudes=None, additional_bits=None, additional_wires=None):
         if not isinstance(X, np.ndarray):
             X = np.array(X)
+
         self.X = X
         if not check_if_values_are_binary(self.X):
             raise ValueError("A QAM (Quantum Associative Memory) can only load binary data")
@@ -25,45 +27,28 @@ class QAM:
             self.xor_additional_bits = additional_bits
 
         self.register_wires = list(register_wires)
-        self.load_and_control_wire = list(load_and_control_wire)
-        self.compare_register = list(compare_register)
+        self.load_and_control_wires = list(load_and_control_wires)
+        self.compare_register_wires = list(compare_register_wires)
         self.additional_wires = additional_wires
+
+        wire_types = ["register", "load_and_control", "compare_register", "additional"]
+        num_wires = [X.shape[1], 2, X.shape[1]-2]
+        error_msgs = ["the points' dimensionality.", "2.", "the points' dimensionality - 2."]
+        check_wires_uniqueness(self, wire_types)
+        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
+
+        if additional_bits is not None:
+            if additional_wires is None or len(additional_wires) < additional_bits.shape[1]:
+                raise qml.QuantumFunctionError(
+                    "The number of additional wires must be at least the same as the dimension of the additional bits."
+                )
+
 
         if amplitudes is None:
             self.amplitudes = [1/np.sqrt(X.shape[0], dtype=np.float64)]*X.shape[0]
         else:
             self.amplitudes = amplitudes
 
-        if any(wire in register_wires for wire in load_and_control_wire):
-            raise qml.QuantumFunctionError(
-                "The load and control wires must be different from the register wires"
-            )
-        if any(wire in compare_register for wire in load_and_control_wire):
-            raise qml.QuantumFunctionError(
-                "The load and control wires must be different from the compare register's wires"
-            )
-        if any(wire in register_wires for wire in compare_register):
-            raise qml.QuantumFunctionError(
-                "The wire in the compare register must be different from the register wires"
-            )
-        if len(register_wires) < X.shape[1]:
-            raise qml.QuantumFunctionError(
-                "The number of register wires must be at least the same as the dimension of the data points"
-            )
-        if len(load_and_control_wire) < 2:
-            raise qml.QuantumFunctionError(
-                "2 ancilla wires are required."
-            )
-        if len(X[0]) > 2:
-            if len(compare_register) < X.shape[1]-2:
-                raise qml.QuantumFunctionError(
-                    "The number of compare register wires must be at least the same as the dimension of the data points minus 2."
-                )
-        if additional_bits is not None:
-            if additional_wires is None or len(additional_wires) < additional_bits.shape[1]:
-                raise qml.QuantumFunctionError(
-                    "The number of additional wires must be at least the same as the dimension of the additional bits."
-                )
 
         self.rotation_circuits = self.prepare_rotation_circuits()
 
@@ -114,7 +99,7 @@ class QAM:
             if x[i] == 0:
                 qml.PauliX(self.register_wires[i])
         # Check if all wires are one
-        clean_ccnot(self.register_wires, self.compare_register, self.load_and_control_wire[1])
+        clean_ccnot(self.register_wires, self.compare_register_wires, self.load_and_control_wires[1])
         # Uncompute flips
         for i in range(len(x)):
             if x[i] == 0:
@@ -123,15 +108,15 @@ class QAM:
     def load_x(self, x):
         for idx in range(len(x)):
             if x[idx] == 1:
-                qml.CNOT((self.load_and_control_wire[0], self.register_wires[idx]))
+                qml.CNOT((self.load_and_control_wires[0], self.register_wires[idx]))
 
     def load_additional_bits(self, bits):
         for idx in range(len(bits)):
             if bits[idx] == 1:
-                qml.CNOT((self.load_and_control_wire[0], self.additional_wires[idx]))
+                qml.CNOT((self.load_and_control_wires[0], self.additional_wires[idx]))
 
     def circuit(self):
-        qml.PauliX(self.load_and_control_wire[0])
+        qml.PauliX(self.load_and_control_wires[0])
         for i in range(self.xor_X.shape[0]):
 
             # Load xi
@@ -141,11 +126,11 @@ class QAM:
             # qml.Snapshot(f"{i}: loaded {self.X[i]}")  # Debug
 
             # CNOT load to control
-            qml.CNOT(wires=self.load_and_control_wire)
+            qml.CNOT(wires=self.load_and_control_wires)
             # qml.Snapshot(f"{i}: set control to load") # Debug
 
             # Controlled rotation i from control on load
-            self.rotation_circuits[i](self.load_and_control_wire[1], self.load_and_control_wire[0])
+            self.rotation_circuits[i](self.load_and_control_wires[1], self.load_and_control_wires[0])
             # qml.Snapshot(f"{i}: controlled rotation on load") # Debug
 
             # Flip control wire, if register == xi

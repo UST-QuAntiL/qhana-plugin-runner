@@ -2,7 +2,6 @@ import numpy as np
 from abc import abstractmethod
 from enum import Enum
 from typing import List
-from pennylane import QuantumFunctionError
 
 
 class QkNNEnum(Enum):
@@ -70,23 +69,3 @@ class QkNN:
         for x in X:
             new_labels.append(self.label_point(x))
         return new_labels
-
-    def check_wires(self, wire_types):
-        for idx1 in range(len(wire_types)):
-            wire_type1 = wire_types[idx1]
-            wires1 = getattr(self, wire_type1 + '_wires')
-            for idx2 in range(idx1 + 1, len(wire_types)):
-                wire_type2 = wire_types[idx2]
-                wires2 = getattr(self, wire_type2 + '_wires')
-                if any(wire in wires1 for wire in wires2):
-                    raise QuantumFunctionError(
-                        f"The {wire_type1} wires must be different from the {wire_type2} wires"
-                    )
-
-    def check_num_wires(self, wire_types, num_wires, error_msgs):
-        for i in range(len(wire_types)):
-            wire_type = wire_types[i]
-            wires = getattr(self, wire_type + '_wires')
-            if len(wires) < num_wires[i]:
-                error = f"The number of {wire_type} wires has to be greater or equal to {error_msgs[i]}"
-                raise QuantumFunctionError(error)

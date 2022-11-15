@@ -2,6 +2,7 @@ import pennylane as qml
 import numpy as np
 from ..utils import int_to_bitlist
 from ..ccnot import one_ancilla_ccnot
+from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class BinaryTreeNode:
@@ -28,6 +29,12 @@ class TreeLoader:
         self.idx_wires = idx_wires
         self.data_wires = data_wires
         self.ancilla_wires = ancilla_wires
+
+        wire_types = ["idx", "data", "ancilla"]
+        num_wires = [int(np.ceil(np.log2(self.data.shape[1]))), int(np.ceil(np.log2(data.shape[1]))), 3]
+        error_msgs = ["ceil(log2(size of train_data)).", "ceil(log2(datas' dimensionality)).", "3."]
+        check_wires_uniqueness(self, wire_types)
+        check_num_wires(self, wire_types, num_wires, error_msgs)
 
     def prepare_tree_values(self, node: BinaryTreeNode, sqrt_parent_value=1.):
         sqrt_value = np.sqrt(node.value)
