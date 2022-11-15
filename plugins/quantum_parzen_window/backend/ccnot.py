@@ -1,6 +1,26 @@
 import pennylane as qml
 
 
+def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
+    """
+    Chooses the ccnot variant with the least operations and executes it.
+    :param c_qubits: list of control qubits
+    :param a_qubits: list of ancilla qubits
+    :param unclean_qubits: list of unclean qubits
+    :param t_qubit: the target qubit
+    :return: None
+    """
+    if len(a_qubits) == len(c_qubits) - 2:
+        clean_ccnot(c_qubits, a_qubits, t_qubit)
+    elif len(a_qubits) + len(unclean_qubits) == len(c_qubits) - 2:
+        unclean_qubits(c_qubits, a_qubits + unclean_qubits, t_qubit)
+    elif len(a_qubits) > 0:
+        one_ancilla_ccnot(c_qubits, a_qubits[0], t_qubit)
+    else:
+        raise NotImplementedError(f"There is no ccnot implemented for {len(c_qubits)} control qubits, {a_qubits} ancilla qubits and {unclean_qubits} unclean qubits.")
+
+
+
 def one_ancilla_ccnot(c_qubits, a_qubit, t_qubit):
     """
     This consists of 4 steps
