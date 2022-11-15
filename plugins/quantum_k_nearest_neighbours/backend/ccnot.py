@@ -1,16 +1,6 @@
 import pennylane as qml
 
 
-def xor_int(x1, x2):
-    return 0 if x1 == x2 else 1
-
-
-def bit_list(num, num_bits):
-    bits = [int(el) for el in bin(num)[2:]]
-    bits = [0]*(num_bits - len(bits)) + bits
-    return bits
-
-
 def one_ancilla_ccnot(c_qubits, a_qubit, t_qubit):
     """
     This consists of 4 steps
@@ -77,28 +67,3 @@ def unclean_ccnot(c_qubits, a_qubits, t_qubit):
         qml.Toffoli(wires=[c_qubits[0], c_qubits[1], a_qubits[-n + 2]])
         for i in range(-n + 2, -1):
             qml.Toffoli(wires=[c_qubits[i], a_qubits[i], a_qubits[i + 1]])
-
-
-def main():
-    c_qubits = list(range(6))
-    a_qubits = list(range(len(c_qubits), len(c_qubits)*2))
-    t_qubit = len(c_qubits) + len(a_qubits)
-    num_wires = len(c_qubits) + len(a_qubits) + 1
-    device = qml.device('default.qubit', wires=num_wires)
-    device.shots = 1
-
-    @qml.qnode(device)
-    def circuit():
-        for wire in a_qubits:
-            qml.PauliX((wire,))
-        for wire in c_qubits:
-            qml.PauliZ((wire,))
-        qml.PauliY((t_qubit,))
-        unclean_ccnot(c_qubits, a_qubits, t_qubit)
-        return qml.probs(c_qubits+a_qubits+[t_qubit])
-
-    print(qml.draw(circuit)())
-
-
-if __name__ == '__main__':
-    main()

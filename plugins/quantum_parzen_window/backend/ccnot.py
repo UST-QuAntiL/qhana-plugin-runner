@@ -1,16 +1,6 @@
 import pennylane as qml
 
 
-def xor_int(x1, x2):
-    return 0 if x1 == x2 else 1
-
-
-def bit_list(num, num_bits):
-    bits = [int(el) for el in bin(num)[2:]]
-    bits = [0]*(num_bits - len(bits)) + bits
-    return bits
-
-
 def one_ancilla_ccnot(c_qubits, a_qubit, t_qubit):
     """
     This consists of 4 steps
