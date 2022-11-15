@@ -23,8 +23,23 @@ from .backend.visualize import plot_data
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def get_point(ent):
+    dimension_keys = list(ent.keys())
+    dimension_keys.remove("ID")
+    dimension_keys.remove("href")
+
+    dimension_keys.sort()
+    point = np.empty(len(dimension_keys))
+    for idx, d in enumerate(dimension_keys):
+        point[idx] = ent[d]
+    return point
+
+
 def load_entity_points_from_url(entity_points_url: str):
-    # load data from file
+    """
+    Loads in entity points, given their url.
+    :param entity_points_url: url to the entity points
+    """
 
     entity_points = open_url(entity_points_url).json()
     id_to_idx = {}
@@ -39,12 +54,13 @@ def load_entity_points_from_url(entity_points_url: str):
         idx += 1
 
     points_cnt = len(id_to_idx)
-    dimensions = len(entity_points[0]["point"])
+    dimensions = len(entity_points[0].keys()-{"ID", "href"})
     points_arr = np.zeros((points_cnt, dimensions))
 
     for ent in entity_points:
         idx = id_to_idx[ent["ID"]]
-        points_arr[idx] = ent["point"]
+        points_arr[idx] = get_point(ent)
+
     return points_arr, id_to_idx
 
 
@@ -117,7 +133,7 @@ def calculation_task(self, db_id: int) -> str:
 
     max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
     if max_qbits is None:
-        max_qbits = 14
+        max_qbits = 20
     backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
     backend.shots = shots
 
