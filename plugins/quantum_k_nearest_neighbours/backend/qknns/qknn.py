@@ -9,8 +9,9 @@ class QkNNEnum(Enum):
     schuld_qknn = "schuld qknn"
     simple_hamming_qknn = "simple hamming qknn"
     simple_fidelity_qknn = "simple fidelity qknn"
+    basheer_hamming_qknn = "basheer hamming qknn"
 
-    def get_qknn(self, train_data, train_labels, k, backend):
+    def get_qknn(self, train_data, train_labels, k, backend, exp_itr=10):
         if self == QkNNEnum.schuld_qknn:
             from .schuld_hamming import SchuldQkNN
             wires = self.check_and_get_qubits(SchuldQkNN, backend, train_data=train_data, train_labels=train_labels)
@@ -23,6 +24,10 @@ class QkNNEnum(Enum):
             from .simpleQkNN import SimpleFidelityQkNN
             wires = self.check_and_get_qubits(SimpleFidelityQkNN, backend, train_data=train_data)
             return SimpleFidelityQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], wires[4], backend)
+        elif self == QkNNEnum.basheer_hamming_qknn:
+            from .basheer_hamming import BasheerHammingQkNN
+            wires = self.check_and_get_qubits(BasheerHammingQkNN, backend, train_data=train_data)
+            return BasheerHammingQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], backend, exp_itr=exp_itr)
 
     def check_and_get_qubits(self, qknn_class, backend, **kwargs):
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)
@@ -38,17 +43,10 @@ class QkNNEnum(Enum):
             )
         return wires
 
-    def get_preferred_backend(self):
-        if self == QkNNEnum.qiskit_qknn:
-            return "qiskit"
-        else:
-            return "pennylane"
-        # return "pennylane"
-
 
 class QkNN:
 
-    def __init__(self, train_data, train_labels, k, backend, shots):
+    def __init__(self, train_data, train_labels, k, backend):
         if not isinstance(train_data, np.ndarray):
             train_data = np.array(train_data, dtype=int)
         self.train_data = np.array(train_data)
@@ -57,7 +55,6 @@ class QkNN:
 
         self.k = min(k, len(self.train_data))
         self.backend = backend
-        self.shots = shots
 
     def get_representative_circuit(self, X) -> str:
         return ""
