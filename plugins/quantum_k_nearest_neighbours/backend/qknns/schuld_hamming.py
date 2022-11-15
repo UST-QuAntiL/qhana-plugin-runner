@@ -1,5 +1,5 @@
 import pennylane as qml
-from ..data_loading_circuits.quantum_associative_memory import QAM
+from ..data_loading_circuits import QAM
 from .qknn import QkNN
 from typing import List
 import numpy as np
@@ -48,7 +48,7 @@ def simple_float_to_int(X):
 
 class SchuldQkNN(QkNN):
     def __init__(self, train_data, train_labels, train_wires: List[int], label_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device):
-        super(SchuldQkNN, self).__init__(train_data, train_labels, len(train_data), backend, 0)
+        super(SchuldQkNN, self).__init__(train_data, train_labels, len(train_data), backend)
         TASK_LOGGER.info(f"first point {train_data[0]}")
         self.train_data = np.array(train_data, dtype=int)
 

@@ -3,8 +3,8 @@ import pennylane as qml
 from abc import abstractmethod
 from typing import List
 import numpy as np
-from ..data_loading_circuits.quantum_associative_memory import QAM
-from ..data_loading_circuits.tree_loader import TreeLoader
+from ..data_loading_circuits import QAM
+from ..data_loading_circuits import TreeLoader
 from ..utils import bitlist_to_int, check_if_values_are_binary
 from collections import Counter
 
@@ -16,7 +16,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 class SimpleQkNN(QkNN):
     def __init__(self, train_data, train_labels, k: int, backend: qml.Device):
-        super(SimpleQkNN, self).__init__(train_data, train_labels, k, backend, 0)
+        super(SimpleQkNN, self).__init__(train_data, train_labels, k, backend)
 
     @abstractmethod
     def calculate_distances(self, x) -> List[float]:
