@@ -1,7 +1,7 @@
 import pennylane as qml
 import numpy as np
 from ..utils import int_to_bitlist
-from ..ccnot import unclean_ccnot, one_ancilla_ccnot
+from ..ccnot import one_ancilla_ccnot
 
 
 class BinaryTreeNode:
@@ -16,7 +16,8 @@ class BinaryTreeNode:
 
 class TreeLoader:
     def __init__(self, data, idx_wires, data_wires, ancilla_wires):
-        if isinstance(data, np.ndarray):
+        # 3 Ancillas needed
+        if not isinstance(data, np.ndarray):
             self.data = np.array(data)
         else:
             self.data = data
@@ -123,7 +124,7 @@ class TreeLoader:
                     return 0, True
         return 0, False
 
-    def qubit_rotations(self, qubit_idx: int, tree_node: BinaryTreeNode, right=True):
+    def qubit_rotations(self, qubit_idx: int, tree_node: BinaryTreeNode, right=True, tree_idx=0):
         if tree_node.left_child is not None:
             # rotate qubit
             sign_rot, use_z = self.get_sign_rotation(tree_node)
@@ -132,35 +133,37 @@ class TreeLoader:
                 if use_z:
                     qml.CZ(wires=(self.ancilla_wires[0], self.data_wires[qubit_idx]))
             else:
-                qml.CRY(tree_node.left_child.value+sign_rot, wires=(self.ancilla_wires[1], self.data_wires[qubit_idx]))
+                one_ancilla_ccnot(self.data_wires[:qubit_idx]+self.ancilla_wires[0:1], self.ancilla_wires[1], self.ancilla_wires[2])
+                qml.CRY(tree_node.left_child.value+sign_rot, wires=(self.ancilla_wires[2], self.data_wires[qubit_idx]))
                 if use_z:
-                    qml.CZ(wires=(self.ancilla_wires[1], self.data_wires[qubit_idx]))
+                    qml.CZ((self.ancilla_wires[2], self.data_wires[qubit_idx]))
+                one_ancilla_ccnot(self.data_wires[:qubit_idx] + self.ancilla_wires[0:1], self.ancilla_wires[1],
+                                  self.ancilla_wires[2])
 
-            # qml.Snapshot(f"{'right' if right else 'left'} qubit_idx {qubit_idx}, sign_rot {sign_rot}, angle {tree_node.left_child.value+sign_rot}, amplitude {np.cos((tree_node.left_child.value+sign_rot)/2.)}, prob {np.square(np.cos((tree_node.left_child.value+sign_rot)/2.))}")
 
             # left child
             qml.PauliX((self.data_wires[qubit_idx],))
-            unclean_ccnot(self.data_wires[:qubit_idx+1]+self.ancilla_wires[:1], self.idx_wires, self.ancilla_wires[1])
-            # qml.Snapshot(f"{'right' if right else 'left'} qubit_idx {qubit_idx}, prepared left ancilla")
+            # Reserve ancilla 1
             self.qubit_rotations(qubit_idx+1, tree_node.left_child, right=False)
-            unclean_ccnot(self.data_wires[:qubit_idx+1] + self.ancilla_wires[:1], self.idx_wires, self.ancilla_wires[1])
+            # Release ancilla 1
             qml.PauliX((self.data_wires[qubit_idx],))
+
             # right child
-            unclean_ccnot(self.data_wires[:qubit_idx+1] + self.ancilla_wires[:1], self.idx_wires, self.ancilla_wires[1])
-            # qml.Snapshot(f"{'right' if right else 'left'} qubit_idx {qubit_idx}, prepared right ancilla")
+            # Reserve ancilla 1
             self.qubit_rotations(qubit_idx + 1, tree_node.right_child, right=True)
-            unclean_ccnot(self.data_wires[:qubit_idx+1] + self.ancilla_wires[:1], self.idx_wires, self.ancilla_wires[1])
+            # Release ancilla 1
 
     def load_tree(self, tree_idx: int):
-        # print(f"tree_idx={tree_idx}")
         # print(f"log2_num_trees={log2_num_trees}")
         tree_idx_bits = int_to_bitlist(tree_idx, len(self.idx_wires))
         for i in range(len(self.idx_wires)):
             if tree_idx_bits[i] == 0:
                 qml.PauliX((self.idx_wires[i],))
 
+        # Reserved ancilla 0
         one_ancilla_ccnot(self.idx_wires, self.ancilla_wires[2], self.ancilla_wires[0])
-        self.qubit_rotations(0, self.binary_trees[tree_idx])
+        self.qubit_rotations(0, self.binary_trees[tree_idx], tree_idx=tree_idx)
+        # Release ancilla 0
         one_ancilla_ccnot(self.idx_wires, self.ancilla_wires[2], self.ancilla_wires[0])
 
         for i in range(len(self.idx_wires)):
