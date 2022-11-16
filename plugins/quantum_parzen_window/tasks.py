@@ -56,9 +56,7 @@ def load_labels_from_url(labels_url: str, id_to_idx: dict):
     num_labels = len(id_to_idx)
     label_arr = np.empty((num_labels,))
 
-    TASK_LOGGER.info(f"id_to_idx: {id_to_idx}")
     for label in labels:
-        TASK_LOGGER.info(f"id: {label['ID']}")
         idx = id_to_idx[label["ID"]]
         label_arr[idx] = label["label"]
     return label_arr
