@@ -36,7 +36,7 @@ class RuanParzenWindow(ParzenWindow):
         check_num_wires(self, wire_types, num_wires, error_msgs)
 
         self.qam = QAM(
-            self.train_data, self.train_wires, self.qam_ancilla_wires[:2], self.qam_ancilla_wires[2:],
+            self.train_data, self.train_wires, self.qam_ancilla_wires,
             additional_bits=self.label_indices, additional_wires=self.label_wires
         )
 

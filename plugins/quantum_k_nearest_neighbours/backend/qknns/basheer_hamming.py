@@ -60,7 +60,7 @@ class BasheerHammingQkNN(QkNN):
         check_num_wires(self, wire_types, num_wires, error_msgs)
 
         self.tree_loader = TreeLoader(
-            self.prepare_data_for_treeloader(self.train_data), idx_wires, train_wires, ancilla_wires,
+            self.prepare_data_for_treeloader(self.train_data), self.idx_wires, self.train_wires, self.ancilla_wires,
         )
 
     def prepare_data_for_treeloader(self, data):

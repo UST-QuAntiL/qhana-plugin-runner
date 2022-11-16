@@ -1,14 +1,15 @@
 import pennylane as qml
 import numpy as np
 from typing import List
-from ..ccnot import clean_ccnot
+from ..ccnot import adaptive_ccnot
 from ..controlled_unitaries import get_controlled_one_qubit_unitary
 from ..utils import check_if_values_are_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class QAM:
-    def __init__(self, X, register_wires, load_and_control_wires, compare_register_wires, amplitudes=None, additional_bits=None, additional_wires=None):
+    def __init__(self, X, register_wires, ancilla_wires, unclean_wires=None,
+                 amplitudes=None, additional_bits=None, additional_wires=None):
         if not isinstance(X, np.ndarray):
             X = np.array(X)
 
@@ -27,13 +28,14 @@ class QAM:
             self.xor_additional_bits = additional_bits
 
         self.register_wires = list(register_wires)
-        self.load_and_control_wires = list(load_and_control_wires)
-        self.compare_register_wires = list(compare_register_wires)
+        self.ancilla_wires = list(ancilla_wires)
         self.additional_wires = additional_wires
+        self.unclean_wires = [] if unclean_wires is None else unclean_wires  # unclean wires are like ancilla wires, but they are not guaranteed to be 0
 
-        wire_types = ["register", "load_and_control", "compare_register", "additional"]
-        num_wires = [X.shape[1], 2, X.shape[1]-2]
-        error_msgs = ["the points' dimensionality.", "2.", "the points' dimensionality - 2."]
+        ancillas_needed = min(X.shape[1], 3)
+        wire_types = ["register", "ancilla", "additional"]
+        num_wires = [X.shape[1], ancillas_needed]
+        error_msgs = ["the points' dimensionality.", str(ancillas_needed)+"."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
@@ -42,6 +44,10 @@ class QAM:
                 raise qml.QuantumFunctionError(
                     "The number of additional wires must be at least the same as the dimension of the additional bits."
                 )
+
+        self.load_wire = self.ancilla_wires[0]
+        self.control_wire = self.ancilla_wires[1]
+        self.ancilla_wires = self.ancilla_wires[2:]
 
 
         if amplitudes is None:
@@ -99,7 +105,7 @@ class QAM:
             if x[i] == 0:
                 qml.PauliX(self.register_wires[i])
         # Check if all wires are one
-        clean_ccnot(self.register_wires, self.compare_register_wires, self.load_and_control_wires[1])
+        adaptive_ccnot(self.register_wires, self.ancilla_wires, self.unclean_wires, self.control_wire)
         # Uncompute flips
         for i in range(len(x)):
             if x[i] == 0:
@@ -108,15 +114,15 @@ class QAM:
     def load_x(self, x):
         for idx in range(len(x)):
             if x[idx] == 1:
-                qml.CNOT((self.load_and_control_wires[0], self.register_wires[idx]))
+                qml.CNOT((self.load_wire, self.register_wires[idx]))
 
     def load_additional_bits(self, bits):
         for idx in range(len(bits)):
             if bits[idx] == 1:
-                qml.CNOT((self.load_and_control_wires[0], self.additional_wires[idx]))
+                qml.CNOT((self.load_wire, self.additional_wires[idx]))
 
     def circuit(self):
-        qml.PauliX(self.load_and_control_wires[0])
+        qml.PauliX(self.load_wire)
         for i in range(self.xor_X.shape[0]):
 
             # Load xi
@@ -126,11 +132,11 @@ class QAM:
             # qml.Snapshot(f"{i}: loaded {self.X[i]}")  # Debug
 
             # CNOT load to control
-            qml.CNOT(wires=self.load_and_control_wires)
+            qml.CNOT(wires=(self.load_wire, self.control_wire))
             # qml.Snapshot(f"{i}: set control to load") # Debug
 
             # Controlled rotation i from control on load
-            self.rotation_circuits[i](self.load_and_control_wires[1], self.load_and_control_wires[0])
+            self.rotation_circuits[i](self.control_wire, self.load_wire)
             # qml.Snapshot(f"{i}: controlled rotation on load") # Debug
 
             # Flip control wire, if register == xi

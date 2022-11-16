@@ -8,19 +8,14 @@ from .qknn import QkNN
 from ..utils import bitlist_to_int, int_to_bitlist, check_if_values_are_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
-from celery.utils.log import get_task_logger
-TASK_LOGGER = get_task_logger(__name__)
-
 
 def num_decimal_places(value):
-    TASK_LOGGER.info(f"num_decimal_places: value = {value} with type = {type(value)}")
     result = 0
     if value.startswith('-'):
         value = value[1:]
         result = 1
     m = re.match(r"^[0-9]*\.([1-9]([0-9]*[1-9])?)0*$", value)
     result += len(m.group(1)) if m is not None else 0
-    TASK_LOGGER.info(f"num_decimal_places: result = {result}")
     return result
 
 
@@ -49,7 +44,6 @@ def simple_float_to_int(X):
 class SchuldQkNN(QkNN):
     def __init__(self, train_data, train_labels, train_wires: List[int], label_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device):
         super(SchuldQkNN, self).__init__(train_data, train_labels, len(train_data), backend)
-        TASK_LOGGER.info(f"first point {train_data[0]}")
         self.train_data = np.array(train_data, dtype=int)
 
         if not check_if_values_are_binary(self.train_data):
@@ -67,7 +61,7 @@ class SchuldQkNN(QkNN):
         check_num_wires(self, wire_types, num_wires, error_msgs)
 
         self.qam = QAM(
-            self.train_data, train_wires, qam_ancilla_wires[:2], qam_ancilla_wires[2:],
+            self.train_data, self.train_wires, self.qam_ancilla_wires,
             additional_bits=self.label_indices, additional_wires=self.label_wires
         )
 

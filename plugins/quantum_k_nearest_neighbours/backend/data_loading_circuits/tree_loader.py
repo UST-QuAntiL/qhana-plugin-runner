@@ -1,7 +1,7 @@
 import pennylane as qml
 import numpy as np
 from ..utils import int_to_bitlist
-from ..ccnot import one_ancilla_ccnot
+from ..ccnot import adaptive_ccnot
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -16,7 +16,7 @@ class BinaryTreeNode:
 
 
 class TreeLoader:
-    def __init__(self, data, idx_wires, data_wires, ancilla_wires):
+    def __init__(self, data, idx_wires, data_wires, ancilla_wires, unclean_wires=None):
         # 3 Ancillas needed
         if not isinstance(data, np.ndarray):
             self.data = np.array(data)
@@ -29,12 +29,13 @@ class TreeLoader:
         self.idx_wires = idx_wires
         self.data_wires = data_wires
         self.ancilla_wires = ancilla_wires
+        self.unclean_wires = [] if unclean_wires is None else unclean_wires  # unclean wires are like ancilla wires, but they are not guaranteed to be 0
 
-        wire_types = ["idx", "data", "ancilla"]
+        wire_types = ["idx", "data", "ancilla", "unclean"]
         num_wires = [int(np.ceil(np.log2(self.data.shape[1]))), int(np.ceil(np.log2(data.shape[1]))), 3]
         error_msgs = ["ceil(log2(size of train_data)).", "ceil(log2(datas' dimensionality)).", "3."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types, num_wires, error_msgs)
+        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
     def prepare_tree_values(self, node: BinaryTreeNode, sqrt_parent_value=1.):
         sqrt_value = np.sqrt(node.value)
@@ -140,12 +141,17 @@ class TreeLoader:
                 if use_z:
                     qml.CZ(wires=(self.ancilla_wires[0], self.data_wires[qubit_idx]))
             else:
-                one_ancilla_ccnot(self.data_wires[:qubit_idx]+self.ancilla_wires[0:1], self.ancilla_wires[1], self.ancilla_wires[2])
+                adaptive_ccnot(
+                    self.data_wires[:qubit_idx]+self.ancilla_wires[0:1],
+                    [self.ancilla_wires[1]], self.unclean_wires+self.data_wires[qubit_idx+1:], self.ancilla_wires[2]
+                )
                 qml.CRY(tree_node.left_child.value+sign_rot, wires=(self.ancilla_wires[2], self.data_wires[qubit_idx]))
                 if use_z:
                     qml.CZ((self.ancilla_wires[2], self.data_wires[qubit_idx]))
-                one_ancilla_ccnot(self.data_wires[:qubit_idx] + self.ancilla_wires[0:1], self.ancilla_wires[1],
-                                  self.ancilla_wires[2])
+                adaptive_ccnot(
+                    self.data_wires[:qubit_idx] + self.ancilla_wires[0:1],
+                    [self.ancilla_wires[1]], self.unclean_wires + self.data_wires[qubit_idx + 1:], self.ancilla_wires[2]
+                )
 
 
             # left child
@@ -168,10 +174,10 @@ class TreeLoader:
                 qml.PauliX((self.idx_wires[i],))
 
         # Reserved ancilla 0
-        one_ancilla_ccnot(self.idx_wires, self.ancilla_wires[2], self.ancilla_wires[0])
+        adaptive_ccnot(self.idx_wires, self.ancilla_wires[2:], self.data_wires+self.unclean_wires, self.ancilla_wires[0])
         self.qubit_rotations(0, self.binary_trees[tree_idx], tree_idx=tree_idx)
         # Release ancilla 0
-        one_ancilla_ccnot(self.idx_wires, self.ancilla_wires[2], self.ancilla_wires[0])
+        adaptive_ccnot(self.idx_wires, self.ancilla_wires[2:], self.data_wires+self.unclean_wires, self.ancilla_wires[0])
 
         for i in range(len(self.idx_wires)):
             if tree_idx_bits[i] == 0:

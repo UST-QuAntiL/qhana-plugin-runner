@@ -11,12 +11,6 @@ from ..utils import bitlist_to_int, check_if_values_are_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
-from celery.utils.log import get_task_logger
-
-
-TASK_LOGGER = get_task_logger(__name__)
-
-
 class SimpleQkNN(QkNN):
     def __init__(self, train_data, train_labels, k: int, backend: qml.Device):
         super(SimpleQkNN, self).__init__(train_data, train_labels, k, backend)
@@ -36,7 +30,6 @@ class SimpleQkNN(QkNN):
             distances = np.array(self.calculate_distances(x))       # Get distances
             indices = np.argpartition(distances, self.k)[:self.k]   # Get k smallest values
             counts = Counter(self.train_labels[indices])            # Count occurrences of labels in k smallest values
-            TASK_LOGGER.info(f"counts = {counts}")
             new_label = max(counts, key=counts.get)                 # Get most frequent label
         return new_label
 
@@ -61,7 +54,7 @@ class SimpleHammingQkNN(SimpleQkNN):
         error_msgs = ["the points' dimensionality.", "the points' dimensionality."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types, num_wires, error_msgs)
-        self.qam = QAM(self.train_data, self.train_wires, self.qam_ancilla_wires[:2], self.qam_ancilla_wires[2:])
+        self.qam = QAM(self.train_data, self.train_wires, self.qam_ancilla_wires)
 
     def get_quantum_circuit(self, x):
         rot_angle = np.pi / len(x)
@@ -126,10 +119,12 @@ class SimpleFidelityQkNN(SimpleQkNN):
         wire_types = ['train', 'test', 'idx', 'swap', 'ancilla']
         num_wires = [int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3]
         error_msgs = ["ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(size of train_data)).", "1.", "3."]
-        self.check_wires(wire_types)
-        self.check_num_wires(wire_types, num_wires, error_msgs)
+        check_wires_uniqueness(self, wire_types)
+        check_num_wires(self, wire_types, num_wires, error_msgs)
 
-        self.loader = TreeLoader(self.prepped_points, self.idx_wires, self.train_wires, self.ancilla_wires)
+        self.loader = TreeLoader(
+            self.prepped_points, self.idx_wires, self.train_wires, self.ancilla_wires, unclean_wires=self.swap_wires
+        )
 
     def prep_data(self, data: np.ndarray):
         # Normalize
