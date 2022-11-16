@@ -100,7 +100,7 @@ class BasheerHammingQkNN(QkNN):
                 cc_increment_register(
                     [t_wire],
                     self.ancilla_wires[:len(a)],
-                    self.ancilla_wires[len(a):],
+                    self.ancilla_wires[len(a):2*len(a)] + self.ancilla_wires[2*len(a)+1:],
                     self.ancilla_wires[2 * len(a)],
                     unclean_wires=self.unclean_wires + self.train_wires[:t_idx] + self.train_wires[t_idx+1:] + self.idx_wires,
                     ancilla_is_zero=False
