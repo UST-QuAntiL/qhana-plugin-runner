@@ -10,6 +10,7 @@ def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
     :param t_qubit: the target qubit
     :return: None
     """
+    unclean_qubits = [] if unclean_qubits is None else unclean_qubits
     if len(a_qubits) == len(c_qubits) - 2:
         clean_ccnot(c_qubits, a_qubits, t_qubit)
     elif len(a_qubits) + len(unclean_qubits) == len(c_qubits) - 2:
@@ -18,7 +19,6 @@ def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
         one_ancilla_ccnot(c_qubits, a_qubits[0], t_qubit)
     else:
         raise NotImplementedError(f"There is no ccnot implemented for {len(c_qubits)} control qubits, {a_qubits} ancilla qubits and {unclean_qubits} unclean qubits.")
-
 
 
 def one_ancilla_ccnot(c_qubits, a_qubit, t_qubit):
@@ -87,28 +87,3 @@ def unclean_ccnot(c_qubits, a_qubits, t_qubit):
         qml.Toffoli(wires=[c_qubits[0], c_qubits[1], a_qubits[-n + 2]])
         for i in range(-n + 2, -1):
             qml.Toffoli(wires=[c_qubits[i], a_qubits[i], a_qubits[i + 1]])
-
-
-def main():
-    c_qubits = list(range(6))
-    a_qubits = list(range(len(c_qubits), len(c_qubits)*2))
-    t_qubit = len(c_qubits) + len(a_qubits)
-    num_wires = len(c_qubits) + len(a_qubits) + 1
-    device = qml.device('default.qubit', wires=num_wires)
-    device.shots = 1
-
-    @qml.qnode(device)
-    def circuit():
-        for wire in a_qubits:
-            qml.PauliX((wire,))
-        for wire in c_qubits:
-            qml.PauliZ((wire,))
-        qml.PauliY((t_qubit,))
-        unclean_ccnot(c_qubits, a_qubits, t_qubit)
-        return qml.probs(c_qubits+a_qubits+[t_qubit])
-
-    print(qml.draw(circuit)())
-
-
-if __name__ == '__main__':
-    main()

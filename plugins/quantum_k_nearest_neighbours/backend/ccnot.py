@@ -10,6 +10,7 @@ def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
     :param t_qubit: the target qubit
     :return: None
     """
+    unclean_qubits = [] if unclean_qubits is None else unclean_qubits
     if len(a_qubits) == len(c_qubits) - 2:
         clean_ccnot(c_qubits, a_qubits, t_qubit)
     elif len(a_qubits) + len(unclean_qubits) == len(c_qubits) - 2:
