@@ -5,7 +5,7 @@ from typing import List, Tuple
 from ..data_loading_circuits import TreeLoader
 from ..utils import int_to_bitlist, bitlist_to_int
 from ..q_arithmetic import cc_increment_register
-from ..ccnot import unclean_ccnot, one_ancilla_ccnot
+from ..ccnot import adaptive_ccnot
 from .qknn import QkNN
 from ..amplitude_amplification import exp_searching_amplitude_amplification
 from ..check_wires import check_wires_uniqueness, check_num_wires
@@ -26,10 +26,10 @@ def x_state_to_one(wires, state):
             qml.PauliX((wire, ))
 
 
-def oracle_state_circuit(data_wires, oracle_wire, ancilla_wires, good_states):
+def oracle_state_circuit(data_wires, oracle_wire, ancilla_wires, unclean_wires, good_states):
     for state in good_states:
         x_state_to_one(data_wires, state)
-        one_ancilla_ccnot(data_wires, ancilla_wires[0], oracle_wire)
+        adaptive_ccnot(data_wires, ancilla_wires, unclean_wires, oracle_wire)
         x_state_to_one(data_wires, state)
 
 
@@ -39,7 +39,7 @@ def calc_hamming_distance(x, y):
 
 class BasheerHammingQkNN(QkNN):
     def __init__(self, train_data, train_labels, k: int,
-                 train_wires: List[int], idx_wires: List[int], ancilla_wires: List[int], backend: qml.Device, exp_itr=10):
+                 train_wires: List[int], idx_wires: List[int], ancilla_wires: List[int], backend: qml.Device, exp_itr=10, unclean_wires=None):
         super(BasheerHammingQkNN, self).__init__(train_data, train_labels, k, backend)
 
         self.train_data = np.array(train_data, dtype=int)
@@ -50,17 +50,20 @@ class BasheerHammingQkNN(QkNN):
         self.num_train_data = self.train_data.shape[0]
         self.train_data = self.repeat_data_til_next_power_of_two(self.train_data)
 
+        self.unclean_wires = [] if unclean_wires is None else unclean_wires
+
         self.train_wires = train_wires
         self.idx_wires = idx_wires
         self.ancilla_wires = ancilla_wires
-        wire_types = ["train", "idx", "ancilla"]
+        wire_types = ["train", "idx", "ancilla", "unclean"]
         num_wires = [self.train_data.shape[1], np.ceil(np.log2(self.train_data.shape[0])), 2*int(np.ceil(np.log2(self.train_data.shape[1]))) + 5]
-        error_msgs = ["the points' dimensionality.", "ceil(log2(size of train_data)).", "ceil(log2(the points' dimensionality)))."]
+        error_msgs = ["the points' dimensionality.", "ceil(log2(size of train_data)).", "2*ceil(log2(the points' dimensionality))) + 5."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types, num_wires, error_msgs)
+        check_num_wires(self, wire_types[-1], num_wires, error_msgs)
 
         self.tree_loader = TreeLoader(
             self.prepare_data_for_treeloader(self.train_data), self.idx_wires, self.train_wires, self.ancilla_wires,
+            unclean_wires=unclean_wires
         )
 
     def prepare_data_for_treeloader(self, data):
@@ -93,11 +96,14 @@ class BasheerHammingQkNN(QkNN):
 
             # Increment overflow register for each 1 in the train register
             qml.PauliX((self.ancilla_wires[2 * len(a)],))  # Allows us to set ancilla_is_zero to False
-            for t_wire in self.train_wires:
+            for t_idx, t_wire in enumerate(self.train_wires):
                 cc_increment_register(
-                    [t_wire], self.ancilla_wires[:len(a)],
-                    self.ancilla_wires[len(a):2 * len(a)],
-                    self.ancilla_wires[2 * len(a)], ancilla_is_zero=False
+                    [t_wire],
+                    self.ancilla_wires[:len(a)],
+                    self.ancilla_wires[len(a):],
+                    self.ancilla_wires[2 * len(a)],
+                    unclean_wires=self.unclean_wires + self.train_wires[:t_idx] + self.train_wires[t_idx+1:] + self.idx_wires,
+                    ancilla_is_zero=False
                 )
             qml.PauliX((self.ancilla_wires[2 * len(a)],))  # Undo the inverse (ancilla_is_zero thing)
 
@@ -105,7 +111,12 @@ class BasheerHammingQkNN(QkNN):
                 qml.PauliX((self.ancilla_wires[:len(a)][i],))
 
             # Set ancilla wire len(a) to 1, if the distance is smaller than the threshold
-            unclean_ccnot(self.ancilla_wires[:len(a)][:2], self.train_wires, self.ancilla_wires[len(a)])
+            adaptive_ccnot(
+                self.ancilla_wires[:len(a)][:2],
+                self.ancilla_wires[len(a)+1:],
+                self.train_wires,                   # We know that self.train_wires suffice for an unclean ccnot
+                self.ancilla_wires[len(a)]
+            )
             qml.PauliX((self.ancilla_wires[len(a)], ))
 
             # Set ancilla wire len(a)+1 to 1, if the point's idx is not contained in indices
@@ -123,7 +134,8 @@ class BasheerHammingQkNN(QkNN):
             qml.PauliX((self.ancilla_wires[len(a)+1],))
             # Set qubit len(a)+1 to 0, if idx qubits are in the list temp
             oracle_state_circuit(
-                self.idx_wires, self.ancilla_wires[len(a)+1], self.ancilla_wires[len(a)+2:len(a)+3], temp
+                self.idx_wires, self.ancilla_wires[len(a)+1],
+                self.ancilla_wires[len(a)+2:len(a)+3], self.unclean_wires, temp
             )
 
             # Set ancilla wire len(a)+2 to 1, if the distance is smaller than the threshold
@@ -152,11 +164,11 @@ class BasheerHammingQkNN(QkNN):
         # Check if idx_wires = |0>
         for wire in self.idx_wires:
             qml.PauliX((wire, ))
-        one_ancilla_ccnot(self.idx_wires, self.ancilla_wires[0], self.ancilla_wires[1])
-        # Set phase to -1, if idx_wires = |0>
-        qml.PauliZ((self.ancilla_wires[1], ))
-        # Uncompute 'idx_wires = |0> check'
-        one_ancilla_ccnot(self.idx_wires, self.ancilla_wires[0], self.ancilla_wires[1])
+
+        qml.Hadamard((self.ancilla_wires[0], ))
+        adaptive_ccnot(self.idx_wires, self.ancilla_wires[1:], self.unclean_wires, self.ancilla_wires[0])
+        qml.Hadamard((self.ancilla_wires[0], ))
+
         for wire in self.idx_wires:
             qml.PauliX((wire, ))
 
