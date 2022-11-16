@@ -42,7 +42,7 @@ def simple_float_to_int(X):
 
 
 class SchuldQkNN(QkNN):
-    def __init__(self, train_data, train_labels, train_wires: List[int], label_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device):
+    def __init__(self, train_data, train_labels, train_wires: List[int], label_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device, unclean_wires=None):
         super(SchuldQkNN, self).__init__(train_data, train_labels, len(train_data), backend)
         self.train_data = np.array(train_data, dtype=int)
 
@@ -51,18 +51,21 @@ class SchuldQkNN(QkNN):
 
         self.label_indices = self.init_labels(train_labels)
 
+        self.unclean_wires = [] if unclean_wires is None else unclean_wires
+
         self.train_wires = train_wires
         self.qam_ancilla_wires = qam_ancilla_wires
         self.label_wires = label_wires
-        wire_types = ['train', 'qam_ancilla', 'label']
+        wire_types = ['train', 'qam_ancilla', 'label', 'unclean']
         num_wires = [self.train_data.shape[1], self.train_data.shape[1], self.label_indices.shape[1]]
         error_msgs = ["the points' dimensionality.", "the points' dimensionality.", "ceil(log2(len(unique labels)))."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types, num_wires, error_msgs)
+        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
         self.qam = QAM(
             self.train_data, self.train_wires, self.qam_ancilla_wires,
-            additional_bits=self.label_indices, additional_wires=self.label_wires
+            additional_bits=self.label_indices, additional_wires=self.label_wires,
+            unclean_wires=unclean_wires
         )
 
     def init_labels(self, labels):
