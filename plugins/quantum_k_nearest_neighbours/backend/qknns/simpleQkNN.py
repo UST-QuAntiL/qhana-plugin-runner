@@ -36,7 +36,8 @@ class SimpleQkNN(QkNN):
 
 class SimpleHammingQkNN(SimpleQkNN):
     def __init__(self, train_data, train_labels, k: int,
-                 train_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device):
+                 train_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device,
+                 unclean_wires=None):
         super(SimpleHammingQkNN, self).__init__(train_data, train_labels, k, backend)
         self.train_data = np.array(train_data, dtype=int)
 
@@ -47,14 +48,15 @@ class SimpleHammingQkNN(SimpleQkNN):
         for i in range(len(self.train_data)):
             self.point_num_to_idx[bitlist_to_int(self.train_data[i])] = i
 
+        self.unclean_wires = [] if unclean_wires is None else unclean_wires
         self.train_wires = train_wires
         self.qam_ancilla_wires = qam_ancilla_wires
-        wire_types = ['train', 'qam_ancilla']
+        wire_types = ["train", "qam_ancilla", "unclean"]
         num_wires = [self.train_data.shape[1], self.train_data.shape[1]]
         error_msgs = ["the points' dimensionality.", "the points' dimensionality."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types, num_wires, error_msgs)
-        self.qam = QAM(self.train_data, self.train_wires, self.qam_ancilla_wires)
+        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
+        self.qam = QAM(self.train_data, self.train_wires, self.qam_ancilla_wires, unclean_wires=self.unclean_wires)
 
     def get_quantum_circuit(self, x):
         rot_angle = np.pi / len(x)
@@ -105,25 +107,27 @@ class SimpleHammingQkNN(SimpleQkNN):
 class SimpleFidelityQkNN(SimpleQkNN):
     def __init__(self, train_data, train_labels, k: int,
                  train_wires: List[int], test_wires: List[int], idx_wires: List[int],
-                 swap_wires: List[int], ancilla_wires: List[int], backend: qml.Device):
+                 swap_wires: List[int], ancilla_wires: List[int], backend: qml.Device, unclean_wires=None):
         super(SimpleFidelityQkNN, self).__init__(train_data, train_labels, k, backend)
 
         self.prepped_points = self.prep_data(self.train_data)
         self.prepped_points = self.repeat_data_til_next_power_of_two(self.prepped_points)
 
+        self.unclean_wires = [] if unclean_wires is None else unclean_wires
         self.train_wires = train_wires
         self.test_wires = test_wires
         self.ancilla_wires = ancilla_wires
         self.idx_wires = idx_wires
         self.swap_wires = swap_wires
-        wire_types = ['train', 'test', 'idx', 'swap', 'ancilla']
+        wire_types = ["train", "test", "idx", "swap", "ancilla", "unclean"]
         num_wires = [int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3]
         error_msgs = ["ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(size of train_data)).", "1.", "3."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types, num_wires, error_msgs)
+        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
         self.loader = TreeLoader(
-            self.prepped_points, self.idx_wires, self.train_wires, self.ancilla_wires, unclean_wires=self.swap_wires
+            self.prepped_points, self.idx_wires, self.train_wires, self.ancilla_wires,
+            unclean_wires=self.swap_wires+self.unclean_wires
         )
 
     def prep_data(self, data: np.ndarray):
