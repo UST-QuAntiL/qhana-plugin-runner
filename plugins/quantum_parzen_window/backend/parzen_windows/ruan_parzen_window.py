@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import pennylane as qml
 from ..data_loading_circuits.quantum_associative_memory import QAM
-from ..ccnot import unclean_ccnot
+from ..ccnot import unclean_ccnot, adaptive_ccnot
 from ..utils import int_to_bitlist, bitlist_to_int, check_if_values_are_binary
 from ..q_arithmetic import cc_increment_register
 from ..check_wires import check_wires_uniqueness, check_num_wires
@@ -11,7 +11,8 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 
 class RuanParzenWindow(ParzenWindow):
     def __init__(self, train_data, train_labels, distance_threshold: float,
-                 train_wires: List[int], label_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device):
+                 train_wires: List[int], label_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device,
+                 unclean_wires=None):
         super(RuanParzenWindow, self).__init__(train_data, train_labels, distance_threshold, backend)
         self.train_data = np.array(train_data, dtype=int)
 
@@ -26,18 +27,20 @@ class RuanParzenWindow(ParzenWindow):
         # self.log2_threshold = 0 if self.distance_threshold == 0 else int(np.ceil(np.log2(self.distance_threshold)))
         self.label_indices = self.init_labels(train_labels)
 
+        self.unclean_wires = [] if unclean_wires is None else unclean_wires
         self.train_wires = train_wires
         self.label_wires = label_wires
         self.qam_ancilla_wires = qam_ancilla_wires
-        wire_types = ['train', 'qam_ancilla', 'label']
+        wire_types = ["train", "qam_ancilla", "label", "unclean"]
         num_wires = [self.train_data.shape[1], self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels)))))]
         error_msgs = ["the points' dimensionality.", "the points' dimensionality.", "ceil(log2(len(unique labels)))."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types, num_wires, error_msgs)
+        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
         self.qam = QAM(
             self.train_data, self.train_wires, self.qam_ancilla_wires,
-            additional_bits=self.label_indices, additional_wires=self.label_wires
+            additional_bits=self.label_indices, additional_wires=self.label_wires,
+            unclean_wires=self.unclean_wires
         )
 
     def init_labels(self, labels):
@@ -66,13 +69,20 @@ class RuanParzenWindow(ParzenWindow):
             for i in range(len(self.train_wires)):
                 cc_increment_register(
                     [self.train_wires[i]], self.qam_ancilla_wires[:len(self.a)],
-                    self.qam_ancilla_wires[len(self.a):2*len(self.a)],
-                    self.qam_ancilla_wires[2*len(self.a)], ancilla_is_zero=False
+                    self.qam_ancilla_wires[len(self.a):2*len(self.a)] + self.qam_ancilla_wires[2*len(self.a)+1:],
+                    self.qam_ancilla_wires[2*len(self.a)],
+                    unclean_wires=self.unclean_wires + self.train_wires[:i] + self.train_wires[i+1:],
+                    ancilla_is_zero=False
                 )
             # for i in range(self.log2_threshold):
             for i in range(2):
                 qml.PauliX((self.qam_ancilla_wires[:len(self.a)][i],))
-            unclean_ccnot(self.qam_ancilla_wires[:len(self.a)][:2], self.train_wires, self.qam_ancilla_wires[2*len(self.a)])
+            adaptive_ccnot(
+                self.qam_ancilla_wires[:len(self.a)][:2],
+                self.qam_ancilla_wires[len(self.a):2*len(self.a)] + self.qam_ancilla_wires[2*len(self.a)+1:],
+                self.train_wires,
+                self.qam_ancilla_wires[2*len(self.a)]
+            )
             return qml.sample(wires=self.label_wires + [self.qam_ancilla_wires[2*len(self.a)]])
         return quantum_circuit
 
