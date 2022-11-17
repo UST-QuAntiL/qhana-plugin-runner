@@ -103,7 +103,7 @@ function onPluginUrlResponseMessage(data) {
         input.dispatchEvent(new InputEvent("change", { data: data.pluginUrl, cancelable: false }));
         var pluginNameSpan = document.querySelector(`.selected-plugin-name[data-input-id=${data.inputKey}]`);
         if (pluginNameSpan != null) {
-            pluginNameSpan.textContent = `${data.pluginName || "unknown"} (v${data.pluginVersion || "?"})`;
+            pluginNameSpan.textContent = `${data.pluginName || "unknown"} (${data.pluginVersion || "?"})`;
             if (pluginNameSpan.parentNode.hasAttribute("hidden")) {
                 pluginNameSpan.parentNode.removeAttribute("hidden");
                 pluginNameSpan.parentNode.setAttribute("aria-live", "polite");
@@ -252,7 +252,7 @@ function instrumentForm() {
             if (pluginTags == null) {
                 pluginTags = [];
             } else {
-                pluginTags = pluginTags.split();
+                pluginTags = pluginTags.split(/\s+/);
             }
             var requestMessage = {
                 type: "request-plugin-url",
