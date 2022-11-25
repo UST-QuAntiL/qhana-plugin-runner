@@ -2,7 +2,7 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![GitHub license](https://img.shields.io/github/license/UST-QuAntiL/qhana-plugin-runner)](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/LICENSE)
-![Python: >= 3.7](https://img.shields.io/badge/python-^3.7-blue)
+![Python: >= 3.8](https://img.shields.io/badge/python-^3.8-blue)
 [![Documentation Status](https://readthedocs.org/projects/qhana-plugin-runner/badge/?version=latest)](https://qhana-plugin-runner.readthedocs.io/en/latest/?badge=latest)
 
 This package uses Poetry ([documentation](https://python-poetry.org/docs/)).
@@ -364,8 +364,10 @@ Currently the local file system is used as result store by default, meaning that
 This restriction also applies if the default sqlite database is used.
 
 For communication between server and worker containers, a redis or amqp broker need to be setup.
-Server and worker containers with the same plugin configuration need to use the same broker.
+Server and worker containers with the same plugin configuration need to use the same broker and queue name.
+Server and worker containers that use different sets of plugins need to use different brokers or the same broker but different queue names.
 The broker can be configured using the `BROKER_URL` and the `RESULT_BACKEND` environment variable.
+The environment variable `CELERY_QUEUE` can be used to set the queue name.
 
 The database to use can be configured using the `SQLALCHEMY_DATABASE_URI` environment variable.
 SQLAlchemy is used which supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.

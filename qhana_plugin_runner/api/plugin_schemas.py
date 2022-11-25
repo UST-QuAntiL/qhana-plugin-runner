@@ -16,7 +16,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
 
 import marshmallow as ma
 from marshmallow.validate import Regexp
@@ -52,6 +52,11 @@ class InputDataMetadata(DataMetadata):
     parameter: str
 
 
+@dataclass
+class OutputDataMetadata(DataMetadata):
+    name: Optional[str]
+
+
 class DataMetadataSchema(MaBaseSchema):
     data_type = ma.fields.String(
         required=True,
@@ -78,6 +83,14 @@ class InputDataMetadataSchema(DataMetadataSchema):
         required=False,  # FIXME make this required once all plugins use this
         allow_none=False,
         metadata={"description": "The parameter where the input should be available at."},
+    )
+
+
+class OutputDataMetadataSchema(DataMetadataSchema):
+    name = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={"description": "The name of the produced output data."},
     )
 
 
@@ -198,7 +211,9 @@ class EntryPoint:
     href: str
     ui_href: str
     data_input: List[InputDataMetadata] = field(default_factory=list)
-    data_output: List[DataMetadata] = field(default_factory=list)
+    data_output: List[Union[OutputDataMetadata, DataMetadata]] = field(
+        default_factory=list
+    )
     plugin_dependencies: List[PluginDependencyMetadata] = field(default_factory=list)
 
 
@@ -249,7 +264,7 @@ class EntryPointSchema(MaBaseSchema):
     )
     data_output = ma.fields.List(
         ma.fields.Nested(
-            DataMetadataSchema,
+            OutputDataMetadataSchema,
             required=True,
             allow_none=False,
             metadata={"description": "A list of possible data outputs."},
