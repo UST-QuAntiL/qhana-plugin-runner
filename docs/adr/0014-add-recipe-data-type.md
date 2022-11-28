@@ -12,7 +12,7 @@ This includes providing defaults for some or all parameters.
 ## Use Cases
 
 * PCA is computed once, but new points may have to be fitted to the same PCA instance
-* Reccomendations for plugin usage
+* Recommendations for plugin usage
 * Human driven workflows
 
 ## Considered Options
