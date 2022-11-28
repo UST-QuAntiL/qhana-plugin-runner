@@ -21,6 +21,7 @@ Submodules
    qhana_plugin_runner.util.plugins
    qhana_plugin_runner.util.request_helpers
    qhana_plugin_runner.util.reverse_proxy_fix
+   qhana_plugin_runner.util.templates
 
 Module contents
 ---------------
