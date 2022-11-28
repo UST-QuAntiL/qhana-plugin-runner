@@ -1,4 +1,5 @@
 import dataclasses
+from typing import List
 
 
 @dataclasses.dataclass
@@ -34,7 +35,7 @@ class QhanaPlugin:
 class QhanaInput:
     """ """
 
-    content_type: list[str]
+    content_type: List[str]
     data_type: str
     required: bool
 

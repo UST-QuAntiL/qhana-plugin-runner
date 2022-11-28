@@ -159,6 +159,11 @@ def _try_load_plugin_file(app: Flask, plugin_file: Path):
             f"Failed to import '{plugin_file.name}' at location '{plugin_file.parent}'.",
             exc_info=True,
         )
+    except Exception:
+        app.logger.error(
+            f"Failed to import '{plugin_file.name}' at location '{plugin_file.parent}' with an unknown exception.",
+            exc_info=True,
+        )
 
 
 def _try_load_plugin_package(app: Flask, plugin_package: Path):
@@ -180,6 +185,11 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
     except ImportError:
         app.logger.warning(
             f"Failed to import '{plugin_package.name}' at location '{plugin_package.parent}'."
+        )
+    except Exception:
+        app.logger.error(
+            f"Failed to import '{plugin_package.name}' at location '{plugin_package.parent}' with an unknown exception.",
+            exc_info=True,
         )
 
 
