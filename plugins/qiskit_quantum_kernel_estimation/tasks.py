@@ -15,11 +15,12 @@
 import os
 from tempfile import SpooledTemporaryFile
 
-from typing import Optional
+from typing import Optional, List
 
 from celery.utils.log import get_task_logger
 
-from . import QKMeans
+from . import QiskitQKE
+
 from .schemas import (
     InputParameters,
     InputParametersSchema,
@@ -33,8 +34,6 @@ from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
 import numpy as np
-
-from .backend.visualize import plot_data
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -62,16 +61,39 @@ def get_entity_generator(entity_points_url: str):
     file_type = file_.headers["Content-Type"]
     entities_generator = load_entities(file_, mimetype=file_type)
     entities_generator = ensure_dict(entities_generator)
-    for ent in entities_generator:
-        yield {"ID": ent["ID"], "href": ent.get("href", ""), "point": get_point(ent)}
+    return entities_generator
 
 
-@CELERY.task(name=f"{QKMeans.instance.identifier}.calculation_task", bind=True)
+def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]]):
+    entity_points = list(get_entity_generator(entity_points_url))
+    id_to_idx = {}
+
+    idx = 0
+
+    for ent in entity_points:
+        if ent["ID"] in id_to_idx:
+            raise ValueError("Duplicate ID: ", ent["ID"])
+
+        id_to_idx[ent["ID"]] = idx
+        idx += 1
+
+    points_cnt = len(id_to_idx)
+    dimensions = len(entity_points[0].keys()-{"ID", "href"})
+    points_arr = np.zeros((points_cnt, dimensions))
+
+    for ent in entity_points:
+        idx = id_to_idx[ent["ID"]]
+        points_arr[idx] = get_point(ent)
+
+    return id_to_idx, points_arr
+
+
+@CELERY.task(name=f"{QiskitQKE.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
     TASK_LOGGER.info(
-        f"Starting new quantum k-means calculation task with db id '{db_id}'"
+        f"Starting new qiskit quantum kernel estimation calculation task with db id '{db_id}'"
     )
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -82,14 +104,17 @@ def calculation_task(self, db_id: int) -> str:
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
-    entity_points_url = input_params.entity_points_url
-    clusters_cnt = input_params.clusters_cnt
-    variant = input_params.variant
-    tol = input_params.tol
-    max_runs = input_params.max_runs
-    backend = input_params.backend
+    entity_points_url1 = input_params.entity_points_url1
+    entity_points_url2 = input_params.entity_points_url2
+    kernel_enum = input_params.kernel
+    entanglement_pattern = input_params.entanglement_pattern
+    n_qbits = input_params.n_qbits
+    paulis = input_params.paulis
+    reps = input_params.reps
     shots = input_params.shots
+    backend = input_params.backend
     ibmq_token = input_params.ibmq_token
+    custom_backend = input_params.custom_backend
 
     TASK_LOGGER.info(
         f"Loaded input parameters from db: {str(input_params)}"
@@ -104,82 +129,41 @@ def calculation_task(self, db_id: int) -> str:
         else:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
-    custom_backend = input_params.custom_backend
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
-    )
-
     # load data from file
 
-    entity_points = list(get_entity_generator(entity_points_url))
-    id_to_idx = {}
+    id_to_idx_x, points_arr_x = get_indices_and_point_arr(entity_points_url1)
+    id_to_idx_y, points_arr_y = get_indices_and_point_arr(entity_points_url2)
 
-    idx = 0
-
-    for ent in entity_points:
-        if ent["ID"] in id_to_idx:
-            raise ValueError("Duplicate ID: ", ent["ID"])
-
-        id_to_idx[ent["ID"]] = idx
-        idx += 1
-
-    points_cnt = len(id_to_idx)
-    dimensions = len(entity_points[0]["point"])
-    points_arr = np.zeros((points_cnt, dimensions))
-
-    for ent in entity_points:
-        idx = id_to_idx[ent["ID"]]
-        points_arr[idx] = ent["point"]
-
-    max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
-    if max_qbits is None:
-        max_qbits = 6
-    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
+    backend = backend.get_qiskit_backend(ibmq_token, custom_backend)
     backend.shots = shots
 
-    cluster_algo = variant.get_cluster_algo(backend, tol, max_runs)
+    entanglement_pattern = entanglement_pattern.get_pattern()
+    paulis = paulis.replace(" ", "").split(",")
 
-    clusters, representative_circuit = cluster_algo.create_clusters(points_arr, clusters_cnt)
+    kernel = kernel_enum.get_kernel(backend, n_qbits, paulis, reps, entanglement_pattern)
+    # kernel_matrix is size len(points_arr_y) x len(points_arr_x)
+    kernel_matrix = kernel.evaluate(x_vec=points_arr_x, y_vec=points_arr_y).T
+    TASK_LOGGER.info(f"kernel_matrix.shape = {kernel_matrix.shape}")
 
-    entity_clusters = []
-
-    for ent_id, idx in id_to_idx.items():
-        entity_clusters.append({"ID": ent_id, "href": "", "cluster": int(clusters[idx])})
-
-    with SpooledTemporaryFile(mode="w") as output:
-        save_entities(entity_clusters, output, "application/json")
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "clusters.json",
-            "clusters",
-            "application/json",
-        )
-
-    fig = plot_data(entity_points, entity_clusters)
-    if fig is not None:
-        fig.update_layout(showlegend=False)
-
-        with SpooledTemporaryFile(mode="wt") as output:
-            html = fig.to_html()
-            output.write(html)
-
-            STORE.persist_task_result(
-                db_id,
-                output,
-                "plot.html",
-                "plot",
-                "text/html",
+    kernel_json = []
+    for ent_id_x, idx_x in id_to_idx_x.items():
+        for ent_id_y, idx_y in id_to_idx_y.items():
+            kernel_json.append(
+                {
+                    "entity_1_ID": ent_id_y,
+                    "entity_2_ID": ent_id_x,
+                    "kernel": kernel_matrix[idx_y, idx_x],
+                }
             )
 
     with SpooledTemporaryFile(mode="w") as output:
-        output.write(representative_circuit)
+        save_entities(kernel_json, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
-            "representative-circuit",
-            "text/x-qasm",
+            "kernel.json",
+            "kernel-matrix",
+            "application/json",
         )
 
     return "Result stored in file"

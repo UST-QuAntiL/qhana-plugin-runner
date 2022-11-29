@@ -19,39 +19,43 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
-_plugin_name = "quantum-k-means"
+_plugin_name = "qiskit-quantum-kernel-estimation"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-QKMEANS_BLP = SecurityBlueprint(
+QISKIT_QKE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Quantum k-means plugin API.",
+    description="Qiskit Quantum-Kernel-Estimation plugin API",
 )
 
 
-class QKMeans(QHAnaPluginBase):
+qiskit_version = "0.27"
+qiskit_ml_version = "0.4.0"
+
+
+class QiskitQKE(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
-        "This plugin groups the data into different clusters, with the help of quantum algorithms.\n"
-        "Currently there are four implemented algorithms. Destructive interference and negative rotation are from [0], "
-        "positive correlation is from [1] and state preparation is from a previous colleague.\n\n"
+        "Produces a kernel matrix from a quantum kernel. "
+        "Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature "
+        "maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed "
+        f"kernel by Havlíček [0]. The following versions were used `qiskit~={qiskit_version}` and `qiskit-machine-learning~={qiskit_ml_version}`.\n\n"
         "Source:\n"
-        '[0] [S. Khan and A. Awan and G. Vall-Llosera. K-Means Clustering on Noisy Intermediate Scale Quantum Computers.arXiv.](https://doi.org/10.48550/ARXIV.1909.12183)\n'
-        "[1] <https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76>"
+        "[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)"
     )
-    tags = ["points-to-clusters", "k-means"]
+    tags = ["kernel", "mapping"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return QKMEANS_BLP
+        return QISKIT_QKE_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16"
+        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}"
 
 
 try:

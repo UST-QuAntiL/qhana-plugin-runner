@@ -19,39 +19,39 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
-_plugin_name = "quantum-k-means"
+_plugin_name = "pca"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-QKMEANS_BLP = SecurityBlueprint(
+PCA_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Quantum k-means plugin API.",
+    description="PCA plugin API",
 )
 
+sklearn_version = "1.1"
 
-class QKMeans(QHAnaPluginBase):
+
+class PCA(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
-        "This plugin groups the data into different clusters, with the help of quantum algorithms.\n"
-        "Currently there are four implemented algorithms. Destructive interference and negative rotation are from [0], "
-        "positive correlation is from [1] and state preparation is from a previous colleague.\n\n"
-        "Source:\n"
-        '[0] [S. Khan and A. Awan and G. Vall-Llosera. K-Means Clustering on Noisy Intermediate Scale Quantum Computers.arXiv.](https://doi.org/10.48550/ARXIV.1909.12183)\n'
-        "[1] <https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76>"
+        "The PCA Plugin reduces the number of dimensions by computing the principle components.\n"
+        "The new orthonormal basis consists of the k first principle components. "
+        "The methods implemented here are from scikit-learn. "
+        f"Currently this plugin uses scikit-learn version {sklearn_version}."
     )
-    tags = ["points-to-clusters", "k-means"]
+    tags = ["dimension-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return QKMEANS_BLP
+        return PCA_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16"
+        return f"scikit-learn~={sklearn_version}\nplotly~=5.3.1\npandas~=1.4.1"
 
 
 try:

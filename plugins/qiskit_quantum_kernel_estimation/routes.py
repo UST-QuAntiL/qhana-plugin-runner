@@ -25,8 +25,8 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import QKMEANS_BLP, QKMeans
-from .backend.quantum_backend import QuantumBackends
+from . import QISKIT_QKE_BLP, QiskitQKE
+from .backend.qiskit_backends import QiskitBackends
 from .schemas import InputParametersSchema, TaskResponseSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -42,23 +42,23 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from .tasks import calculation_task
 
 
-@QKMEANS_BLP.route("/")
+@QISKIT_QKE_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @QKMEANS_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
-    @QKMEANS_BLP.require_jwt("jwt", optional=True)
+    @QISKIT_QKE_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
+    @QISKIT_QKE_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        """Quantum k-means endpoint returning the plugin metadata."""
+        """Qiskit quantum kernel estimation endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Quantum k-means",
-            description=QKMeans.instance.description,
-            name=QKMeans.instance.name,
-            version=QKMeans.instance.version,
-            type=PluginType.simple,
+            title="Qiskit Quantum Kernel Estimation",
+            description=QiskitQKE.instance.description,
+            name=QiskitQKE.instance.name,
+            version=QiskitQKE.instance.version,
+            type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{QKMEANS_BLP.name}.CalcView"),
-                ui_href=url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),
+                href=url_for(f"{QISKIT_QKE_BLP.name}.CalcView"),
+                ui_href=url_for(f"{QISKIT_QKE_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/vector",
@@ -67,53 +67,62 @@ class PluginsView(MethodView):
                             "text/csv",
                         ],
                         required=True,
-                        parameter="entityPointsUrl",
-                    )
+                        parameter="entityPointsUrl1",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
+                        required=True,
+                        parameter="entityPointsUrl2",
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="clusters",
+                        data_type="kernel-matrix",
                         content_type=["application/json"],
                         required=True,
                     )
                 ],
             ),
-            tags=QKMeans.instance.tags,
+            tags=QiskitQKE.instance.tags,
         )
 
 
-@QKMEANS_BLP.route("/ui/")
+@QISKIT_QKE_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the quantum k-means plugin."""
+    """Micro frontend for the qiskit quantum kernel estimation plugin."""
 
-    @QKMEANS_BLP.html_response(
+    @QISKIT_QKE_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the quantum k-means plugin.",
+        description="Micro frontend of the qiskit quantum kernel estimation plugin.",
     )
-    @QKMEANS_BLP.arguments(
+    @QISKIT_QKE_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @QKMEANS_BLP.require_jwt("jwt", optional=True)
+    @QISKIT_QKE_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @QKMEANS_BLP.html_response(
+    @QISKIT_QKE_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the quantum k-means plugin.",
+        description="Micro frontend of the qiskit quantum kernel estimation plugin.",
     )
-    @QKMEANS_BLP.arguments(
+    @QISKIT_QKE_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @QKMEANS_BLP.require_jwt("jwt", optional=True)
+    @QISKIT_QKE_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors)
@@ -124,11 +133,10 @@ class MicroFrontend(MethodView):
 
         # define default values
         default_values = {
-            fields["clusters_cnt"].data_key: 2,
-            fields["tol"].data_key: 0.0,
-            fields["max_runs"].data_key: 1000,
-            fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+            fields["n_qbits"].data_key: 2,
+            fields["reps"].data_key: 2,
             fields["shots"].data_key: 1024,
+            fields["backend"].data_key: QiskitBackends.aer_statevector_simulator.value,
         }
 
         if "IBMQ_BACKEND" in os.environ:
@@ -144,23 +152,23 @@ class MicroFrontend(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=QKMeans.instance.name,
-                version=QKMeans.instance.version,
+                name=QiskitQKE.instance.name,
+                version=QiskitQKE.instance.version,
                 schema=InputParametersSchema(),
                 values=data_dict,
                 errors=errors,
-                process=url_for(f"{QKMEANS_BLP.name}.CalcView"),
+                process=url_for(f"{QISKIT_QKE_BLP.name}.CalcView"),
             )
         )
 
 
-@QKMEANS_BLP.route("/process/")
+@QISKIT_QKE_BLP.route("/process/")
 class CalcView(MethodView):
     """Start a long running processing task."""
 
-    @QKMEANS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @QKMEANS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @QKMEANS_BLP.require_jwt("jwt", optional=True)
+    @QISKIT_QKE_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
+    @QISKIT_QKE_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @QISKIT_QKE_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
         db_task = ProcessingTask(
