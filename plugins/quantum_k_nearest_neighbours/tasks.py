@@ -83,7 +83,7 @@ def calculation_task(self, db_id: int) -> str:
     # get parameters
 
     TASK_LOGGER.info(
-        f"Starting new quantum k ne calculation task with db id '{db_id}'"
+        f"Starting new quantum k nearest neighbours calculation task with db id '{db_id}'"
     )
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -92,57 +92,58 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
+    # Load input parameters
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
+    # Assign input parameters to variables
     train_points_url = input_params.train_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: train_points_url='{train_points_url}'"
-    )
     label_points_url = input_params.label_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: label_points_url='{label_points_url}'"
-    )
     test_points_url = input_params.test_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: test_points_url='{test_points_url}'"
-    )
     k = input_params.k
-    TASK_LOGGER.info(f"Loaded input parameters from db: k='{k}'")
     variant = input_params.variant
-    TASK_LOGGER.info(f"Loaded input parameters from db: variant='{variant}'")
+    minimize_qubit_count = input_params.minimize_qubit_count
     backend = input_params.backend
-    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     shots = input_params.shots
-    TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+    custom_backend = input_params.custom_backend
 
+    # Log information about the input parameters
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(input_params)}"
+    )
     if ibmq_token == "****":
-        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+        TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
         if "IBMQ_TOKEN" in os.environ:
             ibmq_token = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
-            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+            TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
-    custom_backend = input_params.custom_backend
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
-    )
 
-    max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
-    if max_qbits is None:
-        max_qbits = 20
-    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
-    backend.shots = shots
-
+    # Load in data
     train_data, train_id_to_idx = load_entity_points_from_url(train_points_url)
     train_labels = load_labels_from_url(label_points_url, train_id_to_idx)
     test_data, test_id_to_idx = load_entity_points_from_url(test_points_url)
 
-    qknn = variant.get_qknn(train_data, train_labels, k, backend)
+    # Retrieve max qubit count
+    max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
+    if max_qbits is None:
+        max_qbits = 20
 
+    # Get QkNN
+    qknn, num_qbits = variant.get_qknn_and_total_wires(
+        train_data, train_labels, k, max_qbits,
+        use_access_wires=(not minimize_qubit_count)
+    )
+
+    # Set backend
+    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, num_qbits)
+    qknn.set_quantum_backend(backend)
+
+    print(f"backend.num_qubits = {backend.num_wires}")
+
+    # Label test data
     test_labels = qknn.label_points(test_data)
 
     # Prepare labels to be saved
