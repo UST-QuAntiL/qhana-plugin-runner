@@ -206,6 +206,8 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
     # Override so that we can use 'prep_data'
     def label_points(self, X) -> List[int]:
+        if self.backend is None:
+            raise ValueError("The quantum backend may not be None!")
         new_labels = []
         X = self.prep_data(X)
         for x in X:
