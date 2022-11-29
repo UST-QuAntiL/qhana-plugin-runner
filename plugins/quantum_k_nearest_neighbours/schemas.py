@@ -99,7 +99,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Variant",
-            "description": "Variant of quantum kNN that will be used.",
+            "description": "- schuld qknn: uses the Hamming distance as a metric and all training points as neighbours, i.e. k := No. training points"
+                           "- simple hamming qknn: uses the Hamming distance as a meric. The quantum algorithm is only used to calculate the distances. Computing the k closest neighours and doing the majority voting is then done classicaly. It is also described in [0].\n"
+                           "- simple fidelity qknn: analogously like simple hamming qknn, but it uses the fidelity as a similarity metric (see [1] about the fidelity metric).\n"
+                           "- basheer hamming qknn: uses the Hamming distance. It uses amplitude amplification to find the k nearest neighours as described by Basheer et al. in [1], with the oracle of Ruan et al. [2]",
             "input_type": "select",
         },
     )
