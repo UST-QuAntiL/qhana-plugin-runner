@@ -4,8 +4,7 @@ from pennylane import QuantumFunctionError
 def check_wires_uniqueness(obj_with_wires, wire_types):
     for idx1, wire_type1 in enumerate(wire_types):
         wires1 = getattr(obj_with_wires, wire_type1 + '_wires')
-        for idx2 in range(idx1 + 1, len(wire_types)):
-            wire_type2 = wire_types[idx2]
+        for wire_type2 in wire_types[idx1 + 1:]:
             wires2 = getattr(obj_with_wires, wire_type2 + '_wires')
             if any(wire in wires1 for wire in wires2):
                 raise QuantumFunctionError(
