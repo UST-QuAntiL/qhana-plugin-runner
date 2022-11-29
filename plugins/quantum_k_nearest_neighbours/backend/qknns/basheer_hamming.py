@@ -7,7 +7,7 @@ from ..utils import int_to_bitlist, bitlist_to_int
 from ..q_arithmetic import cc_increment_register
 from ..ccnot import adaptive_ccnot
 from .qknn import QkNN
-from ..amplitude_amplification import exp_searching_amplitude_amplification
+from ..amplitude_amplification import exp_searching_amplitude_amplification, exp_search_aa_representative_circuit
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 from collections import Counter
@@ -239,3 +239,32 @@ class BasheerHammingQkNN(QkNN):
         #                   + we need 1 ancilla wire for incrementing the overflow register
         #                   + we need at least 1 ancilla wire for every ccnot
         return train_data.shape[1], int(np.ceil(np.log2(train_data.shape[0]))), int(np.ceil(np.log2(train_data.shape[1]))) + 4
+
+    def get_representative_circuit(self, X) -> str:
+        # Chose some initial parameters
+        x = X[0]
+        distance_threshold = 1
+        chosen_indices = range(self.k)
+
+        # Initiate all necessary circuits for the aa circuit
+        state_circuit = self.idx_circuit
+        zero_circuit = self.zero_circuit
+
+        distance_threshold = min(distance_threshold, self.train_data.shape[0])
+        p = int(np.ceil(np.log2(self.train_data.shape[1])))
+        a = int(2 ** p - self.train_data.shape[1] + distance_threshold)
+        a = int_to_bitlist(a, p + 2)
+
+        oracle_phase_circuit = self.get_phase_oracle_circuit(x, a, chosen_indices)
+        oracle_one_circuit = self.get_oracle_wire_to_one_circuit(x, a, chosen_indices)
+        check_if_good_wire = self.ancilla_wires[len(a) + 2]
+        measure_wires = self.idx_wires + self.train_wires
+
+        # Get representative aa circuit
+        circuit = exp_search_aa_representative_circuit(
+            state_circuit, state_circuit, zero_circuit, oracle_phase_circuit, self.backend,
+            oracle_one_circuit, check_if_good_wire, measure_wires
+
+        )
+        circuit.construct([], {})
+        return circuit.qtape.to_openqasm()

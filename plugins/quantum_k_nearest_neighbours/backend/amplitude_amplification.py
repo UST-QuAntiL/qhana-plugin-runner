@@ -31,6 +31,16 @@ def get_good_result(result, good_wire=0):
     return None
 
 
+def get_exp_search_aa_representative_circuit(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, device,
+                                          check_if_good, check_if_good_wire, measure_wires):
+    @qml.qnode(device)
+    def circuit():
+        state_circuit()
+        aa_steps(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, 2)
+        check_if_good()
+        return qml.sample(wires=check_if_good_wire + measure_wires)
+    return circuit
+
 def exp_searching_amplitude_amplification(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, device,
                                           check_if_good, check_if_good_wire, measure_wires, exp_itr=10):
     check_if_good_wire = [check_if_good_wire]
