@@ -16,4 +16,4 @@
 
 """Module containing all SQLalchemy Models."""
 
-from . import tasks  # noqa
+from . import tasks, virtual_plugins  # noqa
