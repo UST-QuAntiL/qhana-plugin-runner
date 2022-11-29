@@ -4,7 +4,7 @@ Data loaders load data and metadata from different sources in a specified data f
 
 ## Loading Entities
 
-File Type Tag: `entity`/`entity/list`
+File Type Tag: `entity/list`, `entity/stream`, `entity/numeric`, `entity/vector`...
 
 Entities can be serialized in two different formats (JSON or CSV).
 
@@ -67,7 +67,7 @@ Example {mimetype}`application/X-lines+json`:
 
 ## Attribute Metadata
 
-File Type Tag: `attribute-metadata`
+File Type Tag: `entity/attribute-metadata`
 
 ```{note}
 The plugin runner provides utilities to read attribute metadata and use it to serialize/de-serialize entity attributes.
@@ -131,7 +131,7 @@ color,Color,the color of the paint,string
 
 ## Graphs
 
-File Type Tag: `entity-graph`
+File Type Tag: `graph/*`
 
 Taxonomies and other entity structures that form a graph should be serialized as a graph.
 Formats like CSV are unsuitable to serialize graphs as they would need at least two files, one for the entities and one for the relations.

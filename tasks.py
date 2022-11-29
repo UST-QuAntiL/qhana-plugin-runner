@@ -19,7 +19,7 @@ from pathlib import Path
 from re import match
 from shlex import join
 from shutil import copytree
-from typing import Optional, cast
+from typing import List, Optional, cast
 
 from dotenv import load_dotenv, set_key, unset_key
 from invoke import UnexpectedExit, call, task
@@ -133,7 +133,118 @@ def start_broker(c, port=None):
 
 
 @task
-def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
+def stop_camunda(c):
+    """Stop the previously started camunda container with docker or podman.
+
+    Discovers the container id from the environment variable CAMUNDA_CONTAINER_ID.
+    If the variable is not set ``--latest`` is used (this assumes that the latest
+    created container is the camunda container!).
+
+    To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
+
+    Args:
+        c (Context): task context
+    """
+    c = cast(Context, c)
+    docker_cmd = environ.get("DOCKER_CMD", "docker")
+    container_id = environ.get("CAMUNDA_CONTAINER_ID", "--latest")
+    c.run(join([docker_cmd, "stop", container_id]))
+    if docker_cmd == "podman":
+        reset_camunda(c)
+
+
+@task(stop_broker)
+def reset_camunda(c):
+    """Remove the current camunda container and unset the CAMUNDA_CONTAINER_ID variable.
+
+    Discovers the container id from the environment variable CAMUNDA_CONTAINER_ID.
+    If the variable is not set this task does nothing.
+
+    To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
+
+    Args:
+        c (Context): task context
+    """
+    c = cast(Context, c)
+    docker_cmd = environ.get("DOCKER_CMD", "docker")
+    container_id = environ.get("CAMUNDA_CONTAINER_ID")
+    if not container_id:
+        return
+    c.run(join([docker_cmd, "rm", container_id]), echo=True, warn=True)
+    dot_env_path = Path(".env")
+    unset_key(dot_env_path, "CAMUNDA_CONTAINER_ID")
+
+
+@task
+def start_camunda(c, port=None):
+    """Start the camunda container with docker or podman.
+
+    Resuses an existing container if the environment variable CAMUNDA_CONTAINER_ID is set.
+    The reused container ignores the port option!
+    Sets the environemnt variable in the .env file if a new container is created.
+
+    Camunda port is optionally read from CAMUNDA_PORT environment variable. Use the
+    ``reset-camunda`` task to remove the old container to create a new container
+    with a different port.
+
+    To use podman instead of docker set the DOCKER_CMD environment variable to "podman".
+
+    Args:
+        c (Context): task context
+        port (str, optional): outside port for connections to camunda. Defaults to "8080".
+    """
+    c = cast(Context, c)
+    docker_cmd = environ.get("DOCKER_CMD", "docker")
+    container_id = environ.get("CAMUNDA_CONTAINER_ID", None)
+
+    if container_id and docker_cmd == "podman":
+        reset_camunda(c)
+        container_id = None
+    if container_id:
+        res: Result = c.run(join([docker_cmd, "restart", container_id]), echo=True)
+        if res.failed:
+            print(f"Failed to start container with id {container_id}.")
+        return
+
+    if not port:
+        port = environ.get("CAMUNDA_PORT", "8080")
+    c.run(
+        join(
+            [
+                docker_cmd,
+                "run",
+                "-d",
+                "-p",
+                f"{port}:8080",
+                "camunda/camunda-bpm-platform:run-latest",
+            ]
+        ),
+        echo=True,
+    )
+    result: Result = c.run(join([docker_cmd, "ps", "-q", "--latest"]), hide=True)
+    result_container_id = result.stdout.strip()
+    dot_env_path = Path(".env")
+    if not dot_env_path.exists():
+        dot_env_path.touch()
+    set_key(dot_env_path, "CAMUNDA_CONTAINER_ID", result_container_id)
+
+
+@task(stop_broker, stop_camunda)
+def stop_containers(c):
+    """Stop both the camunda and the redis broker container."""
+    pass
+
+
+@task(start_broker, start_camunda)
+def start_containers(c):
+    """Start both the camunda and the redis broker container."""
+    pass
+
+
+@task
+def worker(
+    c, pool="solo", concurrency=1, dev=False, log_level="INFO", periodic_scheduler=False
+):
     """Run the celery worker, optionally starting the redis broker.
 
     Args:
@@ -142,6 +253,7 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         concurrency (int, optional): the number of concurrent workers (defaults to 1 for development)
         dev (bool, optional): If true the redis docker container will be started before the worker and stopped after the workers finished. Defaults to False.
         log_level (str, optional): The log level of the celery logger in the worker (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
+        periodic_scheduler (bool, optional): If true a celery beat scheduler will be started alongside the worker. This is needed for periodic tasks. Should only be set to True for one worker otherwise the periodic tasks get executed too often (see readme file).
     """
     if dev:
         start_broker(c)
@@ -156,7 +268,12 @@ def worker(c, pool="solo", concurrency=1, dev=False, log_level="INFO"):
         str(concurrency),
         "--loglevel",
         log_level.upper(),
+        "-E",
     ]
+
+    if periodic_scheduler:
+        cmd += ["-B"]
+
     if dev:
         c.run(join(cmd), echo=True)
         stop_broker(c)
@@ -318,7 +435,7 @@ def start_gunicorn(c, workers=1, log_level="info", docker=False):
         "--log-level",
         log_level.lower(),
         "--error-logfile=-",
-        "qhana_plugin_runner:create_app()",
+        f"{MODULE_NAME}:create_app()",
     ]
 
     print(join(cmd))
@@ -439,9 +556,16 @@ def ensure_paths(c):
     Path("/app/instance").mkdir(parents=True, exist_ok=True)
 
 
-@task(ensure_paths, load_git_plugins, install_plugin_dependencies, await_db, upgrade_db)
+@task(ensure_paths)
 def start_docker(c):
     """Docker entry point task. Do not call!"""
+
+    def execute_pre_tasks(do_upgrade_db=False):
+        for task in (load_git_plugins, install_plugin_dependencies, await_db):
+            task(c)
+        if do_upgrade_db:
+            upgrade_db(c)
+
     if not environ.get("QHANA_SECRET_KEY"):
         environ["QHANA_SECRET_KEY"] = urandom(32).hex()
 
@@ -449,13 +573,122 @@ def start_docker(c):
     concurrency_env = environ.get("CONCURRENCY", "1")
     concurrency = int(concurrency_env) if concurrency_env.isdigit() else 1
     if environ.get("CONTAINER_MODE", "").lower() == "server":
+        execute_pre_tasks(do_upgrade_db=True)
         start_gunicorn(c, workers=concurrency, log_level=log_level, docker=True)
     elif environ.get("CONTAINER_MODE", "").lower() == "worker":
-        worker_pool = environ.get("CELERY_WORKER_POOL", "threds")
-        worker(c, concurrency=concurrency, pool=worker_pool, log_level=log_level)
+        execute_pre_tasks()
+        worker_pool = environ.get("CELERY_WORKER_POOL", "threads")
+        periodic_scheduler = bool(environ.get("PERIODIC_SCHEDULER", False))
+        worker(
+            c,
+            concurrency=concurrency,
+            pool=worker_pool,
+            log_level=log_level,
+            periodic_scheduler=periodic_scheduler,
+        )
     else:
         raise ValueError(
             "Environment variable 'CONTAINER_MODE' must be set to either 'server' or 'worker'!"
+        )
+
+
+@task
+def doc(c, format_="html", all_=False, color=True):
+    """Build the documentation.
+
+    Args:
+        c (Context): task context
+        format_ (str, optional): the format to build. Defaults to "html".
+        all (bool, optional): build all files new. Defaults to False.
+        color (bool, optional): color output. Defaults to True.
+    """
+    cmd = ["sphinx-build", "-b", format_]
+    if all_:
+        cmd.append("-a")
+    if color:
+        cmd.append("--color")
+    else:
+        cmd.append("--no-color")
+    cmd += [".", "_build"]
+    with c.cd(str(Path("./docs"))):
+        c.run(join(cmd), echo=True)
+
+
+@task
+def update_source_doc(c):
+    """Update the autogenerated source documentation files.
+
+    Args:
+        c (Context): task context
+    """
+    cmd = [
+        "sphinx-apidoc",
+        "--separate",
+        "--force",
+        "-o",
+        "docs/source",
+        ".",
+        "./tasks.py",
+        "docs",
+        "plugins",  # TODO exclude all known plugin folders!
+        "migrations",
+    ]
+
+    c.run(join(cmd), echo=True)
+
+    # remove unwanted files
+    for p in (
+        Path("docs/source/modules.rst"),
+        Path("docs/source/qhana_plugin_runner.celery_worker.rst"),
+    ):
+        if p.exists():
+            p.unlink()
+
+
+@task
+def browse_doc(c):
+    """Open the documentation in the browser.
+
+    Args:
+        c (Context): task context
+    """
+    index_path = Path("./docs/_build/html/index.html")
+    if not index_path.exists():
+        doc(c)
+
+    print(f"Open: file://{index_path.resolve()}")
+    import webbrowser
+
+    webbrowser.open_new_tab(str(index_path.resolve()))
+
+
+@task
+def doc_index(c, filter_=""):
+    """Search the index of referencable sphinx targets in the documentation.
+
+    Args:
+        c (Context): task context
+        filter_ (str, optional): an optional filter string. Defaults to "".
+    """
+    inv_path = Path("./docs/_build/html/objects.inv")
+    if not inv_path.exists():
+        doc(c)
+
+    if filter_:
+        filter_ = filter_.lower()
+
+    with c.cd(str(Path("./docs"))):
+        output: Result = c.run(
+            join(["python", "-m", "sphinx.ext.intersphinx", "_build/html/objects.inv"]),
+            echo=True,
+            hide="stdout",
+        )
+        print(
+            "".join(
+                l
+                for l in output.stdout.splitlines(True)
+                if (l and not l[0].isspace()) or (not filter_) or (filter_ in l.lower())
+            ),
         )
 
 
@@ -475,15 +708,15 @@ def list_licenses(
         short (bool, optional): If true only name, version, license and authors of a apackage are printed. Defaults to False.
         echo (bool, optional): If true the command used to generate the license output is printed to console. Defaults to False.
     """
-    packages = []
+    packages: List[str] = []
     if not include_installed:
-        packages_output = c.run(
+        packages_output: Result = c.run(
             join(["poetry", "export", "--dev", "--without-hashes"]),
             echo=False,
             hide="both",
         )
         packages = [p.split("=", 1)[0] for p in packages_output.stdout.splitlines() if p]
-    cmd = [
+    cmd: List[str] = [
         "pip-licenses",
         "--format",
         format_,
@@ -523,20 +756,20 @@ def update_licenses(c, include_installed=False):
         c (Context): task context
         include_installed (bool, optional): Include all currently installed libraries. Defaults to False.
     """
-    packages = []
+    packages: List[str] = []
     if not include_installed:
-        packages_output = c.run(
+        packages_output: Result = c.run(
             join(["poetry", "export", "--dev", "--without-hashes"]),
             echo=False,
             hide="both",
         )
         packages = [p.split("=", 1)[0] for p in packages_output.stdout.splitlines() if p]
-    cmd = [
+    cmd: List[str] = [
         "pip-licenses",
         "--format",
         "html",
         "--output-file",
-        str(Path("./qhana_plugin_runner/templates/licenses.html")),
+        str((Path(".") / Path(MODULE_NAME) / Path("templates/licenses.html")).resolve()),
         "--with-authors",
         "--with-urls",
         "--with-description",

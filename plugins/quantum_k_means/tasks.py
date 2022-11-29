@@ -1,3 +1,17 @@
+# Copyright 2022 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from tempfile import SpooledTemporaryFile
 
@@ -6,23 +20,50 @@ from typing import Optional
 from celery.utils.log import get_task_logger
 
 from . import QKMeans
-from .backend.clustering import (
-    Clustering,
-    NegativeRotationQuantumKMeansClustering,
-    DestructiveInterferenceQuantumKMeansClustering,
-    StatePreparationQuantumKMeansClustering,
-    PositiveCorrelationQuantumKMeansClustering,
+from .schemas import (
+    InputParameters,
+    InputParametersSchema,
 )
-from .schemas import InputParameters, InputParametersSchema, VariantEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    save_entities, load_entities, ensure_dict
+)
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
 import numpy as np
 
+from .backend.visualize import plot_data
+
+
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_point(ent):
+    dimension_keys = list(ent.keys())
+    dimension_keys.remove("ID")
+    dimension_keys.remove("href")
+
+    dimension_keys.sort()
+    point = np.empty((len(dimension_keys, )))
+    for idx, d in enumerate(dimension_keys):
+        point[idx] = ent[d]
+    return point
+
+
+def get_entity_generator(entity_points_url: str):
+    """
+    Return a generator for the entity points, given an url to them.
+    :param entity_points_url: url to the entity points
+    """
+    file_ = open_url(entity_points_url)
+    file_.encoding = "utf-8"
+    file_type = file_.headers["Content-Type"]
+    entities_generator = load_entities(file_, mimetype=file_type)
+    entities_generator = ensure_dict(entities_generator)
+    for ent in entities_generator:
+        yield {"ID": ent["ID"], "href": ent.get("href", ""), "point": get_point(ent)}
 
 
 @CELERY.task(name=f"{QKMeans.instance.identifier}.calculation_task", bind=True)
@@ -42,26 +83,26 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entity_points_url = input_params.entity_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: entity_points_url='{entity_points_url}'"
-    )
     clusters_cnt = input_params.clusters_cnt
-    TASK_LOGGER.info(f"Loaded input parameters from db: clusters='{clusters_cnt}'")
     variant = input_params.variant
-    TASK_LOGGER.info(f"Loaded input parameters from db: variant='{variant}'")
+    tol = input_params.tol
+    max_runs = input_params.max_runs
     backend = input_params.backend
-    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
+    shots = input_params.shots
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(input_params)}"
+    )
 
     if ibmq_token == "****":
-        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+        TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
         if "IBMQ_TOKEN" in os.environ:
             ibmq_token = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
-            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+            TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
     custom_backend = input_params.custom_backend
     TASK_LOGGER.info(
@@ -70,7 +111,7 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
 
-    entity_points = open_url(entity_points_url).json()
+    entity_points = list(get_entity_generator(entity_points_url))
     id_to_idx = {}
 
     idx = 0
@@ -90,40 +131,15 @@ def calculation_task(self, db_id: int) -> str:
         idx = id_to_idx[ent["ID"]]
         points_arr[idx] = ent["point"]
 
-    algo: Clustering
+    max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
+    if max_qbits is None:
+        max_qbits = 6
+    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
+    backend.shots = shots
 
-    if variant == VariantEnum.negative_rotation:
-        algo = NegativeRotationQuantumKMeansClustering(
-            number_of_clusters=clusters_cnt,
-            backend=backend,
-            ibmq_token=ibmq_token,
-            ibmq_custom_backend=custom_backend,
-        )
-    elif variant == VariantEnum.destructive_interference:
-        algo = DestructiveInterferenceQuantumKMeansClustering(
-            number_of_clusters=clusters_cnt,
-            backend=backend,
-            ibmq_token=ibmq_token,
-            ibmq_custom_backend=custom_backend,
-        )
-    elif variant == VariantEnum.state_preparation:
-        algo = StatePreparationQuantumKMeansClustering(
-            number_of_clusters=clusters_cnt,
-            backend=backend,
-            ibmq_token=ibmq_token,
-            ibmq_custom_backend=custom_backend,
-        )
-    elif variant == VariantEnum.positive_correlation:
-        algo = PositiveCorrelationQuantumKMeansClustering(
-            number_of_clusters=clusters_cnt,
-            backend=backend,
-            ibmq_token=ibmq_token,
-            ibmq_custom_backend=custom_backend,
-        )
-    else:
-        raise ValueError("Unknown variant.")
+    cluster_algo = variant.get_cluster_algo(backend, tol, max_runs)
 
-    clusters, representative_circuit = algo.create_cluster(points_arr)
+    clusters, representative_circuit = cluster_algo.create_clusters(points_arr, clusters_cnt)
 
     entity_clusters = []
 
@@ -140,6 +156,22 @@ def calculation_task(self, db_id: int) -> str:
             "application/json",
         )
 
+    fig = plot_data(entity_points, entity_clusters)
+    if fig is not None:
+        fig.update_layout(showlegend=False)
+
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "plot.html",
+                "plot",
+                "text/html",
+            )
+
     with SpooledTemporaryFile(mode="w") as output:
         output.write(representative_circuit)
         STORE.persist_task_result(
@@ -147,7 +179,7 @@ def calculation_task(self, db_id: int) -> str:
             output,
             "representative_circuit.qasm",
             "representative-circuit",
-            "application/qasm",
+            "text/x-qasm",
         )
 
     return "Result stored in file"

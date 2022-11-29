@@ -1,0 +1,198 @@
+{% import 'forms.html' as forms %}
+
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+</head>
+
+<body>
+    <div class="qhana-microfrontend">
+        {% if help_text or example_values %}
+        <details class="qhana-help">
+            <summary>Help</summary>
+            {% if help_text %}
+            {% autoescape false %}
+            {{help_text | markdown}}
+            {% endautoescape %}
+            {% else %}
+            <br>
+            {% endif %}
+            {% if example_values %}
+            <a href="{{example_values}}">Fill in example values.</a>
+            {% endif %}
+        </details>
+        {% endif %}
+        {% call forms.render_form(target="microfrontend") %}
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend")}}
+            {{ forms.submit("submit", action=process)}}
+            {% if done %}
+            {{ forms.submit("done", action=done)}}
+            {% endif %}
+        </div>
+        {% endcall %}
+    </div>
+
+    <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
+    <script>
+        // Long block of just gathering elements
+        // If a variable ends with _value, it's the element itself and the value can be retrieved or set
+        var pca_type_value = document.getElementById("pca_type");
+        var kernel_type_value = document.getElementById("kernel");
+        var solver_value = document.getElementById("solver");
+        var batch_size_value = document.getElementById("batch_size")
+        var sparsity_alpha_value = document.getElementById("sparsity_alpha");
+        var ridge_alpha_value = document.getElementById("ridge_alpha");
+        var degree_value = document.getElementById("degree");
+        var kernel_gamma_value = document.getElementById("kernel_gamma");
+        var kernel_coef_value = document.getElementById("kernel_coef");
+        var max_itr_value = document.getElementById("max_itr");
+        var tol_value = document.getElementById("tol");
+        var iterated_power_value = document.getElementById("iterated_power");
+
+        // If a vairable ends with _vis, it's the parentNode's parentNode and we can set the visibility
+        var entity_points_url_vis = document.getElementById("entity_points_url").parentNode.parentNode;
+        var solver_vis = solver_value.parentNode.parentNode;
+        var batch_size_vis = batch_size_value.parentNode.parentNode;
+        var sparsity_alpha_vis = sparsity_alpha_value.parentNode.parentNode;
+        var ridge_alpha_vis = ridge_alpha_value.parentNode.parentNode;
+        var kernel_vis = kernel_type_value.parentNode.parentNode;
+        var kernel_url_vis = document.getElementById("kernel_url").parentNode.parentNode;
+        var degree_vis = degree_value.parentNode.parentNode;
+        var kernel_gamma_vis = kernel_gamma_value.parentNode.parentNode;
+        var kernel_coef_vis = kernel_coef_value.parentNode.parentNode;
+        var max_itr_vis = max_itr_value.parentNode.parentNode;
+        var tol_vis = tol_value.parentNode.parentNode;
+        var iterated_power_vis = iterated_power_value.parentNode.parentNode;
+
+
+        function set_default_kernel_values() {
+            degree_value.value = "3";
+            kernel_gamma_value.value = "0.1";
+            kernel_coef_value.value = "1";
+        }
+
+        function set_default_values() {
+            solver_value.value = "auto";
+            batch_size_value.value = "1";
+            sparsity_alpha_value.value = "1";
+            ridge_alpha_value.value = "0.01";
+            kernel_type_value.value = "linear";
+            set_default_kernel_values();
+            max_itr_value.value = "1000";
+            tol_value.value = "0";
+            iterated_power_value.value = "0";
+        }
+
+
+        // If the pca type is the KernelPCA, then we can choose a type of kernel, e.g. linear
+        // Different kernel types need different input parameters
+        function kernel_type_change(reset_values=true) {
+            kernel_coef_vis.style.display = 'none';
+            degree_vis.style.display = 'none';
+            kernel_gamma_vis.style.display = 'none';
+            kernel_url_vis.style.display = 'none';
+
+            if (reset_values){
+                set_default_kernel_values();
+            }
+
+            if (kernel_type_value.value === "poly") {
+                kernel_coef_vis.style.display = 'block';
+                degree_vis.style.display = 'block';
+                kernel_gamma_vis.style.display = 'block';
+            }
+            else if (kernel_type_value.value === "rbf") {
+                kernel_gamma_vis.style.display = 'block';
+            }
+            else if (kernel_type_value.value === "sigmoid") {
+                kernel_coef_vis.style.display = 'block';
+                kernel_gamma_vis.style.display = 'block';
+            }
+            else if (kernel_type_value.value === "precomputed") {
+                kernel_url_vis.style.display = 'block';
+                entity_points_url_vis.style.display = 'none';
+            }
+        }
+
+
+        function hide_all() {
+            solver_vis.style.display = 'none';
+            batch_size_vis.style.display = 'none';
+            sparsity_alpha_vis.style.display = 'none';
+            ridge_alpha_vis.style.display = 'none';
+            kernel_vis.style.display = 'none';
+            kernel_url_vis.style.display = 'none';
+            degree_vis.style.display = 'none';
+            kernel_gamma_vis.style.display = 'none';
+            kernel_coef_vis.style.display = 'none';
+            max_itr_vis.style.display = 'none';
+            tol_vis.style.display = 'none';
+            iterated_power_vis.style.display = 'none';
+        }
+
+        function show_normal() {
+            solver_vis.style.display = 'block';
+            tol_vis.style.display = 'block';
+            iterated_power_vis.style.display = 'block';
+        }
+
+        function show_incremental() {
+            solver_vis.style.display = 'block';
+            batch_size_vis.style.display = 'block';
+        }
+
+        function show_sparse() {
+            solver_vis.style.display = 'block';
+            sparsity_alpha_vis.style.display = 'block';
+            ridge_alpha_vis.style.display = 'block';
+            max_itr_vis.style.display = 'block';
+            tol_vis.style.display = 'block';
+        }
+
+        function show_kernel() {
+            kernel_vis.style.display = 'block';
+            // The following parameters in comments belong to the KernalPCA, but only specific kernels use them.
+            // Therefor, kernel_type_change() manages their visibility
+            // kernel_coef.style.display = 'block';
+            // degree.style.display = 'block';
+            // kernel_gamma.style.display = 'block';
+            // kernel_url.style.display = 'block';
+
+            solver_vis.style.display = 'block';
+            tol_vis.style.display = 'block';
+            iterated_power_vis.style.display = 'block';
+        }
+
+        function pca_type_change(reset_values=true) {
+            hide_all();
+            if (reset_values) {
+                set_default_values();
+            }
+            entity_points_url_vis.style.display = 'block';
+            if (pca_type_value.value === "normal") {
+                show_normal();
+            }
+            else if (pca_type_value.value === "incremental") {
+                show_incremental();
+            }
+            else if (pca_type_value.value === "sparse") {
+                show_sparse();
+            }
+            else if (pca_type_value.value === "kernel") {
+                show_kernel();
+                kernel_type_change(reset_values);
+            }
+        }
+
+        pca_type_change(false);
+
+        pca_type_value.onchange = pca_type_change;
+        kernel_type_value.onchange = kernel_type_change;
+    </script>
+</body>
+
+</html>

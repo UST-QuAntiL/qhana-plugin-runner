@@ -31,7 +31,7 @@ RUN mkdir /venv && mkdir --parents /app/instance \
     && mkdir /home/gunicorn && chown --recursive gunicorn /home/gunicorn
 
 # Wait for database
-ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
 RUN chmod +x /wait
 
 RUN python -m pip install poetry gunicorn

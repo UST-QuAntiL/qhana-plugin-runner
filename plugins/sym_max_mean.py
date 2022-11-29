@@ -301,8 +301,7 @@ def calculation_task(self, db_id: int) -> str:
         attr_name = file_name[:-5]
 
         element_similarities[attr_name] = {
-            (element["value_1"], element["value_2"]): element
-            for element in json.load(file)
+            (element["source"], element["target"]): element for element in json.load(file)
         }
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")

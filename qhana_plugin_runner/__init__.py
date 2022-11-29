@@ -92,11 +92,20 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         # TODO load some config keys directly from env vars
 
         # load Redis URLs from env vars
-        if "BROKER_URL" in os.environ and "RESULT_BACKEND" in os.environ:
-            config["CELERY"] = {
-                "broker_url": os.environ["BROKER_URL"],
-                "result_backend": os.environ["RESULT_BACKEND"],
-            }
+        if "BROKER_URL" in environ:
+            celery_conf = config.get("CELERY", {})
+            celery_conf["broker_url"] = environ["BROKER_URL"]
+            config["CELERY"] = celery_conf
+
+        if "RESULT_BACKEND" in environ:
+            celery_conf = config.get("CELERY", {})
+            celery_conf["result_backend"] = environ["RESULT_BACKEND"]
+            config["CELERY"] = celery_conf
+
+        if "CELERY_QUEUE" in environ:
+            celery_conf = config.get("CELERY", {})
+            celery_conf["task_default_queue"] = environ["CELERY_QUEUE"]
+            config["CELERY"] = celery_conf
 
         if "PLUGIN_FOLDERS" in os.environ:
             config["PLUGIN_FOLDERS"] = [
@@ -117,6 +126,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
         if "DEFAULT_FILE_STORE" in os.environ:
             config["DEFAULT_FILE_STORE"] = os.environ["DEFAULT_FILE_STORE"]
+
+        if "SERVER_NAME" in os.environ:
+            config["SERVER_NAME"] = os.environ["SERVER_NAME"]
     else:
         # load the test config if passed in
         config.from_mapping(test_config)

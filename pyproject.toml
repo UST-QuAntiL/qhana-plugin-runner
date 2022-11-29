@@ -7,7 +7,7 @@ license = "Apache-2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 flask = { extras = ["dotenv"], version = "^2.0.0" }
 Flask-JWT-Extended = "^4.0.0"
 Flask-Cors = "^3.0.10"
@@ -27,9 +27,10 @@ sqlalchemy-json = "^0.5.0"
 invoke = "^1.5.0"
 psycopg2 = {version = "^2.9.3", optional = true}
 PyMySQL = {version = "^1.0.2", optional = true}
+linuxdoc = "^20221025"
 
 [tool.poetry.dev-dependencies]
-black = "^21.5b1"
+black = "^22.6.0"
 flake8 = "^3.9.2"
 pytest = "^6.2.4"
 flake8-docstrings = "^1.6.0"
@@ -80,7 +81,7 @@ python_use_unqualified_type_names = true
 
 [tool.sphinx.intersphinx-mapping]
 python = ["https://docs.python.org/3"]
-requests = ["https://docs.python-requests.org/en/master/"]
+requests = ["https://requests.readthedocs.io/en/latest/"]
 celery = ["https://docs.celeryproject.org/en/stable/"]
 # user documentation
 qhana = ["https://qhana.readthedocs.io/en/latest/"]

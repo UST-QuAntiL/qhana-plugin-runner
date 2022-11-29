@@ -449,7 +449,7 @@ Plugins with external dependencies must fail gracefully if their dependencies ar
 Otherwise they cannot inform the plugin runner about their dependencies.
 
 Late Imports of Dependencies
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+''''''''''''''''''''''''''''
 
 Instead of importing dependencies at the top of the module import your dependency locally (i.e. in the celery task instead of in the module).
 This allows the plugin to load while the failing import does not get executed until the task is called.
@@ -457,7 +457,7 @@ This allows the plugin to load while the failing import does not get executed un
 This method is useful for one-module plugins that rely on external dependencies for specific calculations/functionality.
 
 Catch import Errors
-^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''
 
 Surround the failing import with ``try``-``except`` and handle cases where the import failed gracefully.
 A failing import can produce ``NameErrors`` when code tries to use the imported names.
@@ -465,14 +465,14 @@ A failing import can produce ``NameErrors`` when code tries to use the imported 
 This method is useful for one-module plugins that rely on external dependencies for specific calculations/functionality.
 
 Reorganize Code
-^^^^^^^^^^^^^^^
+'''''''''''''''
 
 If the external dependency is tightly integrated into your plugin (e.g. through type hints) then it is best to move all code depending on the external functions into its own module or package.
 This means that your plugin should be a python package!
 Then one of the above techniques can be used to import that package.
 
 Import in :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_api_blueprint` method
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 This is a combination of all the above strategies.
 The import happens late in the :py:meth:`~qhana_plugin_runner.util.plugins.QHAnaPluginBase.get_api_blueprint` method of the plugin.

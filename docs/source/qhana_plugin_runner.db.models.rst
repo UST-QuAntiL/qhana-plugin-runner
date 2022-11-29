@@ -7,6 +7,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   qhana_plugin_runner.db.models.mutable_json
    qhana_plugin_runner.db.models.tasks
 
 Module contents

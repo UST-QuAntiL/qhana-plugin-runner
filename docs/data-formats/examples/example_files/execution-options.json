@@ -1,0 +1,7 @@
+{
+    "shots": 1024,
+    "qpu": "aer-statevector",
+    "sdk": "qiskit",
+    "sdkVersion": "0.27",
+    "provider": "IBM"
+}
