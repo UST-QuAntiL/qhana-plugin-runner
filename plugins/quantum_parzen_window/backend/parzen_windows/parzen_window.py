@@ -5,6 +5,13 @@ from typing import List
 from pennylane import QuantumFunctionError, Device
 
 
+def count_wires(wires: List[List]):
+    s = 0
+    for w in wires:
+        s += len(w)
+    return s
+
+
 class QParzenWindowEnum(Enum):
     ruan_window = "ruan et al. parzen window"
 
@@ -15,7 +22,7 @@ class QParzenWindowEnum(Enum):
             if use_access_wires:
                 wires[2] = wires[2]+access_wires
 
-            return RuanParzenWindow(train_data, train_labels, window_size, wires[0], wires[1], wires[2], None)
+            return RuanParzenWindow(train_data, train_labels, window_size, wires[0], wires[1], wires[2], None), count_wires(wires)
 
     def check_and_get_qubits(self, qknn_class, max_wires, **kwargs):
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)
