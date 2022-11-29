@@ -20,7 +20,13 @@ QParzenWindow_BLP = SecurityBlueprint(
 class QParzenWindow(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "parzen window algorithms that can run on quantum computers."
+    description = (
+        "This plugin implements a quantum parzen window. A parzen window labels an unlabeled data point via a majority "
+        "vote of all labeled points that are at most a certain distance away from the unlabeled point."
+        "The Plugin implements the algorithms by Ruan et al. [0].\n\n"
+        "Source:\n"
+        "[0] [Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest Neighbors Classification Based on the Metric of Hamming Distance. Int J Theor Phys 56, 3496–3507 (2017).](https://doi.org/10.1007/s10773-017-3514-4)\n"
+    )
     tags = ["parzen-window", "supervised-learning", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:

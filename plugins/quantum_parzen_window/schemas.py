@@ -100,7 +100,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Variant",
-            "description": "Variant of quantum parzen window that will be used.",
+            "description": "ruan parzen window: This parzen window uses the Hamming distance and thus only works for "
+                           "binary data points. It was developed by Ruan et al. in [0].",
             "input_type": "select",
         },
     )
