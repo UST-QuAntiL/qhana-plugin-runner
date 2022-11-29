@@ -8,25 +8,29 @@ from pennylane import QuantumFunctionError, Device
 class QParzenWindowEnum(Enum):
     ruan_window = "ruan et al. parzen window"
 
-    def get_parzen_window(self, train_data, train_labels, window_size, backend, shots):
+    def get_parzen_window(self, train_data, train_labels, window_size, max_wires, use_access_wires=True):
         if self == QParzenWindowEnum.ruan_window:
             from .ruan_parzen_window import RuanParzenWindow
-            wires = self.check_and_get_qubits(RuanParzenWindow, backend, train_data=train_data, train_labels=train_labels)
-            return RuanParzenWindow(train_data, train_labels, window_size, wires[0], wires[1], wires[2], backend)
+            wires, access_wires = self.check_and_get_qubits(RuanParzenWindow, max_wires, train_data=train_data, train_labels=train_labels)
+            if use_access_wires:
+                wires[2] = wires[2]+access_wires
 
-    def check_and_get_qubits(self, qknn_class, backend, **kwargs):
+            return RuanParzenWindow(train_data, train_labels, window_size, wires[0], wires[1], wires[2], None)
+
+    def check_and_get_qubits(self, qknn_class, max_wires, **kwargs):
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)
         num_total_wires = 0
         wires = []
         for num_wires in num_necessary_wires:
             wires.append(list(range(num_total_wires, num_total_wires + num_wires)))
             num_total_wires += num_wires
-        if num_total_wires > backend.num_wires:
+        if num_total_wires > max_wires:
             raise ValueError(
                 "The quantum circuit needs at least " + str(num_total_wires)
-                + " qubits, but it only got " + str(backend.num_wires) + "!"
+                + " qubits, but it only got " + str(max_wires) + "!"
             )
-        return wires
+        access_wires = list(range(num_total_wires, max_wires))
+        return wires, access_wires
 
     def get_preferred_backend(self):
         # if self == QkNNEnum.qiskit_qknn:
@@ -45,6 +49,9 @@ class ParzenWindow:
         self.train_labels = train_labels
         self.unique_labels = list(set(self.train_labels))
         self.distance_threshold = distance_threshold
+
+    def set_quantum_backend(self, backend):
+        self.backend = backend
 
     def get_representative_circuit(self, X) -> str:
         return ""
