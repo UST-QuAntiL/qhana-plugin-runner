@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
-from typing import TYPE_CHECKING, List, Optional, Sequence
+from typing import TYPE_CHECKING, List, Optional, Sequence, Dict, Any
 
 import requests
 from celery.utils.log import get_task_logger
@@ -28,21 +28,33 @@ class ParameterParsingError(ValueError):
 
 class QhanaTaskClient:
     """
-    Gets all available plugins and creates qhana plugin instances from camunda external tasks.
+    A client for executing QHAna plugins and retreiving their results.
     Completes camunda external tasks and forwards results to the result store
     """
 
     def __init__(
         self,
-        plugin_runner_endpoints: List[str],
     ):
-        self.plugin_runner_endpoints = plugin_runner_endpoints
-        self._plugins: Optional[List[QhanaPlugin]] = None
         self.timeout: int = config.get("request_timeout", 5 * 60)
 
-    def call_qhana_plugin(self, plugin: QhanaPlugin, params):
+    def call_qhana_plugin(self, plugin: Dict[str, Any], params):
+        process_endpoint: Optional[str] = None
+        href: Optional[str] = (
+                        plugin.get("entryPoint", {}).get("href", None)
+                    )
+        if href:
+            if href.startswith(("http://", "https://")):
+                process_endpoint = href
+            else:
+                process_endpoint = (
+                    f"{plugin.get('url', '').rstrip('/')}/{href.lstrip('/')}"
+                )
+
+        if process_endpoint is None:
+            raise ValueError("The plugin does not contain a valid URL for the processing endpoint!")
+
         response = requests.post(
-            plugin.process_endpoint, data=params, timeout=self.timeout
+            process_endpoint, data=params, timeout=self.timeout
         )
 
         response.raise_for_status()
@@ -56,70 +68,28 @@ class QhanaTaskClient:
         response = requests.post(href, data=params, timeout=self.timeout)
         response.raise_for_status()
 
-    def _get_plugins_from_endpoints(self):
-        """
-        Retrieves the hosted plugins from the specified QHAna endpoints
-        """
-        plugin_list: List[QhanaPlugin] = []
-        for endpoint in self.plugin_runner_endpoints:
-            response = requests.get(f"{endpoint}/plugins/", timeout=self.timeout)
-            response.raise_for_status()
-            for plugin in response.json()["plugins"]:
-                try:
-                    plugin_response = requests.get(
-                        plugin["apiRoot"], timeout=self.timeout
-                    )
-                    href: Optional[str] = (
-                        plugin_response.json().get("entryPoint", {}).get("href", None)
-                    )
-                    if href:
-                        if href.startswith(("http://", "https://")):
-                            process_endpoint = href
-                        else:
-                            process_endpoint = (
-                                f"{endpoint.rstrip('/')}/{href.lstrip('/')}"
-                            )
-                    else:
-                        process_endpoint = f'{plugin["apiRoot"]}/process/'
-
-                    plugin_list.append(
-                        QhanaPlugin.deserialize(plugin, endpoint, process_endpoint)
-                    )
-                except Exception:
-                    TASK_LOGGER.info(f"Failed to load plugin {plugin}")
-        self._plugins = plugin_list
-
-    def get_plugins(self) -> Sequence[QhanaPlugin]:
-        if self._plugins is not None:
-            return self._plugins
-        self._get_plugins_from_endpoints()
-        assert self._plugins is not None
-        return self._plugins if self._plugins is not None else []
-
-    def resolve(self, plugin_name):
-        """
-        Retrieves the plugin from the provided plugin name
-        :param plugin_name: Name of the plugin
-        :return: Plugin
-        """
-
-        def match_plugin(plugin: QhanaPlugin) -> bool:
-            # TODO replace this matcher with a more sophisticated version once
-            # the plugin registry is integrated
-            return plugin.name == plugin_name or plugin.identifier == plugin_name
-
-        self.get_plugins()
-        plugin = next(filter(match_plugin, self.get_plugins()), None)
-
-        return plugin
-
-    def get_micro_frontend(self, plugin: QhanaPlugin):
+    def get_micro_frontend(self, plugin: Dict[str, Any]):
         """
         Retrieves the micro frontend of a plugin
         :param plugin: Plugin for retrieving the micro frontend
         :return:
         """
-        response = requests.get(f"{plugin.api_root}/ui/", timeout=self.timeout)
+        ui_endpoint: Optional[str] = None
+        href: Optional[str] = (
+                        plugin.get("entryPoint", {}).get("uiHref", None)
+                    )
+        if href:
+            if href.startswith(("http://", "https://")):
+                ui_endpoint = href
+            else:
+                ui_endpoint = (
+                    f"{plugin.get('url', '').rstrip('/')}/{href.lstrip('/')}"
+                )
+
+        if ui_endpoint is None:
+            raise ValueError("The plugin does not contain a valid URL for the user interface endpoint!")
+
+        response = requests.get(ui_endpoint, timeout=self.timeout)
         response.raise_for_status()
         return response.text
 
@@ -183,15 +153,12 @@ class QhanaTaskClient:
 
         return plugin_inputs
 
-    def get_plugin_inputs(self, plugin: QhanaPlugin):
+    def get_plugin_inputs(self, plugin: Dict[str, Any]):
         """
         Gets the list of inputs for a given plugin
         :param plugin: The plugin to get inputs for
         :return:
         """
-        url = plugin.api_root if plugin.api_root.endswith("/") else f"{plugin.api_root}/"
-        response = requests.get(url, timeout=self.timeout)
-        response.raise_for_status()
-        inputs = response.json()["entryPoint"]["dataInput"]
+        inputs = plugin["entryPoint"]["dataInput"]
 
         return [QhanaInput.deserialize(i) for i in inputs]
