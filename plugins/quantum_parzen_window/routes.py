@@ -35,9 +35,9 @@ class PluginsView(MethodView):
     @QParzenWindow_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @QParzenWindow_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        """Quantum k nearest neighbours endpoint returning the plugin metadata."""
+        """Quantum parzen window endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Quantum k Nearest Neighbours",
+            title="Quantum Parzen Window",
             description=QParzenWindow.instance.description,
             name=QParzenWindow.instance.name,
             version=QParzenWindow.instance.version,
@@ -67,7 +67,7 @@ class PluginsView(MethodView):
 
 @QParzenWindow_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the quantum k nearest neighbours plugin."""
+    """Micro frontend for the quantum parzen window plugin."""
 
     @QParzenWindow_BLP.html_response(
         HTTPStatus.OK,
