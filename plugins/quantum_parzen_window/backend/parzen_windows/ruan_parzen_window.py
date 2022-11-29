@@ -31,9 +31,11 @@ class RuanParzenWindow(ParzenWindow):
         self.train_wires = train_wires
         self.label_wires = label_wires
         self.qam_ancilla_wires = qam_ancilla_wires
-        wire_types = ["train", "qam_ancilla", "label", "unclean"]
-        num_wires = [self.train_data.shape[1], self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels)))))]
-        error_msgs = ["the points' dimensionality.", "the points' dimensionality.", "ceil(log2(len(unique labels)))."]
+
+        wire_types = ["train", "label", "qam_ancilla", "unclean"]
+        # num_wires = [self.train_data.shape[1], self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels)))))]
+        num_wires = [self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels))))), np.ceil(np.log2(self.train_data.shape[1]))+4]
+        error_msgs = ["the points' dimensionality.", "ceil(log2(the points' dimensionality)))+2.", "ceil(log2(len(unique labels)))."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
@@ -65,12 +67,12 @@ class RuanParzenWindow(ParzenWindow):
                 if self.a[i] == 1:
                     qml.PauliX((self.qam_ancilla_wires[i],))
             # Increment overflow register for each 1 in the train register
-            qml.PauliX((self.qam_ancilla_wires[2*len(self.a)],))    # Allows us to set ancilla_is_zero to False
+            qml.PauliX((self.qam_ancilla_wires[len(self.a)],))    # Allows us to set ancilla_is_zero to False
             for i in range(len(self.train_wires)):
                 cc_increment_register(
                     [self.train_wires[i]], self.qam_ancilla_wires[:len(self.a)],
-                    self.qam_ancilla_wires[len(self.a):2*len(self.a)] + self.qam_ancilla_wires[2*len(self.a)+1:],
-                    self.qam_ancilla_wires[2*len(self.a)],
+                    self.qam_ancilla_wires[len(self.a)+1:],
+                    self.qam_ancilla_wires[len(self.a)],
                     unclean_wires=self.unclean_wires + self.train_wires[:i] + self.train_wires[i+1:],
                     ancilla_is_zero=False
                 )
@@ -79,11 +81,11 @@ class RuanParzenWindow(ParzenWindow):
                 qml.PauliX((self.qam_ancilla_wires[:len(self.a)][i],))
             adaptive_ccnot(
                 self.qam_ancilla_wires[:len(self.a)][:2],
-                self.qam_ancilla_wires[len(self.a):2*len(self.a)] + self.qam_ancilla_wires[2*len(self.a)+1:],
+                self.qam_ancilla_wires[len(self.a)+1:],
                 self.train_wires,
-                self.qam_ancilla_wires[2*len(self.a)]
+                self.qam_ancilla_wires[len(self.a)]
             )
-            return qml.sample(wires=self.label_wires + [self.qam_ancilla_wires[2*len(self.a)]])
+            return qml.sample(wires=self.label_wires + [self.qam_ancilla_wires[len(self.a)]])
         return quantum_circuit
 
     def get_label_from_samples(self, samples):
@@ -104,10 +106,12 @@ class RuanParzenWindow(ParzenWindow):
 
     @staticmethod
     def get_necessary_wires(train_data, train_labels):
-        if len(train_data[0]) < 13:
-            k = int(np.ceil(np.log2(len(train_data[0]))))
-            return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), 2*k + 5
-        return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), len(train_data[0])
+        # if len(train_data[0]) < 13:
+        #     k = int(np.ceil(np.log2(len(train_data[0]))))
+        #     return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), 2*k + 5
+
+        unique_labels = list(set(train_labels))
+        return int(len(train_data[0])), max(1, int(np.ceil(np.log2(len(unique_labels))))), int(np.ceil(np.log2(len(train_data[0])))+4)
 
     def get_representative_circuit(self, X) -> str:
         circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
