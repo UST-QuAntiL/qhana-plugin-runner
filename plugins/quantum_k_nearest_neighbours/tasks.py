@@ -139,6 +139,7 @@ def calculation_task(self, db_id: int) -> str:
 
     # Set backend
     backend = backend.get_pennylane_backend(ibmq_token, custom_backend, num_qbits)
+    backend.shots = shots
     qknn.set_quantum_backend(backend)
 
     print(f"backend.num_qubits = {backend.num_wires}")
