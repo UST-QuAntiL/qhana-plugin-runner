@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import pennylane as qml
 from ..data_loading_circuits.quantum_associative_memory import QAM
-from ..ccnot import unclean_ccnot, adaptive_ccnot
+from ..ccnot import adaptive_ccnot
 from ..utils import int_to_bitlist, bitlist_to_int, check_if_values_are_binary
 from ..q_arithmetic import cc_increment_register
 from ..check_wires import check_wires_uniqueness, check_num_wires
