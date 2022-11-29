@@ -13,7 +13,7 @@ def count_wires(wires: List[List]):
 
 
 class QParzenWindowEnum(Enum):
-    ruan_window = "ruan et al. parzen window"
+    ruan_window = "ruan parzen window"
 
     def get_parzen_window(self, train_data, train_labels, window_size, max_wires, use_access_wires=True):
         if self == QParzenWindowEnum.ruan_window:
