@@ -27,6 +27,7 @@ class InputParameters:
         test_points_url: str,
         window_size: int,
         variant: QParzenWindowEnum,
+        minimize_qubit_count: bool,
         backend: QuantumBackends,
         shots: int,
         ibmq_token: str,
@@ -37,10 +38,16 @@ class InputParameters:
         self.test_points_url = test_points_url
         self.window_size = window_size
         self.variant = variant
+        self.minimize_qubit_count = minimize_qubit_count
         self.backend = backend
         self.shots = shots
         self.ibmq_token = ibmq_token
         self.custom_backend = custom_backend
+
+        def __str__(self):
+            variables = self.__dict__.copy()
+            variables["ibmq_token"] = ""
+            return str(variables)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -97,6 +104,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
+    minimize_qubit_count = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Minimize Qubit Count",
+            "description": "If checked, then the amount of qubits used will be minimized. "
+                           "A consequence of this is an increased circuit depth.<br>"
+                           "Minimizing the qubit count is good, when the chosen quantum backend is a classical simulator.",
+            "input_type": "checkbox",
+        }
+    )
     backend = EnumField(
         QuantumBackends,
         required=True,
@@ -138,4 +156,5 @@ class InputParametersSchema(FrontendFormBaseSchema):
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
+        data["minimize_qubit_count"] = data.get("minimize_qubit_count", False)
         return InputParameters(**data)

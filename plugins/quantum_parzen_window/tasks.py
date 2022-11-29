@@ -23,8 +23,23 @@ from .backend.visualize import plot_data
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def get_point(ent):
+    dimension_keys = list(ent.keys())
+    dimension_keys.remove("ID")
+    dimension_keys.remove("href")
+
+    dimension_keys.sort()
+    point = np.empty(len(dimension_keys))
+    for idx, d in enumerate(dimension_keys):
+        point[idx] = ent[d]
+    return point
+
+
 def load_entity_points_from_url(entity_points_url: str):
-    # load data from file
+    """
+    Loads in entity points, given their url.
+    :param entity_points_url: url to the entity points
+    """
 
     entity_points = open_url(entity_points_url).json()
     id_to_idx = {}
@@ -39,12 +54,13 @@ def load_entity_points_from_url(entity_points_url: str):
         idx += 1
 
     points_cnt = len(id_to_idx)
-    dimensions = len(entity_points[0]["point"])
+    dimensions = len(entity_points[0].keys()-{"ID", "href"})
     points_arr = np.zeros((points_cnt, dimensions))
 
     for ent in entity_points:
         idx = id_to_idx[ent["ID"]]
-        points_arr[idx] = ent["point"]
+        points_arr[idx] = get_point(ent)
+
     return points_arr, id_to_idx
 
 
@@ -76,68 +92,59 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
+    # Load input parameters
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
+    # Assign input parameters to variables
     train_points_url = input_params.train_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: train_points_url='{train_points_url}'"
-    )
     label_points_url = input_params.label_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: label_points_url='{label_points_url}'"
-    )
     test_points_url = input_params.test_points_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: test_points_url='{test_points_url}'"
-    )
     window_size = input_params.window_size
-    TASK_LOGGER.info(f"Loaded input parameters from db: window_size='{window_size}'")
     variant = input_params.variant
-    TASK_LOGGER.info(f"Loaded input parameters from db: variant='{variant}'")
+    minimize_qubit_count = input_params.minimize_qubit_count
     backend = input_params.backend
-    TASK_LOGGER.info(f"Loaded input parameters from db: backend='{backend}'")
     shots = input_params.shots
-    TASK_LOGGER.info(f"Loaded input parameters from db: shots='{shots}'")
     ibmq_token = input_params.ibmq_token
-    TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+    custom_backend = input_params.custom_backend
 
+    # Log information about the input parameters
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(input_params)}"
+    )
     if ibmq_token == "****":
-        TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+        TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
         if "IBMQ_TOKEN" in os.environ:
             ibmq_token = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
-            TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
-
-    custom_backend = input_params.custom_backend
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: custom_backend='{custom_backend}'"
-    )
+            TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
 
-    if variant.get_preferred_backend() == 'qiskit':
-        backend = backend.get_qiskit_backend(ibmq_token, custom_backend)
-    else:
-        max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
-        if max_qbits is None:
-            max_qbits = 20
-        backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
-        backend.shots = shots
 
+
+    # Load in data
     train_data, train_id_to_idx = load_entity_points_from_url(train_points_url)
     train_labels = load_labels_from_url(label_points_url, train_id_to_idx)
     test_data, test_id_to_idx = load_entity_points_from_url(test_points_url)
 
-    # complete_data = np.array(train_data.tolist() + test_data.tolist())
-    # from .backend.qknns.schuld_hamming import simple_float_to_int
-    # complete_data = simple_float_to_int(complete_data)
-    #
-    # train_data = complete_data[:len(train_data)]
-    # test_data = complete_data[len(train_data):]
+    # Retrieve max qubit count
+    max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
+    if max_qbits is None:
+        max_qbits = 20
 
-    parzen_window = variant.get_parzen_window(train_data, train_labels, window_size, backend, shots)
+    # Get parzen window
+    parzen_window, num_qbits = variant.get_parzen_window(
+        train_data, train_labels, window_size, max_qbits,
+        use_access_wires=(not minimize_qubit_count)
+    )
 
+    # Set backend
+    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, num_qbits)
+    backend.shots = shots
+    parzen_window.set_quantum_backend(backend)
+
+    # Label test data
     test_labels = parzen_window.label_points(test_data)
 
     # Prepare labels to be saved
