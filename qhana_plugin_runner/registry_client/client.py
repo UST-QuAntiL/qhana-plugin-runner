@@ -12,15 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from logging import Logger
 from time import time
 from typing import Dict, Optional, Sequence, Union
 
 from flask import Flask
+from flask.globals import current_app
 from requests import request
 
 from .types import ApiLink, ApiResponse, match_api_link
+from ..util.logging import get_logger
 
 _API_RESPONSE_MIN_KEYS = {"data", "links"}
+
+_REGISTRY_CLIENT_LOGGER = "registry_client"
 
 
 class PluginRegistryClient:
@@ -29,12 +34,16 @@ class PluginRegistryClient:
     def __init__(self, app: Optional[Flask] = None) -> None:
         self._cache: Dict[str, ApiResponse] = {}
         self._last_cache_clear = time()
-        self.plugin_registry_url: Optional[str] = None
+        self._plugin_registry_url: Optional[str] = None
         if app is not None:
             self.init_app(app)
 
     def init_app(self, app: Flask):
-        self.plugin_registry_url = app.config.get("PLUGIN_REGISTRY_URL", None)
+        self._plugin_registry_url = app.config.get("PLUGIN_REGISTRY_URL", None)
+
+    @property
+    def plugin_registry_url(self) -> Optional[str]:
+        return current_app.config.get("PLUGIN_REGISTRY_URL", self._plugin_registry_url)
 
     def _cache_response(self, response: ApiResponse):
         """Cache a response if it is an "api" response.
@@ -72,6 +81,10 @@ class PluginRegistryClient:
             if cached is not None:
                 return cached
 
+        if current_app:
+            get_logger(current_app, _REGISTRY_CLIENT_LOGGER).debug(
+                f"Requesting URL '{url}' with query params {query_params}"
+            )
         response = request("get", url, params=query_params)
 
         response_data = response.json()
