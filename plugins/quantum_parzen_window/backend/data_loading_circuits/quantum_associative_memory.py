@@ -29,15 +29,15 @@ class QAM:
 
         self.register_wires = list(register_wires)
         self.ancilla_wires = list(ancilla_wires)
-        self.additional_wires = additional_wires
+        self.additional_wires = [] if additional_wires is None else additional_wires
         self.unclean_wires = [] if unclean_wires is None else unclean_wires  # unclean wires are like ancilla wires, but they are not guaranteed to be 0
 
-        ancillas_needed = min(X.shape[1], 3)
-        wire_types = ["register", "ancilla", "additional"]
+        ancillas_needed = min(X.shape[1], 3)    # If we have less than 3 data qubits, we can use a Toffoli or a CNOT and thus we do not need an ancilla qubit for a CCCNOT
+        wire_types = ["register", "ancilla", "additional", "unclean"]
         num_wires = [X.shape[1], ancillas_needed]
         error_msgs = ["the points' dimensionality.", str(ancillas_needed)+"."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
+        check_num_wires(self, wire_types[:-2], num_wires, error_msgs)
 
         if additional_bits is not None:
             if additional_wires is None or len(additional_wires) < additional_bits.shape[1]:
