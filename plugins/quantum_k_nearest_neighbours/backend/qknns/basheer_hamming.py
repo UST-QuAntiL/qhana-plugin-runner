@@ -56,8 +56,9 @@ class BasheerHammingQkNN(QkNN):
         self.idx_wires = idx_wires
         self.ancilla_wires = ancilla_wires
         wire_types = ["train", "idx", "ancilla", "unclean"]
-        num_wires = [self.train_data.shape[1], np.ceil(np.log2(self.train_data.shape[0])), 2*int(np.ceil(np.log2(self.train_data.shape[1]))) + 5]
-        error_msgs = ["the points' dimensionality.", "ceil(log2(size of train_data)).", "2*ceil(log2(the points' dimensionality))) + 5."]
+        # Details in method get_necessary_wires
+        num_wires = [self.train_data.shape[1], np.ceil(np.log2(self.train_data.shape[0])), int(np.ceil(np.log2(self.train_data.shape[1]))) + 4]
+        error_msgs = ["the points' dimensionality.", "ceil(log2(size of train_data)).", "ceil(log2(the points' dimensionality))) + 4."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[-1], num_wires, error_msgs)
 
@@ -232,4 +233,9 @@ class BasheerHammingQkNN(QkNN):
 
     @staticmethod
     def get_necessary_wires(train_data):
-        return train_data.shape[1], int(np.ceil(np.log2(train_data.shape[0]))), 2*int(np.ceil(np.log2(train_data.shape[1]))) + 5
+        # train wires: we need a qubit for each dimension of a point
+        # idx wires: a number n can be represented by log(n) bits. Thus, we need ceil(log2(size of train_data)) qubits
+        # ancilla wires:    + we need int(np.ceil(np.log2(self.train_data.shape[1])))+2 qubits for the overflow register
+        #                   + we need 1 ancilla wire for incrementing the overflow register
+        #                   + we need at least 1 ancilla wire for every ccnot
+        return train_data.shape[1], int(np.ceil(np.log2(train_data.shape[0]))), int(np.ceil(np.log2(train_data.shape[1]))) + 4
