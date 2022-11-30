@@ -27,11 +27,11 @@ class InputParameters:
         test_points_url: str,
         k: int,
         variant: QkNNEnum,
-        minimize_qubit_count: bool,
         backend: QuantumBackends,
         shots: int,
         ibmq_token: str,
         custom_backend: str,
+        minimize_qubit_count=False,
     ):
         self.train_points_url = train_points_url
         self.label_points_url = label_points_url
@@ -158,5 +158,4 @@ class InputParametersSchema(FrontendFormBaseSchema):
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
-        data["minimize_qubit_count"] = data.get("minimize_qubit_count", False)
         return InputParameters(**data)
