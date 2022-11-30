@@ -318,10 +318,8 @@ def calculation_task(self, db_id: int) -> str:
                         val1,
                     ) not in similarities:
                         similarities[(val1, val2)] = {
-                            "ID": str(val1) + "_" + str(val2),
-                            "href": "",
-                            "value_1": val1,
-                            "value_2": val2,
+                            "source": val1,
+                            "target": val2,
                             "similarity": sim,
                         }
 

@@ -103,7 +103,7 @@ function onPluginUrlResponseMessage(data) {
         input.dispatchEvent(new InputEvent("change", { data: data.pluginUrl, cancelable: false }));
         var pluginNameSpan = document.querySelector(`.selected-plugin-name[data-input-id=${data.inputKey}]`);
         if (pluginNameSpan != null) {
-            pluginNameSpan.textContent = `${data.pluginName || "unknown"} (v${data.pluginVersion || "?"})`;
+            pluginNameSpan.textContent = `${data.pluginName || "unknown"} (${data.pluginVersion || "?"})`;
             if (pluginNameSpan.parentNode.hasAttribute("hidden")) {
                 pluginNameSpan.parentNode.removeAttribute("hidden");
                 pluginNameSpan.parentNode.setAttribute("aria-live", "polite");
@@ -226,12 +226,12 @@ function instrumentForm() {
         });
         form.querySelectorAll('button.qhana-choose-file-button').forEach(chooseButton => {
             var inputId = chooseButton.getAttribute("data-input-id");
-            var dataType = chooseButton.getAttribute("data-input-type") ?? "*";
+            var dataType = chooseButton.getAttribute("data-input") ?? "*";
             var contentTypes = chooseButton.getAttribute("data-content-type");
             if (contentTypes == null) {
                 contentTypes = ["*"];
             } else {
-                contentTypes = contentTypes.split();
+                contentTypes = contentTypes.split(/\s+/g);
             }
             chooseButton.addEventListener("click", (event) => {
                 event.preventDefault();
@@ -252,7 +252,7 @@ function instrumentForm() {
             if (pluginTags == null) {
                 pluginTags = [];
             } else {
-                pluginTags = pluginTags.split();
+                pluginTags = pluginTags.split(/\s+/);
             }
             var requestMessage = {
                 type: "request-plugin-url",
@@ -313,6 +313,8 @@ function onFormSubmit(event, dataInputs, privateInputs) {
                 inputDataUrls.add(entry);
             }
         });
+
+        inputDataUrls.delete(""); // remove empty string if present (e.g. from non required form values)
 
         if (window._qhana_microfrontend_state.preventSubmit) {
             sendMessage({

@@ -20,4 +20,5 @@ A collection of data (serialization) formats used by QHAna plugins to exchange d
 
     data-model
     data-loader-formats
+    recipes
     examples/index

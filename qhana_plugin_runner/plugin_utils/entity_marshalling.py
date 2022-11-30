@@ -22,6 +22,7 @@ from keyword import iskeyword
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Dict,
     Generator,
     Iterable,
@@ -41,33 +42,85 @@ from unicodedata import category, normalize
 
 from typing_extensions import Protocol
 
-_LEGAL_CHARACTER_SETS_FIRST = {"Lu", "Ll", "Lt", "Lm", "Lo", "Nl"}
-_LEGAL_CHARACTER_SETS_CONTINUE = {"Mn", "Mc", "Nd", "Pc"} | _LEGAL_CHARACTER_SETS_FIRST
+
+class EntityTupleMixin:
+    """A mixin class to provide entity metadata (e.g. attribute names) and
+    some helper functions to a namedtuple class.
+
+    Use the helper method ``get_entity_tuple_class`` to create a new entity tuple class.
+    """
+
+    entity_attributes: ClassVar[Sequence[str]]
+    """The list of attribute names."""
+    _attribute_to_index: ClassVar[Dict[str, int]]
+    """Helper map to convert an attribute name to its index fast."""
+
+    def __init_subclass__(cls) -> None:
+        assert issubclass(cls, tuple), f"Class {cls} must also inherit from a namedtuple!"
+        assert cls.entity_attributes, "Entity Attributes must be present!"
+        cls._attribute_to_index = {a: i for i, a in enumerate(cls.entity_attributes)}
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+
+    def get(self, key: Union[str, int], default=None):
+        if isinstance(key, str):
+            try:
+                key = self._attribute_to_index[key]
+            except KeyError:
+                return default
+        return self[key]
+
+    def as_dict(self) -> Dict[str, Any]:
+        """Convert the entity tuple to a dict."""
+        assert isinstance(self, tuple)
+        return dict(zip(self.entity_attributes, self))
+
+    @classmethod
+    def from_dict(cls, **kwargs):
+        """Create an entity tuple from key=value mapping (using keyword arguments)."""
+        assert issubclass(cls, tuple)
+        values: Sequence[Any] = tuple(map(kwargs.get, cls.entity_attributes))
+        return cls(*values)
+
+    @classmethod
+    def from_iter(cls, iterable: Sequence):
+        """Create an entity tuple from any iterable."""
+        return cls(*iterable)
 
 
-def _illegal_character_filter(index: int, char: str):
-    """Replace illegal characters of identifiers with ``_``."""
-    categories = (
-        _LEGAL_CHARACTER_SETS_FIRST if index == 0 else _LEGAL_CHARACTER_SETS_CONTINUE
+_ENTITY_TYPE_TUPLE_CLASSES: Dict[Tuple[str, ...], Type[NamedTuple]] = {}  # TODO cache invalidation (use lru cache?)
+
+
+def get_entity_tuple_class(
+    attributes: Sequence[str], name: str = "Entity"
+) -> Type[NamedTuple]:
+    """Get an entity tuple class.
+
+    Caches the classes based on attributes and provided class name.
+
+    Args:
+        attributes (Sequence[str]): the list of entity attributes
+        name (str, optional): the name to use for creating the new type. Defaults to "Entity".
+
+    Returns:
+        Type[NamedTuple]: the created entity tuple class
+    """
+    attributes = tuple(attributes)  # make an immutable copy
+
+    key = (name, *attributes)
+
+    if key in _ENTITY_TYPE_TUPLE_CLASSES:
+        return _ENTITY_TYPE_TUPLE_CLASSES[key]
+
+    EntityType: Type[NamedTuple] = type(
+        name,
+        (EntityTupleMixin, namedtuple(name, attributes, rename=True)),
+        {"entity_attributes": attributes},
     )
-    if char in {"_"}:
-        return char
-    if category(char) in categories:
-        return char
-    return "_"
 
-
-def normalize_attribute_name(name: str) -> str:
-    """Normalize the attribute name to be used as valid python identifier (e.g. in a namedtuple)."""
-    if name.isidentifier():
-        return name
-    name = "".join(
-        _illegal_character_filter(i, char)
-        for i, char in enumerate(normalize("NFKC", name))
-    )
-    if iskeyword(name):
-        name = name + "_"
-    return name
+    _ENTITY_TYPE_TUPLE_CLASSES[key] = EntityType
+    return EntityType
 
 
 class ResponseLike(Protocol):
@@ -140,6 +193,8 @@ def ensure_dict(
     for item in items:
         if isinstance(item, dict):
             yield item
+        elif isinstance(item, EntityTupleMixin):
+            yield item.as_dict()
         else:
             yield item._asdict()
 
@@ -159,6 +214,8 @@ def ensure_tuple(
     Yields:
         Generator[NamedTuple, None, None]: the output iterable
     """
+    if issubclass(tuple_, EntityTupleMixin):
+        tuple_ = tuple_.from_dict
     for item in items:
         if isinstance(item, dict):
             yield tuple_(**item)
@@ -213,14 +270,13 @@ def load_entities(
             yield loads(line)
     elif mimetype == "text/csv":
         csv_reader = reader(file_.iter_lines(decode_unicode=True), csv_dialect)
-        header: List[str] = next(csv_reader)
+        header: Sequence[str] = next(csv_reader)
         if process_csv_header:
-            header = list(process_csv_header(header))
-        else:
-            header = [normalize_attribute_name(attr) for attr in header]
+            header = tuple(process_csv_header(header))
         if tuple_ is None:
-            # convert attribute names to legal python names
-            tuple_ = namedtuple("Entity", header)._make  # type: ignore
+            EntityType: Type[NamedTuple] = get_entity_tuple_class(header)
+            tuple_ = lambda s: EntityType(*s)  # type: ignore
+            assert tuple_ is not None
 
         yield from (tuple_(row) for row in csv_reader if row)
     else:

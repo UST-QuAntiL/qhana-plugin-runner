@@ -1,7 +1,7 @@
-qhana\_plugin\_runner.celery\_worker module
+qhana\_plugin\_runner.util.templates module
 ===========================================
 
-.. automodule:: qhana_plugin_runner.celery_worker
+.. automodule:: qhana_plugin_runner.util.templates
    :members:
    :undoc-members:
    :show-inheritance:

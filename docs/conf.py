@@ -105,6 +105,7 @@ with api_spec_path.open() as api_spec:
 extensions = [
     "sphinxcontrib.redoc",
     "sphinx_click",
+    "linuxdoc.rstFlatTable",
 ]
 
 autosectionlabel_prefix_document = False
