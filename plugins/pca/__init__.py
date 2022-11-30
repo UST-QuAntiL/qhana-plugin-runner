@@ -51,7 +51,7 @@ class PCA(QHAnaPluginBase):
         return PCA_BLP
 
     def get_requirements(self) -> str:
-        return f"scikit-learn~={sklearn_version}\nplotly~=5.3.1\npandas~=1.4.1"
+        return f"scikit-learn~={sklearn_version}\nplotly~=5.6.0\npandas~=1.5.0"
 
 
 try:
