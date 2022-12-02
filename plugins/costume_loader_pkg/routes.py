@@ -96,9 +96,9 @@ class MicroFrontend(MethodView):
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, True if errors == {} else None)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
         app = flask.current_app
         fields = InputParametersSchema().fields
@@ -121,6 +121,7 @@ class MicroFrontend(MethodView):
                 name=CostumeLoader.instance.name,
                 version=CostumeLoader.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),

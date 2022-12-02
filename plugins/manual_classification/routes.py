@@ -103,7 +103,7 @@ class MicroFrontend(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the manual classification plugin."
@@ -118,9 +118,9 @@ class MicroFrontend(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, True if errors == {} else None)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         return Response(
             render_template(
                 "simple_template.html",
@@ -129,6 +129,7 @@ class MicroFrontend(MethodView):
                 schema=LoadParametersSchema(),
                 values=data,
                 errors=errors,
+                valid=valid,
                 process=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
                 example_values=url_for(
                     f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend",
@@ -220,9 +221,9 @@ class MicroFrontendClassification(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: str):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, db_id)
+        return self.render(request.form, errors, db_id, True if errors == {} else None)
 
-    def render(self, data: Mapping, errors: dict, db_id: str):
+    def render(self, data: Mapping, errors: dict, db_id: str, valid: bool):
         task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if task_data is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -238,6 +239,7 @@ class MicroFrontendClassification(MethodView):
                 version=ManualClassification.instance.version,
                 schema=schema,
                 values=data,
+                valid=valid,
                 entity_list=task_data.data["entity_list"],
                 attr_list=task_data.data["attr_list"],
                 errors=errors,

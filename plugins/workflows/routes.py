@@ -93,15 +93,16 @@ class MicroFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with pre-rendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, True if errors == {} else None)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         return Response(
             render_template(
                 "simple_template.html",
                 name=Workflows.instance.name,
                 version=Workflows.instance.version,
                 schema=WorkflowsParametersSchema(),
+                valid=valid,
                 values=dict(data),
                 errors=errors,
                 process=url_for(f"{WORKFLOWS_BLP.name}.ProcessView"),
@@ -184,9 +185,9 @@ class HumanTaskFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors)
+        return self.render(request.form, db_id, errors, True if errors == {} else None)
 
-    def render(self, data: Mapping, db_id: int, errors: dict):
+    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -221,6 +222,7 @@ class HumanTaskFrontend(MethodView):
                 name=Workflows.instance.name,
                 version=Workflows.instance.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(

@@ -181,9 +181,9 @@ class MicroFrontend(MethodView):
     @TIME_TANH_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, True if errors == {} else None)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = InputParametersSchema()
         return Response(
             render_template(
@@ -191,6 +191,7 @@ class MicroFrontend(MethodView):
                 name=TimeTanh.instance.name,
                 version=TimeTanh.instance.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{TIME_TANH_BLP.name}.CalcSimilarityView"),

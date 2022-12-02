@@ -31,6 +31,9 @@
             {% if done %}
             {{ forms.submit("done", action=done)}}
             {% endif %}
+            {% if errors == {} and valid %}
+            <mat-icon aria-hidden="true" class="material-icon notranslate material-icons ng-star-inserted">done</mat-icon>
+            {% endif %}
         </div>
         {% endcall %}
     </div>

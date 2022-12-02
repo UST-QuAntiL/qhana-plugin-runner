@@ -84,9 +84,9 @@ class MicroFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, True if errors == {} else None)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
@@ -95,6 +95,7 @@ class MicroFrontend(MethodView):
                 version=HelloWorldMultiStep.instance.version,
                 schema=schema,
                 values=data,
+                valid=valid,
                 errors=errors,
                 process=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
                 help_text="This is an example help text with basic **Markdown** support.",

@@ -213,9 +213,9 @@ class MicroFrontend(MethodView):
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         values: ChainMap[str, Any] = ChainMap(request.form.to_dict(), self.example_inputs)
-        return self.render(values, errors)
+        return self.render(values, errors, True if errors == {} else None)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         plugin = QiskitSimulator.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -226,6 +226,7 @@ class MicroFrontend(MethodView):
                 name=plugin.name,
                 version=plugin.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{QISKIT_BLP.name}.ProcessView"),
