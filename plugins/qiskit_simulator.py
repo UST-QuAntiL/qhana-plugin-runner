@@ -197,7 +197,7 @@ class MicroFrontend(MethodView):
     def get(self, errors):
         """Return the micro frontend."""
         values: ChainMap[str, Any] = ChainMap(request.args.to_dict(), self.example_inputs)
-        return self.render(values, errors)
+        return self.render(values, errors, None)
 
     @QISKIT_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the qiskit simulators plugin."

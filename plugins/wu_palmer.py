@@ -200,7 +200,7 @@ class MicroFrontend(MethodView):
     @WU_PALMER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @WU_PALMER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Wu Palmer plugin."

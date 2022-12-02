@@ -202,7 +202,7 @@ class MicroFrontend(MethodView):
     @MDS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @MDS_BLP.html_response(
         HTTPStatus.OK,

@@ -81,7 +81,7 @@ class MicroFrontend(MethodView):
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @COSTUME_LOADER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the costume loader plugin."

@@ -185,7 +185,7 @@ class MicroFrontend(MethodView):
     @PCA_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
     @PCA_BLP.arguments(

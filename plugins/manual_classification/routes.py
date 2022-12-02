@@ -205,7 +205,7 @@ class MicroFrontendClassification(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: str):
         """Return the micro frontend."""
-        return self.render(request.args, errors, db_id)
+        return self.render(request.args, errors, db_id, None)
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
         HTTPStatus.OK,

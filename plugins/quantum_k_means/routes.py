@@ -84,7 +84,7 @@ class MicroFrontend(MethodView):
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @QKMEANS_BLP.html_response(
         HTTPStatus.OK,

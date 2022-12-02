@@ -170,7 +170,7 @@ class MicroFrontend(MethodView):
     @SYM_MAX_MEAN_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @SYM_MAX_MEAN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Sym Max Mean plugin."

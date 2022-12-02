@@ -153,7 +153,7 @@ class MicroFrontend(MethodView):
     @ZIP_MERGER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @ZIP_MERGER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Wu Palmer plugin."

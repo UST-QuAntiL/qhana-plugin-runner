@@ -166,7 +166,7 @@ class MicroFrontend(MethodView):
     @TIME_TANH_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @TIME_TANH_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the time tanh plugin."

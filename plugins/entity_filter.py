@@ -226,7 +226,7 @@ class MicroFrontend(MethodView):
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, None)
 
     @ENTITY_FILTER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the entity filter plugin."
