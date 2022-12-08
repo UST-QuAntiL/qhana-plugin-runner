@@ -532,7 +532,7 @@ class SVM(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         return (
-            "qiskit==0.27\nqiskit-aer~=0.8.2\nscikit-learn~=1.1\nqiskit-machine-learning"
+            "qiskit~=0.27\nscikit-learn~=1.1\nqiskit-machine-learning~=0.4.0"
         )
 
 
