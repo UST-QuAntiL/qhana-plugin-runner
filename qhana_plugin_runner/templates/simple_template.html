@@ -3,11 +3,15 @@
 <html>
 
 <head>
+    {% block head %}
     <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+    {% endblock head %}
 </head>
 
 <body>
+    {% block content %}
     <div class="qhana-microfrontend">
+        {% block help %}
         {% if help_text or example_values %}
         <details class="qhana-help">
             <summary>Help</summary>
@@ -23,6 +27,7 @@
             {% endif %}
         </details>
         {% endif %}
+        {% endblock help %}
         {% call forms.render_form(target="microfrontend") %}
         {{ forms.render_fields(schema, values=values, errors=errors) }}
         <div class="qhana-form-buttons">
@@ -34,8 +39,11 @@
         </div>
         {% endcall %}
     </div>
+    {% endblock content %}
 
+    {% block script %}
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+    {% endblock script %}
 
 </body>
 
