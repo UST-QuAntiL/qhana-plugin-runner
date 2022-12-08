@@ -8,12 +8,84 @@ import requests
 from requests.exceptions import HTTPError
 
 from .. import Workflows
-from ..exceptions import WorkflowDeploymentError
 from ..datatypes.camunda_datatypes import CamundaConfig, ExternalTask, HumanTask
+from ..exceptions import WorkflowDeploymentError
 
 config = Workflows.instance.config
 
 logger = logging.getLogger(__name__)
+
+
+class CamundaManagementClient:
+    def __init__(
+        self,
+        camunda_endpoint: str,
+        timeout: int = config.get("request_timeout", 5 * 60),
+    ):
+        self.camunda_endpoint = camunda_endpoint.rstrip("/")
+        self.timeout = timeout
+
+    def get_process_definitions(self):
+        response = requests.get(
+            url=f"{self.camunda_endpoint}/process-definition",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+        return response.json()
+
+    def get_process_definition(self, definition_id: str):
+        response = requests.get(
+            url=f"{self.camunda_endpoint}/process-definition/{definition_id}",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+        return response.json()
+
+    def get_process_definition_xml(self, definition_id: str):
+        response = requests.get(
+            url=f"{self.camunda_endpoint}/process-definition/{definition_id}/xml",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+        return response.json()["bpmn20Xml"]
+
+    def get_workflow_start_form_variables(self, definition_id: str):
+        response = requests.get(
+            url=f"{self.camunda_endpoint}/process-definition/{definition_id}/form-variables",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        start_variables = response.json()
+
+        try:
+            rendered_form = self.get_workflow_start_rendered_form(definition_id)
+        except HTTPError as err:
+            if err.response.status_code == 404:
+                return {}  # no form variables if no rendered form!
+            raise  # otherwise reraise
+
+        # Extract form variables from the rendered form. Cannot use only camunda endpoint for form variables (broken)  # TODO link issue
+        matches: List[str] = re.findall(
+            r'<input[^\>]*cam-variable-name="(?P<name>[^"]*)"', rendered_form
+        )  # returns a list of strings matching the 'name' group only
+        form_variables = set(matches)
+
+        return {k: v for k, v in start_variables.items() if k in form_variables}
+
+    def get_workflow_start_rendered_form(self, definition_id: str):
+        response = requests.get(
+            url=f"{self.camunda_endpoint}/process-definition/{definition_id}/rendered-form",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.text
+
+    # TODO add method to start a workflow without variiables and with variables
+    # with variables should use http://localhost:8080/swaggerui/#/Process%20Definition/submitForm
+    # without variables can use /start
 
 
 class CamundaClient:
