@@ -33,11 +33,14 @@ class PluginType(Enum):
         "simple" and "complex" are deprecated and should be replaced with "processing"!
     """
 
-    simple = "simple"
-    complex = "complex"
-    processing = "processing"
-    visualization = "visualization"
-    conversion = "conversion"
+    simple = "simple"  # DEPRECATED
+    complex = "complex"  # DEPRECATED
+    processing = (
+        "processing"  # type for processing data (data comes in, processed data comes out)
+    )
+    visualization = "visualization"  # type for visualizing data (used as data previews)
+    conversion = "conversion"  # type for converting between data (and content) types
+    interaction = "interaction"  # type for plugins that do not handle data but provide user interaction
 
 
 @dataclass
@@ -279,7 +282,7 @@ class PluginMetadata:
     name: str
     version: str
     # TODO replace literal with PluginType after removing deprecated values
-    type: Literal[PluginType.processing, PluginType.visualization, PluginType.conversion]
+    type: Literal[PluginType.processing, PluginType.visualization, PluginType.conversion, PluginType.interaction]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
 
