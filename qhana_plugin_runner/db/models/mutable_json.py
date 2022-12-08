@@ -15,10 +15,15 @@
 
 """This module provides a helper class :py:class:`MutableJSON` that can be used as a column in SQL Alchemy. SQL Alchemy's built-in JSON type is immutable and hence inflexible for usage as a key-value storage. :py:class:`MutableJSON` supports all primitive types in JSON (``str``, ``float``, ``int`` and ``bool``) as well nested dicts and lists with change tracking."""
 
+from typing import TypeAlias, Union, Dict, List
 from sqlalchemy import event, inspect
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.types import JSON
 from sqlalchemy_json import NestedMutableDict, NestedMutableList
+
+_JSON_ATOM: TypeAlias = Union[str, float, int, bool, None]
+
+JSON_LIKE: TypeAlias = Union[Dict[str, "JSON_LIKE"], List["JSON_LIKE"], _JSON_ATOM]
 
 
 class NestedMutable(Mutable):

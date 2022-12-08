@@ -28,7 +28,7 @@ from sqlalchemy.sql.schema import (
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.event import listens_for
 
-from .mutable_json import MutableJSON
+from .mutable_json import MutableJSON, JSON_LIKE
 from ..db import DB, REGISTRY
 
 
@@ -72,7 +72,7 @@ class ProcessingTask:
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
-        data (Union[dict, list, str, float, int, bool, None]): mutable JSON-like store for additional lightweight task data. Default value is empty dict.
+        data (JSON_LIKE): mutable JSON-like store for additional lightweight task data. Default value is empty dict.
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
         progress_value (float): current progress value. ``None`` by default.
@@ -100,7 +100,7 @@ class ProcessingTask:
 
     parameters: str = field(default="", metadata={"sa": Column(sql.Text())})
 
-    data: Union[dict, list, str, float, int, bool, None] = field(
+    data: JSON_LIKE = field(
         default_factory=dict, metadata={"sa": Column(MutableJSON)}
     )
 
