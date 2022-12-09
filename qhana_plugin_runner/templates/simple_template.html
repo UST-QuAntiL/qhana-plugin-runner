@@ -31,8 +31,9 @@
             {% if done %}
             {{ forms.submit("done", action=done)}}
             {% endif %}
-            {% if errors == {} and valid %}
-            <mat-icon aria-hidden="true" class="material-icon notranslate material-icons ng-star-inserted qhana-valid-icon">done</mat-icon>
+            {% if not errors and valid %}
+            <span class="qhana-input-description"> Validation successful!</span>
+            <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/></svg>
             {% endif %}
         </div>
         {% endcall %}
