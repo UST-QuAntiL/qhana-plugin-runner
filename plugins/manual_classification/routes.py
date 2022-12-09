@@ -103,7 +103,7 @@ class MicroFrontend(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors, None)
+        return self.render(request.args, errors, False)
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the manual classification plugin."
@@ -118,7 +118,7 @@ class MicroFrontend(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, True if errors == {} else None)
+        return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
         return Response(
@@ -205,7 +205,7 @@ class MicroFrontendClassification(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: str):
         """Return the micro frontend."""
-        return self.render(request.args, errors, db_id, None)
+        return self.render(request.args, errors, db_id, False)
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
         HTTPStatus.OK,
@@ -221,7 +221,7 @@ class MicroFrontendClassification(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: str):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, db_id, True if errors == {} else None)
+        return self.render(request.form, errors, db_id, not errors)
 
     def render(self, data: Mapping, errors: dict, db_id: str, valid: bool):
         task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)

@@ -149,7 +149,7 @@ class MicroFrontend(MethodView):
     @CSV_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors, None)
+        return self.render(request.args, errors, False)
 
     @CSV_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the csv visualization plugin."
@@ -164,7 +164,7 @@ class MicroFrontend(MethodView):
     @CSV_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, True if errors == {} else None)
+        return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
         plugin = CsvVisualization.instance

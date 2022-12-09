@@ -153,7 +153,7 @@ class MicroFrontend(MethodView):
     @ZIP_MERGER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors, None)
+        return self.render(request.args, errors, False)
 
     @ZIP_MERGER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Wu Palmer plugin."
@@ -168,7 +168,7 @@ class MicroFrontend(MethodView):
     @ZIP_MERGER_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, True if errors == {} else None)
+        return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
         schema = InputParametersSchema()

@@ -69,7 +69,7 @@ class MicroFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors, None)
+        return self.render(request.args, errors, False)
 
     @HELLO_MULTI_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
@@ -84,7 +84,7 @@ class MicroFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, True if errors == {} else None)
+        return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
         schema = HelloWorldParametersSchema()
@@ -169,7 +169,7 @@ class DemoStepFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int):
         """Return the micro frontend."""
-        return self.render(request.args, db_id, errors)
+        return self.render(request.args, db_id, errors, False)
 
     @HELLO_MULTI_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
@@ -184,7 +184,7 @@ class DemoStepFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors, True if errors == {} else None)
+        return self.render(request.form, db_id, errors, not errors)
 
     def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)

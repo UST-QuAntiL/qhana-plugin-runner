@@ -109,7 +109,7 @@ class MicroFrontend(MethodView):
     @PCA_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors, None)
+        return self.render(request.args, errors, False)
 
     @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
     @PCA_BLP.arguments(
@@ -134,7 +134,7 @@ class MicroFrontend(MethodView):
                     "Field may not be null."
                 ]
 
-        return self.render(request.form, errors, True if errors == {} else None)
+        return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
