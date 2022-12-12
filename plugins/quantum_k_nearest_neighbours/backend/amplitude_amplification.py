@@ -77,6 +77,9 @@ def get_exp_search_aa_representative_circuit(state_circuit, inv_state_circuit, z
     :param check_if_good_wire: The qubit that will be set to one by the check_if_good circuit
     :param measure_wires: The qubits whose result is desired
     """
+    if isinstance(check_if_good_wire, int):
+        check_if_good_wire = [check_if_good_wire]
+
     @qml.qnode(device)
     def circuit():
         state_circuit()
@@ -105,7 +108,8 @@ def exp_searching_amplitude_amplification(state_circuit, inv_state_circuit, zero
     :param measure_wires: The qubits whose result is desired
     :param exp_itr: The max number of iterations the exponential search might take.
     """
-    check_if_good_wire = [check_if_good_wire]
+    if isinstance(check_if_good_wire, int):
+        check_if_good_wire = [check_if_good_wire]
 
     c = 1.5     # 1 < c < 2
     M_float = 1.
