@@ -7,7 +7,7 @@ from ..utils import int_to_bitlist, bitlist_to_int
 from ..q_arithmetic import cc_increment_register
 from ..ccnot import adaptive_ccnot
 from .qknn import QkNN
-from ..amplitude_amplification import exp_searching_amplitude_amplification, exp_search_aa_representative_circuit
+from ..amplitude_amplification import exp_searching_amplitude_amplification, get_exp_search_aa_representative_circuit
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 from collections import Counter
@@ -57,10 +57,23 @@ class BasheerHammingQkNN(QkNN):
         self.ancilla_wires = ancilla_wires
         wire_types = ["train", "idx", "ancilla", "unclean"]
         # Details in method get_necessary_wires
-        num_wires = [self.train_data.shape[1], np.ceil(np.log2(self.train_data.shape[0])), int(np.ceil(np.log2(self.train_data.shape[1]))) + 4]
-        error_msgs = ["the points' dimensionality.", "ceil(log2(size of train_data)).", "ceil(log2(the points' dimensionality))) + 4."]
+        num_wires = [self.train_data.shape[1], np.ceil(np.log2(self.train_data.shape[0])), int(np.ceil(np.log2(self.train_data.shape[1]))) + 5]
+        error_msgs = ["the points' dimensionality.", "ceil(log2(size of train_data)).", "ceil(log2(the points' dimensionality))) + 5."]
         check_wires_uniqueness(self, wire_types)
-        check_num_wires(self, wire_types[-1], num_wires, error_msgs)
+        check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
+
+        a_len = (int(np.ceil(np.log2(self.train_data.shape[1]))) + 2)
+        # Ancilla wires are split as follows:
+        # [0, a_len) are reserved for the overflow register
+        # a_len is reserved as the oracle wire
+        # a_len + 1 is reserved as the threshold wire
+        # a_len + 2 is rserved as the not in list wire
+        # Thus we need int(np.ceil(np.log2(self.train_data.shape[1]))) + 5 wires
+        self.overflow_wires = self.ancilla_wires[:a_len]                # This register is used with the threshold oracle by Ruan et al.
+        self.oracle_wire = self.ancilla_wires[a_len]                    # This is the oracles qubit
+        self.threshold_wire = self.ancilla_wires[a_len+1]               # This is the thresholds oracle's qubit
+        self.not_in_list_wire = self.ancilla_wires[a_len+2]             # This i the not_in_list oracle's qubit
+        self.additional_ancilla_wires = self.ancilla_wires[a_len+3:]    # Any additional wires
 
         self.tree_loader = TreeLoader(
             self.prepare_data_for_treeloader(self.train_data), self.idx_wires, self.train_wires, self.ancilla_wires,
@@ -79,7 +92,7 @@ class BasheerHammingQkNN(QkNN):
         data = np.vstack((data, data[:missing_till_next_power]))
         return data
 
-    def get_oracle_wire_to_one_circuit(self, x, a, indices):
+    def get_oracle_wire_to_one_circuit(self, x, a, indices, do_final_toffoli=True):
         def circuit():
             # Load points into register
             self.tree_loader.circuit()
@@ -87,38 +100,37 @@ class BasheerHammingQkNN(QkNN):
             # Get inverse Hamming Distance
             for i in range(len(x)):
                 if x[i] == 0:
-                # if x[i] == 1:
                     qml.PauliX((self.train_wires[i],))
 
             # Prep overflow register
             for i in range(len(a)):
                 if a[i] == 1:
-                    qml.PauliX((self.ancilla_wires[i],))
+                    qml.PauliX((self.overflow_wires[i],))
 
             # Increment overflow register for each 1 in the train register
-            qml.PauliX((self.ancilla_wires[2 * len(a)],))  # Allows us to set ancilla_is_zero to False
+            qml.PauliX((self.oracle_wire,))  # Allows us to set ancilla_is_zero to False
             for t_idx, t_wire in enumerate(self.train_wires):
                 cc_increment_register(
                     [t_wire],
-                    self.ancilla_wires[:len(a)],
-                    self.ancilla_wires[len(a):2*len(a)] + self.ancilla_wires[2*len(a)+1:],
-                    self.ancilla_wires[2 * len(a)],
+                    self.overflow_wires,
+                    [self.not_in_list_wire, self.threshold_wire] + self.additional_ancilla_wires,
+                    self.oracle_wire,
                     unclean_wires=self.unclean_wires + self.train_wires[:t_idx] + self.train_wires[t_idx+1:] + self.idx_wires,
                     ancilla_is_zero=False
                 )
-            qml.PauliX((self.ancilla_wires[2 * len(a)],))  # Undo the inverse (ancilla_is_zero thing)
+            qml.PauliX((self.oracle_wire,))  # Undo the inverse (ancilla_is_zero thing)
 
             for i in range(2):
-                qml.PauliX((self.ancilla_wires[:len(a)][i],))
+                qml.PauliX((self.overflow_wires[i],))
 
             # Set ancilla wire len(a) to 1, if the distance is smaller than the threshold
             adaptive_ccnot(
-                self.ancilla_wires[:len(a)][:2],
-                self.ancilla_wires[len(a)+1:],
+                self.overflow_wires[:2],
+                [self.oracle_wire, self.not_in_list_wire] + self.additional_ancilla_wires,
                 self.train_wires,                   # We know that self.train_wires suffice for an unclean ccnot
-                self.ancilla_wires[len(a)]
+                self.threshold_wire
             )
-            qml.PauliX((self.ancilla_wires[len(a)], ))
+            qml.PauliX((self.threshold_wire, ))
 
             # Set ancilla wire len(a)+1 to 1, if the point's idx is not contained in indices
             # We are looping elements in self.train_data. Thus, a point at index i might also be at the index i+self.num_train_data.
@@ -132,28 +144,33 @@ class BasheerHammingQkNN(QkNN):
             temp = [int_to_bitlist(value, len(self.idx_wires)) for value in temp]
 
             # Inverse qubit len(a)+1 so that the oracle is inversed
-            qml.PauliX((self.ancilla_wires[len(a)+1],))
+            qml.PauliX((self.not_in_list_wire,))
             # Set qubit len(a)+1 to 0, if idx qubits are in the list temp
             oracle_state_circuit(
-                self.idx_wires, self.ancilla_wires[len(a)+1],
-                self.ancilla_wires[len(a)+2:len(a)+3], self.unclean_wires, temp
+                self.idx_wires, self.not_in_list_wire,
+                [self.oracle_wire] + self.additional_ancilla_wires,
+                self.unclean_wires, temp
             )
 
-            # Set ancilla wire len(a)+2 to 1, if the distance is smaller than the threshold
+            # Set oracle wire to 1, if the distance is smaller than the threshold
             # and the point's idx is not contained in indices
-            qml.Toffoli((self.ancilla_wires[len(a)], self.ancilla_wires[len(a)+1], self.ancilla_wires[len(a)+2]))
+            qml.Toffoli(wires=(self.threshold_wire, self.not_in_list_wire, self.oracle_wire))
 
         return circuit
 
     def get_phase_oracle_circuit(self, x, a, indices):
+        oracle_circuit = self.get_oracle_wire_to_one_circuit(x, a, indices)
 
         def quantum_circuit():
+            # We do not use HX oracle XH here, since the oracle has a lot to uncompute and it only saves one Toffoli operation
             # Set oracle wire to one
-            self.get_oracle_wire_to_one_circuit(x, a, indices)()
-            # Set phase to -1 if oracle wire == |1>
-            qml.PauliZ((2 * len(a),))
-            # Uncompute oracle wire
-            qml.adjoint(self.get_oracle_wire_to_one_circuit(x, a, indices))()
+            oracle_circuit()
+
+            # Set phase
+            qml.PauliZ((self.oracle_wire, ))
+
+            # Uncompute oracle
+            qml.adjoint(oracle_circuit)()
 
         return quantum_circuit
 
@@ -167,7 +184,7 @@ class BasheerHammingQkNN(QkNN):
             qml.PauliX((wire, ))
 
         qml.Hadamard((self.ancilla_wires[0], ))
-        adaptive_ccnot(self.idx_wires, self.ancilla_wires[1:], self.unclean_wires, self.ancilla_wires[0])
+        adaptive_ccnot(self.idx_wires, self.ancilla_wires[1:]+self.train_wires, self.unclean_wires, self.ancilla_wires[0])
         qml.Hadamard((self.ancilla_wires[0], ))
 
         for wire in self.idx_wires:
@@ -186,7 +203,7 @@ class BasheerHammingQkNN(QkNN):
 
         oracle_phase_circuit = self.get_phase_oracle_circuit(x, a, chosen_indices)
         oracle_one_circuit = self.get_oracle_wire_to_one_circuit(x, a, chosen_indices)
-        check_if_good_wire = self.ancilla_wires[len(a)+2]
+        check_if_good_wire = self.oracle_wire
         measure_wires = self.idx_wires + self.train_wires
 
         result = exp_searching_amplitude_amplification(
@@ -236,9 +253,10 @@ class BasheerHammingQkNN(QkNN):
         # train wires: we need a qubit for each dimension of a point
         # idx wires: a number n can be represented by log(n) bits. Thus, we need ceil(log2(size of train_data)) qubits
         # ancilla wires:    + we need int(np.ceil(np.log2(self.train_data.shape[1])))+2 qubits for the overflow register
-        #                   + we need 1 ancilla wire for incrementing the overflow register
-        #                   + we need at least 1 ancilla wire for every ccnot
-        return train_data.shape[1], int(np.ceil(np.log2(train_data.shape[0]))), int(np.ceil(np.log2(train_data.shape[1]))) + 4
+        #                   + we need 1 qubit for the oracle
+        #                   + we need 1 qubit for the threshold oracle
+        #                   + we need 1 qubit for the not_in_list oracle
+        return train_data.shape[1], int(np.ceil(np.log2(train_data.shape[0]))), int(np.ceil(np.log2(train_data.shape[1]))) + 5
 
     def get_representative_circuit(self, X) -> str:
         # Chose some initial parameters
@@ -257,11 +275,11 @@ class BasheerHammingQkNN(QkNN):
 
         oracle_phase_circuit = self.get_phase_oracle_circuit(x, a, chosen_indices)
         oracle_one_circuit = self.get_oracle_wire_to_one_circuit(x, a, chosen_indices)
-        check_if_good_wire = self.ancilla_wires[len(a) + 2]
+        check_if_good_wire = self.oracle_wire
         measure_wires = self.idx_wires + self.train_wires
 
         # Get representative aa circuit
-        circuit = exp_search_aa_representative_circuit(
+        circuit = get_exp_search_aa_representative_circuit(
             state_circuit, state_circuit, zero_circuit, oracle_phase_circuit, self.backend,
             oracle_one_circuit, check_if_good_wire, measure_wires
 
