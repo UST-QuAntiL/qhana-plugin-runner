@@ -1,6 +1,10 @@
 import numpy as np
 import pennylane as qml
 
+"""
+The amplitude amplifications algorithms implemented here, can be found in [0]
+[0] Brassard et al. "Quantum amplitude amplification and estimation." Contemporary Mathematics 305 (2002): 53-74. https://arxiv.org/pdf/quant-ph/0005055
+"""
 
 def aa_steps(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, itr):
     """
