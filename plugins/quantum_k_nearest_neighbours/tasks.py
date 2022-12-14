@@ -171,7 +171,7 @@ def calculation_task(self, db_id: int) -> str:
 
     fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels)
     if fig is not None:
-        fig.update_layout(showlegend=False)
+        fig.update_layout(showlegend=True)
 
         with SpooledTemporaryFile(mode="wt") as output:
             html = fig.to_html()
