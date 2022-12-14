@@ -1,7 +1,7 @@
 from enum import Enum
 
 import marshmallow as ma
-from marshmallow import post_load
+from marshmallow import post_load, validate
 
 from .backend.quantum_backends import QuantumBackends
 from .backend.qknns.qknn import QkNNEnum
@@ -27,6 +27,7 @@ class InputParameters:
         test_points_url: str,
         k: int,
         variant: QkNNEnum,
+        exp_itr: int,
         backend: QuantumBackends,
         shots: int,
         ibmq_token: str,
@@ -38,6 +39,7 @@ class InputParameters:
         self.test_points_url = test_points_url
         self.k = k
         self.variant = variant
+        self.exp_itr = exp_itr
         self.minimize_qubit_count = minimize_qubit_count
         self.backend = backend
         self.shots = shots
@@ -105,6 +107,16 @@ class InputParametersSchema(FrontendFormBaseSchema):
                            "- basheer hamming qknn: uses the Hamming distance. It uses amplitude amplification to find the k nearest neighours as described by Basheer et al. in [1], with the oracle of Ruan et al. [2]",
             "input_type": "select",
         },
+    )
+    exp_itr = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Number of Exponential Iterations",
+            "description": "The maximum number of exponential search iterations for amplitude amplification.",
+            "input_type": "number",
+        },
+        validate=validate.Range(min=0, min_inclusive=False)
     )
     minimize_qubit_count = ma.fields.Boolean(
         required=False,

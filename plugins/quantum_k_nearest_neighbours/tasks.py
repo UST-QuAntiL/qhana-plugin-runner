@@ -101,6 +101,7 @@ def calculation_task(self, db_id: int) -> str:
     test_points_url = input_params.test_points_url
     k = input_params.k
     variant = input_params.variant
+    exp_itr = input_params.exp_itr
     minimize_qubit_count = input_params.minimize_qubit_count
     backend = input_params.backend
     shots = input_params.shots
@@ -134,6 +135,7 @@ def calculation_task(self, db_id: int) -> str:
     # Get QkNN
     qknn, num_qbits = variant.get_qknn_and_total_wires(
         train_data, train_labels, k, max_qbits,
+        exp_itr=exp_itr,
         use_access_wires=(not minimize_qubit_count)
     )
 
