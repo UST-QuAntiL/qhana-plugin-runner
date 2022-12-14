@@ -15,7 +15,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
         points_z = []
         ids = []
         label = []
-        test_or_train = []
+        type = []
         for id, idx in train_id_to_idx.items():
             if idx >= train_end:
                 break
@@ -25,7 +25,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_z.append(float(point[2]))
             ids.append(id)
             label.append(f"class {int(train_labels[idx])}")
-            test_or_train.append('train')
+            type.append('train')
         for id, idx in test_id_to_idx.items():
             if idx >= test_end:
                 break
@@ -35,7 +35,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_z.append(float(point[2]))
             ids.append(id)
             label.append(f"class {int(test_labels[idx])}")
-            test_or_train.append('test')
+            type.append('test')
         df = pd.DataFrame(
             {
                 "x": points_x,
@@ -44,18 +44,18 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
                 "ID": ids,
                 "size": [10]*len(ids),
                 "label": label,
-                "test_or_train": test_or_train,
+                "type": type,
             }
         )
         return px.scatter_3d(
-            df, x="x", y="y", z="z", hover_name="ID", size="size", color="label", symbol="test_or_train"
+            df, x="x", y="y", z="z", hover_name="ID", size="size", color="label", symbol="type"
         )
     elif dim == 2:
         points_x = []
         points_y = []
         ids = []
         label = []
-        test_or_train = []
+        type = []
         for id, idx in train_id_to_idx.items():
             if idx >= train_end:
                 break
@@ -64,7 +64,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_y.append(float(point[1]))
             ids.append(id)
             label.append(f"class {int(train_labels[idx])}")
-            test_or_train.append('train')
+            type.append('train')
         for id, idx in test_id_to_idx.items():
             if idx >= test_end:
                 break
@@ -73,7 +73,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_y.append(float(point[1]))
             ids.append(id)
             label.append(f"class {int(test_labels[idx])}")
-            test_or_train.append('test')
+            type.append('test')
         df = pd.DataFrame(
             {
                 "x": points_x,
@@ -81,17 +81,17 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
                 "ID": ids,
                 "size": [10] * len(ids),
                 "label": label,
-                "test_or_train": test_or_train,
+                "type": type,
             }
         )
         return px.scatter(
-            df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="test_or_train"
+            df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
     else:
         points_x = []
         ids = []
         label = []
-        test_or_train = []
+        type = []
         for id, idx in train_id_to_idx.items():
             if idx >= train_end:
                 break
@@ -99,7 +99,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_x.append(float(point[0]))
             ids.append(id)
             label.append(f"class {int(train_labels[idx])}")
-            test_or_train.append('train')
+            type.append('train')
         for id, idx in test_id_to_idx.items():
             if idx >= test_end:
                 break
@@ -107,7 +107,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_x.append(float(point[0]))
             ids.append(id)
             label.append(f"class {int(test_labels[idx])}")
-            test_or_train.append('test')
+            type.append('test')
         df = pd.DataFrame(
             {
                 "x": points_x,
@@ -115,9 +115,9 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
                 "ID": ids,
                 "size": [10] * len(ids),
                 "label": label,
-                "test_or_train": test_or_train,
+                "type": type,
             }
         )
         return px.scatter(
-            df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="test_or_train"
+            df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
