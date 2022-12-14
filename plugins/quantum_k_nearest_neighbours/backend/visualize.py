@@ -24,7 +24,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_y.append(float(point[1]))
             points_z.append(float(point[2]))
             ids.append(id)
-            label.append(f"class {int(train_labels[idx])}")
+            label.append(f"{int(train_labels[idx])}")
             type.append('train')
         for id, idx in test_id_to_idx.items():
             if idx >= test_end:
@@ -34,7 +34,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_y.append(float(point[1]))
             points_z.append(float(point[2]))
             ids.append(id)
-            label.append(f"class {int(test_labels[idx])}")
+            label.append(f"{int(test_labels[idx])}")
             type.append('test')
         df = pd.DataFrame(
             {
@@ -63,7 +63,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_x.append(float(point[0]))
             points_y.append(float(point[1]))
             ids.append(id)
-            label.append(f"class {int(train_labels[idx])}")
+            label.append(f"{int(train_labels[idx])}")
             type.append('train')
         for id, idx in test_id_to_idx.items():
             if idx >= test_end:
@@ -72,7 +72,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             points_x.append(float(point[0]))
             points_y.append(float(point[1]))
             ids.append(id)
-            label.append(f"class {int(test_labels[idx])}")
+            label.append(f"{int(test_labels[idx])}")
             type.append('test')
         df = pd.DataFrame(
             {
@@ -98,7 +98,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             point = train_data[idx]
             points_x.append(float(point[0]))
             ids.append(id)
-            label.append(f"class {int(train_labels[idx])}")
+            label.append(f"{int(train_labels[idx])}")
             type.append('train')
         for id, idx in test_id_to_idx.items():
             if idx >= test_end:
@@ -106,7 +106,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
             point = test_data[idx]
             points_x.append(float(point[0]))
             ids.append(id)
-            label.append(f"class {int(test_labels[idx])}")
+            label.append(f"{int(test_labels[idx])}")
             type.append('test')
         df = pd.DataFrame(
             {
