@@ -27,6 +27,8 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .tasks import calculation_task
 
+from .frontend_js import frontend_js
+
 
 @QKNN_BLP.route("/")
 class PluginsView(MethodView):
@@ -132,8 +134,14 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QKNN_BLP.name}.CalcView"),
+                frontendjs=url_for(f"{QKNN_BLP.name}.get_frontend_js"),
             )
         )
+
+
+@QKNN_BLP.route("/ui/frontend_js/")
+def get_frontend_js():
+    return Response(frontend_js, mimetype='text/javascript')
 
 
 @QKNN_BLP.route("/process/")
