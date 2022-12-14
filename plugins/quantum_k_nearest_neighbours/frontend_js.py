@@ -8,7 +8,7 @@ var exp_itr_value = document.getElementById("exp_itr");
 var exp_itr_vis = exp_itr_value.parentNode.parentNode;
 
 function set_default_values() {
-    exp_itr_value.value = "1";
+    exp_itr_value.value = "10";
 }
 
 

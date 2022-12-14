@@ -111,6 +111,7 @@ class MicroFrontend(MethodView):
         default_values = {
             fields["k"].data_key: 1,
             fields["minimize_qubit_count"].data_key: False,
+            fields["exp_itr"].data_key: 10,
             fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
             fields["shots"].data_key: 1024,
         }
