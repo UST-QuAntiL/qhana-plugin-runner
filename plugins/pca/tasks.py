@@ -409,7 +409,7 @@ def save_outputs(
                 db_id,
                 output,
                 "plot.html",
-                "plot",
+                "custom/plot",
                 "text/html",
             )
     # save pca
@@ -419,7 +419,7 @@ def save_outputs(
             db_id,
             output,
             "pca_metadata.json",
-            "pca-metadata",
+            "custom/pca-metadata",
             "application/json",
         )
 
@@ -430,7 +430,7 @@ def save_outputs(
             db_id,
             output,
             "transformed_entity_points.csv",
-            "entity-points",
+            "entity/vector",
             "text/csv",
         )
 

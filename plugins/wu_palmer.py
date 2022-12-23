@@ -60,7 +60,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "wu-palmer"
-__version__ = "v1.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -81,7 +81,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entities",
+        data_input_type="entity/list",
         data_content_types="application/json",
         metadata={
             "label": "Entities URL",
@@ -92,7 +92,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_metadata_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="attribute-metadata",
+        data_input_type="entity/attribute-metadata",
         data_content_types="application/json",
         metadata={
             "label": "Entities Attribute Metadata URL",
@@ -103,7 +103,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     taxonomies_zip_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="taxonomy",
+        data_input_type="graph/taxonomy",
         data_content_types="application/zip",
         metadata={
             "label": "Taxonomies URL",
@@ -153,19 +153,19 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{WU_PALMER_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entities",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="attribute-metadata",
+                        data_type="entity/attribute-metadata",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesMetadataUrl",
                     ),
                     InputDataMetadata(
-                        data_type="taxonomy",
+                        data_type="graph/taxonomy",
                         content_type=["application/zip"],
                         required=True,
                         parameter="taxonomiesZipUrl",
@@ -173,7 +173,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="element-similarities",
+                        data_type="custom/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -530,7 +530,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "wu_palmer.zip",
-        "element-similarities",
+        "custom/element-similarities",
         "application/zip",
     )
 

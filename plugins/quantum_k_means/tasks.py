@@ -152,7 +152,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "clusters.json",
-            "clusters",
+            "custom/clusters",
             "application/json",
         )
 

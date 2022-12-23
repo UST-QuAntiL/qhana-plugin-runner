@@ -44,17 +44,17 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="raw",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                     ),
                     DataMetadata(
-                        data_type="attribute-metadata",
+                        data_type="entity/attribute-metadata",
                         content_type=["application/json"],
                         required=True,
                     ),
                     DataMetadata(
-                        data_type="graphs",
+                        data_type="custom/taxonomy-graphs",
                         content_type=["application/zip"],
                         required=True,
                     ),

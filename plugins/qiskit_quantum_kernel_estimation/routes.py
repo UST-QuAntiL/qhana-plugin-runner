@@ -81,7 +81,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="kernel-matrix",
+                        data_type="custom/kernel-matrix",
                         content_type=["application/json"],
                         required=True,
                     )

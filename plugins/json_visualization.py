@@ -50,7 +50,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "json-visualization"
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -112,7 +112,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="*",
+                        data_type="custom/hello-world-output",
                         content_type=["text/html"],
                         required=True,
                     )
@@ -236,7 +236,7 @@ def demo_task(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "out.txt", "hello-world-output", "text/plain"
+                db_id, output, "out.txt", "custom/hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"

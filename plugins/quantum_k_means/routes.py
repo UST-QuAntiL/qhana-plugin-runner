@@ -72,7 +72,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="clusters",
+                        data_type="custom/clusters",
                         content_type=["application/json"],
                         required=True,
                     )

@@ -43,14 +43,14 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{HA_BLP.name}.MicroFrontend"),
                 data_input=[
                     DataMetadata(
-                        data_type="real-valued-entities",
+                        data_type="custom/real-valued-entities",
                         content_type=["application/json"],
                         required=True,
                     )
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="real-valued-entities",
+                        data_type="custom/real-valued-entities",
                         content_type=["application/json"],
                         required=True,
                     )
