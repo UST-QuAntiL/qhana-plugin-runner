@@ -170,15 +170,6 @@ Plugin Overview
   
     * - entity/vector
       - text/csv
-  
-    * - `Principle Component Analysis <https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/plugins/pca.py>`_
-      - `PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_
-      - dimension-reduction
-      - entityPointsUrl
-      - entity-points
-      - application/json
-      - principle-components
-      - application/json
 
     * - `Quantum k-Means <https://github.com/UST-QuAntiL/qhana-plugin-runner/tree/main/plugins/quantum_k_means>`_
       - `Quantum k-Means <https://arxiv.org/abs/1909.12183>`_ with custom adaptations for State-Preparation-Quantum-k-Means
@@ -190,8 +181,7 @@ Plugin Overview
       - application/json
 
     * - :rspan:`1` `Quantum Kernel Estimation <https://github.com/UST-QuAntiL/qhana-plugin-runner/tree/main/plugins/quantum_kernel_estimation>`_
-      - :rspan:`1` Quantum Kernel Estimation with kernels from `Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). <https://doi.org/10.1038/s41586-019-0980-2>`
-      and `Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020). <https://doi.org/10.1007/s42484-020-00020-y>`
+      - :rspan:`1` Quantum Kernel Estimation with kernels from `Havlíček, V. et al. (2019) <https://doi.org/10.1038/s41586-019-0980-2>`_ and `Suzuki, Y. et al. (2020) <https://doi.org/10.1007/s42484-020-00020-y>`_
       - :rspan:`1` kernel, mapping
       - entityPointsUrl1
       - entity/vector
@@ -204,7 +194,7 @@ Plugin Overview
       - application/json
 
     * - :rspan:`1` `Qiskit Quantum Kernel Estimation <https://github.com/UST-QuAntiL/qhana-plugin-runner/tree/main/plugins/qiskit_quantum_kernel_estimation>`_
-      - :rspan:`1` Qiskit Quantum Kernel using qiskit's feature maps (ZFeatureMap, ZZFeatureMap, PauliFeatureMap) using the proposed kernel from `Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019). <https://www.nature.com/articles/s41586-019-0980-2>`
+      - :rspan:`1` Qiskit Quantum Kernel using qiskit's feature maps (ZFeatureMap, ZZFeatureMap, PauliFeatureMap) using the proposed kernel from `Havlíček, V. et al. (2019). <https://www.nature.com/articles/s41586-019-0980-2>`_
       - :rspan:`1` kernel, mapping
       - entityPointsUrl1
       - entity/vector
