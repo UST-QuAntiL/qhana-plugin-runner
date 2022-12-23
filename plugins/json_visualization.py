@@ -139,7 +139,7 @@ class MicroFrontend(MethodView):
     @JSON_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @JSON_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the json visualization plugin."
@@ -154,9 +154,9 @@ class MicroFrontend(MethodView):
     @JSON_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         plugin = JsonVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -167,6 +167,7 @@ class MicroFrontend(MethodView):
                 name=plugin.name,
                 version=plugin.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{JSON_BLP.name}.ProcessView"),
