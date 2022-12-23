@@ -61,7 +61,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "entity-filter"
-__version__ = "v0.1.0"
+__version__ = "v1.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 INFINITY = -1
@@ -176,7 +176,7 @@ class PluginsView(MethodView):
             description=EntityFilter.instance.description,
             name=EntityFilter.instance.name,
             version=EntityFilter.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),

@@ -55,7 +55,7 @@ class PluginsView(MethodView):
             description=QKMeans.instance.description,
             name=QKMeans.instance.name,
             version=QKMeans.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{QKMEANS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),

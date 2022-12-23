@@ -37,7 +37,7 @@ class PluginsView(MethodView):
             description=HybridAutoencoderPlugin.instance.description,
             name=HybridAutoencoderPlugin.instance.name,
             version=HybridAutoencoderPlugin.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{HA_BLP.name}.HybridAutoencoderPennylaneAPI"),
                 ui_href=url_for(f"{HA_BLP.name}.MicroFrontend"),

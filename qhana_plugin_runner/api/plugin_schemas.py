@@ -33,8 +33,6 @@ class PluginType(Enum):
         "simple" and "complex" are deprecated and should be replaced with "processing"!
     """
 
-    simple = "simple"
-    complex = "complex"
     processing = "processing"
     visualization = "visualization"
     conversion = "conversion"

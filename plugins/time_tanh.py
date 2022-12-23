@@ -59,7 +59,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "time-tanh"
-__version__ = "v0.1.0"
+__version__ = "v1.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -121,7 +121,7 @@ class PluginsView(MethodView):
             description=TimeTanh.instance.description,
             name=TimeTanh.instance.name,
             version=TimeTanh.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{TIME_TANH_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{TIME_TANH_BLP.name}.MicroFrontend"),

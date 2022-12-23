@@ -37,7 +37,7 @@ class PluginsView(MethodView):
             description=CostumeLoader.instance.description,
             name=CostumeLoader.instance.name,
             version=CostumeLoader.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
                 ui_href=url_for(f"{COSTUME_LOADER_BLP.name}.MicroFrontend"),
