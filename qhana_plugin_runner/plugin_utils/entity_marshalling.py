@@ -89,7 +89,9 @@ class EntityTupleMixin:
         return cls(*iterable)
 
 
-_ENTITY_TYPE_TUPLE_CLASSES: Dict[Tuple[str, ...], Type[NamedTuple]] = {}  # TODO cache invalidation (use lru cache?)
+_ENTITY_TYPE_TUPLE_CLASSES: Dict[
+    Tuple[str, ...], Type[NamedTuple]
+] = {}  # TODO cache invalidation (use lru cache?)
 
 
 def get_entity_tuple_class(

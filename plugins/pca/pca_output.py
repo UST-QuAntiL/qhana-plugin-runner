@@ -84,6 +84,7 @@ def _(pca: SparsePCA) -> dict:
     }
     return sparse_pca_out
 
+
 @pca_to_output.register
 def _(pca: KernelPCA) -> dict:
     kernel_pca_out = {

@@ -126,7 +126,9 @@ class Clustering(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def compute_new_centroid_mapping(self, prepped_data, centroids) -> (List[int], int, str):
+    def compute_new_centroid_mapping(
+        self, prepped_data, centroids
+    ) -> (List[int], int, str):
         """
         Returns new centroid mapping, depending on the prepared data and the current centroids
         """
