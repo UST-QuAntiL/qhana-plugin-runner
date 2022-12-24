@@ -33,7 +33,12 @@ class KernelEnum(enum.Enum):
     pauli_feature_map = "Pauli Kernel"
 
     def get_kernel(
-        self, backend, n_qbits: int, paulis: List[str], reps: int, entanglement_pattern: str
+        self,
+        backend,
+        n_qbits: int,
+        paulis: List[str],
+        reps: int,
+        entanglement_pattern: str,
     ) -> QuantumKernel:
         if self == KernelEnum.z_feature_map:
             feature_map = ZFeatureMap(
@@ -47,7 +52,10 @@ class KernelEnum(enum.Enum):
 
         elif self == KernelEnum.pauli_feature_map:
             feature_map = PauliFeatureMap(
-                feature_dimension=n_qbits, paulis=paulis, entanglement=entanglement_pattern, reps=reps
+                feature_dimension=n_qbits,
+                paulis=paulis,
+                entanglement=entanglement_pattern,
+                reps=reps,
             )
 
         else:
