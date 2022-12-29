@@ -303,7 +303,7 @@ class SimpleAngleQkNN(SimpleQkNN):
 
     def calculate_distances(self, x) -> np.ndarray:
         samples = qml.QNode(self.get_quantum_circuit(x), self.backend)().tolist()
-        num_zero_swap = [0] * len(self.train_data)
+        num_one_swap = [0] * len(self.train_data)
         idx_count = [0] * len(self.train_data)
         # Count how often a certain index was measured (idx_count)
         # and how often the swap qubit was zero (num_zero_ancilla)
@@ -312,18 +312,19 @@ class SimpleAngleQkNN(SimpleQkNN):
             idx = bitlist_to_int(sample[:-1]) % self.train_data.shape[0]
             idx_count[idx] += 1
             if sample[-1] == 1:
-                num_zero_swap[idx] += 1
+                num_one_swap[idx] += 1
 
         distances = np.ones((self.train_data.shape[0], ))
         for i in range(self.train_data.shape[0]):
             if idx_count[i] != 0:
                 # The swap test variant used, results in zero_prob = (1 + <Psi|Phi>)/2 and one_prob = (1 - <Psi|Phi>)/2,
                 # where |Psi> and |Phi> are the quantum states that get compared
-                zero_prob = num_zero_swap[i] / idx_count[i]
-                # angle = <Psi | Phi> and we want to minimize the angle
-                # We want to minimize the angle between the different states. Thus, if we minimize
-                # zero_prob = (1 + <Psi|Phi)/2, we also minimize the angle.
-                distances[i] = zero_prob
+                one_prob = num_one_swap[i] / idx_count[i]
+                # angle = arccos(<Psi | Phi>) and we want to minimize the angle
+                # We want to minimize the angle between the different states. Thus, if we maximize <Psi|Phi>,
+                # we also minimize the angle. Further, maximizing zero_prob = (1 + <Psi|Phi)/2 is equivalent.
+                # Maximizing zero_prob is the same as minimizing one_prob
+                distances[i] = one_prob
 
         return distances
 
