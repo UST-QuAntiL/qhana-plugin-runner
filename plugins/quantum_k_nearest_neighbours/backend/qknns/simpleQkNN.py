@@ -130,7 +130,8 @@ class SimpleFidelityQkNN(SimpleQkNN):
             unclean_wires=self.swap_wires+self.unclean_wires
         )
 
-    def prep_data(self, data: np.ndarray):
+    @staticmethod
+    def prep_data(data: np.ndarray):
         # Normalize
         norms = np.linalg.norm(data, axis=1)
         zero_elements = np.where(norms == 0)
@@ -150,7 +151,8 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
         return data
 
-    def repeat_data_til_next_power_of_two(self, data):
+    @staticmethod
+    def repeat_data_til_next_power_of_two(data):
         next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
         missing_till_next_power = next_power - data.shape[0]
         data = np.vstack((data, data[:missing_till_next_power]))
@@ -218,6 +220,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
     def get_necessary_wires(train_data):
         if not isinstance(train_data, np.ndarray):
             train_data = np.array(train_data)
+        train_data = SimpleFidelityQkNN.repeat_data_til_next_power_of_two(SimpleFidelityQkNN.prep_data(train_data))
         return int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3
 
     def get_representative_circuit(self, X) -> str:
