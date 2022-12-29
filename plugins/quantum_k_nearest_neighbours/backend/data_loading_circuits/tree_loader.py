@@ -32,7 +32,7 @@ class TreeLoader:
         self.unclean_wires = [] if unclean_wires is None else unclean_wires  # unclean wires are like ancilla wires, but they are not guaranteed to be 0
 
         wire_types = ["idx", "data", "ancilla", "unclean"]
-        num_wires = [int(np.ceil(np.log2(self.data.shape[1]))), int(np.ceil(np.log2(data.shape[1]))), 3]
+        num_wires = [int(np.ceil(np.log2(self.data.shape[0]))), int(np.ceil(np.log2(data.shape[1]))), 3]
         error_msgs = ["ceil(log2(size of train_data)).", "ceil(log2(datas' dimensionality)).", "3."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
