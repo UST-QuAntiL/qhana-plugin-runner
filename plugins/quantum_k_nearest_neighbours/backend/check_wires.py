@@ -16,5 +16,5 @@ def check_num_wires(obj_with_wires, wire_types, num_wires, error_msgs):
     for w_type, n_wires, e_msg in zip(wire_types, num_wires, error_msgs):
         wires = getattr(obj_with_wires, w_type + '_wires')
         if len(wires) < n_wires:
-            error = f"The number of {w_type} wires has to be greater or equal to {e_msg}"
+            error = f"The number of {w_type} wires has to be greater or equal to {e_msg} Expected {n_wires}, but got {len(wires)}."
             raise QuantumFunctionError(error)
