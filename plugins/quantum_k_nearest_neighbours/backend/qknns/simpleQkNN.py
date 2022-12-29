@@ -119,6 +119,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
         self.ancilla_wires = ancilla_wires
         self.idx_wires = idx_wires
         self.swap_wires = swap_wires
+
         wire_types = ["train", "test", "idx", "swap", "ancilla", "unclean"]
         num_wires = [int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3]
         error_msgs = ["ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(size of train_data)).", "1.", "3."]
@@ -164,18 +165,15 @@ class SimpleFidelityQkNN(SimpleQkNN):
             for i in self.idx_wires:
                 qml.Hadamard((i, ))
             self.loader.circuit()
-            qml.Snapshot("Training data")
 
             # Load test point x
-            TreeLoader(x[None, :], self.swap_wires, self.test_wires, self.ancilla_wires)
-            qml.Snapshot("Test data")
+            TreeLoader(x[None, :], self.swap_wires, self.test_wires, self.ancilla_wires).circuit()
 
             # Swap test
             qml.Hadamard((self.swap_wires[0], ))
             for i in range(len(self.train_wires)):
                 qml.CSWAP((self.swap_wires[0], self.train_wires[i], self.test_wires[i]))
             qml.Hadamard((self.swap_wires[0],))
-            qml.Snapshot("Swap test")
 
             return qml.sample(wires=self.idx_wires + self.swap_wires)
 
