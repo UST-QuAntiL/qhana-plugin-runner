@@ -15,6 +15,7 @@ class QkNNEnum(Enum):
     schuld_qknn = "schuld qknn"
     simple_hamming_qknn = "simple hamming qknn"
     simple_fidelity_qknn = "simple fidelity qknn"
+    simple_angle_qknn = "simple angle qknn"
     basheer_hamming_qknn = "basheer hamming qknn"
 
     def get_qknn_and_total_wires(self, train_data, train_labels, k, max_wires, exp_itr=10, use_access_wires=True):
@@ -39,6 +40,13 @@ class QkNNEnum(Enum):
                 wires[4] = wires[4]+access_wires
 
             return SimpleFidelityQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], wires[4], None), count_wires(wires)
+        elif self == QkNNEnum.simple_angle_qknn:
+            from .simpleQkNN import SimpleAngleQkNN
+            wires, access_wires = self.check_and_get_qubits(SimpleAngleQkNN, max_wires, train_data=train_data)
+            if use_access_wires:
+                wires[4] = wires[4]+access_wires
+
+            return SimpleAngleQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], None), count_wires(wires)
         elif self == QkNNEnum.basheer_hamming_qknn:
             from .basheer_hamming import BasheerHammingQkNN
             wires, access_wires = self.check_and_get_qubits(BasheerHammingQkNN, max_wires, train_data=train_data)
