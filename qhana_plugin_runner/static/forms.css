@@ -46,3 +46,13 @@ code.example {
     background-color: blanchedalmond;
     color: #333;
 }
+
+.checkmark {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    stroke-width: 1;
+    color: rgb(0, 247, 0);
+    stroke-miterlimit: 10;
+    stroke-dashoffset: 0;
+}

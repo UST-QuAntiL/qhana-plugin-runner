@@ -226,7 +226,7 @@ class MicroFrontend(MethodView):
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @ENTITY_FILTER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the entity filter plugin."
@@ -241,9 +241,9 @@ class MicroFrontend(MethodView):
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = EntityFilterParametersSchema()
         return Response(
             render_template(
@@ -252,6 +252,7 @@ class MicroFrontend(MethodView):
                 version=EntityFilter.instance.version,
                 schema=schema,
                 values=data,
+                valid=valid,
                 errors=errors,
                 process=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 example_values=url_for(

@@ -246,7 +246,7 @@ class MicroFrontend(MethodView):
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @ONEHOT_BLP.html_response(
         HTTPStatus.OK,
@@ -262,9 +262,9 @@ class MicroFrontend(MethodView):
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
 
         return Response(
@@ -273,6 +273,7 @@ class MicroFrontend(MethodView):
                 name=OneHot.instance.name,
                 version=OneHot.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{ONEHOT_BLP.name}.CalcView"),
