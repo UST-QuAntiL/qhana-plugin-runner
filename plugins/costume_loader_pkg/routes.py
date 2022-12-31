@@ -54,7 +54,7 @@ class PluginsView(MethodView):
                         required=True,
                     ),
                     DataMetadata(
-                        data_type="custom/taxonomy-graphs",
+                        data_type="graph/taxonomy",
                         content_type=["application/zip"],
                         required=True,
                     ),

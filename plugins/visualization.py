@@ -51,7 +51,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "visualization"
-__version__ = "v1.0.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -82,7 +82,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity/numeric",
+        data_input_type="entity/*",
         data_content_types="application/json",
         metadata={
             "label": "Entity points URL",
@@ -126,7 +126,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{VIS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity/numeric",
+                        data_type="entity/*",
                         content_type=["application/json"],
                         required=True,
                         parameter="entityPointsUrl",

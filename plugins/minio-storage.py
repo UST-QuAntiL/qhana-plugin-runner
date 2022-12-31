@@ -26,7 +26,7 @@ from qhana_plugin_runner.db.models.tasks import TaskFile
 from qhana_plugin_runner.storage import FileStore
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 
 
 class HelloWorld(QHAnaPluginBase):
@@ -128,7 +128,7 @@ class MinioStore(FileStore, name="minio"):
 
         if length < 0:
             # part size >5MiB must be set if the size is unknown
-            extra_args["part_size"] = 2**25
+            extra_args["part_size"] = 2 ** 25
 
         self._client.put_object(
             self._minio_bucket,

@@ -170,7 +170,7 @@ def loading_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "taxonomies.zip",
-        "graphs",
+        "graph/taxonomy",
         "application/zip",
     )
 

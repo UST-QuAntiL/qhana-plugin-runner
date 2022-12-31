@@ -53,7 +53,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "zip-merger"
-__version__ = "v1.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -114,13 +114,13 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{ZIP_MERGER_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="any",
+                        data_type="*",
                         content_type=["application/zip"],
                         required=True,
                         parameter="zip1Url",
                     ),
                     InputDataMetadata(
-                        data_type="any",
+                        data_type="*",
                         content_type=["application/zip"],
                         required=True,
                         parameter="zip2Url",
@@ -128,7 +128,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="any", content_type=["application/zip"], required=True
+                        data_type="*", content_type=["application/zip"], required=True
                     )
                 ],
             ),
@@ -267,7 +267,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "merged.zip",
-        "any",
+        "*",
         "application/zip",
     )
 

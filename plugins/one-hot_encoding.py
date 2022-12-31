@@ -99,7 +99,7 @@ Improvements:
 
 
 _plugin_name = "one-hot encoding"
-__version__ = "v1.0.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -381,7 +381,9 @@ def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict) -> Set:
         return result
 
 
-def compute_ancestors_and_index_dict(entities, attributes, attribute_ref_targets, taxonomies) -> Tuple[List, List, int]:
+def compute_ancestors_and_index_dict(
+    entities, attributes, attribute_ref_targets, taxonomies
+) -> Tuple[List, List, int]:
     """
     Each entity owns certain attributes in a given taxonomy. This method computes the ancestors for each of the
     attributes in every given taxonomy.
@@ -420,14 +422,18 @@ def compute_ancestors_and_index_dict(entities, attributes, attribute_ref_targets
     return taxonomies_ancestors_list, attr_to_idx_dict_list, dim
 
 
-def prepare_stream_output(entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim):
+def prepare_stream_output(
+    entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+):
     """
     Transforms an entity into it's one-hot encoding and yields it.
     """
     for entity in entities:
         id = entity["ID"]
-        one_hot_encodings = np.zeros((dim, ))
-        for attribute, attr_to_idx_dict, taxonomies_ancestors in zip(attributes, attr_to_idx_dict_list, taxonomies_ancestors_list):
+        one_hot_encodings = np.zeros((dim,))
+        for attribute, attr_to_idx_dict, taxonomies_ancestors in zip(
+            attributes, attr_to_idx_dict_list, taxonomies_ancestors_list
+        ):
             values = entity[attribute]
 
             sub_attributes = set()
@@ -473,13 +479,23 @@ def calculation_task(self, db_id: int) -> str:
     # load data from file
     attributes = attributes.splitlines()
     # ref target is the name of the file containing the taxonomy
-    attribute_ref_targets = get_attribute_ref_target(entities_attribute_metadata_url, attributes)
+    attribute_ref_targets = get_attribute_ref_target(
+        entities_attribute_metadata_url, attributes
+    )
     # load taxonomies
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
     entities = open_url(entities_url).json()
-    taxonomies_ancestors_list, attr_to_idx_dict_list, dim = compute_ancestors_and_index_dict(entities, attributes, attribute_ref_targets, taxonomies)
-    entity_points = prepare_stream_output(entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim)
+    (
+        taxonomies_ancestors_list,
+        attr_to_idx_dict_list,
+        dim,
+    ) = compute_ancestors_and_index_dict(
+        entities, attributes, attribute_ref_targets, taxonomies
+    )
+    entity_points = prepare_stream_output(
+        entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+    )
     csv_attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
 
     with SpooledTemporaryFile(mode="w") as output:
