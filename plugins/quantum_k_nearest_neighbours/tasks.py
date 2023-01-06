@@ -159,6 +159,10 @@ def calculation_task(self, db_id: int) -> str:
     # Get representative circuit
     representative_circuit = qknn.get_representative_circuit(test_data)
 
+    # Create plot
+    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels,
+                    resolution=resolution, predictor=qknn.label_points)
+
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
@@ -169,9 +173,6 @@ def calculation_task(self, db_id: int) -> str:
             "labels",
             "application/json",
         )
-
-    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels,
-                    resolution=resolution, predictor=qknn.label_points)
 
     if fig is not None:
         with SpooledTemporaryFile(mode="wt") as output:
