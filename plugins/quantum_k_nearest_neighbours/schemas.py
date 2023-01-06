@@ -32,6 +32,7 @@ class InputParameters:
         shots: int,
         ibmq_token: str,
         custom_backend: str,
+        resolution: int,
         minimize_qubit_count=False,
     ):
         self.train_points_url = train_points_url
@@ -45,6 +46,7 @@ class InputParameters:
         self.shots = shots
         self.ibmq_token = ibmq_token
         self.custom_backend = custom_backend
+        self.resolution = resolution
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -166,6 +168,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Custom backend for IBMQ.",
             "input_type": "text",
         },
+    )
+    resolution = ma.fields.Integer(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Resolution",
+            "description": "The resolution of the visualization. How finegrained the evaluation of the classifier should be.\n"
+                           "If set to 0, only the test and training points get plotted.",
+            "input_type": "number",
+        },
+        validate=validate.Range(min=0, min_inclusive=False)
     )
 
     @post_load

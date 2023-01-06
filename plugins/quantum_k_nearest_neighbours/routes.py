@@ -114,6 +114,7 @@ class MicroFrontend(MethodView):
             fields["exp_itr"].data_key: 10,
             fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
             fields["shots"].data_key: 1024,
+            fields["resolution"].data_key: 20,
         }
 
         if "IBMQ_BACKEND" in os.environ:

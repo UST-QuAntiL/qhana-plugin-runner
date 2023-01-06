@@ -70,7 +70,7 @@ def load_labels_from_url(labels_url: str, id_to_idx: dict):
     labels = open_url(labels_url).json()
 
     num_labels = len(id_to_idx)
-    label_arr = np.empty((num_labels,))
+    label_arr = np.empty((num_labels,), dtype=int)
 
     for label in labels:
         idx = id_to_idx[label["ID"]]
@@ -107,6 +107,7 @@ def calculation_task(self, db_id: int) -> str:
     shots = input_params.shots
     ibmq_token = input_params.ibmq_token
     custom_backend = input_params.custom_backend
+    resolution = input_params.resolution
 
     # Log information about the input parameters
     TASK_LOGGER.info(
@@ -169,7 +170,9 @@ def calculation_task(self, db_id: int) -> str:
             "application/json",
         )
 
-    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels)
+    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels,
+                    resolution=resolution, predictor=qknn.label_points)
+
     if fig is not None:
         with SpooledTemporaryFile(mode="wt") as output:
             html = fig.to_html()
