@@ -222,7 +222,8 @@ class SimpleFidelityQkNN(SimpleQkNN):
         return int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3
 
     def get_representative_circuit(self, X) -> str:
-        circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
+        x = self.prep_data(X[:1])[0]
+        circuit = qml.QNode(self.get_quantum_circuit(x), self.backend)
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
 
@@ -346,6 +347,7 @@ class SimpleAngleQkNN(SimpleQkNN):
         return int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3
 
     def get_representative_circuit(self, X) -> str:
-        circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
+        x = self.prep_data(X[:1])[0]
+        circuit = qml.QNode(self.get_quantum_circuit(x), self.backend)
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
