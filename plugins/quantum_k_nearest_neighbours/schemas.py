@@ -1,5 +1,3 @@
-from enum import Enum
-
 import marshmallow as ma
 from marshmallow import post_load, validate
 
@@ -85,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_input_type="entity-points",
         data_content_types="application/json",
         metadata={
-            "label": "Testing Entity points URL",
+            "label": "Test Entity points URL",
             "description": "URL to a json file with the entity points that should be used for testing. These points will be labeled.",
             "input_type": "text",
         },
@@ -96,8 +94,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_input_type="labels",
         data_content_types="application/json",
         metadata={
-            "label": "Testing Labels URL",
-            "description": "URL to a json file containing the labels of the testing entity points. If no url is provided,"
+            "label": "Test Labels URL",
+            "description": "URL to a json file containing the labels of the test entity points. If no url is provided,"
                            "then the accuracy will not be calculated.",
             "input_type": "text",
         },
