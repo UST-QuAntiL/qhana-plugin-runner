@@ -1,4 +1,3 @@
-frontend_js = """
 // Long block of just gathering elements
 // If a variable ends with _value, it's the element itself and the value can be retrieved or set
 var qknn_type_value = document.getElementById("variant");
@@ -35,4 +34,3 @@ function qknn_type_change(reset_values=true) {
 qknn_type_change(false);
 
 qknn_type_value.onchange = qknn_type_change;
-"""
