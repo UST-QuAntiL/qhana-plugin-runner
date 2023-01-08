@@ -17,8 +17,9 @@ from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
 import numpy as np
+from sklearn.metrics import accuracy_score
 
-from .backend.visualize import plot_data
+from .backend.visualize import plot_data, plot_confusion_matrix
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -97,8 +98,9 @@ def calculation_task(self, db_id: int) -> str:
 
     # Assign input parameters to variables
     train_points_url = input_params.train_points_url
-    label_points_url = input_params.label_points_url
+    train_label_points_url = input_params.train_label_points_url
     test_points_url = input_params.test_points_url
+    test_label_points_url = input_params.test_label_points_url
     k = input_params.k
     variant = input_params.variant
     exp_itr = input_params.exp_itr
@@ -125,8 +127,11 @@ def calculation_task(self, db_id: int) -> str:
 
     # Load in data
     train_data, train_id_to_idx = load_entity_points_from_url(train_points_url)
-    train_labels = load_labels_from_url(label_points_url, train_id_to_idx)
+    train_labels = load_labels_from_url(train_label_points_url, train_id_to_idx)
     test_data, test_id_to_idx = load_entity_points_from_url(test_points_url)
+    test_labels = None
+    if test_label_points_url != "" and test_label_points_url is not None:
+        test_labels = load_labels_from_url(test_label_points_url, test_id_to_idx)
 
     # Retrieve max qubit count
     max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
@@ -148,20 +153,32 @@ def calculation_task(self, db_id: int) -> str:
     print(f"backend.num_qubits = {backend.num_wires}")
 
     # Label test data
-    test_labels = qknn.label_points(test_data)
+    predictions = qknn.label_points(test_data)
 
     # Prepare labels to be saved
     output_labels = []
 
     for ent_id, idx in test_id_to_idx.items():
-        output_labels.append({"ID": ent_id, "href": "", "label": int(test_labels[idx])})
+        output_labels.append({"ID": ent_id, "href": "", "label": int(predictions[idx])})
 
     # Get representative circuit
     representative_circuit = qknn.get_representative_circuit(test_data)
 
+    # Plot title + confusion matrix
+    plot_title = "Classification"
+    conf_matrix = None
+    if test_labels is not None:
+        # Compute accuracy on test data
+        test_accuracy = accuracy_score(test_labels, predictions)
+        plot_title += f": accuracy on test data={test_accuracy}"
+
+        # Compute confusion matrix
+        conf_matrix = plot_confusion_matrix(test_labels, predictions)
+
     # Create plot
-    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels,
-                    resolution=resolution, predictor=qknn.label_points)
+    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, predictions,
+                    resolution=resolution, predictor=qknn.label_points, title=plot_title)
+
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
@@ -182,7 +199,20 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                "classification_plot.html",
+                "plot",
+                "text/html",
+            )
+
+    if conf_matrix is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = conf_matrix.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "confusion_matrix.html",
                 "plot",
                 "text/html",
             )

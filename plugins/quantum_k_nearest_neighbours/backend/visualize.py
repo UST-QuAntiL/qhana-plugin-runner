@@ -2,6 +2,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+from sklearn.metrics import confusion_matrix
 
 
 def get_id_list(id_to_idx: dict) -> list:
@@ -106,7 +107,10 @@ def add_background(points, resolution, predictor, scatter, two_classes=False):
     return scatter
 
 
-def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, test_labels, resolution=0, predictor=None, only_first_100=True):
+def plot_data(train_data, train_id_to_idx, train_labels,
+              test_data, test_id_to_idx, test_labels,
+              resolution=0, predictor=None, only_first_100=True,
+              title=""):
     # Prepare data
     dim = len(train_data[0])
     train_end = 100 if only_first_100 else len(train_data)
@@ -136,9 +140,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
 
     # Create plots
     if dim >= 3:
-        return px.scatter_3d(
-            df, x="x", y="y", z="z", hover_name="ID", size="size", color="label", symbol="type"
-        )
+        fig = px.scatter_3d(df, x="x", y="y", z="z", hover_name="ID", size="size", color="label", symbol="type")
     elif dim == 2:
         fig = px.scatter(
             df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
@@ -146,10 +148,64 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
 
         if resolution > 0 and predictor is not None:
             fig = add_background(points, resolution, predictor, fig, two_classes=len(set(train_labels))==2)
-
-        return fig
     else:
         df["y"] = [0]*len(df["x"])
-        return px.scatter(
+        fig = px.scatter(
             df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
+
+    fig.update_layout(dict(
+        font=dict(
+            size=15,
+        ),
+    ))
+    fig.update_layout(dict(
+        title=dict(
+            text=title,
+            x=0.5,
+            xanchor="center",
+            yanchor="top",
+            font=dict(
+                size=30,
+            ),
+        )
+    ))
+
+    return fig
+
+
+def plot_confusion_matrix(y_true, y_pred):
+    conf_matrix = confusion_matrix(y_true, y_pred).T
+
+    df_content = dict()
+    for idx, v in enumerate(conf_matrix):
+        df_content[str(idx)] = [str(el) for el in v]
+    df = pd.DataFrame(df_content)
+    df.index = pd.Index([str(idx) for idx in range(len(conf_matrix))], name="True label")
+    df.columns = pd.Index([str(idx) for idx in range(len(conf_matrix))], name="Predicted label")
+
+    fig = px.imshow(
+        df,
+        text_auto=True,
+        color_continuous_scale=px.colors.sequential.Aggrnyl,
+    )
+    fig.update_layout(dict(
+        font=dict(
+            size=18,
+        ),
+    ))
+    fig.update_layout(dict(
+        title=dict(
+            text="Confusion Matrix",
+            x=0.5,
+            xanchor="center",
+            yanchor="top",
+            font=dict(
+                size=30,
+            ),
+        )
+    ))
+    fig.update_xaxes(dict(titlefont=dict(size=18), tickfont=dict(size=18)))
+    fig.update_yaxes(dict(titlefont=dict(size=18), tickfont=dict(size=18)))
+
+    return fig

@@ -35,7 +35,7 @@ class QKNN(QHAnaPluginBase):
         return QKNN_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16"
+        return "qiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16\nscikit-learn~=1.1"
 
 
 try:
