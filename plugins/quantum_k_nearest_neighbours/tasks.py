@@ -176,6 +176,8 @@ def calculation_task(self, db_id: int) -> str:
         conf_matrix = plot_confusion_matrix(test_labels, predictions)
 
     # Create plot
+    if not qknn.heatmap_meaningful():
+        resolution = 0
     fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, predictions,
                     resolution=resolution, predictor=qknn.label_points, title=plot_title)
 

@@ -286,3 +286,6 @@ class BasheerHammingQkNN(QkNN):
         )
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
+
+    def heatmap_meaningful(self):
+        return False

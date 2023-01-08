@@ -102,3 +102,10 @@ class QkNN:
         for x in X:
             new_labels.append(self.label_point(x))
         return new_labels
+
+    @abstractmethod
+    def heatmap_meaningful(self) -> bool:
+        """
+        Determines, if a heatmap as a background, when visualizing labeled data is meaningful or not.
+        E.g. a heatmap for binary data is not meaningful.
+        """

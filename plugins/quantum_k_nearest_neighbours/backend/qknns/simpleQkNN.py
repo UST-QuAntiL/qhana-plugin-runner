@@ -103,6 +103,9 @@ class SimpleHammingQkNN(SimpleQkNN):
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
 
+    def heatmap_meaningful(self):
+        return False
+
 
 class SimpleFidelityQkNN(SimpleQkNN):
     def __init__(self, train_data, train_labels, k: int,
@@ -226,6 +229,9 @@ class SimpleFidelityQkNN(SimpleQkNN):
         circuit = qml.QNode(self.get_quantum_circuit(x), self.backend)
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
+
+    def heatmap_meaningful(self):
+        return True
 
 
 class SimpleAngleQkNN(SimpleQkNN):
@@ -351,3 +357,6 @@ class SimpleAngleQkNN(SimpleQkNN):
         circuit = qml.QNode(self.get_quantum_circuit(x), self.backend)
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
+
+    def heatmap_meaningful(self):
+        return True

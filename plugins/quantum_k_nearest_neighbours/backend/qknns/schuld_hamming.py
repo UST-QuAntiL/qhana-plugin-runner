@@ -114,3 +114,6 @@ class SchuldQkNN(QkNN):
         circuit = self.get_quantum_circuit(X[0])
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
+
+    def heatmap_meaningful(self):
+        return False
