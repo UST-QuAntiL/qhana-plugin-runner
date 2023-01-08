@@ -16,21 +16,25 @@ def add_heatmap(points, resolution, predictor, scatter):
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
     max_vec = points.max(axis=0)
-    max_v = max_vec.max() * 0.1
-    min_vec -= max_v
-    max_vec += max_v
+
+    # The plotly zooms a little further out (autozoom), such that the points at the edge of the plot are perfectly visible.
+    # If we do not account for this, there would be an margin of empty space between the points and the edge of the plot.
+    # Therefore, we adapt the min and max values and thus, stretching the heatmap to the edge.
+    max_values = np.array([np.abs(min_vec), np.abs(max_vec)]).max(axis=0) * 0.1
+    min_vec -= max_values
+    max_vec += max_values
 
     # Compute ranges (still in vector)
     range_vec = max_vec - min_vec
 
-    # Subtract 1 from the resolution, we add it later on again, but doing it like this, fills the whole screen
-    # with the heatmap and leaves no blank border
-    # resolution -= 1
+    # Subtract 1 from the resolution, we add it later on again.
+    # This lets us fill the whole screen, on low resolutions
+    resolution -= 1
     h_vec = range_vec / resolution  # h_vec contains the step size for x and y direction
 
     # get x and y coordinates of a grid.
     # We need to determine the label of each point in the grid to create the heatmap
-    # max_vec += h_vec  # +h adds the previously subtracted resolution
+    max_vec += h_vec  # +h adds the previously subtracted resolution
     x_grid = np.arange(min_vec[0], max_vec[0], h_vec[0])
     y_grid = np.arange(min_vec[1], max_vec[1], h_vec[1])
 
@@ -78,7 +82,6 @@ def add_heatmap(points, resolution, predictor, scatter):
 
     # Combine both heatmap and scatter plot
     # layout=fig.layout keeps the description of the legend
-
     scatter = go.Figure(data=heatmap.data + scatter.data, layout=scatter.layout)
 
     return scatter
