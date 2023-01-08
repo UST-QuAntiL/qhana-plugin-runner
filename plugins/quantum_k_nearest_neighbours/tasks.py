@@ -172,7 +172,7 @@ def calculation_task(self, db_id: int) -> str:
         test_accuracy = accuracy_score(test_labels, predictions)
         plot_title += f": accuracy on test data={test_accuracy}"
 
-        # Compute confusion matrix
+        # Create confusion matrix plot
         conf_matrix = plot_confusion_matrix(test_labels, predictions)
 
     # Create plot
