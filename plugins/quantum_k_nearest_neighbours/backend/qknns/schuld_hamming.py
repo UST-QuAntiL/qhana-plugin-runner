@@ -85,7 +85,6 @@ class SchuldQkNN(QkNN):
             label = bitlist_to_int(sample[1:])
             if sample[0] == 0:
                 label_probs[label] += 1
-        print(label_probs / len(samples))
         return self.unique_labels[label_probs.argmax()]
 
     def get_quantum_circuit(self, x):

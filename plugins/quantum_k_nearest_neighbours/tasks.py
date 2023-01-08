@@ -150,8 +150,6 @@ def calculation_task(self, db_id: int) -> str:
     backend.shots = shots
     qknn.set_quantum_backend(backend)
 
-    print(f"backend.num_qubits = {backend.num_wires}")
-
     # Label test data
     predictions = qknn.label_points(test_data)
 

@@ -167,7 +167,6 @@ class TreeLoader:
             # Release ancilla 1
 
     def load_tree(self, tree_idx: int):
-        # print(f"log2_num_trees={log2_num_trees}")
         if len(self.idx_wires) != 0:
             tree_idx_bits = int_to_bitlist(tree_idx, len(self.idx_wires))
             for i in range(len(self.idx_wires)):

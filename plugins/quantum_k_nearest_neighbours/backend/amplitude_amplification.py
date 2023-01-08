@@ -165,7 +165,6 @@ def lambda_amplitude_amplification(num_states, state_circuit, inv_state_circuit,
             check_if_good()
             return qml.sample(wires=check_if_good_wire+measure_wires)
 
-        # print(qml.draw(circuit)())
         result = get_good_result(circuit())
         if result is not None:
             return result
