@@ -1,5 +1,3 @@
-from enum import Enum
-
 import marshmallow as ma
 from marshmallow import post_load
 
@@ -23,8 +21,9 @@ class InputParameters:
     def __init__(
         self,
         train_points_url: str,
-        label_points_url: str,
+        train_label_points_url: str,
         test_points_url: str,
+        test_label_points_url: str,
         window_size: int,
         variant: QParzenWindowEnum,
         backend: QuantumBackends,
@@ -34,7 +33,9 @@ class InputParameters:
         minimize_qubit_count=False,
     ):
         self.train_points_url = train_points_url
-        self.label_points_url = label_points_url
+        self.train_label_points_url = train_label_points_url
+        self.test_points_url = test_points_url
+        self.test_label_points_url = test_label_points_url
         self.test_points_url = test_points_url
         self.window_size = window_size
         self.variant = variant
@@ -57,18 +58,18 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_input_type="entity-points",
         data_content_types="application/json",
         metadata={
-            "label": "Entity points URL for Training",
+            "label": "Training Entity points URL",
             "description": "URL to a json file with the entity points to train the quantum kNN algorithm.",
             "input_type": "text",
         },
     )
-    label_points_url = FileUrl(
+    train_label_points_url = FileUrl(
         required=True,
         allow_none=False,
         data_input_type="labels",
         data_content_types="application/json",
         metadata={
-            "label": "Labels URL",
+            "label": "Training Labels URL",
             "description": "URL to a json file containing the labels of the training entity points.",
             "input_type": "text",
         },
@@ -79,8 +80,20 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_input_type="entity-points",
         data_content_types="application/json",
         metadata={
-            "label": "Unlabeled Entity points URL",
-            "description": "URL to a json file with the unlabeled entity points. These points will be labeled.",
+            "label": "Test Entity points URL",
+            "description": "URL to a json file with the entity points that should be used for testing. These points will be labeled.",
+            "input_type": "text",
+        },
+    )
+    test_label_points_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="labels",
+        data_content_types="application/json",
+        metadata={
+            "label": "Test Labels URL",
+            "description": "URL to a json file containing the labels of the test entity points. If no url is provided,"
+                           "then the accuracy will not be calculated.",
             "input_type": "text",
         },
     )
