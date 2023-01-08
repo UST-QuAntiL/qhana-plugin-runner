@@ -11,7 +11,7 @@ def get_id_list(id_to_idx: dict) -> list:
     return ids
 
 
-def add_heatmap(points, resolution, predictor, scatter):
+def add_background(points, resolution, predictor, scatter, two_classes=False):
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -20,7 +20,7 @@ def add_heatmap(points, resolution, predictor, scatter):
     # The plotly zooms a little further out (autozoom), such that the points at the edge of the plot are perfectly visible.
     # If we do not account for this, there would be an margin of empty space between the points and the edge of the plot.
     # Therefore, we adapt the min and max values and thus, stretching the heatmap to the edge.
-    max_values = np.array([np.abs(min_vec), np.abs(max_vec)]).max(axis=0) * 0.1
+    max_values = np.array([np.abs(min_vec), np.abs(max_vec)]).max(axis=0) * 0.2 + 1     # +1 to avoid the zero case
     min_vec -= max_values
     max_vec += max_values
 
@@ -48,18 +48,33 @@ def add_heatmap(points, resolution, predictor, scatter):
 
     Z = np.array(Z)
 
-    # Create heatmap
-    heatmap = go.Figure(go.Heatmap(
-        z=Z,
-        x=x_grid,
-        y=y_grid,
-        showscale=False,
-        colorscale=px.colors.qualitative.D3,
-        zmin=0,
-        zmax=10,
-        hoverinfo="skip",
-        opacity=0.75,
-    ))
+    if two_classes:
+        # Create contours
+        background = go.Figure(go.Contour(
+            z=Z + 1,
+            x=x_grid,
+            y=y_grid,
+            showscale=False,
+            colorscale=list(px.colors.qualitative.D3),
+            zmin=0,
+            zmax=10,
+            hoverinfo="skip",
+            opacity=0.55,
+            line_width=1,
+        ))
+    else:
+        # Create heatmap
+        background = go.Figure(go.Heatmap(
+            z=Z,
+            x=x_grid,
+            y=y_grid,
+            showscale=False,
+            colorscale=list(px.colors.qualitative.D3),
+            zmin=0,
+            zmax=9,
+            hoverinfo="skip",
+            opacity=0.55,
+        ))
 
     # Give markers a slightly thicker border, since their background will most likely have the same color.
     # Note, background is due to the heatmap
@@ -82,7 +97,11 @@ def add_heatmap(points, resolution, predictor, scatter):
 
     # Combine both heatmap and scatter plot
     # layout=fig.layout keeps the description of the legend
-    scatter = go.Figure(data=heatmap.data + scatter.data, layout=scatter.layout)
+    scatter = go.Figure(data=background.data + scatter.data, layout=scatter.layout)
+
+    # Set x- and y-axes correctly, in case the background still is not large enough for autozoom
+    scatter.update_xaxes(range=[x_grid.min(), x_grid.max()])
+    scatter.update_yaxes(range=[y_grid.min(), y_grid.max()])
 
     return scatter
 
@@ -126,7 +145,7 @@ def plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_i
         )
 
         if resolution > 0 and predictor is not None:
-            fig = add_heatmap(points, resolution, predictor, fig)
+            fig = add_background(points, resolution, predictor, fig, two_classes=len(set(train_labels))==2)
 
         return fig
     else:
