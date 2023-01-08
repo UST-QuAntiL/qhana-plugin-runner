@@ -67,14 +67,14 @@ class RuanParzenWindow(ParzenWindow):
                 if self.a[i] == 1:
                     qml.PauliX((self.qam_ancilla_wires[i],))
             # Increment overflow register for each 1 in the train register
-            qml.PauliX((self.qam_ancilla_wires[len(self.a)],))    # Allows us to set ancilla_is_zero to False
+            qml.PauliX((self.qam_ancilla_wires[len(self.a)],))    # Allows us to set indicator_is_zero to False
             for i in range(len(self.train_wires)):
                 cc_increment_register(
                     [self.train_wires[i]], self.qam_ancilla_wires[:len(self.a)],
                     self.qam_ancilla_wires[len(self.a)+1:],
                     self.qam_ancilla_wires[len(self.a)],
                     unclean_wires=self.unclean_wires + self.train_wires[:i] + self.train_wires[i+1:],
-                    ancilla_is_zero=False
+                    indicator_is_zero=False
                 )
             # for i in range(self.log2_threshold):
             for i in range(2):
