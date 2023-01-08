@@ -192,7 +192,6 @@ class TreeLoader:
 
         for tree_idx in range(len(self.binary_trees)):
             self.load_tree(tree_idx)
-            qml.Snapshot(f"tree{tree_idx}")
 
         for i in range(log2_num_trees, len(self.idx_wires)):
             qml.PauliX((self.idx_wires[i],))
