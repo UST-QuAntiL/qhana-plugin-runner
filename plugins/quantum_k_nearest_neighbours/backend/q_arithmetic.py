@@ -19,7 +19,7 @@ def cc_increment_register(
     :param unclean_wires: unclean qubits (their state might not be |0>). They are used for ccnots.
     :param indicator_is_zero: if True, then the indicator_wire is in state |0>, else |1>.
     """
-    if indicator_wire:
+    if indicator_is_zero:
         qml.PauliX((indicator_wire,))  # indicator wire must be 1
     for i in range(len(target_wires) - 1, 0, -1):
         adaptive_ccnot(
