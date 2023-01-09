@@ -95,17 +95,17 @@ class PluginsView(MethodView):
                     ),
                     DataMetadata(
                         data_type="plot",
-                        content_type=["application/json"],
+                        content_type=["text/html"],
                         required=False,
                     ),
                     DataMetadata(
                         data_type="plot",
-                        content_type=["application/json"],
+                        content_type=["text/html"],
                         required=False,
                     ),
                     DataMetadata(
                         data_type="representative-circuit",
-                        content_type=["application/json"],
+                        content_type=["application/qasm"],
                         required=True,
                     ),
                 ],
