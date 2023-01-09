@@ -55,7 +55,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     train_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Training Entity points URL",
@@ -66,7 +66,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     train_label_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="labels",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Training Labels URL",
@@ -77,7 +77,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     test_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Test Entity points URL",
@@ -88,7 +88,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     test_label_points_url = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="labels",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Test Labels URL",

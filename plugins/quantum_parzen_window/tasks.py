@@ -179,7 +179,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "labels.json",
-            "labels",
+            "entity/vector",
             "application/json",
         )
 

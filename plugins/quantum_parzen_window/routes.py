@@ -47,15 +47,48 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{QParzenWindow_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["application/json"],
                         required=True,
-                        parameter="entityPointsUrl",
+                        parameter="trainPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter="trainLabelPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter="testPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=False,
+                        parameter="testLabelPointsUrl",
                     )
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="labels",
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=["application/json"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=["application/json"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="representative-circuit",
                         content_type=["application/json"],
                         required=True,
                     )
