@@ -27,7 +27,6 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .tasks import calculation_task
 
-# from .frontend_js import frontend_js
 from .frontend_js import get_frontend_js as frontend_js
 
 
@@ -50,15 +49,48 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{QKNN_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["application/json"],
                         required=True,
-                        parameter="entityPointsUrl",
+                        parameter="trainPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter="trainLabelPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter="testPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=False,
+                        parameter="testLabelPointsUrl",
                     )
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="labels",
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=["application/json"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=["application/json"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="representative-circuit",
                         content_type=["application/json"],
                         required=True,
                     )

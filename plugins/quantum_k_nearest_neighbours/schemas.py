@@ -58,7 +58,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     train_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Training Entity points URL",
@@ -69,7 +69,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     train_label_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="labels",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Training Labels URL",
@@ -80,7 +80,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     test_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Test Entity points URL",
@@ -91,7 +91,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     test_label_points_url = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="labels",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
             "label": "Test Labels URL",
@@ -106,8 +106,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Number of Neighbours",
             "description": "The number of neighbours that the kNN algorithm will use, to label the unlabeled entity points.",
-            "input_type": "text",
+            "input_type": "number",
         },
+        validate=validate.Range(min=0, min_inclusive=False)
     )
     variant = EnumField(
         QkNNEnum,
@@ -160,8 +161,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "Number of times the quantum kNN circuit gets repeated. "
                            "Rule of thumb is, the higher the number of shots, the more accurate the results.",
-            "input_type": "text",
-        }
+            "input_type": "number",
+        },
+        validate=validate.Range(min=0, min_inclusive=False)
     )
     ibmq_token = ma.fields.String(
         required=False,
@@ -190,7 +192,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
                            "If set to 0, only the test and training points get plotted.",
             "input_type": "number",
         },
-        validate=validate.Range(min=0, min_inclusive=False)
+        validate=validate.Range(min=0, min_inclusive=True)
     )
 
     @post_load
