@@ -67,7 +67,6 @@ def load_entity_points_from_url(entity_points_url: str):
 
 def load_labels_from_url(labels_url: str, id_to_idx: dict):
     # load data from file
-
     labels = open_url(labels_url).json()
 
     num_labels = len(id_to_idx)

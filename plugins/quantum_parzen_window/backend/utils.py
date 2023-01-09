@@ -21,6 +21,7 @@ def int_to_bitlist(num, length: int):
         result[0] = 1
     return result
 
+
 def check_if_values_are_binary(data):
     import numpy as np
     return np.array_equal(data, data.astype(bool))

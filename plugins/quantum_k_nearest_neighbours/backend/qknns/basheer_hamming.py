@@ -44,8 +44,6 @@ class BasheerHammingQkNN(QkNN):
 
         self.train_data = np.array(train_data, dtype=int)
 
-        # self.a = int_to_bitlist(self.a, int(np.ceil(np.log2(self.a)))+1)
-        # self.log2_threshold = 0 if self.distance_threshold == 0 else int(np.ceil(np.log2(self.distance_threshold)))
         self.exp_itr = exp_itr
         self.num_train_data = self.train_data.shape[0]
         self.train_data = self.repeat_data_til_next_power_of_two(self.train_data)
@@ -92,7 +90,7 @@ class BasheerHammingQkNN(QkNN):
         data = np.vstack((data, data[:missing_till_next_power]))
         return data
 
-    def get_oracle_wire_to_one_circuit(self, x, a, indices, do_final_toffoli=True):
+    def get_oracle_wire_to_one_circuit(self, x, a, indices):
         def circuit():
             # Load points into register
             self.tree_loader.circuit()
@@ -224,7 +222,6 @@ class BasheerHammingQkNN(QkNN):
         # Init: First choose k random points, to be the current nearest neighbours
         chosen_indices = np.random.choice(range(self.num_train_data), self.k, replace=False)
 
-        # chosen_indices = np.array([0, 4])
         chosen_distances = np.array([calc_hamming_distance(x, self.train_data[idx]) for idx in chosen_indices])
         converged = False
 

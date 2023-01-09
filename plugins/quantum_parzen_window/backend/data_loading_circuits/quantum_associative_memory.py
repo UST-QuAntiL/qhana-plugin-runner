@@ -69,14 +69,11 @@ class QAM:
         return x.real**2 + x.imag**2
 
     def prepare_rotation_circuits(self) -> List:
-        # rotation_matrices = np.zeros((self.xor_X.shape[0], 4), dtype=np.float64)
         rotation_circuits = []
         prev_sum = 1
         rotation_matrix = np.zeros((2, 2), dtype=np.complex128)
         for i in range(self.xor_X.shape[0]-1):
             next_sum = prev_sum - self.abs2(self.amplitudes[i])
-            # print(f"prev_sum = {prev_sum}")
-            # print(f"next_sum = {next_sum}")
             diag = np.sqrt(next_sum / prev_sum)
             rotation_matrix[0, 0] = diag
             rotation_matrix[1, 1] = diag
@@ -84,7 +81,6 @@ class QAM:
             sqrt_prev_sum = np.sqrt(prev_sum)
             rotation_matrix[0, 1] = self.amplitudes[i] / sqrt_prev_sum
             rotation_matrix[1, 0] = -self.amplitudes[i].conjugate() / sqrt_prev_sum
-            # rotation_matrices[i] = np.array(compute_zyz_decomposition(rotation_matrix))
             rotation_circuits.append(get_controlled_one_qubit_unitary(rotation_matrix))
             prev_sum = next_sum
 
@@ -94,7 +90,6 @@ class QAM:
         sqrt_prev_sum = np.sqrt(prev_sum)
         rotation_matrix[0, 1] = self.amplitudes[-1] / sqrt_prev_sum
         rotation_matrix[1, 0] = -self.amplitudes[-1].conjugate() / sqrt_prev_sum
-        # rotation_matrices[-1] = np.array(compute_zyz_decomposition(rotation_matrix))
         rotation_circuits.append(get_controlled_one_qubit_unitary(rotation_matrix))
 
         return rotation_circuits
@@ -129,25 +124,20 @@ class QAM:
             self.load_x(self.xor_X[i])
             if self.xor_additional_bits is not None:
                 self.load_additional_bits(self.xor_additional_bits[i])
-            # qml.Snapshot(f"{i}: loaded {self.X[i]}")  # Debug
 
             # CNOT load to control
             qml.CNOT(wires=(self.load_wire, self.control_wire))
-            # qml.Snapshot(f"{i}: set control to load") # Debug
 
             # Controlled rotation i from control on load
             self.rotation_circuits[i](self.control_wire, self.load_wire)
-            # qml.Snapshot(f"{i}: controlled rotation on load") # Debug
 
             # Flip control wire, if register == xi
             self.flip_control_if_reg_equals_x(self.X[i])
-            # qml.Snapshot(f"{i}: controlled flipped, if reg equals {self.X[i]}")   # Debug
 
             # Since we are using xor_X, we don't need to uncompute the register, if load == 1
             # xor_X[0] = X[0], but xor_X[i] = X[i] xor X[i-1] for all i > 0
             # After iteration i, reg=X[i]. Now loading xor_X[i+1] results in
             # reg = X[i] xor xor_X[i+1] = X[i] xor (X[i+1] xor X[i]) = (X[i] xor X[i]) xor X[i+1] = 0 xor X[i+1] = X[i+1]
-            # qml.Snapshot(f"{i}: qam after {i}'th data point") # Debug
 
     def get_circuit(self):
         return self.circuit

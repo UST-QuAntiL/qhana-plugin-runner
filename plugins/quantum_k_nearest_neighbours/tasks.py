@@ -67,7 +67,6 @@ def load_entity_points_from_url(entity_points_url: str):
 
 def load_labels_from_url(labels_url: str, id_to_idx: dict):
     # load data from file
-
     labels = open_url(labels_url).json()
 
     num_labels = len(id_to_idx)
@@ -82,7 +81,6 @@ def load_labels_from_url(labels_url: str, id_to_idx: dict):
 @CELERY.task(name=f"{QKNN.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
-
     TASK_LOGGER.info(
         f"Starting new quantum k nearest neighbours calculation task with db id '{db_id}'"
     )
@@ -178,7 +176,6 @@ def calculation_task(self, db_id: int) -> str:
         resolution = 0
     fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, predictions,
                     resolution=resolution, predictor=qknn.label_points, title=plot_title)
-
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:

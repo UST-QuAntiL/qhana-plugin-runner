@@ -156,15 +156,11 @@ class TreeLoader:
 
             # left child
             qml.PauliX((self.data_wires[qubit_idx],))
-            # Reserve ancilla 1
             self.qubit_rotations(qubit_idx+1, tree_node.left_child, right=False)
-            # Release ancilla 1
             qml.PauliX((self.data_wires[qubit_idx],))
 
             # right child
-            # Reserve ancilla 1
             self.qubit_rotations(qubit_idx + 1, tree_node.right_child, right=True)
-            # Release ancilla 1
 
     def load_tree(self, tree_idx: int):
         if len(self.idx_wires) != 0:

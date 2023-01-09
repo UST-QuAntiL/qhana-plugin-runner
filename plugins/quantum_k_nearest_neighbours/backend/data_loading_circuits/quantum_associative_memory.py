@@ -69,7 +69,6 @@ class QAM:
         return x.real**2 + x.imag**2
 
     def prepare_rotation_circuits(self) -> List:
-        # rotation_matrices = np.zeros((self.xor_X.shape[0], 4), dtype=np.float64)
         rotation_circuits = []
         prev_sum = 1
         rotation_matrix = np.zeros((2, 2), dtype=np.complex128)
@@ -91,7 +90,6 @@ class QAM:
         sqrt_prev_sum = np.sqrt(prev_sum)
         rotation_matrix[0, 1] = self.amplitudes[-1] / sqrt_prev_sum
         rotation_matrix[1, 0] = -self.amplitudes[-1].conjugate() / sqrt_prev_sum
-        # rotation_matrices[-1] = np.array(compute_zyz_decomposition(rotation_matrix))
         rotation_circuits.append(get_controlled_one_qubit_unitary(rotation_matrix))
 
         return rotation_circuits

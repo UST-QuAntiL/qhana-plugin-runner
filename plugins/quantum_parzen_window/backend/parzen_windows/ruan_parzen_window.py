@@ -23,8 +23,6 @@ class RuanParzenWindow(ParzenWindow):
         self.k = int(np.ceil(np.log2(self.train_data.shape[1])))
         self.a = int(2**self.k - self.train_data.shape[1] + self.distance_threshold)
         self.a = int_to_bitlist(self.a, self.k+2)
-        # self.a = int_to_bitlist(self.a, int(np.ceil(np.log2(self.a)))+1)
-        # self.log2_threshold = 0 if self.distance_threshold == 0 else int(np.ceil(np.log2(self.distance_threshold)))
         self.label_indices = self.init_labels(train_labels)
 
         self.unclean_wires = [] if unclean_wires is None else unclean_wires
@@ -33,7 +31,6 @@ class RuanParzenWindow(ParzenWindow):
         self.ancilla_wires = ancilla_wires
 
         wire_types = ["train", "label", "ancilla", "unclean"]
-        # num_wires = [self.train_data.shape[1], self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels)))))]
         num_wires = [self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels))))), np.ceil(np.log2(self.train_data.shape[1]))+4]
         error_msgs = ["the points' dimensionality.", "ceil(log2(the points' dimensionality)))+2.", "ceil(log2(len(unique labels)))."]
         check_wires_uniqueness(self, wire_types)
@@ -110,8 +107,6 @@ class RuanParzenWindow(ParzenWindow):
                 label = bitlist_to_int(sample[:-1])
                 label_probs[label] += 1
                 samples_with_one += 1
-        # if samples_with_one != 0:
-        #     print(label_probs / samples_with_one)
         return self.unique_labels[label_probs.argmax()]
 
     def label_point(self, x) -> int:
@@ -120,10 +115,6 @@ class RuanParzenWindow(ParzenWindow):
 
     @staticmethod
     def get_necessary_wires(train_data, train_labels):
-        # if len(train_data[0]) < 13:
-        #     k = int(np.ceil(np.log2(len(train_data[0]))))
-        #     return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), 2*k + 5
-
         unique_labels = list(set(train_labels))
         return int(len(train_data[0])), max(1, int(np.ceil(np.log2(len(unique_labels))))), int(np.ceil(np.log2(len(train_data[0])))+4)
 

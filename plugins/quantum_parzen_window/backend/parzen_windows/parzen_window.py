@@ -2,7 +2,7 @@ import numpy as np
 from abc import abstractmethod
 from enum import Enum
 from typing import List
-from pennylane import QuantumFunctionError, Device
+from pennylane import Device
 
 
 def count_wires(wires: List[List]):
@@ -40,10 +40,6 @@ class QParzenWindowEnum(Enum):
         return wires, access_wires
 
     def get_preferred_backend(self):
-        # if self == QkNNEnum.qiskit_qknn:
-        #     return "qiskit"
-        # else:
-        #     return "pennylane"
         return "pennylane"
 
 
