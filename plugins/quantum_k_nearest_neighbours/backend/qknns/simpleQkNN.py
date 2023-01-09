@@ -65,8 +65,8 @@ class SimpleHammingQkNN(SimpleQkNN):
         self.train_wires = train_wires
         self.qam_ancilla_wires = qam_ancilla_wires
         wire_types = ["train", "qam_ancilla", "unclean"]
-        num_wires = [self.train_data.shape[1], self.train_data.shape[1]]
-        error_msgs = ["the points' dimensionality.", "the points' dimensionality."]
+        num_wires = [self.train_data.shape[1], max(self.train_data.shape[1], 2)]
+        error_msgs = ["the points' dimensionality.", "the points' dimensionality and greater or equal to 2."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
         self.qam = QAM(
@@ -116,7 +116,7 @@ class SimpleHammingQkNN(SimpleQkNN):
 
     @staticmethod
     def get_necessary_wires(train_data):
-        return len(train_data[0]), len(train_data[0])
+        return len(train_data[0]), max(len(train_data[0]), 2)
 
     def get_representative_circuit(self, X) -> str:
         circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)

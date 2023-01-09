@@ -73,16 +73,16 @@ class SchuldQkNN(QkNN):
         self.train_wires = train_wires
         self.qam_ancilla_wires = qam_ancilla_wires
         self.label_wires = label_wires
-        wire_types = ["train", "qam_ancilla", "label", "unclean"]
+        wire_types = ["train", "label", "qam_ancilla", "unclean"]
         num_wires = [
             self.train_data.shape[1],
-            self.train_data.shape[1],
             self.label_indices.shape[1],
+            max(self.train_data.shape[1], 2),
         ]
         error_msgs = [
             "the points' dimensionality.",
-            "the points' dimensionality.",
             "ceil(log2(len(unique labels))).",
+            "the points' dimensionality and greater or equal to 2.",
         ]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
@@ -143,7 +143,7 @@ class SchuldQkNN(QkNN):
         return (
             len(train_data[0]),
             int(np.ceil(np.log2(len(set(train_labels))))),
-            len(train_data[0]),
+            max(len(train_data[0]), 2),
         )
 
     def get_representative_circuit(self, X) -> str:

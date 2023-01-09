@@ -52,8 +52,8 @@ class RuanParzenWindow(ParzenWindow):
         ]
         error_msgs = [
             "the points' dimensionality.",
-            "ceil(log2(the points' dimensionality)))+2.",
-            "ceil(log2(len(unique labels))).",
+            "ceil(log2(no. of unique labels)) and greater or equal to 1.",
+            "ceil(log2(the points' dimensionality)) + 4.",
         ]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
