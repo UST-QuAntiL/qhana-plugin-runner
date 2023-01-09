@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from marshmallow import post_load
+from marshmallow import post_load, validate
 import marshmallow as ma
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
@@ -101,7 +101,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     train_labels_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity/numeric",
+        data_input_type="entity/vector",
         data_content_types=[
             "application/json",
             "text/csv",
@@ -130,7 +130,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     test_labels_url = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="entity/numeric",
+        data_input_type="entity/vector",
         data_content_types=[
             "application/json",
             "text/csv",
@@ -298,6 +298,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
                            "If set to 0, only the test and training points get plotted.",
             "input_type": "number",
         },
+        validate=validate.Range(min=0, min_inclusive=True),
     )
 
     @post_load

@@ -70,7 +70,7 @@ class PluginsView(MethodView):
                         parameter="train_data_url",
                     ),
                     InputDataMetadata(
-                        data_type="entity/numeric",
+                        data_type="entity/vector",
                         content_type=[
                             "application/json",
                             "text/csv",
@@ -87,13 +87,42 @@ class PluginsView(MethodView):
                         required=True,
                         parameter="test_data_url",
                     ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
+                        required=False,
+                        parameter="test_labels_url",
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity/numeric",
+                        data_type="entity/vector",
                         content_type=["application/json"],
                         required=True,
-                    )
+                    ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=["text/html"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=["text/html"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="representative-circuit",
+                        content_type=["application/qasm"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="vqc-metadata",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
                 ],
             ),
             tags=VQC.instance.tags,
