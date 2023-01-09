@@ -247,7 +247,7 @@ class BasheerHammingQkNN(QkNN):
 
         distance_threshold = min(distance_threshold, self.train_data.shape[0])
         p = int(np.ceil(np.log2(self.train_data.shape[1])))
-        a = int(2 ** p - self.train_data.shape[1] + distance_threshold)
+        a = int(2**p - self.train_data.shape[1] + distance_threshold)
         a = int_to_bitlist(a, p + 2)
 
         oracle_phase_circuit = self.get_phase_oracle_circuit(x, a, chosen_indices)
@@ -337,7 +337,7 @@ class BasheerHammingQkNN(QkNN):
 
         distance_threshold = min(distance_threshold, self.train_data.shape[0])
         p = int(np.ceil(np.log2(self.train_data.shape[1])))
-        a = int(2 ** p - self.train_data.shape[1] + distance_threshold)
+        a = int(2**p - self.train_data.shape[1] + distance_threshold)
         a = int_to_bitlist(a, p + 2)
 
         oracle_phase_circuit = self.get_phase_oracle_circuit(x, a, chosen_indices)

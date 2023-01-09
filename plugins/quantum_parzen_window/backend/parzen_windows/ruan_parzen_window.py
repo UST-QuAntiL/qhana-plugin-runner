@@ -35,7 +35,7 @@ class RuanParzenWindow(ParzenWindow):
             int(self.distance_threshold), self.train_data.shape[1]
         )
         self.k = int(np.ceil(np.log2(self.train_data.shape[1])))
-        self.a = int(2 ** self.k - self.train_data.shape[1] + self.distance_threshold)
+        self.a = int(2**self.k - self.train_data.shape[1] + self.distance_threshold)
         self.a = int_to_bitlist(self.a, self.k + 2)
         self.label_indices = self.init_labels(train_labels)
 

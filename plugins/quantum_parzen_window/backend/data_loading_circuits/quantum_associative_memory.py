@@ -83,7 +83,7 @@ class QAM:
         return xor_X
 
     def abs2(self, x):
-        return x.real ** 2 + x.imag ** 2
+        return x.real**2 + x.imag**2
 
     def prepare_rotation_circuits(self) -> List:
         rotation_circuits = []
