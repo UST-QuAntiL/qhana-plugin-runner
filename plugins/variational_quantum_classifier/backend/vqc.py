@@ -88,12 +88,9 @@ class qiskitVQC:
 
     def get_representative_circuit(self, data, labels):
         # Init vqc
-        print(f"vqc type = {type(self.__vqc)}")
         if self.__vqc._fit_result is not None:
-            print("pick vqc")
             vqc = self.__vqc
         else:
-            print("new vqc")
             optimizer = OptimizerEnum.cobyla.get_optimizer(1)
             vqc = VQC(feature_map=self.__feature_map, ansatz=self.__ansatz,
                              optimizer=optimizer, quantum_instance=self.__quantum_instance)
