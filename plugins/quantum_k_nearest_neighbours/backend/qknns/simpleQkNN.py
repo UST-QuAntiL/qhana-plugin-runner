@@ -27,22 +27,35 @@ class SimpleQkNN(QkNN):
         if self.k == len(self.train_data):
             new_label = np.bincount(self.train_labels).argmax()
         else:
-            distances = np.array(self.calculate_distances(x))       # Get distances
-            indices = np.argpartition(distances, self.k)[:self.k]   # Get k smallest values
-            counts = Counter(self.train_labels[indices])            # Count occurrences of labels in k smallest values
-            new_label = max(counts, key=counts.get)                 # Get most frequent label
+            distances = np.array(self.calculate_distances(x))  # Get distances
+            indices = np.argpartition(distances, self.k)[
+                : self.k
+            ]  # Get k smallest values
+            counts = Counter(
+                self.train_labels[indices]
+            )  # Count occurrences of labels in k smallest values
+            new_label = max(counts, key=counts.get)  # Get most frequent label
         return new_label
 
 
 class SimpleHammingQkNN(SimpleQkNN):
-    def __init__(self, train_data, train_labels, k: int,
-                 train_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device,
-                 unclean_wires=None):
+    def __init__(
+        self,
+        train_data,
+        train_labels,
+        k: int,
+        train_wires: List[int],
+        qam_ancilla_wires: List[int],
+        backend: qml.Device,
+        unclean_wires=None,
+    ):
         super(SimpleHammingQkNN, self).__init__(train_data, train_labels, k, backend)
         self.train_data = np.array(train_data, dtype=int)
 
         if not check_if_values_are_binary(self.train_data):
-            raise ValueError("All the data needs to be binary, when dealing with the hamming distance")
+            raise ValueError(
+                "All the data needs to be binary, when dealing with the hamming distance"
+            )
 
         self.point_num_to_idx = dict()
         for i in range(len(self.train_data)):
@@ -56,7 +69,12 @@ class SimpleHammingQkNN(SimpleQkNN):
         error_msgs = ["the points' dimensionality.", "the points' dimensionality."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
-        self.qam = QAM(self.train_data, self.train_wires, self.qam_ancilla_wires, unclean_wires=self.unclean_wires)
+        self.qam = QAM(
+            self.train_data,
+            self.train_wires,
+            self.qam_ancilla_wires,
+            unclean_wires=self.unclean_wires,
+        )
 
     def get_quantum_circuit(self, x):
         rot_angle = np.pi / len(x)
@@ -78,8 +96,8 @@ class SimpleHammingQkNN(SimpleQkNN):
 
     def calculate_distances(self, x) -> List[float]:
         samples = qml.QNode(self.get_quantum_circuit(x), self.backend)().tolist()
-        num_zero_ancilla = [0]*len(self.train_data)
-        total_ancilla = [0]*len(self.train_data)
+        num_zero_ancilla = [0] * len(self.train_data)
+        total_ancilla = [0] * len(self.train_data)
         # Count how often a certain point was measured (total_ancilla)
         # and how often the ancilla qubit was zero (num_zero_ancilla)
         for sample in samples:
@@ -91,7 +109,9 @@ class SimpleHammingQkNN(SimpleQkNN):
         for i in range(len(num_zero_ancilla)):
             # 0 <= num_zero_ancilla[i] / total_ancilla[i] <= 1. Hence if total_ancilla[i] == 0, we have no information
             # about the distance, but due to the rot_angle it can't be greater than 1, therefore we set it to 1
-            num_zero_ancilla[i] = 1 if total_ancilla[i] == 0 else num_zero_ancilla[i] / total_ancilla[i]
+            num_zero_ancilla[i] = (
+                1 if total_ancilla[i] == 0 else num_zero_ancilla[i] / total_ancilla[i]
+            )
         return num_zero_ancilla
 
     @staticmethod
@@ -108,9 +128,19 @@ class SimpleHammingQkNN(SimpleQkNN):
 
 
 class SimpleFidelityQkNN(SimpleQkNN):
-    def __init__(self, train_data, train_labels, k: int,
-                 train_wires: List[int], test_wires: List[int], idx_wires: List[int],
-                 swap_wires: List[int], ancilla_wires: List[int], backend: qml.Device, unclean_wires=None):
+    def __init__(
+        self,
+        train_data,
+        train_labels,
+        k: int,
+        train_wires: List[int],
+        test_wires: List[int],
+        idx_wires: List[int],
+        swap_wires: List[int],
+        ancilla_wires: List[int],
+        backend: qml.Device,
+        unclean_wires=None,
+    ):
         super(SimpleFidelityQkNN, self).__init__(train_data, train_labels, k, backend)
 
         self.prepped_points = self.prep_data(self.train_data)
@@ -124,14 +154,29 @@ class SimpleFidelityQkNN(SimpleQkNN):
         self.swap_wires = swap_wires
 
         wire_types = ["train", "test", "idx", "swap", "ancilla", "unclean"]
-        num_wires = [int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3]
-        error_msgs = ["ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(size of train_data)).", "1.", "3."]
+        num_wires = [
+            int(np.ceil(np.log2(train_data.shape[1] + 1))),
+            int(np.ceil(np.log2(train_data.shape[1] + 1))),
+            int(np.ceil(np.log2(train_data.shape[0]))),
+            1,
+            3,
+        ]
+        error_msgs = [
+            "ceil(log2(train_datas' dimensionality + 1)).",
+            "ceil(log2(train_datas' dimensionality + 1)).",
+            "ceil(log2(size of train_data)).",
+            "1.",
+            "3.",
+        ]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
         self.loader = TreeLoader(
-            self.prepped_points, self.idx_wires, self.train_wires, self.ancilla_wires,
-            unclean_wires=self.swap_wires+self.unclean_wires
+            self.prepped_points,
+            self.idx_wires,
+            self.train_wires,
+            self.ancilla_wires,
+            unclean_wires=self.swap_wires + self.unclean_wires,
         )
 
     @staticmethod
@@ -149,9 +194,14 @@ class SimpleFidelityQkNN(SimpleQkNN):
         data = np.append(data, new_column[:, None], axis=1)
 
         # Ensure the number of dimensions is a power of 2
-        next_power = 2**int(np.ceil(np.log2(data.shape[1])))
+        next_power = 2 ** int(np.ceil(np.log2(data.shape[1])))
         next_power = max(next_power, 1)
-        data = np.pad(data, [(0, 0), (0, next_power - data.shape[1])], mode='constant', constant_values=0)
+        data = np.pad(
+            data,
+            [(0, 0), (0, next_power - data.shape[1])],
+            mode="constant",
+            constant_values=0,
+        )
 
         return data
 
@@ -166,14 +216,16 @@ class SimpleFidelityQkNN(SimpleQkNN):
         def quantum_circuit():
             # Load in training data
             for i in self.idx_wires:
-                qml.Hadamard((i, ))
+                qml.Hadamard((i,))
             self.loader.circuit()
 
             # Load test point x
-            TreeLoader(x[None, :], self.swap_wires, self.test_wires, self.ancilla_wires).circuit()
+            TreeLoader(
+                x[None, :], self.swap_wires, self.test_wires, self.ancilla_wires
+            ).circuit()
 
             # Swap test
-            qml.Hadamard((self.swap_wires[0], ))
+            qml.Hadamard((self.swap_wires[0],))
             for i in range(len(self.train_wires)):
                 qml.CSWAP((self.swap_wires[0], self.train_wires[i], self.test_wires[i]))
             qml.Hadamard((self.swap_wires[0],))
@@ -195,12 +247,12 @@ class SimpleFidelityQkNN(SimpleQkNN):
             if sample[-1] == 0:
                 num_zero_swap[idx] += 1
 
-        distances = np.ones((self.train_data.shape[0], ))
+        distances = np.ones((self.train_data.shape[0],))
         for i in range(self.train_data.shape[0]):
             if idx_count[i] != 0:
                 zero_prob = num_zero_swap[i] / idx_count[i]
                 # fidelitiy = zero_prob - one_prob = zero_prob - (1 - zero_prob) = 2*zero_prob - 1
-                fidelity = 2*zero_prob - 1
+                fidelity = 2 * zero_prob - 1
                 # Barres distance is sqrt(2 - 2*sqrt(fidelity)). Therefore it suffices to maximise the fidelity
                 # maximising fidelity is equivalent to minimising -1*fidelity
                 distances[i] = -1 * fidelity
@@ -221,8 +273,16 @@ class SimpleFidelityQkNN(SimpleQkNN):
     def get_necessary_wires(train_data):
         if not isinstance(train_data, np.ndarray):
             train_data = np.array(train_data)
-        train_data = SimpleFidelityQkNN.repeat_data_til_next_power_of_two(SimpleFidelityQkNN.prep_data(train_data))
-        return int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3
+        train_data = SimpleFidelityQkNN.repeat_data_til_next_power_of_two(
+            SimpleFidelityQkNN.prep_data(train_data)
+        )
+        return (
+            int(np.ceil(np.log2(train_data.shape[1] + 1))),
+            int(np.ceil(np.log2(train_data.shape[1] + 1))),
+            int(np.ceil(np.log2(train_data.shape[0]))),
+            1,
+            3,
+        )
 
     def get_representative_circuit(self, X) -> str:
         x = self.prep_data(X[:1])[0]
@@ -235,9 +295,18 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
 
 class SimpleAngleQkNN(SimpleQkNN):
-    def __init__(self, train_data, train_labels, k: int,
-                 train_wires: List[int], idx_wires: List[int],
-                 swap_wires: List[int], ancilla_wires: List[int], backend: qml.Device, unclean_wires=None):
+    def __init__(
+        self,
+        train_data,
+        train_labels,
+        k: int,
+        train_wires: List[int],
+        idx_wires: List[int],
+        swap_wires: List[int],
+        ancilla_wires: List[int],
+        backend: qml.Device,
+        unclean_wires=None,
+    ):
         super(SimpleAngleQkNN, self).__init__(train_data, train_labels, k, backend)
 
         self.prepped_points = self.prep_data(self.train_data)
@@ -250,14 +319,28 @@ class SimpleAngleQkNN(SimpleQkNN):
         self.swap_wires = swap_wires
 
         wire_types = ["train", "idx", "swap", "ancilla", "unclean"]
-        num_wires = [int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3]
-        error_msgs = ["ceil(log2(train_datas' dimensionality + 1)).", "ceil(log2(size of train_data)).", "1.", "3."]
+        num_wires = [
+            int(np.ceil(np.log2(train_data.shape[1] + 1))),
+            int(np.ceil(np.log2(train_data.shape[0]))),
+            1,
+            3,
+        ]
+        error_msgs = [
+            "ceil(log2(train_datas' dimensionality + 1)).",
+            "ceil(log2(size of train_data)).",
+            "1.",
+            "3.",
+        ]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
         self.loader = TreeLoader(
-            self.prepped_points, self.idx_wires, self.train_wires, self.ancilla_wires,
-            unclean_wires=self.unclean_wires, control_wires=self.swap_wires
+            self.prepped_points,
+            self.idx_wires,
+            self.train_wires,
+            self.ancilla_wires,
+            unclean_wires=self.unclean_wires,
+            control_wires=self.swap_wires,
         )
 
     @staticmethod
@@ -275,9 +358,14 @@ class SimpleAngleQkNN(SimpleQkNN):
         data = np.append(data, new_column[:, None], axis=1)
 
         # Ensure the number of dimensions is a power of 2
-        next_power = 2**int(np.ceil(np.log2(data.shape[1])))
+        next_power = 2 ** int(np.ceil(np.log2(data.shape[1])))
         next_power = max(next_power, 1)
-        data = np.pad(data, [(0, 0), (0, next_power - data.shape[1])], mode='constant', constant_values=0)
+        data = np.pad(
+            data,
+            [(0, 0), (0, next_power - data.shape[1])],
+            mode="constant",
+            constant_values=0,
+        )
 
         return data
 
@@ -291,16 +379,22 @@ class SimpleAngleQkNN(SimpleQkNN):
     def get_quantum_circuit(self, x):
         def quantum_circuit():
             # Init swap wire
-            qml.Hadamard((self.swap_wires[0], ))
+            qml.Hadamard((self.swap_wires[0],))
 
             # Load in training data
             for i in self.idx_wires:
-                qml.Hadamard((i, ))
+                qml.Hadamard((i,))
             self.loader.circuit()
 
             # Load test point x
-            qml.PauliX((self.swap_wires[0], ))
-            TreeLoader(x[None, :], None, self.train_wires, self.ancilla_wires, control_wires=self.swap_wires).circuit()
+            qml.PauliX((self.swap_wires[0],))
+            TreeLoader(
+                x[None, :],
+                None,
+                self.train_wires,
+                self.ancilla_wires,
+                control_wires=self.swap_wires,
+            ).circuit()
 
             qml.Hadamard((self.swap_wires[0],))
 
@@ -321,7 +415,7 @@ class SimpleAngleQkNN(SimpleQkNN):
             if sample[-1] == 1:
                 num_one_swap[idx] += 1
 
-        distances = np.ones((self.train_data.shape[0], ))
+        distances = np.ones((self.train_data.shape[0],))
         for i in range(self.train_data.shape[0]):
             if idx_count[i] != 0:
                 # The swap test variant used, results in zero_prob = (1 + <Psi|Phi>)/2 and one_prob = (1 - <Psi|Phi>)/2,
@@ -349,8 +443,15 @@ class SimpleAngleQkNN(SimpleQkNN):
     def get_necessary_wires(train_data):
         if not isinstance(train_data, np.ndarray):
             train_data = np.array(train_data)
-        train_data = SimpleFidelityQkNN.repeat_data_til_next_power_of_two(SimpleFidelityQkNN.prep_data(train_data))
-        return int(np.ceil(np.log2(train_data.shape[1] + 1))), int(np.ceil(np.log2(train_data.shape[0]))), 1, 3
+        train_data = SimpleFidelityQkNN.repeat_data_til_next_power_of_two(
+            SimpleFidelityQkNN.prep_data(train_data)
+        )
+        return (
+            int(np.ceil(np.log2(train_data.shape[1] + 1))),
+            int(np.ceil(np.log2(train_data.shape[0]))),
+            1,
+            3,
+        )
 
     def get_representative_circuit(self, X) -> str:
         x = self.prep_data(X[:1])[0]

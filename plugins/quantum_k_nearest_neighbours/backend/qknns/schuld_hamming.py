@@ -11,7 +11,7 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 
 def num_decimal_places(value):
     result = 0
-    if value.startswith('-'):
+    if value.startswith("-"):
         value = value[1:]
         result = 1
     m = re.match(r"^[0-9]*\.([1-9]([0-9]*[1-9])?)0*$", value)
@@ -20,14 +20,16 @@ def num_decimal_places(value):
 
 
 def simple_float_to_int(X):
-    max_num_decimal_places = [0]*X.shape[1]
+    max_num_decimal_places = [0] * X.shape[1]
     for vec in X:
         for dim in range(X.shape[1]):
-            max_num_decimal_places[dim] = max(num_decimal_places(str(vec[dim])), max_num_decimal_places[dim])
-    max_num_bits = [0]*X.shape[1]
+            max_num_decimal_places[dim] = max(
+                num_decimal_places(str(vec[dim])), max_num_decimal_places[dim]
+            )
+    max_num_bits = [0] * X.shape[1]
     for vec in X:
         for dim in range(X.shape[1]):
-            temp = vec[dim]*(10**max_num_decimal_places[dim])
+            temp = vec[dim] * (10 ** max_num_decimal_places[dim])
             if temp < 0:
                 temp *= -1
             temp = int(np.ceil(np.log2(temp)))
@@ -36,18 +38,33 @@ def simple_float_to_int(X):
     for vec in X:
         new_vec = []
         for dim in range(X.shape[1]):
-            new_vec += int_to_bitlist(int(vec[dim] * max_num_decimal_places[dim]), max_num_bits[dim])
+            new_vec += int_to_bitlist(
+                int(vec[dim] * max_num_decimal_places[dim]), max_num_bits[dim]
+            )
         result.append(new_vec)
     return np.array(result)
 
 
 class SchuldQkNN(QkNN):
-    def __init__(self, train_data, train_labels, train_wires: List[int], label_wires: List[int], qam_ancilla_wires: List[int], backend: qml.Device, unclean_wires=None):
-        super(SchuldQkNN, self).__init__(train_data, train_labels, len(train_data), backend)
+    def __init__(
+        self,
+        train_data,
+        train_labels,
+        train_wires: List[int],
+        label_wires: List[int],
+        qam_ancilla_wires: List[int],
+        backend: qml.Device,
+        unclean_wires=None,
+    ):
+        super(SchuldQkNN, self).__init__(
+            train_data, train_labels, len(train_data), backend
+        )
         self.train_data = np.array(train_data, dtype=int)
 
         if not check_if_values_are_binary(self.train_data):
-            raise ValueError("All the data needs to be binary, when dealing with the hamming distance")
+            raise ValueError(
+                "All the data needs to be binary, when dealing with the hamming distance"
+            )
 
         self.label_indices = self.init_labels(train_labels)
 
@@ -56,23 +73,37 @@ class SchuldQkNN(QkNN):
         self.train_wires = train_wires
         self.qam_ancilla_wires = qam_ancilla_wires
         self.label_wires = label_wires
-        wire_types = ['train', 'qam_ancilla', 'label', 'unclean']
-        num_wires = [self.train_data.shape[1], self.train_data.shape[1], self.label_indices.shape[1]]
-        error_msgs = ["the points' dimensionality.", "the points' dimensionality.", "ceil(log2(len(unique labels)))."]
+        wire_types = ["train", "qam_ancilla", "label", "unclean"]
+        num_wires = [
+            self.train_data.shape[1],
+            self.train_data.shape[1],
+            self.label_indices.shape[1],
+        ]
+        error_msgs = [
+            "the points' dimensionality.",
+            "the points' dimensionality.",
+            "ceil(log2(len(unique labels))).",
+        ]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
         self.qam = QAM(
-            self.train_data, self.train_wires, self.qam_ancilla_wires,
-            additional_bits=self.label_indices, additional_wires=self.label_wires,
-            unclean_wires=unclean_wires
+            self.train_data,
+            self.train_wires,
+            self.qam_ancilla_wires,
+            additional_bits=self.label_indices,
+            additional_wires=self.label_wires,
+            unclean_wires=unclean_wires,
         )
 
     def init_labels(self, labels):
         label_indices = list()
-        label_to_idx = dict()  # Map labels to their index. The index is represented by a list of its bits
+        label_to_idx = (
+            dict()
+        )  # Map labels to their index. The index is represented by a list of its bits
         num_bits_needed = int(
-            np.ceil(np.log2(len(self.unique_labels))))  # Number of bits needed to represent all indices of our labels
+            np.ceil(np.log2(len(self.unique_labels)))
+        )  # Number of bits needed to represent all indices of our labels
         for i in range(len(self.unique_labels)):
             label_to_idx[self.unique_labels[i]] = int_to_bitlist(i, num_bits_needed)
         for label in labels:
@@ -89,6 +120,7 @@ class SchuldQkNN(QkNN):
 
     def get_quantum_circuit(self, x):
         rot_angle = np.pi / self.train_data.shape[1]
+
         @qml.qnode(self.backend)
         def circuit():
             self.qam.circuit()
@@ -99,6 +131,7 @@ class SchuldQkNN(QkNN):
                 # QAM ancilla wires are 0 after QAM -> use one of those wires
                 qml.CRX(rot_angle, wires=(self.train_wires[i], self.qam_ancilla_wires[0]))
             return qml.sample(wires=[self.qam_ancilla_wires[0]] + self.label_wires)
+
         return circuit
 
     def label_point(self, x):
@@ -107,7 +140,11 @@ class SchuldQkNN(QkNN):
 
     @staticmethod
     def get_necessary_wires(train_data, train_labels):
-        return len(train_data[0]), int(np.ceil(np.log2(len(set(train_labels))))), len(train_data[0])
+        return (
+            len(train_data[0]),
+            int(np.ceil(np.log2(len(set(train_labels))))),
+            len(train_data[0]),
+        )
 
     def get_representative_circuit(self, X) -> str:
         circuit = self.get_quantum_circuit(X[0])

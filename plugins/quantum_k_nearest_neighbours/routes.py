@@ -71,7 +71,7 @@ class PluginsView(MethodView):
                         content_type=["application/json"],
                         required=False,
                         parameter="testLabelPointsUrl",
-                    )
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
@@ -93,7 +93,7 @@ class PluginsView(MethodView):
                         data_type="representative-circuit",
                         content_type=["application/json"],
                         required=True,
-                    )
+                    ),
                 ],
             ),
             tags=QKNN.instance.tags,
@@ -176,7 +176,7 @@ class MicroFrontend(MethodView):
 
 @QKNN_BLP.route("/ui/frontend_js/")
 def get_frontend_js():
-    return Response(frontend_js(), mimetype='text/javascript')
+    return Response(frontend_js(), mimetype="text/javascript")
 
 
 @QKNN_BLP.route("/process/")

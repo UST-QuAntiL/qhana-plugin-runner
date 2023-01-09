@@ -10,19 +10,33 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class RuanParzenWindow(ParzenWindow):
-    def __init__(self, train_data, train_labels, distance_threshold: float,
-                 train_wires: List[int], label_wires: List[int], ancilla_wires: List[int], backend: qml.Device,
-                 unclean_wires=None):
-        super(RuanParzenWindow, self).__init__(train_data, train_labels, distance_threshold, backend)
+    def __init__(
+        self,
+        train_data,
+        train_labels,
+        distance_threshold: float,
+        train_wires: List[int],
+        label_wires: List[int],
+        ancilla_wires: List[int],
+        backend: qml.Device,
+        unclean_wires=None,
+    ):
+        super(RuanParzenWindow, self).__init__(
+            train_data, train_labels, distance_threshold, backend
+        )
         self.train_data = np.array(train_data, dtype=int)
 
         if not check_if_values_are_binary(self.train_data):
-            raise ValueError("All the data needs to be binary, when dealing with the hamming distance")
+            raise ValueError(
+                "All the data needs to be binary, when dealing with the hamming distance"
+            )
 
-        self.distance_threshold = min(int(self.distance_threshold), self.train_data.shape[1])
+        self.distance_threshold = min(
+            int(self.distance_threshold), self.train_data.shape[1]
+        )
         self.k = int(np.ceil(np.log2(self.train_data.shape[1])))
-        self.a = int(2**self.k - self.train_data.shape[1] + self.distance_threshold)
-        self.a = int_to_bitlist(self.a, self.k+2)
+        self.a = int(2 ** self.k - self.train_data.shape[1] + self.distance_threshold)
+        self.a = int_to_bitlist(self.a, self.k + 2)
         self.label_indices = self.init_labels(train_labels)
 
         self.unclean_wires = [] if unclean_wires is None else unclean_wires
@@ -31,8 +45,16 @@ class RuanParzenWindow(ParzenWindow):
         self.ancilla_wires = ancilla_wires
 
         wire_types = ["train", "label", "ancilla", "unclean"]
-        num_wires = [self.train_data.shape[1], max(1, int(np.ceil(np.log2(len(self.unique_labels))))), np.ceil(np.log2(self.train_data.shape[1]))+4]
-        error_msgs = ["the points' dimensionality.", "ceil(log2(the points' dimensionality)))+2.", "ceil(log2(len(unique labels)))."]
+        num_wires = [
+            self.train_data.shape[1],
+            max(1, int(np.ceil(np.log2(len(self.unique_labels))))),
+            np.ceil(np.log2(self.train_data.shape[1])) + 4,
+        ]
+        error_msgs = [
+            "the points' dimensionality.",
+            "ceil(log2(the points' dimensionality)))+2.",
+            "ceil(log2(len(unique labels))).",
+        ]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
@@ -41,20 +63,31 @@ class RuanParzenWindow(ParzenWindow):
         # len(a) is reserved as the oracle wire
         # len(a) + 1 is an ancilla wire for ccnots
         # Thus we need len(a) + 2 = int(np.ceil(np.log2(self.train_data.shape[1]))) + 4 wires
-        self.overflow_wires = self.ancilla_wires[:len(self.a)]  # This register is used with the threshold oracle by Ruan et al.
+        self.overflow_wires = self.ancilla_wires[
+            : len(self.a)
+        ]  # This register is used with the threshold oracle by Ruan et al.
         self.oracle_wire = self.ancilla_wires[len(self.a)]  # This is the oracles qubit
-        self.additional_ancilla_wires = self.ancilla_wires[len(self.a) + 1:]  # Any additional wires
+        self.additional_ancilla_wires = self.ancilla_wires[
+            len(self.a) + 1 :
+        ]  # Any additional wires
 
         self.qam = QAM(
-            self.train_data, self.train_wires, self.ancilla_wires,
-            additional_bits=self.label_indices, additional_wires=self.label_wires,
-            unclean_wires=self.unclean_wires
+            self.train_data,
+            self.train_wires,
+            self.ancilla_wires,
+            additional_bits=self.label_indices,
+            additional_wires=self.label_wires,
+            unclean_wires=self.unclean_wires,
         )
 
     def init_labels(self, labels):
         label_indices = list()
-        label_to_idx = dict()   # Map labels to their index. The index is represented by a list of its bits
-        num_bits_needed = max(1, int(np.ceil(np.log2(len(self.unique_labels)))))    # Number of bits needed to represent all indices of our labels
+        label_to_idx = (
+            dict()
+        )  # Map labels to their index. The index is represented by a list of its bits
+        num_bits_needed = max(
+            1, int(np.ceil(np.log2(len(self.unique_labels))))
+        )  # Number of bits needed to represent all indices of our labels
         for i in range(len(self.unique_labels)):
             label_to_idx[self.unique_labels[i]] = int_to_bitlist(i, num_bits_needed)
         for label in labels:
@@ -77,15 +110,17 @@ class RuanParzenWindow(ParzenWindow):
                     qml.PauliX((self.overflow_wires[i],))
 
             # Increment overflow register for each 1 in the train register
-            qml.PauliX((self.oracle_wire,))    # Allows us to set indicator_is_zero to False
+            qml.PauliX((self.oracle_wire,))  # Allows us to set indicator_is_zero to False
             for t_idx, t_wire in enumerate(self.train_wires):
                 cc_increment_register(
                     [t_wire],
                     self.overflow_wires,
                     self.additional_ancilla_wires,
                     self.oracle_wire,
-                    unclean_wires=self.unclean_wires + self.train_wires[:t_idx] + self.train_wires[t_idx+1:],
-                    indicator_is_zero=False
+                    unclean_wires=self.unclean_wires
+                    + self.train_wires[:t_idx]
+                    + self.train_wires[t_idx + 1 :],
+                    indicator_is_zero=False,
                 )
 
             for i in range(2):
@@ -94,9 +129,10 @@ class RuanParzenWindow(ParzenWindow):
                 self.overflow_wires[:2],
                 self.additional_ancilla_wires,
                 self.train_wires + self.unclean_wires,
-                self.oracle_wire
+                self.oracle_wire,
             )
             return qml.sample(wires=self.label_wires + [self.oracle_wire])
+
         return quantum_circuit
 
     def get_label_from_samples(self, samples):
@@ -116,7 +152,11 @@ class RuanParzenWindow(ParzenWindow):
     @staticmethod
     def get_necessary_wires(train_data, train_labels):
         unique_labels = list(set(train_labels))
-        return int(len(train_data[0])), max(1, int(np.ceil(np.log2(len(unique_labels))))), int(np.ceil(np.log2(len(train_data[0])))+4)
+        return (
+            int(len(train_data[0])),
+            max(1, int(np.ceil(np.log2(len(unique_labels))))),
+            int(np.ceil(np.log2(len(train_data[0]))) + 4),
+        )
 
     def get_representative_circuit(self, X) -> str:
         circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)

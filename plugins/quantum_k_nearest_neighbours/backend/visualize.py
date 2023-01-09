@@ -6,7 +6,7 @@ from sklearn.metrics import confusion_matrix
 
 
 def get_id_list(id_to_idx: dict) -> list:
-    ids = ["id"]*len(id_to_idx)
+    ids = ["id"] * len(id_to_idx)
     for id, idx in id_to_idx.items():
         ids[idx] = id
     return ids
@@ -21,7 +21,9 @@ def add_background(points, resolution, predictor, scatter, two_classes=False):
     # The plotly zooms a little further out (autozoom), such that the points at the edge of the plot are perfectly visible.
     # If we do not account for this, there would be an margin of empty space between the points and the edge of the plot.
     # Therefore, we adapt the min and max values and thus, stretching the heatmap to the edge.
-    max_values = np.array([np.abs(min_vec), np.abs(max_vec)]).max(axis=0) * 0.2 + 1     # +1 to avoid the zero case
+    max_values = (
+        np.array([np.abs(min_vec), np.abs(max_vec)]).max(axis=0) * 0.2 + 1
+    )  # +1 to avoid the zero case
     min_vec -= max_values
     max_vec += max_values
 
@@ -51,31 +53,35 @@ def add_background(points, resolution, predictor, scatter, two_classes=False):
 
     if two_classes:
         # Create contours
-        background = go.Figure(go.Contour(
-            z=Z + 1,
-            x=x_grid,
-            y=y_grid,
-            showscale=False,
-            colorscale=list(px.colors.qualitative.D3),
-            zmin=0,
-            zmax=10,
-            hoverinfo="skip",
-            opacity=0.55,
-            line_width=1,
-        ))
+        background = go.Figure(
+            go.Contour(
+                z=Z + 1,
+                x=x_grid,
+                y=y_grid,
+                showscale=False,
+                colorscale=list(px.colors.qualitative.D3),
+                zmin=0,
+                zmax=10,
+                hoverinfo="skip",
+                opacity=0.55,
+                line_width=1,
+            )
+        )
     else:
         # Create heatmap
-        background = go.Figure(go.Heatmap(
-            z=Z,
-            x=x_grid,
-            y=y_grid,
-            showscale=False,
-            colorscale=list(px.colors.qualitative.D3),
-            zmin=0,
-            zmax=9,
-            hoverinfo="skip",
-            opacity=0.55,
-        ))
+        background = go.Figure(
+            go.Heatmap(
+                z=Z,
+                x=x_grid,
+                y=y_grid,
+                showscale=False,
+                colorscale=list(px.colors.qualitative.D3),
+                zmin=0,
+                zmax=9,
+                hoverinfo="skip",
+                opacity=0.55,
+            )
+        )
 
     # Give markers a slightly thicker border, since their background will most likely have the same color.
     # Note, background is due to the heatmap
@@ -107,10 +113,18 @@ def add_background(points, resolution, predictor, scatter, two_classes=False):
     return scatter
 
 
-def plot_data(train_data, train_id_to_idx, train_labels,
-              test_data, test_id_to_idx, test_labels,
-              resolution=0, predictor=None, only_first_100=True,
-              title=""):
+def plot_data(
+    train_data,
+    train_id_to_idx,
+    train_labels,
+    test_data,
+    test_id_to_idx,
+    test_labels,
+    resolution=0,
+    predictor=None,
+    only_first_100=True,
+    title="",
+):
     # Prepare data
     dim = len(train_data[0])
     train_end = 100 if only_first_100 else len(train_data)
@@ -121,7 +135,9 @@ def plot_data(train_data, train_id_to_idx, train_labels,
     points = np.concatenate((train_data, test_data), axis=0)
 
     dimensions = ["x", "y", "z"][:dim]
-    ids = get_id_list(train_id_to_idx)[:train_end] + get_id_list(test_id_to_idx)[:test_end]
+    ids = (
+        get_id_list(train_id_to_idx)[:train_end] + get_id_list(test_id_to_idx)[:test_end]
+    )
 
     train_labels = [str(int(el)) for el in train_labels[:train_end]]
     test_labels = [str(int(el)) for el in test_labels[:test_end]]
@@ -131,7 +147,7 @@ def plot_data(train_data, train_id_to_idx, train_labels,
         ID=ids,
         size=[10] * len(ids),
         label=labels,
-        type=["train"]*len(train_data) + ["test"]*len(test_data),
+        type=["train"] * len(train_data) + ["test"] * len(test_data),
     )
     for d, d_name in enumerate(dimensions):
         data_frame_content[d_name] = points[:, d]
@@ -140,36 +156,55 @@ def plot_data(train_data, train_id_to_idx, train_labels,
 
     # Create plots
     if dim >= 3:
-        fig = px.scatter_3d(df, x="x", y="y", z="z", hover_name="ID", size="size", color="label", symbol="type")
+        fig = px.scatter_3d(
+            df,
+            x="x",
+            y="y",
+            z="z",
+            hover_name="ID",
+            size="size",
+            color="label",
+            symbol="type",
+        )
     elif dim == 2:
         fig = px.scatter(
             df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
 
         if resolution > 0 and predictor is not None:
-            fig = add_background(points, resolution, predictor, fig, two_classes=len(set(train_labels))==2)
+            fig = add_background(
+                points,
+                resolution,
+                predictor,
+                fig,
+                two_classes=len(set(train_labels)) == 2,
+            )
     else:
-        df["y"] = [0]*len(df["x"])
+        df["y"] = [0] * len(df["x"])
         fig = px.scatter(
             df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
 
-    fig.update_layout(dict(
-        font=dict(
-            size=15,
-        ),
-    ))
-    fig.update_layout(dict(
-        title=dict(
-            text=title,
-            x=0.5,
-            xanchor="center",
-            yanchor="top",
+    fig.update_layout(
+        dict(
             font=dict(
-                size=30,
+                size=15,
             ),
         )
-    ))
+    )
+    fig.update_layout(
+        dict(
+            title=dict(
+                text=title,
+                x=0.5,
+                xanchor="center",
+                yanchor="top",
+                font=dict(
+                    size=30,
+                ),
+            )
+        )
+    )
 
     return fig
 
@@ -182,29 +217,35 @@ def plot_confusion_matrix(y_true, y_pred):
         df_content[str(idx)] = [str(el) for el in v]
     df = pd.DataFrame(df_content)
     df.index = pd.Index([str(idx) for idx in range(len(conf_matrix))], name="True label")
-    df.columns = pd.Index([str(idx) for idx in range(len(conf_matrix))], name="Predicted label")
+    df.columns = pd.Index(
+        [str(idx) for idx in range(len(conf_matrix))], name="Predicted label"
+    )
 
     fig = px.imshow(
         df,
         text_auto=True,
         color_continuous_scale=px.colors.sequential.Aggrnyl,
     )
-    fig.update_layout(dict(
-        font=dict(
-            size=18,
-        ),
-    ))
-    fig.update_layout(dict(
-        title=dict(
-            text="Confusion Matrix",
-            x=0.5,
-            xanchor="center",
-            yanchor="top",
+    fig.update_layout(
+        dict(
             font=dict(
-                size=30,
+                size=18,
             ),
         )
-    ))
+    )
+    fig.update_layout(
+        dict(
+            title=dict(
+                text="Confusion Matrix",
+                x=0.5,
+                xanchor="center",
+                yanchor="top",
+                font=dict(
+                    size=30,
+                ),
+            )
+        )
+    )
     fig.update_xaxes(dict(titlefont=dict(size=18), tickfont=dict(size=18)))
     fig.update_yaxes(dict(titlefont=dict(size=18), tickfont=dict(size=18)))
 

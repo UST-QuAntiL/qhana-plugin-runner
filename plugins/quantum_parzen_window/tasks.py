@@ -55,7 +55,7 @@ def load_entity_points_from_url(entity_points_url: str):
         idx += 1
 
     points_cnt = len(id_to_idx)
-    dimensions = len(entity_points[0].keys()-{"ID", "href"})
+    dimensions = len(entity_points[0].keys() - {"ID", "href"})
     points_arr = np.zeros((points_cnt, dimensions))
 
     for ent in entity_points:
@@ -82,9 +82,7 @@ def load_labels_from_url(labels_url: str, id_to_idx: dict):
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(
-        f"Starting new quantum k ne calculation task with db id '{db_id}'"
-    )
+    TASK_LOGGER.info(f"Starting new quantum k ne calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -109,9 +107,7 @@ def calculation_task(self, db_id: int) -> str:
     custom_backend = input_params.custom_backend
 
     # Log information about the input parameters
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: {str(input_params)}"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
@@ -136,8 +132,11 @@ def calculation_task(self, db_id: int) -> str:
 
     # Get parzen window
     parzen_window, num_qbits = variant.get_parzen_window(
-        train_data, train_labels, window_size, max_qbits,
-        use_access_wires=(not minimize_qubit_count)
+        train_data,
+        train_labels,
+        window_size,
+        max_qbits,
+        use_access_wires=(not minimize_qubit_count),
     )
 
     # Set backend
@@ -169,8 +168,15 @@ def calculation_task(self, db_id: int) -> str:
         conf_matrix = plot_confusion_matrix(test_labels, predictions)
 
     # Create plot
-    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, predictions,
-                    title=plot_title)
+    fig = plot_data(
+        train_data,
+        train_id_to_idx,
+        train_labels,
+        test_data,
+        test_id_to_idx,
+        predictions,
+        title=plot_title,
+    )
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:

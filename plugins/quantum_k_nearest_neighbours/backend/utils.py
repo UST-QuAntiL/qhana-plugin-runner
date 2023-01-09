@@ -1,4 +1,3 @@
-
 def bitlist_to_int(bitlist):
     if bitlist is None:
         return None
@@ -14,8 +13,8 @@ def int_to_bitlist(num, length: int):
         num *= -1
         negative = True
     binary = bin(num)[2:]
-    result = [0]*length
-    for i in range(-1, -len(binary)-1, -1):
+    result = [0] * length
+    for i in range(-1, -len(binary) - 1, -1):
         result[i] = int(binary[i])
     if negative:
         result[0] = 1
@@ -24,4 +23,5 @@ def int_to_bitlist(num, length: int):
 
 def check_if_values_are_binary(data):
     import numpy as np
+
     return np.array_equal(data, data.astype(bool))

@@ -55,7 +55,7 @@ def load_entity_points_from_url(entity_points_url: str):
         idx += 1
 
     points_cnt = len(id_to_idx)
-    dimensions = len(entity_points[0].keys()-{"ID", "href"})
+    dimensions = len(entity_points[0].keys() - {"ID", "href"})
     points_arr = np.zeros((points_cnt, dimensions))
 
     for ent in entity_points:
@@ -110,9 +110,7 @@ def calculation_task(self, db_id: int) -> str:
     resolution = input_params.resolution
 
     # Log information about the input parameters
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: {str(input_params)}"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
@@ -121,7 +119,6 @@ def calculation_task(self, db_id: int) -> str:
             TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
-
 
     # Load in data
     train_data, train_id_to_idx = load_entity_points_from_url(train_points_url)
@@ -138,9 +135,12 @@ def calculation_task(self, db_id: int) -> str:
 
     # Get QkNN
     qknn, num_qbits = variant.get_qknn_and_total_wires(
-        train_data, train_labels, k, max_qbits,
+        train_data,
+        train_labels,
+        k,
+        max_qbits,
         exp_itr=exp_itr,
-        use_access_wires=(not minimize_qubit_count)
+        use_access_wires=(not minimize_qubit_count),
     )
 
     # Set backend
@@ -174,8 +174,17 @@ def calculation_task(self, db_id: int) -> str:
     # Create plot
     if not qknn.heatmap_meaningful():
         resolution = 0
-    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, predictions,
-                    resolution=resolution, predictor=qknn.label_points, title=plot_title)
+    fig = plot_data(
+        train_data,
+        train_id_to_idx,
+        train_labels,
+        test_data,
+        test_id_to_idx,
+        predictions,
+        resolution=resolution,
+        predictor=qknn.label_points,
+        title=plot_title,
+    )
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:

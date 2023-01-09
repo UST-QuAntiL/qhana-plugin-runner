@@ -96,7 +96,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Test Labels URL",
             "description": "URL to a json file containing the labels of the test entity points. If no url is provided,"
-                           "then the accuracy will not be calculated.",
+            "then the accuracy will not be calculated.",
             "input_type": "text",
         },
     )
@@ -108,7 +108,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The number of neighbours that the kNN algorithm will use, to label the unlabeled entity points.",
             "input_type": "number",
         },
-        validate=validate.Range(min=0, min_inclusive=False)
+        validate=validate.Range(min=0, min_inclusive=False),
     )
     variant = EnumField(
         QkNNEnum,
@@ -117,9 +117,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Variant",
             "description": "- schuld qknn: uses the Hamming distance as a metric and all training points as neighbours, i.e. k := Number training points\n"
-                           "- simple hamming qknn: uses the Hamming distance as a meric. The quantum algorithm is only used to calculate the distances. Computing the k closest neighours and doing the majority voting is then done classicaly. It is also described in [0].\n"
-                           "- simple fidelity qknn: analogously like simple hamming qknn, but it uses the fidelity as a similarity metric (see [1] about the fidelity metric).\n"
-                           "- basheer hamming qknn: uses the Hamming distance. It uses amplitude amplification to find the k nearest neighours as described by Basheer et al. in [1], with the oracle of Ruan et al. [2]",
+            "- simple hamming qknn: uses the Hamming distance as a meric. The quantum algorithm is only used to calculate the distances. Computing the k closest neighours and doing the majority voting is then done classicaly. It is also described in [0].\n"
+            "- simple fidelity qknn: analogously like simple hamming qknn, but it uses the fidelity as a similarity metric (see [1] about the fidelity metric).\n"
+            "- basheer hamming qknn: uses the Hamming distance. It uses amplitude amplification to find the k nearest neighours as described by Basheer et al. in [1], with the oracle of Ruan et al. [2]",
             "input_type": "select",
         },
     )
@@ -131,7 +131,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The maximum number of exponential search iterations for amplitude amplification.",
             "input_type": "number",
         },
-        validate=validate.Range(min=0, min_inclusive=False)
+        validate=validate.Range(min=0, min_inclusive=False),
     )
     minimize_qubit_count = ma.fields.Boolean(
         required=False,
@@ -139,10 +139,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Minimize Qubit Count",
             "description": "If checked, then the amount of qubits used will be minimized. "
-                           "A consequence of this is an increased circuit depth.<br>"
-                           "Minimizing the qubit count is good, when the chosen quantum backend is a classical simulator.",
+            "A consequence of this is an increased circuit depth.<br>"
+            "Minimizing the qubit count is good, when the chosen quantum backend is a classical simulator.",
             "input_type": "checkbox",
-        }
+        },
     )
     backend = EnumField(
         QuantumBackends,
@@ -160,10 +160,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Shots",
             "description": "Number of times the quantum kNN circuit gets repeated. "
-                           "Rule of thumb is, the higher the number of shots, the more accurate the results.",
+            "Rule of thumb is, the higher the number of shots, the more accurate the results.",
             "input_type": "number",
         },
-        validate=validate.Range(min=0, min_inclusive=False)
+        validate=validate.Range(min=0, min_inclusive=False),
     )
     ibmq_token = ma.fields.String(
         required=False,
@@ -189,10 +189,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Resolution",
             "description": "The resolution of the visualization. How finegrained the evaluation of the classifier should be.\n"
-                           "If set to 0, only the test and training points get plotted.",
+            "If set to 0, only the test and training points get plotted.",
             "input_type": "number",
         },
-        validate=validate.Range(min=0, min_inclusive=True)
+        validate=validate.Range(min=0, min_inclusive=True),
     )
 
     @post_load

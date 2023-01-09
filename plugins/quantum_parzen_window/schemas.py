@@ -93,7 +93,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Test Labels URL",
             "description": "URL to a json file containing the labels of the test entity points. If no url is provided,"
-                           "then the accuracy will not be calculated.",
+            "then the accuracy will not be calculated.",
             "input_type": "text",
         },
     )
@@ -103,7 +103,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Window Size",
             "description": "The size of the parzen window. If it is set to 5, then only points with a distance "
-                           "of 5 or less to the test point get to vote for the test point's label",
+            "of 5 or less to the test point get to vote for the test point's label",
             "input_type": "text",
         },
     )
@@ -114,7 +114,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Variant",
             "description": "ruan parzen window: This parzen window uses the Hamming distance and thus only works for "
-                           "binary data points. It was developed by Ruan et al. in [0].",
+            "binary data points. It was developed by Ruan et al. in [0].",
             "input_type": "select",
         },
     )
@@ -124,10 +124,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Minimize Qubit Count",
             "description": "If checked, then the amount of qubits used will be minimized. "
-                           "A consequence of this is an increased circuit depth.<br>"
-                           "Minimizing the qubit count is good, when the chosen quantum backend is a classical simulator.",
+            "A consequence of this is an increased circuit depth.<br>"
+            "Minimizing the qubit count is good, when the chosen quantum backend is a classical simulator.",
             "input_type": "checkbox",
-        }
+        },
     )
     backend = EnumField(
         QuantumBackends,
@@ -145,9 +145,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Shots",
             "description": "Number of times the quantum kNN circuit gets repeated. "
-                           "Rule of thumb is, the higher the number of shots, the more accurate the results.",
+            "Rule of thumb is, the higher the number of shots, the more accurate the results.",
             "input_type": "text",
-        }
+        },
     )
     ibmq_token = ma.fields.String(
         required=False,

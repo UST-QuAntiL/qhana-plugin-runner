@@ -18,42 +18,84 @@ class QkNNEnum(Enum):
     simple_angle_qknn = "simple angle qknn"
     basheer_hamming_qknn = "basheer hamming qknn"
 
-    def get_qknn_and_total_wires(self, train_data, train_labels, k, max_wires, exp_itr=10, use_access_wires=True):
+    def get_qknn_and_total_wires(
+        self, train_data, train_labels, k, max_wires, exp_itr=10, use_access_wires=True
+    ):
         if self == QkNNEnum.schuld_qknn:
             from .schuld_hamming import SchuldQkNN
-            wires, access_wires = self.check_and_get_qubits(SchuldQkNN, max_wires, train_data=train_data, train_labels=train_labels)
-            if use_access_wires:
-                wires[2] = wires[2]+access_wires
 
-            return SchuldQkNN(train_data, train_labels, wires[0], wires[1], wires[2], None), count_wires(wires)
+            wires, access_wires = self.check_and_get_qubits(
+                SchuldQkNN, max_wires, train_data=train_data, train_labels=train_labels
+            )
+            if use_access_wires:
+                wires[2] = wires[2] + access_wires
+
+            return SchuldQkNN(
+                train_data, train_labels, wires[0], wires[1], wires[2], None
+            ), count_wires(wires)
         elif self == QkNNEnum.simple_hamming_qknn:
             from .simpleQkNN import SimpleHammingQkNN
-            wires, access_wires = self.check_and_get_qubits(SimpleHammingQkNN, max_wires, train_data=train_data)
-            if use_access_wires:
-                wires[1] = wires[1]+access_wires
 
-            return SimpleHammingQkNN(train_data, train_labels, k, wires[0], wires[1], None), count_wires(wires)
+            wires, access_wires = self.check_and_get_qubits(
+                SimpleHammingQkNN, max_wires, train_data=train_data
+            )
+            if use_access_wires:
+                wires[1] = wires[1] + access_wires
+
+            return SimpleHammingQkNN(
+                train_data, train_labels, k, wires[0], wires[1], None
+            ), count_wires(wires)
         elif self == QkNNEnum.simple_fidelity_qknn:
             from .simpleQkNN import SimpleFidelityQkNN
-            wires, access_wires = self.check_and_get_qubits(SimpleFidelityQkNN, max_wires, train_data=train_data)
-            if use_access_wires:
-                wires[4] = wires[4]+access_wires
 
-            return SimpleFidelityQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], wires[4], None), count_wires(wires)
+            wires, access_wires = self.check_and_get_qubits(
+                SimpleFidelityQkNN, max_wires, train_data=train_data
+            )
+            if use_access_wires:
+                wires[4] = wires[4] + access_wires
+
+            return SimpleFidelityQkNN(
+                train_data,
+                train_labels,
+                k,
+                wires[0],
+                wires[1],
+                wires[2],
+                wires[3],
+                wires[4],
+                None,
+            ), count_wires(wires)
         elif self == QkNNEnum.simple_angle_qknn:
             from .simpleQkNN import SimpleAngleQkNN
-            wires, access_wires = self.check_and_get_qubits(SimpleAngleQkNN, max_wires, train_data=train_data)
-            if use_access_wires:
-                wires[4] = wires[4]+access_wires
 
-            return SimpleAngleQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], None), count_wires(wires)
+            wires, access_wires = self.check_and_get_qubits(
+                SimpleAngleQkNN, max_wires, train_data=train_data
+            )
+            if use_access_wires:
+                wires[4] = wires[4] + access_wires
+
+            return SimpleAngleQkNN(
+                train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], None
+            ), count_wires(wires)
         elif self == QkNNEnum.basheer_hamming_qknn:
             from .basheer_hamming import BasheerHammingQkNN
-            wires, access_wires = self.check_and_get_qubits(BasheerHammingQkNN, max_wires, train_data=train_data)
-            if use_access_wires:
-                wires[2] = wires[2]+access_wires
 
-            return BasheerHammingQkNN(train_data, train_labels, k, wires[0], wires[1], wires[2], None, exp_itr=exp_itr), count_wires(wires)
+            wires, access_wires = self.check_and_get_qubits(
+                BasheerHammingQkNN, max_wires, train_data=train_data
+            )
+            if use_access_wires:
+                wires[2] = wires[2] + access_wires
+
+            return BasheerHammingQkNN(
+                train_data,
+                train_labels,
+                k,
+                wires[0],
+                wires[1],
+                wires[2],
+                None,
+                exp_itr=exp_itr,
+            ), count_wires(wires)
 
     def check_and_get_qubits(self, qknn_class, max_wires, **kwargs):
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)
@@ -64,15 +106,17 @@ class QkNNEnum(Enum):
             num_total_wires += num_wires
         if num_total_wires > max_wires:
             raise ValueError(
-                "The quantum circuit needs at least " + str(num_total_wires)
-                + " qubits, but it only got " + str(max_wires) + "!"
+                "The quantum circuit needs at least "
+                + str(num_total_wires)
+                + " qubits, but it only got "
+                + str(max_wires)
+                + "!"
             )
         access_wires = list(range(num_total_wires, max_wires))
         return wires, access_wires
 
 
 class QkNN:
-
     def __init__(self, train_data, train_labels, k, backend):
         if not isinstance(train_data, np.ndarray):
             train_data = np.array(train_data, dtype=int)

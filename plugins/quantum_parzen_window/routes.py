@@ -69,7 +69,7 @@ class PluginsView(MethodView):
                         content_type=["application/json"],
                         required=False,
                         parameter="testLabelPointsUrl",
-                    )
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
@@ -91,7 +91,7 @@ class PluginsView(MethodView):
                         data_type="representative-circuit",
                         content_type=["application/json"],
                         required=True,
-                    )
+                    ),
                 ],
             ),
             tags=QParzenWindow.instance.tags,

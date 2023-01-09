@@ -8,19 +8,31 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class QAM:
-    def __init__(self, X, register_wires, ancilla_wires, unclean_wires=None,
-                 amplitudes=None, additional_bits=None, additional_wires=None):
+    def __init__(
+        self,
+        X,
+        register_wires,
+        ancilla_wires,
+        unclean_wires=None,
+        amplitudes=None,
+        additional_bits=None,
+        additional_wires=None,
+    ):
         if not isinstance(X, np.ndarray):
             X = np.array(X)
 
         self.X = X
         if not check_if_values_are_binary(self.X):
-            raise ValueError("A QAM (Quantum Associative Memory) can only load binary data")
+            raise ValueError(
+                "A QAM (Quantum Associative Memory) can only load binary data"
+            )
         self.xor_X = self.create_xor_X(X)
 
         if additional_bits is not None:
             if not check_if_values_are_binary(additional_bits):
-                raise ValueError("A QAM (Quantum Associative Memory) can only load binary additional bits")
+                raise ValueError(
+                    "A QAM (Quantum Associative Memory) can only load binary additional bits"
+                )
             if not isinstance(additional_bits, np.ndarray):
                 additional_bits = np.array(additional_bits)
             self.xor_additional_bits = self.create_xor_X(additional_bits)
@@ -30,17 +42,24 @@ class QAM:
         self.register_wires = list(register_wires)
         self.ancilla_wires = list(ancilla_wires)
         self.additional_wires = [] if additional_wires is None else additional_wires
-        self.unclean_wires = [] if unclean_wires is None else unclean_wires  # unclean wires are like ancilla wires, but they are not guaranteed to be 0
+        self.unclean_wires = (
+            [] if unclean_wires is None else unclean_wires
+        )  # unclean wires are like ancilla wires, but they are not guaranteed to be 0
 
-        ancillas_needed = min(X.shape[1], 3)    # If we have less than 3 data qubits, we can use a Toffoli or a CNOT and thus we do not need an ancilla qubit for a CCCNOT
+        ancillas_needed = min(
+            X.shape[1], 3
+        )  # If we have less than 3 data qubits, we can use a Toffoli or a CNOT and thus we do not need an ancilla qubit for a CCCNOT
         wire_types = ["register", "ancilla", "additional", "unclean"]
         num_wires = [X.shape[1], ancillas_needed]
-        error_msgs = ["the points' dimensionality.", str(ancillas_needed)+"."]
+        error_msgs = ["the points' dimensionality.", str(ancillas_needed) + "."]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-2], num_wires, error_msgs)
 
         if additional_bits is not None:
-            if additional_wires is None or len(additional_wires) < additional_bits.shape[1]:
+            if (
+                additional_wires is None
+                or len(additional_wires) < additional_bits.shape[1]
+            ):
                 raise qml.QuantumFunctionError(
                     "The number of additional wires must be at least the same as the dimension of the additional bits."
                 )
@@ -49,30 +68,28 @@ class QAM:
         self.control_wire = self.ancilla_wires[1]
         self.ancilla_wires = self.ancilla_wires[2:]
 
-
         if amplitudes is None:
-            self.amplitudes = [1/np.sqrt(X.shape[0], dtype=np.float64)]*X.shape[0]
+            self.amplitudes = [1 / np.sqrt(X.shape[0], dtype=np.float64)] * X.shape[0]
         else:
             self.amplitudes = amplitudes
-
 
         self.rotation_circuits = self.prepare_rotation_circuits()
 
     def create_xor_X(self, X):
         xor_X = np.zeros(X.shape)
-        for i in range(X.shape[0]-1, 0, -1):
-            xor_X[i] = np.bitwise_xor(X[i], X[i-1])
+        for i in range(X.shape[0] - 1, 0, -1):
+            xor_X[i] = np.bitwise_xor(X[i], X[i - 1])
         xor_X[0] = X[0]
         return xor_X
 
     def abs2(self, x):
-        return x.real**2 + x.imag**2
+        return x.real ** 2 + x.imag ** 2
 
     def prepare_rotation_circuits(self) -> List:
         rotation_circuits = []
         prev_sum = 1
         rotation_matrix = np.zeros((2, 2), dtype=np.complex128)
-        for i in range(self.xor_X.shape[0]-1):
+        for i in range(self.xor_X.shape[0] - 1):
             next_sum = prev_sum - self.abs2(self.amplitudes[i])
             diag = np.sqrt(next_sum / prev_sum)
             rotation_matrix[0, 0] = diag
@@ -100,7 +117,9 @@ class QAM:
             if x[i] == 0:
                 qml.PauliX(self.register_wires[i])
         # Check if all wires are one
-        adaptive_ccnot(self.register_wires, self.ancilla_wires, self.unclean_wires, self.control_wire)
+        adaptive_ccnot(
+            self.register_wires, self.ancilla_wires, self.unclean_wires, self.control_wire
+        )
         # Uncompute flips
         for i in range(len(x)):
             if x[i] == 0:
