@@ -123,7 +123,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Test Data URL",
             "description": "URL to a json file with the set of entity points. The plugin will predict the labels of "
-                           "these entity points.",
+            "these entity points.",
             "input_type": "text",
         },
     )
@@ -158,14 +158,14 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entanglement Pattern for the Feature Map",
             "description": "This determines how the different Qubits will be entangled."
-                           "In case of 3 qubits, the patterns are as follows:\n"
-                           "- full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]\n"
-                           "- linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]\n"
-                           "- circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]\n"
-                           "To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets"
-                           "{0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the"
-                           "feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to"
-                           "the feature map and so on for {0, 2} and {1, 2}.",
+            "In case of 3 qubits, the patterns are as follows:\n"
+            "- full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]\n"
+            "- linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]\n"
+            "- circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]\n"
+            "To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets"
+            "{0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the"
+            "feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to"
+            "the feature map and so on for {0, 2} and {1, 2}.",
             "input_type": "select",
         },
     )
@@ -189,7 +189,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
                     in [0]. With this parameter, other pauli matrices (X, Y, Z) can be used, e.g. `Z,XX,XZ,ZYZ` is a possible 
                     input.""",
             "input_type": "text",
-        }
+        },
     )
     vqc_ansatz = EnumField(
         AnsatzEnum,
@@ -208,14 +208,14 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entanglement Pattern for the Ansatz",
             "description": "This determines how the different Qubits will be entangled."
-                           "In case of 3 qubits, the patterns are as follows:\n"
-                           "- full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]\n"
-                           "- linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]\n"
-                           "- circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]\n"
-                           "To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets"
-                           "{0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the"
-                           "feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to"
-                           "the feature map and so on for {0, 2} and {1, 2}.",
+            "In case of 3 qubits, the patterns are as follows:\n"
+            "- full: [{0}, {1}, {2}, {0, 1}, {0, 2}, {1, 2}]\n"
+            "- linear: [{0}, {1}, {2}, {0, 1}, {1, 2}]\n"
+            "- circular: [{0}, {1}, {2}, {2, 0}, {0, 1}, {1, 2}]\n"
+            "To see what this means, let's take a closer look at the case of a 'full' entanglement. The first three sets"
+            "{0}, {1} and {2} in the order list, tell us that all three of these qubits will be rotated according to the"
+            "feature map. Continuing, {0, 1} means both qubits 0 and 1 will be rotated by the same amount, according to"
+            "the feature map and so on for {0, 2} and {1, 2}.",
             "input_type": "select",
         },
     )
@@ -295,7 +295,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Resolution",
             "description": "The resolution of the visualization. How finegrained the evaluation of the classifier should be.\n"
-                           "If set to 0, only the test and training points get plotted.",
+            "If set to 0, only the test and training points get plotted.",
             "input_type": "number",
         },
         validate=validate.Range(min=0, min_inclusive=True),

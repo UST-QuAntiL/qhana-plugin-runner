@@ -28,7 +28,9 @@ from .schemas import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities, load_entities, ensure_dict
+    save_entities,
+    load_entities,
+    ensure_dict,
 )
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
@@ -51,7 +53,13 @@ def get_point(ent):
     dimension_keys.remove("href")
 
     dimension_keys.sort()
-    point = np.empty((len(dimension_keys, )))
+    point = np.empty(
+        (
+            len(
+                dimension_keys,
+            )
+        )
+    )
     for idx, d in enumerate(dimension_keys):
         point[idx] = ent[d]
     return point
@@ -113,7 +121,7 @@ def get_label_arr(entity_labels_url: str, id_to_idx: dict) -> (dict, List[List[f
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
-    labels = np.zeros((len(id_to_idx.keys()), ))
+    labels = np.zeros((len(id_to_idx.keys()),))
     for ent in entity_labels:
         labels[id_to_idx[ent["ID"]]] = ent["label"]
 
@@ -155,9 +163,7 @@ def calculation_task(self, db_id: int) -> str:
     custom_backend = input_params.custom_backend
     resolution = input_params.resolution
 
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: {str(input_params)}"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
@@ -167,7 +173,6 @@ def calculation_task(self, db_id: int) -> str:
             TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
-
 
     # load data from file
     train_id_to_idx, train_points = get_indices_and_point_arr(train_data_url)
@@ -188,11 +193,15 @@ def calculation_task(self, db_id: int) -> str:
     # Prep feature map
     entanglement_pattern_feature_map = entanglement_pattern_feature_map_enum.get_pattern()
     paulis = paulis.replace(" ", "").split(",")
-    feature_map = feature_map_enum.get_featuremap(n_qbits, paulis, reps_feature_map, entanglement_pattern_feature_map)
+    feature_map = feature_map_enum.get_featuremap(
+        n_qbits, paulis, reps_feature_map, entanglement_pattern_feature_map
+    )
 
     # Prep ansatz
     entanglement_pattern_ansatz = entanglement_pattern_ansatz_enum.get_pattern()
-    vqc_ansatz = vqc_ansatz_enum.get_ansatz(n_qbits, entanglement_pattern_ansatz, reps_ansatz)
+    vqc_ansatz = vqc_ansatz_enum.get_ansatz(
+        n_qbits, entanglement_pattern_ansatz, reps_ansatz
+    )
 
     # Prep optimizer
     optimizer = optimizer_enum.get_optimizer(maxitr)
@@ -201,28 +210,33 @@ def calculation_task(self, db_id: int) -> str:
     vqc = qiskitVQC(backend, feature_map, vqc_ansatz, optimizer)
     vqc.fit(train_points, train_labels)
     predictions = vqc.predict(test_points)
-    output_labels = [{"ID": ent_id, "href": "", "label": predictions[idx]} for ent_id, idx in test_id_to_idx.items()]
+    output_labels = [
+        {"ID": ent_id, "href": "", "label": predictions[idx]}
+        for ent_id, idx in test_id_to_idx.items()
+    ]
 
     # Prep VQC output
-    vqc_output = [{
-        "num_qubits": n_qbits,
-        "feature_map": {
-            "name": feature_map_enum.name,
-            "entanglement_pattern": entanglement_pattern_feature_map_enum.name,
-            "paulis": str(paulis)[1:-1],
-            "reps": reps_feature_map,
-        },
-        "ansatz": {
-            "name": vqc_ansatz_enum.name,
-            "entanglement_pattern": entanglement_pattern_ansatz_enum.name,
-            "reps": reps_ansatz,
-        },
-        "optimizer": {
-            "name": optimizer_enum.name,
-            "maxitr": maxitr,
-        },
-        "weights": vqc.get_weights().tolist(),
-    }]
+    vqc_output = [
+        {
+            "num_qubits": n_qbits,
+            "feature_map": {
+                "name": feature_map_enum.name,
+                "entanglement_pattern": entanglement_pattern_feature_map_enum.name,
+                "paulis": str(paulis)[1:-1],
+                "reps": reps_feature_map,
+            },
+            "ansatz": {
+                "name": vqc_ansatz_enum.name,
+                "entanglement_pattern": entanglement_pattern_ansatz_enum.name,
+                "reps": reps_ansatz,
+            },
+            "optimizer": {
+                "name": optimizer_enum.name,
+                "maxitr": maxitr,
+            },
+            "weights": vqc.get_weights().tolist(),
+        }
+    ]
 
     # Get representative circuit
     representative_circuit = vqc.get_representative_circuit(train_points, train_labels)

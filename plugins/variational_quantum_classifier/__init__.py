@@ -34,9 +34,7 @@ VQC_BLP = SecurityBlueprint(
 class VQC(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = (
-        "This plugin implements a Variational Quantum Classifier (VQC)"
-    )
+    description = "This plugin implements a Variational Quantum Classifier (VQC)"
     tags = ["classification", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:

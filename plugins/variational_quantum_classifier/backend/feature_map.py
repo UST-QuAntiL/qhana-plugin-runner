@@ -46,7 +46,10 @@ class FeatureMapEnum(enum.Enum):
 
         elif self == FeatureMapEnum.pauli_feature_map:
             feature_map = PauliFeatureMap(
-                feature_dimension=n_qbits, paulis=paulis, entanglement=entanglement_pattern, reps=reps
+                feature_dimension=n_qbits,
+                paulis=paulis,
+                entanglement=entanglement_pattern,
+                reps=reps,
             )
 
         else:

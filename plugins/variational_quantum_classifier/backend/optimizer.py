@@ -13,7 +13,17 @@
 # limitations under the License.
 
 from enum import Enum
-from qiskit.algorithms.optimizers import ADAM, AQGD, BOBYQA, COBYLA, NELDER_MEAD, SPSA, POWELL, NFT, TNC
+from qiskit.algorithms.optimizers import (
+    ADAM,
+    AQGD,
+    BOBYQA,
+    COBYLA,
+    NELDER_MEAD,
+    SPSA,
+    POWELL,
+    NFT,
+    TNC,
+)
 
 
 class OptimizerEnum(Enum):

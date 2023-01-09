@@ -16,7 +16,12 @@ from qiskit_machine_learning.algorithms.classifiers import VQC
 import numpy as np
 from qiskit.utils import QuantumInstance
 from enum import Enum
-from qiskit.circuit.library import TwoLocal, RealAmplitudes, ExcitationPreserving, EfficientSU2
+from qiskit.circuit.library import (
+    TwoLocal,
+    RealAmplitudes,
+    ExcitationPreserving,
+    EfficientSU2,
+)
 from .optimizer import OptimizerEnum
 
 
@@ -26,23 +31,31 @@ class AnsatzEnum(Enum):
     efficient_su2 = "EfficientSU2"
     ry_rz = "RyRz"
 
-    def get_ansatz(self, n_qbits:int , entanglement, reps: int):
+    def get_ansatz(self, n_qbits: int, entanglement, reps: int):
         if self == AnsatzEnum.real_amplitudes:
-            return RealAmplitudes(num_qubits=n_qbits, entanglement=entanglement, reps=reps)
+            return RealAmplitudes(
+                num_qubits=n_qbits, entanglement=entanglement, reps=reps
+            )
         elif self == AnsatzEnum.excitation_preserving:
-            return ExcitationPreserving(num_qubits=n_qbits, entanglement=entanglement, reps=reps)
+            return ExcitationPreserving(
+                num_qubits=n_qbits, entanglement=entanglement, reps=reps
+            )
         elif self == AnsatzEnum.efficient_su2:
             return EfficientSU2(num_qubits=n_qbits, entanglement=entanglement, reps=reps)
         elif self == AnsatzEnum.ry_rz:
-            return TwoLocal(num_qubits=n_qbits, rotation_blocks=['ry', 'rz'], entanglement_blocks="cz",
-                            entanglement=entanglement, reps=reps)
+            return TwoLocal(
+                num_qubits=n_qbits,
+                rotation_blocks=["ry", "rz"],
+                entanglement_blocks="cz",
+                entanglement=entanglement,
+                reps=reps,
+            )
         else:
             err_str = f"Unkown ansatz {self.name}!"
             raise ValueError(err_str)
 
 
 class qiskitVQC:
-
     def __init__(
         self,
         quantum_instance: QuantumInstance,
@@ -54,8 +67,12 @@ class qiskitVQC:
         self.__feature_map = feature_map
         self.__ansatz = ansatz
         self.__optimizer = optimizer
-        self.__vqc = VQC(feature_map=feature_map, ansatz=ansatz,
-                         optimizer=optimizer, quantum_instance=quantum_instance)
+        self.__vqc = VQC(
+            feature_map=feature_map,
+            ansatz=ansatz,
+            optimizer=optimizer,
+            quantum_instance=quantum_instance,
+        )
 
     def prep_labels(self, labels):
         n_samples = len(labels)
@@ -92,18 +109,25 @@ class qiskitVQC:
             vqc = self.__vqc
         else:
             optimizer = OptimizerEnum.cobyla.get_optimizer(1)
-            vqc = VQC(feature_map=self.__feature_map, ansatz=self.__ansatz,
-                             optimizer=optimizer, quantum_instance=self.__quantum_instance)
+            vqc = VQC(
+                feature_map=self.__feature_map,
+                ansatz=self.__ansatz,
+                optimizer=optimizer,
+                quantum_instance=self.__quantum_instance,
+            )
             labels_onehot, _ = self.prep_labels(labels)
             vqc.fit(data, labels_onehot)
 
         # Prep parameters
         param_values = {
-            input_param: data[0, j] for j, input_param in enumerate(vqc._neural_network._input_params)
+            input_param: data[0, j]
+            for j, input_param in enumerate(vqc._neural_network._input_params)
         }
         param_values.update(
-            {weight_param: vqc._fit_result.x[j] for j, weight_param in
-             enumerate(vqc._neural_network._weight_params)}
+            {
+                weight_param: vqc._fit_result.x[j]
+                for j, weight_param in enumerate(vqc._neural_network._weight_params)
+            }
         )
 
         # Bind parameters to circuit
