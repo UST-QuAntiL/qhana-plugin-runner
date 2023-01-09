@@ -170,7 +170,8 @@ def calculation_task(self, db_id: int) -> str:
         conf_matrix = plot_confusion_matrix(test_labels, predictions)
 
     # Create plot
-    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, predictions)
+    fig = plot_data(train_data, train_id_to_idx, train_labels, test_data, test_id_to_idx, predictions,
+                    title=plot_title)
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
