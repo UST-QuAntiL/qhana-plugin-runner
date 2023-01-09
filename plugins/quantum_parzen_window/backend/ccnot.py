@@ -14,7 +14,7 @@ def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
     if len(a_qubits) == len(c_qubits) - 2:
         clean_ccnot(c_qubits, a_qubits, t_qubit)
     elif len(a_qubits) + len(unclean_qubits) == len(c_qubits) - 2:
-        unclean_qubits(c_qubits, a_qubits + unclean_qubits, t_qubit)
+        unclean_ccnot(c_qubits, a_qubits + unclean_qubits, t_qubit)
     elif len(a_qubits) > 0:
         one_ancilla_ccnot(c_qubits, a_qubits[0], t_qubit)
     else:
