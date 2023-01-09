@@ -66,7 +66,10 @@ class SimpleHammingQkNN(SimpleQkNN):
         self.qam_ancilla_wires = qam_ancilla_wires
         wire_types = ["train", "qam_ancilla", "unclean"]
         num_wires = [self.train_data.shape[1], max(self.train_data.shape[1], 2)]
-        error_msgs = ["the points' dimensionality.", "the points' dimensionality and greater or equal to 2."]
+        error_msgs = [
+            "the points' dimensionality.",
+            "the points' dimensionality and greater or equal to 2.",
+        ]
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
         self.qam = QAM(
