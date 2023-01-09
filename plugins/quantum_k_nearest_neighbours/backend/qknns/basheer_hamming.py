@@ -108,17 +108,16 @@ class BasheerHammingQkNN(QkNN):
                     qml.PauliX((self.overflow_wires[i],))
 
             # Increment overflow register for each 1 in the train register
-            qml.PauliX((self.oracle_wire,))  # Allows us to set indicator_is_zero to False
+            qml.PauliX((self.threshold_wire,))  # Allows us to set indicator_is_zero to False
             for t_idx, t_wire in enumerate(self.train_wires):
                 cc_increment_register(
                     [t_wire],
                     self.overflow_wires,
-                    [self.not_in_list_wire, self.threshold_wire] + self.additional_ancilla_wires,
-                    self.oracle_wire,
+                    [self.not_in_list_wire, self.oracle_wire] + self.additional_ancilla_wires,
+                    self.threshold_wire,
                     unclean_wires=self.unclean_wires + self.train_wires[:t_idx] + self.train_wires[t_idx+1:] + self.idx_wires,
                     indicator_is_zero=False,
                 )
-            qml.PauliX((self.oracle_wire,))  # Undo the inverse (indicator_is_zero thing)
 
             for i in range(2):
                 qml.PauliX((self.overflow_wires[i],))
@@ -130,7 +129,8 @@ class BasheerHammingQkNN(QkNN):
                 self.train_wires,                   # We know that self.train_wires suffice for an unclean ccnot
                 self.threshold_wire
             )
-            qml.PauliX((self.threshold_wire, ))
+            # Normally, we would need to invert the threshold wire here, but we already did that above, for the
+            # increment steps. Thus, there is no need for qml.PauliX((self.threshold_wire, ))
 
             # Set ancilla wire len(a)+1 to 1, if the point's idx is not contained in indices
             # We are looping elements in self.train_data. Thus, a point at index i might also be at the index i+self.num_train_data.
