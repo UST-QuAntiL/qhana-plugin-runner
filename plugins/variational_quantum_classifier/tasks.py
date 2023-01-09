@@ -182,13 +182,6 @@ def calculation_task(self, db_id: int) -> str:
     n_qbits = train_points.shape[1]
 
     # Prep backend
-    # max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
-    # if max_qbits is None:
-    #     max_qbits = 20
-    #
-    # if n_qbits >= max_qbits:
-    #     raise ValueError("not enough qubits")
-
     backend = backend.get_qiskit_backend(ibmq_token, custom_backend)
     backend = QuantumInstance(backend=backend, shots=shots)
 
