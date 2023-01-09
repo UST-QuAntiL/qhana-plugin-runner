@@ -200,7 +200,9 @@ class StatePreparationQuantumKMeans(Clustering):
         plt.scatter(c0[:, 0], c0[:, 1], c="blue", marker=".")
         plt.scatter(c1[:, 0], c1[:, 1], c="red", marker="s")
         colors = ["green"] * len(prepped_centroids)
-        plt.scatter(prepped_centroids[:, 0], prepped_centroids[:, 1], c=colors, marker="<")
+        plt.scatter(
+            prepped_centroids[:, 0], prepped_centroids[:, 1], c=colors, marker="<"
+        )
         plt.axis("square")
         plt.show()
         plt.cla()

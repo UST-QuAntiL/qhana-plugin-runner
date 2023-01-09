@@ -83,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Number of clusters that shall be found.",
             "input_type": "number",
         },
-        validate=ma.validate.Range(min=1, min_inclusive=True)
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     variant = EnumField(
         ClusteringEnum,
@@ -106,7 +106,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "assignments have changed.",
             "input_type": "number",
         },
-        validate=ma.validate.Range(min=0, min_inclusive=True)
+        validate=ma.validate.Range(min=0, min_inclusive=True),
     )
     max_runs = ma.fields.Integer(
         required=True,
@@ -117,7 +117,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "the algorithm terminates, even if the tolerance isn't reached.",
             "input_type": "number",
         },
-        validate=ma.validate.Range(min=0, min_inclusive=True)
+        validate=ma.validate.Range(min=0, min_inclusive=True),
     )
     backend = EnumField(
         QuantumBackends,
@@ -137,7 +137,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Number of times a quantum circuit gets repeatedly executed.",
             "input_type": "number",
         },
-        validate=ma.validate.Range(min=1, min_inclusive=True)
+        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     ibmq_token = ma.fields.String(
         required=False,

@@ -109,7 +109,7 @@ class MicroFrontend(MethodView):
     @PCA_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
     @PCA_BLP.arguments(
@@ -126,13 +126,17 @@ class MicroFrontend(MethodView):
         schema_error = errors.get("_schema", None)
         if schema_error:
             if "Entity points url must not be none." in schema_error:
-                errors["entityPointsUrl"] = errors.get("entityPointsUrl", []) + ["Field may not be null."]
+                errors["entityPointsUrl"] = errors.get("entityPointsUrl", []) + [
+                    "Field may not be null."
+                ]
             elif "Kernel url must not be none." in schema_error:
-                errors["kernelUrl"] = errors.get("kernelUrl", []) + ["Field may not be null."]
+                errors["kernelUrl"] = errors.get("kernelUrl", []) + [
+                    "Field may not be null."
+                ]
 
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
         fields = InputParametersSchema().fields
 
@@ -163,6 +167,7 @@ class MicroFrontend(MethodView):
                 name=PCA.instance.name,
                 version=PCA.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{PCA_BLP.name}.ProcessView"),
