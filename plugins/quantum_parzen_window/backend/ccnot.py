@@ -11,7 +11,13 @@ def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
     :return: None
     """
     unclean_qubits = [] if unclean_qubits is None else unclean_qubits
-    if len(a_qubits) == len(c_qubits) - 2:
+    if len(c_qubits) == 0:
+        qml.PauliX((t_qubit,))
+    elif len(c_qubits) == 1:
+        qml.CNOT((c_qubits[0], t_qubit))
+    elif len(c_qubits) == 2:
+        qml.Toffoli(wires=c_qubits + [t_qubit])
+    elif len(a_qubits) == len(c_qubits) - 2:
         clean_ccnot(c_qubits, a_qubits, t_qubit)
     elif len(a_qubits) + len(unclean_qubits) == len(c_qubits) - 2:
         unclean_ccnot(c_qubits, a_qubits + unclean_qubits, t_qubit)
