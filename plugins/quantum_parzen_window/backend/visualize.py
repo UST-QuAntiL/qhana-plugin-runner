@@ -108,9 +108,7 @@ def plot_confusion_matrix(y_true, y_pred, labels: list):
         df_content[label] = [str(el) for el in v]
     df = pd.DataFrame(df_content)
     df.index = pd.Index(labels, name="True label")
-    df.columns = pd.Index(
-        labels, name="Predicted label"
-    )
+    df.columns = pd.Index(labels, name="Predicted label")
 
     fig = px.imshow(
         df,
