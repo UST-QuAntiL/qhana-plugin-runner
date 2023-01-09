@@ -147,6 +147,7 @@ class MicroFrontend(MethodView):
             fields["maxitr"].data_key: 1000,
             fields["shots"].data_key: 1024,
             fields["backend"].data_key: QiskitBackends.aer_statevector_simulator.value,
+            fields["resolution"].data_key: 20,
         }
 
         if "IBMQ_BACKEND" in os.environ:

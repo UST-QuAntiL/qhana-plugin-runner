@@ -42,6 +42,7 @@ class InputParameters:
         train_data_url: str,
         train_labels_url: str,
         test_data_url: str,
+        test_labels_url: str,
         feature_map: FeatureMapEnum,
         entanglement_pattern_feature_map: EntanglementPatternEnum,
         reps_feature_map: int,
@@ -55,10 +56,12 @@ class InputParameters:
         backend: QiskitBackends,
         ibmq_token: str,
         custom_backend: str,
+        resolution: int,
     ):
         self.train_data_url = train_data_url
         self.train_labels_url = train_labels_url
         self.test_data_url = test_data_url
+        self.test_labels_url = test_labels_url
         self.feature_map = feature_map
         self.entanglement_pattern_feature_map = entanglement_pattern_feature_map
         self.reps_feature_map = reps_feature_map
@@ -72,6 +75,7 @@ class InputParameters:
         self.backend = backend
         self.ibmq_token = ibmq_token
         self.custom_backend = custom_backend
+        self.resolution = resolution
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -95,8 +99,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
     train_labels_url = FileUrl(
-        required=False,
-        allow_none=True,
+        required=True,
+        allow_none=False,
         data_input_type="entity/numeric",
         data_content_types=[
             "application/json",
@@ -104,7 +108,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         ],
         metadata={
             "label": "Training Label URL",
-            "description": "URL to a json file with the set of labels. These labels will be used for training.",
+            "description": "URL to a json file with the set of labels of the training data. These labels will be used for training.",
             "input_type": "text",
         },
     )
@@ -120,6 +124,20 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Test Data URL",
             "description": "URL to a json file with the set of entity points. The plugin will predict the labels of "
                            "these entity points.",
+            "input_type": "text",
+        },
+    )
+    test_labels_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity/numeric",
+        data_content_types=[
+            "application/json",
+            "text/csv",
+        ],
+        metadata={
+            "label": "Test Label URL",
+            "description": "URL to a json file with the set of labels of the test data. This input is optional and will be used to calculate the accuracy.",
             "input_type": "text",
         },
     )
@@ -269,6 +287,16 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Custom backend",
             "description": "Custom backend for IBMQ.",
             "input_type": "text",
+        },
+    )
+    resolution = ma.fields.Integer(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Resolution",
+            "description": "The resolution of the visualization. How finegrained the evaluation of the classifier should be.\n"
+                           "If set to 0, only the test and training points get plotted.",
+            "input_type": "number",
         },
     )
 

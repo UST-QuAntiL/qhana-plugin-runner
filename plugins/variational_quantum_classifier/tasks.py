@@ -38,6 +38,9 @@ import numpy as np
 from qiskit.utils import QuantumInstance
 from .backend.vqc import qiskitVQC
 
+from sklearn.metrics import accuracy_score
+
+from .backend.visualization import plot_data, plot_confusion_matrix
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -108,8 +111,6 @@ def get_label_generator(entity_labels_url: str):
 
 def get_label_arr(entity_labels_url: str, id_to_idx: dict) -> (dict, List[List[float]]):
     entity_labels = list(get_label_generator(entity_labels_url))
-    for ent in entity_labels:
-        print(ent)
 
     # Initialise label array
     labels = np.zeros((len(id_to_idx.keys()), ))
@@ -138,6 +139,7 @@ def calculation_task(self, db_id: int) -> str:
     train_data_url = input_params.train_data_url
     train_labels_url = input_params.train_labels_url
     test_data_url = input_params.test_data_url
+    test_labels_url = input_params.test_labels_url
     feature_map_enum = input_params.feature_map
     entanglement_pattern_feature_map_enum = input_params.entanglement_pattern_feature_map
     reps_feature_map = input_params.reps_feature_map
@@ -151,6 +153,7 @@ def calculation_task(self, db_id: int) -> str:
     backend = input_params.backend
     ibmq_token = input_params.ibmq_token
     custom_backend = input_params.custom_backend
+    resolution = input_params.resolution
 
     TASK_LOGGER.info(
         f"Loaded input parameters from db: {str(input_params)}"
@@ -167,10 +170,13 @@ def calculation_task(self, db_id: int) -> str:
 
 
     # load data from file
-    id_to_idx, train_points = get_indices_and_point_arr(train_data_url)
-    train_labels = get_label_arr(train_labels_url, id_to_idx)
+    train_id_to_idx, train_points = get_indices_and_point_arr(train_data_url)
+    train_labels = get_label_arr(train_labels_url, train_id_to_idx)
 
-    id_to_idx_test, test_points = get_indices_and_point_arr(test_data_url)
+    test_id_to_idx, test_points = get_indices_and_point_arr(test_data_url)
+    test_labels = None
+    if test_labels_url != "" and test_labels_url is not None:
+        test_labels = get_label_arr(test_labels_url, test_id_to_idx)
 
     # set no. of qubits accordingly
     n_qbits = train_points.shape[1]
@@ -201,8 +207,8 @@ def calculation_task(self, db_id: int) -> str:
     # VQC
     vqc = qiskitVQC(backend, feature_map, vqc_ansatz, optimizer)
     vqc.fit(train_points, train_labels)
-    test_labels = vqc.predict(test_points)
-    test_labels = [{"ID": ent_id, "href": "", "label": test_labels[idx]} for ent_id, idx in id_to_idx_test.items()]
+    predictions = vqc.predict(test_points)
+    output_labels = [{"ID": ent_id, "href": "", "label": predictions[idx]} for ent_id, idx in test_id_to_idx.items()]
 
     # Prep VQC output
     vqc_output = [{
@@ -222,15 +228,41 @@ def calculation_task(self, db_id: int) -> str:
             "name": optimizer_enum.name,
             "maxitr": maxitr,
         },
-        "weights": vqc.get_weights(),
+        "weights": vqc.get_weights().tolist(),
     }]
 
     # Get representative circuit
     representative_circuit = vqc.get_representative_circuit(train_points, train_labels)
 
+    # Plot title + confusion matrix
+    plot_title = "Classification"
+    conf_matrix = None
+    if test_labels is not None:
+        # Compute accuracy on test data
+        test_accuracy = accuracy_score(test_labels, predictions)
+        plot_title += f": accuracy on test data={test_accuracy}"
+
+        # Create confusion matrix plot
+        conf_matrix = plot_confusion_matrix(
+            test_labels, predictions, list(set(train_labels))
+        )
+
+    # Create plot
+    fig = plot_data(
+        train_points,
+        train_id_to_idx,
+        train_labels,
+        test_points,
+        test_id_to_idx,
+        predictions,
+        resolution=resolution,
+        predictor=vqc.predict,
+        title=plot_title,
+    )
+
     # Output
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(test_labels, output, "application/json")
+        save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
@@ -238,6 +270,32 @@ def calculation_task(self, db_id: int) -> str:
             "entity/numeric",
             "application/json",
         )
+
+    if fig is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "classification_plot.html",
+                "plot",
+                "text/html",
+            )
+
+    if conf_matrix is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = conf_matrix.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "confusion_matrix.html",
+                "plot",
+                "text/html",
+            )
 
     with SpooledTemporaryFile(mode="w") as output:
         output.write(representative_circuit)
