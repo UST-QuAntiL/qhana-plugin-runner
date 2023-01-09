@@ -70,7 +70,7 @@ def load_labels_from_url(labels_url: str, id_to_idx: dict):
     labels = open_url(labels_url).json()
 
     num_labels = len(id_to_idx)
-    label_arr = np.empty((num_labels,))
+    label_arr = np.empty((num_labels,), dtype=int)
 
     for label in labels:
         idx = id_to_idx[label["ID"]]
@@ -165,7 +165,7 @@ def calculation_task(self, db_id: int) -> str:
         plot_title += f": accuracy on test data={test_accuracy}"
 
         # Create confusion matrix plot
-        conf_matrix = plot_confusion_matrix(test_labels, predictions)
+        conf_matrix = plot_confusion_matrix(test_labels, predictions, list(set(train_labels)))
 
     # Create plot
     fig = plot_data(

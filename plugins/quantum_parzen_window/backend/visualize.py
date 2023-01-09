@@ -97,16 +97,19 @@ def plot_data(
     return fig
 
 
-def plot_confusion_matrix(y_true, y_pred):
-    conf_matrix = confusion_matrix(y_true, y_pred).T
+def plot_confusion_matrix(y_true, y_pred, labels: list):
+    labels.sort()
+    conf_matrix = confusion_matrix(y_true, y_pred, labels=labels).T
+
+    labels = [str(label) for label in labels]
 
     df_content = dict()
-    for idx, v in enumerate(conf_matrix):
-        df_content[str(idx)] = [str(el) for el in v]
+    for label, v in zip(labels, conf_matrix):
+        df_content[label] = [str(el) for el in v]
     df = pd.DataFrame(df_content)
-    df.index = pd.Index([str(idx) for idx in range(len(conf_matrix))], name="True label")
+    df.index = pd.Index(labels, name="True label")
     df.columns = pd.Index(
-        [str(idx) for idx in range(len(conf_matrix))], name="Predicted label"
+        labels, name="Predicted label"
     )
 
     fig = px.imshow(

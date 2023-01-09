@@ -169,7 +169,7 @@ def calculation_task(self, db_id: int) -> str:
         plot_title += f": accuracy on test data={test_accuracy}"
 
         # Create confusion matrix plot
-        conf_matrix = plot_confusion_matrix(test_labels, predictions)
+        conf_matrix = plot_confusion_matrix(test_labels, predictions, list(set(train_labels)))
 
     # Create plot
     if not qknn.heatmap_meaningful():
