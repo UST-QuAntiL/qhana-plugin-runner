@@ -27,7 +27,9 @@ from .schemas import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities, load_entities, ensure_dict
+    save_entities,
+    load_entities,
+    ensure_dict,
 )
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
@@ -46,7 +48,13 @@ def get_point(ent):
     dimension_keys.remove("href")
 
     dimension_keys.sort()
-    point = np.empty((len(dimension_keys, )))
+    point = np.empty(
+        (
+            len(
+                dimension_keys,
+            )
+        )
+    )
     for idx, d in enumerate(dimension_keys):
         point[idx] = ent[d]
     return point
@@ -91,9 +99,7 @@ def calculation_task(self, db_id: int) -> str:
     shots = input_params.shots
     ibmq_token = input_params.ibmq_token
 
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: {str(input_params)}"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
@@ -139,7 +145,9 @@ def calculation_task(self, db_id: int) -> str:
 
     cluster_algo = variant.get_cluster_algo(backend, tol, max_runs)
 
-    clusters, representative_circuit = cluster_algo.create_clusters(points_arr, clusters_cnt)
+    clusters, representative_circuit = cluster_algo.create_clusters(
+        points_arr, clusters_cnt
+    )
 
     entity_clusters = []
 
