@@ -208,7 +208,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entanglement Pattern for the Ansatz",
             "description": "This determines how the different Qubits will be entangled. "
-                "This is the same procedure as for the feature map, except this time its for the vqc-ansatz.",
+            "This is the same procedure as for the feature map, except this time its for the vqc-ansatz.",
             "input_type": "select",
         },
     )
@@ -229,8 +229,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Optimizer",
             "description": "This parameter determines the optimizer used to optimize the VQC's parameters. "
-                           "Optimizer can vary a lot, e.g. in the way they update the model's parameters or some may "
-                           "preserve some sort of momentum, while optimizing.",
+            "Optimizer can vary a lot, e.g. in the way they update the model's parameters or some may "
+            "preserve some sort of momentum, while optimizing.",
             "input_type": "select",
         },
     )
