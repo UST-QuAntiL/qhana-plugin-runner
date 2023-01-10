@@ -174,8 +174,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Number of Feature Map Repetitions",
-            "description": """The kernel proposed by Havlíček [0] works by creating an ansatz, which is a specific
-                                quantum circuit. The final quantum circuit contains this ansatz number of repetitions times.""",
+            "description": """The kernel proposed by Havlíček et al. [1] works by creating an ansatz, which is a specific
+                                quantum circuit. The final quantum circuit repeats the feature map this many times.""",
             "input_type": "number",
         },
         validate=ma.validate.Range(min=1, min_inclusive=True),
@@ -186,7 +186,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Pauli Matrices",
             "description": """By default the pauli kernel only uses the Z and ZZ matrices, as described 
-                    in [0]. With this parameter, other pauli matrices (X, Y, Z) can be used, e.g. `Z,XX,XZ,ZYZ` is a possible 
+                    in [1]. With this parameter, other pauli matrices (X, Y, Z) can be used, e.g. `Z,XX,XZ,ZYZ` is a possible 
                     input.""",
             "input_type": "text",
         },
@@ -197,7 +197,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Ansatz",
-            "description": "Ansatz",
+            "description": "Determines the ansatz used in the VQC.",
             "input_type": "select",
         },
     )
@@ -207,8 +207,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Entanglement Pattern for the Ansatz",
-            "description": "This determines how the different Qubits will be entangled."
-            "This is the same procedure as for the feature map, except this times its for the ansatz",
+            "description": "This determines how the different Qubits will be entangled. "
+                "This is the same procedure as for the feature map, except this time its for the vqc-ansatz.",
             "input_type": "select",
         },
     )
@@ -217,8 +217,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Number of Ansatz Repetitions",
-            "description": """The kernel proposed by Havlíček [0] works by creating an ansatz, which is a specific
-                                quantum circuit. The final quantum circuit contains this ansatz number of repetitions times.""",
+            "description": """The chosen ansatz will be repeated this many number of repetitions.""",
             "input_type": "number",
         },
         validate=ma.validate.Range(min=1, min_inclusive=True),
@@ -229,7 +228,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Optimizer",
-            "description": "Optimizer",
+            "description": "This parameter determines the optimizer used to optimize the VQC's parameters. "
+                           "Optimizer can vary a lot, e.g. in the way they update the model's parameters or some may "
+                           "preserve some sort of momentum, while optimizing.",
             "input_type": "select",
         },
     )

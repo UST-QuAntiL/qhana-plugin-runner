@@ -30,11 +30,18 @@ VQC_BLP = SecurityBlueprint(
     description="VQC plugin API",
 )
 
+qiskit_ml_version = "0.4.0"
+
 
 class VQC(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "This plugin implements a Variational Quantum Classifier (VQC)"
+    description = (
+        "This plugin implements the Variational Quantum Classifier (VQC) by Qiskit [0]. It's currently using version "
+        f"{qiskit_ml_version} of qiskit's machine learning library."
+        "[0] [Qiskit documentation, Variational Quantum Classifier](https://qiskit.org/documentation/machine-learning/stubs/qiskit_machine_learning.algorithms.VQC.html#qiskit_machine_learning.algorithms.VQC)\n"
+        "[1] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)"
+    )
     tags = ["classification", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -44,7 +51,7 @@ class VQC(QHAnaPluginBase):
         return VQC_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~=0.27\nqiskit-machine-learning~=0.4.0\nscikit-learn~=1.1"
+        return f"qiskit~=0.27\nqiskit-machine-learning~={qiskit_ml_version}\nscikit-learn~=1.1"
 
 
 try:
