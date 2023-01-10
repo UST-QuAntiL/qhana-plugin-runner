@@ -95,9 +95,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Entity points URL 2",
             "description": "URL to a json file with the second entity points. If not provided, then 'entity points URL 1' will be used. \\"
-                           "Note: To train/fit an algorithm, e.g. a Support Vector Machine (SVM), the first and second set of entity points "
-                           "are equal. But to classify new points with the SVM, the first set is the training set and the second set is"
-                           "the test set, i.e. the set of new points.",
+            "Note: To train/fit an algorithm, e.g. a Support Vector Machine (SVM), the first and second set of entity points "
+            "are equal. But to classify new points with the SVM, the first set is the training set and the second set is"
+            "the test set, i.e. the set of new points.",
             "input_type": "text",
         },
     )
@@ -150,7 +150,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             in [0]. With this parameter, other pauli matrices (X, Y, Z) can be used, e.g. `Z,XX,XZ,ZYZ` is a possible 
             input.""",
             "input_type": "text",
-        }
+        },
     )
     reps = ma.fields.Integer(
         required=True,
