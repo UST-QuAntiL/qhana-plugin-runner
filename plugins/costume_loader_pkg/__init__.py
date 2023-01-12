@@ -44,7 +44,7 @@ class CostumeLoader(QHAnaPluginBase):
         return COSTUME_LOADER_BLP
 
     def get_requirements(self) -> str:
-        return "mysql-connector-python==8.0.29"
+        return ""
 
 
 try:
