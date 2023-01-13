@@ -35,7 +35,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FileUrl,
@@ -180,7 +179,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @CSV_BLP.arguments(CsvInputParametersSchema(unknown=EXCLUDE), location="form")
-    @CSV_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @CSV_BLP.response(HTTPStatus.SEE_OTHER)
     @CSV_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""

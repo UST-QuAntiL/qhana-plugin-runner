@@ -35,7 +35,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -171,7 +170,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @HELLO_BLP.arguments(HelloWorldParametersSchema(unknown=EXCLUDE), location="form")
-    @HELLO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""

@@ -35,7 +35,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FileUrl,
@@ -173,7 +172,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @JSON_BLP.arguments(JsonInputParametersSchema(unknown=EXCLUDE), location="form")
-    @JSON_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @JSON_BLP.response(HTTPStatus.SEE_OTHER)
     @JSON_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""

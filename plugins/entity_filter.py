@@ -40,7 +40,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
     InputDataMetadata,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FileUrl,
@@ -261,7 +260,7 @@ class ProcessView(MethodView):
     @ENTITY_FILTER_BLP.arguments(
         EntityFilterParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @ENTITY_FILTER_BLP.response(HTTPStatus.SEE_OTHER)
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params: EntityFilterParametersSchema):
         """Start the entity filter task."""

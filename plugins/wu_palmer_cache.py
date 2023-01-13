@@ -38,7 +38,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     DataMetadata,
     InputDataMetadata,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -172,7 +171,7 @@ class CalcSimilarityView(MethodView):
     @WU_PALMER_CACHE_BLP.arguments(
         CalcSimilarityParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @WU_PALMER_CACHE_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @WU_PALMER_CACHE_BLP.response(HTTPStatus.SEE_OTHER)
     @WU_PALMER_CACHE_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

@@ -40,7 +40,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     DataMetadata,
     InputDataMetadata,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -224,7 +223,7 @@ class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
     @TRANSFORMERS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @TRANSFORMERS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @TRANSFORMERS_BLP.response(HTTPStatus.SEE_OTHER)
     @TRANSFORMERS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

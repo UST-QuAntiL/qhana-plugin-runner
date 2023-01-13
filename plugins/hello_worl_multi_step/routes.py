@@ -19,7 +19,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
@@ -116,7 +115,7 @@ class ProcessView(MethodView):
     @HELLO_MULTI_BLP.arguments(
         HelloWorldParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
@@ -227,7 +226,7 @@ class DemoStepView(MethodView):
     @HELLO_MULTI_BLP.arguments(
         HelloWorldParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Start the demo task."""

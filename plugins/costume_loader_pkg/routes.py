@@ -19,7 +19,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -134,7 +133,7 @@ class LoadingView(MethodView):
     """Start a long running processing task."""
 
     @COSTUME_LOADER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @COSTUME_LOADER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @COSTUME_LOADER_BLP.response(HTTPStatus.SEE_OTHER)
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params: InputParameters):
         """Start the costume loading task."""

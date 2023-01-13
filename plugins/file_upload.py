@@ -35,7 +35,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -176,7 +175,7 @@ class ProcessView(MethodView):
     @FILE_UPLOAD_BLP.arguments(
         FileUploadParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @FILE_UPLOAD_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @FILE_UPLOAD_BLP.response(HTTPStatus.SEE_OTHER)
     @FILE_UPLOAD_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""

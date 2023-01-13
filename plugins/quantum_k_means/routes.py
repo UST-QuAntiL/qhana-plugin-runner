@@ -21,7 +21,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
     InputDataMetadata,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -140,7 +139,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @QKMEANS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @QKMEANS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @QKMEANS_BLP.response(HTTPStatus.SEE_OTHER)
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

@@ -33,7 +33,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     InputDataMetadata,
-    TaskResponseSchema,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -201,7 +200,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @VIS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @VIS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
