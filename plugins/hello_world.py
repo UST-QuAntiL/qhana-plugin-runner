@@ -38,7 +38,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -58,18 +57,6 @@ HELLO_BLP = SecurityBlueprint(
     description="Demo plugin API.",
     template_folder="hello_world_templates",
 )
-
-
-class DemoResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class HelloWorldParametersSchema(FrontendFormBaseSchema):
@@ -184,7 +171,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @HELLO_BLP.arguments(HelloWorldParametersSchema(unknown=EXCLUDE), location="form")
-    @HELLO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""

@@ -19,7 +19,6 @@ from typing import Mapping, Optional
 import flask
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -41,7 +40,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -63,12 +61,6 @@ MDS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="MDS plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class MetricEnum(Enum):
@@ -256,7 +248,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @MDS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @MDS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MDS_BLP.response(HTTPStatus.SEE_OTHER)
     @MDS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

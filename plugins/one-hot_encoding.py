@@ -110,12 +110,6 @@ ONEHOT_BLP = SecurityBlueprint(
 )
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class InputParameters:
     def __init__(
         self,
@@ -286,7 +280,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @ONEHOT_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @ONEHOT_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @ONEHOT_BLP.response(HTTPStatus.SEE_OTHER)
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

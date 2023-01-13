@@ -14,7 +14,7 @@
 import json
 import math
 from http import HTTPStatus
-from io import BytesIO, StringIO
+from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List
@@ -22,7 +22,6 @@ from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -43,7 +42,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -68,12 +66,6 @@ TIME_TANH_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Time tanh plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -207,7 +199,7 @@ class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
     @TIME_TANH_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @TIME_TANH_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @TIME_TANH_BLP.response(HTTPStatus.SEE_OTHER)
     @TIME_TANH_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

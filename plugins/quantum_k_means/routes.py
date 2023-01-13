@@ -27,7 +27,7 @@ from marshmallow import EXCLUDE
 
 from . import QKMEANS_BLP, QKMeans
 from .backend.quantum_backend import QuantumBackends
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import InputParametersSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -160,7 +160,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @QKMEANS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @QKMEANS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @QKMEANS_BLP.response(HTTPStatus.SEE_OTHER)
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

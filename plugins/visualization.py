@@ -16,9 +16,7 @@ from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
 import flask
-import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -34,12 +32,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginType,
     EntryPoint,
-    DataMetadata,
     InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -60,12 +56,6 @@ VIS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Visualization plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class InputParameters:
@@ -211,7 +201,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @VIS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @VIS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

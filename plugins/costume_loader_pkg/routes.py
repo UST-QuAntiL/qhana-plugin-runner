@@ -11,7 +11,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import COSTUME_LOADER_BLP, CostumeLoader
-from .schemas import InputParameters, InputParametersSchema, TaskResponseSchema
+from .schemas import InputParameters, InputParametersSchema
 from .tasks import loading_task
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -134,7 +134,7 @@ class LoadingView(MethodView):
     """Start a long running processing task."""
 
     @COSTUME_LOADER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @COSTUME_LOADER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @COSTUME_LOADER_BLP.response(HTTPStatus.SEE_OTHER)
     @COSTUME_LOADER_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params: InputParameters):
         """Start the costume loading task."""

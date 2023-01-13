@@ -22,7 +22,6 @@ from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -44,7 +43,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -66,12 +64,6 @@ TRANSFORMERS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Similarity to distance transformers plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class TransformersEnum(Enum):
@@ -232,7 +224,7 @@ class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
     @TRANSFORMERS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @TRANSFORMERS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @TRANSFORMERS_BLP.response(HTTPStatus.SEE_OTHER)
     @TRANSFORMERS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

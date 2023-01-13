@@ -12,7 +12,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import HELLO_MULTI_BLP, HelloWorldMultiStep
-from .schemas import HelloWorldParametersSchema, TaskResponseSchema
+from .schemas import HelloWorldParametersSchema
 from .tasks import preprocessing_task, processing_task
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
@@ -116,7 +116,7 @@ class ProcessView(MethodView):
     @HELLO_MULTI_BLP.arguments(
         HelloWorldParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
@@ -228,7 +228,7 @@ class DemoStepView(MethodView):
     @HELLO_MULTI_BLP.arguments(
         HelloWorldParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Start the demo task."""

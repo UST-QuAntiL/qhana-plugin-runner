@@ -23,8 +23,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 
 from . import MANUAL_CLASSIFICATION_BLP, ManualClassification
 from .schemas import (
-    ResponseSchema,
-    TaskResponseSchema,
     LoadParametersSchema,
     ClassificationSchema,
 )
@@ -146,7 +144,7 @@ class LoadView(MethodView):
     @MANUAL_CLASSIFICATION_BLP.arguments(
         LoadParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.SEE_OTHER)
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         db_task = ProcessingTask(task_name="manual-classification")
@@ -266,7 +264,7 @@ class ClassificationView(MethodView):
         ClassificationSchema(unknown=INCLUDE),
         location="form",  # TODO: this should cause fields not in schema (id's) to be included... not sure if this works
     )
-    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.SEE_OTHER)
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: str):
         """Start the classification task and add another step."""
@@ -321,7 +319,7 @@ class ClassificationDoneView(MethodView):
     @MANUAL_CLASSIFICATION_BLP.arguments(
         ClassificationSchema(unknown=INCLUDE), location="form"
     )
-    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.SEE_OTHER)
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: str):
         """Start the classification task."""
