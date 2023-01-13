@@ -31,57 +31,56 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
       {% endfor %}
     </select>
     {% elif input_type %}
-    <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off" 
-      aria-describedby="{{key}}-description" 
-      {{ 'data-input-type=data' if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') else '' }}
-      {{ 'data-input-type=plugin' if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') else '' }}
-      {{ field_value(input_type, values.get(form_key)) }} {{ 'required' if field.required else '' }} 
-      {{ field_attr('min-length', None) }} {{field_attr('step', get_input_attr_step(field))}}>
+    <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
+      aria-describedby="{{key}}-description" {{ 'data-input-type=data' if field.metadata.get('data_input_type') or
+      field.metadata.get('data_content_types') else '' }} {{ 'data-input-type=plugin' if
+      field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') else '' }} {{ field_value(input_type,
+      values.get(form_key)) }} {{ 'required' if field.required else '' }} {{ get_validation_attrs(field) }}>
     {% else %}
     <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
     {% endif %}
 
 
     {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-    <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden 
-      {{ field_attr('data-input', field.metadata.get('data_input_type')) }} 
-      {{ field_attr('data-content-type',space_delimited_list(field.metadata.get('data_content_types'))) }}>
+    <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden {{ field_attr('data-input',
+      field.metadata.get('data_input_type')) }} {{
+      field_attr('data-content-type',space_delimited_list(field.metadata.get('data_content_types'))) }}>
       choose file
     </button>
     {% endif %}
     {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
-    <button class="qhana-choose-plugin-button" data-input-id="{{key}}" hidden 
-      {{ field_attr('data-plugin-tags', space_delimited_list(field.metadata.get('plugin_tags', []))) }} 
-      {{ field_attr('data-plugin-name', field.metadata.get('plugin_name')) }}
-      {{ field_attr('data-plugin-version', field.metadata.get('plugin_version')) }}>
+    <button class="qhana-choose-plugin-button" data-input-id="{{key}}" hidden {{ field_attr('data-plugin-tags',
+      space_delimited_list(field.metadata.get('plugin_tags', []))) }} {{ field_attr('data-plugin-name',
+      field.metadata.get('plugin_name')) }} {{ field_attr('data-plugin-version', field.metadata.get('plugin_version'))
+      }}>
       select plugin
     </button>
     {% endif %}
   </div>
 
   <div id="{{key}}-description" class="qhana-input-description">
-      {% if error %}
-      <p class="qhana-error-message" aria-live="assertive">
-        {% for message in error %}
-        <span>{{message}}</span>
-        {% endfor %}
-      </p>
-      {% endif %}
+    {% if error %}
+    <p class="qhana-error-message" aria-live="assertive">
+      {% for message in error %}
+      <span>{{message}}</span>
+      {% endfor %}
+    </p>
+    {% endif %}
 
-      {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-      <p class="selected-file-hint" data-input-id="{{key}}" aria-live="off" hidden>
-        Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
-      </p>
-      {% endif %}
-      {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
-      <p class="selected-plugin-hint" data-input-id="{{key}}" aria-live="off" hidden>
-        Selected Plugin: <span class="selected-plugin-name" data-input-id="{{key}}"></span>
-      </p>
-      {% endif %}
+    {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
+    <p class="selected-file-hint" data-input-id="{{key}}" aria-live="off" hidden>
+      Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
+    </p>
+    {% endif %}
+    {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
+    <p class="selected-plugin-hint" data-input-id="{{key}}" aria-live="off" hidden>
+      Selected Plugin: <span class="selected-plugin-name" data-input-id="{{key}}"></span>
+    </p>
+    {% endif %}
 
-      {% autoescape false %}
-      {{field.metadata.get("description", "") | markdown}}
-      {% endautoescape %}
+    {% autoescape false %}
+    {{field.metadata.get("description", "") | markdown}}
+    {% endautoescape %}
   </div>
 
 

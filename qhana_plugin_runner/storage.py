@@ -28,11 +28,13 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 class FileStoreInterface:
     """Base class defining the file store interface."""
 
-    def persist_file(self, file_: IO, target: Union[str, Path], mimetype: str):
+    def persist_file(
+        self, file_: Union[IO, str, bytes], target: Union[str, Path], mimetype: str
+    ):
         """Persist a file to the file storage.
 
         Args:
-            file_ (IO): the file like object to perist to the storage.
+            file_ (Union[IO, str, bytes]): the file like object to perist to the storage.
             target (Union[str, Path]): the file path to save the file on the storage including the file name.
             mimetype (str): the content type of the data.
         """
@@ -41,7 +43,7 @@ class FileStoreInterface:
     def persist_task_result(
         self,
         task_db_id: int,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         file_name: str,
         file_type: str,
         mimetype: str,
@@ -51,7 +53,7 @@ class FileStoreInterface:
 
         Args:
             task_db_id (int): the id of the task in the database
-            file_ (IO): the file object to persist
+            file_ (Union[IO, str, bytes]): the file object to persist
             file_name (Path): the file name of the result file
             file_type (str): the file type tag
             mimetype (str): the mime type of the file (not optional for result files!)
@@ -68,7 +70,7 @@ class FileStoreInterface:
     def persist_task_temp_file(
         self,
         task_db_id: int,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         file_name: str,
         mimetype: Optional[str] = None,
         commit: bool = True,
@@ -80,7 +82,7 @@ class FileStoreInterface:
 
         Args:
             task_db_id (int): the id of the task in the database
-            file_ (IO): the file object to persist
+            file_ (Union[IO, str, bytes]): the file object to persist
             file_name (str): the file name of the result file
             mimetype (Optional[str]): the mime type of the file. Defaults to None.
             commit (bool): if true commits the current DB transaction. Defaults to True.
@@ -185,7 +187,7 @@ class FileStore(FileStoreInterface):
     def _persist_task_file(
         self,
         task_db_id: int,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         target: Union[Path, str],
         file_name: str,
         file_type: str,
@@ -196,7 +198,7 @@ class FileStore(FileStoreInterface):
 
         Args:
             task_db_id (int): the id of the task in the database
-            file_ (IO): the file object to persist
+            file_ (Union[IO, str, bytes]): the file object to persist
             target (Union[Path, str]): the target path or filename
             file_name (str): the file name
             file_type (str): the file type tag
@@ -230,7 +232,7 @@ class FileStore(FileStoreInterface):
     def persist_task_result(
         self,
         task_db_id: int,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         file_name: str,
         file_type: str,
         mimetype: str,
@@ -244,7 +246,7 @@ class FileStore(FileStoreInterface):
     def persist_task_temp_file(
         self,
         task_db_id: int,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         file_name: str,
         mimetype: Optional[str] = None,
         commit: bool = True,
@@ -292,9 +294,24 @@ class LocalFileStore(FileStore, name="local_filesystem"):
         """Get the full path of the file on disc."""
         return str(self._get_storage_root() / target)
 
-    def persist_file(self, file_: IO, target: Union[str, Path], mimetype: str):
+    def persist_raw_data(
+        self, data: Union[str, bytes], target: Union[str, Path], mimetype: str
+    ):
+        pass
+        target_path = self._get_storage_root() / self.prepare_path(target)
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        mode = "wb" if isinstance(data, bytes) else "w"
+        with target_path.open(mode=mode) as target_file:
+            target_file.write(data)
+
+    def persist_file(
+        self, file_: Union[IO, str, bytes], target: Union[str, Path], mimetype: str
+    ):
         mode: str  # mode to open target file with
-        if isinstance(file_, TextIO):
+        if isinstance(file_, (str, bytes)):
+            self.persist_raw_data(file_, target, mimetype)
+            return
+        elif isinstance(file_, TextIO):
             mode = "w"
         elif isinstance(file_, BinaryIO):
             mode = "wb"
@@ -328,6 +345,53 @@ class LocalFileStore(FileStore, name="local_filesystem"):
             **{"file-id": file_info.security_tag},
             _external=True,
         )
+
+
+class UrlFileStore(FileStore, name="url_file_store"):
+    """A file store implementation using url references."""
+
+    def __init__(self, app: Flask) -> None:
+        super().__init__(app=app)
+
+    def persist_file(
+        self, file_: Union[IO, str, bytes], target: Union[str, Path], mimetype: str
+    ):
+        if not isinstance(file_, str):
+            raise ValueError(
+                "UrlFileStorage can only persist an URL reference passed as a string. E.g. file_='http://...'"
+            )
+
+    def _persist_task_file(
+        self,
+        task_db_id: int,
+        file_: Union[IO, str, bytes],
+        target: Union[Path, str],
+        file_name: str,
+        file_type: str,
+        mimetype: Optional[str] = None,
+        commit: bool = True,
+    ) -> TaskFile:
+        task = ProcessingTask.get_by_id(task_db_id)
+        if not task:
+            raise KeyError(f"No task with database id {task_db_id} found!")
+        if not mimetype:
+            mimetype = "application/octet-stream"
+        self.persist_file(file_, target, mimetype)
+        assert isinstance(file_, str)
+        file_info = TaskFile(
+            task=task,
+            security_tag=token_urlsafe(32),
+            storage_provider=self.name,
+            file_name=file_name,
+            file_storage_data=file_,
+            file_type=file_type,
+            mimetype=mimetype,
+        )
+        file_info.save(commit)
+        return file_info
+
+    def get_file_url(self, file_storage_data: str, external: bool = True) -> str:
+        return file_storage_data
 
 
 class FileStoreRegistry(FileStoreInterface):
@@ -388,52 +452,73 @@ class FileStoreRegistry(FileStoreInterface):
 
     def persist_file(
         self,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         target: Union[str, Path],
         mimetype: str = "application/octet-stream",
+        storage_provider: Optional[str] = None,
     ):
-        if self._default_store is None:
+        if storage_provider is None:
+            storage_provider = self._default_store
+        if storage_provider is None:
             raise NotImplementedError()
-        self._stores[self._default_store].persist_file(file_, target, mimetype)
+        self._stores[storage_provider].persist_file(file_, target, mimetype)
 
     def persist_task_result(
         self,
         task_db_id: int,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         file_name: str,
         file_type: str,
         mimetype: str,
         commit: bool = True,
+        storage_provider: Optional[str] = None,
     ) -> TaskFile:
-        if self._default_store is None:
+        if storage_provider is None:
+            storage_provider = self._default_store
+        if storage_provider is None:
             raise NotImplementedError()
-        return self._stores[self._default_store].persist_task_result(
-            task_db_id, file_, file_name, file_type, mimetype
+        return self._stores[storage_provider].persist_task_result(
+            task_db_id, file_, file_name, file_type, mimetype, commit=commit
         )
 
     def persist_task_temp_file(
         self,
         task_db_id: int,
-        file_: IO,
+        file_: Union[IO, str, bytes],
         file_name: str,
         mimetype: Optional[str] = None,
         commit: bool = True,
+        storage_provider: Optional[str] = None,
     ) -> TaskFile:
-        if self._default_store is None:
+        if storage_provider is None:
+            storage_provider = self._default_store
+        if storage_provider is None:
             raise NotImplementedError()
-        return self._stores[self._default_store].persist_task_temp_file(
-            task_db_id, file_, file_name, mimetype
+        return self._stores[storage_provider].persist_task_temp_file(
+            task_db_id, file_, file_name, mimetype, commit=commit
         )
 
-    def get_file_url(self, file_storage_data: str, external: bool = True) -> str:
-        if self._default_store is None:
+    def get_file_url(
+        self,
+        file_storage_data: str,
+        external: bool = True,
+        storage_provider: Optional[str] = None,
+    ) -> str:
+        if storage_provider is None:
+            storage_provider = self._default_store
+        if storage_provider is None:
             raise NotImplementedError()
-        return self._stores[self._default_store].get_file_url(file_storage_data, external)
+        return self._stores[storage_provider].get_file_url(file_storage_data, external)
 
     def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
-        if self._default_store is None:
+        storage_provider = (
+            file_info.storage_provider
+            if file_info.storage_provider
+            else self._default_store
+        )
+        if storage_provider is None:
             raise NotImplementedError()
-        return self._stores[self._default_store].get_task_file_url(file_info, external)
+        return self._stores[storage_provider].get_task_file_url(file_info, external)
 
 
 # The file store registry that should be imported and used

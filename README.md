@@ -2,7 +2,7 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![GitHub license](https://img.shields.io/github/license/UST-QuAntiL/qhana-plugin-runner)](https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/LICENSE)
-![Python: >= 3.7](https://img.shields.io/badge/python-^3.7-blue)
+![Python: >= 3.8](https://img.shields.io/badge/python-^3.8-blue)
 [![Documentation Status](https://readthedocs.org/projects/qhana-plugin-runner/badge/?version=latest)](https://qhana-plugin-runner.readthedocs.io/en/latest/?badge=latest)
 
 This package uses Poetry ([documentation](https://python-poetry.org/docs/)).
@@ -178,6 +178,45 @@ Additional files and folders:
     A folder to place plugins in during initial development. Mature plugins should be relocated into seperate repositories eventually.
 
 
+## Poetry Commands
+
+```bash
+# install dependencies from lock file in a virtualenv
+poetry install
+
+# open a shell in the virtualenv
+poetry shell
+
+# update dependencies
+poetry update
+poetry run invoke update-dependencies # to update other dependencies in the repository
+
+# run a command in the virtualenv (replace cmd with the command to run without quotes)
+poetry run cmd
+```
+
+## Invoke Tasks
+
+[Invoke](http://www.pyinvoke.org) is a python tool for scripting cli commands.
+It allows to define complex commands in simple python functions in the `tasks.py` file.
+
+:warning: Make sure to update the module name in `tasks.py` after renaming the `qhana_plugin_registry` module!
+
+```bash
+# list available commands
+poetry run invoke --list
+
+# update dependencies (requirements.txt in ./docs and licenses template)
+poetry run invoke update-dependencies
+
+# Compile the documentation
+poetry run invoke doc
+
+# Open the documentation in the default browser
+poetry run invoke browse-doc
+```
+
+
 ## Babel
 
 ```bash
@@ -247,16 +286,36 @@ poetry run invoke --list
 poetry run invoke worker --help
 ```
 
+### Worker arguments
+
+- `--pool=...`
+  - for possible values see [celery docs](https://celery-safwan.readthedocs.io/en/latest/reference/cli.html#cmdoption-celery-worker-P)
+  - don't use `solo` if you want multiple tasks to be able to be executed concurrently
+- `--concurrency=...`
+  - number of tasks that can be executed concurrently
+- `--log_level=...`
+  - see [Python docs](https://docs.python.org/3/howto/logging.html) for possible values
+- `--periodic-scheduler`
+  - add this flag to run the Celery beat scheduler alongside the worker
+  - this is needed for periodic tasks
+  - If a plugin is run by multiple workers, only one of these workers should start with a celery beat scheduler,
+  otherwise the periodic tasks get scheduled by all of these schedulers and executed too many times.
+
 
 ## Compiling the Documentation
 
 ```bash
-poetry shell
-cd docs
-make html
+# compile documentation
+poetry run invoke doc
 
-# list all targets (only available after build!)
-python -m sphinx.ext.intersphinx _build/html/objects.inv
+# update source code documentation
+poetry run invoke update-source-doc
+
+# Open the documentation in the default browser
+poetry run invoke browse-doc
+
+# Find reference targets defined in the documentation
+poetry run invoke doc-index --filter=searchtext
 
 # export/update requirements.txt from poetry dependencies (for readthedocs build)
 poetry run invoke update-dependencies
@@ -349,8 +408,10 @@ Currently the local file system is used as result store by default, meaning that
 This restriction also applies if the default sqlite database is used.
 
 For communication between server and worker containers, a redis or amqp broker need to be setup.
-Server and worker containers with the same plugin configuration need to use the same broker.
+Server and worker containers with the same plugin configuration need to use the same broker and queue name.
+Server and worker containers that use different sets of plugins need to use different brokers or the same broker but different queue names.
 The broker can be configured using the `BROKER_URL` and the `RESULT_BACKEND` environment variable.
+The environment variable `CELERY_QUEUE` can be used to set the queue name.
 
 The database to use can be configured using the `SQLALCHEMY_DATABASE_URI` environment variable.
 SQLAlchemy is used which supports SQLite, Postgres and MariaDB/MySQL databases given that the [correct drivers](https://docs.sqlalchemy.org/en/14/core/engines.html#supported-databases) are installed.
@@ -359,6 +420,8 @@ Database drivers can be installed by using plugins that specify that driver as a
 The default file store can be configured with the `DEFAULT_FILE_STORE` environment variable.
 This defaults to `local_filesystem`.
 
+When a worker (or plugin in the worker) tries to generate a URL with `flask.url_for` and `_external=True`, it can fail with the error `Application was not able to create a URL adapter for request independent URL generation. You might be able to fix this by setting the SERVER_NAME config variable.`.
+You can set the environment variable `SERVER_NAME` for the worker container and the value will be set in the flask configuration.
 
 ### Running the Plugin-Runner with Docker Compose
 

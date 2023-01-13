@@ -65,5 +65,4 @@ class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
 
     CELERY = CELERY_DEBUG_CONFIG
 
-    # TODO allow specifying this as a Environment variable
     PLUGIN_FOLDERS = ["./plugins", "./local_plugins"]

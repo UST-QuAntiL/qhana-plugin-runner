@@ -163,3 +163,28 @@ JSON:
             {"source": "paintA", "target": "paintB"}
         ]
     }
+
+
+
+Executables
+-----------
+
+Executables are executable artifacts, e.g., source code.
+
+
+
+Provenance
+----------
+
+Provenance data follows the same rules as entities but allows nested datastructures.
+The provenance data type is used to describe the (future or past) execution of an executable artifact.
+
+
+
+Custom Data Formats
+-------------------
+
+Custom data formats are completely free from any restrictions described for other data formats.
+However, they should be used sparingly as their reuseability is limited.
+
+

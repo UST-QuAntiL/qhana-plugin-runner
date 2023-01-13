@@ -1,3 +1,17 @@
+# Copyright 2022 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from http import HTTPStatus
 from typing import Mapping
@@ -12,7 +26,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import QKMEANS_BLP, QKMeans
-from .backend.clustering import QuantumBackends
+from .backend.quantum_backend import QuantumBackends
 from .schemas import InputParametersSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -47,8 +61,11 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
-                        content_type=["application/json"],
+                        data_type="entity/vector",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entityPointsUrl",
                     )
@@ -83,7 +100,7 @@ class MicroFrontend(MethodView):
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @QKMEANS_BLP.html_response(
         HTTPStatus.OK,
@@ -99,16 +116,19 @@ class MicroFrontend(MethodView):
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
         fields = InputParametersSchema().fields
 
         # define default values
         default_values = {
             fields["clusters_cnt"].data_key: 2,
+            fields["tol"].data_key: 0.0,
+            fields["max_runs"].data_key: 1000,
             fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+            fields["shots"].data_key: 1024,
         }
 
         if "IBMQ_BACKEND" in os.environ:
@@ -127,6 +147,7 @@ class MicroFrontend(MethodView):
                 name=QKMeans.instance.name,
                 version=QKMeans.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QKMEANS_BLP.name}.CalcView"),

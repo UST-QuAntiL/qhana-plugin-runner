@@ -162,7 +162,7 @@ class MicroFrontend(MethodView):
     @SYM_MAX_MEAN_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @SYM_MAX_MEAN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Sym Max Mean plugin."
@@ -177,9 +177,9 @@ class MicroFrontend(MethodView):
     @SYM_MAX_MEAN_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = InputParametersSchema()
         return Response(
             render_template(
@@ -187,6 +187,7 @@ class MicroFrontend(MethodView):
                 name=SymMaxMean.instance.name,
                 version=SymMaxMean.instance.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{SYM_MAX_MEAN_BLP.name}.CalcSimilarityView"),
@@ -293,8 +294,7 @@ def calculation_task(self, db_id: int) -> str:
         attr_name = file_name[:-5]
 
         element_similarities[attr_name] = {
-            (element["value_1"], element["value_2"]): element
-            for element in json.load(file)
+            (element["source"], element["target"]): element for element in json.load(file)
         }
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")

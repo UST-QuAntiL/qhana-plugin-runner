@@ -19,6 +19,7 @@ Welcome to QHAna-Plugin-Runner's documentation!
     templates
     data-formats/index
     cli
+    plugin-overview
     adr/index
     source/qhana_plugin_runner
     changelog
