@@ -24,7 +24,7 @@ class Database(Singleton):
 
     def open_with_params(self, host: str, user: str, password: str, database: str):
         engine: Engine = create_engine(
-            "mysql+pymysql://" + user + ":" + password + "@" + host + "/" + database
+            f"mysql+pymysql://{user}:{password}@{host}/{database}"
         )
 
         self.connected = True
