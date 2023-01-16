@@ -47,7 +47,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "visualization"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -72,7 +72,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
+        data_input_type="entity/*",
         data_content_types="application/json",
         metadata={
             "label": "Entity points URL",
@@ -83,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     clusters_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="clusters",
+        data_input_type="custom/clusters",
         data_content_types="application/json",
         metadata={
             "label": "Clusters URL",
@@ -110,19 +110,19 @@ class PluginsView(MethodView):
             description=VIS.instance.description,
             name=VIS.instance.name,
             version=VIS.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{VIS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{VIS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/*",
                         content_type=["application/json"],
                         required=True,
                         parameter="entityPointsUrl",
                     ),
                     InputDataMetadata(
-                        data_type="clusters",
+                        data_type="custom/clusters",
                         content_type=["application/json"],
                         required=True,
                         parameter="clustersUrl",

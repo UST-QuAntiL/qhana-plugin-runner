@@ -57,7 +57,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "time-tanh"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -72,7 +72,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entities",
+        data_input_type="entity/list",
         data_content_types="application/json",
         metadata={
             "label": "Entities URL",
@@ -113,13 +113,13 @@ class PluginsView(MethodView):
             description=TimeTanh.instance.description,
             name=TimeTanh.instance.name,
             version=TimeTanh.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{TIME_TANH_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{TIME_TANH_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entities",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesUrl",
@@ -127,7 +127,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="element-similarities",
+                        data_type="custom/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -327,7 +327,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "time_tanh.zip",
-        "element-similarities",
+        "custom/element-similarities",
         "application/zip",
     )
 

@@ -55,7 +55,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sim-to-dist-transformers"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -90,7 +90,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     attribute_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="attribute-similarities",
+        data_input_type="custom/attribute-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Attribute similarities URL",
@@ -136,13 +136,13 @@ class PluginsView(MethodView):
             description=Transformers.instance.description,
             name=Transformers.instance.name,
             version=Transformers.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{TRANSFORMERS_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{TRANSFORMERS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="attribute-similarities",
+                        data_type="custom/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                         parameter="attributeSimilaritiesUrl",
@@ -150,7 +150,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="attribute-distances",
+                        data_type="custom/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -349,7 +349,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "attr_dist.zip",
-        "attribute_distances",
+        "custom/attribute-distances",
         "application/zip",
     )
 

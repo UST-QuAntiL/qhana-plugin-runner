@@ -51,7 +51,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "distance-aggregator"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -83,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     attribute_distances_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="attribute-distances",
+        data_input_type="custom/attribute-distances",
         data_content_types="application/zip",
         metadata={
             "label": "Attribute distances URL",
@@ -120,13 +120,13 @@ class PluginsView(MethodView):
             name=Aggregator.instance.name,
             description=Aggregator.instance.description,
             version=Aggregator.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{AGGREGATOR_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{AGGREGATOR_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="attribute-distances",
+                        data_type="custom/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                         parameter="attributeDistancesUrl",
@@ -134,7 +134,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity-distances",
+                        data_type="custom/entity-distances",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -334,7 +334,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "entity_distances.json",
-            "entity-distances",
+            "custom/entity-distances",
             "application/json",
         )
 

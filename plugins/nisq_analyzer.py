@@ -49,7 +49,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "nisq-analyzer"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -135,7 +135,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="nisq-analyzer-result",
+                        data_type="custom/nisq-analyzer-result",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -218,7 +218,7 @@ def store_results_task(self, db_id: int) -> str:
             db_id,
             output,
             "nisq_analysis.json",
-            "nisq-analyzer-result",
+            "custom/nisq-analyzer-result",
             "application/json",
         )
 

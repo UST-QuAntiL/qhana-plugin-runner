@@ -72,7 +72,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entities",
+        data_input_type="entity/list",
         data_content_types="application/json",
         metadata={
             "label": "Entities URL",
@@ -83,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     element_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="element-similarities",
+        data_input_type="custom/element-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Element similarities URL",
@@ -115,19 +115,19 @@ class PluginsView(MethodView):
             description=SymMaxMean.instance.description,
             name=SymMaxMean.instance.name,
             version=SymMaxMean.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{SYM_MAX_MEAN_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{SYM_MAX_MEAN_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entities",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="element-similarities",
+                        data_type="custom/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                         parameter="elementSimilaritiesUrl",
@@ -135,7 +135,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="attribute-similarities",
+                        data_type="custom/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -378,7 +378,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "sym_max_mean.zip",
-        "attribute_similarities",
+        "custom/attribute-similarities",
         "application/zip",
     )
 

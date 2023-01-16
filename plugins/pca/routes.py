@@ -73,12 +73,12 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="plot",
+                        data_type="custom/plot",
                         content_type=["text/html"],
                         required=False,
                     ),
                     DataMetadata(
-                        data_type="pca-metadata",
+                        data_type="custom/pca-metadata",
                         content_type=["application/json"],
                         required=True,
                     ),

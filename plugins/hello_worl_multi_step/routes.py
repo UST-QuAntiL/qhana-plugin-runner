@@ -37,7 +37,7 @@ class PluginsView(MethodView):
             description=HelloWorldMultiStep.instance.description,
             name=HelloWorldMultiStep.instance.name,
             version=HelloWorldMultiStep.instance.version,
-            type=PluginType.complex,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{HELLO_MULTI_BLP.name}.MicroFrontend"),

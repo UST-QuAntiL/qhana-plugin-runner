@@ -37,24 +37,24 @@ class PluginsView(MethodView):
             description=CostumeLoader.instance.description,
             name=CostumeLoader.instance.name,
             version=CostumeLoader.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{COSTUME_LOADER_BLP.name}.LoadingView"),
                 ui_href=url_for(f"{COSTUME_LOADER_BLP.name}.MicroFrontend"),
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="raw",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                     ),
                     DataMetadata(
-                        data_type="attribute-metadata",
+                        data_type="entity/attribute-metadata",
                         content_type=["application/json"],
                         required=True,
                     ),
                     DataMetadata(
-                        data_type="graphs",
+                        data_type="graph/taxonomy",
                         content_type=["application/zip"],
                         required=True,
                     ),

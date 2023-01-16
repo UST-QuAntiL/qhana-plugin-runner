@@ -52,7 +52,7 @@ class PluginsView(MethodView):
             description=ManualClassification.instance.description,
             name=ManualClassification.instance.name,
             version=ManualClassification.instance.version,
-            type=PluginType.complex,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
                 ui_href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"),
