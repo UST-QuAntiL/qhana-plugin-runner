@@ -38,7 +38,7 @@ from qhana_plugin_runner.storage import STORE
 import numpy as np
 
 from qiskit.utils import QuantumInstance
-from .backend.vqc import qiskitVQC
+from .backend.vqc import QiskitVQC
 
 from sklearn.metrics import accuracy_score
 
@@ -48,16 +48,11 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_point(ent):
-    dimension_keys = list(ent.keys())
-    dimension_keys.remove("ID")
-    dimension_keys.remove("href")
-
+    dimension_keys = [k for k in ent.keys() if k not in ("ID", "href")]
     dimension_keys.sort()
     point = np.empty(
-        (
-            len(
-                dimension_keys,
-            )
+        len(
+            dimension_keys,
         )
     )
     for idx, d in enumerate(dimension_keys):
@@ -207,7 +202,7 @@ def calculation_task(self, db_id: int) -> str:
     optimizer = optimizer_enum.get_optimizer(maxitr)
 
     # VQC
-    vqc = qiskitVQC(backend, feature_map, vqc_ansatz, optimizer)
+    vqc = QiskitVQC(backend, feature_map, vqc_ansatz, optimizer)
     vqc.fit(train_points, train_labels)
     predictions = vqc.predict(test_points)
     output_labels = [

@@ -55,7 +55,7 @@ class AnsatzEnum(Enum):
             raise ValueError(err_str)
 
 
-class qiskitVQC:
+class QiskitVQC:
     def __init__(
         self,
         quantum_instance: QuantumInstance,
