@@ -144,8 +144,8 @@ def plot_data(
     train_end = 100 if only_first_100 else len(train_data)
     test_end = 100 if only_first_100 else len(test_data)
 
-    train_data = np.array(train_data)[:train_end]
-    test_data = np.array(test_data)[:test_end]
+    train_data = np.array(train_data[:train_end])
+    test_data = np.array(test_data[:test_end])
     points = np.concatenate((train_data, test_data), axis=0)
 
     dimensions = ["x", "y", "z"][:dim]
@@ -155,7 +155,7 @@ def plot_data(
 
     train_labels = [str(int(el)) for el in train_labels[:train_end]]
     test_labels = [str(int(el)) for el in test_labels[:test_end]]
-    labels = train_labels[:train_end] + test_labels[:test_end]
+    labels = train_labels + test_labels
 
     data_frame_content = dict(
         ID=ids,
