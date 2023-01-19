@@ -222,53 +222,6 @@ def calculation_task(self, db_id: int) -> str:
     # ------------------------------
     start_time = time.time()  # Start the computation timer
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    model = None
-    if use_quantum:
-
-        # load quantum parameters
-        q_device = input_params.device
-        TASK_LOGGER.info(f"Loaded input parameters from db: device='{q_device}'")
-        ibmq_token = input_params.ibmq_token
-        TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
-
-        if ibmq_token == "****":
-            TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
-
-            if "IBMQ_TOKEN" in os.environ:
-                ibmq_token = os.environ["IBMQ_TOKEN"]
-                TASK_LOGGER.info(
-                    f"IBMQ token successfully loaded from environment variable"
-                )
-            else:
-                TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
-
-        custom_backend = input_params.custom_backend
-        TASK_LOGGER.info(
-            f"Loaded input parameters from db: custom_backend='{custom_backend}'"
-        )
-        # choose quantum backend
-        dev = QuantumBackends.get_pennylane_backend(
-            q_device, ibmq_token, custom_backend, n_qubits, shots
-        )
-        TASK_LOGGER.info(f"DEVICE '{dev}'")
-        # dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # pennylane simulator. faster! # TODO remove
-
-        # get dressed quantum network
-        model = DressedQuantumNet(n_qubits, dev, q_depth, weight_init)
-    else:
-        # get classical neural network
-        model = ClassicalNet(n_qubits, q_depth, weight_init)
-
-    model = model.to(device)
-
-    # loss function
-    loss_fn = nn.CrossEntropyLoss()
-
-    # select optimizer
-    opt = get_optimizer(optimizer, model, step)
-
     # prepare data
     X, Y = dataset
 
@@ -302,6 +255,59 @@ def calculation_task(self, db_id: int) -> str:
 
     Y_train = Y_shuffle[:-n_test]
     Y_test = Y_shuffle[-n_test:]
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    model = None
+    if use_quantum:
+
+        # load quantum parameters
+        q_device = input_params.device
+        TASK_LOGGER.info(f"Loaded input parameters from db: device='{q_device}'")
+        ibmq_token = input_params.ibmq_token
+        TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
+        weights_to_wiggle = input_params.weights_to_wiggle
+        TASK_LOGGER.info(f"Loaded input parameters from db: weights_to_wiggle='{weights_to_wiggle}'")
+        preprocess_layers = [int(el) for el in input_params.preprocess_layers.split(",")]
+        postprocess_layers = [int(el) for el in input_params.postprocess_layers.split(",")]
+        print(f"{input_params.preprocess_layers} -> {preprocess_layers}")
+        print(f"{input_params.postprocess_layers} -> {postprocess_layers}")
+
+        if ibmq_token == "****":
+            TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
+
+            if "IBMQ_TOKEN" in os.environ:
+                ibmq_token = os.environ["IBMQ_TOKEN"]
+                TASK_LOGGER.info(
+                    f"IBMQ token successfully loaded from environment variable"
+                )
+            else:
+                TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
+
+        custom_backend = input_params.custom_backend
+        TASK_LOGGER.info(
+            f"Loaded input parameters from db: custom_backend='{custom_backend}'"
+        )
+        # choose quantum backend
+        dev = QuantumBackends.get_pennylane_backend(
+            q_device, ibmq_token, custom_backend, n_qubits, shots
+        )
+        TASK_LOGGER.info(f"DEVICE '{dev}'")
+        # dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # pennylane simulator. faster! # TODO remove
+
+        # get dressed quantum network
+        model = DressedQuantumNet(X.shape[1], n_classes, n_qubits, dev, q_depth, weight_init, preprocess_layers, postprocess_layers)
+    else:
+        # get classical neural network
+        model = ClassicalNet(n_qubits, q_depth, weight_init)
+
+    model = model.to(device)
+
+    # loss function
+    loss_fn = nn.CrossEntropyLoss()
+
+    # select optimizer
+    opt = get_optimizer(optimizer, model, step)
 
     # train network
     train(

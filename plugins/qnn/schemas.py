@@ -1,4 +1,3 @@
-from xmlrpc.client import Boolean
 import marshmallow as ma
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import (
@@ -6,11 +5,13 @@ from qhana_plugin_runner.api.util import (
     MaBaseSchema,
     FileUrl,
 )
-from marshmallow import EXCLUDE, post_load
+from marshmallow import post_load
 
 from enum import Enum
 import pennylane as qml
 from qiskit import IBMQ
+
+from .validation_functions import validate_layer_input
 
 # TODO additional pennylane devices?
 #   default.qubit, default.gaussian, default.qubit.tf, default.qubit.autograd
@@ -112,8 +113,11 @@ class InputParameters:
         n_qubits: int,
         N_total_iterations: int,
         q_depth: int,
+        preprocess_layers: str,
+        postprocess_layers: str,
         batch_size: int,
         resolution: int,
+        weights_to_wiggle: int,
         use_default_dataset=False,
         randomly_shuffle=False,
         visualize=False,
@@ -134,10 +138,13 @@ class InputParameters:
         self.n_qubits = n_qubits
         self.N_total_iterations = N_total_iterations
         self.q_depth = q_depth
+        self.preprocess_layers = preprocess_layers
+        self.postprocess_layers = postprocess_layers
         self.batch_size = batch_size
         self.weight_init = weight_init
         self.randomly_shuffle = randomly_shuffle
         self.visualize = visualize
+        self.weights_to_wiggle = weights_to_wiggle
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -306,6 +313,32 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    preprocess_layers = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Preprocessing layers",
+            "description": "Before the data is forward into the quantum neural network, it is first preprocessed with "
+                           "a classical network. This determines the number of neurons in the classical preprocessing "
+                           "step. The i'th entry represents the number of neurons in the i'th hidden layer."
+                           "Please separate the layer sizes by a comma, e.g. ``4,5,10,4``",
+            "input_type": "text",
+        },
+        validate=validate_layer_input,
+    )
+    postprocess_layers = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Postprocessing layers",
+            "description": "Before outputting the final results, the quantum neural networks output gets postprocessed "
+                           " with the help of a classical neural network. This determines the number of neurons in the "
+                           "classical postprocessing step. The i'th entry represents the number of neurons in the i'th "
+                           "hidden layer.",
+            "input_type": "text",
+        },
+        validate=validate_layer_input,
+    )
     batch_size = ma.fields.Int(
         required=True,
         allow_none=False,
@@ -323,6 +356,15 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Weight initialization strategy",
             "description": "Distribution of (random) initialization of weigths.",
             "input_type": "select",
+        },
+    )
+    weights_to_wiggle = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Quantum Layer: Weights to wiggle",
+            "description": "The number of weights in the quantum circuit to update in one optimization step. 0 means all.",
+            "input_type": "number",
         },
     )
 
