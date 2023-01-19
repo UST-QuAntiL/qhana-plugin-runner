@@ -26,6 +26,8 @@ from .backend.optimizer import OptimizerEnum
 from .backend.vqc import AnsatzEnum
 from .backend.qiskit_backends import QiskitBackends
 
+from dataclasses import dataclass
+
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -36,46 +38,26 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+@dataclass(repr=False)
 class InputParameters:
-    def __init__(
-        self,
-        train_data_url: str,
-        train_labels_url: str,
-        test_data_url: str,
-        test_labels_url: str,
-        feature_map: FeatureMapEnum,
-        entanglement_pattern_feature_map: EntanglementPatternEnum,
-        reps_feature_map: int,
-        paulis: str,
-        vqc_ansatz: AnsatzEnum,
-        entanglement_pattern_ansatz: EntanglementPatternEnum,
-        reps_ansatz: int,
-        optimizer: OptimizerEnum,
-        maxitr: int,
-        shots: int,
-        backend: QiskitBackends,
-        ibmq_token: str,
-        custom_backend: str,
-        resolution: int,
-    ):
-        self.train_data_url = train_data_url
-        self.train_labels_url = train_labels_url
-        self.test_data_url = test_data_url
-        self.test_labels_url = test_labels_url
-        self.feature_map = feature_map
-        self.entanglement_pattern_feature_map = entanglement_pattern_feature_map
-        self.reps_feature_map = reps_feature_map
-        self.paulis = paulis
-        self.vqc_ansatz = vqc_ansatz
-        self.entanglement_pattern_ansatz = entanglement_pattern_ansatz
-        self.reps_ansatz = reps_ansatz
-        self.optimizer = optimizer
-        self.maxitr = maxitr
-        self.shots = shots
-        self.backend = backend
-        self.ibmq_token = ibmq_token
-        self.custom_backend = custom_backend
-        self.resolution = resolution
+    train_data_url: str
+    train_labels_url: str
+    test_data_url: str
+    test_labels_url: str
+    feature_map: FeatureMapEnum
+    entanglement_pattern_feature_map: EntanglementPatternEnum
+    reps_feature_map: int
+    paulis: str
+    vqc_ansatz: AnsatzEnum
+    entanglement_pattern_ansatz: EntanglementPatternEnum
+    reps_ansatz: int
+    optimizer: OptimizerEnum
+    maxitr: int
+    shots: int
+    backend: QiskitBackends
+    ibmq_token: str
+    custom_backend: str
+    resolution: int
 
     def __str__(self):
         variables = self.__dict__.copy()
