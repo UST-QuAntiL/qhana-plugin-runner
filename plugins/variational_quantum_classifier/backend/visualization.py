@@ -26,7 +26,7 @@ def get_id_list(id_to_idx: dict) -> list:
     return ids
 
 
-def add_background(points, resolution, predictor, scatter, two_classes=False):
+def add_background(points, resolution, predictor, scatter, two_classes=False, label_to_int=None):
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -109,7 +109,7 @@ def add_background(points, resolution, predictor, scatter, two_classes=False):
     # Correct colors of different labels. 0 gets the first color, 1 the second and so on
     # Thus the color match with the heatmap colors
     for sca_plt in scatter.data:
-        label = int(sca_plt.legendgroup[0])
+        label = int(sca_plt.legendgroup[0] if label_to_int is None else label_to_int[sca_plt.legendgroup.split(", ")[0]])
         sca_plt.update(
             marker=dict(
                 color=px.colors.qualitative.D3[label],
@@ -138,6 +138,7 @@ def plot_data(
     predictor=None,
     only_first_100=True,
     title="",
+    label_to_int=None,
 ):
     # Prepare data
     dim = len(train_data[0])
@@ -153,8 +154,8 @@ def plot_data(
         get_id_list(train_id_to_idx)[:train_end] + get_id_list(test_id_to_idx)[:test_end]
     )
 
-    train_labels = [str(int(el)) for el in train_labels[:train_end]]
-    test_labels = [str(int(el)) for el in test_labels[:test_end]]
+    train_labels = [str(el) for el in train_labels[:train_end]]
+    test_labels = [str(el) for el in test_labels[:test_end]]
     labels = train_labels + test_labels
 
     data_frame_content = dict(
@@ -192,6 +193,7 @@ def plot_data(
                 predictor,
                 fig,
                 two_classes=len(set(train_labels)) == 2,
+                label_to_int=label_to_int,
             )
     else:
         df["y"] = [0] * len(df["x"])

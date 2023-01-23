@@ -112,15 +112,24 @@ def get_label_generator(entity_labels_url: str):
         yield {"ID": ent["ID"], "href": ent.get("href", ""), "label": ent["label"]}
 
 
-def get_label_arr(entity_labels_url: str, id_to_idx: dict) -> (dict, List[List[float]]):
+def get_label_arr(entity_labels_url: str, id_to_idx: dict, label_to_int=None, int_to_label=None) -> (dict, List[List[float]]):
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
-    labels = np.zeros((len(id_to_idx.keys()),))
-    for ent in entity_labels:
-        labels[id_to_idx[ent["ID"]]] = ent["label"]
+    labels = np.zeros((len(id_to_idx.keys()),), dtype=int)
 
-    return labels
+    if label_to_int is None:
+        label_to_int = dict()
+    if int_to_label is None:
+        int_to_label = list()
+    for ent in entity_labels:
+        label = str(ent["label"])
+        if label not in label_to_int:
+            label_to_int[label] = len(int_to_label)
+            int_to_label.append(label)
+        labels[id_to_idx[ent["ID"]]] = label_to_int[label]
+
+    return labels, label_to_int, int_to_label
 
 
 @CELERY.task(name=f"{VQC.instance.identifier}.calculation_task", bind=True)
@@ -171,12 +180,12 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
     train_id_to_idx, train_points = get_indices_and_point_arr(train_data_url)
-    train_labels = get_label_arr(train_labels_url, train_id_to_idx)
+    train_labels, label_to_int, int_to_label = get_label_arr(train_labels_url, train_id_to_idx)
 
     test_id_to_idx, test_points = get_indices_and_point_arr(test_data_url)
     test_labels = None
     if test_labels_url != "" and test_labels_url is not None:
-        test_labels = get_label_arr(test_labels_url, test_id_to_idx)
+        test_labels, label_to_int, int_to_label = get_label_arr(test_labels_url, test_id_to_idx, label_to_int=label_to_int, int_to_label=int_to_label)
 
     # set no. of qubits accordingly
     n_qbits = train_points.shape[1]
@@ -204,7 +213,7 @@ def calculation_task(self, db_id: int) -> str:
     # VQC
     vqc = QiskitVQC(backend, feature_map, vqc_ansatz, optimizer)
     vqc.fit(train_points, train_labels)
-    predictions = vqc.predict(test_points)
+    predictions = [int_to_label[el] for el in vqc.predict(test_points)]
     output_labels = [
         {"ID": ent_id, "href": "", "label": predictions[idx]}
         for ent_id, idx in test_id_to_idx.items()
@@ -236,10 +245,15 @@ def calculation_task(self, db_id: int) -> str:
     # Get representative circuit
     representative_circuit = vqc.get_representative_circuit(train_points, train_labels)
 
+    # Correct train labels
+    train_labels = [int_to_label[el] for el in train_labels]
+
     # Plot title + confusion matrix
     plot_title = "Classification"
     conf_matrix = None
     if test_labels is not None:
+        test_labels = [int_to_label[el] for el in test_labels]
+
         # Compute accuracy on test data
         test_accuracy = accuracy_score(test_labels, predictions)
         plot_title += f": accuracy on test data={test_accuracy}"
@@ -260,6 +274,7 @@ def calculation_task(self, db_id: int) -> str:
         resolution=resolution,
         predictor=vqc.predict,
         title=plot_title,
+        label_to_int=label_to_int,
     )
 
     # Output
@@ -269,7 +284,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "test_labels.json",
-            "entity/vector",
+            "entity/label",
             "application/json",
         )
 

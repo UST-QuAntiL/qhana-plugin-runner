@@ -70,7 +70,7 @@ class PluginsView(MethodView):
                         parameter="train_data_url",
                     ),
                     InputDataMetadata(
-                        data_type="entity/vector",
+                        data_type="entity/label",
                         content_type=[
                             "application/json",
                             "text/csv",
@@ -88,7 +88,7 @@ class PluginsView(MethodView):
                         parameter="test_data_url",
                     ),
                     InputDataMetadata(
-                        data_type="entity/vector",
+                        data_type="entity/label",
                         content_type=[
                             "application/json",
                             "text/csv",
@@ -99,7 +99,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity/vector",
+                        data_type="entity/label",
                         content_type=["application/json"],
                         required=True,
                     ),

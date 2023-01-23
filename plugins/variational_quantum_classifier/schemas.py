@@ -83,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     train_labels_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity/vector",
+        data_input_type="entity/label",
         data_content_types=[
             "application/json",
             "text/csv",
@@ -112,7 +112,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     test_labels_url = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="entity/vector",
+        data_input_type="entity/label",
         data_content_types=[
             "application/json",
             "text/csv",
