@@ -26,7 +26,9 @@ def get_id_list(id_to_idx: dict) -> list:
     return ids
 
 
-def add_background(points, resolution, predictor, scatter, two_classes=False, label_to_int=None):
+def add_background(
+    points, resolution, predictor, scatter, two_classes=False, label_to_int=None
+):
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -109,7 +111,11 @@ def add_background(points, resolution, predictor, scatter, two_classes=False, la
     # Correct colors of different labels. 0 gets the first color, 1 the second and so on
     # Thus the color match with the heatmap colors
     for sca_plt in scatter.data:
-        label = int(sca_plt.legendgroup[0] if label_to_int is None else label_to_int[sca_plt.legendgroup.split(", ")[0]])
+        label = int(
+            sca_plt.legendgroup[0]
+            if label_to_int is None
+            else label_to_int[sca_plt.legendgroup.split(", ")[0]]
+        )
         sca_plt.update(
             marker=dict(
                 color=px.colors.qualitative.D3[label],

@@ -112,7 +112,9 @@ def get_label_generator(entity_labels_url: str):
         yield {"ID": ent["ID"], "href": ent.get("href", ""), "label": ent["label"]}
 
 
-def get_label_arr(entity_labels_url: str, id_to_idx: dict, label_to_int=None, int_to_label=None) -> (dict, List[List[float]]):
+def get_label_arr(
+    entity_labels_url: str, id_to_idx: dict, label_to_int=None, int_to_label=None
+) -> (dict, List[List[float]]):
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
@@ -180,12 +182,19 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
     train_id_to_idx, train_points = get_indices_and_point_arr(train_data_url)
-    train_labels, label_to_int, int_to_label = get_label_arr(train_labels_url, train_id_to_idx)
+    train_labels, label_to_int, int_to_label = get_label_arr(
+        train_labels_url, train_id_to_idx
+    )
 
     test_id_to_idx, test_points = get_indices_and_point_arr(test_data_url)
     test_labels = None
     if test_labels_url != "" and test_labels_url is not None:
-        test_labels, label_to_int, int_to_label = get_label_arr(test_labels_url, test_id_to_idx, label_to_int=label_to_int, int_to_label=int_to_label)
+        test_labels, label_to_int, int_to_label = get_label_arr(
+            test_labels_url,
+            test_id_to_idx,
+            label_to_int=label_to_int,
+            int_to_label=int_to_label,
+        )
 
     # set no. of qubits accordingly
     n_qbits = train_points.shape[1]
