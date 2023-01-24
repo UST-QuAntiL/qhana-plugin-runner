@@ -82,7 +82,7 @@ def amplitude_amplification_t_solutions(
     :param oracle_circuit: A phase oracle for the desired state
     :param t: The number of good states that will be loaded into a superposition by the quantum circuit state_circuit
     """
-    itr = int(np.pi / 4 * np.sqrt(num_states / t))
+    itr = int((np.pi / 4) * np.sqrt(num_states / t))
     state_circuit()
     aa_steps(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, itr)
 
