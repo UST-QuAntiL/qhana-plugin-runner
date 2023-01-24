@@ -17,7 +17,7 @@ import numpy as np
 from typing import List
 from ..ccnot import adaptive_ccnot
 from ..controlled_unitaries import get_controlled_one_qubit_unitary
-from ..utils import check_if_values_are_binary
+from ..utils import is_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -36,14 +36,14 @@ class QAM:
             X = np.array(X)
 
         self.X = X
-        if not check_if_values_are_binary(self.X):
+        if not is_binary(self.X):
             raise ValueError(
                 "A QAM (Quantum Associative Memory) can only load binary data"
             )
         self.xor_X = self.create_xor_X(X)
 
         if additional_bits is not None:
-            if not check_if_values_are_binary(additional_bits):
+            if not is_binary(additional_bits):
                 raise ValueError(
                     "A QAM (Quantum Associative Memory) can only load binary additional bits"
                 )
