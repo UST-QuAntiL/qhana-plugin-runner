@@ -17,8 +17,9 @@ import pennylane as qml
 from typing import Callable, List, Optional
 
 """
-The amplitude amplifications algorithms implemented here, can be found in [0]
+The amplitude amplifications algorithms implemented here, can be found in [0] and [1]
 [0] Brassard et al. "Quantum amplitude amplification and estimation." Contemporary Mathematics 305 (2002): 53-74. https://arxiv.org/pdf/quant-ph/0005055
+[1] M. Boyer, G. Brassard, P. Høyer and A. Tapp (1998), Tight Bounds on Quantum Searching. Fortschr. Phys., 46: 493-505. https://doi.org/10.1002/(SICI)1521-3978(199806)46:4/5<493::AID-PROP493>3.0.CO;2-P
 """
 
 
@@ -151,7 +152,7 @@ def exp_searching_amplitude_amplification(
     3. itr = random int between [1, M]
     4. Do grover search with itr many iterations
     5. Check result of grover search. Return if good, do another exponential iteration, if bad
-    The algorithm does at most exp_itr many exponential iterations and starts out with M = 1 and c = 1.5
+    The algorithm does at most exp_itr many exponential iterations and starts out with M_float = 1 and c = 1.5
     :param state_circuit: A quantum circuit that loads in the state, e.g. Walsh-Hadamard
     :param inv_state_circuit: The inverse of the state_circuit
     :param zero_circuit: A phase oracle for the zero state
@@ -213,13 +214,31 @@ def lambda_amplitude_amplification(
     check_if_good: Callable[[], None],
     check_if_good_wire: List[int],
     measure_wires: List[int],
-    exp_itr: int = 10,
+    max_itr: int = 10,
 ) -> Optional[List[int]]:
+    """
+    This algorithm works similarly as the exponential search algorithm. One Iteration works as follows:
+    1. itr = random int between [1, m]
+    2. Do grover search with itr many iterations
+    3. Check result of grover search. Return if good.
+    4. m = min(lam * m, sqrt(num_states)) and do another iteration.
+    The algorithm does at most exp_itr many iterations and starts out with m = 1, lam = 8/7.
+    :param num_states: The amount of states in the superposition (bad and good).
+    :param state_circuit: A quantum circuit that loads in the state, e.g. Walsh-Hadamard
+    :param inv_state_circuit: The inverse of the state_circuit
+    :param zero_circuit: A phase oracle for the zero state
+    :param oracle_circuit: A phase oracle for the desired state
+    :param device: The quantum backend
+    :param check_if_good: A circuit that sets a qubit to one, if the state is good/desired
+    :param check_if_good_wire: The qubit that will be set to one by the check_if_good circuit
+    :param measure_wires: The qubits whose result is desired
+    :param exp_itr: The max number of iterations.
+    """
     m = 1
-    lam = 8 / 7
+    lam = 8 / 7     # 1 < lam < 4/3
     sqrt_num_states = np.sqrt(num_states)
 
-    for _ in range(exp_itr):  # This should actually go to infinity
+    for _ in range(max_itr):  # This should actually go to infinity
         itr = np.random.randint(0, m)
 
         @qml.qnode(device)
