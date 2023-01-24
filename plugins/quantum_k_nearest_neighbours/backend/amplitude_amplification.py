@@ -146,13 +146,12 @@ def exp_searching_amplitude_amplification(
     exp_itr: int = 10,
 ) -> Optional[List[int]]:
     """
-    Does exponential search with amplitude amplification. An exponential iteration works as follows:
-    1. M_float = M_float * c
-    2. M = ceil(M_float)
-    3. itr = random int between [1, M]
-    4. Do grover search with itr many iterations
-    5. Check result of grover search. Return if good, do another exponential iteration, if bad
-    The algorithm does at most exp_itr many exponential iterations and starts out with M_float = 1 and c = 1.5
+    Does exponential search with amplitude amplification. The i'th exponential iteration works as follows:
+    1. M = ceil(c**i)
+    2. itr = random int between [1, M]
+    3. Do grover search with itr many iterations
+    4. Check result of grover search. Return if good, do another exponential iteration, if bad
+    The algorithm does at most exp_itr many exponential iterations and starts out with i = 1 and c = 1.5
     :param state_circuit: A quantum circuit that loads in the state, e.g. Walsh-Hadamard
     :param inv_state_circuit: The inverse of the state_circuit
     :param zero_circuit: A phase oracle for the zero state
@@ -167,7 +166,6 @@ def exp_searching_amplitude_amplification(
         check_if_good_wire = [check_if_good_wire]
 
     c = 1.5  # 1 < c < 2
-    M_float = 1.0
 
     # Check for a good state, without grover
     @qml.qnode(device)
@@ -183,9 +181,8 @@ def exp_searching_amplitude_amplification(
         return result
 
     # Do exponential iterations, with grover
-    for _ in range(exp_itr):  # This should actually go to infinity
-        M_float *= c
-        M = int(np.ceil(M_float))
+    for i in range(1, exp_itr+1):  # This should actually go to infinity
+        M = int(np.ceil(c**i))
         itr = np.random.randint(1, M)
 
         @qml.qnode(device)
