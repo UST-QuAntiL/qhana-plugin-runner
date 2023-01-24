@@ -13,9 +13,10 @@
 # limitations under the License.
 
 from pennylane import QuantumFunctionError
+from typing import List
 
 
-def check_wires_uniqueness(obj_with_wires, wire_types):
+def check_wires_uniqueness(obj_with_wires: object, wire_types: List[str]):
     for idx1, wire_type1 in enumerate(wire_types):
         wires1 = getattr(obj_with_wires, wire_type1 + "_wires")
         for wire_type2 in wire_types[idx1 + 1 :]:
@@ -26,7 +27,7 @@ def check_wires_uniqueness(obj_with_wires, wire_types):
                 )
 
 
-def check_num_wires(obj_with_wires, wire_types, num_wires, error_msgs):
+def check_num_wires(obj_with_wires: object, wire_types: List[str], num_wires: List[int], error_msgs: List[str]):
     for w_type, n_wires, e_msg in zip(wire_types, num_wires, error_msgs):
         wires = getattr(obj_with_wires, w_type + "_wires")
         if len(wires) < n_wires:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Callable, Tuple
 import numpy as np
 import re
 
@@ -23,7 +23,7 @@ from ..utils import bitlist_to_int, int_to_bitlist, check_if_values_are_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
-def num_decimal_places(value):
+def num_decimal_places(value: str) -> int:
     result = 0
     if value.startswith("-"):
         value = value[1:]
@@ -33,7 +33,7 @@ def num_decimal_places(value):
     return result
 
 
-def simple_float_to_int(X):
+def simple_float_to_int(X: np.ndarray) -> np.ndarray:
     max_num_decimal_places = [0] * X.shape[1]
     for vec in X:
         for dim in range(X.shape[1]):
@@ -62,13 +62,13 @@ def simple_float_to_int(X):
 class SchuldQkNN(QkNN):
     def __init__(
         self,
-        train_data,
-        train_labels,
+        train_data: np.ndarray,
+        train_labels: np.ndarray,
         train_wires: List[int],
         label_wires: List[int],
         qam_ancilla_wires: List[int],
         backend: qml.Device,
-        unclean_wires=None,
+        unclean_wires: List[int] = None,
     ):
         super(SchuldQkNN, self).__init__(
             train_data, train_labels, len(train_data), backend
@@ -110,7 +110,7 @@ class SchuldQkNN(QkNN):
             unclean_wires=unclean_wires,
         )
 
-    def init_labels(self, labels):
+    def init_labels(self, labels: List[int]) -> np.ndarray:
         label_indices = list()
         label_to_idx = (
             dict()
@@ -124,7 +124,7 @@ class SchuldQkNN(QkNN):
             label_indices.append(label_to_idx[label])
         return np.array(label_indices)
 
-    def get_label_from_samples(self, samples):
+    def get_label_from_samples(self, samples: List[List[int]]) -> int:
         label_probs = np.zeros((len(self.unique_labels),))
         for sample in samples:
             label = bitlist_to_int(sample[1:])
@@ -132,7 +132,7 @@ class SchuldQkNN(QkNN):
                 label_probs[label] += 1
         return self.unique_labels[label_probs.argmax()]
 
-    def get_quantum_circuit(self, x):
+    def get_quantum_circuit(self, x: np.ndarray) -> Callable[[], None]:
         rot_angle = np.pi / self.train_data.shape[1]
 
         @qml.qnode(self.backend)
@@ -148,22 +148,22 @@ class SchuldQkNN(QkNN):
 
         return circuit
 
-    def label_point(self, x):
+    def label_point(self, x: np.ndarray) -> int:
         samples = self.get_quantum_circuit(x)()
         return self.get_label_from_samples(samples)
 
     @staticmethod
-    def get_necessary_wires(train_data, train_labels):
+    def get_necessary_wires(train_data: np.ndarray, train_labels: np.ndarray) -> Tuple[int, int, int]:
         return (
             len(train_data[0]),
             int(np.ceil(np.log2(len(set(train_labels))))),
             max(len(train_data[0]), 2),
         )
 
-    def get_representative_circuit(self, X) -> str:
+    def get_representative_circuit(self, X: np.ndarray) -> str:
         circuit = self.get_quantum_circuit(X[0])
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
 
-    def heatmap_meaningful(self):
+    def heatmap_meaningful(self) -> bool:
         return False

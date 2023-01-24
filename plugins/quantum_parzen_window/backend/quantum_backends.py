@@ -19,11 +19,12 @@ from celery.utils.log import get_task_logger
 from qiskit import IBMQ
 from qiskit import Aer
 
+from typing import Optional
+
 TASK_LOGGER = get_task_logger(__name__)
 
 
 class QuantumBackends(enum.Enum):
-    pennylane_default = "pennylane_default"
     custom_ibmq = "custom_ibmq"
     aer_statevector_simulator = "aer_statevector_simulator"
     aer_qasm_simulator = "aer_qasm_simulator"
@@ -35,12 +36,13 @@ class QuantumBackends(enum.Enum):
     ibmq_belem = "ibmq_belem"
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
+    pennylane_default = "pennylane_default"
 
     def get_max_num_qbits(
         self,
         ibmq_token: str,
         custom_backend_name: str,
-    ):
+    ) -> Optional[int]:
         if self.name.startswith("aer"):
             return None
         elif self.name.startswith("ibmq"):

@@ -14,9 +14,11 @@
 
 import pennylane as qml
 import qiskit
+from numpy import ndarray
+from typing import Callable
 
 
-def get_controlled_one_qubit_unitary(U):
+def get_controlled_one_qubit_unitary(U: ndarray) -> Callable[[int, int], None]:
     qc = qiskit.QuantumCircuit(1)
     qc.unitary(U, [0])
     c_qc = qc.control()

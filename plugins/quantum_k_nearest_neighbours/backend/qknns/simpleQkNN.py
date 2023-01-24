@@ -16,7 +16,7 @@ import pennylane as qml
 import numpy as np
 from collections import Counter
 from abc import abstractmethod
-from typing import List
+from typing import List, Tuple
 
 from .qknn import QkNN
 from ..data_loading_circuits import QAM
@@ -26,18 +26,24 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class SimpleQkNN(QkNN):
-    def __init__(self, train_data, train_labels, k: int, backend: qml.Device):
+    def __init__(
+        self,
+        train_data: np.ndarray,
+        train_labels: np.ndarray,
+        k: int,
+        backend: qml.Device
+    ):
         super(SimpleQkNN, self).__init__(train_data, train_labels, k, backend)
 
     @abstractmethod
-    def calculate_distances(self, x) -> List[float]:
+    def calculate_distances(self, x: np.ndarray) -> List[float]:
         """
         Calculates and returns the distances for each point to x.
         :param x:
         :return:
         """
 
-    def label_point(self, x):
+    def label_point(self, x: np.ndarray) -> int:
         if self.k == len(self.train_data):
             new_label = np.bincount(self.train_labels).argmax()
         else:
@@ -55,13 +61,13 @@ class SimpleQkNN(QkNN):
 class SimpleHammingQkNN(SimpleQkNN):
     def __init__(
         self,
-        train_data,
-        train_labels,
+        train_data: np.ndarray,
+        train_labels: np.ndarray,
         k: int,
         train_wires: List[int],
         qam_ancilla_wires: List[int],
         backend: qml.Device,
-        unclean_wires=None,
+        unclean_wires: List[int] = None,
     ):
         super(SimpleHammingQkNN, self).__init__(train_data, train_labels, k, backend)
         self.train_data = np.array(train_data, dtype=int)
@@ -93,7 +99,7 @@ class SimpleHammingQkNN(SimpleQkNN):
             unclean_wires=self.unclean_wires,
         )
 
-    def get_quantum_circuit(self, x):
+    def get_quantum_circuit(self, x: np.ndarray):
         rot_angle = np.pi / len(x)
 
         def quantum_circuit():
@@ -111,7 +117,7 @@ class SimpleHammingQkNN(SimpleQkNN):
 
         return quantum_circuit
 
-    def calculate_distances(self, x) -> List[float]:
+    def calculate_distances(self, x: np.ndarray) -> List[float]:
         samples = qml.QNode(self.get_quantum_circuit(x), self.backend)().tolist()
         num_zero_ancilla = [0] * len(self.train_data)
         total_ancilla = [0] * len(self.train_data)
@@ -132,15 +138,15 @@ class SimpleHammingQkNN(SimpleQkNN):
         return num_zero_ancilla
 
     @staticmethod
-    def get_necessary_wires(train_data):
+    def get_necessary_wires(train_data: np.ndarray) -> Tuple[int, int]:
         return len(train_data[0]), max(len(train_data[0]), 2)
 
-    def get_representative_circuit(self, X) -> str:
+    def get_representative_circuit(self, X: np.ndarray) -> str:
         circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
 
-    def heatmap_meaningful(self):
+    def heatmap_meaningful(self) -> bool:
         return False
 
 

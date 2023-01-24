@@ -19,6 +19,8 @@ from celery.utils.log import get_task_logger
 from qiskit import IBMQ
 from qiskit import Aer
 
+from typing import Optional
+
 TASK_LOGGER = get_task_logger(__name__)
 
 
@@ -40,7 +42,7 @@ class QuantumBackends(enum.Enum):
         self,
         ibmq_token: str,
         custom_backend_name: str,
-    ):
+    ) -> Optional[int]:
         if self.name.startswith("aer"):
             return None
         elif self.name.startswith("ibmq"):

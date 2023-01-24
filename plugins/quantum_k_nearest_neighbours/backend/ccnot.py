@@ -13,9 +13,10 @@
 # limitations under the License.
 
 import pennylane as qml
+from typing import List
 
 
-def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
+def adaptive_ccnot(c_qubits: List[int], a_qubits: List[int], unclean_qubits: List[int], t_qubit: int):
     """
     Chooses the ccnot variant with the least operations and executes it.
     :param c_qubits: list of control qubits
@@ -43,7 +44,7 @@ def adaptive_ccnot(c_qubits, a_qubits, unclean_qubits, t_qubit):
         )
 
 
-def one_ancilla_ccnot(c_qubits, a_qubit, t_qubit):
+def one_ancilla_ccnot(c_qubits: List[int], a_qubit: List[int], t_qubit: int):
     """
     This consists of 4 steps
     1. Partition c_qubits into two sets c1 and c2
@@ -63,7 +64,7 @@ def one_ancilla_ccnot(c_qubits, a_qubit, t_qubit):
     unclean_ccnot(c1, c2, a_qubit)
 
 
-def clean_ccnot(c_qubits, a_qubits, t_qubit):
+def clean_ccnot(c_qubits: List[int], a_qubits: List[int], t_qubit: int):
     if len(c_qubits) == 0:
         qml.PauliX((t_qubit,))
     elif len(c_qubits) == 1:
@@ -80,7 +81,7 @@ def clean_ccnot(c_qubits, a_qubits, t_qubit):
         qml.Toffoli(wires=c_qubits[:2] + [a_qubits[0]])
 
 
-def unclean_ccnot(c_qubits, a_qubits, t_qubit):
+def unclean_ccnot(c_qubits: List[int], a_qubits: List[int], t_qubit: int):
     """
     This ccnot operation works, even if the ancilla register has non zero values, i.e. it is not clean
     :param c_qubits:

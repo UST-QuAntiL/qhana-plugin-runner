@@ -15,7 +15,7 @@
 import os
 from tempfile import SpooledTemporaryFile
 
-from typing import Optional
+from typing import Optional, Tuple
 
 from celery.utils.log import get_task_logger
 
@@ -38,7 +38,7 @@ from .backend.visualize import plot_data, plot_confusion_matrix
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_point(ent):
+def get_point(ent: dict) -> np.ndarray:
     dimension_keys = list(ent.keys())
     dimension_keys.remove("ID")
     dimension_keys.remove("href")
@@ -50,7 +50,7 @@ def get_point(ent):
     return point
 
 
-def load_entity_points_from_url(entity_points_url: str):
+def load_entity_points_from_url(entity_points_url: str) -> Tuple[np.ndarray, dict]:
     """
     Loads in entity points, given their url.
     :param entity_points_url: url to the entity points
@@ -79,7 +79,7 @@ def load_entity_points_from_url(entity_points_url: str):
     return points_arr, id_to_idx
 
 
-def load_labels_from_url(labels_url: str, id_to_idx: dict):
+def load_labels_from_url(labels_url: str, id_to_idx: dict) -> np.ndarray:
     # load data from file
     labels = open_url(labels_url).json()
 

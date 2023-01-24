@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from .parzen_window import ParzenWindow
-from typing import List
+from typing import List, Callable, Tuple
 import numpy as np
 import pennylane as qml
 from ..data_loading_circuits.quantum_associative_memory import QAM
@@ -26,14 +26,14 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 class RuanParzenWindow(ParzenWindow):
     def __init__(
         self,
-        train_data,
-        train_labels,
+        train_data: np.ndarray,
+        train_labels: np.ndarray,
         distance_threshold: float,
         train_wires: List[int],
         label_wires: List[int],
         ancilla_wires: List[int],
         backend: qml.Device,
-        unclean_wires=None,
+        unclean_wires: List[int] = None,
     ):
         super(RuanParzenWindow, self).__init__(
             train_data, train_labels, distance_threshold, backend
@@ -94,7 +94,7 @@ class RuanParzenWindow(ParzenWindow):
             unclean_wires=self.unclean_wires,
         )
 
-    def init_labels(self, labels):
+    def init_labels(self, labels: np.ndarray) -> np.ndarray:
         label_indices = list()
         label_to_idx = (
             dict()
@@ -108,7 +108,7 @@ class RuanParzenWindow(ParzenWindow):
             label_indices.append(label_to_idx[label])
         return np.array(label_indices)
 
-    def get_quantum_circuit(self, x):
+    def get_quantum_circuit(self, x: np.ndarray) -> Callable[[], None]:
         def quantum_circuit():
             # Load points into register
             self.qam.circuit()
@@ -149,7 +149,7 @@ class RuanParzenWindow(ParzenWindow):
 
         return quantum_circuit
 
-    def get_label_from_samples(self, samples):
+    def get_label_from_samples(self, samples: List[List[int]]) -> int:
         label_probs = np.zeros((len(self.unique_labels),))
         samples_with_one = 0
         for sample in samples:
@@ -159,12 +159,12 @@ class RuanParzenWindow(ParzenWindow):
                 samples_with_one += 1
         return self.unique_labels[label_probs.argmax()]
 
-    def label_point(self, x) -> int:
+    def label_point(self, x: np.ndarray) -> int:
         samples = qml.QNode(self.get_quantum_circuit(x), self.backend)().tolist()
         return self.get_label_from_samples(samples)
 
     @staticmethod
-    def get_necessary_wires(train_data, train_labels):
+    def get_necessary_wires(train_data: np.ndarray, train_labels: np.ndarray) -> Tuple[int, int, int]:
         unique_labels = list(set(train_labels))
         return (
             int(len(train_data[0])),
@@ -172,7 +172,7 @@ class RuanParzenWindow(ParzenWindow):
             int(np.ceil(np.log2(len(train_data[0]))) + 4),
         )
 
-    def get_representative_circuit(self, X) -> str:
+    def get_representative_circuit(self, X: np.ndarray) -> str:
         circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()

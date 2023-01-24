@@ -13,16 +13,61 @@
 # limitations under the License.
 
 import numpy as np
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 from enum import Enum
-from typing import List
+from typing import List, Tuple
 
 
-def count_wires(wires: List[List]):
+def count_wires(wires: List[List]) -> int:
     s = 0
     for w in wires:
         s += len(w)
     return s
+
+
+class QkNN(metaclass=ABCMeta):
+    def __init__(self, train_data, train_labels, k, backend):
+        if not isinstance(train_data, np.ndarray):
+            train_data = np.array(train_data, dtype=int)
+        self.train_data = np.array(train_data)
+        self.train_labels = np.array(train_labels)
+        self.unique_labels = list(set(self.train_labels))
+
+        self.k = min(k, len(self.train_data))
+        self.backend = backend
+
+    def set_quantum_backend(self, backend):
+        self.backend = backend
+
+    def get_representative_circuit(self, X) -> str:
+        return ""
+
+    @abstractmethod
+    def label_point(self, X) -> int:
+        """
+        Takes new point x as input and returns a label for it.
+        """
+
+    def label_points(self, X) -> List[int]:
+        if self.backend is None:
+            raise ValueError("The quantum backend may not be None!")
+        new_labels = []
+        for x in X:
+            new_labels.append(self.label_point(x))
+        return new_labels
+
+    @abstractmethod
+    def heatmap_meaningful(self) -> bool:
+        """
+        Determines, if a heatmap as a background, when visualizing labeled data is meaningful or not.
+        E.g. a heatmap for binary data is not meaningful.
+        """
+
+    @abstractmethod
+    def get_necessary_wires(self, **kwargs) -> Tuple:
+        """
+        Returns the amount of necessary wires as a tuple.
+        """
 
 
 class QkNNEnum(Enum):
@@ -33,8 +78,14 @@ class QkNNEnum(Enum):
     basheer_hamming_qknn = "basheer hamming qknn"
 
     def get_qknn_and_total_wires(
-        self, train_data, train_labels, k, max_wires, exp_itr=10, use_access_wires=True
-    ):
+        self,
+        train_data: np.ndarray,
+        train_labels: np.ndarray,
+        k: int,
+        max_wires: int,
+        exp_itr: int = 10,
+        use_access_wires: bool = True,
+    ) -> Tuple[QkNN, int]:
         if self == QkNNEnum.schuld_qknn:
             from .schuld_hamming import SchuldQkNN
 
@@ -111,7 +162,7 @@ class QkNNEnum(Enum):
                 exp_itr=exp_itr,
             ), count_wires(wires)
 
-    def check_and_get_qubits(self, qknn_class, max_wires, **kwargs):
+    def check_and_get_qubits(self, qknn_class: QkNN, max_wires: int, **kwargs) -> Tuple[List[List[int]], List[int]]:
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)
         num_total_wires = 0
         wires = []
@@ -128,42 +179,3 @@ class QkNNEnum(Enum):
             )
         access_wires = list(range(num_total_wires, max_wires))
         return wires, access_wires
-
-
-class QkNN:
-    def __init__(self, train_data, train_labels, k, backend):
-        if not isinstance(train_data, np.ndarray):
-            train_data = np.array(train_data, dtype=int)
-        self.train_data = np.array(train_data)
-        self.train_labels = np.array(train_labels)
-        self.unique_labels = list(set(self.train_labels))
-
-        self.k = min(k, len(self.train_data))
-        self.backend = backend
-
-    def set_quantum_backend(self, backend):
-        self.backend = backend
-
-    def get_representative_circuit(self, X) -> str:
-        return ""
-
-    @abstractmethod
-    def label_point(self, X) -> int:
-        """
-        Takes new point x as input and returns a label for it.
-        """
-
-    def label_points(self, X) -> List[int]:
-        if self.backend is None:
-            raise ValueError("The quantum backend may not be None!")
-        new_labels = []
-        for x in X:
-            new_labels.append(self.label_point(x))
-        return new_labels
-
-    @abstractmethod
-    def heatmap_meaningful(self) -> bool:
-        """
-        Determines, if a heatmap as a background, when visualizing labeled data is meaningful or not.
-        E.g. a heatmap for binary data is not meaningful.
-        """

@@ -24,13 +24,13 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 class QAM:
     def __init__(
         self,
-        X,
-        register_wires,
-        ancilla_wires,
-        unclean_wires=None,
-        amplitudes=None,
-        additional_bits=None,
-        additional_wires=None,
+        X: np.ndarray,
+        register_wires: List[int],
+        ancilla_wires: List[int],
+        unclean_wires: List[int] = None,
+        amplitudes: List[int] = None,
+        additional_bits: List[int] = None,
+        additional_wires: List[int] = None,
     ):
         if not isinstance(X, np.ndarray):
             X = np.array(X)
@@ -89,14 +89,14 @@ class QAM:
 
         self.rotation_circuits = self.prepare_rotation_circuits()
 
-    def create_xor_X(self, X):
+    def create_xor_X(self, X: np.ndarray) -> np.ndarray:
         xor_X = np.zeros(X.shape)
         for i in range(X.shape[0] - 1, 0, -1):
             xor_X[i] = np.bitwise_xor(X[i], X[i - 1])
         xor_X[0] = X[0]
         return xor_X
 
-    def abs2(self, x):
+    def abs2(self, x: float):
         return x.real**2 + x.imag**2
 
     def prepare_rotation_circuits(self) -> List:
@@ -125,7 +125,7 @@ class QAM:
 
         return rotation_circuits
 
-    def flip_control_if_reg_equals_x(self, x):
+    def flip_control_if_reg_equals_x(self, x: np.ndarray):
         # Flip all wires to one, if reg == x
         for i in range(len(x)):
             if x[i] == 0:
@@ -139,12 +139,12 @@ class QAM:
             if x[i] == 0:
                 qml.PauliX(self.register_wires[i])
 
-    def load_x(self, x):
+    def load_x(self, x: np.ndarray):
         for idx in range(len(x)):
             if x[idx] == 1:
                 qml.CNOT((self.load_wire, self.register_wires[idx]))
 
-    def load_additional_bits(self, bits):
+    def load_additional_bits(self, bits: np.ndarray):
         for idx in range(len(bits)):
             if bits[idx] == 1:
                 qml.CNOT((self.load_wire, self.additional_wires[idx]))

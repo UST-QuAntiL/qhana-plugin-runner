@@ -14,6 +14,7 @@
 
 import numpy as np
 import pennylane as qml
+from typing import Callable, List, Optional
 
 """
 The amplitude amplifications algorithms implemented here, can be found in [0]
@@ -21,7 +22,13 @@ The amplitude amplifications algorithms implemented here, can be found in [0]
 """
 
 
-def aa_steps(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, itr):
+def aa_steps(
+    state_circuit: Callable[[], None],
+    inv_state_circuit: Callable[[], None],
+    zero_circuit: Callable[[], None],
+    oracle_circuit: Callable[[], None],
+    itr: int
+):
     """
     Does itr many grover iterations
     :param state_circuit: A quantum circuit that loads in the state, e.g. Walsh-Hadamard
@@ -38,7 +45,11 @@ def aa_steps(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, itr
 
 
 def amplitude_amplification_unique(
-    num_states, state_circuit, inv_state_circuit, zero_circuit, oracle_circuit
+    num_states: int,
+    state_circuit: Callable[[], None],
+    inv_state_circuit: Callable[[], None],
+    zero_circuit: Callable[[], None],
+    oracle_circuit: Callable[[], None]
 ):
     """
     Does the necessary amount of grover iterations, given that there is only one good/desired state.
@@ -54,7 +65,12 @@ def amplitude_amplification_unique(
 
 
 def amplitude_amplification_t_solutions(
-    num_states, state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, t
+    num_states: int,
+    state_circuit: Callable[[], None],
+    inv_state_circuit: Callable[[], None],
+    zero_circuit: Callable[[], None],
+    oracle_circuit: Callable[[], None],
+    t: int
 ):
     """
     Does the necessary amount of grover iterations, given the number of good results in our quantum state
@@ -70,7 +86,7 @@ def amplitude_amplification_t_solutions(
     aa_steps(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, itr)
 
 
-def get_good_result(result, good_wire=0):
+def get_good_result(result: List[List[int]], good_wire: int = 0) -> Optional[List[int]]:
     """
     Checks the results of a quantum circuit for a good/desired result and returns it.
     If there is no good result, then None is returned.
@@ -84,15 +100,15 @@ def get_good_result(result, good_wire=0):
 
 
 def get_exp_search_aa_representative_circuit(
-    state_circuit,
-    inv_state_circuit,
-    zero_circuit,
-    oracle_circuit,
-    device,
-    check_if_good,
-    check_if_good_wire,
-    measure_wires,
-):
+    state_circuit: Callable[[], None],
+    inv_state_circuit: Callable[[], None],
+    zero_circuit: Callable[[], None],
+    oracle_circuit: Callable[[], None],
+    device: qml.Device,
+    check_if_good: Callable[[], None],
+    check_if_good_wire: int,
+    measure_wires: List[int],
+) -> Optional[List[int]]:
     """
     Returns a circuit for the exponential search with amplitude amplification. It only does 2 grover iterations.
     :param state_circuit: A quantum circuit that loads in the state, e.g. Walsh-Hadamard
@@ -118,16 +134,16 @@ def get_exp_search_aa_representative_circuit(
 
 
 def exp_searching_amplitude_amplification(
-    state_circuit,
-    inv_state_circuit,
-    zero_circuit,
-    oracle_circuit,
-    device,
-    check_if_good,
-    check_if_good_wire,
-    measure_wires,
-    exp_itr=10,
-):
+    state_circuit: Callable[[], None],
+    inv_state_circuit: Callable[[], None],
+    zero_circuit: Callable[[], None],
+    oracle_circuit: Callable[[], None],
+    device: qml.Device,
+    check_if_good: Callable[[], None],
+    check_if_good_wire: int,
+    measure_wires: List[int],
+    exp_itr: int = 10,
+) -> Optional[List[int]]:
     """
     Does exponential search with amplitude amplification. An exponential iteration works as follows:
     1. M_float = M_float * c
@@ -188,17 +204,17 @@ def exp_searching_amplitude_amplification(
 
 
 def lambda_amplitude_amplification(
-    num_states,
-    state_circuit,
-    inv_state_circuit,
-    zero_circuit,
-    oracle_circuit,
-    device,
-    check_if_good,
-    check_if_good_wire,
-    measure_wires,
-    exp_itr=10,
-):
+    num_states: int,
+    state_circuit: Callable[[], None],
+    inv_state_circuit: Callable[[], None],
+    zero_circuit: Callable[[], None],
+    oracle_circuit: Callable[[], None],
+    device: qml.Device,
+    check_if_good: Callable[[], None],
+    check_if_good_wire: List[int],
+    measure_wires: List[int],
+    exp_itr: int = 10,
+) -> Optional[List[int]]:
     m = 1
     lam = 8 / 7
     sqrt_num_states = np.sqrt(num_states)

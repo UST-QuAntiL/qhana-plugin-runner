@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List
+import numpy as np
 
-def bitlist_to_int(bitlist):
+
+def bitlist_to_int(bitlist: List[int]) -> int:
     if bitlist is None:
         return None
     out = 0
@@ -22,7 +25,7 @@ def bitlist_to_int(bitlist):
     return out
 
 
-def int_to_bitlist(num, length: int):
+def int_to_bitlist(num, length: int) -> List[int]:
     negative = False
     if num < 0:
         num *= -1
@@ -36,7 +39,6 @@ def int_to_bitlist(num, length: int):
     return result
 
 
-def check_if_values_are_binary(data):
-    import numpy as np
+def check_if_values_are_binary(data: np.ndarray) -> bool:
 
     return np.array_equal(data, data.astype(bool))

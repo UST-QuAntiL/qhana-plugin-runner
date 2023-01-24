@@ -14,13 +14,19 @@
 
 import pennylane as qml
 import numpy as np
+from typing import List, Tuple
 from ..utils import int_to_bitlist
 from ..ccnot import adaptive_ccnot
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
 class BinaryTreeNode:
-    def __init__(self, bit_str, value, neg_sign=None):
+    def __init__(
+        self,
+        bit_str: str,
+        value: float,
+        neg_sign: bool = None,
+    ):
         self.bit_str = bit_str
         self.value = value
         self.parent = None
@@ -32,12 +38,12 @@ class BinaryTreeNode:
 class TreeLoader:
     def __init__(
         self,
-        data,
-        idx_wires,
-        data_wires,
-        ancilla_wires,
-        unclean_wires=None,
-        control_wires=None,
+        data: np.ndarray,
+        idx_wires: List[int],
+        data_wires: List[int],
+        ancilla_wires: List[int],
+        unclean_wires: List[int] = None,
+        control_wires: List[int] = None,
     ):
         # 3 Ancillas needed
         if not isinstance(data, np.ndarray):
@@ -72,7 +78,7 @@ class TreeLoader:
         self.binary_trees = self.build_binary_tree_list()
         self.prepare_tree_list_values()
 
-    def prepare_tree_values(self, node: BinaryTreeNode, sqrt_parent_value=1.0):
+    def prepare_tree_values(self, node: BinaryTreeNode, sqrt_parent_value: float = 1.0):
         sqrt_value = np.sqrt(node.value)
         if node.parent is None:
             node.value = 0
@@ -88,7 +94,7 @@ class TreeLoader:
         for tree in self.binary_trees:
             self.prepare_tree_values(tree)
 
-    def build_binary_tree_list(self):
+    def build_binary_tree_list(self) -> List[BinaryTreeNode]:
         binary_trees = []
         if len(self.data.shape) == 1:
             binary_trees.append(self.build_binary_tree(self.data))
@@ -97,7 +103,7 @@ class TreeLoader:
                 binary_trees.append(self.build_binary_tree(self.data[i]))
         return binary_trees
 
-    def build_binary_tree(self, state):
+    def build_binary_tree(self, state: np.ndarray) -> BinaryTreeNode:
         """
         Create a binary tree. The leafs consist of the probabilities of the different states. Going up the tree the
         probabilities get added up. The root has a value equal to one.
@@ -154,7 +160,7 @@ class TreeLoader:
             tree_nodes = new_tree_nodes
         return tree_nodes[-1]
 
-    def get_sign_rotation(self, tree_node: BinaryTreeNode):
+    def get_sign_rotation(self, tree_node: BinaryTreeNode) -> Tuple[float, bool]:
         if tree_node.left_child is not None:
             if tree_node.left_child.neg_sign is not None:
                 """
@@ -172,7 +178,7 @@ class TreeLoader:
         return 0, False
 
     def qubit_rotations(
-        self, qubit_idx: int, tree_node: BinaryTreeNode, right=True, tree_idx=0
+        self, qubit_idx: int, tree_node: BinaryTreeNode
     ):
         if tree_node.left_child is not None:
             # rotate qubit
@@ -206,11 +212,11 @@ class TreeLoader:
 
             # left child
             qml.PauliX((self.data_wires[qubit_idx],))
-            self.qubit_rotations(qubit_idx + 1, tree_node.left_child, right=False)
+            self.qubit_rotations(qubit_idx + 1, tree_node.left_child)
             qml.PauliX((self.data_wires[qubit_idx],))
 
             # right child
-            self.qubit_rotations(qubit_idx + 1, tree_node.right_child, right=True)
+            self.qubit_rotations(qubit_idx + 1, tree_node.right_child)
 
     def load_tree(self, tree_idx: int):
         if len(self.idx_wires) != 0:
@@ -226,7 +232,7 @@ class TreeLoader:
             self.data_wires + self.unclean_wires,
             self.ancilla_wires[0],
         )
-        self.qubit_rotations(0, self.binary_trees[tree_idx], tree_idx=tree_idx)
+        self.qubit_rotations(0, self.binary_trees[tree_idx])
         # Release ancilla 0
         adaptive_ccnot(
             self.control_wires + self.idx_wires,
@@ -262,7 +268,7 @@ class TreeLoader:
         return qml.adjoint(self.get_circuit())
 
     @staticmethod
-    def get_necessary_wires(data):
+    def get_necessary_wires(data: np.ndarray) -> Tuple[float, float, float]:
         return (
             int(np.ceil(np.log2(data.shape[0]))),
             int(np.ceil(np.log2(data.shape[1]))),

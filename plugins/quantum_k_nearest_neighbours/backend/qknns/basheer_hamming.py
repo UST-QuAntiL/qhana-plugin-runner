@@ -14,7 +14,7 @@
 
 import pennylane as qml
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Callable
 
 from ..data_loading_circuits import TreeLoader
 from ..utils import int_to_bitlist, bitlist_to_int
@@ -30,21 +30,25 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 from collections import Counter
 
 
-def string_indices_and_distances(indices, distances, separator=" "):
+def string_indices_and_distances(indices: List[int], distances: List[int], separator: str = " ") -> str:
     result = []
     for idx, d in zip(indices, distances):
         result.append(f"{idx}:{d}")
     return separator.join(result)
 
 
-def x_state_to_one(wires, state):
+def x_state_to_one(wires: List[int], state: List[int]):
     for (wire, value) in zip(wires, state):
         if value == 0:
             qml.PauliX((wire,))
 
 
 def oracle_state_circuit(
-    data_wires, oracle_wire, ancilla_wires, unclean_wires, good_states
+    data_wires: List[int],
+    oracle_wire: int,
+    ancilla_wires: List[int],
+    unclean_wires: List[int],
+    good_states: List[List[int]],
 ):
     for state in good_states:
         x_state_to_one(data_wires, state)
@@ -52,22 +56,22 @@ def oracle_state_circuit(
         x_state_to_one(data_wires, state)
 
 
-def calc_hamming_distance(x, y):
+def calc_hamming_distance(x: np.ndarray, y: np.ndarray) -> int:
     return np.bitwise_xor(x, y).sum()
 
 
 class BasheerHammingQkNN(QkNN):
     def __init__(
         self,
-        train_data,
-        train_labels,
+        train_data: np.ndarray,
+        train_labels: np.ndarray,
         k: int,
         train_wires: List[int],
         idx_wires: List[int],
         ancilla_wires: List[int],
         backend: qml.Device,
-        exp_itr=10,
-        unclean_wires=None,
+        exp_itr: int = 10,
+        unclean_wires: List[int] = None,
     ):
         super(BasheerHammingQkNN, self).__init__(train_data, train_labels, k, backend)
 
@@ -126,19 +130,19 @@ class BasheerHammingQkNN(QkNN):
             unclean_wires=unclean_wires,
         )
 
-    def prepare_data_for_treeloader(self, data):
+    def prepare_data_for_treeloader(self, data: np.ndarray) -> np.ndarray:
         tree_points = np.zeros(((data.shape[0], 2 ** data.shape[1])))
         for idx, point in enumerate(data):
             tree_points[idx][bitlist_to_int(point)] = 1
         return tree_points
 
-    def repeat_data_til_next_power_of_two(self, data):
+    def repeat_data_til_next_power_of_two(self, data: np.ndarray) -> np.ndarray:
         next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
         missing_till_next_power = next_power - data.shape[0]
         data = np.vstack((data, data[:missing_till_next_power]))
         return data
 
-    def get_oracle_wire_to_one_circuit(self, x, a, indices):
+    def get_oracle_wire_to_one_circuit(self, x: np.ndarray, a: List[int], indices: List[int]) -> Callable[[], None]:
         def circuit():
             # Load points into register
             self.tree_loader.circuit()
@@ -214,7 +218,7 @@ class BasheerHammingQkNN(QkNN):
 
         return circuit
 
-    def get_phase_oracle_circuit(self, x, a, indices):
+    def get_phase_oracle_circuit(self, x: np.ndarray, a: List[int], indices: List[int]) -> Callable[[], None]:
         oracle_circuit = self.get_oracle_wire_to_one_circuit(x, a, indices)
 
         def quantum_circuit():
@@ -252,8 +256,8 @@ class BasheerHammingQkNN(QkNN):
             qml.PauliX((wire,))
 
     def get_better_training_point_idx(
-        self, x, distance_threshold, chosen_indices
-    ) -> Tuple[int, int]:
+        self, x: np.ndarray, distance_threshold: int, chosen_indices: List[int]
+    ) -> Tuple[Optional[int], Optional[int]]:
         if distance_threshold < 0:
             return None, None
         state_circuit = self.idx_circuit
@@ -289,7 +293,7 @@ class BasheerHammingQkNN(QkNN):
         hamming_distance = len(train_bits) - np.array(train_bits).sum()
         return int(bitlist_to_int(idx_bits) % self.num_train_data), hamming_distance
 
-    def label_point(self, x) -> int:
+    def label_point(self, x: np.ndarray) -> int:
         x = np.array(x, dtype=int)
         # Init: First choose k random points, to be the current nearest neighbours
         chosen_indices = np.random.choice(
@@ -326,7 +330,7 @@ class BasheerHammingQkNN(QkNN):
         return new_label
 
     @staticmethod
-    def get_necessary_wires(train_data):
+    def get_necessary_wires(train_data: np.ndarray) -> Tuple[int, int, int]:
         # train wires: we need a qubit for each dimension of a point
         # idx wires: a number n can be represented by log(n) bits. Thus, we need ceil(log2(size of train_data)) qubits
         # ancilla wires:    + we need int(np.ceil(np.log2(self.train_data.shape[1])))+2 qubits for the overflow register
@@ -339,11 +343,11 @@ class BasheerHammingQkNN(QkNN):
             int(np.ceil(np.log2(train_data.shape[1]))) + 5,
         )
 
-    def get_representative_circuit(self, X) -> str:
+    def get_representative_circuit(self, X: np.ndarray) -> str:
         # Chose some initial parameters
         x = X[0]
         distance_threshold = 1
-        chosen_indices = range(self.k)
+        chosen_indices = list(range(self.k))
 
         # Initiate all necessary circuits for the aa circuit
         state_circuit = self.idx_circuit
@@ -373,5 +377,5 @@ class BasheerHammingQkNN(QkNN):
         circuit.construct([], {})
         return circuit.qtape.to_openqasm()
 
-    def heatmap_meaningful(self):
+    def heatmap_meaningful(self) -> bool:
         return False
