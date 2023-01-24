@@ -60,7 +60,7 @@ def amplitude_amplification_unique(
     :param oracle_circuit: A phase oracle for the desired state
     """
     # Compute number of iterations
-    itr = int(np.pi / 4 * np.sqrt(num_states))
+    itr = int((np.pi / 4) * np.sqrt(num_states))
     state_circuit()
     aa_steps(state_circuit, inv_state_circuit, zero_circuit, oracle_circuit, itr)
 
