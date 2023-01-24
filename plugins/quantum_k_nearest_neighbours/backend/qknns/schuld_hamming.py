@@ -153,7 +153,9 @@ class SchuldQkNN(QkNN):
         return self.get_label_from_samples(samples)
 
     @staticmethod
-    def get_necessary_wires(train_data: np.ndarray, train_labels: np.ndarray) -> Tuple[int, int, int]:
+    def get_necessary_wires(
+        train_data: np.ndarray, train_labels: np.ndarray
+    ) -> Tuple[int, int, int]:
         return (
             len(train_data[0]),
             int(np.ceil(np.log2(len(set(train_labels))))),

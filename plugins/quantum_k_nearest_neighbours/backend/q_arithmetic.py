@@ -66,7 +66,7 @@ def add_registers(
     target_reg: List[int],
     indicator_wire: int,
     unclean_wires: List[int] = None,
-    indicator_is_zero: bool = True
+    indicator_is_zero: bool = True,
 ):
     if indicator_is_zero:
         qml.PauliX((indicator_wire,))

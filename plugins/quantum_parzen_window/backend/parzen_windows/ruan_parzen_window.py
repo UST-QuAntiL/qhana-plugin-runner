@@ -164,7 +164,9 @@ class RuanParzenWindow(ParzenWindow):
         return self.get_label_from_samples(samples)
 
     @staticmethod
-    def get_necessary_wires(train_data: np.ndarray, train_labels: np.ndarray) -> Tuple[int, int, int]:
+    def get_necessary_wires(
+        train_data: np.ndarray, train_labels: np.ndarray
+    ) -> Tuple[int, int, int]:
         unique_labels = list(set(train_labels))
         return (
             int(len(train_data[0])),

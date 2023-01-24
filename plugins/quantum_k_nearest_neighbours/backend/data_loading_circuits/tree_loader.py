@@ -177,9 +177,7 @@ class TreeLoader:
                     return 0, True
         return 0, False
 
-    def qubit_rotations(
-        self, qubit_idx: int, tree_node: BinaryTreeNode
-    ):
+    def qubit_rotations(self, qubit_idx: int, tree_node: BinaryTreeNode):
         if tree_node.left_child is not None:
             # rotate qubit
             sign_rot, use_z = self.get_sign_rotation(tree_node)

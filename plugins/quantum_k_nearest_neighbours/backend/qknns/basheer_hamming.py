@@ -30,7 +30,9 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 from collections import Counter
 
 
-def string_indices_and_distances(indices: List[int], distances: List[int], separator: str = " ") -> str:
+def string_indices_and_distances(
+    indices: List[int], distances: List[int], separator: str = " "
+) -> str:
     result = []
     for idx, d in zip(indices, distances):
         result.append(f"{idx}:{d}")
@@ -142,7 +144,9 @@ class BasheerHammingQkNN(QkNN):
         data = np.vstack((data, data[:missing_till_next_power]))
         return data
 
-    def get_oracle_wire_to_one_circuit(self, x: np.ndarray, a: List[int], indices: List[int]) -> Callable[[], None]:
+    def get_oracle_wire_to_one_circuit(
+        self, x: np.ndarray, a: List[int], indices: List[int]
+    ) -> Callable[[], None]:
         def circuit():
             # Load points into register
             self.tree_loader.circuit()
@@ -218,7 +222,9 @@ class BasheerHammingQkNN(QkNN):
 
         return circuit
 
-    def get_phase_oracle_circuit(self, x: np.ndarray, a: List[int], indices: List[int]) -> Callable[[], None]:
+    def get_phase_oracle_circuit(
+        self, x: np.ndarray, a: List[int], indices: List[int]
+    ) -> Callable[[], None]:
         oracle_circuit = self.get_oracle_wire_to_one_circuit(x, a, indices)
 
         def quantum_circuit():

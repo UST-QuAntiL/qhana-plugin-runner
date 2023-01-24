@@ -27,7 +27,12 @@ def check_wires_uniqueness(obj_with_wires: object, wire_types: List[str]):
                 )
 
 
-def check_num_wires(obj_with_wires: object, wire_types: List[str], num_wires: List[int], error_msgs: List[str]):
+def check_num_wires(
+    obj_with_wires: object,
+    wire_types: List[str],
+    num_wires: List[int],
+    error_msgs: List[str],
+):
     for w_type, n_wires, e_msg in zip(wire_types, num_wires, error_msgs):
         wires = getattr(obj_with_wires, w_type + "_wires")
         if len(wires) < n_wires:

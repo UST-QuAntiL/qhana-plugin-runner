@@ -162,7 +162,9 @@ class QkNNEnum(Enum):
                 exp_itr=exp_itr,
             ), count_wires(wires)
 
-    def check_and_get_qubits(self, qknn_class: QkNN, max_wires: int, **kwargs) -> Tuple[List[List[int]], List[int]]:
+    def check_and_get_qubits(
+        self, qknn_class: QkNN, max_wires: int, **kwargs
+    ) -> Tuple[List[List[int]], List[int]]:
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)
         num_total_wires = 0
         wires = []

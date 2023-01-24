@@ -28,7 +28,7 @@ def aa_steps(
     inv_state_circuit: Callable[[], None],
     zero_circuit: Callable[[], None],
     oracle_circuit: Callable[[], None],
-    itr: int
+    itr: int,
 ):
     """
     Does itr many grover iterations
@@ -50,7 +50,7 @@ def amplitude_amplification_unique(
     state_circuit: Callable[[], None],
     inv_state_circuit: Callable[[], None],
     zero_circuit: Callable[[], None],
-    oracle_circuit: Callable[[], None]
+    oracle_circuit: Callable[[], None],
 ):
     """
     Does the necessary amount of grover iterations, given that there is only one good/desired state.
@@ -71,7 +71,7 @@ def amplitude_amplification_t_solutions(
     inv_state_circuit: Callable[[], None],
     zero_circuit: Callable[[], None],
     oracle_circuit: Callable[[], None],
-    t: int
+    t: int,
 ):
     """
     Does the necessary amount of grover iterations, given the number of good results in our quantum state
@@ -235,7 +235,7 @@ def lambda_amplitude_amplification(
     :param exp_itr: The max number of iterations.
     """
     m = 1
-    lam = 8 / 7     # 1 < lam < 4/3
+    lam = 8 / 7  # 1 < lam < 4/3
     sqrt_num_states = np.sqrt(num_states)
 
     for _ in range(max_itr):  # This should actually go to infinity

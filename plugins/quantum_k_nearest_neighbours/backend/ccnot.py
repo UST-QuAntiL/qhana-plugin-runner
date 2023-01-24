@@ -16,7 +16,9 @@ import pennylane as qml
 from typing import List
 
 
-def adaptive_ccnot(c_qubits: List[int], a_qubits: List[int], unclean_qubits: List[int], t_qubit: int):
+def adaptive_ccnot(
+    c_qubits: List[int], a_qubits: List[int], unclean_qubits: List[int], t_qubit: int
+):
     """
     Chooses the ccnot variant with the least operations and executes it.
     :param c_qubits: list of control qubits

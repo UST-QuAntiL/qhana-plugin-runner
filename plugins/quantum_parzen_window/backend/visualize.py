@@ -32,7 +32,7 @@ def add_background(
     resolution: int,
     predictor: Callable[[np.ndarray], int],
     scatter: go.Scatter,
-    two_classes: bool = False
+    two_classes: bool = False,
 ) -> go.Figure:
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
@@ -231,9 +231,7 @@ def plot_data(
 
 
 def plot_confusion_matrix(
-    y_true: np.ndarray,
-    y_pred: np.ndarray,
-    labels: list
+    y_true: np.ndarray, y_pred: np.ndarray, labels: list
 ) -> go.Figure:
     labels.sort()
     conf_matrix = confusion_matrix(y_true, y_pred, labels=labels).T

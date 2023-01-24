@@ -31,7 +31,7 @@ class SimpleQkNN(QkNN):
         train_data: np.ndarray,
         train_labels: np.ndarray,
         k: int,
-        backend: qml.Device
+        backend: qml.Device,
     ):
         super(SimpleQkNN, self).__init__(train_data, train_labels, k, backend)
 

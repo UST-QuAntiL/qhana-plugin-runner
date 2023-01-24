@@ -91,7 +91,8 @@ class QParzenWindowEnum(Enum):
             ), count_wires(wires)
 
     def check_and_get_qubits(
-        self, parzen_window_class: ParzenWindow, max_wires: int, **kwargs) -> Tuple[List[List[int]], List[int]]:
+        self, parzen_window_class: ParzenWindow, max_wires: int, **kwargs
+    ) -> Tuple[List[List[int]], List[int]]:
         num_necessary_wires = parzen_window_class.get_necessary_wires(**kwargs)
         num_total_wires = 0
         wires = []
