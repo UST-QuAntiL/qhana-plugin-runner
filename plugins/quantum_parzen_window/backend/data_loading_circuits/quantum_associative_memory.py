@@ -51,7 +51,7 @@ class QAM:
                 additional_bits = np.array(additional_bits)
             self.xor_additional_bits = self.create_xor_X(additional_bits)
         else:
-            self.xor_additional_bits = additional_bits
+            self.xor_additional_bits = None
 
         self.register_wires = list(register_wires)
         self.ancilla_wires = list(ancilla_wires)
