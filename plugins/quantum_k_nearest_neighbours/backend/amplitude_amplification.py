@@ -181,7 +181,7 @@ def exp_searching_amplitude_amplification(
         return result
 
     # Do exponential iterations, with grover
-    for i in range(1, exp_itr+1):  # This should actually go to infinity
+    for i in range(1, exp_itr + 1):  # This should actually go to infinity
         M = int(np.ceil(c**i))
         itr = np.random.randint(1, M)
 
