@@ -129,12 +129,12 @@ class SimpleHammingQkNN(SimpleQkNN):
             if sample[-1] == 0:
                 num_zero_ancilla[idx] += 1
         # Get prob for ancilla qubit to be equal to 0
-        for i, (total_anc_, num_zero_anc) in enumerate(zip(total_ancilla, num_zero_ancilla)):
+        for i, (total_anc_, num_zero_anc) in enumerate(
+            zip(total_ancilla, num_zero_ancilla)
+        ):
             # 0 <= num_zero_ancilla[i] / total_ancilla[i] <= 1. Hence if total_ancilla[i] == 0, we have no information
             # about the distance, but due to the rot_angle it can't be greater than 1, therefore we set it to 1
-            num_zero_ancilla[i] = (
-                1 if total_anc_ == 0 else num_zero_anc / total_anc_
-            )
+            num_zero_ancilla[i] = 1 if total_anc_ == 0 else num_zero_anc / total_anc_
         return num_zero_ancilla
 
     @staticmethod

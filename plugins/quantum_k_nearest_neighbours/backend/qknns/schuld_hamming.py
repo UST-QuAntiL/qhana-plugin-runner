@@ -51,10 +51,10 @@ def simple_float_to_int(X: np.ndarray) -> np.ndarray:
     result = []
     for vec in X:
         new_vec = []
-        for vec_entry, decimal_places, num_bits in zip(vec, max_num_decimal_places, max_num_bits):
-            new_vec += int_to_bitlist(
-                int(vec_entry * decimal_places), num_bits
-            )
+        for vec_entry, decimal_places, num_bits in zip(
+            vec, max_num_decimal_places, max_num_bits
+        ):
+            new_vec += int_to_bitlist(int(vec_entry * decimal_places), num_bits)
         result.append(new_vec)
     return np.array(result)
 

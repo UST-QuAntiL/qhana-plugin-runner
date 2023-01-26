@@ -91,8 +91,10 @@ class QAM:
 
     def create_xor_X(self, X: np.ndarray) -> np.ndarray:
         shifted_X = np.zeros(X.shape, dtype=int)
-        shifted_X[1:] = X[:-1]  # Thus, shifted_X[i] = X[i+1] and shifted_X[0] = [0...0], i.e. all zeros
-        return np.bitwise_xor(X, shifted_X) # Creating xor_X
+        shifted_X[1:] = X[
+            :-1
+        ]  # Thus, shifted_X[i] = X[i+1] and shifted_X[0] = [0...0], i.e. all zeros
+        return np.bitwise_xor(X, shifted_X)  # Creating xor_X
 
     def abs2(self, x: float):
         return x.real**2 + x.imag**2
@@ -149,8 +151,14 @@ class QAM:
 
     def circuit(self):
         qml.PauliX(self.load_wire)
-        xor_additional_bits = self.xor_additional_bits if self.xor_additional_bits is not None else [None]*len(self.xor_X)
-        for xor_x, xor_add_bit, x, rot_circuit in zip(self.xor_X, xor_additional_bits, self.X, self.rotation_circuits):
+        xor_additional_bits = (
+            self.xor_additional_bits
+            if self.xor_additional_bits is not None
+            else [None] * len(self.xor_X)
+        )
+        for xor_x, xor_add_bit, x, rot_circuit in zip(
+            self.xor_X, xor_additional_bits, self.X, self.rotation_circuits
+        ):
             # Load xi
             self.load_x(xor_x)
             if xor_add_bit is not None:

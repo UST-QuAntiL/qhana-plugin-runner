@@ -29,8 +29,10 @@ def int_to_bitlist(num, length: int):
     binary = bin(num)[2:]
     result = [int(el) for el in reversed(binary)]
     if len(result) > length:
-        raise ValueError(f"Binary representation of {num} needs at least {len(result)} bits, but only got {length}.")
-    result = [0]*(length - len(result)) + result
+        raise ValueError(
+            f"Binary representation of {num} needs at least {len(result)} bits, but only got {length}."
+        )
+    result = [0] * (length - len(result)) + result
     return result
 
 
