@@ -18,7 +18,7 @@ import numpy as np
 import pennylane as qml
 from ..data_loading_circuits.quantum_associative_memory import QAM
 from ..ccnot import adaptive_ccnot
-from ..utils import int_to_bitlist, bitlist_to_int, check_if_values_are_binary
+from ..utils import int_to_bitlist, bitlist_to_int, is_binary
 from ..q_arithmetic import cc_increment_register
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
@@ -40,7 +40,7 @@ class RuanParzenWindow(ParzenWindow):
         )
         self.train_data = np.array(train_data, dtype=int)
 
-        if not check_if_values_are_binary(self.train_data):
+        if not is_binary(self.train_data):
             raise ValueError(
                 "All the data needs to be binary, when dealing with the hamming distance"
             )
@@ -102,8 +102,8 @@ class RuanParzenWindow(ParzenWindow):
         num_bits_needed = max(
             1, int(np.ceil(np.log2(len(self.unique_labels))))
         )  # Number of bits needed to represent all indices of our labels
-        for i in range(len(self.unique_labels)):
-            label_to_idx[self.unique_labels[i]] = int_to_bitlist(i, num_bits_needed)
+        for i, label in enumerate(self.unique_labels):
+            label_to_idx[label] = int_to_bitlist(i, num_bits_needed)
         for label in labels:
             label_indices.append(label_to_idx[label])
         return np.array(label_indices)
@@ -114,14 +114,14 @@ class RuanParzenWindow(ParzenWindow):
             self.qam.circuit()
 
             # Get inverse Hamming Distance
-            for i in range(len(x)):
-                if x[i] == 0:
-                    qml.PauliX((self.train_wires[i],))
+            for x_, train_wire in zip(x, self.train_wires):
+                if x_ == 0:
+                    qml.PauliX((train_wire,))
 
             # Prep overflow register
-            for i in range(len(self.a)):
-                if self.a[i] == 1:
-                    qml.PauliX((self.overflow_wires[i],))
+            for a_, overflow_wire in zip(self.a, self.overflow_wires):
+                if a_ == 1:
+                    qml.PauliX((overflow_wire,))
 
             # Increment overflow register for each 1 in the train register
             qml.PauliX((self.oracle_wire,))  # Allows us to set indicator_is_zero to False
@@ -137,8 +137,8 @@ class RuanParzenWindow(ParzenWindow):
                     indicator_is_zero=False,
                 )
 
-            for i in range(2):
-                qml.PauliX((self.overflow_wires[i],))
+            for overflow_wire in self.overflow_wires[:2]:
+                qml.PauliX((overflow_wire,))
             adaptive_ccnot(
                 self.overflow_wires[:2],
                 self.additional_ancilla_wires,

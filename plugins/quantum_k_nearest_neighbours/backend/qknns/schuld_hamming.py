@@ -19,7 +19,7 @@ import re
 import pennylane as qml
 from ..data_loading_circuits import QAM
 from .qknn import QkNN
-from ..utils import bitlist_to_int, int_to_bitlist, check_if_values_are_binary
+from ..utils import bitlist_to_int, int_to_bitlist, is_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -51,9 +51,9 @@ def simple_float_to_int(X: np.ndarray) -> np.ndarray:
     result = []
     for vec in X:
         new_vec = []
-        for dim in range(X.shape[1]):
+        for vec_entry, decimal_places, num_bits in zip(vec, max_num_decimal_places, max_num_bits):
             new_vec += int_to_bitlist(
-                int(vec[dim] * max_num_decimal_places[dim]), max_num_bits[dim]
+                int(vec_entry * decimal_places), num_bits
             )
         result.append(new_vec)
     return np.array(result)
@@ -75,7 +75,7 @@ class SchuldQkNN(QkNN):
         )
         self.train_data = np.array(train_data, dtype=int)
 
-        if not check_if_values_are_binary(self.train_data):
+        if not is_binary(self.train_data):
             raise ValueError(
                 "All the data needs to be binary, when dealing with the hamming distance"
             )
@@ -118,8 +118,8 @@ class SchuldQkNN(QkNN):
         num_bits_needed = int(
             np.ceil(np.log2(len(self.unique_labels)))
         )  # Number of bits needed to represent all indices of our labels
-        for i in range(len(self.unique_labels)):
-            label_to_idx[self.unique_labels[i]] = int_to_bitlist(i, num_bits_needed)
+        for i, unique_label in enumerate(self.unique_labels):
+            label_to_idx[unique_label] = int_to_bitlist(i, num_bits_needed)
         for label in labels:
             label_indices.append(label_to_idx[label])
         return np.array(label_indices)
@@ -138,12 +138,12 @@ class SchuldQkNN(QkNN):
         @qml.qnode(self.backend)
         def circuit():
             self.qam.circuit()
-            for i in range(len(x)):
-                if x[i] == 0:
-                    qml.PauliX((self.train_wires[i],))
-            for i in range(len(self.train_wires)):
+            for x_, train_wire in zip(x, self.train_wires):
+                if x == 0:
+                    qml.PauliX((train_wire,))
+            for train_wire in self.train_wires:
                 # QAM ancilla wires are 0 after QAM -> use one of those wires
-                qml.CRX(rot_angle, wires=(self.train_wires[i], self.qam_ancilla_wires[0]))
+                qml.CRX(rot_angle, wires=(train_wire, self.qam_ancilla_wires[0]))
             return qml.sample(wires=[self.qam_ancilla_wires[0]] + self.label_wires)
 
         return circuit

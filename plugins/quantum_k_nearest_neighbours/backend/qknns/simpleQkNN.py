@@ -21,7 +21,7 @@ from typing import List, Tuple
 from .qknn import QkNN
 from ..data_loading_circuits import QAM
 from ..data_loading_circuits import TreeLoader
-from ..utils import bitlist_to_int, check_if_values_are_binary
+from ..utils import bitlist_to_int, is_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -72,14 +72,14 @@ class SimpleHammingQkNN(SimpleQkNN):
         super(SimpleHammingQkNN, self).__init__(train_data, train_labels, k, backend)
         self.train_data = np.array(train_data, dtype=int)
 
-        if not check_if_values_are_binary(self.train_data):
+        if not is_binary(self.train_data):
             raise ValueError(
                 "All the data needs to be binary, when dealing with the hamming distance"
             )
 
         self.point_num_to_idx = dict()
-        for i in range(len(self.train_data)):
-            self.point_num_to_idx[bitlist_to_int(self.train_data[i])] = i
+        for i, vec in enumerate(self.train_data):
+            self.point_num_to_idx[bitlist_to_int(vec)] = i
 
         self.unclean_wires = [] if unclean_wires is None else unclean_wires
         self.train_wires = train_wires
@@ -104,15 +104,15 @@ class SimpleHammingQkNN(SimpleQkNN):
 
         def quantum_circuit():
             self.qam.circuit()
-            for i in range(len(x)):
-                if x[i] == 0:
-                    qml.PauliX((self.train_wires[i],))
-            for i in range(len(self.train_wires)):
+            for x_, train_wire in zip(x, self.train_wires):
+                if x_ == 0:
+                    qml.PauliX((train_wire,))
+            for train_wire in self.train_wires:
                 # QAM ancilla wires are 0 after QAM -> use one of those wires
-                qml.CRX(rot_angle, wires=(self.train_wires[i], self.qam_ancilla_wires[0]))
-            for i in range(len(x)):
-                if x[i] == 0:
-                    qml.PauliX((self.train_wires[i],))
+                qml.CRX(rot_angle, wires=(train_wire, self.qam_ancilla_wires[0]))
+            for x_, train_wire in zip(x, self.train_wires):
+                if x_ == 0:
+                    qml.PauliX((train_wire,))
             return qml.sample(wires=self.train_wires + [self.qam_ancilla_wires[0]])
 
         return quantum_circuit
@@ -129,11 +129,11 @@ class SimpleHammingQkNN(SimpleQkNN):
             if sample[-1] == 0:
                 num_zero_ancilla[idx] += 1
         # Get prob for ancilla qubit to be equal to 0
-        for i in range(len(num_zero_ancilla)):
+        for i, (total_anc_, num_zero_anc) in enumerate(zip(total_ancilla, num_zero_ancilla)):
             # 0 <= num_zero_ancilla[i] / total_ancilla[i] <= 1. Hence if total_ancilla[i] == 0, we have no information
             # about the distance, but due to the rot_angle it can't be greater than 1, therefore we set it to 1
             num_zero_ancilla[i] = (
-                1 if total_ancilla[i] == 0 else num_zero_ancilla[i] / total_ancilla[i]
+                1 if total_anc_ == 0 else num_zero_anc / total_anc_
             )
         return num_zero_ancilla
 
@@ -249,8 +249,8 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
             # Swap test
             qml.Hadamard((self.swap_wires[0],))
-            for i in range(len(self.train_wires)):
-                qml.CSWAP((self.swap_wires[0], self.train_wires[i], self.test_wires[i]))
+            for train_wire, test_wire in zip(self.train_wires, self.test_wires):
+                qml.CSWAP((self.swap_wires[0], train_wire, test_wire))
             qml.Hadamard((self.swap_wires[0],))
 
             return qml.sample(wires=self.idx_wires + self.swap_wires)
@@ -271,9 +271,9 @@ class SimpleFidelityQkNN(SimpleQkNN):
                 num_zero_swap[idx] += 1
 
         distances = np.ones((self.train_data.shape[0],))
-        for i in range(self.train_data.shape[0]):
-            if idx_count[i] != 0:
-                zero_prob = num_zero_swap[i] / idx_count[i]
+        for i, (idx_c_, num_zero_s_) in enumerate(zip(idx_count, num_zero_swap)):
+            if idx_c_ != 0:
+                zero_prob = num_zero_s_ / idx_c_
                 # fidelitiy = zero_prob - one_prob = zero_prob - (1 - zero_prob) = 2*zero_prob - 1
                 fidelity = 2 * zero_prob - 1
                 # Barres distance is sqrt(2 - 2*sqrt(fidelity)). Therefore it suffices to maximise the fidelity
@@ -439,11 +439,11 @@ class SimpleAngleQkNN(SimpleQkNN):
                 num_one_swap[idx] += 1
 
         distances = np.ones((self.train_data.shape[0],))
-        for i in range(self.train_data.shape[0]):
-            if idx_count[i] != 0:
+        for i, (idx_c_, num_one_s_) in enumerate(zip(idx_count, num_one_swap)):
+            if idx_c_ != 0:
                 # The swap test variant used, results in zero_prob = (1 + <Psi|Phi>)/2 and one_prob = (1 - <Psi|Phi>)/2,
                 # where |Psi> and |Phi> are the quantum states that get compared
-                one_prob = num_one_swap[i] / idx_count[i]
+                one_prob = num_one_s_ / idx_c_
                 # angle = arccos(<Psi | Phi>) and we want to minimize the angle
                 # We want to minimize the angle between the different states. Thus, if we maximize <Psi|Phi>,
                 # we also minimize the angle. Further, maximizing zero_prob = (1 + <Psi|Phi)/2 is equivalent.

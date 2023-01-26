@@ -99,8 +99,8 @@ class TreeLoader:
         if len(self.data.shape) == 1:
             binary_trees.append(self.build_binary_tree(self.data))
         else:
-            for i in range(self.data.shape[0]):
-                binary_trees.append(self.build_binary_tree(self.data[i]))
+            for data_entry in self.data:
+                binary_trees.append(self.build_binary_tree(data_entry))
         return binary_trees
 
     def build_binary_tree(self, state: np.ndarray) -> BinaryTreeNode:
@@ -219,9 +219,9 @@ class TreeLoader:
     def load_tree(self, tree_idx: int):
         if len(self.idx_wires) != 0:
             tree_idx_bits = int_to_bitlist(tree_idx, len(self.idx_wires))
-            for i in range(len(self.idx_wires)):
-                if tree_idx_bits[i] == 0:
-                    qml.PauliX((self.idx_wires[i],))
+            for tree_idx_bit_, idx_wire in zip(tree_idx_bits, self.idx_wires):
+                if tree_idx_bit_ == 0:
+                    qml.PauliX((idx_wire,))
 
         # Reserved ancilla 0
         adaptive_ccnot(
@@ -240,21 +240,13 @@ class TreeLoader:
         )
 
         if len(self.idx_wires) != 0:
-            for i in range(len(self.idx_wires)):
-                if tree_idx_bits[i] == 0:
-                    qml.PauliX((self.idx_wires[i],))
+            for tree_idx_bit_, idx_wire in zip(tree_idx_bits, self.idx_wires):
+                if tree_idx_bit_ == 0:
+                    qml.PauliX((idx_wire,))
 
     def circuit(self):
-        log2_num_trees = int(np.log2(len(self.binary_trees)))
-        log2_num_trees = max(1, log2_num_trees)
-        for i in range(log2_num_trees, len(self.idx_wires)):
-            qml.PauliX((self.idx_wires[i],))
-
         for tree_idx in range(len(self.binary_trees)):
             self.load_tree(tree_idx)
-
-        for i in range(log2_num_trees, len(self.idx_wires)):
-            qml.PauliX((self.idx_wires[i],))
 
     def get_circuit(self):
         return self.circuit

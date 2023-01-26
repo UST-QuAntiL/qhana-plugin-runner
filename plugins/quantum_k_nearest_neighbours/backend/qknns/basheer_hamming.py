@@ -152,14 +152,14 @@ class BasheerHammingQkNN(QkNN):
             self.tree_loader.circuit()
 
             # Get inverse Hamming Distance
-            for i in range(len(x)):
-                if x[i] == 0:
-                    qml.PauliX((self.train_wires[i],))
+            for x_, train_wire in zip(x, self.train_wires):
+                if x_ == 0:
+                    qml.PauliX((train_wire,))
 
             # Prep overflow register
-            for i in range(len(a)):
-                if a[i] == 1:
-                    qml.PauliX((self.overflow_wires[i],))
+            for a_, overflow_wire in zip(a, self.overflow_wires):
+                if a_ == 1:
+                    qml.PauliX((overflow_wire,))
 
             # Increment overflow register for each 1 in the train register
             qml.PauliX(
@@ -179,8 +179,8 @@ class BasheerHammingQkNN(QkNN):
                     indicator_is_zero=False,
                 )
 
-            for i in range(2):
-                qml.PauliX((self.overflow_wires[i],))
+            for overflow_wire in self.overflow_wires[:2]:
+                qml.PauliX((overflow_wire,))
 
             # Set ancilla wire len(a) to 1, if the distance is smaller than the threshold
             adaptive_ccnot(

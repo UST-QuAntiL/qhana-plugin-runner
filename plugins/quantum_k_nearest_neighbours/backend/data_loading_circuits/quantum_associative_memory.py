@@ -90,11 +90,9 @@ class QAM:
         self.rotation_circuits = self.prepare_rotation_circuits()
 
     def create_xor_X(self, X: np.ndarray) -> np.ndarray:
-        xor_X = np.zeros(X.shape)
-        for i in range(X.shape[0] - 1, 0, -1):
-            xor_X[i] = np.bitwise_xor(X[i], X[i - 1])
-        xor_X[0] = X[0]
-        return xor_X
+        shifted_X = np.zeros(X.shape, dtype=int)
+        shifted_X[1:] = X[:-1]  # Thus, shifted_X[i] = X[i+1] and shifted_X[0] = [0...0], i.e. all zeros
+        return np.bitwise_xor(X, shifted_X) # Creating xor_X
 
     def abs2(self, x: float):
         return x.real**2 + x.imag**2
@@ -103,15 +101,15 @@ class QAM:
         rotation_circuits = []
         prev_sum = 1
         rotation_matrix = np.zeros((2, 2), dtype=np.complex128)
-        for i in range(self.xor_X.shape[0] - 1):
-            next_sum = prev_sum - self.abs2(self.amplitudes[i])
+        for amp in self.amplitudes[:-1]:
+            next_sum = prev_sum - self.abs2(amp)
             diag = np.sqrt(next_sum / prev_sum)
             rotation_matrix[0, 0] = diag
             rotation_matrix[1, 1] = diag
 
             sqrt_prev_sum = np.sqrt(prev_sum)
-            rotation_matrix[0, 1] = self.amplitudes[i] / sqrt_prev_sum
-            rotation_matrix[1, 0] = -self.amplitudes[i].conjugate() / sqrt_prev_sum
+            rotation_matrix[0, 1] = amp / sqrt_prev_sum
+            rotation_matrix[1, 0] = -amp.conjugate() / sqrt_prev_sum
             rotation_circuits.append(get_controlled_one_qubit_unitary(rotation_matrix))
             prev_sum = next_sum
 
@@ -127,45 +125,45 @@ class QAM:
 
     def flip_control_if_reg_equals_x(self, x: np.ndarray):
         # Flip all wires to one, if reg == x
-        for i in range(len(x)):
-            if x[i] == 0:
+        for i, x_ in enumerate(x):
+            if x_ == 0:
                 qml.PauliX(self.register_wires[i])
         # Check if all wires are one
         adaptive_ccnot(
             self.register_wires, self.ancilla_wires, self.unclean_wires, self.control_wire
         )
         # Uncompute flips
-        for i in range(len(x)):
-            if x[i] == 0:
+        for i, x_ in enumerate(x):
+            if x_ == 0:
                 qml.PauliX(self.register_wires[i])
 
     def load_x(self, x: np.ndarray):
-        for idx in range(len(x)):
-            if x[idx] == 1:
+        for idx, x_ in enumerate(x):
+            if x_ == 1:
                 qml.CNOT((self.load_wire, self.register_wires[idx]))
 
     def load_additional_bits(self, bits: np.ndarray):
-        for idx in range(len(bits)):
-            if bits[idx] == 1:
+        for idx, bit in enumerate(bits):
+            if bit == 1:
                 qml.CNOT((self.load_wire, self.additional_wires[idx]))
 
     def circuit(self):
         qml.PauliX(self.load_wire)
-        for i in range(self.xor_X.shape[0]):
-
+        xor_additional_bits = self.xor_additional_bits if self.xor_additional_bits is not None else [None]*len(self.xor_X)
+        for xor_x, xor_add_bit, x, rot_circuit in zip(self.xor_X, xor_additional_bits, self.X, self.rotation_circuits):
             # Load xi
-            self.load_x(self.xor_X[i])
-            if self.xor_additional_bits is not None:
-                self.load_additional_bits(self.xor_additional_bits[i])
+            self.load_x(xor_x)
+            if xor_add_bit is not None:
+                self.load_additional_bits(xor_add_bit)
 
             # CNOT load to control
             qml.CNOT(wires=(self.load_wire, self.control_wire))
 
             # Controlled rotation i from control on load
-            self.rotation_circuits[i](self.control_wire, self.load_wire)
+            rot_circuit(self.control_wire, self.load_wire)
 
             # Flip control wire, if register == xi
-            self.flip_control_if_reg_equals_x(self.X[i])
+            self.flip_control_if_reg_equals_x(x)
 
             # Since we are using xor_X, we don't need to uncompute the register, if load == 1
             # xor_X[0] = X[0], but xor_X[i] = X[i] xor X[i-1] for all i > 0
