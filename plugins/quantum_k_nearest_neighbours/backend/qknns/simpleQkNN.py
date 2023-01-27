@@ -232,8 +232,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
     def repeat_data_til_next_power_of_two(data):
         next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
         missing_till_next_power = next_power - data.shape[0]
-        data = np.vstack((data, data[:missing_till_next_power]))
-        return data
+        return np.vstack((data, data[:missing_till_next_power]))
 
     def get_quantum_circuit(self, x):
         def quantum_circuit():
