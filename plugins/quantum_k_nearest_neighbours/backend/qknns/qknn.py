@@ -19,10 +19,7 @@ from typing import List, Tuple
 
 
 def count_wires(wires: List[List]) -> int:
-    s = 0
-    for w in wires:
-        s += len(w)
-    return s
+    return sum(len(w) for w in wires)
 
 
 class QkNN(metaclass=ABCMeta):
