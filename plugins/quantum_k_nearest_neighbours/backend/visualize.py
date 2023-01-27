@@ -238,7 +238,7 @@ def plot_confusion_matrix(
 
     labels = [str(label) for label in labels]
 
-    df_content = dict()
+    df_content = {}
     for label, v in zip(labels, conf_matrix):
         df_content[label] = [str(el) for el in v]
     df = pd.DataFrame(df_content)

@@ -77,7 +77,7 @@ class SimpleHammingQkNN(SimpleQkNN):
                 "All the data needs to be binary, when dealing with the hamming distance"
             )
 
-        self.point_num_to_idx = dict()
+        self.point_num_to_idx = {}
         for i, vec in enumerate(self.train_data):
             self.point_num_to_idx[bitlist_to_int(vec)] = i
 

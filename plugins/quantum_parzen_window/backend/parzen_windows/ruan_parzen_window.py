@@ -96,12 +96,10 @@ class RuanParzenWindow(ParzenWindow):
 
     def init_labels(self, labels: np.ndarray) -> np.ndarray:
         label_indices = list()
-        label_to_idx = (
-            dict()
-        )  # Map labels to their index. The index is represented by a list of its bits
-        num_bits_needed = max(
-            1, int(np.ceil(np.log2(len(self.unique_labels))))
-        )  # Number of bits needed to represent all indices of our labels
+        # Map labels to their index. The index is represented by a list of its bits
+        label_to_idx = {}
+        # Number of bits needed to represent all indices of our labels
+        num_bits_needed = max(1, int(np.ceil(np.log2(len(self.unique_labels)))))
         for i, label in enumerate(self.unique_labels):
             label_to_idx[label] = int_to_bitlist(i, num_bits_needed)
         for label in labels:
