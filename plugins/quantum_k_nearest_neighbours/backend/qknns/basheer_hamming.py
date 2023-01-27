@@ -124,7 +124,7 @@ class BasheerHammingQkNN(QkNN):
         )
 
     def prepare_data_for_treeloader(self, data: np.ndarray) -> np.ndarray:
-        tree_points = np.zeros(((data.shape[0], 2 ** data.shape[1])))
+        tree_points = np.zeros((data.shape[0], 2 ** data.shape[1]))
         for idx, point in enumerate(data):
             tree_points[idx][bitlist_to_int(point)] = 1
         return tree_points
@@ -132,8 +132,7 @@ class BasheerHammingQkNN(QkNN):
     def repeat_data_til_next_power_of_two(self, data: np.ndarray) -> np.ndarray:
         next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
         missing_till_next_power = next_power - data.shape[0]
-        data = np.vstack((data, data[:missing_till_next_power]))
-        return data
+        return np.vstack((data, data[:missing_till_next_power]))
 
     def get_oracle_wire_to_one_circuit(
         self, x: np.ndarray, a: List[int], indices: List[int]
@@ -300,10 +299,10 @@ class BasheerHammingQkNN(QkNN):
         chosen_distances = np.array(
             [calc_hamming_distance(x, self.train_data[idx]) for idx in chosen_indices]
         )
-        converged = False
 
-        # Loop
-        while not converged:
+        # Loop converges, if no better y can be found
+        # Loop should take at most |train data| - k many steps
+        for _ in range(self.num_train_data - self.k):
             # Choose index y from the indices in A
             # Choosing y with max distance to x is best
             y_idx = chosen_distances.argmax()
@@ -317,7 +316,8 @@ class BasheerHammingQkNN(QkNN):
                 chosen_indices[y_idx] = new_y
                 chosen_distances[y_idx] = distance
             else:
-                converged = True
+                # No closer neighbor has been found
+                break
 
         # Majority voting
         counts = Counter(
