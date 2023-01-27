@@ -23,42 +23,6 @@ from ..utils import bitlist_to_int, int_to_bitlist, is_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
-def num_decimal_places(value: str) -> int:
-    result = 0
-    if value.startswith("-"):
-        value = value[1:]
-        result = 1
-    m = re.match(r"^[0-9]*\.([1-9]([0-9]*[1-9])?)0*$", value)
-    result += len(m.group(1)) if m is not None else 0
-    return result
-
-
-def simple_float_to_int(X: np.ndarray) -> np.ndarray:
-    max_num_decimal_places = [0] * X.shape[1]
-    for vec in X:
-        for dim in range(X.shape[1]):
-            max_num_decimal_places[dim] = max(
-                num_decimal_places(str(vec[dim])), max_num_decimal_places[dim]
-            )
-    max_num_bits = [0] * X.shape[1]
-    for vec in X:
-        for dim in range(X.shape[1]):
-            temp = vec[dim] * (10 ** max_num_decimal_places[dim])
-            if temp < 0:
-                temp *= -1
-            temp = int(np.ceil(np.log2(temp)))
-            max_num_bits[dim] = max(temp, max_num_bits[dim])
-    result = []
-    for vec in X:
-        new_vec = []
-        for vec_entry, decimal_places, num_bits in zip(
-            vec, max_num_decimal_places, max_num_bits
-        ):
-            new_vec += int_to_bitlist(int(vec_entry * decimal_places), num_bits)
-        result.append(new_vec)
-    return np.array(result)
-
-
 class SchuldQkNN(QkNN):
     def __init__(
         self,
