@@ -30,15 +30,6 @@ from ..check_wires import check_wires_uniqueness, check_num_wires
 from collections import Counter
 
 
-def string_indices_and_distances(
-    indices: List[int], distances: List[int], separator: str = " "
-) -> str:
-    result = []
-    for idx, d in zip(indices, distances):
-        result.append(f"{idx}:{d}")
-    return separator.join(result)
-
-
 def x_state_to_one(wires: List[int], state: List[int]):
     for (wire, value) in zip(wires, state):
         if value == 0:
