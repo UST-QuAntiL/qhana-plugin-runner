@@ -139,7 +139,7 @@ class SchuldQkNN(QkNN):
         def circuit():
             self.qam.circuit()
             for x_, train_wire in zip(x, self.train_wires):
-                if x == 0:
+                if x_ == 0:
                     qml.PauliX((train_wire,))
             for train_wire in self.train_wires:
                 # QAM ancilla wires are 0 after QAM -> use one of those wires
