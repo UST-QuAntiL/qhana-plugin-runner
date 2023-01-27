@@ -95,7 +95,7 @@ class RuanParzenWindow(ParzenWindow):
         )
 
     def init_labels(self, labels: np.ndarray) -> np.ndarray:
-        label_indices = list()
+        label_indices = []
         # Map labels to their index. The index is represented by a list of its bits
         label_to_idx = {}
         # Number of bits needed to represent all indices of our labels
