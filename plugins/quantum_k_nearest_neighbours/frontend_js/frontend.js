@@ -16,17 +16,22 @@
 // If a variable ends with _value, it's the element itself and the value can be retrieved or set
 var qknn_type_value = document.getElementById("variant");
 var exp_itr_value = document.getElementById("exp_itr");
+var k_value = document.getElementById("k");
 
 // If a vairable ends with _vis, it's the parentNode's parentNode and we can set the visibility
 var exp_itr_vis = exp_itr_value.parentNode.parentNode;
+var k_vis = k_value.parentNode.parentNode;
+
 
 function set_default_values() {
     exp_itr_value.value = "10";
+    k_value = 1;
 }
 
 
 function hide_all() {
     exp_itr_vis.style.display = 'none';
+    k_vis.style.display = 'none';
 }
 
 
@@ -40,6 +45,9 @@ function qknn_type_change(reset_values=true) {
     if (reset_values) {
         set_default_values();
     }
+    if (qknn_type_value.value !== "schuld_qknn") {
+        k_vis.style.display = 'block';
+    }
     if (qknn_type_value.value === "basheer_hamming_qknn") {
         show_basheer_hamming();
     }
@@ -47,4 +55,4 @@ function qknn_type_change(reset_values=true) {
 
 qknn_type_change(false);
 
-qknn_type_value.onchange = qknn_type_change;
+qknn_type_value.addEventListener("change", qknn_type_change);
