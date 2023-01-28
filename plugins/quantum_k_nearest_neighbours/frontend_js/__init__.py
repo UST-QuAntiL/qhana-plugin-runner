@@ -16,4 +16,4 @@ from pathlib import Path
 
 
 def get_frontend_js() -> str:
-    return (Path(__file__).parent/"frontend.js").read_text()
+    return (Path(__file__).parent / "frontend.js").read_text()
