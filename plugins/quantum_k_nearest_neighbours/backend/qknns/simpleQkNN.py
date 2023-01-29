@@ -21,7 +21,7 @@ from typing import List, Tuple
 from .qknn import QkNN
 from ..data_loading_circuits import QAM
 from ..data_loading_circuits import TreeLoader
-from ..utils import bitlist_to_int, is_binary
+from ..utils import bitlist_to_int, is_binary, ceil_log2
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -192,9 +192,9 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
         wire_types = ["train", "test", "idx", "swap", "ancilla", "unclean"]
         num_wires = [
-            int(np.ceil(np.log2(train_data.shape[1] + 1))),
-            int(np.ceil(np.log2(train_data.shape[1] + 1))),
-            int(np.ceil(np.log2(train_data.shape[0]))),
+            ceil_log2(train_data.shape[1] + 1),
+            ceil_log2(train_data.shape[1] + 1),
+            ceil_log2(train_data.shape[0]),
             1,
             3,
         ]
@@ -239,7 +239,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
         data = np.append(data, new_column[:, None], axis=1)
 
         # Ensure the number of dimensions is a power of 2
-        next_power = 2 ** int(np.ceil(np.log2(data.shape[1])))
+        next_power = 2 ** ceil_log2(data.shape[1])
         next_power = max(next_power, 1)
         data = np.pad(
             data,
@@ -256,7 +256,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
         Given a list, this function adds the elements of the list again, until the total amount of elements is
         a power of 2.
         """
-        next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
+        next_power = 2 ** ceil_log2(data.shape[0])
         missing_till_next_power = next_power - data.shape[0]
         return np.vstack((data, data[:missing_till_next_power]))
 
@@ -336,9 +336,9 @@ class SimpleFidelityQkNN(SimpleQkNN):
             SimpleFidelityQkNN.prep_data(train_data)
         )
         return (
-            int(np.ceil(np.log2(train_data.shape[1] + 1))),
-            int(np.ceil(np.log2(train_data.shape[1] + 1))),
-            int(np.ceil(np.log2(train_data.shape[0]))),
+            ceil_log2(train_data.shape[1] + 1),
+            ceil_log2(train_data.shape[1] + 1),
+            ceil_log2(train_data.shape[0]),
             1,
             3,
         )
@@ -379,8 +379,8 @@ class SimpleAngleQkNN(SimpleQkNN):
 
         wire_types = ["train", "idx", "swap", "ancilla", "unclean"]
         num_wires = [
-            int(np.ceil(np.log2(train_data.shape[1] + 1))),
-            int(np.ceil(np.log2(train_data.shape[0]))),
+            ceil_log2(train_data.shape[1] + 1),
+            ceil_log2(train_data.shape[0]),
             1,
             3,
         ]
@@ -425,7 +425,7 @@ class SimpleAngleQkNN(SimpleQkNN):
         data = np.append(data, new_column[:, None], axis=1)
 
         # Ensure the number of dimensions is a power of 2
-        next_power = 2 ** int(np.ceil(np.log2(data.shape[1])))
+        next_power = 2 ** ceil_log2(data.shape[1])
         next_power = max(next_power, 1)
         data = np.pad(
             data,
@@ -442,7 +442,7 @@ class SimpleAngleQkNN(SimpleQkNN):
         Given a list, this function adds the elements of the list again, until the total amount of elements is
         a power of 2.
         """
-        next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
+        next_power = 2 ** ceil_log2(data.shape[0])
         missing_till_next_power = next_power - data.shape[0]
         data = np.vstack((data, data[:missing_till_next_power]))
         return data
@@ -532,8 +532,8 @@ class SimpleAngleQkNN(SimpleQkNN):
             SimpleFidelityQkNN.prep_data(train_data)
         )
         return (
-            int(np.ceil(np.log2(train_data.shape[1] + 1))),
-            int(np.ceil(np.log2(train_data.shape[0]))),
+            ceil_log2(train_data.shape[1] + 1),
+            ceil_log2(train_data.shape[0]),
             1,
             3,
         )

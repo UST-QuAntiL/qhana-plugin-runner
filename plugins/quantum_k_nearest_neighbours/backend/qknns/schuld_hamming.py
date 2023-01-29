@@ -19,7 +19,7 @@ import re
 import pennylane as qml
 from ..data_loading_circuits import QAM
 from .qknn import QkNN
-from ..utils import bitlist_to_int, int_to_bitlist, is_binary
+from ..utils import bitlist_to_int, int_to_bitlist, is_binary, ceil_log2
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -82,7 +82,7 @@ class SchuldQkNN(QkNN):
         # Map labels to their index. The index is represented by a list of its bits
         label_to_idx = {}
         # Number of bits needed to represent all indices of our labels
-        num_bits_needed = int(np.ceil(np.log2(len(self.unique_labels))))
+        num_bits_needed = ceil_log2(len(self.unique_labels))
         for i, unique_label in enumerate(self.unique_labels):
             label_to_idx[unique_label] = int_to_bitlist(i, num_bits_needed)
         for label in labels:
@@ -137,7 +137,7 @@ class SchuldQkNN(QkNN):
     ) -> Tuple[int, int, int]:
         return (
             len(train_data[0]),
-            int(np.ceil(np.log2(len(set(train_labels))))),
+            ceil_log2(len(set(train_labels))),
             max(len(train_data[0]), 2),
         )
 

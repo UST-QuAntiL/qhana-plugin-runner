@@ -15,7 +15,7 @@
 import pennylane as qml
 import numpy as np
 from typing import List, Tuple
-from ..utils import int_to_bitlist
+from ..utils import int_to_bitlist, ceil_log2
 from ..ccnot import adaptive_ccnot
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
@@ -69,8 +69,8 @@ class TreeLoader:
 
         wire_types = ["idx", "data", "ancilla", "unclean", "control"]
         num_wires = [
-            int(np.ceil(np.log2(self.data.shape[0]))),
-            int(np.ceil(np.log2(data.shape[1]))),
+            ceil_log2(self.data.shape[0]),
+            ceil_log2(data.shape[1]),
             3,
         ]
         error_msgs = [
@@ -279,7 +279,7 @@ class TreeLoader:
     @staticmethod
     def get_necessary_wires(data: np.ndarray) -> Tuple[float, float, float]:
         return (
-            int(np.ceil(np.log2(data.shape[0]))),
-            int(np.ceil(np.log2(data.shape[1]))),
+            ceil_log2(data.shape[0]),
+            ceil_log2(data.shape[1]),
             3,
         )

@@ -17,7 +17,7 @@ import numpy as np
 from typing import List, Tuple, Optional, Callable
 
 from ..data_loading_circuits import TreeLoader
-from ..utils import int_to_bitlist, bitlist_to_int
+from ..utils import int_to_bitlist, bitlist_to_int, ceil_log2
 from ..q_arithmetic import cc_increment_register
 from ..ccnot import adaptive_ccnot
 from .qknn import QkNN
@@ -86,8 +86,8 @@ class BasheerHammingQkNN(QkNN):
         # Details in method get_necessary_wires
         num_wires = [
             self.train_data.shape[1],
-            np.ceil(np.log2(self.train_data.shape[0])),
-            int(np.ceil(np.log2(self.train_data.shape[1]))) + 5,
+            ceil_log2((self.train_data.shape[0])),
+            ceil_log2((self.train_data.shape[1])) + 5,
         ]
         error_msgs = [
             "the points' dimensionality.",
@@ -97,7 +97,7 @@ class BasheerHammingQkNN(QkNN):
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
-        a_len = int(np.ceil(np.log2(self.train_data.shape[1]))) + 2
+        a_len = ceil_log2(self.train_data.shape[1]) + 2
         # Ancilla wires are split as follows:
         # [0, a_len) are reserved for the overflow register
         # a_len is reserved as the oracle wire
@@ -138,7 +138,7 @@ class BasheerHammingQkNN(QkNN):
         return tree_points
 
     def repeat_data_til_next_power_of_two(self, data: np.ndarray) -> np.ndarray:
-        next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
+        next_power = 2 ** ceil_log2(data.shape[0])
         missing_till_next_power = next_power - data.shape[0]
         return np.vstack((data, data[:missing_till_next_power]))
 
@@ -289,7 +289,7 @@ class BasheerHammingQkNN(QkNN):
         zero_circuit = self.zero_circuit
 
         distance_threshold = min(distance_threshold, self.train_data.shape[0])
-        p = int(np.ceil(np.log2(self.train_data.shape[1])))
+        p = ceil_log2(self.train_data.shape[1])
         a = int(2**p - self.train_data.shape[1] + distance_threshold)
         a = int_to_bitlist(a, p + 2)
 
@@ -365,8 +365,8 @@ class BasheerHammingQkNN(QkNN):
         #                   + we need 1 qubit for the not_in_list oracle
         return (
             train_data.shape[1],
-            int(np.ceil(np.log2(train_data.shape[0]))),
-            int(np.ceil(np.log2(train_data.shape[1]))) + 5,
+            ceil_log2(train_data.shape[0]),
+            ceil_log2(train_data.shape[1]) + 5,
         )
 
     def get_representative_circuit(self, X: np.ndarray) -> str:
@@ -380,7 +380,7 @@ class BasheerHammingQkNN(QkNN):
         zero_circuit = self.zero_circuit
 
         distance_threshold = min(distance_threshold, self.train_data.shape[0])
-        p = int(np.ceil(np.log2(self.train_data.shape[1])))
+        p = ceil_log2(self.train_data.shape[1])
         a = int(2**p - self.train_data.shape[1] + distance_threshold)
         a = int_to_bitlist(a, p + 2)
 
