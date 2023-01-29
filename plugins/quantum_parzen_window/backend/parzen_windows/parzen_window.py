@@ -20,10 +20,7 @@ from pennylane import Device
 
 
 def count_wires(wires: List[List]) -> int:
-    s = 0
-    for w in wires:
-        s += len(w)
-    return s
+    return sum(len(w) for w in wires)
 
 
 class ParzenWindow(metaclass=ABCMeta):
@@ -93,6 +90,11 @@ class QParzenWindowEnum(Enum):
     def check_and_get_qubits(
         self, parzen_window_class: ParzenWindow, max_wires: int, **kwargs
     ) -> Tuple[List[List[int]], List[int]]:
+        """
+        Given a quantum parzen window instance and the maximum number of qubits, this method returns the necessary
+        qubits needed and a list of the unnecessary qubits. This function throws an error, if the amount of necessary
+        qubits is greater than the maximum number of qubits.
+        """
         num_necessary_wires = parzen_window_class.get_necessary_wires(**kwargs)
         num_total_wires = 0
         wires = []

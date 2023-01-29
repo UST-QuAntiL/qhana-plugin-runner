@@ -95,6 +95,9 @@ class RuanParzenWindow(ParzenWindow):
         )
 
     def init_labels(self, labels: np.ndarray) -> np.ndarray:
+        """
+        This function maps the labels to their index in self.unique_labels
+        """
         label_indices = []
         # Map labels to their index. The index is represented by a list of its bits
         label_to_idx = {}
@@ -107,6 +110,11 @@ class RuanParzenWindow(ParzenWindow):
         return np.array(label_indices)
 
     def get_quantum_circuit(self, x: np.ndarray) -> Callable[[], None]:
+        """
+        Returns a quantum circuit that does the following:
+        1. Load in the trainings data with a quantum associative memory, i.e. initialise the label- and data-register
+        2. Execute the oracle by Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest Neighbors Classification Based on the Metric of Hamming Distance. Int J Theor Phys 56, 3496–3507 (2017). https://doi.org/10.1007/s10773-017-3514-4
+        """
         def quantum_circuit():
             # Load points into register
             self.qam.circuit()
@@ -148,6 +156,10 @@ class RuanParzenWindow(ParzenWindow):
         return quantum_circuit
 
     def get_label_from_samples(self, samples: List[List[int]]) -> int:
+        """
+        Given a list of samples, this function returns the label with the most occurrences, where an oracle qubit
+        is equal to |1>.
+        """
         label_probs = np.zeros((len(self.unique_labels),))
         samples_with_one = 0
         for sample in samples:

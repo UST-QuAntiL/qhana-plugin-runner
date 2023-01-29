@@ -44,6 +44,10 @@ class SimpleQkNN(QkNN):
         """
 
     def label_point(self, x: np.ndarray) -> int:
+        """
+        Computes the distances from the test point to each training point and assigns the test point with the most
+        occurring label within the set of the k closest training points.
+        """
         if self.k == len(self.train_data):
             new_label = np.bincount(self.train_labels).argmax()
         else:
@@ -100,6 +104,16 @@ class SimpleHammingQkNN(SimpleQkNN):
         )
 
     def get_quantum_circuit(self, x: np.ndarray):
+        """
+        Given a binary test vector of size m. This function returns a quantum circuit that does the following:
+        1. Load data into the trainings register with a quantum associative memory
+        2. Invert the i'th qubit in the trainings register, if the i'th entry of the test vector is 0
+        => The sum of the trainings register is equal to m minus the hamming distance to the test vector.
+        3. For each trainings qubit equal to |1>, an oracle qubit is rotated by pi/m further towards |1>
+        4. Uncompute step 2
+        5. Return measurements of the trainings register and the oracle qubit
+        => The probability of the oracle qubit being |0> is proportional to the hamming distance
+        """
         rot_angle = np.pi / len(x)
 
         def quantum_circuit():
@@ -204,6 +218,14 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
     @staticmethod
     def prep_data(data: np.ndarray):
+        """
+        This function takes in a list of points and does the following:
+        1. Normalizes the list of points.
+        2. Adds another dimension to each point. If the point was previously 0 in each dimension, then its additional
+        dimension is set to 1. Otherwise, the point's additiojnal dimension is set to 0.
+        3. Each point gets added more additional dimensions, until its dimensionality is a power of 2.
+        4. Return the newly created points
+        """
         # Normalize
         norms = np.linalg.norm(data, axis=1)
         zero_elements = np.where(norms == 0)
@@ -230,11 +252,25 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
     @staticmethod
     def repeat_data_til_next_power_of_two(data):
+        """
+        Given a list, this function adds the elements of the list again, until the total amount of elements is
+        a power of 2.
+        """
         next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
         missing_till_next_power = next_power - data.shape[0]
         return np.vstack((data, data[:missing_till_next_power]))
 
     def get_quantum_circuit(self, x):
+        """
+        Given a test point, this function returns a quantum circuit that does a Swap-Test between the trainings points
+        and the test point. This works as follows:
+        1. Load index register with a Walsh-Hadamard transform
+        2. Load the trainings data into the trainings register, depending on the index in the index register
+        3. Load the test point into the test register
+        4. Execute a Swap-test on the trainings and the test register
+        5. Return measurements on index register and the swap-qubit
+        => fidelity between a trainings point and the test vector is equal to P(swap-qubit = |0>) - P(swap-qubit = |1>)
+        """
         def quantum_circuit():
             # Load in training data
             for i in self.idx_wires:
@@ -367,6 +403,14 @@ class SimpleAngleQkNN(SimpleQkNN):
 
     @staticmethod
     def prep_data(data: np.ndarray):
+        """
+        This function takes in a list of points and does the following:
+        1. Normalizes the list of points.
+        2. Adds another dimension to each point. If the point was previously 0 in each dimension, then its additional
+        dimension is set to 1. Otherwise, the point's additiojnal dimension is set to 0.
+        3. Each point gets added more additional dimensions, until its dimensionality is a power of 2.
+        4. Return the newly created points
+        """
         # Normalize
         norms = np.linalg.norm(data, axis=1)
         zero_elements = np.where(norms == 0)
@@ -393,12 +437,29 @@ class SimpleAngleQkNN(SimpleQkNN):
 
     @staticmethod
     def repeat_data_til_next_power_of_two(data):
+        """
+        Given a list, this function adds the elements of the list again, until the total amount of elements is
+        a power of 2.
+        """
         next_power = 2 ** int(np.ceil(np.log2(data.shape[0])))
         missing_till_next_power = next_power - data.shape[0]
         data = np.vstack((data, data[:missing_till_next_power]))
         return data
 
     def get_quantum_circuit(self, x):
+        """
+        Given a test point, this function returns a quantum circuit that does a variant of a Swap-Test between the
+        trainings points and the test point. This works as follows:
+        1. Use a Hadamard operation on the swap qubit
+        2. Load index register with a Walsh-Hadamard transform
+        3. If the swap-qubit is equal to |1>, load the trainings data into the trainings register, depending on the
+        index in the index register
+        3. If the swap-qubit is equal to |0>, load the test point into the test register
+        4. Use a Hadamard operation on the swap qubit
+        5. Return measurements on index register and the swap-qubit
+        => The angle between a trainings point and the test point can be calculated by the probability of the swap-qubit
+        to be zero. P(swap-qubit = 0) = (1 + <x|y>)/2 and P(swap-qubit = 1) = (1 - <x|y>)/2
+        """
         def quantum_circuit():
             # Init swap wire
             qml.Hadamard((self.swap_wires[0],))

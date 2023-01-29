@@ -162,6 +162,11 @@ class QkNNEnum(Enum):
     def check_and_get_qubits(
         self, qknn_class: QkNN, max_wires: int, **kwargs
     ) -> Tuple[List[List[int]], List[int]]:
+        """
+        Given a QkNN instance and the maximum number of qubits, this method returns the necessary qubits needed
+        and a list of the unnecessary qubits. This function throws an error, if the amount of necessary qubits is
+        greater than the maximum number of qubits.
+        """
         num_necessary_wires = qknn_class.get_necessary_wires(**kwargs)
         num_total_wires = 0
         wires = []

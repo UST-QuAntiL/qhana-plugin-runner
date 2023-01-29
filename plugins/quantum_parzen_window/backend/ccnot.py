@@ -67,6 +67,13 @@ def one_ancilla_ccnot(c_qubits: List[int], a_qubit: List[int], t_qubit: int):
 
 
 def clean_ccnot(c_qubits: List[int], a_qubits: List[int], t_qubit: int):
+    """
+    This ccnot operation only works, if the ancilla register has only zero values, i.e. it is clean
+    :param c_qubits:
+    :param a_qubits:
+    :param t_qubit:
+    :return:
+    """
     if len(c_qubits) == 0:
         qml.PauliX((t_qubit,))
     elif len(c_qubits) == 1:

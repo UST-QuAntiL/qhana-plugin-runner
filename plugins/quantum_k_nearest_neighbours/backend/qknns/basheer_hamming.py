@@ -43,6 +43,9 @@ def oracle_state_circuit(
     unclean_wires: List[int],
     good_states: List[List[int]],
 ):
+    """
+    Given a list of 'good' states, this function flips the oracle bit, if the data register is in a 'good' state
+    """
     for state in good_states:
         x_state_to_one(data_wires, state)
         adaptive_ccnot(data_wires, ancilla_wires, unclean_wires, oracle_wire)
@@ -124,6 +127,11 @@ class BasheerHammingQkNN(QkNN):
         )
 
     def prepare_data_for_treeloader(self, data: np.ndarray) -> np.ndarray:
+        """
+        The TreeLoader used, to load in the trainings data into a quantum computer, needs the amplitudes of the quantum
+        states. The information stored in data is not the amplitudes, but rather which qubit should be flipped to one
+        and which should stay zero.
+        """
         tree_points = np.zeros((data.shape[0], 2 ** data.shape[1]))
         for idx, point in enumerate(data):
             tree_points[idx][bitlist_to_int(point)] = 1
@@ -137,6 +145,10 @@ class BasheerHammingQkNN(QkNN):
     def get_oracle_wire_to_one_circuit(
         self, x: np.ndarray, a: List[int], indices: List[int]
     ) -> Callable[[], None]:
+        """
+        Returns a quantum circuit that inverses the oracle qubit of a trainings point, if its hamming distance is smaller
+        than a certain threshold (oracle by Ruan et al.) and if its index is not in the list of the 'k' chosen indices.
+        """
         def circuit():
             # Load points into register
             self.tree_loader.circuit()
@@ -215,6 +227,10 @@ class BasheerHammingQkNN(QkNN):
     def get_phase_oracle_circuit(
         self, x: np.ndarray, a: List[int], indices: List[int]
     ) -> Callable[[], None]:
+        """
+        Returns a quantum circuit that gives a trainings point a phase of -1, if its hamming distance is smaller
+        than a certain threshold (oracle by Ruan et al.) and if its index is not in the list of the 'k' chosen indices.
+        """
         oracle_circuit = self.get_oracle_wire_to_one_circuit(x, a, indices)
 
         def quantum_circuit():
@@ -231,22 +247,30 @@ class BasheerHammingQkNN(QkNN):
         return quantum_circuit
 
     def idx_circuit(self):
+        """
+        Initialises the index register with a Walsh-Hadamard transform
+        """
         for wire in self.idx_wires:
             qml.Hadamard((wire,))
 
     def zero_circuit(self):
+        """
+        Quantum circuit that gives the index |0> a -1 phase.
+        """
         # Check if idx_wires = |0>
         for wire in self.idx_wires:
             qml.PauliX((wire,))
 
-        qml.Hadamard((self.ancilla_wires[0],))
+        qml.PauliX((self.oracle_wire,))
+        qml.Hadamard((self.oracle_wire,))
         adaptive_ccnot(
             self.idx_wires,
-            self.ancilla_wires[1:] + self.train_wires,
+            self.additional_ancilla_wires + [self.not_in_list_wire] + [self.threshold_wire] + self.overflow_wires + self.train_wires,
             self.unclean_wires,
-            self.ancilla_wires[0],
+            self.oracle_wire,
         )
-        qml.Hadamard((self.ancilla_wires[0],))
+        qml.Hadamard((self.oracle_wire,))
+        qml.PauliX((self.oracle_wire,))
 
         for wire in self.idx_wires:
             qml.PauliX((wire,))

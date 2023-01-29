@@ -21,6 +21,13 @@ from ..utils import is_binary
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
+"""
+The QAM implemented here is a corrected/completed version of [0]. It's corrected/completed, because Andrecut and Ali 
+never explained in [0], how to do the R_c rotation of equation (50), only if |c> = 1.
+[0] M. Andrecut and M. K. Ali (2003), Quantum Associative Memory. World Scientific Publishing Company: 2447 - 2472. https://doi.org/10.1142/S0217979203018284
+"""
+
+
 class QAM:
     def __init__(
         self,

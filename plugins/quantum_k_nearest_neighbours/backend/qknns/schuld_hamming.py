@@ -75,6 +75,9 @@ class SchuldQkNN(QkNN):
         )
 
     def init_labels(self, labels: List[int]) -> np.ndarray:
+        """
+        This function maps the labels to their index in self.unique_labels
+        """
         label_indices = []
         # Map labels to their index. The index is represented by a list of its bits
         label_to_idx = {}
@@ -87,6 +90,10 @@ class SchuldQkNN(QkNN):
         return np.array(label_indices)
 
     def get_label_from_samples(self, samples: List[List[int]]) -> int:
+        """
+        Given a list of samples, this function returns the label with the most occurrences, where an oracle qubit
+        is equal to |0>.
+        """
         label_probs = np.zeros((len(self.unique_labels),))
         for sample in samples:
             label = bitlist_to_int(sample[1:])
@@ -95,6 +102,16 @@ class SchuldQkNN(QkNN):
         return self.unique_labels[label_probs.argmax()]
 
     def get_quantum_circuit(self, x: np.ndarray) -> Callable[[], None]:
+        """
+        Returns a quantum circuit that does the following:
+        1. Load in the trainings data with a quantum associative memory, i.e. initialise the label- and data-register
+        2. Invert the i'th qubit of the data-register, if the i'th bit of the test point is 0
+           => The sum of the register is the inverse hamming distance
+        3. Rotate an oracle qubit more towards |1>, for each |1> in the data-register
+        4. sample the oracle qubit and the label-register
+        The oracle will be rotated at most m times, where m is the dimensionality of a trainings/test point.
+        Thus, in step 3 the oracle qubit will be rotated by pi/m for each |1>.
+        """
         rot_angle = np.pi / self.train_data.shape[1]
 
         @qml.qnode(self.backend)

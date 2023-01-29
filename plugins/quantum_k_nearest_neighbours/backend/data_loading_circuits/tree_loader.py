@@ -20,6 +20,12 @@ from ..ccnot import adaptive_ccnot
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
+"""
+The TreeLoader implemented is from [0].
+[0] I. Kerenidis, A. Prakash (2016), Quantum Recommendation Systems. arXiv. https://doi.org/10.48550/ARXIV.1603.08675
+"""
+
+
 class BinaryTreeNode:
     def __init__(
         self,
@@ -79,6 +85,9 @@ class TreeLoader:
         self.prepare_tree_list_values()
 
     def prepare_tree_values(self, node: BinaryTreeNode, sqrt_parent_value: float = 1.0):
+        """
+        Changes values in binary tree, such that they can be directly used for a RY rotation.
+        """
         sqrt_value = np.sqrt(node.value)
         if node.parent is None:
             node.value = 0
@@ -161,14 +170,17 @@ class TreeLoader:
         return tree_nodes[-1]
 
     def get_sign_rotation(self, tree_node: BinaryTreeNode) -> Tuple[float, bool]:
+        """
+        Depending, if an amplitude should be negative or positive, the RY rotations needs to be rotated by
+        additional 2pi and a Z operations needs to be added. Since this concerns the amplitudes, only the leafs of
+        the binary tree can have neg_sin == True.
+        + +: 0
+        - -: 2pi
+        + -: 0 + z
+        - +: 2pi + z
+        """
         if tree_node.left_child is not None:
             if tree_node.left_child.neg_sign is not None:
-                """
-                0: + +
-                2pi: - -
-                0 + z: + -
-                2pi + z: - +
-                """
                 if tree_node.left_child.neg_sign and tree_node.right_child.neg_sign:
                     return 2.0 * np.pi, False
                 elif tree_node.left_child.neg_sign and not tree_node.right_child.neg_sign:
@@ -178,6 +190,9 @@ class TreeLoader:
         return 0, False
 
     def qubit_rotations(self, qubit_idx: int, tree_node: BinaryTreeNode):
+        """
+        Recursively rotates the qubits in the data register to produce the correct state.
+        """
         if tree_node.left_child is not None:
             # rotate qubit
             sign_rot, use_z = self.get_sign_rotation(tree_node)
@@ -217,6 +232,10 @@ class TreeLoader:
             self.qubit_rotations(qubit_idx + 1, tree_node.right_child)
 
     def load_tree(self, tree_idx: int):
+        """
+        Loads the state described in the tree into the data register, given that the index register is equal to the
+        tree's index.
+        """
         if len(self.idx_wires) != 0:
             tree_idx_bits = int_to_bitlist(tree_idx, len(self.idx_wires))
             for tree_idx_bit_, idx_wire in zip(tree_idx_bits, self.idx_wires):
