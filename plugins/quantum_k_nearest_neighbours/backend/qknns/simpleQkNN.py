@@ -271,6 +271,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
         5. Return measurements on index register and the swap-qubit
         => fidelity between a trainings point and the test vector is equal to P(swap-qubit = |0>) - P(swap-qubit = |1>)
         """
+
         def quantum_circuit():
             # Load in training data
             for i in self.idx_wires:
@@ -460,6 +461,7 @@ class SimpleAngleQkNN(SimpleQkNN):
         => The angle between a trainings point and the test point can be calculated by the probability of the swap-qubit
         to be zero. P(swap-qubit = 0) = (1 + <x|y>)/2 and P(swap-qubit = 1) = (1 - <x|y>)/2
         """
+
         def quantum_circuit():
             # Init swap wire
             qml.Hadamard((self.swap_wires[0],))

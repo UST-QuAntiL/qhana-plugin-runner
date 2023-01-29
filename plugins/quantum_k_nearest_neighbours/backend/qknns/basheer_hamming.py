@@ -149,6 +149,7 @@ class BasheerHammingQkNN(QkNN):
         Returns a quantum circuit that inverses the oracle qubit of a trainings point, if its hamming distance is smaller
         than a certain threshold (oracle by Ruan et al.) and if its index is not in the list of the 'k' chosen indices.
         """
+
         def circuit():
             # Load points into register
             self.tree_loader.circuit()
@@ -265,7 +266,11 @@ class BasheerHammingQkNN(QkNN):
         qml.Hadamard((self.oracle_wire,))
         adaptive_ccnot(
             self.idx_wires,
-            self.additional_ancilla_wires + [self.not_in_list_wire] + [self.threshold_wire] + self.overflow_wires + self.train_wires,
+            self.additional_ancilla_wires
+            + [self.not_in_list_wire]
+            + [self.threshold_wire]
+            + self.overflow_wires
+            + self.train_wires,
             self.unclean_wires,
             self.oracle_wire,
         )

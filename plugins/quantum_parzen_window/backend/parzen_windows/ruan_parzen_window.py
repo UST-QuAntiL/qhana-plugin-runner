@@ -115,6 +115,7 @@ class RuanParzenWindow(ParzenWindow):
         1. Load in the trainings data with a quantum associative memory, i.e. initialise the label- and data-register
         2. Execute the oracle by Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest Neighbors Classification Based on the Metric of Hamming Distance. Int J Theor Phys 56, 3496–3507 (2017). https://doi.org/10.1007/s10773-017-3514-4
         """
+
         def quantum_circuit():
             # Load points into register
             self.qam.circuit()
