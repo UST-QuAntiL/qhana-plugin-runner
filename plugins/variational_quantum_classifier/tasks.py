@@ -50,11 +50,7 @@ TASK_LOGGER = get_task_logger(__name__)
 def get_point(ent):
     dimension_keys = [k for k in ent.keys() if k not in ("ID", "href")]
     dimension_keys.sort()
-    point = np.empty(
-        len(
-            dimension_keys,
-        )
-    )
+    point = np.empty(len(dimension_keys))
     for idx, d in enumerate(dimension_keys):
         point[idx] = ent[d]
     return point
@@ -118,7 +114,7 @@ def get_label_arr(
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
-    labels = np.zeros((len(id_to_idx.keys()),), dtype=int)
+    labels = np.zeros(len(id_to_idx.keys()), dtype=int)
 
     if label_to_int is None:
         label_to_int = dict()
