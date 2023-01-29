@@ -94,7 +94,7 @@ class SchuldQkNN(QkNN):
         Given a list of samples, this function returns the label with the most occurrences, where an oracle qubit
         is equal to |0>.
         """
-        label_probs = np.zeros((len(self.unique_labels),))
+        label_probs = np.zeros(len(self.unique_labels))
         for sample in samples:
             label = bitlist_to_int(sample[1:])
             if sample[0] == 0:

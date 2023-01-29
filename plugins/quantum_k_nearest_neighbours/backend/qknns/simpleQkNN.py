@@ -234,7 +234,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
 
         # Add another dimension to avoid 0 vectors
         # new dimension is 1 for 0 vectors and 0 otherwise
-        new_column = np.zeros((data.shape[0]))
+        new_column = np.zeros(data.shape[0])
         new_column[zero_elements] = 1
         data = np.append(data, new_column[:, None], axis=1)
 
@@ -420,7 +420,7 @@ class SimpleAngleQkNN(SimpleQkNN):
 
         # Add another dimension to avoid 0 vectors
         # new dimension is 1 for 0 vectors and 0 otherwise
-        new_column = np.zeros((data.shape[0]))
+        new_column = np.zeros(data.shape[0])
         new_column[zero_elements] = 1
         data = np.append(data, new_column[:, None], axis=1)
 
