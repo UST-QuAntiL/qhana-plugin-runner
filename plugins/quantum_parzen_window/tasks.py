@@ -15,7 +15,7 @@
 import os
 from tempfile import SpooledTemporaryFile
 
-from typing import Optional, Tuple
+from typing import Optional, List
 
 from celery.utils.log import get_task_logger
 
@@ -26,7 +26,11 @@ from .schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    save_entities,
+    load_entities,
+    ensure_dict,
+)
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
@@ -39,10 +43,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_point(ent: dict) -> np.ndarray:
-    dimension_keys = list(ent.keys())
-    dimension_keys.remove("ID")
-    dimension_keys.remove("href")
-
+    dimension_keys = [k for k in ent.keys() if k not in ("ID", "href")]
     dimension_keys.sort()
     point = np.empty(len(dimension_keys))
     for idx, d in enumerate(dimension_keys):
@@ -50,13 +51,22 @@ def get_point(ent: dict) -> np.ndarray:
     return point
 
 
-def load_entity_points_from_url(entity_points_url: str) -> Tuple[np.ndarray, dict]:
+def get_entity_generator(entity_points_url: str):
     """
-    Loads in entity points, given their url.
+    Return a generator for the entity points, given an url to them.
     :param entity_points_url: url to the entity points
     """
+    file_ = open_url(entity_points_url)
+    file_.encoding = "utf-8"
+    file_type = file_.headers["Content-Type"]
+    entities_generator = load_entities(file_, mimetype=file_type)
+    entities_generator = ensure_dict(entities_generator)
+    for ent in entities_generator:
+        yield {"ID": ent["ID"], "href": ent.get("href", ""), "point": get_point(ent)}
 
-    entity_points = open_url(entity_points_url).json()
+
+def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]]):
+    entity_points = list(get_entity_generator(entity_points_url))
     id_to_idx = {}
 
     idx = 0
@@ -69,27 +79,52 @@ def load_entity_points_from_url(entity_points_url: str) -> Tuple[np.ndarray, dic
         idx += 1
 
     points_cnt = len(id_to_idx)
-    dimensions = len(entity_points[0].keys() - {"ID", "href"})
+    dimensions = len(entity_points[0]["point"])
     points_arr = np.zeros((points_cnt, dimensions))
 
     for ent in entity_points:
         idx = id_to_idx[ent["ID"]]
-        points_arr[idx] = get_point(ent)
+        points_arr[idx] = ent["point"]
 
-    return points_arr, id_to_idx
+    return id_to_idx, points_arr
 
 
-def load_labels_from_url(labels_url: str, id_to_idx: dict) -> np.ndarray:
-    # load data from file
-    labels = open_url(labels_url).json()
+def get_label_generator(entity_labels_url: str):
+    """
+    Return a generator for the entity labels, given an url to them.
+    :param entity_labels_url: url to the entity labels
+    """
+    file_ = open_url(entity_labels_url)
+    file_.encoding = "utf-8"
+    file_type = file_.headers["Content-Type"]
+    entities_generator = load_entities(file_, mimetype=file_type)
+    entities_generator = ensure_dict(entities_generator)
+    for ent in entities_generator:
+        yield {"ID": ent["ID"], "href": ent.get("href", ""), "label": ent["label"]}
 
-    num_labels = len(id_to_idx)
-    label_arr = np.empty((num_labels,), dtype=int)
 
-    for label in labels:
-        idx = id_to_idx[label["ID"]]
-        label_arr[idx] = label["label"]
-    return label_arr
+def get_label_arr(
+    entity_labels_url: str, id_to_idx: dict, label_to_int=None, int_to_label=None
+) -> (dict, List[List[float]]):
+    entity_labels = list(get_label_generator(entity_labels_url))
+
+    # Initialise label array
+    print(f"id_to_idx type: {type(id_to_idx)}\nid_to_idx: {id_to_idx}")
+    labels = np.zeros(len(id_to_idx.keys()), dtype=int)
+
+    if label_to_int is None:
+        label_to_int = dict()
+    if int_to_label is None:
+        int_to_label = list()
+    for ent in entity_labels:
+        label = ent["label"]
+        label_str = str(label)
+        if label_str not in label_to_int:
+            label_to_int[label_str] = len(int_to_label)
+            int_to_label.append(label)
+        labels[id_to_idx[ent["ID"]]] = label_to_int[label_str]
+
+    return labels, label_to_int, int_to_label
 
 
 @CELERY.task(name=f"{QParzenWindow.instance.identifier}.calculation_task", bind=True)
@@ -132,12 +167,20 @@ def calculation_task(self, db_id: int) -> str:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
     # Load in data
-    train_data, train_id_to_idx = load_entity_points_from_url(train_points_url)
-    train_labels = load_labels_from_url(train_label_points_url, train_id_to_idx)
-    test_data, test_id_to_idx = load_entity_points_from_url(test_points_url)
+    train_id_to_idx, train_data = get_indices_and_point_arr(train_points_url)
+    train_labels, label_to_int, int_to_label = get_label_arr(
+        train_label_points_url, train_id_to_idx
+    )
+
+    test_id_to_idx, test_data = get_indices_and_point_arr(test_points_url)
     test_labels = None
     if test_label_points_url != "" and test_label_points_url is not None:
-        test_labels = load_labels_from_url(test_label_points_url, test_id_to_idx)
+        test_labels, label_to_int, int_to_label = get_label_arr(
+            test_label_points_url,
+            test_id_to_idx,
+            label_to_int=label_to_int,
+            int_to_label=int_to_label,
+        )
 
     # Retrieve max qubit count
     max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
@@ -159,21 +202,26 @@ def calculation_task(self, db_id: int) -> str:
     parzen_window.set_quantum_backend(backend)
 
     # Label test data
-    predictions = parzen_window.label_points(test_data)
+    predictions = [int_to_label[el] for el in parzen_window.label_points(test_data)]
 
     # Prepare labels to be saved
     output_labels = []
 
     for ent_id, idx in test_id_to_idx.items():
-        output_labels.append({"ID": ent_id, "href": "", "label": int(predictions[idx])})
+        output_labels.append({"ID": ent_id, "href": "", "label": predictions[idx]})
 
     # Get representative circuit
     representative_circuit = parzen_window.get_representative_circuit(test_data)
+
+    # Correct train labels
+    train_labels = [int_to_label[el] for el in train_labels]
 
     # Plot title + confusion matrix
     plot_title = "Classification"
     conf_matrix = None
     if test_labels is not None:
+        test_labels = [int_to_label[el] for el in test_labels]
+
         # Compute accuracy on test data
         test_accuracy = accuracy_score(test_labels, predictions)
         plot_title += f": accuracy on test data={test_accuracy}"
@@ -192,6 +240,7 @@ def calculation_task(self, db_id: int) -> str:
         test_id_to_idx,
         predictions,
         title=plot_title,
+        label_to_int=label_to_int,
     )
 
     # Output the data
@@ -201,7 +250,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "labels.json",
-            "entity/vector",
+            "entity/label",
             "application/json",
         )
 

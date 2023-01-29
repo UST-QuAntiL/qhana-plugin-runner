@@ -17,7 +17,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 from sklearn.metrics import confusion_matrix
-from typing import Callable
 
 
 def get_id_list(id_to_idx: dict) -> list:
@@ -28,12 +27,8 @@ def get_id_list(id_to_idx: dict) -> list:
 
 
 def add_background(
-    points: np.ndarray,
-    resolution: int,
-    predictor: Callable[[np.ndarray], int],
-    scatter: go.Scatter,
-    two_classes: bool = False,
-) -> go.Figure:
+    points, resolution, predictor, scatter, two_classes=False, label_to_int=None
+):
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -116,7 +111,11 @@ def add_background(
     # Correct colors of different labels. 0 gets the first color, 1 the second and so on
     # Thus the color match with the heatmap colors
     for sca_plt in scatter.data:
-        label = int(sca_plt.legendgroup[0])
+        label = int(
+            sca_plt.legendgroup[0]
+            if label_to_int is None
+            else label_to_int[", ".join(sca_plt.legendgroup.split(", ")[:-1])]
+        )
         sca_plt.update(
             marker=dict(
                 color=px.colors.qualitative.D3[label],
@@ -135,24 +134,25 @@ def add_background(
 
 
 def plot_data(
-    train_data: np.ndarray,
-    train_id_to_idx: dict,
-    train_labels: np.ndarray,
-    test_data: np.ndarray,
-    test_id_to_idx: dict,
-    test_labels: np.ndarray,
-    resolution: int = 0,
-    predictor: Callable[[np.ndarray], int] = None,
-    only_first_100: bool = True,
-    title: str = "",
-) -> go.Figure:
+    train_data,
+    train_id_to_idx,
+    train_labels,
+    test_data,
+    test_id_to_idx,
+    test_labels,
+    resolution=0,
+    predictor=None,
+    only_first_100=True,
+    title="",
+    label_to_int=None,
+):
     # Prepare data
     dim = len(train_data[0])
     train_end = 100 if only_first_100 else len(train_data)
     test_end = 100 if only_first_100 else len(test_data)
 
-    train_data = np.array(train_data)[:train_end]
-    test_data = np.array(test_data)[:test_end]
+    train_data = np.array(train_data[:train_end])
+    test_data = np.array(test_data[:test_end])
     points = np.concatenate((train_data, test_data), axis=0)
 
     dimensions = ["x", "y", "z"][:dim]
@@ -160,9 +160,9 @@ def plot_data(
         get_id_list(train_id_to_idx)[:train_end] + get_id_list(test_id_to_idx)[:test_end]
     )
 
-    train_labels = [str(int(el)) for el in train_labels[:train_end]]
-    test_labels = [str(int(el)) for el in test_labels[:test_end]]
-    labels = train_labels[:train_end] + test_labels[:test_end]
+    train_labels = [str(el) for el in train_labels[:train_end]]
+    test_labels = [str(el) for el in test_labels[:test_end]]
+    labels = train_labels + test_labels
 
     data_frame_content = dict(
         ID=ids,
@@ -199,6 +199,7 @@ def plot_data(
                 predictor,
                 fig,
                 two_classes=len(set(train_labels)) == 2,
+                label_to_int=label_to_int,
             )
     else:
         df["y"] = [0] * len(df["x"])
@@ -230,15 +231,13 @@ def plot_data(
     return fig
 
 
-def plot_confusion_matrix(
-    y_true: np.ndarray, y_pred: np.ndarray, labels: list
-) -> go.Figure:
+def plot_confusion_matrix(y_true, y_pred, labels: list):
     labels.sort()
     conf_matrix = confusion_matrix(y_true, y_pred, labels=labels).T
 
     labels = [str(label) for label in labels]
 
-    df_content = {}
+    df_content = dict()
     for label, v in zip(labels, conf_matrix):
         df_content[label] = [str(el) for el in v]
     df = pd.DataFrame(df_content)

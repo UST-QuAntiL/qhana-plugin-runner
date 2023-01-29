@@ -64,32 +64,44 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/vector",
-                        content_type=["application/json"],
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="trainPointsUrl",
                     ),
                     InputDataMetadata(
-                        data_type="entity/vector",
-                        content_type=["application/json"],
+                        data_type="entity/label",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="trainLabelPointsUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/vector",
-                        content_type=["application/json"],
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="testPointsUrl",
                     ),
                     InputDataMetadata(
-                        data_type="entity/vector",
-                        content_type=["application/json"],
+                        data_type="entity/label",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=False,
                         parameter="testLabelPointsUrl",
                     ),
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity/vector",
+                        data_type="entity/label",
                         content_type=["application/json"],
                         required=True,
                     ),
