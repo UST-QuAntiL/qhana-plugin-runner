@@ -114,7 +114,7 @@ def add_background(
         label = int(
             sca_plt.legendgroup[0]
             if label_to_int is None
-            else label_to_int[sca_plt.legendgroup.split(", ")[0]]
+            else label_to_int[", ".join(sca_plt.legendgroup.split(", ")[:-1])]
         )
         sca_plt.update(
             marker=dict(

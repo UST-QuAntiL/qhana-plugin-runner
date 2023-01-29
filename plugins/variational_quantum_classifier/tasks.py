@@ -125,11 +125,12 @@ def get_label_arr(
     if int_to_label is None:
         int_to_label = list()
     for ent in entity_labels:
-        label = str(ent["label"])
-        if label not in label_to_int:
-            label_to_int[label] = len(int_to_label)
+        label = ent["label"]
+        label_str = str(label)
+        if label_str not in label_to_int:
+            label_to_int[label_str] = len(int_to_label)
             int_to_label.append(label)
-        labels[id_to_idx[ent["ID"]]] = label_to_int[label]
+        labels[id_to_idx[ent["ID"]]] = label_to_int[label_str]
 
     return labels, label_to_int, int_to_label
 

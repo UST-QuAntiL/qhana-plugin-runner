@@ -87,8 +87,7 @@ Example:
 entity/label
 ^^^^^^^^^^^^^
 
-Each entity has only three attributes ``ID``, ``href`` and ``label``. The ``label`` attribute can be any type of object,
-preferably a string.
+Each entity has only three attributes ``ID``, ``href`` and ``label``. The ``label`` attribute can be any type of object.
 
 Example:
 
