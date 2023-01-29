@@ -161,7 +161,7 @@ class RuanParzenWindow(ParzenWindow):
         Given a list of samples, this function returns the label with the most occurrences, where an oracle qubit
         is equal to |1>.
         """
-        label_probs = np.zeros((len(self.unique_labels),))
+        label_probs = np.zeros(len(self.unique_labels))
         samples_with_one = 0
         for sample in samples:
             if sample[-1] == 1:
