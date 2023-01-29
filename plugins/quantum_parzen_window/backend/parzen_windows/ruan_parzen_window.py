@@ -18,7 +18,7 @@ import numpy as np
 import pennylane as qml
 from ..data_loading_circuits.quantum_associative_memory import QAM
 from ..ccnot import adaptive_ccnot
-from ..utils import int_to_bitlist, bitlist_to_int, is_binary
+from ..utils import int_to_bitlist, bitlist_to_int, is_binary, ceil_log2
 from ..q_arithmetic import cc_increment_register
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
@@ -48,7 +48,7 @@ class RuanParzenWindow(ParzenWindow):
         self.distance_threshold = min(
             int(self.distance_threshold), self.train_data.shape[1]
         )
-        self.k = int(np.ceil(np.log2(self.train_data.shape[1])))
+        self.k = ceil_log2(self.train_data.shape[1])
         self.a = int(2**self.k - self.train_data.shape[1] + self.distance_threshold)
         self.a = int_to_bitlist(self.a, self.k + 2)
         self.label_indices = self.init_labels(train_labels)
@@ -61,8 +61,8 @@ class RuanParzenWindow(ParzenWindow):
         wire_types = ["train", "label", "ancilla", "unclean"]
         num_wires = [
             self.train_data.shape[1],
-            max(1, int(np.ceil(np.log2(len(self.unique_labels))))),
-            np.ceil(np.log2(self.train_data.shape[1])) + 4,
+            max(1, ceil_log2(len(self.unique_labels))),
+            ceil_log2(self.train_data.shape[1]) + 4,
         ]
         error_msgs = [
             "the points' dimensionality.",
@@ -102,7 +102,7 @@ class RuanParzenWindow(ParzenWindow):
         # Map labels to their index. The index is represented by a list of its bits
         label_to_idx = {}
         # Number of bits needed to represent all indices of our labels
-        num_bits_needed = max(1, int(np.ceil(np.log2(len(self.unique_labels)))))
+        num_bits_needed = max(1, ceil_log2(len(self.unique_labels)))
         for i, label in enumerate(self.unique_labels):
             label_to_idx[label] = int_to_bitlist(i, num_bits_needed)
         for label in labels:
@@ -181,8 +181,8 @@ class RuanParzenWindow(ParzenWindow):
         unique_labels = list(set(train_labels))
         return (
             int(len(train_data[0])),
-            max(1, int(np.ceil(np.log2(len(unique_labels))))),
-            int(np.ceil(np.log2(len(train_data[0]))) + 4),
+            max(1, ceil_log2(len(unique_labels))),
+            ceil_log2(len(train_data[0])) + 4,
         )
 
     def get_representative_circuit(self, X: np.ndarray) -> str:
