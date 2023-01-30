@@ -81,6 +81,7 @@ class QkNNEnum(Enum):
         k: int,
         max_wires: int,
         exp_itr: int = 10,
+        slack: float = 0.0,
         use_access_wires: bool = True,
     ) -> Tuple[QkNN, int]:
         if self == QkNNEnum.schuld_qknn:
@@ -157,6 +158,7 @@ class QkNNEnum(Enum):
                 wires[2],
                 None,
                 exp_itr=exp_itr,
+                slack=slack
             ), count_wires(wires)
 
     def check_and_get_qubits(

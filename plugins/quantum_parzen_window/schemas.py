@@ -24,6 +24,8 @@ from qhana_plugin_runner.api.util import (
     FileUrl,
 )
 
+from dataclasses import dataclass
+
 
 class TaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
@@ -31,38 +33,24 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+@dataclass(repr=False)
 class InputParameters:
-    def __init__(
-        self,
-        train_points_url: str,
-        train_label_points_url: str,
-        test_points_url: str,
-        test_label_points_url: str,
-        window_size: int,
-        variant: QParzenWindowEnum,
-        backend: QuantumBackends,
-        shots: int,
-        ibmq_token: str,
-        custom_backend: str,
-        minimize_qubit_count=False,
-    ):
-        self.train_points_url = train_points_url
-        self.train_label_points_url = train_label_points_url
-        self.test_points_url = test_points_url
-        self.test_label_points_url = test_label_points_url
-        self.test_points_url = test_points_url
-        self.window_size = window_size
-        self.variant = variant
-        self.minimize_qubit_count = minimize_qubit_count
-        self.backend = backend
-        self.shots = shots
-        self.ibmq_token = ibmq_token
-        self.custom_backend = custom_backend
+    train_points_url: str
+    train_label_points_url: str
+    test_points_url: str
+    test_label_points_url: str
+    window_size: int
+    variant: QParzenWindowEnum
+    backend: QuantumBackends
+    shots: int
+    ibmq_token: str
+    custom_backend: str
+    minimize_qubit_count=False
 
-        def __str__(self):
-            variables = self.__dict__.copy()
-            variables["ibmq_token"] = ""
-            return str(variables)
+    def __str__(self):
+        variables = self.__dict__.copy()
+        variables["ibmq_token"] = ""
+        return str(variables)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):

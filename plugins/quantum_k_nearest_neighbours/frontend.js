@@ -15,28 +15,33 @@
 // Long block of just gathering elements
 // If a variable ends with _value, it's the element itself and the value can be retrieved or set
 var qknn_type_value = document.getElementById("variant");
-var exp_itr_value = document.getElementById("exp_itr");
 var k_value = document.getElementById("k");
+var exp_itr_value = document.getElementById("exp_itr");
+var slack_value = document.getElementById("slack");
 
 // If a vairable ends with _vis, it's the parentNode's parentNode and we can set the visibility
-var exp_itr_vis = exp_itr_value.parentNode.parentNode;
 var k_vis = k_value.parentNode.parentNode;
+var exp_itr_vis = exp_itr_value.parentNode.parentNode;
+var slack_vis = slack_value.parentNode.parentNode;
 
 
 function set_default_values() {
     exp_itr_value.value = "10";
     k_value = 1;
+    slack_value = 0.05;
 }
 
 
 function hide_all() {
     exp_itr_vis.style.display = 'none';
     k_vis.style.display = 'none';
+    slack_vis.style.display = 'none';
 }
 
 
 function show_basheer_hamming() {
     exp_itr_vis.style.display = 'block';
+    slack_vis.style.display = 'block';
 }
 
 

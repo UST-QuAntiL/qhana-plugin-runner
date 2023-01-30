@@ -24,6 +24,8 @@ from qhana_plugin_runner.api.util import (
     FileUrl,
 )
 
+from dataclasses import dataclass
+
 
 class TaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
@@ -31,41 +33,27 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+@dataclass(repr=False)
 class InputParameters:
+    train_points_url: str
+    train_label_points_url: str
+    test_points_url: str
+    test_label_points_url: str
+    variant: QkNNEnum
+    k: int
+    exp_itr: int
+    slack: float
+    backend: QuantumBackends
+    shots: int
+    ibmq_token: str
+    custom_backend: str
+    resolution: int
+    minimize_qubit_count: bool = False
+
     def __str__(self):
         variables = self.__dict__.copy()
         variables["ibmq_token"] = ""
         return str(variables)
-
-    def __init__(
-        self,
-        train_points_url: str,
-        train_label_points_url: str,
-        test_points_url: str,
-        test_label_points_url: str,
-        variant: QkNNEnum,
-        k: int,
-        exp_itr: int,
-        backend: QuantumBackends,
-        shots: int,
-        ibmq_token: str,
-        custom_backend: str,
-        resolution: int,
-        minimize_qubit_count=False,
-    ):
-        self.train_points_url = train_points_url
-        self.train_label_points_url = train_label_points_url
-        self.test_points_url = test_points_url
-        self.test_label_points_url = test_label_points_url
-        self.k = k
-        self.variant = variant
-        self.exp_itr = exp_itr
-        self.minimize_qubit_count = minimize_qubit_count
-        self.backend = backend
-        self.shots = shots
-        self.ibmq_token = ibmq_token
-        self.custom_backend = custom_backend
-        self.resolution = resolution
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -146,6 +134,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
         validate=validate.Range(min=0, min_inclusive=False),
+    )
+    slack = ma.fields.Float(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Slack Break Condition",
+            "description": "Without any errors, this algorithm takes "
+            "`max_number` many iterations. Since quantum computers aren't without errors, this input parameter `slack` "
+            "allows `max_number` to be increased to `max_number = (1+slack)*max_number`.",
+            "input_type": "number",
+        },
     )
     minimize_qubit_count = ma.fields.Boolean(
         required=False,

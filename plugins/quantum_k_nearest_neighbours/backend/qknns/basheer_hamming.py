@@ -67,6 +67,7 @@ class BasheerHammingQkNN(QkNN):
         ancilla_wires: List[int],
         backend: qml.Device,
         exp_itr: int = 10,
+        slack: float = 0.0,
         unclean_wires: List[int] = None,
     ):
         super(BasheerHammingQkNN, self).__init__(train_data, train_labels, k, backend)
@@ -74,6 +75,7 @@ class BasheerHammingQkNN(QkNN):
         self.train_data = np.array(train_data, dtype=int)
 
         self.exp_itr = exp_itr
+        self.slack = slack
         self.num_train_data = self.train_data.shape[0]
         self.train_data = self.repeat_data_til_next_power_of_two(self.train_data)
 
@@ -331,7 +333,9 @@ class BasheerHammingQkNN(QkNN):
 
         # Loop converges, if no better y can be found
         # Loop should take at most |train data| - k many steps
-        for _ in range(self.num_train_data - self.k):
+        # Allow for more iterations with a slack variable
+        # (1 + slack) * max_itr = (1 + slack) * (|train data| - k)
+        for _ in range(int((1+self.slack) * (self.num_train_data - self.k))):
             # Choose index y from the indices in A
             # Choosing y with max distance to x is best
             y_idx = chosen_distances.argmax()

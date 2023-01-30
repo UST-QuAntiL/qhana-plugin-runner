@@ -109,7 +109,6 @@ def get_label_arr(
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
-    print(f"id_to_idx type: {type(id_to_idx)}\nid_to_idx: {id_to_idx}")
     labels = np.zeros(len(id_to_idx.keys()), dtype=int)
 
     if label_to_int is None:
@@ -151,6 +150,7 @@ def calculation_task(self, db_id: int) -> str:
     k = input_params.k
     variant = input_params.variant
     exp_itr = input_params.exp_itr
+    slack = input_params.slack
     minimize_qubit_count = input_params.minimize_qubit_count
     backend = input_params.backend
     shots = input_params.shots
@@ -197,6 +197,7 @@ def calculation_task(self, db_id: int) -> str:
         k,
         max_qbits,
         exp_itr=exp_itr,
+        slack=slack,
         use_access_wires=(not minimize_qubit_count),
     )
 
