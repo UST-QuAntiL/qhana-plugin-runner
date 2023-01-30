@@ -335,6 +335,7 @@ class BasheerHammingQkNN(QkNN):
         # Loop should take at most |train data| - k many steps
         # Allow for more iterations with a slack variable
         # (1 + slack) * max_itr = (1 + slack) * (|train data| - k)
+        new_y = None
         for _ in range(int((1 + self.slack) * (self.num_train_data - self.k))):
             # Choose index y from the indices in A
             # Choosing y with max distance to x is best
@@ -351,6 +352,14 @@ class BasheerHammingQkNN(QkNN):
             else:
                 # No closer neighbor has been found
                 break
+
+        if new_y is not None:
+            raise UserWarning(
+                "The search for the k closest training points took longer than expected. Theoretically it should take "
+                f"at most {(self.num_train_data - self.k)} iterations, but it hasn't converged after "
+                f"{int((1 + self.slack) * (self.num_train_data - self.k))} iterations. "
+                "An error prone quantum backend could be the issue."
+            )
 
         # Majority voting
         counts = Counter(
