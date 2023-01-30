@@ -16,7 +16,10 @@ import os
 from http import HTTPStatus
 from typing import Mapping
 
+from pathlib import Path
+
 from celery.canvas import chain
+from flask import send_file
 from flask import Response
 from flask import redirect
 from flask.globals import request
@@ -40,8 +43,6 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .tasks import calculation_task
-
-from .frontend_js import get_frontend_js as frontend_js
 
 
 @QKNN_BLP.route("/")
@@ -202,7 +203,7 @@ class MicroFrontend(MethodView):
 
 @QKNN_BLP.route("/ui/frontend_js/")
 def get_frontend_js():
-    return Response(frontend_js(), mimetype="text/javascript")
+    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @QKNN_BLP.route("/process/")
