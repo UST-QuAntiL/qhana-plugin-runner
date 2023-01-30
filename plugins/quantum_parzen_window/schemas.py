@@ -45,7 +45,7 @@ class InputParameters:
     shots: int
     ibmq_token: str
     custom_backend: str
-    minimize_qubit_count=False
+    minimize_qubit_count = False
 
     def __str__(self):
         variables = self.__dict__.copy()

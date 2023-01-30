@@ -335,7 +335,7 @@ class BasheerHammingQkNN(QkNN):
         # Loop should take at most |train data| - k many steps
         # Allow for more iterations with a slack variable
         # (1 + slack) * max_itr = (1 + slack) * (|train data| - k)
-        for _ in range(int((1+self.slack) * (self.num_train_data - self.k))):
+        for _ in range(int((1 + self.slack) * (self.num_train_data - self.k))):
             # Choose index y from the indices in A
             # Choosing y with max distance to x is best
             y_idx = chosen_distances.argmax()

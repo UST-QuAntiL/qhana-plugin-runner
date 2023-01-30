@@ -158,7 +158,7 @@ class QkNNEnum(Enum):
                 wires[2],
                 None,
                 exp_itr=exp_itr,
-                slack=slack
+                slack=slack,
             ), count_wires(wires)
 
     def check_and_get_qubits(
