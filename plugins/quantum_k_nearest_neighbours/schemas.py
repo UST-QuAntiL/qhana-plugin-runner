@@ -43,8 +43,8 @@ class InputParameters:
         train_label_points_url: str,
         test_points_url: str,
         test_label_points_url: str,
-        k: int,
         variant: QkNNEnum,
+        k: int,
         exp_itr: int,
         backend: QuantumBackends,
         shots: int,
@@ -114,16 +114,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    k = ma.fields.Integer(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Number of Neighbours",
-            "description": "The number of neighbours that the kNN algorithm will use, to label the unlabeled entity points.",
-            "input_type": "number",
-        },
-        validate=validate.Range(min=0, min_inclusive=False),
-    )
     variant = EnumField(
         QkNNEnum,
         required=True,
@@ -136,6 +126,16 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "- basheer hamming qknn: uses the Hamming distance. It uses amplitude amplification to find the k nearest neighours as described by Basheer et al. in [1], with the oracle of Ruan et al. [2]",
             "input_type": "select",
         },
+    )
+    k = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Number of Neighbours",
+            "description": "The number of neighbours that the kNN algorithm will use, to label the unlabeled entity points.",
+            "input_type": "number",
+        },
+        validate=validate.Range(min=0, min_inclusive=False),
     )
     exp_itr = ma.fields.Integer(
         required=True,
