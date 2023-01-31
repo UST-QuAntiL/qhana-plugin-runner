@@ -21,7 +21,7 @@ from typing import List, Tuple
 from .qknn import QkNN
 from ..data_loading_circuits import QAM
 from ..data_loading_circuits import TreeLoader
-from ..utils import bitlist_to_int, is_binary, ceil_log2
+from ..utils import bitlist_to_int, check_binary, ceil_log2
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -74,12 +74,12 @@ class SimpleHammingQkNN(SimpleQkNN):
         unclean_wires: List[int] = None,
     ):
         super(SimpleHammingQkNN, self).__init__(train_data, train_labels, k, backend)
-        self.train_data = np.array(train_data, dtype=int)
 
-        if not is_binary(self.train_data):
-            raise ValueError(
-                "All the data needs to be binary, when dealing with the hamming distance"
-            )
+        check_binary(
+            self.train_data,
+            "All the data needs to be binary, when dealing with the hamming distance",
+        )
+        self.train_data = np.array(train_data, dtype=int)
 
         self.point_num_to_idx = {}
         for i, vec in enumerate(self.train_data):
@@ -114,6 +114,9 @@ class SimpleHammingQkNN(SimpleQkNN):
         5. Return measurements of the trainings register and the oracle qubit
         => The probability of the oracle qubit being |0> is proportional to the hamming distance
         """
+        check_binary(
+            x, "All the data needs to be binary, when dealing with the hamming distance"
+        )
         rot_angle = np.pi / len(x)
 
         def quantum_circuit():

@@ -37,8 +37,12 @@ def int_to_bitlist(num, length: int):
 
 
 def is_binary(data: np.ndarray) -> bool:
-
     return np.array_equal(data, data.astype(bool))
+
+
+def check_binary(data: np.ndarray, error_msg):
+    if not is_binary(data):
+        raise ValueError(error_msg)
 
 
 def ceil_log2(value: float) -> int:

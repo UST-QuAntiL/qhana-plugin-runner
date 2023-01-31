@@ -17,7 +17,7 @@ import numpy as np
 from typing import List, Tuple, Optional, Callable
 
 from ..data_loading_circuits import TreeLoader
-from ..utils import int_to_bitlist, bitlist_to_int, ceil_log2
+from ..utils import int_to_bitlist, bitlist_to_int, ceil_log2, check_binary
 from ..q_arithmetic import cc_increment_register
 from ..ccnot import adaptive_ccnot
 from .qknn import QkNN
@@ -71,6 +71,11 @@ class BasheerHammingQkNN(QkNN):
         unclean_wires: List[int] = None,
     ):
         super(BasheerHammingQkNN, self).__init__(train_data, train_labels, k, backend)
+
+        check_binary(
+            self.train_data,
+            "All the data needs to be binary, when dealing with the hamming distance",
+        )
 
         self.train_data = np.array(train_data, dtype=int)
 
@@ -321,6 +326,10 @@ class BasheerHammingQkNN(QkNN):
         return int(bitlist_to_int(idx_bits) % self.num_train_data), hamming_distance
 
     def label_point(self, x: np.ndarray) -> int:
+        check_binary(
+            x,
+            "All the data needs to be binary, when dealing with the hamming distance",
+        )
         x = np.array(x, dtype=int)
         # Init: First choose k random points, to be the current nearest neighbours
         chosen_indices = np.random.choice(

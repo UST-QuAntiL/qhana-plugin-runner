@@ -14,12 +14,11 @@
 
 from typing import List, Callable, Tuple
 import numpy as np
-import re
 
 import pennylane as qml
 from ..data_loading_circuits import QAM
 from .qknn import QkNN
-from ..utils import bitlist_to_int, int_to_bitlist, is_binary, ceil_log2
+from ..utils import bitlist_to_int, int_to_bitlist, check_binary, ceil_log2
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -37,12 +36,13 @@ class SchuldQkNN(QkNN):
         super(SchuldQkNN, self).__init__(
             train_data, train_labels, len(train_data), backend
         )
-        self.train_data = np.array(train_data, dtype=int)
 
-        if not is_binary(self.train_data):
-            raise ValueError(
-                "All the data needs to be binary, when dealing with the hamming distance"
-            )
+        check_binary(
+            self.train_data,
+            "All the data needs to be binary, when dealing with the hamming distance",
+        )
+
+        self.train_data = np.array(train_data, dtype=int)
 
         self.label_indices = self.init_labels(train_labels)
 
@@ -128,6 +128,9 @@ class SchuldQkNN(QkNN):
         return circuit
 
     def label_point(self, x: np.ndarray) -> int:
+        check_binary(
+            x, "All the data needs to be binary, when dealing with the hamming distance"
+        )
         samples = self.get_quantum_circuit(x)()
         return self.get_label_from_samples(samples)
 
