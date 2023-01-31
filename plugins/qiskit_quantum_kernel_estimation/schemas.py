@@ -28,12 +28,6 @@ from .backend.kernel import KernelEnum, EntanglementPatternEnum
 TASK_LOGGER = get_task_logger(__name__)
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class InputParameters:
     def __init__(
         self,

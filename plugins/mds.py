@@ -19,7 +19,6 @@ from typing import Mapping, Optional
 import flask
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -41,7 +40,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -54,7 +52,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "mds"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -63,12 +61,6 @@ MDS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="MDS plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class MetricEnum(Enum):
@@ -96,7 +88,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_distances_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-distances",
+        data_input_type="custom/entity-distances",
         data_content_types="application/json",
         metadata={
             "label": "Entity distances URL",
@@ -160,13 +152,13 @@ class PluginsView(MethodView):
             description=MDS.instance.description,
             name=MDS.instance.name,
             version=MDS.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{MDS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{MDS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-distances",
+                        data_type="custom/entity-distances",
                         content_type=["application/json"],
                         required=True,
                         parameter="entityDistancesUrl",
@@ -174,7 +166,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -256,7 +248,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @MDS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @MDS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MDS_BLP.response(HTTPStatus.SEE_OTHER)
     @MDS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -378,7 +370,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "entity_points.json",
-            "entity-points",
+            "entity/vector",
             "application/json",
         )
 

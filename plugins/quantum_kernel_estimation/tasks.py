@@ -169,7 +169,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "kernel.json",
-            "kernel-matrix",
+            "custom/kernel-matrix",
             "application/json",
         )
 

@@ -22,7 +22,6 @@ from typing import Any, Dict, Generator, List, Mapping, Optional, Set, Union
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
 from flask.app import Flask
@@ -45,7 +44,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -61,7 +59,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "entity-filter"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 INFINITY = -1
@@ -71,12 +69,6 @@ ENTITY_FILTER_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Entity filter API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class AttributeFilterType(Enum):
@@ -176,7 +168,7 @@ class PluginsView(MethodView):
             description=EntityFilter.instance.description,
             name=EntityFilter.instance.name,
             version=EntityFilter.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{ENTITY_FILTER_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{ENTITY_FILTER_BLP.name}.MicroFrontend"),
@@ -269,7 +261,7 @@ class ProcessView(MethodView):
     @ENTITY_FILTER_BLP.arguments(
         EntityFilterParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @ENTITY_FILTER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @ENTITY_FILTER_BLP.response(HTTPStatus.SEE_OTHER)
     @ENTITY_FILTER_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params: EntityFilterParametersSchema):
         """Start the entity filter task."""

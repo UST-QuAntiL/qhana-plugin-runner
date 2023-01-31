@@ -49,7 +49,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "nisq-analyzer"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -58,12 +58,6 @@ NISQ_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="NISQ Analyzer Plugin.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class NisqAnalyzerResultsRow(MaBaseSchema):
@@ -141,7 +135,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="nisq-analyzer-result",
+                        data_type="custom/nisq-analyzer-result",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -156,7 +150,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @NISQ_BLP.arguments(NisqAnalyzerResults(unknown=EXCLUDE), location="json")
-    @NISQ_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @NISQ_BLP.response(HTTPStatus.SEE_OTHER)
     @NISQ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the task."""
@@ -224,7 +218,7 @@ def store_results_task(self, db_id: int) -> str:
             db_id,
             output,
             "nisq_analysis.json",
-            "nisq-analyzer-result",
+            "custom/nisq-analyzer-result",
             "application/json",
         )
 

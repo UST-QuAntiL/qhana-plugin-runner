@@ -25,12 +25,6 @@ from qhana_plugin_runner.api.util import (
 )
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class SolverEnum(Enum):
     auto = "auto"
     full = "full"

@@ -99,7 +99,7 @@ Improvements:
 
 
 _plugin_name = "one-hot encoding"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -108,12 +108,6 @@ ONEHOT_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="One-hot encoding plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class InputParameters:
@@ -134,7 +128,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entities",
+        data_input_type="entity/list",
         data_content_types="application/json",
         metadata={
             "label": "Entities URL",
@@ -145,7 +139,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_metadata_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="attribute-metadata",
+        data_input_type="entity/attribute-metadata",
         data_content_types="application/json",
         metadata={
             "label": "Entities Attribute Metadata URL",
@@ -156,7 +150,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     taxonomies_zip_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="taxonomy",
+        data_input_type="graph/taxonomy",
         data_content_types="application/zip",
         metadata={
             "label": "Taxonomies URL",
@@ -198,19 +192,19 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{ONEHOT_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entities",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="taxonomy",
+                        data_type="graph/taxonomy",
                         content_type=["application/zip"],
                         required=True,
                         parameter="taxonomiesZipUrl",
                     ),
                     InputDataMetadata(
-                        data_type="attribute-metadata",
+                        data_type="entity/attribute-metadata",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesMetadataUrl",
@@ -218,7 +212,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["application/csv"],
                         required=True,
                     )
@@ -286,7 +280,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @ONEHOT_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @ONEHOT_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @ONEHOT_BLP.response(HTTPStatus.SEE_OTHER)
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -505,7 +499,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "one-hot-encoded_points.csv",
-            "entity-points",
+            "entity/vector",
             "text/csv",
         )
 
