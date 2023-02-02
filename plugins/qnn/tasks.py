@@ -9,8 +9,6 @@ from typing import Optional
 
 from celery.utils.log import get_task_logger
 
-TASK_LOGGER = get_task_logger(__name__)
-
 from plugins.qnn import QNN
 from plugins.qnn.schemas import (
     QuantumBackends,
@@ -46,10 +44,17 @@ from sklearn.preprocessing import StandardScaler
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data.dataloader import DataLoader
+
+from .backend.datasets import OneHotDataset, digits2position
 
 # Plot to html
 import base64
 from io import BytesIO
+
+
+TASK_LOGGER = get_task_logger(__name__)
+
 
 # ------------------------------
 #       dataset generation
@@ -190,7 +195,7 @@ def calculation_task(self, db_id: int) -> str:
     if use_default_dataset:
         TASK_LOGGER.info("Use default dataset")
         # spiral dataset
-        dataset = twospirals(200, turns=1.52)
+        dataset = twospirals(10, turns=1.52)
     else:
         TASK_LOGGER.info("Load dataset from files")
         # get files
@@ -250,11 +255,16 @@ def calculation_task(self, db_id: int) -> str:
     )
 
     # train test split
-    X_train = X_shuffle[:-n_test]
-    X_test = X_shuffle[-n_test:]
+    X_train = torch.tensor(X_shuffle[:-n_test], dtype=torch.float32)
+    X_test = torch.tensor(X_shuffle[-n_test:], dtype=torch.float32)
 
-    Y_train = Y_shuffle[:-n_test]
-    Y_test = Y_shuffle[-n_test:]
+    Y_train = torch.tensor(Y_shuffle[:-n_test])
+    Y_test = torch.tensor(Y_shuffle[-n_test:])
+
+    # Prep data
+    print(f"X_train: {X_train}\nY_train: {Y_train}\nX_test: {X_test}\nY_test: {Y_test}")
+    train_dataloader = DataLoader(OneHotDataset(X_train, Y_train, n_classes), batch_size=batch_size, shuffle=randomly_shuffle)
+    Y_test_one_hot = digits2position(Y_test, n_classes)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -268,10 +278,8 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
         weights_to_wiggle = input_params.weights_to_wiggle
         TASK_LOGGER.info(f"Loaded input parameters from db: weights_to_wiggle='{weights_to_wiggle}'")
-        preprocess_layers = [int(el) for el in input_params.preprocess_layers.split(",")]
-        postprocess_layers = [int(el) for el in input_params.postprocess_layers.split(",")]
-        print(f"{input_params.preprocess_layers} -> {preprocess_layers}")
-        print(f"{input_params.postprocess_layers} -> {postprocess_layers}")
+        preprocess_layers = [int(el) for el in input_params.preprocess_layers.split(",") if el != ""]
+        postprocess_layers = [int(el) for el in input_params.postprocess_layers.split(",") if el != ""]
 
         if ibmq_token == "****":
             TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
@@ -293,7 +301,6 @@ def calculation_task(self, db_id: int) -> str:
             q_device, ibmq_token, custom_backend, n_qubits, shots
         )
         TASK_LOGGER.info(f"DEVICE '{dev}'")
-        # dev = qml.device("default.qubit", wires=n_qubits, shots=shots)  # pennylane simulator. faster! # TODO remove
 
         # get dressed quantum network
         model = DressedQuantumNet(X.shape[1], n_classes, n_qubits, dev, q_depth, weight_init, preprocess_layers, postprocess_layers)
@@ -312,22 +319,19 @@ def calculation_task(self, db_id: int) -> str:
     # train network
     train(
         model,
-        X_train,
-        Y_train,
+        train_dataloader,
         loss_fn,
         opt,
         N_total_iterations,
-        n_classes,
-        batch_size,
     )
     # test network
-    accuracy_on_test_data = test(model, X_test, Y_test, loss_fn, n_classes)
+    accuracy_on_test_data = test(model, X_test, Y_test_one_hot, loss_fn)
 
     if visualize:
         resolution = input_params.resolution
         # plot results (for grid)
         figure_main = plot_classification(
-            model, X, X_train, X_test, Y_train, Y_test, accuracy_on_test_data, resolution
+            model, X, X_train, X_test, Y_train.tolist(), Y_test.tolist(), accuracy_on_test_data, resolution
         )
 
         # plot to html
@@ -399,7 +403,6 @@ def calculation_task(self, db_id: int) -> str:
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
 
 
-# TODO hidden layers for preprocessing and postprocessing? GUI..
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
 # TODO ouput document with details for classical network parts

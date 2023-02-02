@@ -137,7 +137,6 @@ class MicroFrontend(MethodView):
             schema.fields["visualize"].data_key: True,
             schema.fields["weight_init"].data_key: WeightInitEnum.uniform.value,
             schema.fields["weights_to_wiggle"].data_key: 0,
-            schema.fields["preprocess_layers"].data_key: (0, 1),
         }
 
         if "IBMQ_BACKEND" in os.environ:

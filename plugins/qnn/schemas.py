@@ -36,15 +36,9 @@ class QuantumBackends(Enum):
         qubit_cnt: int,
         shots: int,
     ) -> qml.Device:
-        print("BACKEND_ENUM", backend_enum)
-        print("IBMQ_TOKEN", ibmq_token)
-        print("CUSTOM_BACKEND_NAME", custom_backend_name)
-        print("QUBIT_CNT", qubit_cnt)
-        print("SHOTS", shots)
         if backend_enum.name.startswith("aer"):
             # Use local AER backend
             aer_backend_name = backend_enum.name[4:]
-            print("AER_BACKEND_NAME", aer_backend_name)
             return qml.device(
                 "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
             )
@@ -72,7 +66,7 @@ class QuantumBackends(Enum):
             )
         else:
             # TASK_LOGGER.error
-            print("Unknown pennylane backend specified!")  # TODO
+            raise NotImplementedError("Unknown pennylane backend specified!")
 
 
 class OptimizerEnum(Enum):
@@ -113,11 +107,11 @@ class InputParameters:
         n_qubits: int,
         N_total_iterations: int,
         q_depth: int,
-        preprocess_layers: str,
-        postprocess_layers: str,
         batch_size: int,
         resolution: int,
         weights_to_wiggle: int,
+        preprocess_layers: str = "",
+        postprocess_layers: str = "",
         use_default_dataset=False,
         randomly_shuffle=False,
         visualize=False,
@@ -314,8 +308,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         },
     )
     preprocess_layers = ma.fields.String(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={
             "label": "Preprocessing layers",
             "description": "Before the data is forward into the quantum neural network, it is first preprocessed with "
@@ -327,8 +321,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         validate=validate_layer_input,
     )
     postprocess_layers = ma.fields.String(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={
             "label": "Postprocessing layers",
             "description": "Before outputting the final results, the quantum neural networks output gets postprocessed "

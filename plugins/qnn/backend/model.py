@@ -79,7 +79,6 @@ class DressedQuantumNet(nn.Module):
         q_params = None
 
         # weight init
-        # TODO what about biases?
         if weight_init == WeightInitEnum.standard_normal:
             q_params = 0.01 * torch.randn(q_depth * n_qubits)
             init_fn = nn.init.normal_
@@ -193,7 +192,7 @@ class ClassicalNet(nn.Module):
             elif self.weight_init == WeightInitEnum.zero:  # TODO plot is completely blue?
                 module.weight.data.zero_()
             else:
-                print("unknown weight init method")
+                raise NotImplementedError("unknown weight init method")
 
             # initialize bias
             if module.bias is not None:
