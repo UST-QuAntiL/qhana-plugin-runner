@@ -160,7 +160,7 @@ You can find examples in the `/bpmn` directory of the workflows plugin to get st
 Open the workflow in Camunda Modeler.
 This can be your own workflow or one the example workflows.
 - click on the rocket icon at the bottom
-- enter a deployment name,
+- enter a deployment name
 - set the REST endpoint to the endpoint of Camunda BPMN
   - if you're using the docker setup this would be http://localhost:8081/engine-rest
 
