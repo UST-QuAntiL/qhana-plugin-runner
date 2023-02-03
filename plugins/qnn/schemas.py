@@ -313,9 +313,9 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Preprocessing layers",
             "description": "Before the data is forward into the quantum neural network, it is first preprocessed with "
-                           "a classical network. This determines the number of neurons in the classical preprocessing "
-                           "step. The i'th entry represents the number of neurons in the i'th hidden layer."
-                           "Please separate the layer sizes by a comma, e.g. ``4,5,10,4``",
+            "a classical network. This determines the number of neurons in the classical preprocessing "
+            "step. The i'th entry represents the number of neurons in the i'th hidden layer."
+            "Please separate the layer sizes by a comma, e.g. ``4,5,10,4``",
             "input_type": "text",
         },
         validate=validate_layer_input,
@@ -326,9 +326,9 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Postprocessing layers",
             "description": "Before outputting the final results, the quantum neural networks output gets postprocessed "
-                           " with the help of a classical neural network. This determines the number of neurons in the "
-                           "classical postprocessing step. The i'th entry represents the number of neurons in the i'th "
-                           "hidden layer.",
+            " with the help of a classical neural network. This determines the number of neurons in the "
+            "classical postprocessing step. The i'th entry represents the number of neurons in the i'th "
+            "hidden layer.",
             "input_type": "text",
         },
         validate=validate_layer_input,

@@ -10,9 +10,7 @@ import torch
 import time
 
 
-def train(
-    model, dataloader, loss_fn, optimizer, num_iterations, weights_to_wiggle
-):
+def train(model, dataloader, loss_fn, optimizer, num_iterations, weights_to_wiggle):
     """
     train the model with the given data and parameters
 

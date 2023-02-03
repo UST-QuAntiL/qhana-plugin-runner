@@ -263,7 +263,11 @@ def calculation_task(self, db_id: int) -> str:
 
     # Prep data
     print(f"X_train: {X_train}\nY_train: {Y_train}\nX_test: {X_test}\nY_test: {Y_test}")
-    train_dataloader = DataLoader(OneHotDataset(X_train, Y_train, n_classes), batch_size=batch_size, shuffle=randomly_shuffle)
+    train_dataloader = DataLoader(
+        OneHotDataset(X_train, Y_train, n_classes),
+        batch_size=batch_size,
+        shuffle=randomly_shuffle,
+    )
     Y_test_one_hot = digits2position(Y_test, n_classes)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -277,9 +281,15 @@ def calculation_task(self, db_id: int) -> str:
         ibmq_token = input_params.ibmq_token
         TASK_LOGGER.info(f"Loaded input parameters from db: ibmq_token")
         weights_to_wiggle = input_params.weights_to_wiggle
-        TASK_LOGGER.info(f"Loaded input parameters from db: weights_to_wiggle='{weights_to_wiggle}'")
-        preprocess_layers = [int(el) for el in input_params.preprocess_layers.split(",") if el != ""]
-        postprocess_layers = [int(el) for el in input_params.postprocess_layers.split(",") if el != ""]
+        TASK_LOGGER.info(
+            f"Loaded input parameters from db: weights_to_wiggle='{weights_to_wiggle}'"
+        )
+        preprocess_layers = [
+            int(el) for el in input_params.preprocess_layers.split(",") if el != ""
+        ]
+        postprocess_layers = [
+            int(el) for el in input_params.postprocess_layers.split(",") if el != ""
+        ]
 
         if ibmq_token == "****":
             TASK_LOGGER.info(f"Loading IBMQ token from environment variable")
@@ -303,7 +313,17 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.info(f"DEVICE '{dev}'")
 
         # get dressed quantum network
-        model = DressedQuantumNet(X.shape[1], n_classes, n_qubits, dev, q_depth, weight_init, preprocess_layers, postprocess_layers, weights_to_wiggle != 0)
+        model = DressedQuantumNet(
+            X.shape[1],
+            n_classes,
+            n_qubits,
+            dev,
+            q_depth,
+            weight_init,
+            preprocess_layers,
+            postprocess_layers,
+            weights_to_wiggle != 0,
+        )
     else:
         # get classical neural network
         model = ClassicalNet(n_qubits, q_depth, weight_init)
@@ -317,14 +337,7 @@ def calculation_task(self, db_id: int) -> str:
     opt = get_optimizer(optimizer, model, step)
 
     # train network
-    train(
-        model,
-        train_dataloader,
-        loss_fn,
-        opt,
-        N_total_iterations,
-        weights_to_wiggle
-    )
+    train(model, train_dataloader, loss_fn, opt, N_total_iterations, weights_to_wiggle)
     # test network
     accuracy_on_test_data = test(model, X_test, Y_test_one_hot, loss_fn)
 
@@ -332,7 +345,14 @@ def calculation_task(self, db_id: int) -> str:
         resolution = input_params.resolution
         # plot results (for grid)
         figure_main = plot_classification(
-            model, X, X_train, X_test, Y_train.tolist(), Y_test.tolist(), accuracy_on_test_data, resolution
+            model,
+            X,
+            X_train,
+            X_test,
+            Y_train.tolist(),
+            Y_test.tolist(),
+            accuracy_on_test_data,
+            resolution,
         )
 
         # plot to html

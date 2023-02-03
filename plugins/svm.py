@@ -531,9 +531,7 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return (
-            "qiskit~=0.27\nscikit-learn~=1.1\nqiskit-machine-learning~=0.4.0"
-        )
+        return "qiskit~=0.27\nscikit-learn~=1.1\nqiskit-machine-learning~=0.4.0"
 
 
 TASK_LOGGER = get_task_logger(__name__)

@@ -39,14 +39,18 @@ def entangling_layer(nqubits):
         qml.CNOT(wires=[i, i + 1])
 
 
-def create_fully_connected_net(input_size: int, hidden_layers: List[int], output_size: int) -> nn.Sequential:
+def create_fully_connected_net(
+    input_size: int, hidden_layers: List[int], output_size: int
+) -> nn.Sequential:
     net = nn.Sequential()
     if len(hidden_layers) > 0:
         net.add_module("input_layer", nn.Linear(input_size, hidden_layers[0]))
 
         for idx, layer_size in enumerate(hidden_layers[:-1]):
             net.add_module(f"act_func_{idx}", nn.ReLU())
-            net.add_module(f"hidden_layer_{idx}", nn.Linear(layer_size, hidden_layers[idx + 1]))
+            net.add_module(
+                f"hidden_layer_{idx}", nn.Linear(layer_size, hidden_layers[idx + 1])
+            )
 
         net.add_module(f"act_func_{len(hidden_layers)}", nn.ReLU())
         net.add_module("output_layer", nn.Linear(hidden_layers[-1], output_size))
@@ -62,8 +66,18 @@ class DressedQuantumNet(nn.Module):
     Torch module implementing the dressed quantum net.
     """
 
-    def __init__(self, input_size, output_size, n_qubits, quantum_device, q_depth, weight_init,
-                 preprocess_layers: List[int], postprocess_layers: List[int], single_q_params: bool = False):
+    def __init__(
+        self,
+        input_size,
+        output_size,
+        n_qubits,
+        quantum_device,
+        q_depth,
+        weight_init,
+        preprocess_layers: List[int],
+        postprocess_layers: List[int],
+        single_q_params: bool = False,
+    ):
         """
         Initialize network with preprocessing, quantum and postprocessing layers
 
@@ -75,7 +89,9 @@ class DressedQuantumNet(nn.Module):
 
         super().__init__()
         self.pre_net = create_fully_connected_net(input_size, preprocess_layers, n_qubits)
-        self.post_net = create_fully_connected_net(n_qubits, postprocess_layers, output_size)
+        self.post_net = create_fully_connected_net(
+            n_qubits, postprocess_layers, output_size
+        )
         self.post_net.append(nn.Softmax())
 
         q_params = None
