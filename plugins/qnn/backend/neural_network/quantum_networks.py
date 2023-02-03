@@ -15,6 +15,22 @@ from typing import List, Iterator
 
 from .utils import grouper
 
+from abc import ABCMeta, abstractmethod
+
+
+class QuantumNet(nn.Module, metaclass=ABCMeta):
+    def __init__(self, quantum_device: qml.Device):
+        super(QuantumNet, self).__init__()
+        self.quantum_device = quantum_device
+
+    def set_quantum_backend(self, quantum_device: qml.Device):
+        self.quantum_device = quantum_device
+
+    @abstractmethod
+    def get_quantum_parameters(self):
+        """Returns the quantum parameters"""
+
+
 # define quantum layers
 def H_layer(nqubits):
     """Layer of single-qubit Hadamard gates."""
@@ -61,7 +77,7 @@ def create_fully_connected_net(
 
 
 # dressed quantum circuit
-class DressedQuantumNet(nn.Module):
+class DressedQuantumNet(QuantumNet):
     """
     Torch module implementing the dressed quantum net.
     """
@@ -87,14 +103,12 @@ class DressedQuantumNet(nn.Module):
         weight_init: type of (random) initialization of the models weights (WeightInitEnum)
         """
 
-        super().__init__()
+        super().__init__(quantum_device)
         self.pre_net = create_fully_connected_net(input_size, preprocess_layers, n_qubits)
         self.post_net = create_fully_connected_net(
             n_qubits, postprocess_layers, output_size
         )
         self.post_net.append(nn.Softmax())
-
-        q_params = None
 
         # weight init
         if weight_init == WeightInitEnum.standard_normal:
@@ -178,66 +192,5 @@ class DressedQuantumNet(nn.Module):
             for p in self.q_params:
                 yield p
 
-
-class ClassicalNet(nn.Module):
-    """
-    Torch module implementing the classical net.
-    """
-
-    def __init__(self, n_features, depth, weight_init):
-        """
-        Initialize network with preprocessing, classical and postprocessing layers
-
-        n_features: number of features per layer
-        depth: number of layers
-        weight_init: type of (random) initialization of the models weights (WeightInitEnum)
-        """
-
-        super().__init__()
-
-        self.pre_net = nn.Linear(2, n_features)
-
-        self.relu = nn.ReLU()
-        self.classical_net = nn.ModuleList(
-            [nn.Linear(n_features, n_features) for i in range(depth)]
-        )
-
-        self.post_net = nn.Linear(n_features, 2)
-
-        # weight initialization
-        self.weight_init = weight_init
-        self.apply(self._init_weights)
-
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            # init weights according to initialization type
-            if self.weight_init == WeightInitEnum.standard_normal:
-                module.weight.data.normal_(mean=0.0, std=1.0)
-            elif self.weight_init == WeightInitEnum.uniform:
-                module.weight.data.uniform_()
-            elif self.weight_init == WeightInitEnum.zero:  # TODO plot is completely blue?
-                module.weight.data.zero_()
-            else:
-                raise NotImplementedError("unknown weight init method")
-
-            # initialize bias
-            if module.bias is not None:
-                module.bias.data.zero_()
-
-    def forward(self, input_features):
-        """
-        pass input features through classical layers
-        """
-
-        # preprocessing layer
-        out = self.pre_net(input_features)
-        # out = torch.tanh(out)
-
-        # classical net
-        for i, layer in enumerate(self.classical_net):
-            out = self.relu(layer(out))
-
-        c_out = torch.tanh(out)
-
-        # postprocessing layer
-        return self.post_net(c_out)
+    def get_quantum_parameters(self):
+        return self.q_params
