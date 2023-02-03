@@ -13,9 +13,10 @@ from plugins.qnn.schemas import WeightInitEnum
 
 from typing import List, Iterator
 
-from .utils import grouper
-
 from abc import ABCMeta, abstractmethod
+
+from .utils import grouper
+from .classical_networks import create_fully_connected_net
 
 
 class QuantumNet(nn.Module, metaclass=ABCMeta):
@@ -53,27 +54,6 @@ def entangling_layer(nqubits):
         qml.CNOT(wires=[i, i + 1])
     for i in range(1, nqubits - 1, 2):  # Loop over odd indices:  i=1,3,...N-3
         qml.CNOT(wires=[i, i + 1])
-
-
-def create_fully_connected_net(
-    input_size: int, hidden_layers: List[int], output_size: int
-) -> nn.Sequential:
-    net = nn.Sequential()
-    if len(hidden_layers) > 0:
-        net.add_module("input_layer", nn.Linear(input_size, hidden_layers[0]))
-
-        for idx, layer_size in enumerate(hidden_layers[:-1]):
-            net.add_module(f"act_func_{idx}", nn.ReLU())
-            net.add_module(
-                f"hidden_layer_{idx}", nn.Linear(layer_size, hidden_layers[idx + 1])
-            )
-
-        net.add_module(f"act_func_{len(hidden_layers)}", nn.ReLU())
-        net.add_module("output_layer", nn.Linear(hidden_layers[-1], output_size))
-    else:
-        net.add_module("output_layer", nn.Linear(input_size, output_size))
-
-    return net
 
 
 # dressed quantum circuit

@@ -1,6 +1,28 @@
 import torch
 from torch import nn
 from plugins.qnn.schemas import WeightInitEnum
+from typing import List
+
+
+def create_fully_connected_net(
+    input_size: int, hidden_layers: List[int], output_size: int
+) -> nn.Sequential:
+    net = nn.Sequential()
+    if len(hidden_layers) > 0:
+        net.add_module("input_layer", nn.Linear(input_size, hidden_layers[0]))
+
+        for idx, layer_size in enumerate(hidden_layers[:-1]):
+            net.add_module(f"act_func_{idx}", nn.ReLU())
+            net.add_module(
+                f"hidden_layer_{idx}", nn.Linear(layer_size, hidden_layers[idx + 1])
+            )
+
+        net.add_module(f"act_func_{len(hidden_layers)}", nn.ReLU())
+        net.add_module("output_layer", nn.Linear(hidden_layers[-1], output_size))
+    else:
+        net.add_module("output_layer", nn.Linear(input_size, output_size))
+
+    return net
 
 
 class FeedForwardNetwork(nn.Module):
@@ -8,7 +30,7 @@ class FeedForwardNetwork(nn.Module):
     Torch module implementing the classical net.
     """
 
-    def __init__(self, input_size, output_size, n_features, depth, weight_init):
+    def __init__(self, input_size, output_size, hidden_layers, weight_init):
         """
         Initialize network with preprocessing, classical and postprocessing layers
 
@@ -19,14 +41,7 @@ class FeedForwardNetwork(nn.Module):
 
         super().__init__()
 
-        self.pre_net = nn.Linear(input_size, n_features)
-
-        self.relu = nn.ReLU()
-        self.classical_net = nn.ModuleList(
-            [nn.Linear(n_features, n_features) for i in range(depth)]
-        )
-
-        self.post_net = nn.Linear(n_features, output_size)
+        self.net = create_fully_connected_net(input_size, hidden_layers, output_size)
 
         # weight initialization
         self.weight_init = weight_init
@@ -52,16 +67,4 @@ class FeedForwardNetwork(nn.Module):
         """
         pass input features through classical layers
         """
-
-        # preprocessing layer
-        out = self.pre_net(input_features)
-        # out = torch.tanh(out)
-
-        # classical net
-        for i, layer in enumerate(self.classical_net):
-            out = self.relu(layer(out))
-
-        c_out = torch.tanh(out)
-
-        # postprocessing layer
-        return self.post_net(c_out)
+        return self.net(input_features)

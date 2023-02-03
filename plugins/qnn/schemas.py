@@ -37,6 +37,7 @@ class InputParameters:
     weights_to_wiggle: int
     preprocess_layers: str = ""
     postprocess_layers: str = ""
+    hidden_layers: str = ""
     use_default_dataset: bool = False
     randomly_shuffle: bool = False
     visualize: bool = False
@@ -99,24 +100,6 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    visualize = ma.fields.Boolean(
-        required=False,
-        allow_none=False,
-        metadata={
-            "label": "Visualize",
-            "description": "Plot the decision boundary for the trained classifier.",
-            "input_type": "checkbox",
-        },
-    )
-    resolution = ma.fields.Int(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Resolution",
-            "description": "Resolution of the visualization. How finegrained the evaluation of the classifier should be.",
-            "input_type": "text",
-        },
-    )
     randomly_shuffle = ma.fields.Boolean(
         required=False,
         allow_none=False,
@@ -135,40 +118,12 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    device = EnumField(
-        QuantumBackends,
+    epochs = ma.fields.Int(
         required=True,
         allow_none=False,
         metadata={
-            "label": "Backend",
-            "description": "QC or simulator that will be used.",
-            "input_type": "select",
-        },
-    )
-    ibmq_token = ma.fields.String(
-        required=False,
-        allow_none=False,
-        metadata={
-            "label": "IBMQ Token",
-            "description": "Token for IBMQ.",
-            "input_type": "text",
-        },
-    )
-    custom_backend = ma.fields.String(
-        required=False,
-        allow_none=False,
-        metadata={
-            "label": "Custom backend",
-            "description": "Custom backend for IBMQ.",
-            "input_type": "text",
-        },
-    )
-    shots = ma.fields.Int(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Shots",
-            "description": "Number of shots.",
+            "label": "Number of Epochs",
+            "description": "Number of total training epochs.",
             "input_type": "text",
         },
     )
@@ -182,7 +137,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    step = ma.fields.Float(
+    lr = ma.fields.Float(
         required=True,
         allow_none=False,
         metadata={
@@ -200,15 +155,6 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    N_total_iterations = ma.fields.Int(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Number of iterations",
-            "description": "Number of total training iterations. I.e. number of batches used during training",
-            "input_type": "text",
-        },
-    )
     q_depth = ma.fields.Int(
         required=True,
         allow_none=False,
@@ -222,7 +168,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=True,
         metadata={
-            "label": "Preprocessing layers",
+            "label": "Preprocessing Layers",
             "description": "Before the data is forward into the quantum neural network, it is first preprocessed with "
             "a classical network. This determines the number of neurons in the classical preprocessing "
             "step. The i'th entry represents the number of neurons in the i'th hidden layer."
@@ -235,11 +181,22 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=True,
         metadata={
-            "label": "Postprocessing layers",
+            "label": "Postprocessing Layers",
             "description": "Before outputting the final results, the quantum neural networks output gets postprocessed "
             " with the help of a classical neural network. This determines the number of neurons in the "
             "classical postprocessing step. The i'th entry represents the number of neurons in the i'th "
             "hidden layer.",
+            "input_type": "text",
+        },
+        validate=validate_layer_input,
+    )
+    hidden_layers = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Hidden Layers",
+            "description": "This determines the number of neurons in the neural network. The i'th entry represents the "
+                           "number of neurons in the i'th hidden layer.",
             "input_type": "text",
         },
         validate=validate_layer_input,
@@ -270,6 +227,61 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Quantum Layer: Weights to wiggle",
             "description": "The number of weights in the quantum circuit to update in one optimization step. 0 means all.",
             "input_type": "number",
+        },
+    )
+    device = EnumField(
+        QuantumBackends,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Backend",
+            "description": "QC or simulator that will be used.",
+            "input_type": "select",
+        },
+    )
+    shots = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Shots",
+            "description": "Number of shots.",
+            "input_type": "text",
+        },
+    )
+    ibmq_token = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "text",
+        },
+    )
+    custom_backend = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Custom backend",
+            "description": "Custom backend for IBMQ.",
+            "input_type": "text",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Visualize",
+            "description": "Plot the decision boundary for the trained classifier.",
+            "input_type": "checkbox",
+        },
+    )
+    resolution = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Resolution",
+            "description": "Resolution of the visualization. How finegrained the evaluation of the classifier should be.",
+            "input_type": "text",
         },
     )
 

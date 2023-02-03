@@ -18,8 +18,7 @@ class NeuralNetworkEnum(Enum):
             return FeedForwardNetwork(
                 parameters["input_size"],
                 parameters["output_size"],
-                parameters["n_qubits"],
-                parameters["depth"],
+                parameters["hidden_layers"],
                 parameters["weight_init"],
             )
         elif self == NeuralNetworkEnum.dressed_quantum_net:
