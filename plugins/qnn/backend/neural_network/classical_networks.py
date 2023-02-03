@@ -8,7 +8,7 @@ class FeedForwardNetwork(nn.Module):
     Torch module implementing the classical net.
     """
 
-    def __init__(self, n_features, depth, weight_init):
+    def __init__(self, input_size, output_size, n_features, depth, weight_init):
         """
         Initialize network with preprocessing, classical and postprocessing layers
 
@@ -19,14 +19,14 @@ class FeedForwardNetwork(nn.Module):
 
         super().__init__()
 
-        self.pre_net = nn.Linear(2, n_features)
+        self.pre_net = nn.Linear(input_size, n_features)
 
         self.relu = nn.ReLU()
         self.classical_net = nn.ModuleList(
             [nn.Linear(n_features, n_features) for i in range(depth)]
         )
 
-        self.post_net = nn.Linear(n_features, 2)
+        self.post_net = nn.Linear(n_features, output_size)
 
         # weight initialization
         self.weight_init = weight_init

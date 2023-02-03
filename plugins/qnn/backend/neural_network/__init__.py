@@ -16,7 +16,11 @@ class NeuralNetworkEnum(Enum):
             from .classical_networks import FeedForwardNetwork
 
             return FeedForwardNetwork(
-                parameters["n_qubits"], parameters["depth"], parameters["weight_init"]
+                parameters["input_size"],
+                parameters["output_size"],
+                parameters["n_qubits"],
+                parameters["depth"],
+                parameters["weight_init"],
             )
         elif self == NeuralNetworkEnum.dressed_quantum_net:
             from .quantum_networks import DressedQuantumNet
