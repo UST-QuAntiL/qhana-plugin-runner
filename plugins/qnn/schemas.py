@@ -196,7 +196,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Hidden Layers",
             "description": "This determines the number of neurons in the neural network. The i'th entry represents the "
-                           "number of neurons in the i'th hidden layer.",
+            "number of neurons in the i'th hidden layer.",
             "input_type": "text",
         },
         validate=validate_layer_input,

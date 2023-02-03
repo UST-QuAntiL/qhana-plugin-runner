@@ -200,9 +200,7 @@ def calculation_task(self, db_id: int) -> str:
     postprocess_layers = [
         int(el) for el in input_params.postprocess_layers.split(",") if el != ""
     ]
-    hidden_layers = [
-        int(el) for el in input_params.hidden_layers.split(",") if el != ""
-    ]
+    hidden_layers = [int(el) for el in input_params.hidden_layers.split(",") if el != ""]
 
     model_parameters = dict(
         n_qubits=n_qubits,
