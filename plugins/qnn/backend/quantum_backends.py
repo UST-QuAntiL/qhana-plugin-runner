@@ -2,6 +2,7 @@ import pennylane as qml
 from enum import Enum
 from qiskit import IBMQ
 
+
 # TODO additional pennylane devices?
 #   default.qubit, default.gaussian, default.qubit.tf, default.qubit.autograd
 class QuantumBackends(Enum):

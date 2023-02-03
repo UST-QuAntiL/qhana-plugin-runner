@@ -220,7 +220,6 @@ class ProcessView(MethodView):
 
 
 class FileUpload(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Uploads files to use in the workflow."

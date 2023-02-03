@@ -32,7 +32,6 @@ MANUAL_CLASSIFICATION_BLP = SecurityBlueprint(
 
 
 class ManualClassification(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Manually annotate classes for data sets from MUSE database."

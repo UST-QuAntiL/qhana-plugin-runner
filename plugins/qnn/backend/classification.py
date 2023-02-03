@@ -40,7 +40,6 @@ def classical_SVM(data, labels):
 
 
 def quantumkernel_SVM(data, labels, n_qubits):
-
     dev_kernel = qml.device("default.qubit", wires=n_qubits)
 
     projector = np.zeros((2**n_qubits, 2**n_qubits))
@@ -64,7 +63,6 @@ def quantumkernel_SVM(data, labels, n_qubits):
 
 
 def variational_quantum_classifier(data, labels, n_qubits, n_layers):
-
     dev = qml.device("default.qubit", wires=4)
 
     def layer(W):

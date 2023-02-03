@@ -270,7 +270,6 @@ class ProcessView(MethodView):
 
 
 class QiskitSimulator(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = (

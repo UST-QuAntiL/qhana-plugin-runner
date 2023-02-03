@@ -224,7 +224,6 @@ class CalcSimilarityView(MethodView):
 
 
 class TimeTanh(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Compares elements and returns similarity values."

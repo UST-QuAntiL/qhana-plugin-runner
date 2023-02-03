@@ -517,7 +517,6 @@ class ProcessView(MethodView):
 
 
 class SVM(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Classifies data with a classical or quantum support vector machine"
@@ -882,7 +881,6 @@ def demo_task(self, db_id: int) -> str:
     # Support vector machine
     svm = None
     if use_quantum:
-
         svm = get_quantum_SVC(train_data, train_labels, input_params)
     else:
         c = input_params.regularization_C
