@@ -303,7 +303,7 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.info(f"DEVICE '{dev}'")
 
         # get dressed quantum network
-        model = DressedQuantumNet(X.shape[1], n_classes, n_qubits, dev, q_depth, weight_init, preprocess_layers, postprocess_layers)
+        model = DressedQuantumNet(X.shape[1], n_classes, n_qubits, dev, q_depth, weight_init, preprocess_layers, postprocess_layers, weights_to_wiggle != 0)
     else:
         # get classical neural network
         model = ClassicalNet(n_qubits, q_depth, weight_init)
@@ -323,6 +323,7 @@ def calculation_task(self, db_id: int) -> str:
         loss_fn,
         opt,
         N_total_iterations,
+        weights_to_wiggle
     )
     # test network
     accuracy_on_test_data = test(model, X_test, Y_test_one_hot, loss_fn)

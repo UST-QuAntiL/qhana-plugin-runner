@@ -11,7 +11,9 @@ import torch.nn as nn
 
 from plugins.qnn.schemas import WeightInitEnum
 
-from typing import List
+from typing import List, Iterator
+
+from .utils import grouper
 
 # define quantum layers
 def H_layer(nqubits):
@@ -61,7 +63,7 @@ class DressedQuantumNet(nn.Module):
     """
 
     def __init__(self, input_size, output_size, n_qubits, quantum_device, q_depth, weight_init,
-                 preprocess_layers: List[int], postprocess_layers: List[int]):
+                 preprocess_layers: List[int], postprocess_layers: List[int], single_q_params: bool = False):
         """
         Initialize network with preprocessing, quantum and postprocessing layers
 
@@ -92,15 +94,16 @@ class DressedQuantumNet(nn.Module):
             raise NotImplementedError("Unknown weight init method")
 
         for name, module in self.pre_net.named_modules():
-            print(f"{name}: {type(module)}")
             if "layer" in name:
                 init_fn(module.weight)
         for name, module in self.post_net.named_modules():
-            print(f"{name}: {type(module)}")
             if "layer" in name:
                 init_fn(module.weight)
 
-        self.q_params = nn.Parameter(q_params)
+        if single_q_params:
+            self.q_params = [nn.Parameter(el, requires_grad=True) for el in q_params]
+        else:
+            self.q_params = nn.Parameter(q_params)
 
         # define circuit
         @qml.qnode(quantum_device, interface="torch")
@@ -110,7 +113,7 @@ class DressedQuantumNet(nn.Module):
             """
 
             # Reshape weights
-            q_weights = q_weights_flat.reshape(q_depth, n_qubits)
+            q_weights = grouper(iter(q_weights_flat), n_qubits)
 
             # Start from state |+> , unbiased w.r.t. |0> and |1>
             H_layer(n_qubits)
@@ -121,7 +124,7 @@ class DressedQuantumNet(nn.Module):
             # Sequence of trainable variational layers
             for k in range(q_depth):
                 entangling_layer(n_qubits)
-                RY_layer(q_weights[k])
+                RY_layer(next(q_weights))
 
             # Expectation values in the Z basis
             exp_vals = [qml.expval(qml.PauliZ(position)) for position in range(n_qubits)]
@@ -151,6 +154,13 @@ class DressedQuantumNet(nn.Module):
 
         # two-dimensional prediction from the postprocessing layer
         return self.post_net(q_out)
+
+    def parameters(self, recurse: bool = True) -> Iterator[nn.Parameter]:
+        for name, param in self.named_parameters(recurse=recurse):
+            yield param
+        if isinstance(self.q_params, list):
+            for p in self.q_params:
+                yield p
 
 
 class ClassicalNet(nn.Module):

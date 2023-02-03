@@ -11,7 +11,7 @@ import time
 
 
 def train(
-    model, dataloader, loss_fn, optimizer, num_iterations
+    model, dataloader, loss_fn, optimizer, num_iterations, weights_to_wiggle
 ):
     """
     train the model with the given data and parameters
@@ -35,8 +35,13 @@ def train(
 
         correctly_labeled = 0
         for train_data, train_labels in dataloader:
+            if weights_to_wiggle != 0:
+                rnd_indices = torch.randperm(len(model.q_params))[weights_to_wiggle:]
+                for idx in rnd_indices:
+                    model.q_params[idx].requires_grad = False
+
             # zero gradients
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
             # get model predictions
             predictions = model(train_data)
@@ -46,6 +51,7 @@ def train(
 
             # backpropagation, adjust weights
             loss.backward()
+
             optimizer.step()
 
             # accuracy
@@ -58,16 +64,19 @@ def train(
             minutes_it = total_it_time // 60
             seconds_it = round(total_it_time - minutes_it * 60)
 
+            if weights_to_wiggle != 0:
+                for idx in rnd_indices:
+                    model.q_params[idx].requires_grad = True
+
         # print loss, accuracy and time of this iteration
-        accuracy = correctly_labeled / len(dataloader)
+        accuracy = correctly_labeled / len(dataloader.dataset)
         print(
             "Iter: {}/{} Time: {:.4f} min {:.4f} sec with loss: {:.4f} and accuracy: {:.4f} on the training data".format(
                 i + 1, num_iterations, minutes_it, seconds_it, loss.item(), accuracy
-            ),
-            end="\r",
-            flush=True,
+            )
         )
-        time.sleep(0.5)
+        # print(f"weights_to_wiggle: {weights_to_wiggle}")
+        # time.sleep(2)
 
 
 def test(model, X_test, Y_test, loss_fn):
