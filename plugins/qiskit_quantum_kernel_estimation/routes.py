@@ -27,7 +27,7 @@ from marshmallow import EXCLUDE
 
 from . import QISKIT_QKE_BLP, QiskitQKE
 from .backend.qiskit_backends import QiskitBackends
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import InputParametersSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -81,7 +81,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="kernel-matrix",
+                        data_type="custom/kernel-matrix",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -168,7 +168,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @QISKIT_QKE_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @QISKIT_QKE_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @QISKIT_QKE_BLP.response(HTTPStatus.SEE_OTHER)
     @QISKIT_QKE_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

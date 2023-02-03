@@ -10,7 +10,6 @@ from marshmallow import EXCLUDE
 from . import HybridAutoencoderPlugin, HA_BLP
 from .tasks import hybrid_autoencoder_pennylane_task
 from .schemas import (
-    HybridAutoencoderTaskResponseSchema,
     HybridAutoencoderPennylaneRequestSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -37,20 +36,20 @@ class PluginsView(MethodView):
             description=HybridAutoencoderPlugin.instance.description,
             name=HybridAutoencoderPlugin.instance.name,
             version=HybridAutoencoderPlugin.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{HA_BLP.name}.HybridAutoencoderPennylaneAPI"),
                 ui_href=url_for(f"{HA_BLP.name}.MicroFrontend"),
                 data_input=[
                     DataMetadata(
-                        data_type="real-valued-entities",
+                        data_type="custom/real-valued-entities",
                         content_type=["application/json"],
                         required=True,
                     )
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="real-valued-entities",
+                        data_type="custom/real-valued-entities",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -125,7 +124,7 @@ class MicroFrontend(MethodView):
 class HybridAutoencoderPennylaneAPI(MethodView):
     """Start a long running processing task."""
 
-    @HA_BLP.response(HTTPStatus.OK, HybridAutoencoderTaskResponseSchema)
+    @HA_BLP.response(HTTPStatus.SEE_OTHER)
     @HA_BLP.arguments(
         HybridAutoencoderPennylaneRequestSchema(unknown=EXCLUDE), location="form"
     )

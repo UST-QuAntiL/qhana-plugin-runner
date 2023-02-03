@@ -26,7 +26,6 @@ from .schemas import (
     AnyInputSchema,
     InputParameters,
     WorkflowsParametersSchema,
-    WorkflowsTaskResponseSchema,
 )
 from .tasks import process_input, start_workflow
 from .watchers.human_task_watcher import human_task_watcher
@@ -115,7 +114,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @WORKFLOWS_BLP.arguments(WorkflowsParametersSchema(unknown=EXCLUDE), location="form")
-    @WORKFLOWS_BLP.response(HTTPStatus.OK, WorkflowsTaskResponseSchema())
+    @WORKFLOWS_BLP.response(HTTPStatus.SEE_OTHER)
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params: InputParameters):
         db_task = ProcessingTask(
@@ -288,7 +287,7 @@ class HumanTaskProcessView(MethodView):
     """Start a long running processing task."""
 
     @WORKFLOWS_BLP.arguments(AnyInputSchema(), location="form")
-    @WORKFLOWS_BLP.response(HTTPStatus.OK, WorkflowsTaskResponseSchema())
+    @WORKFLOWS_BLP.response(HTTPStatus.SEE_OTHER)
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
