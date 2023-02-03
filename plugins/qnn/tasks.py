@@ -116,9 +116,7 @@ def calculation_task(self, db_id: int) -> str:
 
         if "IBMQ_TOKEN" in os.environ:
             ibmq_token = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info(
-                f"IBMQ token successfully loaded from environment variable"
-            )
+            TASK_LOGGER.info(f"IBMQ token successfully loaded from environment variable")
         else:
             TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
 
@@ -215,7 +213,9 @@ def calculation_task(self, db_id: int) -> str:
     )
 
     if network_enum.needs_quantum_backend():
-        model_parameters["quantum_device"] = q_device_enum.get_pennylane_backend(ibmq_token, custom_backend, n_qubits, shots)
+        model_parameters["quantum_device"] = q_device_enum.get_pennylane_backend(
+            ibmq_token, custom_backend, n_qubits, shots
+        )
     else:
         weights_to_wiggle = 0
 
