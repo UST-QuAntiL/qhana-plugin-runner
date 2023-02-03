@@ -91,13 +91,13 @@ def calculation_task(self, db_id: int) -> str:
 
     # set variables to loaded values
     n_qubits = input_params.n_qubits  # Number of qubits
-    step = input_params.step  # Learning rate
+    lr = input_params.lr  # Learning rate
     batch_size = input_params.batch_size  # Numbre of samples (points) for each mini-batch
     q_depth = input_params.q_depth  # number of variational layers
     use_default_dataset = input_params.use_default_dataset
     network_enum = input_params.network_enum
     # Number of optimization steps (step= 1 batch)
-    N_total_iterations = input_params.N_total_iterations
+    epochs = input_params.epochs
     test_percentage = input_params.test_percentage
     shots = input_params.shots
     optimizer = input_params.optimizer
@@ -229,10 +229,10 @@ def calculation_task(self, db_id: int) -> str:
     loss_fn = nn.CrossEntropyLoss()
 
     # select optimizer
-    opt = optimizer.get_optimizer(model, step)
+    opt = optimizer.get_optimizer(model, lr)
 
     # train network
-    train(model, train_dataloader, loss_fn, opt, N_total_iterations, weights_to_wiggle)
+    train(model, train_dataloader, loss_fn, opt, epochs, weights_to_wiggle)
     # test network
     accuracy_on_test_data = test(model, X_test, Y_test_one_hot, loss_fn)
 

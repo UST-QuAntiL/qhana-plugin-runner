@@ -28,9 +28,9 @@ class InputParameters:
     shots: int
     optimizer: OptimizerEnum
     weight_init: WeightInitEnum
-    step: float
+    lr: float
     n_qubits: int
-    N_total_iterations: int
+    epochs: int
     q_depth: int
     batch_size: int
     resolution: int
@@ -86,20 +86,6 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    network_enum = EnumField(
-        NeuralNetworkEnum,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Neural Network",
-            "description": "This determines the neural network used. Currently available networks are:\n"
-            "- Feed Forward Neural Network: This is a simple classical feed forward neural network, "
-            "with relu as an activation function after each layer.\n"
-            "- Dressed quantum neural network: This is a quantum neural network with a classical feed "
-            "forward neural network for preprocessing and one for postprocessing.",
-            "input_type": "select",
-        },
-    )
     randomly_shuffle = ma.fields.Boolean(
         required=False,
         allow_none=False,
@@ -144,6 +130,20 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Learning Rate",
             "description": "Learning rate for the training of the hybrid NN.",
             "input_type": "text",
+        },
+    )
+    network_enum = EnumField(
+        NeuralNetworkEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Neural Network",
+            "description": "This determines the neural network used. Currently available networks are:\n"
+            "- Feed Forward Neural Network: This is a simple classical feed forward neural network, "
+            "with relu as an activation function after each layer.\n"
+            "- Dressed quantum neural network: This is a quantum neural network with a classical feed "
+            "forward neural network for preprocessing and one for postprocessing.",
+            "input_type": "select",
         },
     )
     n_qubits = ma.fields.Int(

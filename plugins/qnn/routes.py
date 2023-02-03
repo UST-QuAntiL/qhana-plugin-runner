@@ -1,7 +1,10 @@
 from http import HTTPStatus
 from typing import Mapping
 
+from pathlib import Path
+
 from celery.canvas import chain
+from flask import send_file
 from flask import Response, redirect
 from flask.globals import request
 from flask.helpers import url_for
@@ -28,9 +31,6 @@ from plugins.qnn.schemas import (
 
 from plugins.qnn.tasks import calculation_task
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 
@@ -125,10 +125,10 @@ class MicroFrontend(MethodView):
             schema.fields[
                 "optimizer"
             ].data_key: OptimizerEnum.adam.value,  # why not default in GUI?
-            schema.fields["step"].data_key: 0.07,
+            schema.fields["lr"].data_key: 0.07,
             schema.fields["n_qubits"].data_key: 5,
             schema.fields["resolution"].data_key: 80,
-            schema.fields["N_total_iterations"].data_key: 2,
+            schema.fields["epochs"].data_key: 2,
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
             schema.fields["use_default_dataset"].data_key: True,
@@ -150,15 +150,21 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "qnn_template.html",
+                "simple_template.html",
                 name=QNN.instance.name,
                 version=QNN.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QNN_BLP.name}.ProcessView"),
+                frontendjs=url_for(f"{QNN_BLP.name}.get_frontend_js"),
             )
         )
+
+
+@QNN_BLP.route("/ui/frontend_js/")
+def get_frontend_js():
+    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @QNN_BLP.route("/process/")
