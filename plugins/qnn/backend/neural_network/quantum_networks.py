@@ -73,6 +73,7 @@ class DressedQuantumNet(QuantumNet):
         preprocess_layers: List[int],
         postprocess_layers: List[int],
         single_q_params: bool = False,
+        **kwargs,
     ):
         """
         Initialize network with preprocessing, quantum and postprocessing layers

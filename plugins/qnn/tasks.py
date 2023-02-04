@@ -204,7 +204,7 @@ def calculation_task(self, db_id: int) -> str:
 
     model_parameters = dict(
         n_qubits=n_qubits,
-        depth=q_depth,
+        q_depth=q_depth,
         weight_init=weight_init,
         input_size=X.shape[1],
         output_size=n_classes,

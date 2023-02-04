@@ -11,30 +11,15 @@ class NeuralNetworkEnum(Enum):
     feed_forward_net = "Feed Forward Neural Network"
     dressed_quantum_net = "Dressed Quantum Neural Network"
 
-    def get_neural_network(self, parameters: dict):
+    def get_neural_network(self, parameters):
         if self == NeuralNetworkEnum.feed_forward_net:
             from .classical_networks import FeedForwardNetwork
 
-            return FeedForwardNetwork(
-                parameters["input_size"],
-                parameters["output_size"],
-                parameters["hidden_layers"],
-                parameters["weight_init"],
-            )
+            return FeedForwardNetwork(**parameters)
         elif self == NeuralNetworkEnum.dressed_quantum_net:
             from .quantum_networks import DressedQuantumNet
 
-            return DressedQuantumNet(
-                parameters["input_size"],
-                parameters["output_size"],
-                parameters["n_qubits"],
-                parameters["quantum_device"],
-                parameters["depth"],
-                parameters["weight_init"],
-                parameters["preprocess_layers"],
-                parameters["postprocess_layers"],
-                parameters["single_q_params"],
-            )
+            return DressedQuantumNet(**parameters)
 
     def needs_quantum_backend(self):
         if self == NeuralNetworkEnum.feed_forward_net:
