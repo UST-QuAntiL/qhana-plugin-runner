@@ -25,6 +25,7 @@ This file prepares a dictionary with all the necessary parameters of the PCA, to
 In other scikit-learn versions the value names could change!
 """
 
+
 # dim = num features of output. Return dim here, since input params of the plugin can be <= 0
 def get_output_dimensionality(pca):
     """

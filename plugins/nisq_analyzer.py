@@ -175,7 +175,6 @@ class ProcessView(MethodView):
 
 
 class NisqAnalyzer(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Provides the NISQ Analyzer UI."
