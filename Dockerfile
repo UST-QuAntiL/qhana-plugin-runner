@@ -34,6 +34,15 @@ RUN mkdir /venv && mkdir --parents /app/instance \
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
 RUN chmod +x /wait
 
+# install proxy
+ADD https://raw.githubusercontent.com/UST-QuAntiL/docker-localhost-proxy/v0.3/install_proxy.sh install_proxy.sh
+RUN chmod +x install_proxy.sh && ./install_proxy.sh
+
+# add localhost proxy files
+ADD https://raw.githubusercontent.com/UST-QuAntiL/docker-localhost-proxy/v0.3/Caddyfile.template Caddyfile.template
+ADD https://raw.githubusercontent.com/UST-QuAntiL/docker-localhost-proxy/v0.3/start_proxy.sh start_proxy.sh
+RUN chmod +x start_proxy.sh
+
 RUN python -m pip install poetry gunicorn
 
 COPY --chown=gunicorn . /app
@@ -45,4 +54,4 @@ ENV QHANA_PLUGIN_RUNNER_INSTANCE_FOLDER="/app/instance"
 
 EXPOSE 8080
 
-ENTRYPOINT ["python","-m", "invoke", "start-docker"]
+ENTRYPOINT ["sh", "-c", "./start_proxy.sh && python -m invoke start-docker"]
