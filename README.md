@@ -423,6 +423,9 @@ This defaults to `local_filesystem`.
 When a worker (or plugin in the worker) tries to generate a URL with `flask.url_for` and `_external=True`, it can fail with the error `Application was not able to create a URL adapter for request independent URL generation. You might be able to fix this by setting the SERVER_NAME config variable.`.
 You can set the environment variable `SERVER_NAME` for the worker container and the value will be set in the flask configuration.
 
+The docker container includes a [proxy]("https://github.com/UST-QuAntiL/docker-localhost-proxy") to redirect requests to the host machine.
+To configure the ports that should be redirected set the environment variable `LOCALHOST_PROXY_PORTS` to e.g. `:1234 :2345`.
+
 ### Running the Plugin-Runner with Docker Compose
 
 Start the docker compose with:

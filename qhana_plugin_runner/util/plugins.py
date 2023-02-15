@@ -32,7 +32,6 @@ def plugin_identifier(name: str, version: str):
 
 
 class QHAnaPluginBase:
-
     name: ClassVar[str]
     version: ClassVar[str]
     instance: ClassVar["QHAnaPluginBase"]

@@ -33,7 +33,6 @@ HELLO_MULTI_BLP = SecurityBlueprint(
 
 
 class HelloWorldMultiStep(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Tests the connection of all components by printing some text. Also tests the ability to execute multi-step plugins."

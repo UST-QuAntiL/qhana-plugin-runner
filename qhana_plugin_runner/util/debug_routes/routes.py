@@ -25,7 +25,6 @@ def routes():
     """Render all registered routes."""
     output = []
     for rule in current_app.url_map.iter_rules():
-
         line = {
             "endpoint": rule.endpoint,
             "methods": ", ".join(rule.methods),
