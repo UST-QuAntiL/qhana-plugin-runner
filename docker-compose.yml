@@ -62,6 +62,8 @@ services:
       PLUGIN_REGISTRY_URL: "http://registry:8080"
   backend:
     image: ghcr.io/ust-quantil/qhana-backend:main
+    profiles:
+      - with_backend
     volumes:
       - experiments:/app/data
     extra_hosts:
@@ -73,6 +75,8 @@ services:
       - 9090:9090
   ui:
     image: ghcr.io/ust-quantil/qhana-ui:main
+    profiles:
+      - with_ui
     ports:
       - 8080:8080
     environment:
