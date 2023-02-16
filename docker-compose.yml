@@ -17,6 +17,7 @@ services:
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
       CAMUNDA_API_URL: "http://host.docker.internal:8081/engine-rest"
       PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
+      LOCALHOST_PROXY_PORTS: ":9090"
       WAIT_HOSTS: redis:6379, postgres:5432
   redis:
     image: "redis:latest"
@@ -54,6 +55,7 @@ services:
       CAMUNDA_API_URL: "http://host.docker.internal:8081/engine-rest"
       PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
       PERIODIC_SCHEDULER: "True"
+      LOCALHOST_PROXY_PORTS: ":9090"
       WAIT_HOSTS: redis:6379, postgres:5432, camunda:8080
       WAIT_TIMEOUT: 300
       WAIT_SLEEP_INTERVAL: 5
@@ -65,12 +67,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      # remove the following line if you're running the plugin-runner and worker outside of docker
-      QHANA_URL_MAPPING: '{"(?<=^|https?://)(localhost|host.docker.internal):5005": "qhana-plugin-runner:8080", "(?<=^|https?://)localhost": "host.docker.internal"}'
-
-      # uncomment the following line if you're running the plugin-runner and worker outside of docker
-      # QHANA_URL_MAPPING: '{"(?<=^|https?://)localhost": "host.docker.internal"}'
-
+      LOCALHOST_PROXY_PORTS: ":5005"
       QHANA_HOST: http://host.docker.internal:9090
     ports:
       - 9090:9090
@@ -112,15 +109,7 @@ services:
       RESULT_BACKEND: redis://redis:6379
       CELERY_QUEUE: "registry_queue"
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres-registry:5432/default_db"
-
-      # remove the following two lines if you're running the plugin-runner and worker outside of docker
-      URL_MAP_FROM_LOCALHOST: '{"(https?://)(localhost|host.docker.internal):5005": "\\1qhana-plugin-runner:8080"}'
-      URL_MAP_TO_LOCALHOST: '{"(https?://)qhana-plugin-runner:8080": "\\1localhost:5005"}'
-
-      # uncomment the following two lines if you're running the plugin runner and worker outside of docker
-      # URL_MAP_FROM_LOCALHOST: '{"(https?://)(localhost|host.docker.internal):5005": "\\1host.docker.internal:5005"}'
-      # URL_MAP_TO_LOCALHOST: '{"(https?://)host.docker.internal:5005": "\\1localhost:5005"}'
-
+      LOCALHOST_PROXY_PORTS: ":5005"
       PLUGIN_DISCOVERY_INTERVAL: 60
       PERIODIC_SCHEDULER: true
   camunda:
