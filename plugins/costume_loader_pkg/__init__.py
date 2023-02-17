@@ -19,7 +19,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "costume-loader"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -44,7 +44,7 @@ class CostumeLoader(QHAnaPluginBase):
         return COSTUME_LOADER_BLP
 
     def get_requirements(self) -> str:
-        return "mysql-connector-python~=8.0.26"
+        return ""
 
 
 try:

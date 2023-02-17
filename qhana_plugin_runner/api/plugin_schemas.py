@@ -27,14 +27,8 @@ from qhana_plugin_runner.api.util import MaBaseSchema
 
 
 class PluginType(Enum):
-    """Type of the plugin.
+    """Type of the plugin."""
 
-    Deprecation Warning:
-        "simple" and "complex" are deprecated and should be replaced with "processing"!
-    """
-
-    simple = "simple"
-    complex = "complex"
     processing = "processing"
     visualization = "visualization"
     conversion = "conversion"

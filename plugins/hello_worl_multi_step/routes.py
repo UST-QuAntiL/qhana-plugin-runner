@@ -12,7 +12,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import HELLO_MULTI_BLP, HelloWorldMultiStep
-from .schemas import HelloWorldParametersSchema, TaskResponseSchema
+from .schemas import HelloWorldParametersSchema
 from .tasks import preprocessing_task, processing_task
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
@@ -37,7 +37,7 @@ class PluginsView(MethodView):
             description=HelloWorldMultiStep.instance.description,
             name=HelloWorldMultiStep.instance.name,
             version=HelloWorldMultiStep.instance.version,
-            type=PluginType.complex,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{HELLO_MULTI_BLP.name}.MicroFrontend"),
@@ -69,7 +69,7 @@ class MicroFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @HELLO_MULTI_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
@@ -84,9 +84,9 @@ class MicroFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = HelloWorldParametersSchema()
         return Response(
             render_template(
@@ -95,6 +95,7 @@ class MicroFrontend(MethodView):
                 version=HelloWorldMultiStep.instance.version,
                 schema=schema,
                 values=data,
+                valid=valid,
                 errors=errors,
                 process=url_for(f"{HELLO_MULTI_BLP.name}.ProcessView"),
                 help_text="This is an example help text with basic **Markdown** support.",
@@ -115,7 +116,7 @@ class ProcessView(MethodView):
     @HELLO_MULTI_BLP.arguments(
         HelloWorldParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
@@ -168,7 +169,7 @@ class DemoStepFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int):
         """Return the micro frontend."""
-        return self.render(request.args, db_id, errors)
+        return self.render(request.args, db_id, errors, False)
 
     @HELLO_MULTI_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
@@ -183,9 +184,9 @@ class DemoStepFrontend(MethodView):
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors)
+        return self.render(request.form, db_id, errors, not errors)
 
-    def render(self, data: Mapping, db_id: int, errors: dict):
+    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -207,6 +208,7 @@ class DemoStepFrontend(MethodView):
                 name=HelloWorldMultiStep.instance.name,
                 version=HelloWorldMultiStep.instance.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_MULTI_BLP.name}.DemoStepView", db_id=db_id),
@@ -226,7 +228,7 @@ class DemoStepView(MethodView):
     @HELLO_MULTI_BLP.arguments(
         HelloWorldParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @HELLO_MULTI_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_MULTI_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_MULTI_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Start the demo task."""

@@ -49,7 +49,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "nisq-analyzer"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -58,11 +58,6 @@ NISQ_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="NISQ Analyzer Plugin.",
 )
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class NisqAnalyzerResultsRow(MaBaseSchema):
@@ -95,14 +90,12 @@ class NisqAnalyzerResultsRow(MaBaseSchema):
     qpuSelectionJobId = ma.fields.String(required=True, allow_none=False)
     userId = ma.fields.String(required=True, allow_none=True)
 
+
 class NisqAnalyzerResults(MaBaseSchema):
     results = ma.fields.List(
-        ma.fields.Nested(
-            NisqAnalyzerResultsRow,
-            required=True,
-            allow_none=False
-        )
+        ma.fields.Nested(NisqAnalyzerResultsRow, required=True, allow_none=False)
     )
+
 
 @NISQ_BLP.route("/")
 class PluginsView(MethodView):
@@ -117,12 +110,14 @@ class PluginsView(MethodView):
         scheme, netloc, path, _, _ = urlsplit(plugin.url)
         if not path.endswith("/"):
             path += "/"
-        query = urlencode({
-            "plugin-endpoint-url": url_for(
-                "plugins-api.PluginView", plugin=plugin.identifier, _external=True
-            )
-        })
-        fragment = f'algorithms?{query}' # workaround since nisq-analyzer-ui disregards query parameters before fragments
+        query = urlencode(
+            {
+                "plugin-endpoint-url": url_for(
+                    "plugins-api.PluginView", plugin=plugin.identifier, _external=True
+                )
+            }
+        )
+        fragment = f"algorithms?{query}"  # workaround since nisq-analyzer-ui disregards query parameters before fragments
         url = urlunsplit((scheme, netloc, path, None, fragment))
 
         if plugin is None:
@@ -140,7 +135,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="nisq-analyzer-result",
+                        data_type="custom/nisq-analyzer-result",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -155,15 +150,19 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @NISQ_BLP.arguments(NisqAnalyzerResults(unknown=EXCLUDE), location="json")
-    @NISQ_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @NISQ_BLP.response(HTTPStatus.SEE_OTHER)
     @NISQ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the task."""
-        db_task = ProcessingTask(task_name=store_results_task.name, parameters=dumps(arguments))
+        db_task = ProcessingTask(
+            task_name=store_results_task.name, parameters=dumps(arguments)
+        )
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = store_results_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = store_results_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -176,7 +175,6 @@ class ProcessView(MethodView):
 
 
 class NisqAnalyzer(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Provides the NISQ Analyzer UI."
@@ -216,7 +214,11 @@ def store_results_task(self, db_id: int) -> str:
     with SpooledTemporaryFile(mode="w") as output:
         output.write(results_str)
         STORE.persist_task_result(
-            db_id, output, "nisq_analysis.json", "nisq-analyzer-result", "application/json"
+            db_id,
+            output,
+            "nisq_analysis.json",
+            "custom/nisq-analyzer-result",
+            "application/json",
         )
 
     return "result: " + repr(results_str)

@@ -85,12 +85,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
         return InputParameters(**data)
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class CostumeLoaderUIResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     version = ma.fields.String(required=True, allow_none=False, dump_only=True)
