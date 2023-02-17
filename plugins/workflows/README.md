@@ -162,10 +162,10 @@ This can be your own workflow or one the example workflows.
 - click on the rocket icon at the bottom
 - enter a deployment name
 - set the REST endpoint to the endpoint of Camunda BPMN
-  - if you're using the docker setup this would be http://localhost:8081/engine-rest
+  - if you're using the docker setup this would be http://localhost:5018/engine-rest
 
 You can open the Camunda Cockpit in your Browser to see the deployed workflows.
-If you're using the docker setup the URL is http://localhost:8081/, username: `demo` and password: `demo`.
+If you're using the docker setup the URL is http://localhost:5018/, username: `demo` and password: `demo`.
 Click on the number below `Deployments` or at the top bar on `more` -> `Deployments` to see the deployed workflows.
 
 ## Changelog

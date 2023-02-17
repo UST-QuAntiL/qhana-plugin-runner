@@ -15,7 +15,7 @@ services:
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
-      CAMUNDA_API_URL: "http://host.docker.internal:8081/engine-rest"
+      CAMUNDA_API_URL: "http://host.docker.internal:5018/engine-rest"
       PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
       LOCALHOST_PROXY_PORTS: ":9090"
       WAIT_HOSTS: redis:6379, postgres:5432
@@ -52,7 +52,7 @@ services:
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
-      CAMUNDA_API_URL: "http://host.docker.internal:8081/engine-rest"
+      CAMUNDA_API_URL: "http://host.docker.internal:5018/engine-rest"
       PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
       PERIODIC_SCHEDULER: "True"
       LOCALHOST_PROXY_PORTS: ":9090"
@@ -120,7 +120,7 @@ services:
   camunda:
     image: ghcr.io/ust-quantil/docker-camunda-bpm-platform:next
     ports:
-      - "8081:8080"
+      - "5018:8080"
 volumes:
   instance:
   experiments:
