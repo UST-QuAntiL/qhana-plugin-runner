@@ -11,16 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 from http import HTTPStatus
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 from zipfile import ZipFile
 
-import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -41,7 +38,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -53,7 +49,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "zip-merger"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -62,12 +58,6 @@ ZIP_MERGER_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Zip merger plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -108,19 +98,19 @@ class PluginsView(MethodView):
             description=ZipMerger.instance.description,
             name=ZipMerger.instance.name,
             version=ZipMerger.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{ZIP_MERGER_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="any",
+                        data_type="*",
                         content_type=["application/zip"],
                         required=True,
                         parameter="zip1Url",
                     ),
                     InputDataMetadata(
-                        data_type="any",
+                        data_type="*",
                         content_type=["application/zip"],
                         required=True,
                         parameter="zip2Url",
@@ -128,7 +118,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="any", content_type=["application/zip"], required=True
+                        data_type="*", content_type=["application/zip"], required=True
                     )
                 ],
             ),
@@ -153,7 +143,7 @@ class MicroFrontend(MethodView):
     @ZIP_MERGER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @ZIP_MERGER_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Wu Palmer plugin."
@@ -168,9 +158,9 @@ class MicroFrontend(MethodView):
     @ZIP_MERGER_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = InputParametersSchema()
         return Response(
             render_template(
@@ -178,6 +168,7 @@ class MicroFrontend(MethodView):
                 name=ZipMerger.instance.name,
                 version=ZipMerger.instance.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{ZIP_MERGER_BLP.name}.CalcSimilarityView"),
@@ -190,7 +181,7 @@ class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
     @ZIP_MERGER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @ZIP_MERGER_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @ZIP_MERGER_BLP.response(HTTPStatus.SEE_OTHER)
     @ZIP_MERGER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -267,7 +258,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "merged.zip",
-        "any",
+        "*",
         "application/zip",
     )
 

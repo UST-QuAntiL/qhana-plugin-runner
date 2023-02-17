@@ -23,8 +23,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 
 from . import MANUAL_CLASSIFICATION_BLP, ManualClassification
 from .schemas import (
-    ResponseSchema,
-    TaskResponseSchema,
     LoadParametersSchema,
     ClassificationSchema,
 )
@@ -54,7 +52,7 @@ class PluginsView(MethodView):
             description=ManualClassification.instance.description,
             name=ManualClassification.instance.name,
             version=ManualClassification.instance.version,
-            type=PluginType.complex,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
                 ui_href=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend"),
@@ -103,7 +101,7 @@ class MicroFrontend(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the manual classification plugin."
@@ -118,9 +116,9 @@ class MicroFrontend(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         return Response(
             render_template(
                 "simple_template.html",
@@ -129,6 +127,7 @@ class MicroFrontend(MethodView):
                 schema=LoadParametersSchema(),
                 values=data,
                 errors=errors,
+                valid=valid,
                 process=url_for(f"{MANUAL_CLASSIFICATION_BLP.name}.LoadView"),
                 example_values=url_for(
                     f"{MANUAL_CLASSIFICATION_BLP.name}.MicroFrontend",
@@ -145,7 +144,7 @@ class LoadView(MethodView):
     @MANUAL_CLASSIFICATION_BLP.arguments(
         LoadParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.SEE_OTHER)
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         db_task = ProcessingTask(task_name="manual-classification")
@@ -204,7 +203,7 @@ class MicroFrontendClassification(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: str):
         """Return the micro frontend."""
-        return self.render(request.args, errors, db_id)
+        return self.render(request.args, errors, db_id, False)
 
     @MANUAL_CLASSIFICATION_BLP.html_response(
         HTTPStatus.OK,
@@ -220,9 +219,9 @@ class MicroFrontendClassification(MethodView):
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: str):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, db_id)
+        return self.render(request.form, errors, db_id, not errors)
 
-    def render(self, data: Mapping, errors: dict, db_id: str):
+    def render(self, data: Mapping, errors: dict, db_id: str, valid: bool):
         task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if task_data is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -238,6 +237,7 @@ class MicroFrontendClassification(MethodView):
                 version=ManualClassification.instance.version,
                 schema=schema,
                 values=data,
+                valid=valid,
                 entity_list=task_data.data["entity_list"],
                 attr_list=task_data.data["attr_list"],
                 errors=errors,
@@ -264,7 +264,7 @@ class ClassificationView(MethodView):
         ClassificationSchema(unknown=INCLUDE),
         location="form",  # TODO: this should cause fields not in schema (id's) to be included... not sure if this works
     )
-    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.SEE_OTHER)
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: str):
         """Start the classification task and add another step."""
@@ -319,7 +319,7 @@ class ClassificationDoneView(MethodView):
     @MANUAL_CLASSIFICATION_BLP.arguments(
         ClassificationSchema(unknown=INCLUDE), location="form"
     )
-    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MANUAL_CLASSIFICATION_BLP.response(HTTPStatus.SEE_OTHER)
     @MANUAL_CLASSIFICATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: str):
         """Start the classification task."""

@@ -127,6 +127,7 @@ class Attribute(enum.Enum):
             raise ValueError("No name for attribute \"" + str(attribute) + "\" specified")
         return
     """
+
     # englisch names for attributes
     @staticmethod
     def get_name(attribute) -> str:

@@ -26,7 +26,7 @@ from qhana_plugin_runner.db.models.tasks import TaskFile
 from qhana_plugin_runner.storage import FileStore
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 
 
 class HelloWorld(QHAnaPluginBase):

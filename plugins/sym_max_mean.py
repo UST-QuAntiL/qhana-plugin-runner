@@ -21,7 +21,6 @@ from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -42,7 +41,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -70,17 +68,11 @@ SYM_MAX_MEAN_BLP = SecurityBlueprint(
 )
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entities",
+        data_input_type="entity/list",
         data_content_types="application/json",
         metadata={
             "label": "Entities URL",
@@ -91,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     element_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="element-similarities",
+        data_input_type="custom/element-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Element similarities URL",
@@ -123,19 +115,19 @@ class PluginsView(MethodView):
             description=SymMaxMean.instance.description,
             name=SymMaxMean.instance.name,
             version=SymMaxMean.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{SYM_MAX_MEAN_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{SYM_MAX_MEAN_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entities",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="element-similarities",
+                        data_type="custom/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                         parameter="elementSimilaritiesUrl",
@@ -143,7 +135,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="attribute-similarities",
+                        data_type="custom/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -170,7 +162,7 @@ class MicroFrontend(MethodView):
     @SYM_MAX_MEAN_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @SYM_MAX_MEAN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the Sym Max Mean plugin."
@@ -185,9 +177,9 @@ class MicroFrontend(MethodView):
     @SYM_MAX_MEAN_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = InputParametersSchema()
         return Response(
             render_template(
@@ -195,6 +187,7 @@ class MicroFrontend(MethodView):
                 name=SymMaxMean.instance.name,
                 version=SymMaxMean.instance.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{SYM_MAX_MEAN_BLP.name}.CalcSimilarityView"),
@@ -207,7 +200,7 @@ class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
     @SYM_MAX_MEAN_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @SYM_MAX_MEAN_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @SYM_MAX_MEAN_BLP.response(HTTPStatus.SEE_OTHER)
     @SYM_MAX_MEAN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -385,7 +378,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "sym_max_mean.zip",
-        "attribute_similarities",
+        "custom/attribute-similarities",
         "application/zip",
     )
 
