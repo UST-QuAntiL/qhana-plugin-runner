@@ -64,6 +64,7 @@ services:
     image: ghcr.io/ust-quantil/qhana-backend:main
     profiles:
       - with_backend
+      - with_ui
     volumes:
       - experiments:/app/data
     extra_hosts:
