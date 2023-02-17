@@ -15,9 +15,9 @@ services:
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
-      CAMUNDA_API_URL: "http://host.docker.internal:5018/engine-rest"
-      PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
-      LOCALHOST_PROXY_PORTS: ":9090"
+      CAMUNDA_API_URL: "http://localhost:5018/engine-rest"
+      PLUGIN_RUNNER_URLS: "http://localhost:5005"
+      LOCALHOST_PROXY_PORTS: ":9090 :5005 :5018"
       WAIT_HOSTS: redis:6379, postgres:5432
   redis:
     image: "redis:latest"
@@ -52,14 +52,14 @@ services:
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
-      CAMUNDA_API_URL: "http://host.docker.internal:5018/engine-rest"
-      PLUGIN_RUNNER_URLS: "http://host.docker.internal:5005"
+      CAMUNDA_API_URL: "http://localhost:5018/engine-rest"
+      PLUGIN_RUNNER_URLS: "http://localhost:5005"
       PERIODIC_SCHEDULER: "True"
-      LOCALHOST_PROXY_PORTS: ":9090"
+      LOCALHOST_PROXY_PORTS: ":9090 :5018 :5005 :5006"
       WAIT_HOSTS: redis:6379, postgres:5432, camunda:8080
       WAIT_TIMEOUT: 300
       WAIT_SLEEP_INTERVAL: 5
-      PLUGIN_REGISTRY_URL: "http://registry:8080"
+      PLUGIN_REGISTRY_URL: "http://localhost:5006"
   backend:
     image: ghcr.io/ust-quantil/qhana-backend:main
     profiles:
@@ -71,7 +71,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       LOCALHOST_PROXY_PORTS: ":5005"
-      QHANA_HOST: http://host.docker.internal:9090
+      QHANA_HOST: http://localhost:9090
     ports:
       - 9090:9090
   ui:
