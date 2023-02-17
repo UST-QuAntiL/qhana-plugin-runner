@@ -39,9 +39,7 @@ class QhanaTaskClient:
 
     def call_qhana_plugin(self, plugin: Dict[str, Any], params):
         process_endpoint: Optional[str] = None
-        href: Optional[str] = (
-                        plugin.get("entryPoint", {}).get("href", None)
-                    )
+        href: Optional[str] = plugin.get("entryPoint", {}).get("href", None)
         if href:
             if href.startswith(("http://", "https://")):
                 process_endpoint = href
@@ -51,11 +49,11 @@ class QhanaTaskClient:
                 )
 
         if process_endpoint is None:
-            raise ValueError("The plugin does not contain a valid URL for the processing endpoint!")
+            raise ValueError(
+                "The plugin does not contain a valid URL for the processing endpoint!"
+            )
 
-        response = requests.post(
-            process_endpoint, data=params, timeout=self.timeout
-        )
+        response = requests.post(process_endpoint, data=params, timeout=self.timeout)
 
         response.raise_for_status()
 
@@ -75,19 +73,17 @@ class QhanaTaskClient:
         :return:
         """
         ui_endpoint: Optional[str] = None
-        href: Optional[str] = (
-                        plugin.get("entryPoint", {}).get("uiHref", None)
-                    )
+        href: Optional[str] = plugin.get("entryPoint", {}).get("uiHref", None)
         if href:
             if href.startswith(("http://", "https://")):
                 ui_endpoint = href
             else:
-                ui_endpoint = (
-                    f"{plugin.get('url', '').rstrip('/')}/{href.lstrip('/')}"
-                )
+                ui_endpoint = f"{plugin.get('url', '').rstrip('/')}/{href.lstrip('/')}"
 
         if ui_endpoint is None:
-            raise ValueError("The plugin does not contain a valid URL for the user interface endpoint!")
+            raise ValueError(
+                "The plugin does not contain a valid URL for the user interface endpoint!"
+            )
 
         response = requests.get(ui_endpoint, timeout=self.timeout)
         response.raise_for_status()
