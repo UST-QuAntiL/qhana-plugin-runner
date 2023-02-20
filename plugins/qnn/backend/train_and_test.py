@@ -75,6 +75,8 @@ def train(model, dataloader, loss_fn, optimizer, num_iterations, weights_to_wigg
         )
         # print(f"weights_to_wiggle: {weights_to_wiggle}")
         # time.sleep(2)
+    model.eval()
+    torch.set_grad_enabled(False)
 
 
 def test(model, X_test, Y_test, loss_fn):

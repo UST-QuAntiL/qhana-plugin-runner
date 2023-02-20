@@ -7,7 +7,7 @@ from qhana_plugin_runner.api.util import (
 )
 from marshmallow import post_load
 
-from .validation_functions import validate_layer_input
+from .validation_functions import validate_floats_seperated_by_comma
 
 from .backend.neural_network import WeightInitEnum, NeuralNetworkEnum
 from .backend.quantum_backends import QuantumBackends
@@ -38,6 +38,7 @@ class InputParameters:
     preprocess_layers: str = ""
     postprocess_layers: str = ""
     hidden_layers: str = ""
+    q_shifts: str = ""
     use_default_dataset: bool = False
     randomly_shuffle: bool = False
     visualize: bool = False
@@ -175,7 +176,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "Please separate the layer sizes by a comma, e.g. ``4,5,10,4``",
             "input_type": "text",
         },
-        validate=validate_layer_input,
+        validate=validate_floats_seperated_by_comma,
     )
     postprocess_layers = ma.fields.String(
         required=False,
@@ -188,7 +189,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "hidden layer.",
             "input_type": "text",
         },
-        validate=validate_layer_input,
+        validate=validate_floats_seperated_by_comma,
     )
     hidden_layers = ma.fields.String(
         required=False,
@@ -199,7 +200,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "number of neurons in the i'th hidden layer.",
             "input_type": "text",
         },
-        validate=validate_layer_input,
+        validate=validate_floats_seperated_by_comma,
     )
     batch_size = ma.fields.Int(
         required=True,
@@ -228,6 +229,24 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "description": "The number of weights in the quantum circuit to update in one optimization step. 0 means all.",
             "input_type": "number",
         },
+    )
+    q_shifts = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Quantum Shift",
+            "description": "This parameter determines the amount to shift a parameter by, when applying the "
+                           "parameter-shift rule. Each parameter can be given a different shift value. By "
+                           "inputting `0.785,3.141,2`, the shift value for the first three parameters gets set manually. "
+                           "The other parameter's shift value defaults to π/2. \\\n"
+                           "To compute the gradient of a parameter p in a quantum neural net, the parameter-shift rule "
+                           "is applied. The parameter-shift rule works by executing the quantum circuit twice, once "
+                           "with p+ = p + shift and once with p- = p - shift instead of p. The result of p+ gets "
+                           "subtracted by p- and multiplied by the gate's absolute eigenvalue r, resulting "
+                           "in the gradient.",
+            "input_type": "text",
+        },
+        validate=validate_floats_seperated_by_comma,
     )
     device = EnumField(
         QuantumBackends,

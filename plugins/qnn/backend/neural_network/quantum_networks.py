@@ -11,7 +11,7 @@ import torch.nn as nn
 
 from plugins.qnn.schemas import WeightInitEnum
 
-from typing import List, Iterator
+from typing import List, Iterator, Tuple
 
 from abc import ABCMeta, abstractmethod
 
@@ -73,6 +73,7 @@ class DressedQuantumNet(QuantumNet):
         preprocess_layers: List[int],
         postprocess_layers: List[int],
         single_q_params: bool = False,
+        q_shifts: List[Tuple[float]] = None,
         **kwargs,
     ):
         """
@@ -86,10 +87,10 @@ class DressedQuantumNet(QuantumNet):
 
         super().__init__(quantum_device)
         self.pre_net = create_fully_connected_net(input_size, preprocess_layers, n_qubits)
+        self.add_module("output_act_func", nn.Tanh())
         self.post_net = create_fully_connected_net(
             n_qubits, postprocess_layers, output_size
         )
-        self.post_net.append(nn.Softmax())
 
         # weight init
         if weight_init == WeightInitEnum.standard_normal:
@@ -114,10 +115,19 @@ class DressedQuantumNet(QuantumNet):
         if single_q_params:
             self.q_params = [nn.Parameter(el, requires_grad=True) for el in q_params]
         else:
-            self.q_params = nn.Parameter(q_params)
+            self.q_params = nn.Parameter(q_params, requires_grad=True)
 
         # define circuit
-        @qml.qnode(quantum_device, interface="torch")
+        diff_method = "best"
+        if q_shifts is not None:
+            diff_method = "parameter-shift"
+            # None for unspecified parameters, i.e. default
+            q_shifts += [None] * (len(self.q_params) - len(q_shifts))
+            # Pennylane counts the q_input_features as trainable_parameters, thus requiring shift values for them.
+            # By design, we have |q_input_features| = pre_net output size = n_qubits.
+            q_shifts = [None]*n_qubits + q_shifts
+
+        @qml.qnode(quantum_device, interface="torch", diff_method=diff_method, shifts=q_shifts)
         def quantum_net(q_input_features, q_weights_flat):
             """
             The variational quantum circuit.
@@ -152,16 +162,15 @@ class DressedQuantumNet(QuantumNet):
         # obtain the input features for the quantum circuit
         # by reducing the feature dimension from 512 to 4
         pre_out = self.pre_net(input_features)
-        q_in = torch.tanh(pre_out) * np.pi / 2.0
+        q_in = pre_out * torch.pi / 2.0
 
         # Apply the quantum circuit to each element of the batch and append to q_out
-        q_out = torch.Tensor(0, self.n_qubits)
-        # q_out = q_out.to(device)
-        for elem in q_in:
+        q_out = torch.Tensor(input_features.shape[0], self.n_qubits)
+        for idx, elem in enumerate(q_in):
             q_out_elem = (
                 self.q_net(elem, self.q_params).float().unsqueeze(0)
-            )  # quantum_net(elem, self.q_params).float().unsqueeze(0)
-            q_out = torch.cat((q_out, q_out_elem))
+            )
+            q_out[idx] = q_out_elem
 
         # two-dimensional prediction from the postprocessing layer
         return self.post_net(q_out)

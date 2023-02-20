@@ -1,7 +1,7 @@
 import marshmallow as ma
 
 
-def validate_layer_input(value):
+def validate_floats_seperated_by_comma(value: str):
     if value != "":
         value = value.replace(" ", "")
         value = value.split(",")

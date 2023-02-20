@@ -103,6 +103,7 @@ def calculation_task(self, db_id: int) -> str:
     optimizer = input_params.optimizer
     weight_init = input_params.weight_init
     weights_to_wiggle = input_params.weights_to_wiggle
+    q_shifts = input_params.q_shifts
     randomly_shuffle = input_params.randomly_shuffle
     visualize = input_params.visualize
     q_device_enum = input_params.device
@@ -202,6 +203,9 @@ def calculation_task(self, db_id: int) -> str:
     ]
     hidden_layers = [int(el) for el in input_params.hidden_layers.split(",") if el != ""]
 
+    q_shifts = [(float(el), ) for el in q_shifts.split(",") if el != ""]
+    q_shifts = None if len(q_shifts) == 0 else q_shifts
+
     model_parameters = dict(
         n_qubits=n_qubits,
         q_depth=q_depth,
@@ -212,6 +216,7 @@ def calculation_task(self, db_id: int) -> str:
         postprocess_layers=postprocess_layers,
         hidden_layers=hidden_layers,
         single_q_params=(weights_to_wiggle != 0),
+        q_shifts=q_shifts,
     )
 
     if network_enum.needs_quantum_backend():
