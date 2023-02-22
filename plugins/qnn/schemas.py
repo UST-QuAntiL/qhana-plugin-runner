@@ -236,14 +236,14 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Quantum Shift",
             "description": "This parameter determines the amount to shift a parameter by, when applying the "
-                           "parameter-shift rule. Each parameter can be given a different shift value. By "
-                           "inputting `0.785,3.141,2`, the shift value for the first three parameters gets set manually. "
-                           "The other parameter's shift value defaults to π/2. \\\n"
-                           "To compute the gradient of a parameter p in a quantum neural net, the parameter-shift rule "
-                           "is applied. The parameter-shift rule works by executing the quantum circuit twice, once "
-                           "with p+ = p + shift and once with p- = p - shift instead of p. The result of p+ gets "
-                           "subtracted by p- and multiplied by the gate's absolute eigenvalue r, resulting "
-                           "in the gradient.",
+            "parameter-shift rule. Each parameter can be given a different shift value. By "
+            "inputting `0.785,3.141,2`, the shift value for the first three parameters gets set manually. "
+            "The other parameter's shift value defaults to π/2. \\\n"
+            "To compute the gradient of a parameter p in a quantum neural net, the parameter-shift rule "
+            "is applied. The parameter-shift rule works by executing the quantum circuit twice, once "
+            "with p+ = p + shift and once with p- = p - shift instead of p. The result of p+ gets "
+            "subtracted by p- and multiplied by the gate's absolute eigenvalue r, resulting "
+            "in the gradient.",
             "input_type": "text",
         },
         validate=validate_floats_seperated_by_comma,

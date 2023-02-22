@@ -203,7 +203,7 @@ def calculation_task(self, db_id: int) -> str:
     ]
     hidden_layers = [int(el) for el in input_params.hidden_layers.split(",") if el != ""]
 
-    q_shifts = [(float(el), ) for el in q_shifts.split(",") if el != ""]
+    q_shifts = [(float(el),) for el in q_shifts.split(",") if el != ""]
     q_shifts = None if len(q_shifts) == 0 else q_shifts
 
     model_parameters = dict(
