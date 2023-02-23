@@ -47,7 +47,7 @@ from .backend.visualization import plot_data, plot_confusion_matrix
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_point(ent):
+def get_point(ent: dict) -> np.ndarray:
     dimension_keys = [k for k in ent.keys() if k not in ("ID", "href")]
     dimension_keys.sort()
     point = np.empty(len(dimension_keys))

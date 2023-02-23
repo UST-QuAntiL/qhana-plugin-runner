@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from qiskit_machine_learning.algorithms.classifiers import VQC
 import numpy as np
-from qiskit.utils import QuantumInstance
 from enum import Enum
+from typing import List, Optional
+
+from qiskit_machine_learning.algorithms.classifiers import VQC
+from qiskit.utils import QuantumInstance
+from qiskit import QuantumCircuit
 from qiskit.circuit.library import (
     TwoLocal,
     RealAmplitudes,
     ExcitationPreserving,
     EfficientSU2,
 )
+from qiskit.algorithms.optimizers import Optimizer
+
 from .optimizer import OptimizerEnum
 
 
@@ -31,7 +36,7 @@ class AnsatzEnum(Enum):
     efficient_su2 = "EfficientSU2"
     ry_rz = "RyRz"
 
-    def get_ansatz(self, n_qbits: int, entanglement, reps: int):
+    def get_ansatz(self, n_qbits: int, entanglement, reps: int) -> QuantumCircuit:
         if self == AnsatzEnum.real_amplitudes:
             return RealAmplitudes(
                 num_qubits=n_qbits, entanglement=entanglement, reps=reps
@@ -59,9 +64,9 @@ class QiskitVQC:
     def __init__(
         self,
         quantum_instance: QuantumInstance,
-        feature_map,
-        ansatz,
-        optimizer,
+        feature_map: QuantumCircuit,
+        ansatz: QuantumCircuit,
+        optimizer: Optimizer,
     ):
         self.__quantum_instance = quantum_instance
         self.__feature_map = feature_map
@@ -74,7 +79,7 @@ class QiskitVQC:
             quantum_instance=quantum_instance,
         )
 
-    def prep_labels(self, labels):
+    def prep_labels(self, labels: np.ndarray) -> (np.ndarray, dict):
         n_samples = len(labels)
         unique_labels = list(set(labels))
         idx_to_label = {idx: label for idx, label in enumerate(unique_labels)}
@@ -96,14 +101,14 @@ class QiskitVQC:
         # fit vqc
         self.__vqc.fit(train_data, labels_onehot)
 
-    def predict(self, test_data: np.ndarray):
+    def predict(self, test_data: np.ndarray) -> List[int]:
         result = np.array(self.__vqc.predict(test_data))
         # convert back from one-hot to class
         label_indices = result.argmax(axis=1)
         labels = [self.__idx_to_label[idx] for idx in label_indices]
         return labels
 
-    def get_representative_circuit(self, data, labels):
+    def get_representative_circuit(self, data: np.ndarray, labels: np.ndarray) -> str:
         # Init vqc
         if self.__vqc._fit_result is not None:
             vqc = self.__vqc
@@ -136,7 +141,7 @@ class QiskitVQC:
         # Return qasm string
         return circuit.qasm()
 
-    def get_weights(self):
+    def get_weights(self) -> Optional[np.ndarray]:
         if self.__vqc._fit_result is None:
             return None
         return self.__vqc._fit_result.x

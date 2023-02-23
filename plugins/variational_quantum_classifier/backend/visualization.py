@@ -17,6 +17,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 from sklearn.metrics import confusion_matrix
+from typing import List, Callable
 
 
 def get_id_list(id_to_idx: dict) -> list:
@@ -27,8 +28,13 @@ def get_id_list(id_to_idx: dict) -> list:
 
 
 def add_background(
-    points, resolution, predictor, scatter, two_classes=False, label_to_int=None
-):
+    points: np.ndarray,
+    resolution: int,
+    predictor: Callable[[List[float]], int],
+    scatter: go.Figure,
+    two_classes: bool = False,
+    label_to_int: dict = None,
+) -> go.Figure:
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -134,18 +140,18 @@ def add_background(
 
 
 def plot_data(
-    train_data,
-    train_id_to_idx,
-    train_labels,
-    test_data,
-    test_id_to_idx,
-    test_labels,
-    resolution=0,
-    predictor=None,
-    only_first_100=True,
-    title="",
-    label_to_int=None,
-):
+    train_data: List[List[float]],
+    train_id_to_idx: dict,
+    train_labels: List[int],
+    test_data: List[List[float]],
+    test_id_to_idx: dict,
+    test_labels: List[int],
+    resolution: int = 0,
+    predictor: Callable[[List[float]], int] = None,
+    only_first_100: bool = True,
+    title: str = "",
+    label_to_int: dict = None,
+) -> go.Figure:
     # Prepare data
     dim = len(train_data[0])
     train_end = 100 if only_first_100 else len(train_data)
@@ -231,7 +237,9 @@ def plot_data(
     return fig
 
 
-def plot_confusion_matrix(y_true, y_pred, labels: list):
+def plot_confusion_matrix(
+    y_true: List[int], y_pred: List[int], labels: List
+) -> go.Figure:
     labels.sort()
     conf_matrix = confusion_matrix(y_true, y_pred, labels=labels).T
 

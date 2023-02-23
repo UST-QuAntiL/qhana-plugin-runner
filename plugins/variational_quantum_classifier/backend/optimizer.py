@@ -14,6 +14,7 @@
 
 from enum import Enum
 from qiskit.algorithms.optimizers import (
+    Optimizer,
     ADAM,
     AQGD,
     BOBYQA,
@@ -37,7 +38,7 @@ class OptimizerEnum(Enum):
     nft = "NFT"
     tnc = "TNC"
 
-    def get_optimizer(self, maxitr):
+    def get_optimizer(self, maxitr: int) -> Optimizer:
         if self == OptimizerEnum.adam:
             return ADAM(maxiter=maxitr)
         if self == OptimizerEnum.aqgd:
