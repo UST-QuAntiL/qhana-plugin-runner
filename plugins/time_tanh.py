@@ -14,7 +14,7 @@
 import json
 import math
 from http import HTTPStatus
-from io import BytesIO, StringIO
+from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List
@@ -22,7 +22,6 @@ from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -43,7 +42,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -59,7 +57,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "time-tanh"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -70,17 +68,11 @@ TIME_TANH_BLP = SecurityBlueprint(
 )
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entities",
+        data_input_type="entity/list",
         data_content_types="application/json",
         metadata={
             "label": "Entities URL",
@@ -121,13 +113,13 @@ class PluginsView(MethodView):
             description=TimeTanh.instance.description,
             name=TimeTanh.instance.name,
             version=TimeTanh.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{TIME_TANH_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{TIME_TANH_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entities",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesUrl",
@@ -135,7 +127,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="element-similarities",
+                        data_type="custom/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -207,7 +199,7 @@ class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
     @TIME_TANH_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @TIME_TANH_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @TIME_TANH_BLP.response(HTTPStatus.SEE_OTHER)
     @TIME_TANH_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -232,7 +224,6 @@ class CalcSimilarityView(MethodView):
 
 
 class TimeTanh(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Compares elements and returns similarity values."
@@ -335,7 +326,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "time_tanh.zip",
-        "element-similarities",
+        "custom/element-similarities",
         "application/zip",
     )
 

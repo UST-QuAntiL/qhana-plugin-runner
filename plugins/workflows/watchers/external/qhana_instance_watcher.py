@@ -1,9 +1,12 @@
+from typing import cast
+
 import requests
 from celery.utils.functional import maybe_list
 from celery.utils.log import get_task_logger
-from requests.exceptions import ConnectionError, HTTPError
+from requests.exceptions import ConnectionError, HTTPError, RequestException
 
 from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
 from ... import Workflows
 from ...clients.camunda_client import CamundaClient
@@ -59,8 +62,7 @@ def qhana_instance_watcher(
 
     # Clients
     camunda_client = CamundaClient(CamundaConfig.from_config(config))
-    TASK_LOGGER.debug(f"Searching for plugins")
-    qhana_client = QhanaTaskClient(config["QHANA_PLUGIN_ENDPOINTS"])
+    TASK_LOGGER.debug("Searching for plugins")
 
     try:
         plugin_name = extract_second_topic_component(topic_name)
@@ -69,9 +71,27 @@ def qhana_instance_watcher(
             message=f"Malformed task topic name '{topic_name}'. Name must contain a '.' separating the plugin name!"
         )
 
-    plugin = qhana_client.resolve(plugin_name)
-    if plugin is None:
+    query_params = {}
+    if "@" in plugin_name:
+        plugin_name, version = plugin_name.split("@", maxsplit=1)
+        query_params["version"] = version
+    query_params["name"] = plugin_name
+
+    plugin_response = None
+    try:
+        plugin_response = PLUGIN_REGISTRY_CLIENT.search_by_rel(
+            "plugin", query_params=query_params, allow_collection_resource=False
+        )
+    except RequestException or ValueError as err:
+        raise PluginNotFoundError(
+            message=f"Plugin {plugin_name} could not be found because of an error!"
+        ) from err
+    if plugin_response is None:
         raise PluginNotFoundError(message=f"Plugin {plugin_name} could not be found!")
+
+    plugin = cast(dict, plugin_response.data)
+
+    qhana_client = QhanaTaskClient()
 
     workflow_local_variables = camunda_client.get_task_local_variables(execution_id)
     try:
@@ -107,7 +127,7 @@ def qhana_instance_watcher(
         )
 
     TASK_LOGGER.info(
-        f"Created QHAna plugin instance {plugin.name} with result url: {url}"
+        f"Created QHAna plugin instance {plugin_response.data['self'].get('name', plugin_name)} with result url: {url}"
     )
 
     watch_task = check_task_status.s(
@@ -142,7 +162,7 @@ def qhana_step_watcher(
 
     # Clients
     camunda_client = CamundaClient(CamundaConfig.from_config(config))
-    TASK_LOGGER.debug(f"Receiving plugin step.")
+    TASK_LOGGER.debug("Receiving plugin step.")
 
     try:
         step_var = extract_second_topic_component(topic_name)
@@ -162,7 +182,7 @@ def qhana_step_watcher(
             message=f"The plugin step to execute is incomplete! Step: {step}"
         )
 
-    qhana_client = QhanaTaskClient(config["QHANA_PLUGIN_ENDPOINTS"])
+    qhana_client = QhanaTaskClient()
     try:
         parameters = qhana_client.collect_input(
             workflow_local_variables if workflow_local_variables else {},

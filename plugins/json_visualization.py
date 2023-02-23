@@ -17,7 +17,6 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
-import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
@@ -40,7 +39,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -50,7 +48,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "json-visualization"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -60,12 +58,6 @@ JSON_BLP = SecurityBlueprint(
     description="A demo JSON visualization plugin.",
     template_folder="json_visualization_templates",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class JsonInputParametersSchema(FrontendFormBaseSchema):
@@ -112,7 +104,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="*",
+                        data_type="custom/hello-world-output",
                         content_type=["text/html"],
                         required=True,
                     )
@@ -181,7 +173,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @JSON_BLP.arguments(JsonInputParametersSchema(unknown=EXCLUDE), location="form")
-    @JSON_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @JSON_BLP.response(HTTPStatus.SEE_OTHER)
     @JSON_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
@@ -202,7 +194,6 @@ class ProcessView(MethodView):
 
 
 class JsonVisualization(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Visualizes JSON data."
@@ -237,7 +228,7 @@ def demo_task(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "out.txt", "hello-world-output", "text/plain"
+                db_id, output, "out.txt", "custom/hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"

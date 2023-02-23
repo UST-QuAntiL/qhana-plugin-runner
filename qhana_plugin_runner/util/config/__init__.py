@@ -18,7 +18,7 @@
 import re
 from logging import INFO, WARNING
 from os import urandom
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Optional
 
 from .celery_config import CELERY_DEBUG_CONFIG, CELERY_PRODUCTION_CONFIG
 from .smorest_config import SmorestDebugConfig, SmorestProductionConfig
@@ -48,6 +48,8 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
 
     DEFAULT_FILE_STORE = "local_filesystem"
     FILE_STORE_ROOT_PATH = "files"
+
+    PLUGIN_REGISTRY_URL: Optional[str] = None
 
     # URL rewrite rules are (pattern, replacement) pairs that are applied
     # in order to URLs opened with qhana_plugin_runner.requests.open_url

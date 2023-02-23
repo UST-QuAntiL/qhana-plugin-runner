@@ -16,9 +16,7 @@ from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
 import flask
-import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -34,12 +32,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginType,
     EntryPoint,
-    DataMetadata,
     InputDataMetadata,
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -51,7 +47,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "visualization"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -60,12 +56,6 @@ VIS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Visualization plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class InputParameters:
@@ -82,7 +72,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-points",
+        data_input_type="entity/*",
         data_content_types="application/json",
         metadata={
             "label": "Entity points URL",
@@ -93,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     clusters_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="clusters",
+        data_input_type="custom/clusters",
         data_content_types="application/json",
         metadata={
             "label": "Clusters URL",
@@ -120,19 +110,19 @@ class PluginsView(MethodView):
             description=VIS.instance.description,
             name=VIS.instance.name,
             version=VIS.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{VIS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{VIS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/*",
                         content_type=["application/json"],
                         required=True,
                         parameter="entityPointsUrl",
                     ),
                     InputDataMetadata(
-                        data_type="clusters",
+                        data_type="custom/clusters",
                         content_type=["application/json"],
                         required=True,
                         parameter="clustersUrl",
@@ -211,7 +201,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @VIS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @VIS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
