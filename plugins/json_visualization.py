@@ -194,7 +194,6 @@ class ProcessView(MethodView):
 
 
 class JsonVisualization(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Visualizes JSON data."

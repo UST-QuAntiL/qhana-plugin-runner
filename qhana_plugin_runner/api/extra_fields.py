@@ -72,7 +72,6 @@ class OneOfEnum(OneOf):
 
 # field is registered in qhana_plugin_runner.api module
 class EnumField(Field):
-
     #: Default error messages.
     default_error_messages = {"invalid": "Not a valid choice."}
 

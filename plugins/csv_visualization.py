@@ -201,7 +201,6 @@ class ProcessView(MethodView):
 
 
 class CsvVisualization(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "A demo CSV visualization plugin."

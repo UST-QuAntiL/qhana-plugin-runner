@@ -287,7 +287,6 @@ class ProcessView(MethodView):
 
 
 class EntityFilter(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = (

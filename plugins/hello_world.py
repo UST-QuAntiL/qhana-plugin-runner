@@ -192,7 +192,6 @@ class ProcessView(MethodView):
 
 
 class HelloWorld(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Tests the connection of all components by printing some text."

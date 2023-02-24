@@ -37,6 +37,7 @@ from .api import jwt_helper
 from .licenses import register_licenses
 from .markdown import register_markdown_filter
 from .plugins_cli import register_plugin_cli_blueprint
+from .registry_client import register_plugin_registry_client
 from .storage import register_file_store
 from .util.config import DebugConfig, ProductionConfig
 from .util.jinja_helpers import register_helpers
@@ -129,6 +130,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
         if "SERVER_NAME" in os.environ:
             config["SERVER_NAME"] = os.environ["SERVER_NAME"]
+
+        if "PLUGIN_REGISTRY_URL" in os.environ:
+            config["PLUGIN_REGISTRY_URL"] = os.environ["PLUGIN_REGISTRY_URL"]
     else:
         # load the test config if passed in
         config.from_mapping(test_config)
@@ -203,6 +207,8 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
     # register request helpers with request session
     register_additional_schemas(requests.REQUEST_SESSION)
+    # register the plugin registry client
+    register_plugin_registry_client(app)
 
     # register plugins, AFTER registering the API!
     register_plugins(app)
