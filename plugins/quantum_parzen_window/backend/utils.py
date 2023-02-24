@@ -37,7 +37,6 @@ def int_to_bitlist(num, length: int):
 
 
 def is_binary(data: np.ndarray) -> bool:
-
     return np.array_equal(data, data.astype(bool))
 
 
