@@ -67,7 +67,7 @@ var preprocess_layers = document.getElementById("preprocess_layers").parentNode.
 var postprocess_layers = document.getElementById("postprocess_layers").parentNode.parentNode;
 var hidden_layers = document.getElementById("hidden_layers").parentNode.parentNode;
 var q_weights_to_wiggle = document.getElementById("weights_to_wiggle").parentNode.parentNode;
-var q_shifts = document.getElementById("q_shifts").parentNode.parentNode;
+var diff_method = document.getElementById("diff_method").parentNode.parentNode;
 function use_quantum_change() {
     backend_type_change()
     n_qubits.style.display = 'none';
@@ -76,7 +76,7 @@ function use_quantum_change() {
     postprocess_layers.style.display = 'none';
     hidden_layers.style.display = 'none';
     q_weights_to_wiggle.style.display = 'none';
-    q_shifts.style.display = 'none';
+    diff_method.style.display = 'none';
     if (network_enum.value === "dressed_quantum_net") {
         // show quantum elements
         n_qubits.style.display = 'block';
@@ -84,7 +84,7 @@ function use_quantum_change() {
         preprocess_layers.style.display = 'block';
         postprocess_layers.style.display = 'block';
         q_weights_to_wiggle.style.display = 'block';
-        q_shifts.style.display = 'block';
+        diff_method.style.display = 'block';
     } else if (network_enum.value === "feed_forward_net") {
         // hide unnecessary elements
         hidden_layers.style.display = 'block';

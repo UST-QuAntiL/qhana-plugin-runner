@@ -2,6 +2,8 @@
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
 
+from enum import Enum
+
 import pennylane as qml
 from pennylane import numpy as np
 
@@ -17,6 +19,20 @@ from abc import ABCMeta, abstractmethod
 
 from .utils import grouper
 from .classical_networks import create_fully_connected_net
+
+
+class DiffMethodEnum(Enum):
+    best = "Best"
+    parameter_shift = "Parameter Shift"
+    finite_diff = "Finite Differences"
+
+    def get_value_for_pennylane(self):
+        if self == DiffMethodEnum.best:
+            return "best"
+        elif self == DiffMethodEnum.parameter_shift:
+            return "parameter-shift"
+        elif self == DiffMethodEnum.finite_diff:
+            return "finite-diff"
 
 
 class QuantumNet(nn.Module, metaclass=ABCMeta):
@@ -72,8 +88,8 @@ class DressedQuantumNet(QuantumNet):
         weight_init,
         preprocess_layers: List[int],
         postprocess_layers: List[int],
+        diff_method: DiffMethodEnum,
         single_q_params: bool = False,
-        q_shifts: List[Tuple[float]] = None,
         **kwargs,
     ):
         """
@@ -117,18 +133,10 @@ class DressedQuantumNet(QuantumNet):
         else:
             self.q_params = nn.Parameter(q_params, requires_grad=True)
 
-        # define circuit
-        diff_method = "best"
-        if q_shifts is not None:
-            diff_method = "parameter-shift"
-            # None for unspecified parameters, i.e. default
-            q_shifts += [None] * (len(self.q_params) - len(q_shifts))
-            # Pennylane counts the q_input_features as trainable_parameters, thus requiring shift values for them.
-            # By design, we have |q_input_features| = pre_net output size = n_qubits.
-            q_shifts = [None] * n_qubits + q_shifts
+        print(f"diff_method: {diff_method.get_value_for_pennylane()}")
 
         @qml.qnode(
-            quantum_device, interface="torch", diff_method=diff_method, shifts=q_shifts
+            quantum_device, interface="torch", diff_method=diff_method.get_value_for_pennylane()
         )
         def quantum_net(q_input_features, q_weights_flat):
             """
