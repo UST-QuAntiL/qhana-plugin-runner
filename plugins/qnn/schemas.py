@@ -238,8 +238,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Differentiation Method",
             "description": "This parameter allows to select the method used to calculate the gradients of the quantum "
-                           "gates. The option `Best`, chooses the best method and even allows for normal "
-                           "backpropagation, if a classical simulator is used.",
+            "gates. The option `Best`, chooses the best method and even allows for normal "
+            "backpropagation, if a classical simulator is used.",
             "input_type": "select",
         },
     )

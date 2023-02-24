@@ -136,7 +136,9 @@ class DressedQuantumNet(QuantumNet):
         print(f"diff_method: {diff_method.get_value_for_pennylane()}")
 
         @qml.qnode(
-            quantum_device, interface="torch", diff_method=diff_method.get_value_for_pennylane()
+            quantum_device,
+            interface="torch",
+            diff_method=diff_method.get_value_for_pennylane(),
         )
         def quantum_net(q_input_features, q_weights_flat):
             """
