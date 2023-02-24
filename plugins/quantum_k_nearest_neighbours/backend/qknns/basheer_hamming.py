@@ -31,7 +31,7 @@ from collections import Counter
 
 
 def x_state_to_one(wires: List[int], state: List[int]):
-    for (wire, value) in zip(wires, state):
+    for wire, value in zip(wires, state):
         if value == 0:
             qml.PauliX((wire,))
 

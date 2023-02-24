@@ -135,7 +135,7 @@ class QkNNEnum(Enum):
                 SimpleAngleQkNN, max_wires, train_data=train_data
             )
             if use_access_wires:
-                wires[4] = wires[4] + access_wires
+                wires[3] = wires[3] + access_wires
 
             return SimpleAngleQkNN(
                 train_data, train_labels, k, wires[0], wires[1], wires[2], wires[3], None
