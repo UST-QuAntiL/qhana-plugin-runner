@@ -360,9 +360,10 @@ def calculation_task(self, db_id: int) -> str:
     entity_points = []
 
     for ent_id, idx in id_to_idx.items():
-        entity_points.append(
-            {"ID": ent_id, "href": "", "point": [x for x in transformed[idx]]}
-        )
+        new_entity_point = {"ID": ent_id, "href": ""}
+        new_entity_point.update({str(i): x for i, x in enumerate(transformed[idx])})
+
+        entity_points.append(new_entity_point)
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
