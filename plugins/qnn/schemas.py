@@ -109,7 +109,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Test Labels URL",
             "description": "URL to a json file containing the labels of the test entity points. If no url is provided, "
-                           "then the accuracy will not be calculated.",
+            "then the accuracy will not be calculated.",
             "input_type": "text",
         },
     )

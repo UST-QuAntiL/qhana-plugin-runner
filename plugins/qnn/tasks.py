@@ -142,16 +142,20 @@ def get_label_arr(
     return labels, label_to_int, int_to_label
 
 
-def random_split_data(data: np.ndarray, labels: np.ndarray, id_list: np.ndarray, split_size: int):
+def random_split_data(
+    data: np.ndarray, labels: np.ndarray, id_list: np.ndarray, split_size: int
+):
     indices = np.arange(len(data), dtype=int)
     np.random.shuffle(indices)
 
-    return data[indices[:split_size]], \
-           labels[indices[:split_size]], \
-           id_list[indices[:split_size]], \
-           data[indices[split_size:]], \
-           labels[indices[split_size:]], \
-           id_list[indices[split_size:]]
+    return (
+        data[indices[:split_size]],
+        labels[indices[:split_size]],
+        id_list[indices[:split_size]],
+        data[indices[split_size:]],
+        labels[indices[split_size:]],
+        id_list[indices[split_size:]],
+    )
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
@@ -245,7 +249,9 @@ def calculation_task(self, db_id: int) -> str:
     # Split training data and add it to the test data
     split_size = min(int(test_percentage * len(train_data)), len(train_data) - 1)
     if split_size != 0:
-        split_result = random_split_data(train_data, train_labels, train_id_list, split_size)
+        split_result = random_split_data(
+            train_data, train_labels, train_id_list, split_size
+        )
         train_data, train_labels, train_id_list = split_result[3:]
         test_data = np.concatenate((test_data, split_result[0]), axis=0)
         test_labels = np.concatenate((test_labels, split_result[1]), axis=0)
@@ -325,6 +331,7 @@ def calculation_task(self, db_id: int) -> str:
         if not isinstance(data, torch.Tensor):
             data = torch.tensor(data, dtype=torch.float32)
         return torch.argmax(model(data), dim=1).tolist()
+
     predictions = [int_to_label[el] for el in predictor(test_data)]
 
     # Prepare labels to be saved
@@ -453,6 +460,7 @@ def calculation_task(self, db_id: int) -> str:
     seconds = round(total_time - minutes * 60)
 
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
+
 
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
