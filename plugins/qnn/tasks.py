@@ -43,7 +43,7 @@ from sklearn.metrics import accuracy_score
 
 from .backend.datasets import OneHotDataset, digits2position
 from .backend.train_and_test import train
-from .backend.visualization import plot_data, plot_confusion_matrix
+from .backend.visualize import plot_data, plot_confusion_matrix
 
 # Plot to html
 import base64
