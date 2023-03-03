@@ -5,7 +5,7 @@
 import os
 from tempfile import SpooledTemporaryFile
 
-from typing import Optional
+from typing import Optional, List
 
 from celery.utils.log import get_task_logger
 
@@ -22,10 +22,9 @@ from qhana_plugin_runner.requests import open_url
 
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
+    load_entities,
+    ensure_dict,
 )
-from plugins.qnn.backend.train_and_test import train, test
-from plugins.qnn.backend.visualization import plot_classification
-
 
 from pennylane import numpy as np
 
@@ -40,12 +39,15 @@ import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader
 
+from sklearn.metrics import accuracy_score
+
 from .backend.datasets import OneHotDataset, digits2position
+from .backend.train_and_test import train
+from .backend.visualization import plot_data, plot_confusion_matrix
 
 # Plot to html
 import base64
 from io import BytesIO
-
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -62,6 +64,94 @@ def twospirals(n_points, noise=0.7, turns=1.52):
         np.vstack((np.hstack((d1x, d1y)), np.hstack((-d1x, -d1y)))),
         np.hstack((np.zeros(n_points).astype(int), np.ones(n_points).astype(int))),
     )
+
+
+def get_point(ent: dict) -> np.ndarray:
+    dimension_keys = [k for k in ent.keys() if k not in ("ID", "href")]
+    dimension_keys.sort()
+    point = np.empty(len(dimension_keys))
+    for idx, d in enumerate(dimension_keys):
+        point[idx] = ent[d]
+    return point
+
+
+def get_entity_generator(entity_points_url: str):
+    """
+    Return a generator for the entity points, given an url to them.
+    :param entity_points_url: url to the entity points
+    """
+    file_ = open_url(entity_points_url)
+    file_.encoding = "utf-8"
+    file_type = file_.headers["Content-Type"]
+    entities_generator = load_entities(file_, mimetype=file_type)
+    entities_generator = ensure_dict(entities_generator)
+    for ent in entities_generator:
+        yield {"ID": ent["ID"], "href": ent.get("href", ""), "point": get_point(ent)}
+
+
+def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]]):
+    entity_points = list(get_entity_generator(entity_points_url))
+    id_list = []
+    points_arr = []
+
+    for ent in entity_points:
+        if ent["ID"] in id_list:
+            raise ValueError("Duplicate ID: ", ent["ID"])
+        id_list.append(ent["ID"])
+        points_arr.append(ent["point"])
+
+    return np.array(id_list), np.array(points_arr)
+
+
+def get_label_generator(entity_labels_url: str):
+    """
+    Return a generator for the entity labels, given an url to them.
+    :param entity_labels_url: url to the entity labels
+    """
+    file_ = open_url(entity_labels_url)
+    file_.encoding = "utf-8"
+    file_type = file_.headers["Content-Type"]
+    entities_generator = load_entities(file_, mimetype=file_type)
+    entities_generator = ensure_dict(entities_generator)
+    for ent in entities_generator:
+        yield {"ID": ent["ID"], "href": ent.get("href", ""), "label": ent["label"]}
+
+
+def get_label_arr(
+    entity_labels_url: str, id_list: dict, label_to_int=None, int_to_label=None
+) -> (dict, List[List[float]]):
+    entity_labels = list(get_label_generator(entity_labels_url))
+
+    # Initialise label array
+    labels = np.zeros(len(id_list), dtype=int)
+
+    if label_to_int is None:
+        label_to_int = dict()
+    if int_to_label is None:
+        int_to_label = list()
+
+    id_to_idx = {value: idx for idx, value in enumerate(id_list)}
+    for ent in entity_labels:
+        label = ent["label"]
+        label_str = str(label)
+        if label_str not in label_to_int:
+            label_to_int[label_str] = len(int_to_label)
+            int_to_label.append(label)
+        labels[id_to_idx[ent["ID"]]] = label_to_int[label_str]
+
+    return labels, label_to_int, int_to_label
+
+
+def random_split_data(data: np.ndarray, labels: np.ndarray, id_list: np.ndarray, split_size: int):
+    indices = np.arange(len(data), dtype=int)
+    np.random.shuffle(indices)
+
+    return data[indices[:split_size]], \
+           labels[indices[:split_size]], \
+           id_list[indices[:split_size]], \
+           data[indices[split_size:]], \
+           labels[indices[split_size:]], \
+           id_list[indices[split_size:]]
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
@@ -89,6 +179,10 @@ def calculation_task(self, db_id: int) -> str:
 
     input_params: InputParameters = QNNParametersSchema().loads(task_data.parameters)
 
+    train_points_url = input_params.train_points_url
+    train_label_points_url = input_params.train_label_points_url
+    test_points_url = input_params.test_points_url
+    test_label_points_url = input_params.test_label_points_url
     # set variables to loaded values
     n_qubits = input_params.n_qubits  # Number of qubits
     lr = input_params.lr  # Learning rate
@@ -122,76 +216,66 @@ def calculation_task(self, db_id: int) -> str:
             TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
 
     # load or generate dataset
-    dataset = None
     if use_default_dataset:
         # spiral dataset
-        dataset = twospirals(10, turns=1.52)
+        dataset = twospirals(40, turns=1.52)
+        train_data, train_labels = dataset
+        train_id_list = np.arange(len(train_data), dtype=int)  # arbitrary ids
+        label_to_int = {"0": 0, "1": 1}
+        int_to_label = ["0", "1"]
+        test_data = np.zeros((0, train_data.shape[1]), dtype=float)
+        test_labels = np.zeros(0, dtype=int)
+        test_id_list = np.zeros(0, dtype=int)
     else:
-        # get files
-        entity_points_url = input_params.entity_points_url
-        clusters_url = input_params.clusters_url
+        train_id_list, train_data = get_indices_and_point_arr(train_points_url)
+        train_labels, label_to_int, int_to_label = get_label_arr(
+            train_label_points_url, train_id_list
+        )
 
-        # load data from file
-        entity_points = open_url(entity_points_url).json()
-        clusters_entities = open_url(clusters_url).json()
+        test_id_list, test_data = get_indices_and_point_arr(test_points_url)
+        test_labels = None
+        if test_label_points_url != "" and test_label_points_url is not None:
+            test_labels, label_to_int, int_to_label = get_label_arr(
+                test_label_points_url,
+                test_id_list,
+                label_to_int=label_to_int,
+                int_to_label=int_to_label,
+            )
 
-        # get data
-        clusters = {}
-        for ent in clusters_entities:
-            clusters[ent["ID"]] = ent["cluster"]
-        points = []
-        labels = []
-        for ent in entity_points:
-            points.append(ent["point"])
-            labels.append(clusters[ent["ID"]])
-        dataset = (points, np.array(labels))
+    # Split training data and add it to the test data
+    split_size = min(int(test_percentage * len(train_data)), len(train_data) - 1)
+    if split_size != 0:
+        split_result = random_split_data(train_data, train_labels, train_id_list, split_size)
+        train_data, train_labels, train_id_list = split_result[3:]
+        test_data = np.concatenate((test_data, split_result[0]), axis=0)
+        test_labels = np.concatenate((test_labels, split_result[1]), axis=0)
+        test_id_list = np.concatenate((test_id_list, split_result[2]), axis=0)
+
+    train_id_list = train_id_list.tolist()
+    test_id_list = test_id_list.tolist()
 
     # ------------------------------
     #          new qnn
     # ------------------------------
     start_time = time.time()  # Start the computation timer
 
-    # prepare data
-    X, Y = dataset
+    scaler = StandardScaler()
+    train_data = scaler.fit_transform(train_data)
+    test_data = scaler.transform(test_data)
 
-    classes = list(set(list(Y)))
-    n_classes = len(classes)
-    n_data = len(Y)
-
-    X = StandardScaler().fit_transform(X)
-
-    indices = np.arange(n_data)
-    if randomly_shuffle:
-        # randomly shuffle data
-        np.random.shuffle(indices)
-    X_shuffle = X[indices]
-    Y_shuffle = Y[indices]
-
-    # determine amount of training and test data
-    n_test = int(n_data * test_percentage)  # number of test data elements
-    if n_test < 1:
-        n_test = 1
-    if n_test > n_data - 1:
-        n_test = n_data - 1
-    n_train = n_data - n_test  # Number of training points
-    TASK_LOGGER.info(
-        f"Number of data elements: n_train = '{n_train}', n_test = '{n_test}'"
-    )
-
-    # train test split
-    X_train = torch.tensor(X_shuffle[:-n_test], dtype=torch.float32)
-    X_test = torch.tensor(X_shuffle[-n_test:], dtype=torch.float32)
-
-    Y_train = torch.tensor(Y_shuffle[:-n_test])
-    Y_test = torch.tensor(Y_shuffle[-n_test:])
+    train_data = torch.tensor(train_data, dtype=torch.float32)
+    train_labels = torch.from_numpy(train_labels)
+    test_data = torch.tensor(test_data, dtype=torch.float32)
+    test_labels = torch.from_numpy(test_labels)
 
     # Prep data
+    n_classes = len(label_to_int)
     train_dataloader = DataLoader(
-        OneHotDataset(X_train, Y_train, n_classes),
+        OneHotDataset(train_data, train_labels, n_classes),
         batch_size=batch_size,
         shuffle=randomly_shuffle,
     )
-    Y_test_one_hot = digits2position(Y_test, n_classes)
+    test_labels_one_hot = digits2position(test_labels, n_classes)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -207,7 +291,7 @@ def calculation_task(self, db_id: int) -> str:
         n_qubits=n_qubits,
         q_depth=q_depth,
         weight_init=weight_init,
-        input_size=X.shape[1],
+        input_size=train_data.shape[1],
         output_size=n_classes,
         preprocess_layers=preprocess_layers,
         postprocess_layers=postprocess_layers,
@@ -235,36 +319,86 @@ def calculation_task(self, db_id: int) -> str:
 
     # train network
     train(model, train_dataloader, loss_fn, opt, epochs, weights_to_wiggle)
-    # test network
-    accuracy_on_test_data = test(model, X_test, Y_test_one_hot, loss_fn)
 
-    if visualize:
-        resolution = input_params.resolution
-        # plot results (for grid)
-        figure_main = plot_classification(
-            model,
-            X,
-            X_train,
-            X_test,
-            Y_train.tolist(),
-            Y_test.tolist(),
-            accuracy_on_test_data,
-            resolution,
+    # test network
+    def predictor(data: torch.Tensor) -> torch.Tensor:
+        if not isinstance(data, torch.Tensor):
+            data = torch.tensor(data, dtype=torch.float32)
+        return torch.argmax(model(data), dim=1).tolist()
+    predictions = [int_to_label[el] for el in predictor(test_data)]
+
+    # Prepare labels to be saved
+    output_labels = []
+
+    for ent_id, pred in zip(test_id_list, predictions):
+        output_labels.append({"ID": ent_id, "href": "", "label": pred})
+
+    # Plot title + confusion matrix
+    plot_title = "Classification"
+    conf_matrix = None
+    if test_labels is not None:
+        converted_test_labels = [int_to_label[el] for el in test_labels]
+
+        # Compute accuracy on test data
+        test_accuracy = accuracy_score(converted_test_labels, predictions)
+        plot_title += f": accuracy on test data={test_accuracy}"
+
+        # Create confusion matrix plot
+        conf_matrix = plot_confusion_matrix(
+            converted_test_labels, predictions, int_to_label
         )
 
-        # plot to html
-        tmpfile = BytesIO()
-        figure_main.savefig(tmpfile, format="png")
-        encoded = base64.b64encode(tmpfile.getvalue()).decode("utf-8")
-        html = "<img src='data:image/png;base64,{}'>".format(encoded)
+    # Output the data
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(output_labels, output, "application/json")
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "labels.json",
+            "entity/label",
+            "application/json",
+        )
+
+    if visualize:
+        train_labels = train_labels.tolist()
+        test_labels = test_labels.tolist()
+
+        resolution = input_params.resolution
+        fig = plot_data(
+            train_data,
+            train_id_list,
+            train_labels,
+            test_data,
+            test_id_list,
+            test_labels,
+            resolution,
+            predictor=predictor,
+            title=plot_title,
+            label_to_int=label_to_int,
+        )
 
         # show plot
         with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
             output.write(html)
+
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                "classification_plot.html",
+                "plot",
+                "text/html",
+            )
+
+    if conf_matrix is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = conf_matrix.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "confusion_matrix.html",
                 "plot",
                 "text/html",
             )
@@ -279,7 +413,7 @@ def calculation_task(self, db_id: int) -> str:
 
         out_weights_dict[key] = (
             weights_dict[key].flatten().tolist()
-        )  #  one dimensional list of weights
+        )  # one dimensional list of weights
 
     qnn_outputs = []
     qnn_outputs.append(out_weights_dict)  # TODO better solution?
@@ -319,7 +453,6 @@ def calculation_task(self, db_id: int) -> str:
     seconds = round(total_time - minutes * 60)
 
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
-
 
 # TODO Quantum layer: shift for gradient determination?
 # TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all

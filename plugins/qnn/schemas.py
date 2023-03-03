@@ -19,8 +19,10 @@ from dataclasses import dataclass
 
 @dataclass(repr=False)
 class InputParameters:
-    entity_points_url: str
-    clusters_url: str
+    train_points_url: str
+    train_label_points_url: str
+    test_points_url: str
+    test_label_points_url: str
     network_enum: NeuralNetworkEnum
     test_percentage: float
     device: QuantumBackends
@@ -59,32 +61,55 @@ class TaskResponseSchema(MaBaseSchema):
 class QNNParametersSchema(FrontendFormBaseSchema):
     use_default_dataset = ma.fields.Boolean(
         required=False,
-        allow_none=False,
+        allow_none=True,
         metadata={
             "label": "Use default dataset",
             "description": "Use internally generated dataset (no input files required).",
             "input_type": "checkbox",
         },
     )
-    entity_points_url = FileUrl(
+    train_points_url = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="entity-points",
+        data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
-            "label": "Data points URL",
-            "description": "URL to a json file with the data points.",
+            "label": "Training Entity points URL",
+            "description": "URL to a json file with the entity points to train the quantum kNN algorithm.",
             "input_type": "text",
         },
     )
-    clusters_url = FileUrl(
+    train_label_points_url = FileUrl(
         required=False,
         allow_none=True,
-        data_input_type="clusters",
+        data_input_type="entity/label",
         data_content_types="application/json",
         metadata={
-            "label": "Labels URL",
-            "description": "URL to a json file with the labels.",
+            "label": "Training Labels URL",
+            "description": "URL to a json file containing the labels of the training entity points.",
+            "input_type": "text",
+        },
+    )
+    test_points_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity/vector",
+        data_content_types="application/json",
+        metadata={
+            "label": "Test Entity points URL",
+            "description": "URL to a json file with the entity points that should be used for testing. These points will be labeled.",
+            "input_type": "text",
+        },
+    )
+    test_label_points_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity/label",
+        data_content_types="application/json",
+        metadata={
+            "label": "Test Labels URL",
+            "description": "URL to a json file containing the labels of the test entity points. If no url is provided, "
+                           "then the accuracy will not be calculated.",
             "input_type": "text",
         },
     )

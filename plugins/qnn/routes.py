@@ -20,6 +20,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
     EntryPoint,
     DataMetadata,
+    InputDataMetadata,
 )
 from plugins.qnn.schemas import (
     QuantumBackends,
@@ -53,15 +54,41 @@ class PluginsView(MethodView):
                 href=url_for(f"{QNN_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{QNN_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
-                        data_type="entity-points",
-                        content_type=["application/json"],
-                        required=True,
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
+                        required=False,
+                        parameter="trainPointsUrl",
                     ),
-                    DataMetadata(
-                        data_type="clusters",
-                        content_type=["application/json"],
-                        required=True,
+                    InputDataMetadata(
+                        data_type="entity/label",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
+                        required=False,
+                        parameter="trainLabelPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
+                        required=False,
+                        parameter="testPointsUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/label",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
+                        required=False,
+                        parameter="testLabelPointsUrl",
                     ),
                 ],
                 data_output=[

@@ -1,17 +1,23 @@
 // use default dataset
 var use_default_dataset = document.getElementById("use_default_dataset");
 // custom dataset files
-var clusters_url = document.getElementById("clusters_url").parentNode.parentNode;
-var entity_points_url = document.getElementById("entity_points_url").parentNode.parentNode;
+var train_points_url = document.getElementById("train_points_url").parentNode.parentNode;
+var train_label_points_url = document.getElementById("train_label_points_url").parentNode.parentNode;
+var test_points_url = document.getElementById("test_points_url").parentNode.parentNode;
+var test_label_points_url = document.getElementById("test_label_points_url").parentNode.parentNode;
 
 function use_default_dataset_change() {
     if (use_default_dataset.checked === true) {
         // no data files required
-        clusters_url.style.display = 'none';
-        entity_points_url.style.display = 'none';
+        train_points_url.style.display = 'none';
+        train_label_points_url.style.display = 'none';
+        test_points_url.style.display = 'none';
+        test_label_points_url.style.display = 'none';
     } else {
-        clusters_url.style.display = 'block';
-        entity_points_url.style.display = 'block';
+        train_points_url.style.display = 'block';
+        train_label_points_url.style.display = 'block';
+        test_points_url.style.display = 'block';
+        test_label_points_url.style.display = 'block';
     }
 }
 
