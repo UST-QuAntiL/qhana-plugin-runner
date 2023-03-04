@@ -23,6 +23,8 @@ Example with pool, concurrency and celery beat:
 poetry run invoke worker --pool=gevent  --concurrency=10 --periodic-scheduler
 ```
 
+To model workflows and deploy them you need the [Camunda Modeler](https://camunda.com/download/modeler/).
+
 ## Creating workflows
 
 ### Service Tasks
@@ -152,6 +154,19 @@ Currently, following exception error codes are supported:
 ### Example Workflows
 
 You can find examples in the `/bpmn` directory of the workflows plugin to get started.
+
+## Deploying Workflows
+
+Open the workflow in Camunda Modeler.
+This can be your own workflow or one the example workflows.
+- click on the rocket icon at the bottom
+- enter a deployment name
+- set the REST endpoint to the endpoint of Camunda BPMN
+  - if you're using the docker setup this would be http://localhost:5018/engine-rest
+
+You can open the Camunda Cockpit in your Browser to see the deployed workflows.
+If you're using the docker setup the URL is http://localhost:5018/, username: `demo` and password: `demo`.
+Click on the number below `Deployments` or at the top bar on `more` -> `Deployments` to see the deployed workflows.
 
 ## Changelog
 
