@@ -26,7 +26,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
 )
 
-from pennylane import numpy as np
+import numpy as np
 
 # Timing tool
 import time
@@ -118,7 +118,7 @@ def get_label_generator(entity_labels_url: str):
 
 
 def get_label_arr(
-    entity_labels_url: str, id_list: dict, label_to_int=None, int_to_label=None
+    entity_labels_url: str, id_list: np.ndarray, label_to_int=None, int_to_label=None
 ) -> (dict, List[List[float]]):
     entity_labels = list(get_label_generator(entity_labels_url))
 
@@ -340,19 +340,22 @@ def calculation_task(self, db_id: int) -> str:
     for ent_id, pred in zip(test_id_list, predictions):
         output_labels.append({"ID": ent_id, "href": "", "label": pred})
 
+    # Correct train labels
+    train_labels = [int_to_label[el] for el in train_labels]
+
     # Plot title + confusion matrix
     plot_title = "Classification"
     conf_matrix = None
     if test_labels is not None:
-        converted_test_labels = [int_to_label[el] for el in test_labels]
+        test_labels = [int_to_label[el] for el in test_labels]
 
         # Compute accuracy on test data
-        test_accuracy = accuracy_score(converted_test_labels, predictions)
+        test_accuracy = accuracy_score(test_labels, predictions)
         plot_title += f": accuracy on test data={test_accuracy}"
 
         # Create confusion matrix plot
         conf_matrix = plot_confusion_matrix(
-            converted_test_labels, predictions, int_to_label
+            test_labels, predictions, int_to_label
         )
 
     # Output the data
@@ -367,9 +370,6 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     if visualize:
-        train_labels = train_labels.tolist()
-        test_labels = test_labels.tolist()
-
         resolution = input_params.resolution
         fig = plot_data(
             train_data,
