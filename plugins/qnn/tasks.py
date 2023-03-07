@@ -310,9 +310,7 @@ def calculation_task(self, db_id: int) -> str:
         plot_title += f": accuracy on test data={test_accuracy}"
 
         # Create confusion matrix plot
-        conf_matrix = plot_confusion_matrix(
-            test_labels, predictions, int_to_label
-        )
+        conf_matrix = plot_confusion_matrix(test_labels, predictions, int_to_label)
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
