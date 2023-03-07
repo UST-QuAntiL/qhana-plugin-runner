@@ -100,7 +100,7 @@ def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]
         id_list.append(ent["ID"])
         points_arr.append(ent["point"])
 
-    return np.array(id_list), np.array(points_arr)
+    return id_list, np.array(points_arr)
 
 
 def get_label_generator(entity_labels_url: str):
@@ -118,7 +118,7 @@ def get_label_generator(entity_labels_url: str):
 
 
 def get_label_arr(
-    entity_labels_url: str, id_list: np.ndarray, label_to_int=None, int_to_label=None
+    entity_labels_url: str, id_list: list, label_to_int=None, int_to_label=None
 ) -> (dict, List[List[float]]):
     entity_labels = list(get_label_generator(entity_labels_url))
 
@@ -140,22 +140,6 @@ def get_label_arr(
         labels[id_to_idx[ent["ID"]]] = label_to_int[label_str]
 
     return labels, label_to_int, int_to_label
-
-
-def random_split_data(
-    data: np.ndarray, labels: np.ndarray, id_list: np.ndarray, split_size: int
-):
-    indices = np.arange(len(data), dtype=int)
-    np.random.shuffle(indices)
-
-    return (
-        data[indices[:split_size]],
-        labels[indices[:split_size]],
-        id_list[indices[:split_size]],
-        data[indices[split_size:]],
-        labels[indices[split_size:]],
-        id_list[indices[split_size:]],
-    )
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
@@ -192,11 +176,9 @@ def calculation_task(self, db_id: int) -> str:
     lr = input_params.lr  # Learning rate
     batch_size = input_params.batch_size  # Numbre of samples (points) for each mini-batch
     q_depth = input_params.q_depth  # number of variational layers
-    use_default_dataset = input_params.use_default_dataset
     network_enum = input_params.network_enum
     # Number of optimization steps (step= 1 batch)
     epochs = input_params.epochs
-    test_percentage = input_params.test_percentage
     shots = input_params.shots
     optimizer = input_params.optimizer
     weight_init = input_params.weight_init
@@ -219,46 +201,21 @@ def calculation_task(self, db_id: int) -> str:
         else:
             TASK_LOGGER.info(f"IBMQ_TOKEN environment variable not set")
 
-    # load or generate dataset
-    if use_default_dataset:
-        # spiral dataset
-        dataset = twospirals(40, turns=1.52)
-        train_data, train_labels = dataset
-        train_id_list = np.arange(len(train_data), dtype=int)  # arbitrary ids
-        label_to_int = {"0": 0, "1": 1}
-        int_to_label = ["0", "1"]
-        test_data = np.zeros((0, train_data.shape[1]), dtype=float)
-        test_labels = np.zeros(0, dtype=int)
-        test_id_list = np.zeros(0, dtype=int)
-    else:
-        train_id_list, train_data = get_indices_and_point_arr(train_points_url)
-        train_labels, label_to_int, int_to_label = get_label_arr(
-            train_label_points_url, train_id_list
+    # load data
+    train_id_list, train_data = get_indices_and_point_arr(train_points_url)
+    train_labels, label_to_int, int_to_label = get_label_arr(
+        train_label_points_url, train_id_list
+    )
+
+    test_id_list, test_data = get_indices_and_point_arr(test_points_url)
+    test_labels = None
+    if test_label_points_url != "" and test_label_points_url is not None:
+        test_labels, label_to_int, int_to_label = get_label_arr(
+            test_label_points_url,
+            test_id_list,
+            label_to_int=label_to_int,
+            int_to_label=int_to_label,
         )
-
-        test_id_list, test_data = get_indices_and_point_arr(test_points_url)
-        test_labels = None
-        if test_label_points_url != "" and test_label_points_url is not None:
-            test_labels, label_to_int, int_to_label = get_label_arr(
-                test_label_points_url,
-                test_id_list,
-                label_to_int=label_to_int,
-                int_to_label=int_to_label,
-            )
-
-    # Split training data and add it to the test data
-    split_size = min(int(test_percentage * len(train_data)), len(train_data) - 1)
-    if split_size != 0:
-        split_result = random_split_data(
-            train_data, train_labels, train_id_list, split_size
-        )
-        train_data, train_labels, train_id_list = split_result[3:]
-        test_data = np.concatenate((test_data, split_result[0]), axis=0)
-        test_labels = np.concatenate((test_labels, split_result[1]), axis=0)
-        test_id_list = np.concatenate((test_id_list, split_result[2]), axis=0)
-
-    train_id_list = train_id_list.tolist()
-    test_id_list = test_id_list.tolist()
 
     # ------------------------------
     #          new qnn
@@ -281,7 +238,6 @@ def calculation_task(self, db_id: int) -> str:
         batch_size=batch_size,
         shuffle=randomly_shuffle,
     )
-    test_labels_one_hot = digits2position(test_labels, n_classes)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

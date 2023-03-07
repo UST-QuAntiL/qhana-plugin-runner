@@ -1,25 +1,8 @@
-// use default dataset
-var use_default_dataset = document.getElementById("use_default_dataset");
-// custom dataset files
 var train_points_url = document.getElementById("train_points_url").parentNode.parentNode;
 var train_label_points_url = document.getElementById("train_label_points_url").parentNode.parentNode;
 var test_points_url = document.getElementById("test_points_url").parentNode.parentNode;
 var test_label_points_url = document.getElementById("test_label_points_url").parentNode.parentNode;
 
-function use_default_dataset_change() {
-    if (use_default_dataset.checked === true) {
-        // no data files required
-        train_points_url.style.display = 'none';
-        train_label_points_url.style.display = 'none';
-        test_points_url.style.display = 'none';
-        test_label_points_url.style.display = 'none';
-    } else {
-        train_points_url.style.display = 'block';
-        train_label_points_url.style.display = 'block';
-        test_points_url.style.display = 'block';
-        test_label_points_url.style.display = 'block';
-    }
-}
 
 // visualize result?
 var visualize_classification = document.getElementById("visualize");
@@ -98,7 +81,6 @@ function use_quantum_change() {
 }
 
 use_quantum_change();
-use_default_dataset_change();
 visualize_classification_change();
 backend_type_change();
 

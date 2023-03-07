@@ -60,7 +60,7 @@ class PluginsView(MethodView):
                             "application/json",
                             "text/csv",
                         ],
-                        required=False,
+                        required=True,
                         parameter="trainPointsUrl",
                     ),
                     InputDataMetadata(
@@ -69,7 +69,7 @@ class PluginsView(MethodView):
                             "application/json",
                             "text/csv",
                         ],
-                        required=False,
+                        required=True,
                         parameter="trainLabelPointsUrl",
                     ),
                     InputDataMetadata(
@@ -78,7 +78,7 @@ class PluginsView(MethodView):
                             "application/json",
                             "text/csv",
                         ],
-                        required=False,
+                        required=True,
                         parameter="testPointsUrl",
                     ),
                     InputDataMetadata(
@@ -144,7 +144,6 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         # define default values
         default_values = {
-            schema.fields["test_percentage"].data_key: 0.05,
             schema.fields[
                 "device"
             ].data_key: QuantumBackends.aer_statevector_simulator.value,
@@ -158,7 +157,6 @@ class MicroFrontend(MethodView):
             schema.fields["epochs"].data_key: 2,
             schema.fields["q_depth"].data_key: 5,
             schema.fields["batch_size"].data_key: 10,
-            schema.fields["use_default_dataset"].data_key: True,
             schema.fields["randomly_shuffle"].data_key: True,
             schema.fields["visualize"].data_key: True,
             schema.fields["weight_init"].data_key: WeightInitEnum.uniform.value,

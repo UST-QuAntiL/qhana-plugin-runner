@@ -24,7 +24,6 @@ class InputParameters:
     test_points_url: str
     test_label_points_url: str
     network_enum: NeuralNetworkEnum
-    test_percentage: float
     device: QuantumBackends
     ibmq_token: str
     custom_backend: str
@@ -42,7 +41,6 @@ class InputParameters:
     preprocess_layers: str = ""
     postprocess_layers: str = ""
     hidden_layers: str = ""
-    use_default_dataset: bool = False
     randomly_shuffle: bool = False
     visualize: bool = False
 
@@ -59,18 +57,9 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class QNNParametersSchema(FrontendFormBaseSchema):
-    use_default_dataset = ma.fields.Boolean(
-        required=False,
-        allow_none=True,
-        metadata={
-            "label": "Use default dataset",
-            "description": "Use internally generated dataset (no input files required).",
-            "input_type": "checkbox",
-        },
-    )
     train_points_url = FileUrl(
-        required=False,
-        allow_none=True,
+        required=True,
+        allow_none=False,
         data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
@@ -80,8 +69,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         },
     )
     train_label_points_url = FileUrl(
-        required=False,
-        allow_none=True,
+        required=True,
+        allow_none=False,
         data_input_type="entity/label",
         data_content_types="application/json",
         metadata={
@@ -91,8 +80,8 @@ class QNNParametersSchema(FrontendFormBaseSchema):
         },
     )
     test_points_url = FileUrl(
-        required=False,
-        allow_none=True,
+        required=True,
+        allow_none=False,
         data_input_type="entity/vector",
         data_content_types="application/json",
         metadata={
@@ -120,15 +109,6 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "label": "Shuffle",
             "description": "Randomly shuffle data before training.",
             "input_type": "checkbox",
-        },
-    )
-    test_percentage = ma.fields.Float(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Amount of test data",
-            "description": "How much of the data is used as test data. 1 - only test data, 0 - only training data.",
-            "input_type": "text",
         },
     )
     epochs = ma.fields.Int(
