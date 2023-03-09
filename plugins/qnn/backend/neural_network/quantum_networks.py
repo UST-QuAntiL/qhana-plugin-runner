@@ -130,6 +130,8 @@ class DressedQuantumNet(QuantumNet):
 
         if single_q_params:
             self.q_params = [nn.Parameter(el, requires_grad=True) for el in q_params]
+            for i in range(len(self.q_params)):
+                self.register_parameter(f"q_params{i}", self.q_params[i])
         else:
             self.q_params = nn.Parameter(q_params, requires_grad=True)
 
@@ -188,9 +190,6 @@ class DressedQuantumNet(QuantumNet):
     def parameters(self, recurse: bool = True) -> Iterator[nn.Parameter]:
         for name, param in self.named_parameters(recurse=recurse):
             yield param
-        if isinstance(self.q_params, list):
-            for p in self.q_params:
-                yield p
 
     def get_quantum_parameters(self):
         return self.q_params

@@ -105,7 +105,6 @@ def test(model, X_test, Y_test, loss_fn):
     test_accuracy = float(torch.sum(predicted_class == Y_test).item()) / len(Y_test)
 
     # print loss and accuracy for test data
-    print("")
     print(
         "Test loss: {:.4f} and accuracy: {:.4f} on the test data".format(
             test_loss.item(), test_accuracy

@@ -366,22 +366,14 @@ def calculation_task(self, db_id: int) -> str:
 
     # prepare weights output
     weights_dict = model.state_dict()
-    out_weights_dict = {}
-    for key in weights_dict:
-        out_weights_dict[key + ".dims"] = list(
-            weights_dict[key].shape
-        )  # dimensions of the weights tensor
-
-        out_weights_dict[key] = (
-            weights_dict[key].flatten().tolist()
-        )  # one dimensional list of weights
-
-    qnn_outputs = []
-    qnn_outputs.append(out_weights_dict)  # TODO better solution?
+    for key, value in weights_dict.items():
+        if isinstance(value, torch.Tensor):
+            weights_dict[key] = value.tolist()
+    weights_dict["net_type"] = str(model.__class__.__name__)
 
     # save weights in file
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(qnn_outputs, output, "application/json")
+        save_entities([weights_dict], output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
