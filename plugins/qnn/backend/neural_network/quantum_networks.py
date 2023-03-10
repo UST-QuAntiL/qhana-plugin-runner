@@ -47,6 +47,10 @@ class QuantumNet(nn.Module, metaclass=ABCMeta):
     def get_quantum_parameters(self):
         """Returns the quantum parameters"""
 
+    @abstractmethod
+    def get_representative_circuit(self) -> str:
+        """Returns the quantum circuits used, as a qasm string"""
+
 
 # define quantum layers
 def H_layer(nqubits):
@@ -191,3 +195,9 @@ class DressedQuantumNet(QuantumNet):
 
     def get_quantum_parameters(self):
         return self.q_params
+
+    def get_representative_circuit(self) -> str:
+        x = torch.rand(self.n_qubits) * 2*torch.pi
+        circuit = self.q_net
+        circuit.construct([], {"q_input_features": x, "q_weights_flat": self.q_params})
+        return circuit.qtape.to_openqasm()

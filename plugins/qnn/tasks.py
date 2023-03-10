@@ -216,6 +216,7 @@ def calculation_task(self, db_id: int) -> str:
             label_to_int=label_to_int,
             int_to_label=int_to_label,
         )
+        test_labels = torch.from_numpy(test_labels)
 
     # ------------------------------
     #          new qnn
@@ -229,7 +230,6 @@ def calculation_task(self, db_id: int) -> str:
     train_data = torch.tensor(train_data, dtype=torch.float32)
     train_labels = torch.from_numpy(train_labels)
     test_data = torch.tensor(test_data, dtype=torch.float32)
-    test_labels = torch.from_numpy(test_labels)
 
     # Prep data
     n_classes = len(label_to_int)
@@ -331,7 +331,7 @@ def calculation_task(self, db_id: int) -> str:
             train_labels,
             test_data,
             test_id_list,
-            test_labels,
+            predictions,
             resolution,
             predictor=predictor,
             title=plot_title,
@@ -384,20 +384,16 @@ def calculation_task(self, db_id: int) -> str:
 
     # save quantum circuit as qasm file
     if network_enum.needs_quantum_backend():
-        try:
-            qasm_string = model_parameters["quantum_device"]._circuit.qasm()
-            with SpooledTemporaryFile(mode="w") as output:
-                output.write(qasm_string)
-                STORE.persist_task_result(
-                    db_id,
-                    output,
-                    "qasm-quantum-circuit.qasm",
-                    "qasm-quantum-circuit",
-                    "application/qasm",
-                )
-        except Exception as e:
-            TASK_LOGGER.error("Couldn't save circuit as qasm file")
-            TASK_LOGGER.error(e)
+        qasm_string = model.get_representative_circuit()
+        with SpooledTemporaryFile(mode="w") as output:
+            output.write(qasm_string)
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "qasm-quantum-circuit.qasm",
+                "qasm-quantum-circuit",
+                "application/qasm",
+            )
 
     # Print final time
     total_time = time.time() - start_time

@@ -15,6 +15,7 @@ class QuantumBackends(Enum):
     ibmq_belem = "ibmq_belem"
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
+    pennylane_default_qubit = "pennylane_default.qubit"
 
     def get_pennylane_backend(
         self,
@@ -51,6 +52,8 @@ class QuantumBackends(Enum):
                 provider=provider,
                 shots=shots,
             )
+        elif self.name.startswith("pennylane"):
+            return qml.device(self.value[10:], wires=qubit_cnt, shots=shots)
         else:
             # TASK_LOGGER.error
             raise NotImplementedError("Unknown pennylane backend specified!")
