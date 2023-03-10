@@ -197,7 +197,7 @@ class DressedQuantumNet(QuantumNet):
         return self.q_params
 
     def get_representative_circuit(self) -> str:
-        x = torch.rand(self.n_qubits) * 2*torch.pi
+        x = torch.rand(self.n_qubits) * 2 * torch.pi
         circuit = self.q_net
         circuit.construct([], {"q_input_features": x, "q_weights_flat": self.q_params})
         return circuit.qtape.to_openqasm()
