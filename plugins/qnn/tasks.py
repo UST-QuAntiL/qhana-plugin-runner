@@ -148,8 +148,8 @@ def calculation_task(self, db_id: int) -> str:
     train and test a classical or dressed quantum classification network
     """
 
-    torch.manual_seed(42)  # TODO doesn't work?
-    np.random.seed(42)  # TODO doesn't work?
+    torch.manual_seed(42)
+    np.random.seed(42)
 
     # ------------------------------
     #        get input data
@@ -383,7 +383,6 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     # save quantum circuit as qasm file
-    # requires pennylane-qiskit
     if network_enum.needs_quantum_backend():
         try:
             qasm_string = model_parameters["quantum_device"]._circuit.qasm()
@@ -406,15 +405,3 @@ def calculation_task(self, db_id: int) -> str:
     seconds = round(total_time - minutes * 60)
 
     return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds"
-
-
-# TODO Quantum layer: shift for gradient determination?
-# TODO weights to wiggle: number of weights in quantum circuit to update in one optimization step. 0 means all
-# TODO ouput document with details for classical network parts
-# TODO default enum value for optimizer not shown in gui....
-
-
-# print -> TASKLOGGER
-# zero initialization => completely blue background for classical network. but works well for qnn
-# cleanup and comments, documentation
-# really slow with aer statevector device? (with default dataset) -> resolution

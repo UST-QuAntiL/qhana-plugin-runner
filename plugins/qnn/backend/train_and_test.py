@@ -73,8 +73,6 @@ def train(model, dataloader, loss_fn, optimizer, num_iterations, weights_to_wigg
                 i + 1, num_iterations, minutes_it, seconds_it, loss.item(), accuracy
             )
         )
-        # print(f"weights_to_wiggle: {weights_to_wiggle}")
-        # time.sleep(2)
     model.eval()
     torch.set_grad_enabled(False)
 

@@ -4,7 +4,6 @@ import torch
 
 def digits2position(vec_of_digits, n_positions):
     """One-hot encoding of a batch of vectors."""
-    print(f"vec_of_digits: {vec_of_digits}\nn_positions: {n_positions}")
     return torch.eye(n_positions)[vec_of_digits]
 
 

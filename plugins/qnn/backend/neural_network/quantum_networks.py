@@ -135,8 +135,6 @@ class DressedQuantumNet(QuantumNet):
         else:
             self.q_params = nn.Parameter(q_params, requires_grad=True)
 
-        print(f"diff_method: {diff_method.get_value_for_pennylane()}")
-
         @qml.qnode(
             quantum_device,
             interface="torch",

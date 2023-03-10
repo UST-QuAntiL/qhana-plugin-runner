@@ -54,7 +54,7 @@ class FeedForwardNetwork(nn.Module):
                 module.weight.data.normal_(mean=0.0, std=1.0)
             elif self.weight_init == WeightInitEnum.uniform:
                 module.weight.data.uniform_()
-            elif self.weight_init == WeightInitEnum.zero:  # TODO plot is completely blue?
+            elif self.weight_init == WeightInitEnum.zero:
                 module.weight.data.zero_()
             else:
                 raise NotImplementedError("unknown weight init method")
