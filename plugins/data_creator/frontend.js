@@ -1,0 +1,15 @@
+var noise_vis = document.getElementById("noise").parentNode.parentNode;
+var turns_vis = document.getElementById("turns").parentNode.parentNode;
+var dataset_type = document.getElementById("dataset_type");
+
+function dataset_type_change() {
+    console.log("data_type_change");
+    noise_vis.style.display = 'none';
+    turns_vis.style.display = 'none';
+    if (dataset_type.value === "two_spirals") {
+        noise_vis.style.display = 'block';
+        turns_vis.style.display = 'block';
+    }
+}
+
+dataset_type.addEventListener("change", dataset_type_change);
