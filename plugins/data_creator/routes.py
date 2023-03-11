@@ -60,9 +60,7 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{DataCreator_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{DataCreator_BLP.name}.MicroFrontend"),
-                data_input=[
-
-                ],
+                data_input=[],
                 data_output=[
                     DataMetadata(
                         data_type="entity/vector",
@@ -88,7 +86,9 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the data creation plugin."""
 
-    @DataCreator_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the data creation plugin.")
+    @DataCreator_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the data creation plugin."
+    )
     @DataCreator_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -101,7 +101,9 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @DataCreator_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the data creation plugin.")
+    @DataCreator_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the data creation plugin."
+    )
     @DataCreator_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True

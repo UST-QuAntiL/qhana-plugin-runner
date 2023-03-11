@@ -53,9 +53,7 @@ def get_entity_dict(ID, point):
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(
-        f"Starting new data creation calculation task with db id '{db_id}'"
-    )
+    TASK_LOGGER.info(f"Starting new data creation calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -64,18 +62,25 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-    
+
     dataset_type = input_params.dataset_type
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
-    train_data, train_labels, test_data, test_labels = dataset_type.get_data(**input_params.__dict__)
+    train_data, train_labels, test_data, test_labels = dataset_type.get_data(
+        **input_params.__dict__
+    )
     train_id = [str(i) for i in range(len(train_data))]
-    test_id = [str(i) for i in range(len(test_data), len(train_data)+len(test_data))]
+    test_id = [str(i) for i in range(len(test_data), len(train_data) + len(test_data))]
     train_data = [get_entity_dict(ID, point) for ID, point in zip(train_id, train_data)]
-    train_labels = [{"ID": ID, "href": "", "label": label} for ID, label in zip(train_id, train_labels)]
+    train_labels = [
+        {"ID": ID, "href": "", "label": label}
+        for ID, label in zip(train_id, train_labels)
+    ]
     test_data = [get_entity_dict(ID, point) for ID, point in zip(test_id, test_data)]
-    test_labels = [{"ID": ID, "href": "", "label": label} for ID, label in zip(test_id, test_labels)]
+    test_labels = [
+        {"ID": ID, "href": "", "label": label} for ID, label in zip(test_id, test_labels)
+    ]
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
