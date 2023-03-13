@@ -54,11 +54,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
   integration-tests:
-    runs-on: ubuntu-latest
     needs: image
     uses: PhilWun/qhana-integration-tests/.github/workflows/run_integration_tests.yml@a81e695568cd2151e23f223fa22784a6ca68f2de
-      with:
-        plugin-runner-image: ${{ needs.image.outputs.image }}
-        backend-image: ${{ inputs.backend-image }}
-        ui-image: ${{ inputs.ui-image }}
-        registry-image: ${{ inputs.registry-image }}
+    with:
+      plugin-runner-image: ${{ needs.image.outputs.image }}
+      backend-image: ${{ inputs.backend-image }}
+      ui-image: ${{ inputs.ui-image }}
+      registry-image: ${{ inputs.registry-image }}
