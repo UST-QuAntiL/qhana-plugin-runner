@@ -1,0 +1,195 @@
+{% import 'forms.html' as forms %}
+
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+</head>
+
+<body>
+    <div class="qhana-microfrontend">
+        {% if help_text or example_values %}
+        <details class="qhana-help">
+            <summary>Help</summary>
+            {% if help_text %}
+            {% autoescape false %}
+            {{help_text | markdown}}
+            {% endautoescape %}
+            {% else %}
+            <br>
+            {% endif %}
+            {% if example_values %}
+            <a href="{{example_values}}">Fill in example values.</a>
+            {% endif %}
+        </details>
+        {% endif %}
+        {% call forms.render_form(target="microfrontend") %}
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend")}}
+            {{ forms.submit("submit", action=process)}}
+            {% if done %}
+            {{ forms.submit("done", action=done)}}
+            {% endif %}
+        </div>
+        {% endcall %}
+    </div>
+
+    <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
+</body>
+
+</html>
+
+<script>
+    // use default dataset
+    var use_default_dataset = document.getElementById("use_default_data");
+    // custom dataset files
+    var clusters_url = document.getElementById("clusters_url").parentNode.parentNode;
+    var entity_points_url = document.getElementById("entity_points_url").parentNode.parentNode;
+    function use_default_dataset_change() {
+        console.log("use_default_dataset.checked", use_default_dataset.checked)
+        if (use_default_dataset.checked == true) {
+            console.log("default dataset")
+            // no data files required
+            clusters_url.style.display = 'none';
+            entity_points_url.style.display = 'none';
+        } else {
+            console.log("custom dataset")
+            clusters_url.style.display = 'block';
+            entity_points_url.style.display = 'block';
+        }
+    }
+
+    // visualize result?
+    var visualize_classification = document.getElementById("visualize");
+    // resolution of the visualization
+    var resolution = document.getElementById("resolution").parentNode.parentNode;
+    function visualize_classification_change() {
+        console.log("visualize_classification.checked", visualize_classification.checked)
+        if (visualize_classification.checked == true) {
+            console.log("visualize")
+            resolution.style.display = 'block';
+        } else {
+            console.log("don't visualize")
+            resolution.style.display = 'none';
+        }
+    }
+
+    // use quantum or classical SVC
+    var use_quantum = document.getElementById("use_quantum");
+
+    // classical parameters
+    var regularization_C = document.getElementById("regularization_C").parentNode.parentNode;
+    var kernel = document.getElementById("kernel").parentNode.parentNode;
+    var degree = document.getElementById("degree").parentNode.parentNode;
+
+    // quantum parameters
+    var backend = document.getElementById("backend").parentNode.parentNode;
+    var ibmq_token = document.getElementById("ibmq_token").parentNode.parentNode;
+    var custom_backend = document.getElementById("custom_backend").parentNode.parentNode;
+    var feature_map = document.getElementById("feature_map").parentNode.parentNode;
+    var entanglement = document.getElementById("entanglement").parentNode.parentNode;
+    var reps = document.getElementById("reps").parentNode.parentNode;
+    var shots = document.getElementById("shots").parentNode.parentNode;
+
+    // show "degree" parameter only when kerneltype "poly"
+    kernel_type = document.getElementById("kernel");
+    function kernel_type_change() {
+        if (use_quantum.checked == false && kernel_type.value === "poly") {
+            degree.style.display = 'block';
+        } else {
+            degree.style.display = 'none';
+        }
+    }
+
+    // if backendname starts with "aer" ->hide ibmqtoken and custombackendname
+    // if backendname starts with "ibmq" -> hide custombackendname
+    // if backendname starts with "custom_ibmq" -> show all
+    backend_type = document.getElementById("backend");
+    function backend_type_change() {
+        if (use_quantum.checked == true) {
+            if (backend_type.value.startsWith("aer")) {
+                console.log("aer")
+                ibmq_token.style.display = 'none';
+                custom_backend.style.display = 'none';
+            } else if (backend_type.value.startsWith("ibmq")) {
+                console.log("ibmq")
+                ibmq_token.style.display = 'block';
+                custom_backend.style.display = 'none';
+            } else {
+                console.log("other")
+                ibmq_token.style.display = 'block';
+                custom_backend.style.display = 'block';
+            }
+        }
+    }
+
+    var feature_map_type = document.getElementById("feature_map");
+    function feature_map_type_change() {
+        if (use_quantum.checked == true) {
+            console.log("feature_map_type.value", feature_map_type.value)
+            console.log('=== "z_feature_map"', feature_map_type.value === "z_feature_map")
+            if (feature_map_type.value === "z_feature_map") {
+                entanglement.style.display = 'none';
+            } else {
+                entanglement.style.display = 'block';
+            }
+        }
+    }
+
+    function use_quantum_change() {
+        console.log("use_quantum.checked", use_quantum.checked)
+        if (use_quantum.checked == true) {
+            console.log("quantum")
+            // quantum support vector classifier
+
+            // show quantum elements
+            backend.style.display = 'block';
+            feature_map.style.display = 'block';
+            reps.style.display = 'block';
+            shots.style.display = 'block';
+            backend_type_change();
+            feature_map_type_change();
+
+            // hide unnecessary elements
+            regularization_C.style.display = 'none';
+            kernel.style.display = 'none';
+            degree.style.display = 'none';
+        } else {
+            console.log("classical")
+            // classical support vector classifier
+
+            // show classical elements
+            regularization_C.style.display = 'block';
+            kernel.style.display = 'block';
+            kernel_type_change()
+
+            // hide unnecessary elements
+            backend.style.display = 'none';
+            ibmq_token.style.display = 'none';
+            custom_backend.style.display = 'none';
+            feature_map.style.display = 'none';
+            entanglement.style.display = 'none';
+            reps.style.display = 'none';
+            shots.style.display = 'none';
+        }
+    }
+
+
+    use_quantum_change();
+    use_default_dataset_change();
+    visualize_classification_change();
+    kernel_type_change();
+    backend_type_change();
+    feature_map_type_change();
+
+    // react to changes
+    use_quantum.onchange = use_quantum_change;
+    use_default_dataset.onchange = use_default_dataset_change;
+    visualize_classification.onchange = visualize_classification_change;
+    kernel_type.onchange = kernel_type_change;
+    backend_type.onchange = backend_type_change;
+    feature_map_type.onchange = feature_map_type_change;
+
+</script>
