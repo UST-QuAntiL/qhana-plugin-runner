@@ -8,7 +8,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "alembic"
-version = "1.9.4"
+version = "1.10.2"
 description = "A database migration tool for SQLAlchemy."
 category = "main"
 optional = false
@@ -17,6 +17,7 @@ python-versions = ">=3.7"
 [package.dependencies]
 Mako = "*"
 SQLAlchemy = ">=1.3.0"
+typing-extensions = ">=4"
 
 [package.extras]
 tz = ["python-dateutil"]
@@ -410,15 +411,15 @@ tests = ["PyYAML (==6.0)", "apispec (==6.0.0)", "coverage (==6.5.0)", "flask (==
 
 [[package]]
 name = "flask-sqlalchemy"
-version = "2.5.1"
-description = "Adds SQLAlchemy support to your Flask application."
+version = "3.0.3"
+description = "Add SQLAlchemy support to your Flask application."
 category = "main"
 optional = false
-python-versions = ">= 2.7, != 3.0.*, != 3.1.*, != 3.2.*, != 3.3.*"
+python-versions = ">=3.7"
 
 [package.dependencies]
-Flask = ">=0.10"
-SQLAlchemy = ">=0.8.0"
+Flask = ">=2.2"
+SQLAlchemy = ">=1.4.18"
 
 [[package]]
 name = "fspath"
@@ -1217,11 +1218,11 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "typing-extensions"
-version = "3.10.0.2"
-description = "Backported and Experimental Type Hints for Python 3.5+"
+version = "4.5.0"
+description = "Backported and Experimental Type Hints for Python 3.7+"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 
 [[package]]
 name = "urllib3"
@@ -1292,7 +1293,7 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "1e448cf4cc4e01e649450636284a361a9986e12d212e426d7f4de5dad5cf1518"
+content-hash = "5ced3c16c66caabe92f568409bba03ef323765b0f81c54a9d6757858c5b5becb"
 
 [metadata.files]
 alabaster = [
@@ -1300,8 +1301,8 @@ alabaster = [
     {file = "alabaster-0.7.13.tar.gz", hash = "sha256:a27a4a084d5e690e16e01e03ad2b2e552c61a65469419b907243193de1a84ae2"},
 ]
 alembic = [
-    {file = "alembic-1.9.4-py3-none-any.whl", hash = "sha256:6f1c2207369bf4f49f952057a33bb017fbe5c148c2a773b46906b806ea6e825f"},
-    {file = "alembic-1.9.4.tar.gz", hash = "sha256:4d3bd32ecdbb7bbfb48a9fe9e6d6fd6a831a1b59d03e26e292210237373e7db5"},
+    {file = "alembic-1.10.2-py3-none-any.whl", hash = "sha256:8b48368f6533c064b39c024e1daba15ae7f947eac84185c28c06bbe1301a5497"},
+    {file = "alembic-1.10.2.tar.gz", hash = "sha256:457eafbdc0769d855c2c92cbafe6b7f319f916c80cf4ed02b8f394f38b51b89d"},
 ]
 amqp = [
     {file = "amqp-5.1.1-py3-none-any.whl", hash = "sha256:6f0956d2c23d8fa6e7691934d8c3930eadb44972cbbd1a7ae3a520f735d43359"},
@@ -1547,8 +1548,8 @@ flask-smorest = [
     {file = "flask_smorest-0.40.0-py3-none-any.whl", hash = "sha256:b7122837a698bf63266a66880baeeef2bc8c57704973d81b9d0c6cb595af6a79"},
 ]
 flask-sqlalchemy = [
-    {file = "Flask-SQLAlchemy-2.5.1.tar.gz", hash = "sha256:2bda44b43e7cacb15d4e05ff3cc1f8bc97936cc464623424102bfc2c35e95912"},
-    {file = "Flask_SQLAlchemy-2.5.1-py2.py3-none-any.whl", hash = "sha256:f12c3d4cc5cc7fdcc148b9527ea05671718c3ea45d50c7e732cceb33f574b390"},
+    {file = "Flask-SQLAlchemy-3.0.3.tar.gz", hash = "sha256:2764335f3c9d7ebdc9ed6044afaf98aae9fa50d7a074cef55dde307ec95903ec"},
+    {file = "Flask_SQLAlchemy-3.0.3-py3-none-any.whl", hash = "sha256:add5750b2f9cd10512995261ee2aa23fab85bd5626061aa3c564b33bb4aa780a"},
 ]
 fspath = [
     {file = "fspath-20230218-py2.py3-none-any.whl", hash = "sha256:77fe4680b15c2d528c246975710180e8d75bc6e442a27d95ce7785e2db2acf02"},
@@ -2019,9 +2020,8 @@ tomlkit = [
     {file = "tomlkit-0.11.6.tar.gz", hash = "sha256:71b952e5721688937fb02cf9d354dbcf0785066149d2855e44531ebdd2b65d73"},
 ]
 typing-extensions = [
-    {file = "typing_extensions-3.10.0.2-py2-none-any.whl", hash = "sha256:d8226d10bc02a29bcc81df19a26e56a9647f8b0a6d4a83924139f4a8b01f17b7"},
-    {file = "typing_extensions-3.10.0.2-py3-none-any.whl", hash = "sha256:f1d25edafde516b146ecd0613dabcc61409817af4766fbbcfb8d1ad4ec441a34"},
-    {file = "typing_extensions-3.10.0.2.tar.gz", hash = "sha256:49f75d16ff11f1cd258e1b988ccff82a3ca5570217d7ad8c5f48205dd99a677e"},
+    {file = "typing_extensions-4.5.0-py3-none-any.whl", hash = "sha256:fb33085c39dd998ac16d1431ebc293a8b3eedd00fd4a32de0ff79002c19511b4"},
+    {file = "typing_extensions-4.5.0.tar.gz", hash = "sha256:5cb5f4a79139d699607b3ef622a1dedafa84e115ab0024e0d9c044a9479ca7cb"},
 ]
 urllib3 = [
     {file = "urllib3-1.26.15-py2.py3-none-any.whl", hash = "sha256:aa751d169e23c7479ce47a0cb0da579e3ede798f994f5816a74e4f4500dcea42"},
