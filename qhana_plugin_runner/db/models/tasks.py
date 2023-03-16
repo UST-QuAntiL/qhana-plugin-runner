@@ -16,8 +16,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Sequence, Union
 
-from sqlalchemy.orm import relation, relationship
-from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import select
@@ -25,8 +24,6 @@ from sqlalchemy.sql.schema import (
     Column,
     ForeignKey,
 )
-from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.event import listens_for
 
 from .mutable_json import MutableJSON
 from ..db import DB, REGISTRY
@@ -95,7 +92,8 @@ class ProcessingTask:
         default=datetime.utcnow(), metadata={"sa": Column(sql.TIMESTAMP(timezone=True))}
     )
     finished_at: Optional[datetime] = field(
-        default=None, metadata={"sa": Column(sql.TIMESTAMP(timezone=True), nullable=True)}
+        default=None,
+        metadata={"sa": Column(sql.TIMESTAMP(timezone=True), nullable=True)},
     )
 
     parameters: str = field(default="", metadata={"sa": Column(sql.Text())})
