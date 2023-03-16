@@ -327,20 +327,17 @@ dotenv = ["python-dotenv"]
 
 [[package]]
 name = "flask-babel"
-version = "2.0.0"
-description = "Adds i18n/l10n support to Flask applications"
+version = "3.0.1"
+description = "Adds i18n/l10n support fo Flask applications."
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
-Babel = ">=2.3"
-Flask = "*"
-Jinja2 = ">=2.5"
-pytz = "*"
-
-[package.extras]
-dev = ["Pallets-Sphinx-Themes", "bumpversion", "ghp-import", "pytest", "pytest-mock", "sphinx"]
+Babel = ">=2.11.0,<3.0.0"
+Flask = ">=2.0.0,<3.0.0"
+Jinja2 = ">=3.1.2,<4.0.0"
+pytz = ">=2022.7,<2023.0"
 
 [[package]]
 name = "flask-cors"
@@ -1283,7 +1280,7 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "5fc47e873d41d13b93d2e6f28834a9270b83e61714f70b685f7c8ef788a3c358"
+content-hash = "9f772f69554586638bd97aca8d70069e993c176460755879e1a6c5e6618bce56"
 
 [metadata.files]
 alabaster = [
@@ -1514,8 +1511,8 @@ flask = [
     {file = "Flask-2.2.3.tar.gz", hash = "sha256:7eb373984bf1c770023fce9db164ed0c3353cd0b53f130f4693da0ca756a2e6d"},
 ]
 flask-babel = [
-    {file = "Flask-Babel-2.0.0.tar.gz", hash = "sha256:f9faf45cdb2e1a32ea2ec14403587d4295108f35017a7821a2b1acb8cfd9257d"},
-    {file = "Flask_Babel-2.0.0-py3-none-any.whl", hash = "sha256:e6820a052a8d344e178cdd36dd4bb8aea09b4bda3d5f9fa9f008df2c7f2f5468"},
+    {file = "flask_babel-3.0.1-py3-none-any.whl", hash = "sha256:ceb8c82039954a6b29da33ec5deb84878b78069d1ea628b21cac3f8233e9189c"},
+    {file = "flask_babel-3.0.1.tar.gz", hash = "sha256:d408cace25514bea8b92e898fd7e55877fbac79b71bc230e266ff515408eba38"},
 ]
 flask-cors = [
     {file = "Flask-Cors-3.0.10.tar.gz", hash = "sha256:b60839393f3b84a0f3746f6cdca56c1ad7426aa738b70d6c61375857823181de"},
