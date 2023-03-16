@@ -1197,11 +1197,11 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "tomlkit"
-version = "0.7.2"
+version = "0.11.6"
 description = "Style preserving TOML library"
 category = "main"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+python-versions = ">=3.6"
 
 [[package]]
 name = "typing-extensions"
@@ -1280,7 +1280,7 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "9f772f69554586638bd97aca8d70069e993c176460755879e1a6c5e6618bce56"
+content-hash = "6be1276d76b1ce29e01d91244ee321fd04314de2ddbf6b8f49ac5ad816fa451a"
 
 [metadata.files]
 alabaster = [
@@ -1999,8 +1999,8 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 tomlkit = [
-    {file = "tomlkit-0.7.2-py2.py3-none-any.whl", hash = "sha256:173ad840fa5d2aac140528ca1933c29791b79a374a0861a80347f42ec9328117"},
-    {file = "tomlkit-0.7.2.tar.gz", hash = "sha256:d7a454f319a7e9bd2e249f239168729327e4dd2d27b17dc68be264ad1ce36754"},
+    {file = "tomlkit-0.11.6-py3-none-any.whl", hash = "sha256:07de26b0d8cfc18f871aec595fda24d95b08fef89d147caa861939f37230bf4b"},
+    {file = "tomlkit-0.11.6.tar.gz", hash = "sha256:71b952e5721688937fb02cf9d354dbcf0785066149d2855e44531ebdd2b65d73"},
 ]
 typing-extensions = [
     {file = "typing_extensions-3.10.0.2-py2-none-any.whl", hash = "sha256:d8226d10bc02a29bcc81df19a26e56a9647f8b0a6d4a83924139f4a8b01f17b7"},
