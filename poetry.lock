@@ -378,14 +378,14 @@ asymmetric-crypto = ["cryptography (>=3.3.1)"]
 
 [[package]]
 name = "flask-migrate"
-version = "3.1.0"
+version = "4.0.4"
 description = "SQLAlchemy database migrations for Flask applications using Alembic."
 category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
-alembic = ">=0.7"
+alembic = ">=1.9.0"
 Flask = ">=0.9"
 Flask-SQLAlchemy = ">=1.0"
 
@@ -1296,7 +1296,7 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "f5e82bf31de6e6524541d4f564a866a6060b09893b1b4e150859820f7f0f8c47"
+content-hash = "9964b32b012b18e858efba96653006e50eb24425efe6e6ea7cd48f45dcbc68dc"
 
 [metadata.files]
 alabaster = [
@@ -1543,8 +1543,8 @@ flask-jwt-extended = [
     {file = "Flask_JWT_Extended-4.4.4-py2.py3-none-any.whl", hash = "sha256:a85eebfa17c339a7260c4643475af444784ba6de5588adda67406f0a75599553"},
 ]
 flask-migrate = [
-    {file = "Flask-Migrate-3.1.0.tar.gz", hash = "sha256:57d6060839e3a7f150eaab6fe4e726d9e3e7cffe2150fb223d73f92421c6d1d9"},
-    {file = "Flask_Migrate-3.1.0-py3-none-any.whl", hash = "sha256:a6498706241aba6be7a251078de9cf166d74307bca41a4ca3e403c9d39e2f897"},
+    {file = "Flask-Migrate-4.0.4.tar.gz", hash = "sha256:73293d40b10ac17736e715b377e7b7bde474cb8105165d77474df4c3619b10b3"},
+    {file = "Flask_Migrate-4.0.4-py3-none-any.whl", hash = "sha256:77580f27ab39bc68be4906a43c56d7674b45075bc4f883b1d0b985db5164d58f"},
 ]
 flask-smorest = [
     {file = "flask-smorest-0.40.0.tar.gz", hash = "sha256:9b46b4937ccf78702d99fed8cfd1cd5c37608ddefd65ff16a86d1ad5c7f7d8c0"},
