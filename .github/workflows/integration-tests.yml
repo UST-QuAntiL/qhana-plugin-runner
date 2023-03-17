@@ -60,7 +60,7 @@ jobs:
           string: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build_push.outputs.digest }}
   integration-tests:
     needs: image
-    uses: PhilWun/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
+    uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
     with:
       plugin-runner-image: ${{ needs.image.outputs.image }}
       backend-image: ${{ inputs.backend-image }}
