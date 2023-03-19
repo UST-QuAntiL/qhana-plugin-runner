@@ -36,7 +36,9 @@ class KernelEnum(Enum):
         else:
             return False
 
-    def get_kernel(self, **kwargs) -> str | Callable[[np.ndarray, Optional[np.ndarray]], np.ndarray]:
+    def get_kernel(
+        self, **kwargs
+    ) -> str | Callable[[np.ndarray, Optional[np.ndarray]], np.ndarray]:
         if self.is_classical():
             return self.name
         else:

@@ -164,20 +164,20 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Data Map",
             "description": 'The kernels by Havlíček and Suzuki both use the same "kernel" proposed by Havlíček. '
-                           "The difference is that the kernel can take different so called feature maps. "
-                           "In the following the corresponding feature maps are listed. "
-                           "The sets are decided by the entanglement patterns"
-                           "and xi or similar notation represent the i'th entry of vector x.\n"
-                           "- Havlíček: f(x) = xi for set {i}, f(x) = (π - xa) * (π - xb) * ... for set {a, b, ...}\n"
-                           "- Suzuki 8: f(x) = xi for set {i}, f(x) = π * xa * xb * ... for set {a, b, ...}\n"
-                           "- Suzuki 9: f(x) = xi for set {i}, f(x) = π/2 * (1 - xa) * (1 - xb) * ... for set {a, b, ...}\n"
-                           "- Suzuki 10: f(x) = xi for set {i}, f(x) = π * exp(g(x)) for set {a, b, ...}, "
-                           "where g(x) sums up all combinations |xi - xj|^2, where i != j and i, j ∈ {a, b, ...} and takes the mean.\n"
-                           "- Suzuki 11: f(x) = xi for set {i}, f(x) = π / (3 * cos(xa) * cos(xb) * ...) for set {a, b, ...}\n"
-                           "- Suzuki 12: f(x) = xi for set {i}, f(x) = π * cos(xa) * cos(xb) * ... for set {a, b, ...}\n"
-                           "Suzuki actually only defined the feature maps up to a set size of 2. "
-                           "Here we have extended them, although it's questionable, if these are extended in a good way. "
-                           "For more information, please have a look at the respective papers [0] [1].",
+            "The difference is that the kernel can take different so called feature maps. "
+            "In the following the corresponding feature maps are listed. "
+            "The sets are decided by the entanglement patterns"
+            "and xi or similar notation represent the i'th entry of vector x.\n"
+            "- Havlíček: f(x) = xi for set {i}, f(x) = (π - xa) * (π - xb) * ... for set {a, b, ...}\n"
+            "- Suzuki 8: f(x) = xi for set {i}, f(x) = π * xa * xb * ... for set {a, b, ...}\n"
+            "- Suzuki 9: f(x) = xi for set {i}, f(x) = π/2 * (1 - xa) * (1 - xb) * ... for set {a, b, ...}\n"
+            "- Suzuki 10: f(x) = xi for set {i}, f(x) = π * exp(g(x)) for set {a, b, ...}, "
+            "where g(x) sums up all combinations |xi - xj|^2, where i != j and i, j ∈ {a, b, ...} and takes the mean.\n"
+            "- Suzuki 11: f(x) = xi for set {i}, f(x) = π / (3 * cos(xa) * cos(xb) * ...) for set {a, b, ...}\n"
+            "- Suzuki 12: f(x) = xi for set {i}, f(x) = π * cos(xa) * cos(xb) * ... for set {a, b, ...}\n"
+            "Suzuki actually only defined the feature maps up to a set size of 2. "
+            "Here we have extended them, although it's questionable, if these are extended in a good way. "
+            "For more information, please have a look at the respective papers [0] [1].",
             "input_type": "select",
         },
     )
