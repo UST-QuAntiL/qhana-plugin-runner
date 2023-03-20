@@ -1,7 +1,7 @@
 name: Build Container And Run Integration Tests
 on:
   schedule:
-    - cron: "50 13 * * *"  # every Saturday at 12 pm UTC
+    - cron: "0 14 * * *"  # every Saturday at 12 pm UTC
   workflow_dispatch:
     inputs:
       backend-image:
@@ -24,6 +24,7 @@ env:
 jobs:
   image:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       packages: write
@@ -62,7 +63,6 @@ jobs:
           string: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build_push.outputs.digest }}
   integration-tests-workflow-dispatch:
     needs: image
-    if: ${{ github.event_name == 'workflow_dispatch' }}
     uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
     with:
       plugin-runner-image: ${{ needs.image.outputs.image }}
