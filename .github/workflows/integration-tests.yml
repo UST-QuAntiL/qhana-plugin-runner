@@ -1,7 +1,7 @@
 name: Build Container And Run Integration Tests
 on:
-#  schedule:
-#    - cron: "0 12 * * 6"  # every Saturday at 12 pm UTC
+  schedule:
+    - cron: "0 12 * * 6"  # every Saturday at 12 pm UTC
   workflow_dispatch:
     inputs:
       backend-image:
