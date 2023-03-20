@@ -62,7 +62,7 @@ jobs:
           string: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build_push.outputs.digest }}
   integration-tests-workflow-dispatch:
     needs: image
-    if: ${{ github.event_name == "workflow_dispatch" }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
     with:
       plugin-runner-image: ${{ needs.image.outputs.image }}
@@ -70,7 +70,7 @@ jobs:
       ui-image: ${{ inputs.ui-image }}
       registry-image: ${{ inputs.registry-image }}
   integration-tests-schedule:
-    if: ${{ github.event_name == "schedule" }}
+    if: ${{ github.event_name == 'schedule' }}
     uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
     with:
       plugin-runner-image: "ghcr.io/ust-quantil/qhana-plugin-runner:main"
