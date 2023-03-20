@@ -5,15 +5,15 @@ on:
   workflow_dispatch:
     inputs:
       backend-image:
-        default: &default-backend-image "ghcr.io/ust-quantil/qhana-backend:main"
+        default: "ghcr.io/ust-quantil/qhana-backend:main"
         required: false
         type: string
       ui-image:
-        default: &default-ui-image "ghcr.io/ust-quantil/qhana-ui:main"
+        default: "ghcr.io/ust-quantil/qhana-ui:main"
         required: false
         type: string
       registry-image:
-        default: &default-registry-image "ghcr.io/ust-quantil/qhana-plugin-registry:main"
+        default: "ghcr.io/ust-quantil/qhana-plugin-registry:main"
         required: false
         type: string
 
@@ -74,6 +74,6 @@ jobs:
     uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
     with:
       plugin-runner-image: "ghcr.io/ust-quantil/qhana-plugin-runner:main"
-      backend-image: *default-backend-image
-#      ui-image: *default-ui-image
-#      registry-image: *default-registry-image
+      backend-image: "ghcr.io/ust-quantil/qhana-backend:main"
+      ui-image: "ghcr.io/ust-quantil/qhana-ui:main"
+      registry-image: "ghcr.io/ust-quantil/qhana-plugin-registry:main"
