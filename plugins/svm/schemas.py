@@ -261,8 +261,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
     visualize = ma.fields.Boolean(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={
             "label": "Visualize classification",
             "description": "Plot the decision boundary and the support vectors for the trained classifier.",
