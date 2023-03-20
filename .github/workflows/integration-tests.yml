@@ -1,17 +1,19 @@
 name: Build Container And Run Integration Tests
 on:
+  schedule:
+    - cron: "0 12 * * 6"  # every Saturday at 12 pm UTC
   workflow_dispatch:
     inputs:
       backend-image:
-        default: "ghcr.io/ust-quantil/qhana-backend:main"
+        default: &default-backend-image "ghcr.io/ust-quantil/qhana-backend:main"
         required: false
         type: string
       ui-image:
-        default: "ghcr.io/ust-quantil/qhana-ui:main"
+        default: &default-ui-image "ghcr.io/ust-quantil/qhana-ui:main"
         required: false
         type: string
       registry-image:
-        default: "ghcr.io/ust-quantil/qhana-plugin-registry:main"
+        default: &default-registry-image "ghcr.io/ust-quantil/qhana-plugin-registry:main"
         required: false
         type: string
 
@@ -58,11 +60,20 @@ jobs:
         uses: ASzc/change-string-case-action@v5
         with:
           string: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build_push.outputs.digest }}
-  integration-tests:
+  integration-tests-workflow-dispatch:
     needs: image
+    if: ${{ github.event_name == "workflow_dispatch" }}
     uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
     with:
       plugin-runner-image: ${{ needs.image.outputs.image }}
       backend-image: ${{ inputs.backend-image }}
       ui-image: ${{ inputs.ui-image }}
       registry-image: ${{ inputs.registry-image }}
+  integration-tests-schedule:
+    if: ${{ github.event_name == "schedule" }}
+    uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
+    with:
+      plugin-runner-image: "ghcr.io/ust-quantil/qhana-plugin-runner:main"
+      backend-image: *default-backend-image
+      ui-image: *default-ui-image
+      registry-image: *default-registry-image
