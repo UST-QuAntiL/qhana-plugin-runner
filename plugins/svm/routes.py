@@ -171,7 +171,14 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         fields = schema.fields
         # define default values
-        default_values = {}
+        default_values = {
+            fields["regularization_C"].data_key: 1.0,
+            fields["degree"].data_key: 3,
+            fields["reps"].data_key: 2,
+            fields["shots"].data_key: 1000,
+            fields["visualize"].data_key: True,
+            fields["resolution"].data_key: 80,
+        }
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)
