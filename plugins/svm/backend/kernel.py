@@ -47,7 +47,7 @@ class KernelEnum(Enum):
     def get_quantum_kernel(
         self,
         backend,
-        n_qbits: int,
+        n_qubits: int,
         paulis: List[str],
         reps: int,
         entanglement_pattern: str,
@@ -55,14 +55,14 @@ class KernelEnum(Enum):
     ) -> Callable[[np.ndarray, Optional[np.ndarray]], np.ndarray]:
         if self == KernelEnum.z_kernel:
             feature_map = ZFeatureMap(
-                feature_dimension=n_qbits,
+                feature_dimension=n_qubits,
                 reps=reps,
                 data_map_func=data_map_func,
             )  # This FeatureMap has no entanglement
 
         elif self == KernelEnum.zz_kernel:
             feature_map = ZZFeatureMap(
-                feature_dimension=n_qbits,
+                feature_dimension=n_qubits,
                 entanglement=entanglement_pattern,
                 reps=reps,
                 data_map_func=data_map_func,
@@ -70,7 +70,7 @@ class KernelEnum(Enum):
 
         elif self == KernelEnum.pauli_kernel:
             feature_map = PauliFeatureMap(
-                feature_dimension=n_qbits,
+                feature_dimension=n_qubits,
                 paulis=paulis,
                 entanglement=entanglement_pattern,
                 reps=reps,
