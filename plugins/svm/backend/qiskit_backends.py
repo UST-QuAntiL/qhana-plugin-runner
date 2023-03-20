@@ -23,7 +23,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 class QiskitBackends(enum.Enum):
-    custom_ibmq = "custom_ibmq"
     aer_statevector_simulator = "aer_statevector_simulator"
     aer_qasm_simulator = "aer_qasm_simulator"
     ibmq_qasm_simulator = "ibmq_qasm_simulator"
@@ -34,6 +33,7 @@ class QiskitBackends(enum.Enum):
     ibmq_belem = "ibmq_belem"
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
+    custom_ibmq = "custom_ibmq"
 
     def get_qiskit_backend(
         self,
