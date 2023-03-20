@@ -34,6 +34,9 @@ logger = logging.getLogger("alembic.env")
 
 
 def get_engine():
+    # do NOT use foreign key checking when updating DB
+    current_app.config["SQLITE_FOREIGN_KEYS"] = False
+
     try:
         # this works with Flask-SQLAlchemy<3 and Alchemical
         return current_app.extensions["migrate"].db.get_engine()
@@ -81,7 +84,12 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url, target_metadata=get_metadata(), literal_binds=True)
+    context.configure(
+        url=url,
+        target_metadata=get_metadata(),
+        literal_binds=True,
+        render_as_batch=True,  # required for batch operations with SQLite
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -112,6 +120,8 @@ def run_migrations_online():
             connection=connection,
             target_metadata=get_metadata(),
             process_revision_directives=process_revision_directives,
+            render_as_batch=True,  # required for batch operations with SQLite
+            compare_type=True,  # required for detecting type changes
             **current_app.extensions["migrate"].configure_args,
         )
 
