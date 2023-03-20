@@ -181,6 +181,12 @@ def calculation_task(self, db_id: int) -> str:
             label_to_int=label_to_int,
         )
 
+    # Prepare support vectors
+    support_vectors = [{
+        **{"ID": train_id_list[idx], "href": ""},
+        **{f"dim{dim}": value for dim, value in enumerate(train_data[idx])}
+    } for idx in svc.support_]
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
@@ -219,6 +225,7 @@ def calculation_task(self, db_id: int) -> str:
             )
 
     with SpooledTemporaryFile(mode="w") as output:
+        save_entities(support_vectors, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
