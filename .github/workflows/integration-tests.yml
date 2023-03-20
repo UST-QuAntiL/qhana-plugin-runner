@@ -69,11 +69,11 @@ jobs:
       backend-image: ${{ inputs.backend-image }}
       ui-image: ${{ inputs.ui-image }}
       registry-image: ${{ inputs.registry-image }}
-#  integration-tests-schedule:
-#    if: ${{ github.event_name == "schedule" }}
-#    uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
-#    with:
-#      plugin-runner-image: "ghcr.io/ust-quantil/qhana-plugin-runner:main"
-#      backend-image: *default-backend-image
-#      ui-image: *default-ui-image
-#      registry-image: *default-registry-image
+  integration-tests-schedule:
+    if: ${{ github.event_name == "schedule" }}
+    uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
+    with:
+      plugin-runner-image: "ghcr.io/ust-quantil/qhana-plugin-runner:main"
+      backend-image: *default-backend-image
+      ui-image: *default-ui-image
+      registry-image: *default-registry-image
