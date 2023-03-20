@@ -182,10 +182,13 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     # Prepare support vectors
-    support_vectors = [{
-        **{"ID": train_id_list[idx], "href": ""},
-        **{f"dim{dim}": value for dim, value in enumerate(train_data[idx])}
-    } for idx in svc.support_]
+    support_vectors = [
+        {
+            **{"ID": train_id_list[idx], "href": ""},
+            **{f"dim{dim}": value for dim, value in enumerate(train_data[idx])},
+        }
+        for idx in svc.support_
+    ]
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
