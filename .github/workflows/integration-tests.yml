@@ -72,8 +72,8 @@ jobs:
   integration-tests-schedule:
     if: ${{ github.event_name == "schedule" }}
     uses: UST-QuAntiL/qhana-integration-tests/.github/workflows/run_integration_tests.yml@master
-    with:
-      plugin-runner-image: "ghcr.io/ust-quantil/qhana-plugin-runner:main"
-      backend-image: *default-backend-image
-      ui-image: *default-ui-image
-      registry-image: *default-registry-image
+#    with:
+#      plugin-runner-image: "ghcr.io/ust-quantil/qhana-plugin-runner:main"
+#      backend-image: *default-backend-image
+#      ui-image: *default-ui-image
+#      registry-image: *default-registry-image
