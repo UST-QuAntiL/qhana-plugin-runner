@@ -116,7 +116,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Variant",
             "description": "ruan parzen window: This parzen window uses the Hamming distance and thus only works for "
-            "binary data points. It was developed by Ruan et al. in [0].",
+            "binary data points. A dataset may only contain a point at most once. It was developed by Ruan et al. in [0].",
             "input_type": "select",
         },
     )
