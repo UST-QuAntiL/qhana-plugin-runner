@@ -46,7 +46,7 @@ class ClassicalKMeans(QHAnaPluginBase):
         return ClassicKMeans_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "scikit-learn~=1.1"
 
 
 try:
