@@ -5,11 +5,14 @@ import networkx as nx
 """
 Represents an abstract MaxCutSolver class.
 """
+
+
 class MaxCutSolver(metaclass=ABCMeta):
 
     """
     Instantiates the MaxCutSolver with the graph.
     """
+
     def __init__(self, graph: nx.Graph) -> None:
         self.graph = graph
         return
@@ -20,6 +23,7 @@ class MaxCutSolver(metaclass=ABCMeta):
     i.e. the cut value and the list of edges that
     correspond to the cut.
     """
+
     @abstractmethod
     def solve(self):
         return NotImplemented

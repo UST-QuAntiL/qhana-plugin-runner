@@ -43,9 +43,7 @@ TASK_LOGGER = get_task_logger(__name__)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(
-        f"Starting new max cut calculation task with db id '{db_id}'"
-    )
+    TASK_LOGGER.info(f"Starting new max cut calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -54,10 +52,11 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-    
+
     similarity_matrix_url = input_params.similarity_matrix_url
     max_cut_enum = input_params.max_cut_enum
     num_clusters = input_params.num_clusters
+    optimizer = input_params.optimizer
     max_trials = input_params.max_trials
     reps = input_params.reps
     entanglement_pattern_enum = input_params.entanglement_pattern_enum
@@ -86,7 +85,7 @@ def calculation_task(self, db_id: int) -> str:
     # Prepare quantum parameters
     quantum_parameters = dict(
         backend=backend.get_qiskit_backend(ibmq_token, ibmq_custom_backend, shots),
-        max_trials=max_trials,
+        optimizer=optimizer.get_optimizer(max_trials),
         reps=reps,
         entanglement=entanglement_pattern_enum.get_entanglement_pattern(),
     )
@@ -95,8 +94,11 @@ def calculation_task(self, db_id: int) -> str:
     cluster_algo = max_cut_enum.get_max_cut(num_clusters, **quantum_parameters)
     labels = cluster_algo.create_cluster(None, np.array(similarity_matrix))
 
-    labels = [{"ID": _id, "href": "", "label": int(_label)} for _id, _label in zip(id_list1, labels)]
-    
+    labels = [
+        {"ID": _id, "href": "", "label": int(_label)}
+        for _id, _label in zip(id_list1, labels)
+    ]
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")

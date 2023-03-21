@@ -76,7 +76,7 @@ class ClassicNaiveMaxCutSolver(MaxCutSolver):
 
         for a in subset:
             for b in diffSubSet:
-                cutValue = cutValue + float(self.graph[a][b]['weight'])
+                cutValue = cutValue + float(self.graph[a][b]["weight"])
 
         return cutValue
 

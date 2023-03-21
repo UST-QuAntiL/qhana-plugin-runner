@@ -62,9 +62,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/vector",
-                        content_type=[
-                            "application/json"
-                        ],
+                        content_type=["application/json"],
                         required=True,
                         parameter="similarityMatrix",
                     ),
@@ -87,7 +85,9 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the max cut plugin."""
 
-    @MaxCut_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the max cut plugin.")
+    @MaxCut_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the max cut plugin."
+    )
     @MaxCut_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -100,7 +100,9 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @MaxCut_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the max cut plugin.")
+    @MaxCut_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the max cut plugin."
+    )
     @MaxCut_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True

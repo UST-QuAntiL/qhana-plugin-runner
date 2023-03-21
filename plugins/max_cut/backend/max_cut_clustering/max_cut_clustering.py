@@ -8,7 +8,9 @@ class Clustering(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def create_cluster(self, position_matrix: np.matrix, similarity_matrix: np.matrix) -> np.matrix:
+    def create_cluster(
+        self, position_matrix: np.matrix, similarity_matrix: np.matrix
+    ) -> np.matrix:
         pass
 
     # def get_keep_cluster_mapping(self):

@@ -22,6 +22,7 @@ from qhana_plugin_runner.api.util import (
 )
 
 from .backend.entanglement_pattern import EntanglementPatternEnum
+from .backend.optimizer import OptimizerEnum
 from .backend.qiskit_backends import QiskitBackendEnum
 from .backend.max_cut_clustering import MaxCutClusteringEnum
 
@@ -33,12 +34,12 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParameters:
-    
     def __init__(
         self,
         similarity_matrix_url: str,
         max_cut_enum: MaxCutClusteringEnum,
         num_clusters: int,
+        optimizer: OptimizerEnum,
         max_trials: int,
         reps: int,
         entanglement_pattern_enum: EntanglementPatternEnum,
@@ -50,6 +51,7 @@ class InputParameters:
         self.similarity_matrix_url = similarity_matrix_url
         self.max_cut_enum = max_cut_enum
         self.num_clusters = num_clusters
+        self.optimizer = optimizer
         self.max_trials = max_trials
         self.reps = reps
         self.entanglement_pattern_enum = entanglement_pattern_enum
@@ -69,9 +71,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/vector",
-        data_content_types=[
-            "application/json"
-        ],
+        data_content_types=["application/json"],
         metadata={
             "label": "Similarity Matrix URL",
             "description": "URL to a json file containing a similarity matrix.",
@@ -95,6 +95,16 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Number of Clusters",
             "description": "If this parameter is set to x, then the number of clusters generated is 2^x.",
             "input_type": "number",
+        },
+    )
+    optimizer = EnumField(
+        OptimizerEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Optimizer",
+            "description": "Local optimizer that improves the solution.",
+            "input_type": "select",
         },
     )
     max_trials = ma.fields.Integer(

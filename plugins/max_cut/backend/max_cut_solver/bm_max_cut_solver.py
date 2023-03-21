@@ -46,8 +46,8 @@ class BmMaxCutSolver(MaxCutSolver):
 
         sdp = MaxCutBM(self.graph)
 
-        cut = sdp.get_results('cut')
-        cut_value = sdp.get_results('value')
+        cut = sdp.get_results("cut")
+        cut_value = sdp.get_results("value")
 
         for subset in powerset:
             count = count + 1
@@ -82,7 +82,7 @@ class BmMaxCutSolver(MaxCutSolver):
 
         for a in subset:
             for b in diffSubSet:
-                cutValue = cutValue + float(self.graph[a][b]['weight'])
+                cutValue = cutValue + float(self.graph[a][b]["weight"])
 
         return cutValue
 

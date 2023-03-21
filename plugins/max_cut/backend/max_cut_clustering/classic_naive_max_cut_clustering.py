@@ -14,7 +14,9 @@ class ClassicNaiveMaxCut(Clustering):
         self.__number_of_clusters = number_of_clusters
         return
 
-    def create_cluster(self, position_matrix: np.matrix, similarity_matrix: np.matrix) -> np.matrix:
+    def create_cluster(
+        self, position_matrix: np.matrix, similarity_matrix: np.matrix
+    ) -> np.matrix:
         if self.__number_of_clusters == 1:
             return self.__classicNaiveMaxCutAlgo(similarity_matrix)
         else:
@@ -23,12 +25,20 @@ class ClassicNaiveMaxCut(Clustering):
             label.astype(np.int)
             label_all = np.zeros(similarity_matrix.shape[0])
             label_all.astype(np.int)
-            label = self.__rekursivAlgorithmus(self.__number_of_clusters, similarity_matrix, label, label_all, 1)
+            label = self.__rekursivAlgorithmus(
+                self.__number_of_clusters, similarity_matrix, label, label_all, 1
+            )
             # print("Done")
             return label.astype(np.int)
 
-    def __rekursivAlgorithmus(self, iteration: int, similarity_matrix: np.matrix, label: np.matrix,
-                              label_all: np.matrix, category: int) -> np.matrix:
+    def __rekursivAlgorithmus(
+        self,
+        iteration: int,
+        similarity_matrix: np.matrix,
+        label: np.matrix,
+        label_all: np.matrix,
+        category: int,
+    ) -> np.matrix:
         # rekursiv Algorithmus for more than two clusters
         if iteration == 0:
             return label
@@ -47,7 +57,9 @@ class ClassicNaiveMaxCut(Clustering):
                     z = z + 1
                     label_all[i] = label_all[i] + new_label[z] * pow(2, iteration - 1)
                     label[i] = new_label[z]
-            TASK_LOGGER.info("label after " + str(iteration) + " iteration :" + str(label_all))
+            TASK_LOGGER.info(
+                "label after " + str(iteration) + " iteration :" + str(label_all)
+            )
 
             # ones: rekursion only with ones labels in new label
             ones = self.__split_Matrix(similarity_matrix, new_label, 1)
@@ -71,7 +83,9 @@ class ClassicNaiveMaxCut(Clustering):
             self.__rekursivAlgorithmus(iteration - 1, zeros, label, label_all, 1)
             return label_all
 
-    def __split_Matrix(self, similarity_matrix: np.matrix, label: np.matrix, category: int) -> np.matrix:
+    def __split_Matrix(
+        self, similarity_matrix: np.matrix, label: np.matrix, category: int
+    ) -> np.matrix:
         # split the similarity matrix in one smaller matrix. These matrix contains only similarities with the right label
         npl = 0
         for i in range(len(label)):
@@ -116,7 +130,7 @@ class ClassicNaiveMaxCut(Clustering):
         (cutValue, cutEdges) = solver.solve()
 
         # Remove the max cut edges
-        for (u, v) in cutEdges:
+        for u, v in cutEdges:
             graph.remove_edge(u, v)
 
         # Plot the graphs
@@ -141,7 +155,7 @@ class ClassicNaiveMaxCut(Clustering):
                 label[node] = 1
 
         # print results
-        print('solution:', str(cutEdges))
-        print('solution objective:', str(cutValue))
+        print("solution:", str(cutEdges))
+        print("solution objective:", str(cutValue))
 
         return label.astype(np.int)
