@@ -88,7 +88,9 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the classical k means plugin."""
 
-    @ClassicKMeans_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the classical k means plugin.")
+    @ClassicKMeans_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the classical k means plugin."
+    )
     @ClassicKMeans_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -101,7 +103,9 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @ClassicKMeans_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the classical k means plugin.")
+    @ClassicKMeans_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the classical k means plugin."
+    )
     @ClassicKMeans_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True

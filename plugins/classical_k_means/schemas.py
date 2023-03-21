@@ -29,7 +29,6 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParameters:
-    
     def __init__(
         self,
         entity_points_url: str,
@@ -53,9 +52,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/vector",
-        data_content_types=[
-            "application/json"
-        ],
+        data_content_types=["application/json"],
         metadata={
             "label": "Entity Point URL",
             "description": "URL to a json file containing the points.",

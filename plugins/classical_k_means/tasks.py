@@ -53,7 +53,7 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-    
+
     entity_points_url = input_params.entity_points_url
     num_clusters = input_params.num_clusters
     maxiter = input_params.maxiter
@@ -64,15 +64,13 @@ def calculation_task(self, db_id: int) -> str:
     id_list, points = get_indices_and_point_arr(entity_points_url)
 
     tol = relative_residual / 100.0
-    kmeans = KMeans(
-        n_clusters=num_clusters,
-        random_state=0,
-        max_iter=maxiter,
-        tol=tol
-    )
-    labels = [{"ID": _id, "href": "", "label": int(_label)} for _id, _label in zip(id_list, kmeans.fit_predict(points))]
+    kmeans = KMeans(n_clusters=num_clusters, random_state=0, max_iter=maxiter, tol=tol)
+    labels = [
+        {"ID": _id, "href": "", "label": int(_label)}
+        for _id, _label in zip(id_list, kmeans.fit_predict(points))
+    ]
     print(f"labels: {labels}")
-    
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")
@@ -83,6 +81,5 @@ def calculation_task(self, db_id: int) -> str:
             "entity/label",
             "application/json",
         )
-
 
     return "Result stored in file"
