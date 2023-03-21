@@ -125,7 +125,7 @@ class MicroFrontend(MethodView):
             fields["num_clusters"].data_key: 1,
             fields["max_trials"].data_key: 10,
             fields["reps"].data_key: 4,
-            fields["shots"].data_key: 1,
+            fields["shots"].data_key: 1000,
         }
 
         if "IBMQ_TOKEN" in os.environ:
