@@ -108,7 +108,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Variant",
-            "description": "Note: If a QkNN variant uses the Hamming distance, then only binary data input is allowed!\n"
+            "description": "Prerequisites: \n"
+            "- If a QkNN variant uses the Hamming distance, then only binary data input is allowed!\n"
+            "- Datasets for schuld qknn or any QkNN that contains 'simple', may only contain a point at most once.\n"
+            "QkNN descriptions:\n"
             "- schuld qknn: uses the Hamming distance as a metric and all training points as neighbours, i.e. k := Number training points\n"
             "- simple hamming qknn: uses the Hamming distance as a metric. The quantum algorithm is only used to calculate the distances. Computing the k closest neighours and doing the majority voting is then done classicaly. It is also described in [0].\n"
             "- simple fidelity qknn: analogously like simple hamming qknn, but it uses the fidelity between the data points as a similarity metric (see [1] about the fidelity metric).\n"
