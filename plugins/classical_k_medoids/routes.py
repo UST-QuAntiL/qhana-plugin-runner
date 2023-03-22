@@ -120,7 +120,10 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         fields = schema.fields
         # define default values
-        default_values = {}
+        default_values = {
+            fields["num_clusters"].data_key: 2,
+            fields["maxiter"].data_key: 300,
+        }
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)
