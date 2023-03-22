@@ -116,17 +116,17 @@ class OpticsClustering:
         self,
         min_samples: float = 5,  # float between 0 and 1 else int
         max_eps: float = np.inf,
-        metric: str = 'minkowski',
+        metric: str = "minkowski",
         p: int = 2,  # only when the minkowski metric is choosen
         metric_params: dict = None,  # additional keywords for the metric function
-        cluster_method: str = 'xi',
+        cluster_method: str = "xi",
         eps: float = None,  # by default it assumes the same value as max_eps (Only used when cluster_method='dbscan')
         xi: float = 0.05,  # only between 0 and 1 (Only used when cluster_method='xi')
         predecessor_correction: bool = True,  # only used when cluster_method='xi'
         min_cluster_size: float = None,  # float between 0 and 1 else int
-        algorithm: str = 'auto',
+        algorithm: str = "auto",
         leaf_size: int = 30,  # only for BallTree or KDTree
-        n_jobs: int = None  # -1 mean using all processors
+        n_jobs: int = None,  # -1 mean using all processors
     ):
         super().__init__()
         if min_samples <= 1 and min_samples >= 0:
@@ -145,7 +145,9 @@ class OpticsClustering:
         if xi >= 0 and xi <= 1:
             self.__xi: float = xi
         else:
-            TASK_LOGGER.warning("xi is not between 0 and 1. Default Value was set! xi = 0.05")
+            TASK_LOGGER.warning(
+                "xi is not between 0 and 1. Default Value was set! xi = 0.05"
+            )
             self.__xi: float = 0.05
         self.__predecessor_correction: bool = predecessor_correction
         self.__algorithm: str = algorithm
@@ -154,14 +156,20 @@ class OpticsClustering:
         if min_cluster_size == None or (min_cluster_size >= 0 and min_cluster_size <= 1):
             self.__min_cluster_size: float = min_cluster_size
         else:
-            TASK_LOGGER.warning("min is not between 0 and 1 or None. Default Value was set! min_cluster_size = None")
+            TASK_LOGGER.warning(
+                "min is not between 0 and 1 or None. Default Value was set! min_cluster_size = None"
+            )
             self.__min_cluster_size: float = None
 
         try:
             self.__cluster_instance: OPTICS = self.__create_optics_cluster_instance()
         except Exception as error:
-            TASK_LOGGER.error("An Exception occurs by OPTICS initialization: " + str(error))
-            raise Exception("Exception occurs in Method __create_optics_instance by OPTICS initialization.")
+            TASK_LOGGER.error(
+                "An Exception occurs by OPTICS initialization: " + str(error)
+            )
+            raise Exception(
+                "Exception occurs in Method __create_optics_instance by OPTICS initialization."
+            )
 
         # sklearn.cluster._optics.OPTICS
 
@@ -176,148 +184,176 @@ class OpticsClustering:
             TASK_LOGGER.error("Not valid cluster_method.")
             raise Exception("Not valid cluster_method.")
 
-        if self.__min_cluster_size != None and self.__min_cluster_size < 0 and self.__min_cluster_size > 1:
-            TASK_LOGGER.warning("min is not between 0 and 1 or None. Default Value was set! min_cluster_size = None")
+        if (
+            self.__min_cluster_size != None
+            and self.__min_cluster_size < 0
+            and self.__min_cluster_size > 1
+        ):
+            TASK_LOGGER.warning(
+                "min is not between 0 and 1 or None. Default Value was set! min_cluster_size = None"
+            )
             self.__min_cluster_size: float = None
 
-        if self.__algorithm != "auto" and self.__algorithm != "ball_tree" and self.__algorithm != "kd_tree" and self.__algorithm != "brute":
+        if (
+            self.__algorithm != "auto"
+            and self.__algorithm != "ball_tree"
+            and self.__algorithm != "kd_tree"
+            and self.__algorithm != "brute"
+        ):
             TASK_LOGGER.error("Not valid algorithm method.")
             raise Exception("Not valid algorithm method.")
 
         if self.__cluster_method == "xi":
             if self.__xi > 1 and self.__xi < 0:
-                TASK_LOGGER.warning("xi is not between 0 and 1. Default Value was set! xi = 0.05")
+                TASK_LOGGER.warning(
+                    "xi is not between 0 and 1. Default Value was set! xi = 0.05"
+                )
                 self.__xi: float = 0.05
 
             if self.__algorithm == "ball_tree" or self.__algorithm == "kd_tree":
-
                 if self.__metric == "minkowski":
                     # xi, ball algorithm , minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  p=self.__p,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  xi=self.__xi,
-                                  predecessor_correction=self.__predecessor_correction,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  leaf_size=self.__leaf_size,
-                                  n_jobs=self.__n_jobs
-                                  )
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        p=self.__p,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        xi=self.__xi,
+                        predecessor_correction=self.__predecessor_correction,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        leaf_size=self.__leaf_size,
+                        n_jobs=self.__n_jobs,
+                    )
                 else:
                     # xi, ball algorithm , not minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  xi=self.__xi,
-                                  predecessor_correction=self.__predecessor_correction,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  leaf_size=self.__leaf_size,
-                                  n_jobs=self.__n_jobs
-                                  )
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        xi=self.__xi,
+                        predecessor_correction=self.__predecessor_correction,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        leaf_size=self.__leaf_size,
+                        n_jobs=self.__n_jobs,
+                    )
             else:
                 if self.__metric == "minkowski":
                     # xi, not ball algorithm, minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  p=self.__p,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  xi=self.__xi,
-                                  predecessor_correction=self.__predecessor_correction,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  n_jobs=self.__n_jobs
-                                  )
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        p=self.__p,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        xi=self.__xi,
+                        predecessor_correction=self.__predecessor_correction,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        n_jobs=self.__n_jobs,
+                    )
                 else:
                     # xi, not ball algorithm , not minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  xi=self.__xi,
-                                  predecessor_correction=self.__predecessor_correction,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  n_jobs=self.__n_jobs
-                                  )
-
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        xi=self.__xi,
+                        predecessor_correction=self.__predecessor_correction,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        n_jobs=self.__n_jobs,
+                    )
 
         elif self.__cluster_method == "dbscan":
             if self.__algorithm == "ball_tree" or self.__algorithm == "ball_tree":
-
                 if self.__metric == "minkowski":
                     # dbscan, ball algorithm , minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  p=self.__p,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  eps=self.__eps,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  leaf_size=self.__leaf_size,
-                                  n_jobs=self.__n_jobs
-                                  )
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        p=self.__p,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        eps=self.__eps,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        leaf_size=self.__leaf_size,
+                        n_jobs=self.__n_jobs,
+                    )
                 else:
                     # dbscan, ball algorithm , not minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  eps=self.__eps,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  leaf_size=self.__leaf_size,
-                                  n_jobs=self.__n_jobs
-                                  )
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        eps=self.__eps,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        leaf_size=self.__leaf_size,
+                        n_jobs=self.__n_jobs,
+                    )
 
             else:
                 if self.__metric == "minkowski":
                     # dbscan, not ball algorithm, minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  p=self.__p,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  eps=self.__eps,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  n_jobs=self.__n_jobs
-                                  )
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        p=self.__p,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        eps=self.__eps,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        n_jobs=self.__n_jobs,
+                    )
                 else:
                     # dbscan, not ball algorithm , not minkowski
-                    return OPTICS(min_samples=self.__min_samples,
-                                  max_eps=self.__max_eps,
-                                  metric=self.__metric,
-                                  metric_params=self.__metric_params,
-                                  cluster_method=self.__cluster_method,
-                                  eps=self.__eps,
-                                  min_cluster_size=self.__min_cluster_size,
-                                  algorithm=self.__algorithm,
-                                  n_jobs=self.__n_jobs
-                                  )
+                    return OPTICS(
+                        min_samples=self.__min_samples,
+                        max_eps=self.__max_eps,
+                        metric=self.__metric,
+                        metric_params=self.__metric_params,
+                        cluster_method=self.__cluster_method,
+                        eps=self.__eps,
+                        min_cluster_size=self.__min_cluster_size,
+                        algorithm=self.__algorithm,
+                        n_jobs=self.__n_jobs,
+                    )
 
-    def create_cluster(self, position_matrix: np.matrix, similarity_matrix: np.matrix) -> np.matrix:
+    def create_cluster(
+        self, position_matrix: np.matrix, similarity_matrix: np.matrix
+    ) -> np.matrix:
         try:
             self.__cluster_instance = self.__create_optics_cluster_instance()
         except Exception as error:
-            TASK_LOGGER.error("An Exception occurs by OPTICS initialization: " + str(error))
-            raise Exception("Exception occurs in Method __create_optics_instance by OPTICS initialization.")
+            TASK_LOGGER.error(
+                "An Exception occurs by OPTICS initialization: " + str(error)
+            )
+            raise Exception(
+                "Exception occurs in Method __create_optics_instance by OPTICS initialization."
+            )
 
         try:
             self.__cluster_instance.fit(position_matrix)
             return self.__cluster_instance.labels_
         except Exception as error:
-            TASK_LOGGER.error("An Exception occurs by clustering the postion_matrix: " + str(error))
-            raise Exception("Exception occurs in Method create_cluster by clustering the positon_matrix.")
+            TASK_LOGGER.error(
+                "An Exception occurs by clustering the postion_matrix: " + str(error)
+            )
+            raise Exception(
+                "Exception occurs in Method create_cluster by clustering the positon_matrix."
+            )

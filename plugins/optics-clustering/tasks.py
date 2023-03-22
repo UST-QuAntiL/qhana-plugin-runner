@@ -44,9 +44,7 @@ TASK_LOGGER = get_task_logger(__name__)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(
-        f"Starting new optics calculation task with db id '{db_id}'"
-    )
+    TASK_LOGGER.info(f"Starting new optics calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -55,7 +53,7 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-    
+
     entity_points_url = input_params.entity_points_url
     min_samples = input_params.min_samples
     max_epsilon = input_params.max_epsilon
@@ -72,7 +70,7 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     id_list, points = get_indices_and_point_arr(entity_points_url)
-    
+
     optics_clustering = OpticsClustering(
         min_samples,
         max_epsilon,
@@ -85,14 +83,14 @@ def calculation_task(self, db_id: int) -> str:
         predecessor_correction,
         min_cluster_size,
         algorithm_enum.get_algorithm(),
-        leaf_size
+        leaf_size,
     )
     labels = optics_clustering.create_cluster(np.array(points), None)
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
         for _id, _label in zip(id_list, labels)
     ]
-    
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")
@@ -103,6 +101,5 @@ def calculation_task(self, db_id: int) -> str:
             "entity/label",
             "application/json",
         )
-
 
     return "Result stored in file"
