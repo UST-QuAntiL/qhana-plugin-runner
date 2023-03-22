@@ -1,0 +1,108 @@
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from tempfile import SpooledTemporaryFile
+
+from typing import Optional
+
+from celery.utils.log import get_task_logger
+
+from . import Optics
+
+from .schemas import (
+    InputParameters,
+    InputParametersSchema,
+)
+from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    save_entities,
+)
+from qhana_plugin_runner.storage import STORE
+
+import numpy as np
+
+from .backend.optics import OpticsClustering
+from .backend.load_utils import get_indices_and_point_arr
+
+
+TASK_LOGGER = get_task_logger(__name__)
+
+
+@CELERY.task(name=f"{Optics.instance.identifier}.calculation_task", bind=True)
+def calculation_task(self, db_id: int) -> str:
+    # get parameters
+
+    TASK_LOGGER.info(
+        f"Starting new optics calculation task with db id '{db_id}'"
+    )
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+    
+    entity_points_url = input_params.entity_points_url
+    min_samples = input_params.min_samples
+    max_epsilon = input_params.max_epsilon
+    metric_enum = input_params.metric_enum
+    minkowski_p = input_params.minkowski_p
+    method_enum = input_params.method_enum
+    epsilon = input_params.epsilon
+    xi = input_params.xi
+    predecessor_correction = input_params.predecessor_correction
+    min_cluster_size = input_params.min_cluster_size
+    algorithm_enum = input_params.algorithm_enum
+    leaf_size = input_params.leaf_size
+
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
+
+    id_list, points = get_indices_and_point_arr(entity_points_url)
+    
+    optics_clustering = OpticsClustering(
+        min_samples,
+        max_epsilon,
+        metric_enum.get_metric(),
+        minkowski_p,
+        None,
+        method_enum.get_method(),
+        epsilon,
+        xi,
+        predecessor_correction,
+        min_cluster_size,
+        algorithm_enum.get_algorithm(),
+        leaf_size
+    )
+    labels = optics_clustering.create_cluster(np.array(points), None)
+    labels = [
+        {"ID": _id, "href": "", "label": int(_label)}
+        for _id, _label in zip(id_list, labels)
+    ]
+    
+    # Output data
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(labels, output, "application/json")
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "labels.json",
+            "entity/label",
+            "application/json",
+        )
+
+
+    return "Result stored in file"
