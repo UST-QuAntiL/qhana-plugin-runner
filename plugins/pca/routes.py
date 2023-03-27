@@ -27,7 +27,6 @@ from marshmallow import EXCLUDE
 from . import PCA_BLP, PCA
 from .schemas import (
     InputParametersSchema,
-    TaskResponseSchema,
     SolverEnum,
     PCATypeEnum,
     KernelEnum,
@@ -74,12 +73,12 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="plot",
+                        data_type="custom/plot",
                         content_type=["text/html"],
                         required=False,
                     ),
                     DataMetadata(
-                        data_type="pca-metadata",
+                        data_type="custom/pca-metadata",
                         content_type=["application/json"],
                         required=True,
                     ),
@@ -109,7 +108,7 @@ class MicroFrontend(MethodView):
     @PCA_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @PCA_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the PCA plugin.")
     @PCA_BLP.arguments(
@@ -126,13 +125,17 @@ class MicroFrontend(MethodView):
         schema_error = errors.get("_schema", None)
         if schema_error:
             if "Entity points url must not be none." in schema_error:
-                errors["entityPointsUrl"] = errors.get("entityPointsUrl", []) + ["Field may not be null."]
+                errors["entityPointsUrl"] = errors.get("entityPointsUrl", []) + [
+                    "Field may not be null."
+                ]
             elif "Kernel url must not be none." in schema_error:
-                errors["kernelUrl"] = errors.get("kernelUrl", []) + ["Field may not be null."]
+                errors["kernelUrl"] = errors.get("kernelUrl", []) + [
+                    "Field may not be null."
+                ]
 
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
         fields = InputParametersSchema().fields
 
@@ -163,6 +166,7 @@ class MicroFrontend(MethodView):
                 name=PCA.instance.name,
                 version=PCA.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{PCA_BLP.name}.ProcessView"),
@@ -175,7 +179,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @PCA_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @PCA_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @PCA_BLP.response(HTTPStatus.SEE_OTHER)
     @PCA_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

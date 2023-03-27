@@ -27,7 +27,7 @@ from marshmallow import EXCLUDE
 
 from . import QKMEANS_BLP, QKMeans
 from .backend.quantum_backend import QuantumBackends
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import InputParametersSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -55,7 +55,7 @@ class PluginsView(MethodView):
             description=QKMeans.instance.description,
             name=QKMeans.instance.name,
             version=QKMeans.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{QKMEANS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{QKMEANS_BLP.name}.MicroFrontend"),
@@ -72,7 +72,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="clusters",
+                        data_type="custom/clusters",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -100,7 +100,7 @@ class MicroFrontend(MethodView):
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @QKMEANS_BLP.html_response(
         HTTPStatus.OK,
@@ -116,9 +116,9 @@ class MicroFrontend(MethodView):
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
         fields = InputParametersSchema().fields
 
@@ -147,6 +147,7 @@ class MicroFrontend(MethodView):
                 name=QKMeans.instance.name,
                 version=QKMeans.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QKMEANS_BLP.name}.CalcView"),
@@ -159,7 +160,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @QKMEANS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @QKMEANS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @QKMEANS_BLP.response(HTTPStatus.SEE_OTHER)
     @QKMEANS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""

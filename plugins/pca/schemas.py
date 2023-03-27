@@ -25,12 +25,6 @@ from qhana_plugin_runner.api.util import (
 )
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class SolverEnum(Enum):
     auto = "auto"
     full = "full"
@@ -129,7 +123,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Dimensions",
             "description": "Number of dimensions k that the output will have."
-                           "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
+            "\nFor k <= 0, normal PCA will guess k and all other PCA types will take max k.",
             "input_type": "number",
         },
     )
@@ -149,7 +143,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Batch Size",
             "description": "Batch size used when executing Incremental PCA. "
-                           "The batch size will be automatically set to at least the number of dimensions k.",
+            "The batch size will be automatically set to at least the number of dimensions k.",
             "input_type": "number",
         },
     )
@@ -168,7 +162,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Ridge shrinkage",
             "description": "To avoid instability issues in case the system is under-determined, "
-                           "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
+            "regularization can be applied (Ridge regression) via this parameter (only for sparse PCA).",
             "input_type": "number",
         },
     )
@@ -190,8 +184,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Kernel matrix URL",
             "description": "URL to a json file, containing the kernel matrix."
-                           "Note that only kernel matrices between the same set of points X can be processed here, "
-                           "i.e. K(X, X)",
+            "Note that only kernel matrices between the same set of points X can be processed here, "
+            "i.e. K(X, X)",
             "input_type": "text",
         },
     )
@@ -230,7 +224,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The maximum number of iterations that sparse PCA performs.",
             "input_type": "number",
         },
-        validate=validate.Range(min=0, min_inclusive=False)
+        validate=validate.Range(min=0, min_inclusive=False),
     )
     tol = ma.fields.Float(
         required=True,
@@ -238,7 +232,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Error Tolerance",
             "description": "Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
-                           "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
+            "If tol <= 0, then arpack will choose the optimal value automatically and for sparse PCA, it gets set to 1e-8.",
             "input_type": "number",
         },
     )
@@ -248,7 +242,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Iterated Power",
             "description": "This sets the iterated power parameter for the randomized solver. \n"
-                           "If it is set to <= 0, the iterated power will be chosen automatically.",
+            "If it is set to <= 0, the iterated power will be chosen automatically.",
             "input_type": "number",
         },
     )

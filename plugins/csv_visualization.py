@@ -17,7 +17,6 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
-import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
@@ -40,7 +39,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -60,18 +58,6 @@ CSV_BLP = SecurityBlueprint(
     description="CSV visualization API.",
     template_folder="csv_visualization_templates",
 )
-
-
-class DemoResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class CsvInputParametersSchema(FrontendFormBaseSchema):
@@ -149,7 +135,7 @@ class MicroFrontend(MethodView):
     @CSV_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @CSV_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the csv visualization plugin."
@@ -164,9 +150,9 @@ class MicroFrontend(MethodView):
     @CSV_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         plugin = CsvVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -177,6 +163,7 @@ class MicroFrontend(MethodView):
                 name=plugin.name,
                 version=plugin.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{CSV_BLP.name}.ProcessView"),
@@ -193,7 +180,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @CSV_BLP.arguments(CsvInputParametersSchema(unknown=EXCLUDE), location="form")
-    @CSV_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @CSV_BLP.response(HTTPStatus.SEE_OTHER)
     @CSV_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
@@ -214,7 +201,6 @@ class ProcessView(MethodView):
 
 
 class CsvVisualization(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "A demo CSV visualization plugin."

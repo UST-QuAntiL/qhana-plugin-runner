@@ -19,7 +19,7 @@ from typing import ClassVar, Dict, List, Optional, Union
 
 from flask import Flask
 from flask.blueprints import Blueprint
-from packaging.version import LegacyVersion, Version
+from packaging.version import Version, InvalidVersion
 from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
 
@@ -32,7 +32,6 @@ def plugin_identifier(name: str, version: str):
 
 
 class QHAnaPluginBase:
-
     name: ClassVar[str]
     version: ClassVar[str]
     instance: ClassVar["QHAnaPluginBase"]
@@ -80,22 +79,26 @@ class QHAnaPluginBase:
         return plugin_identifier(self.name, self.version)
 
     @cached_property
-    def parsed_version(self) -> Union[Version, LegacyVersion]:
+    def parsed_version(self) -> Version:
         """The parsed version string as a Version that can be compared to other Versions.
 
         Raises:
-            Warning: if the version does not conform to PEP 440
+            Exception: if the version does not conform to PEP 440
 
         Returns:
-            Union[Version, LegacyVersion]: the parsed and comparable version
+            Version: the parsed and comparable version
         """
-        version = parse_version(self.version)
-        if isinstance(version, LegacyVersion):
+        try:
+            version = parse_version(self.version)
+        except InvalidVersion:
             msg = f"The plugin version {self.version} of the plugin {self.name} does not conform to the PEP 440 versioning scheme!"
             if self.app:
-                self.app.logger.warning(msg)
+                self.app.logger.error(msg)
             else:
                 raise Warning(msg)
+
+            raise
+
         return version
 
     def get_api_blueprint(self) -> Blueprint:
@@ -264,5 +267,6 @@ def register_plugins(app: Flask):
         if plugin_blueprint:
             type(plugin).has_api = True
             ROOT_API.register_blueprint(
-                plugin_blueprint, url_prefix=f"{url_prefix}/plugins/{plugin.identifier}/"
+                plugin_blueprint,
+                url_prefix=f"{url_prefix}/plugins/{plugin.identifier}/",
             )

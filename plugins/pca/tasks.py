@@ -85,7 +85,7 @@ def load_entity_points_and_idx_to_id(entity_points_url: str):
 
     # Set array with correct size
     points_cnt = len(id_to_idx)
-    dimensions = len(ent.keys()-{"ID", "href"})
+    dimensions = len(ent.keys() - {"ID", "href"})
     points_arr = np.empty((points_cnt, dimensions))
 
     # Go through elements again and insert them at the correct index
@@ -139,7 +139,6 @@ def get_pca(input_params: dict):
     """
     from sklearn.decomposition import PCA, IncrementalPCA, SparsePCA, KernelPCA
 
-
     pca_type = input_params["pca_type"]
 
     # Result can't have dim <= 0. If this is entered, set to None.
@@ -179,7 +178,7 @@ def get_pca(input_params: dict):
             coef0=input_params["kernel_coef"],
             eigen_solver=eigen_solver,
             tol=input_params["tol"],
-            iterated_power=input_params['iterated_power']
+            iterated_power=input_params["iterated_power"],
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
@@ -257,7 +256,10 @@ def complete_fitting(entity_points_url, pca):
     dim = get_output_dimensionality(pca)
     dim_attributes = get_dim_attributes(dim)
 
-    return prepare_static_output(transformed_points, id_to_idx, dim_attributes), dim_attributes
+    return (
+        prepare_static_output(transformed_points, id_to_idx, dim_attributes),
+        dim_attributes,
+    )
 
 
 def precomputed_kernel_fitting(kernel_url: str, pca):
@@ -278,7 +280,10 @@ def precomputed_kernel_fitting(kernel_url: str, pca):
     dim = get_output_dimensionality(pca)
     dim_attributes = get_dim_attributes(dim)
     # Here we only allow kernel matrices between the same points. K(X, X)
-    return prepare_static_output(transformed_points, id_to_idx_X, dim_attributes), dim_attributes
+    return (
+        prepare_static_output(transformed_points, id_to_idx_X, dim_attributes),
+        dim_attributes,
+    )
 
 
 def batch_fitting(entity_points_url, pca, batch_size):
@@ -369,7 +374,7 @@ def plot_data(entity_points, dim_attributes, only_first_100):
         return px.scatter_3d(df, x="x", y="y", z="z", hover_name="ID", size="size")
     else:
         if len(dim_attributes) == 1:
-            points_y = [0]*len(ids)
+            points_y = [0] * len(ids)
         else:
             points_y = points[:, 1]
 
@@ -409,7 +414,7 @@ def save_outputs(
                 db_id,
                 output,
                 "plot.html",
-                "plot",
+                "custom/plot",
                 "text/html",
             )
     # save pca
@@ -419,7 +424,7 @@ def save_outputs(
             db_id,
             output,
             "pca_metadata.json",
-            "pca-metadata",
+            "custom/pca-metadata",
             "application/json",
         )
 
@@ -430,7 +435,7 @@ def save_outputs(
             db_id,
             output,
             "transformed_entity_points.csv",
-            "entity-points",
+            "entity/vector",
             "text/csv",
         )
 
@@ -476,9 +481,7 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: {str(input_params)}"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
     input_params = prep_input_parameters(input_params)
 
     entity_points_url = input_params["entity_points_url"]
@@ -515,7 +518,12 @@ def calculation_task(self, db_id: int) -> str:
 
     attributes = ["ID", "href"] + dim_attributes
     save_outputs(
-        db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim_attributes
+        db_id,
+        pca_output,
+        entity_points,
+        attributes,
+        entity_points_for_plot,
+        dim_attributes,
     )
 
     return "Result stored in file"

@@ -26,7 +26,6 @@ from .schemas import (
     AnyInputSchema,
     InputParameters,
     WorkflowsParametersSchema,
-    WorkflowsTaskResponseSchema,
 )
 from .tasks import process_input, start_workflow
 from .watchers.human_task_watcher import human_task_watcher
@@ -78,7 +77,7 @@ class MicroFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @WORKFLOWS_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the workflows plugin."
@@ -93,15 +92,16 @@ class MicroFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with pre-rendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         return Response(
             render_template(
                 "simple_template.html",
                 name=Workflows.instance.name,
                 version=Workflows.instance.version,
                 schema=WorkflowsParametersSchema(),
+                valid=valid,
                 values=dict(data),
                 errors=errors,
                 process=url_for(f"{WORKFLOWS_BLP.name}.ProcessView"),
@@ -114,7 +114,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @WORKFLOWS_BLP.arguments(WorkflowsParametersSchema(unknown=EXCLUDE), location="form")
-    @WORKFLOWS_BLP.response(HTTPStatus.OK, WorkflowsTaskResponseSchema())
+    @WORKFLOWS_BLP.response(HTTPStatus.SEE_OTHER)
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, input_params: InputParameters):
         db_task = ProcessingTask(
@@ -169,7 +169,7 @@ class HumanTaskFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int):
         """Return the micro frontend."""
-        return self.render(request.args, db_id, errors)
+        return self.render(request.args, db_id, errors, False)
 
     @WORKFLOWS_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of a workflow human task."
@@ -184,9 +184,9 @@ class HumanTaskFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors)
+        return self.render(request.form, db_id, errors, not errors)
 
-    def render(self, data: Mapping, db_id: int, errors: dict):
+    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -221,6 +221,7 @@ class HumanTaskFrontend(MethodView):
                 name=Workflows.instance.name,
                 version=Workflows.instance.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(
@@ -245,7 +246,7 @@ class HumanTaskBPMNVisualizationFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int):
         """Return the micro frontend."""
-        return self.render(request.args, db_id, errors)
+        return self.render(request.args, db_id, errors, False)
 
     @WORKFLOWS_BLP.html_response(HTTPStatus.OK, description="Micro frontend for bpmn io.")
     @WORKFLOWS_BLP.arguments(
@@ -258,9 +259,9 @@ class HumanTaskBPMNVisualizationFrontend(MethodView):
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors)
+        return self.render(request.form, db_id, errors, not errors)
 
-    def render(self, data: Mapping, db_id: int, errors: dict):
+    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -277,10 +278,7 @@ class HumanTaskBPMNVisualizationFrontend(MethodView):
                 bpmn_properties = None
 
         return Response(
-            render_template(
-                "bpmn_io.html",
-                values=bpmn_properties,
-            )
+            render_template("bpmn_io.html", values=bpmn_properties, valid=valid)
         )
 
 
@@ -289,7 +287,7 @@ class HumanTaskProcessView(MethodView):
     """Start a long running processing task."""
 
     @WORKFLOWS_BLP.arguments(AnyInputSchema(), location="form")
-    @WORKFLOWS_BLP.response(HTTPStatus.OK, WorkflowsTaskResponseSchema())
+    @WORKFLOWS_BLP.response(HTTPStatus.SEE_OTHER)
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)

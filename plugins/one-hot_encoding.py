@@ -99,7 +99,7 @@ Improvements:
 
 
 _plugin_name = "one-hot encoding"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -108,12 +108,6 @@ ONEHOT_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="One-hot encoding plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class InputParameters:
@@ -134,7 +128,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entities",
+        data_input_type="entity/list",
         data_content_types="application/json",
         metadata={
             "label": "Entities URL",
@@ -145,7 +139,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entities_metadata_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="attribute-metadata",
+        data_input_type="entity/attribute-metadata",
         data_content_types="application/json",
         metadata={
             "label": "Entities Attribute Metadata URL",
@@ -156,7 +150,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     taxonomies_zip_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="taxonomy",
+        data_input_type="graph/taxonomy",
         data_content_types="application/zip",
         metadata={
             "label": "Taxonomies URL",
@@ -198,19 +192,19 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{ONEHOT_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entities",
+                        data_type="entity/list",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="taxonomy",
+                        data_type="graph/taxonomy",
                         content_type=["application/zip"],
                         required=True,
                         parameter="taxonomiesZipUrl",
                     ),
                     InputDataMetadata(
-                        data_type="attribute-metadata",
+                        data_type="entity/attribute-metadata",
                         content_type=["application/json"],
                         required=True,
                         parameter="entitiesMetadataUrl",
@@ -218,7 +212,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["application/csv"],
                         required=True,
                     )
@@ -246,7 +240,7 @@ class MicroFrontend(MethodView):
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @ONEHOT_BLP.html_response(
         HTTPStatus.OK,
@@ -262,9 +256,9 @@ class MicroFrontend(MethodView):
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
 
         return Response(
@@ -273,6 +267,7 @@ class MicroFrontend(MethodView):
                 name=OneHot.instance.name,
                 version=OneHot.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{ONEHOT_BLP.name}.CalcView"),
@@ -285,7 +280,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @ONEHOT_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @ONEHOT_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @ONEHOT_BLP.response(HTTPStatus.SEE_OTHER)
     @ONEHOT_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -381,7 +376,9 @@ def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict) -> Set:
         return result
 
 
-def compute_ancestors_and_index_dict(entities, attributes, attribute_ref_targets, taxonomies) -> Tuple[List, List, int]:
+def compute_ancestors_and_index_dict(
+    entities, attributes, attribute_ref_targets, taxonomies
+) -> Tuple[List, List, int]:
     """
     Each entity owns certain attributes in a given taxonomy. This method computes the ancestors for each of the
     attributes in every given taxonomy.
@@ -420,14 +417,18 @@ def compute_ancestors_and_index_dict(entities, attributes, attribute_ref_targets
     return taxonomies_ancestors_list, attr_to_idx_dict_list, dim
 
 
-def prepare_stream_output(entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim):
+def prepare_stream_output(
+    entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+):
     """
     Transforms an entity into it's one-hot encoding and yields it.
     """
     for entity in entities:
         id = entity["ID"]
-        one_hot_encodings = np.zeros((dim, ))
-        for attribute, attr_to_idx_dict, taxonomies_ancestors in zip(attributes, attr_to_idx_dict_list, taxonomies_ancestors_list):
+        one_hot_encodings = np.zeros((dim,))
+        for attribute, attr_to_idx_dict, taxonomies_ancestors in zip(
+            attributes, attr_to_idx_dict_list, taxonomies_ancestors_list
+        ):
             values = entity[attribute]
 
             sub_attributes = set()
@@ -473,13 +474,23 @@ def calculation_task(self, db_id: int) -> str:
     # load data from file
     attributes = attributes.splitlines()
     # ref target is the name of the file containing the taxonomy
-    attribute_ref_targets = get_attribute_ref_target(entities_attribute_metadata_url, attributes)
+    attribute_ref_targets = get_attribute_ref_target(
+        entities_attribute_metadata_url, attributes
+    )
     # load taxonomies
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
     entities = open_url(entities_url).json()
-    taxonomies_ancestors_list, attr_to_idx_dict_list, dim = compute_ancestors_and_index_dict(entities, attributes, attribute_ref_targets, taxonomies)
-    entity_points = prepare_stream_output(entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim)
+    (
+        taxonomies_ancestors_list,
+        attr_to_idx_dict_list,
+        dim,
+    ) = compute_ancestors_and_index_dict(
+        entities, attributes, attribute_ref_targets, taxonomies
+    )
+    entity_points = prepare_stream_output(
+        entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+    )
     csv_attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
 
     with SpooledTemporaryFile(mode="w") as output:
@@ -488,7 +499,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "one-hot-encoded_points.csv",
-            "entity-points",
+            "entity/vector",
             "text/csv",
         )
 

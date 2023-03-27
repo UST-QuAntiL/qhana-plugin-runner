@@ -22,7 +22,6 @@ from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -44,7 +43,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -57,7 +55,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sim-to-dist-transformers"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -66,12 +64,6 @@ TRANSFORMERS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Similarity to distance transformers plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class TransformersEnum(Enum):
@@ -98,7 +90,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     attribute_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="attribute-similarities",
+        data_input_type="custom/attribute-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Attribute similarities URL",
@@ -144,13 +136,13 @@ class PluginsView(MethodView):
             description=Transformers.instance.description,
             name=Transformers.instance.name,
             version=Transformers.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{TRANSFORMERS_BLP.name}.CalcSimilarityView"),
                 ui_href=url_for(f"{TRANSFORMERS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="attribute-similarities",
+                        data_type="custom/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                         parameter="attributeSimilaritiesUrl",
@@ -158,7 +150,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="attribute-distances",
+                        data_type="custom/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -190,7 +182,7 @@ class MicroFrontend(MethodView):
     @TRANSFORMERS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @TRANSFORMERS_BLP.html_response(
         HTTPStatus.OK,
@@ -206,9 +198,9 @@ class MicroFrontend(MethodView):
     @TRANSFORMERS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         schema = InputParametersSchema()
         return Response(
             render_template(
@@ -217,6 +209,7 @@ class MicroFrontend(MethodView):
                 version=Transformers.instance.version,
                 schema=schema,
                 values=data,
+                valid=valid,
                 errors=errors,
                 process=url_for(f"{TRANSFORMERS_BLP.name}.CalcSimilarityView"),
                 example_values=url_for(
@@ -231,7 +224,7 @@ class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
     @TRANSFORMERS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @TRANSFORMERS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @TRANSFORMERS_BLP.response(HTTPStatus.SEE_OTHER)
     @TRANSFORMERS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -356,7 +349,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         "attr_dist.zip",
-        "attribute_distances",
+        "custom/attribute-distances",
         "application/zip",
     )
 

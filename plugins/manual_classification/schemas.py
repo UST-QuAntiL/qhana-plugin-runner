@@ -8,12 +8,6 @@ class ResponseSchema(MaBaseSchema):
     identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
 
 
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
 class LoadParametersSchema(FrontendFormBaseSchema):
     input_file_url = FileUrl(
         required=True,

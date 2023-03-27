@@ -38,7 +38,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
@@ -48,7 +47,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "hello-world"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -58,18 +57,6 @@ HELLO_BLP = SecurityBlueprint(
     description="Demo plugin API.",
     template_folder="hello_world_templates",
 )
-
-
-class DemoResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    version = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    identifier = ma.fields.String(required=True, allow_none=False, dump_only=True)
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class HelloWorldParametersSchema(FrontendFormBaseSchema):
@@ -108,7 +95,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="txt",
+                        data_type="custom/hello-world-output",
                         content_type=["text/plain"],
                         required=True,
                     )
@@ -139,7 +126,7 @@ class MicroFrontend(MethodView):
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @HELLO_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the hello world plugin."
@@ -154,9 +141,9 @@ class MicroFrontend(MethodView):
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         plugin = HelloWorld.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -167,6 +154,7 @@ class MicroFrontend(MethodView):
                 name=plugin.name,
                 version=plugin.version,
                 schema=schema,
+                valid=valid,
                 values=data,
                 errors=errors,
                 process=url_for(f"{HELLO_BLP.name}.ProcessView"),
@@ -183,7 +171,7 @@ class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @HELLO_BLP.arguments(HelloWorldParametersSchema(unknown=EXCLUDE), location="form")
-    @HELLO_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @HELLO_BLP.response(HTTPStatus.SEE_OTHER)
     @HELLO_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
@@ -204,7 +192,6 @@ class ProcessView(MethodView):
 
 
 class HelloWorld(QHAnaPluginBase):
-
     name = _plugin_name
     version = __version__
     description = "Tests the connection of all components by printing some text."
@@ -239,7 +226,7 @@ def demo_task(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             output.write(out_str)
             STORE.persist_task_result(
-                db_id, output, "out.txt", "hello-world-output", "text/plain"
+                db_id, output, "out.txt", "custom/hello-world-output", "text/plain"
             )
         return "result: " + repr(out_str)
     return "Empty input string, no output could be generated!"

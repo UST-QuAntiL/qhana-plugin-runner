@@ -19,7 +19,6 @@ from typing import Mapping, Optional
 import flask
 import marshmallow as ma
 from celery.canvas import chain
-from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
@@ -41,7 +40,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -54,7 +52,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "mds"
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -63,12 +61,6 @@ MDS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="MDS plugin API.",
 )
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
 class MetricEnum(Enum):
@@ -96,7 +88,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_distances_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity-distances",
+        data_input_type="custom/entity-distances",
         data_content_types="application/json",
         metadata={
             "label": "Entity distances URL",
@@ -160,13 +152,13 @@ class PluginsView(MethodView):
             description=MDS.instance.description,
             name=MDS.instance.name,
             version=MDS.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{MDS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{MDS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity-distances",
+                        data_type="custom/entity-distances",
                         content_type=["application/json"],
                         required=True,
                         parameter="entityDistancesUrl",
@@ -174,7 +166,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity-points",
+                        data_type="entity/vector",
                         content_type=["application/json"],
                         required=True,
                     )
@@ -202,7 +194,7 @@ class MicroFrontend(MethodView):
     @MDS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
-        return self.render(request.args, errors)
+        return self.render(request.args, errors, False)
 
     @MDS_BLP.html_response(
         HTTPStatus.OK,
@@ -218,9 +210,9 @@ class MicroFrontend(MethodView):
     @MDS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors)
+        return self.render(request.form, errors, not errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict, valid: bool):
         data_dict = dict(data)
         fields = InputParametersSchema().fields
         app = flask.current_app
@@ -243,6 +235,7 @@ class MicroFrontend(MethodView):
                 name=MDS.instance.name,
                 version=MDS.instance.version,
                 schema=InputParametersSchema(),
+                valid=valid,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{MDS_BLP.name}.CalcView"),
@@ -255,7 +248,7 @@ class CalcView(MethodView):
     """Start a long running processing task."""
 
     @MDS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @MDS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MDS_BLP.response(HTTPStatus.SEE_OTHER)
     @MDS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
@@ -365,11 +358,13 @@ def calculation_task(self, db_id: int) -> str:
     transformed = mds.fit_transform(distance_matrix)
 
     entity_points = []
+    dim_attributes = _get_dim_attributes(dimensions)
 
     for ent_id, idx in id_to_idx.items():
-        entity_points.append(
-            {"ID": ent_id, "href": "", "point": [x for x in transformed[idx]]}
-        )
+        new_entity_point = {"ID": ent_id, "href": ""}
+        new_entity_point.update({d: x for d, x in zip(dim_attributes, transformed[idx])})
+
+        entity_points.append(new_entity_point)
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
@@ -377,8 +372,21 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             "entity_points.json",
-            "entity-points",
+            "entity/vector",
             "application/json",
         )
 
     return "Result stored in file"
+
+
+def _get_dim_attributes(dim):
+    """
+    Returns the attributes for each dimension, with the correct length.
+    For each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
+    This method adds a zero padding to ensure that every dim<int> has the same length, e.g. dim00, dim01, ..., dim10, dim11
+    :params dim: int number of dimensions
+    :return: list[str]
+    """
+    zero_padding = len(str(dim - 1))
+    dim_attributes = [f"dim{d:0{zero_padding}}" for d in range(dim)]
+    return dim_attributes
