@@ -25,7 +25,6 @@ from sqlalchemy.sql.expression import (
     literal,
     select,
 )
-from sqlalchemy.sql.schema import Column
 
 from .mutable_json import JSON_LIKE, MutableJSON
 from ..db import DB, REGISTRY
@@ -263,7 +262,6 @@ class PluginState:
 
 @REGISTRY.mapped_as_dataclass
 class DataBlob:
-
     __tablename__ = "DataBlob"
 
     id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
