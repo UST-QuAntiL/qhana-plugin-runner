@@ -55,7 +55,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:integration-test
           labels: ${{ steps.meta.outputs.labels }}
       - id: image_ref
         uses: ASzc/change-string-case-action@v5
