@@ -1,27 +1,12 @@
-# Copyright 2021 QHAna plugin runner contributors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# originally from <https://github.com/buehlefs/flask-template/>
-
-from __future__ import with_statement
-
 import logging
 from logging.config import fileConfig
 
 from flask import current_app
 
 from alembic import context
+
+# do NOT use foreign key checking when updating DB
+current_app.config["SQLITE_FOREIGN_KEYS"] = False
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -34,9 +19,6 @@ logger = logging.getLogger("alembic.env")
 
 
 def get_engine():
-    # do NOT use foreign key checking when updating DB
-    current_app.config["SQLITE_FOREIGN_KEYS"] = False
-
     try:
         # this works with Flask-SQLAlchemy<3 and Alchemical
         return current_app.extensions["migrate"].db.get_engine()
@@ -84,11 +66,12 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    # render as batch for sqlite support
     context.configure(
         url=url,
         target_metadata=get_metadata(),
         literal_binds=True,
-        render_as_batch=True,  # required for batch operations with SQLite
+        render_as_batch=True,
     )
 
     with context.begin_transaction():
@@ -120,8 +103,7 @@ def run_migrations_online():
             connection=connection,
             target_metadata=get_metadata(),
             process_revision_directives=process_revision_directives,
-            render_as_batch=True,  # required for batch operations with SQLite
-            compare_type=True,  # required for detecting type changes
+            # compare type and render as batch are set by extension settings now!
             **current_app.extensions["migrate"].configure_args,
         )
 
