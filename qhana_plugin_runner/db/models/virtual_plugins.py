@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
 from typing import Any, Iterable, List, Optional, Sequence, cast
 
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import (
-    ColumnOperators,
     ColumnElement,
+    ColumnOperators,
     Delete,
     Select,
     delete,
@@ -32,8 +32,7 @@ from ..db import DB, REGISTRY
 from ...util.plugins import plugin_identifier
 
 
-@REGISTRY.mapped
-@dataclass
+@REGISTRY.mapped_as_dataclass
 class VirtualPlugin:
     """A table to keep track of virtual plugins.
 
@@ -49,18 +48,13 @@ class VirtualPlugin:
 
     __tablename__ = "VirtualPlugin"
 
-    __sa_dataclass_metadata_key__ = "sa"
-
-    id: int = field(
-        init=False,
-        metadata={"sa": Column(sql.INTEGER(), primary_key=True)},
-    )
-    parent_id: str = field(metadata={"sa": Column(sql.String(550))})
-    name: str = field(metadata={"sa": Column(sql.String(500))})
-    version: str = field(metadata={"sa": Column(sql.String(50))})
-    description: str = field(metadata={"sa": Column(sql.Text())})
-    tags: str = field(metadata={"sa": Column(sql.Text())})
-    href: str = field(metadata={"sa": Column(sql.Text())})
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    parent_id: Mapped[str] = mapped_column(sql.String(550))
+    name: Mapped[str] = mapped_column(sql.String(500))
+    version: Mapped[str] = mapped_column(sql.String(50))
+    description: Mapped[str] = mapped_column(sql.Text())
+    tags: Mapped[str] = mapped_column(sql.Text())
+    href: Mapped[str] = mapped_column(sql.Text())
 
     @property
     def tag_list(self):
@@ -125,8 +119,7 @@ class VirtualPlugin:
         return DB.session.execute(select(literal(True)).where(exists_q)).scalar()
 
 
-@REGISTRY.mapped
-@dataclass
+@REGISTRY.mapped_as_dataclass
 class PluginState:
     """A table to store persistent plugin state.
 
@@ -143,11 +136,9 @@ class PluginState:
 
     __tablename__ = "PluginState"
 
-    __sa_dataclass_metadata_key__ = "sa"
-
-    plugin_id: str = field(metadata={"sa": Column(sql.String(550), primary_key=True)})
-    key: str = field(metadata={"sa": Column(sql.String(500), primary_key=True)})
-    value: JSON_LIKE = field(metadata={"sa": Column(MutableJSON)})
+    plugin_id: Mapped[str] = mapped_column(sql.String(550), primary_key=True)
+    key: Mapped[str] = mapped_column(sql.String(500), primary_key=True)
+    value: Mapped[JSON_LIKE] = mapped_column(MutableJSON)
 
     @classmethod
     def get_item(cls, plugin_id: str, key: str) -> Optional["PluginState"]:
@@ -255,9 +246,7 @@ class PluginState:
         return old_value
 
     @classmethod
-    def delete_value(
-        cls, plugin_id: str, key: str, commit: bool = False
-    ):
+    def delete_value(cls, plugin_id: str, key: str, commit: bool = False):
         """Delete state for a given key.
 
         Args:
@@ -272,17 +261,11 @@ class PluginState:
             DB.session.commit()
 
 
-@REGISTRY.mapped
-@dataclass
+@REGISTRY.mapped_as_dataclass
 class DataBlob:
 
     __tablename__ = "DataBlob"
 
-    __sa_dataclass_metadata_key__ = "sa"
-
-    id: int = field(
-        init=False,
-        metadata={"sa": Column(sql.INTEGER(), primary_key=True)},
-    )
-    plugin_id: str = field(metadata={"sa": Column(sql.String(550), primary_key=True)})
-    value: bytes = field(metadata={"sa": Column(sql.BLOB())})
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    plugin_id: Mapped[str] = mapped_column(sql.String(550), primary_key=True)
+    value: Mapped[bytes] = mapped_column(sql.BLOB())
