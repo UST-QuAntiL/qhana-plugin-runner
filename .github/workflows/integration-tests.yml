@@ -48,6 +48,10 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - id: image_tag
+        uses: ASzc/change-string-case-action@v5
+        with:
+          string: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:integration-test
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         id: build_push
@@ -55,7 +59,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:integration-test
+          tags: ${{ steps.image_tag.outputs.lowercase }}
           labels: ${{ steps.meta.outputs.labels }}
       - id: image_ref
         uses: ASzc/change-string-case-action@v5
