@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import marshmallow as ma
 from marshmallow.validate import Regexp
-from typing_extensions import Literal
+from typing import Literal
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import MaBaseSchema
