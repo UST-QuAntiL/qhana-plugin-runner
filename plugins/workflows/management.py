@@ -22,7 +22,9 @@ WORKFLOW_MGMNT_BLP = SecurityBlueprint(
 )
 
 
-class WorkflowManagement(QHAnaPluginBase):  # FIXME this should replace the current workflows plugin completely
+class WorkflowManagement(
+    QHAnaPluginBase
+):  # FIXME this should replace the current workflows plugin completely
     name = _plugin_name
     version = __version__
     description = "Plugin for managing BPMN workflows deployed in Camunda."
@@ -30,7 +32,9 @@ class WorkflowManagement(QHAnaPluginBase):  # FIXME this should replace the curr
 
     instance: ClassVar["WorkflowManagement"]
 
-    config: Dict[str, Any]  # FIXME use full config from existing workflows plugin (fix in __init__)
+    config: Dict[
+        str, Any
+    ]  # FIXME use full config from existing workflows plugin (fix in __init__)
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

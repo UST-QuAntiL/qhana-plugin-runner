@@ -397,7 +397,9 @@ class VirtualPluginProcess(MethodView):
     """Micro frontend for a virtual plugin."""
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def get(self, instance_id: str):  # FIXME this must be a post endpoint that starts the actual workflow (see old plugin for this)
+    def get(
+        self, instance_id: str
+    ):  # FIXME this must be a post endpoint that starts the actual workflow (see old plugin for this)
         camunda = CamundaManagementClient(
             config["CAMUNDA_BASE_URL"], config["request_timeout"]
         )

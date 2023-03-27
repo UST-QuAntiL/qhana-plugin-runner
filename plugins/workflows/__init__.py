@@ -137,7 +137,7 @@ try:
     # accessed as soon as the routes are imported.
     from . import routes  # noqa
     from .watchers.external import schedule  # noqa
-    from . import management # noqa
+    from . import management  # noqa
 except ImportError as e:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.
