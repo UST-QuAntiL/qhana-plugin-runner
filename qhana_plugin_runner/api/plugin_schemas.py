@@ -32,6 +32,7 @@ class PluginType(Enum):
     processing = "processing"
     visualization = "visualization"
     conversion = "conversion"
+    dataloader = "dataloader"
 
 
 @dataclass
