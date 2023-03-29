@@ -11,7 +11,7 @@ def setup_periodic_tasks(sender, **kwargs):
     For this to work the celery beat should be running.
     """
     sender.add_periodic_task(
-        Workflows.instance.config["polling_rates"]["external_watcher"],
+        Workflows.instance.config["camunda_queue_polling_rate"],
         camunda_task_watcher.s(),
         name="periodic task workflows watcher",
     )

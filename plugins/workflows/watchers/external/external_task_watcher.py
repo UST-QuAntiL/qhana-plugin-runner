@@ -8,7 +8,7 @@ from qhana_plugin_runner.celery import CELERY
 from .qhana_instance_watcher import qhana_instance_watcher, qhana_step_watcher
 from ... import Workflows
 from ...clients.camunda_client import CamundaClient
-from ...datatypes.camunda_datatypes import CamundaConfig, ExternalTask
+from ...datatypes.camunda_datatypes import ExternalTask
 from ...exceptions import (
     BadInputsError,
     BadTaskDefinitionError,
@@ -54,12 +54,10 @@ def camunda_task_watcher():
     Watches for new Camunda external task. For each new task found a qhana_watcher celery task is spawned.
     """
     # Client
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
-    max_concurrent_external_tasks = config["external_task_concurrency"]
+    camunda_client = CamundaClient(config)
+    max_concurrent_external_tasks = config["max_concurrent_tasks"]
 
-    TASK_LOGGER.info(
-        f"Polling for external tasks as worker '{camunda_client.camunda_config.worker_id}'."
-    )
+    TASK_LOGGER.info(f"Polling for external tasks as worker '{config['worker_id']}'.")
 
     try:
         locked_task_count = camunda_client.get_locked_external_tasks_count()
@@ -76,8 +74,13 @@ def camunda_task_watcher():
         TASK_LOGGER.info(f"Error retrieving external tasks from camunda: {err}")
         return
 
+    legacy_task_topic_prefix = config["workflow_conf"]["legacy_plugin_task_topic_prefix"]
+    legacy_step_topic_prefix = config["workflow_conf"]["legacy_step_topic_prefix"]
+
+    # FIXME use non legacy settings here!!!
+
     TASK_LOGGER.debug(
-        f"Searching external task topics with prefix '{camunda_client.camunda_config.plugin_prefix}.'"
+        f"Searching external task topics with prefix '{legacy_task_topic_prefix}.'"
     )
 
     for external_task in external_tasks:
@@ -87,14 +90,14 @@ def camunda_task_watcher():
         if camunda_client.is_locked(external_task.id):
             continue
 
-        if topic_name.startswith(f"{camunda_client.camunda_config.plugin_step_prefix}."):
+        if topic_name.startswith(f"{legacy_step_topic_prefix}."):
             # task is a qhana step
             execute_task(
                 external_task=external_task,
                 camunda_client=camunda_client,
                 watcher=qhana_step_watcher,
             )
-        elif topic_name.startswith(f"{camunda_client.camunda_config.plugin_prefix}."):
+        elif topic_name.startswith(f"{legacy_task_topic_prefix}."):
             # task is a qhana plugin
             execute_task(
                 external_task=external_task,
@@ -108,9 +111,9 @@ def camunda_task_watcher():
     ignore_result=True,
 )
 def process_workflow_error(request, exc, traceback, external_task_id: str):
-    camunda_client = CamundaClient(CamundaConfig.from_config(config=config))
+    camunda_client = CamundaClient(config)
 
-    error_code_prefix = config["workflow_error_prefix"]
+    error_code_prefix = config["workflow_conf"]["workflow_error_prefix"]
 
     error_code = "unknown-error"
     message: Optional[str] = None
@@ -146,7 +149,7 @@ def process_workflow_error(request, exc, traceback, external_task_id: str):
     ignore_result=True,
 )
 def unlock_task(external_task_id: str):
-    camunda_client = CamundaClient(CamundaConfig.from_config(config=config))
+    camunda_client = CamundaClient(config)
     try:
         camunda_client.unlock(external_task_id)
     except:

@@ -1,4 +1,5 @@
 import json
+from os import PathLike
 from pathlib import Path
 from typing import Optional
 
@@ -9,9 +10,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from . import Workflows
 from .clients.camunda_client import CamundaClient
-from .datatypes.camunda_datatypes import CamundaConfig
 from .schemas import InputParameters, WorkflowsParametersSchema
-from .watchers.human_task_watcher import human_task_watcher
 
 config = Workflows.instance.config
 
@@ -31,23 +30,31 @@ def start_workflow(self, db_id: int) -> None:
     input_params: InputParameters = param_schema.loads(task_data.parameters)
 
     # BPMN file
-    bpmn_folder: Path = config["WORKFLOW_FOLDER"]
-    bpmn_path = bpmn_folder / (Path("test.bpmn").with_name(input_params.input_bpmn))
-    bpmn_path = bpmn_path.with_suffix(".bpmn").resolve()
+    bpmn_folder: PathLike | None = config.get("workflow_folder")
 
-    if not bpmn_path.exists():
-        builtin_path = Path(__file__).parent / Path("bpmn")
-        bpmn_path = builtin_path / (Path("test.bpmn").with_name(input_params.input_bpmn))
+    if bpmn_folder:
+        bpmn_folder = Path(bpmn_folder)
+        bpmn_path = bpmn_folder / (Path("test.bpmn").with_name(input_params.input_bpmn))
         bpmn_path = bpmn_path.with_suffix(".bpmn").resolve()
 
-    if not bpmn_path.exists() or not bpmn_path.is_file():
-        TASK_LOGGER.error(
-            f"Requested BPMN file '{input_params.input_bpmn}' does not exist."
-        )
-        raise ValueError("BPMN file does not exist!")
+        if not bpmn_path.exists():
+            builtin_path = Path(__file__).parent / Path("bpmn")
+            bpmn_path = builtin_path / (
+                Path("test.bpmn").with_name(input_params.input_bpmn)
+            )
+            bpmn_path = bpmn_path.with_suffix(".bpmn").resolve()
+
+        if not bpmn_path.exists() or not bpmn_path.is_file():
+            TASK_LOGGER.error(
+                f"Requested BPMN file '{input_params.input_bpmn}' does not exist."
+            )
+            raise ValueError("BPMN file does not exist!")
+    else:
+        TASK_LOGGER.error(f"No folder configured to search for BPMN files.")
+        raise ValueError("BPMN file folder is not configured!")
 
     # Client
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    camunda_client = CamundaClient(config)
 
     # Deploy BPMN file and create workflow instance
     process_definition_id = camunda_client.deploy(bpmn_path)
@@ -80,7 +87,7 @@ def process_input(self, db_id: int) -> None:
     human_task_id = task_data.data["human_task_id"]
 
     # Client
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    camunda_client = CamundaClient(config)
 
     variables = {
         key: {

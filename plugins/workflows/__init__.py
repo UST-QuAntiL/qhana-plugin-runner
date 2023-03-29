@@ -1,14 +1,14 @@
 import uuid
-from json import loads
 from os import environ
 from pathlib import Path
-from typing import Any, ClassVar, Dict, Optional
+from typing import ClassVar, Optional
 
 from celery.utils.log import get_task_logger
 from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from .config import get_config, WorkflowPluginConfig
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -32,99 +32,12 @@ class Workflows(QHAnaPluginBase):
 
     instance: ClassVar["Workflows"]
 
-    config: Dict[str, Any]
+    config: WorkflowPluginConfig
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
-        app_config = app.config if app else {}
-
-        workflow_folder = Path(
-            app_config.get(
-                "WORKFLOW_FOLDER",
-                environ.get("WORKFLOW_FOLDER", "./workflows"),
-            )
-        )
-        if not workflow_folder.is_absolute() and app is not None:
-            workflow_folder = Path(app.instance_path) / workflow_folder
-            workflow_folder = workflow_folder.resolve()
-
-        camunda_url = app_config.get(
-            "CAMUNDA_API_URL",
-            environ.get("CAMUNDA_API_URL", "http://localhost:8080/engine-rest"),
-        )
-        plugin_runner_url = app_config.get(
-            "PLUGIN_RUNNER_URLS",
-            [
-                url.strip()
-                for url in environ.get(
-                    "PLUGIN_RUNNER_URLS", "http://localhost:5005;"
-                ).split(";")
-                if url.strip()
-            ],
-        )
-
-        default_timout: str = app_config.get(
-            "REQUEST_TIMEOUT",
-            environ.get("REQUEST_TIMEOUT", str(5 * 60)),
-        )
-        timout_int = 5 * 60
-        if default_timout.isdigit():
-            timout_int = int(default_timout)
-
-        max_parrallelism: str = app_config.get(
-            "EXTERNAL_TASK_CONCURRENCY",
-            environ.get("EXTERNAL_TASK_CONCURRENCY", str(10)),
-        )
-        max_parrallelism_int = 10
-        if max_parrallelism.isdigit():
-            max_parrallelism_int = int(max_parrallelism)
-
-        worker_id: str = app_config.get(
-            "CAMUNDA_WORKER_ID",
-            environ.get("CAMUNDA_WORKER_ID", str(uuid.uuid4())),
-        )
-
-        workflow_config: Dict[str, float] = app_config.get("WORKFLOWs", {})
-        env_workflow_config = environ.get("PLUGIN_WORKFLOWS", None)
-        if env_workflow_config:
-            workflow_config = loads(env_workflow_config)
-
-        workflow_watcher_config: Dict[str, float] = app_config.get(
-            "WORKFLOW_WATCHERS", {}
-        )
-        env_workflow_watcher_config = environ.get("PLUGIN_WORKFLOW_WATCHERS", None)
-        if env_workflow_watcher_config:
-            workflow_watcher_config = loads(env_workflow_watcher_config)
-
-        conf = {
-            "WORKFLOW_FOLDER": workflow_folder,
-            "CAMUNDA_BASE_URL": camunda_url,
-            "QHANA_PLUGIN_ENDPOINTS": plugin_runner_url,
-            "worker_id": worker_id,
-            "polling_rates": {"camunda_general": 5.0, "external_watcher": 5.0},
-            "request_timeout": timout_int,
-            "external_task_concurrency": max_parrallelism_int,
-            "workflow_error_prefix": "qhana",
-            "qhana_input": {
-                "prefix": "qinput",
-                "prefix_value_choice": "choice",
-                "prefix_value_enum": "enum",
-                "prefix_value_file_url": "file_url",
-                "prefix_value_delimiter": "::",
-                "mode_text": "plain",
-                "mode_filename": "name",
-                "mode_datatype": "dataType",
-            },
-            "workflow_out": {
-                "camunda_user_task_name": "Workflow Return Variables",
-                "prefix": "return",
-            },
-        }
-
-        conf["polling_rates"].update(workflow_watcher_config)
-        conf["qhana_input"].update(workflow_config.get("qhana_input", {}))
-        conf["workflow_out"].update(workflow_config.get("workflow_out", {}))
+        conf = get_config(app)
 
         self.config = conf
 

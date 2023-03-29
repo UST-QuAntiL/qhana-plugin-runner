@@ -204,8 +204,8 @@ class HumanTaskFrontend(MethodView):
 
         data = {}
         for key, val in form_params.items():
-            prefix_file_url = config["qhana_input"]["prefix_value_file_url"]
-            prefix_delimiter = config["qhana_input"]["prefix_value_delimiter"]
+            prefix_file_url = config["workflow_conf"]["form_conf"]["file_url_prefix"]
+            prefix_delimiter = config["workflow_conf"]["form_conf"]["value_separator"]
             if val["value"]:
                 if not (
                     val["type"] == "String"

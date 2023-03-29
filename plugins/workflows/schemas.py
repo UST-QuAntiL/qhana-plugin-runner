@@ -56,10 +56,12 @@ class AnyInputSchema(FrontendFormBaseSchema):
 
         self.inputs: Dict = {}
 
-        self.prefix_choices = config["qhana_input"]["prefix_value_choice"]
-        self.prefix_enum = config["qhana_input"]["prefix_value_enum"]
-        self.prefix_file_url = config["qhana_input"]["prefix_value_file_url"]
-        self.prefix_delimiter = config["qhana_input"]["prefix_value_delimiter"]
+        input_config = config["workflow_conf"]["form_conf"]
+
+        self.prefix_choices = input_config["choice_value_prefix"]
+        self.prefix_enum = input_config["enum_value_prefix"]
+        self.prefix_file_url = input_config["file_url_prefix"]
+        self.prefix_delimiter = input_config["value_separator"]
 
         for key, val in params.items():
             if not val["value"]:

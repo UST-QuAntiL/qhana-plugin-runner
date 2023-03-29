@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Dict, Optional
+from typing import Optional
 
 
 #
@@ -54,19 +54,3 @@ class HumanTask:
             task_definition_key=serialized["taskDefinitionKey"],
         )
 
-
-@dataclasses.dataclass
-class CamundaConfig:
-    base_url: str
-    poll_interval: int
-    worker_id: str
-    plugin_prefix: str = "plugin"
-    plugin_step_prefix: str = "plugin-step"
-
-    @staticmethod
-    def from_config(config: Dict[str, Any]):
-        return CamundaConfig(
-            base_url=config["CAMUNDA_BASE_URL"],
-            poll_interval=config["polling_rates"]["camunda_general"],
-            worker_id=config["worker_id"],
-        )

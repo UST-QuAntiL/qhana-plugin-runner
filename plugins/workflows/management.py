@@ -8,6 +8,8 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
+from .config import WorkflowPluginConfig, get_config
+
 TASK_LOGGER = get_task_logger(__name__)
 
 _plugin_name = "workflow-management"
@@ -32,44 +34,12 @@ class WorkflowManagement(
 
     instance: ClassVar["WorkflowManagement"]
 
-    config: Dict[
-        str, Any
-    ]  # FIXME use full config from existing workflows plugin (fix in __init__)
+    config: WorkflowPluginConfig
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
-        app_config = app.config if app else {}
-
-        workflow_folder = Path(
-            app_config.get(
-                "WORKFLOW_FOLDER",
-                environ.get("WORKFLOW_FOLDER", "./workflows"),
-            )
-        )
-        if not workflow_folder.is_absolute() and app is not None:
-            workflow_folder = Path(app.instance_path) / workflow_folder
-            workflow_folder = workflow_folder.resolve()
-
-        camunda_url = app_config.get(
-            "CAMUNDA_API_URL",
-            environ.get("CAMUNDA_API_URL", "http://localhost:8080/engine-rest"),
-        )
-
-        default_timout: str = app_config.get(
-            "REQUEST_TIMEOUT",
-            environ.get("REQUEST_TIMEOUT", str(5 * 60)),
-        )
-        timout_int = 5 * 60
-        if default_timout.isdigit():
-            timout_int = int(default_timout)
-
-        conf = {
-            "WORKFLOW_FOLDER": workflow_folder,
-            "CAMUNDA_BASE_URL": camunda_url,
-            "request_timeout": timout_int,
-            # TODO
-        }
+        conf = get_config(app)
 
         self.config = conf
 

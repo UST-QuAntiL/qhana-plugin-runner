@@ -21,13 +21,11 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
 
-from . import Workflows
 from .clients.camunda_client import CamundaManagementClient
 from .management import WORKFLOW_MGMNT_BLP, WorkflowManagement
 from .schemas import AnyInputSchema, WorkflowsParametersSchema
 
 config = WorkflowManagement.instance.config
-alt_config = Workflows.instance.config  # TODO FIX config (by merging)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -95,9 +93,7 @@ class MicroFrontend(MethodView):
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Return the micro frontend."""
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         process_definitions = camunda.get_process_definitions()
 
         add_deployed_info(process_definitions)
@@ -127,9 +123,7 @@ class WorkflowsView(MethodView):
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         process_definitions = camunda.get_process_definitions()
 
         add_deployed_info(process_definitions)
@@ -143,9 +137,7 @@ class WorkflowView(MethodView):
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
     def get(self, instance_id: str):
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         try:
             process_def = camunda.get_process_definition(definition_id=instance_id)
         except RequestException as err:
@@ -157,9 +149,7 @@ class WorkflowView(MethodView):
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
     def post(self, instance_id: str):
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         try:
             process_instance = camunda.get_process_definition(definition_id=instance_id)
         except RequestException as err:
@@ -245,9 +235,7 @@ class WorkflowBPMNView(MethodView):
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
     def get(self, instance_id: str):
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         try:
             process_xml: str = camunda.get_process_definition_xml(
                 definition_id=instance_id
@@ -271,9 +259,7 @@ class VirtualPluginView(MethodView):
             instance_id=instance_id,
             _external=True,
         )
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         process_definition = camunda.get_process_definition(definition_id=instance_id)
         plugin = VirtualPlugin.get_by_href(
             plugin_url, WorkflowManagement.instance.identifier
@@ -342,9 +328,7 @@ class VirtualPluginUi(MethodView):
         return self.render(request.form, instance_id, errors)
 
     def render(self, data: Mapping, instance_id: str, errors: dict):
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         process_xml: str = camunda.get_process_definition_xml(definition_id=instance_id)
 
         plugin_url = url_for(
@@ -364,8 +348,8 @@ class VirtualPluginUi(MethodView):
         )
 
         for key, val in form_params.items():
-            prefix_file_url = alt_config["qhana_input"]["prefix_value_file_url"]
-            prefix_delimiter = alt_config["qhana_input"]["prefix_value_delimiter"]
+            prefix_file_url = config["workflow_conf"]["form_conf"]["file_url_prefix"]
+            prefix_delimiter = config["workflow_conf"]["form_conf"]["value_separator"]
             if val["value"]:
                 if not (
                     val["type"] == "String"
@@ -400,7 +384,5 @@ class VirtualPluginProcess(MethodView):
     def get(
         self, instance_id: str
     ):  # FIXME this must be a post endpoint that starts the actual workflow (see old plugin for this)
-        camunda = CamundaManagementClient(
-            config["CAMUNDA_BASE_URL"], config["request_timeout"]
-        )
+        camunda = CamundaManagementClient(config)
         return camunda.get_process_definition(definition_id=instance_id)

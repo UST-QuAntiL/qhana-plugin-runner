@@ -11,7 +11,6 @@ from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 from ... import Workflows
 from ...clients.camunda_client import CamundaClient
 from ...clients.qhana_task_client import ParameterParsingError, QhanaTaskClient
-from ...datatypes.camunda_datatypes import CamundaConfig
 from ...datatypes.qhana_datatypes import QhanaOutput
 from ...exceptions import (
     BadInputsError,
@@ -61,7 +60,7 @@ def qhana_instance_watcher(
     TASK_LOGGER.info(f"Received task {external_task_id} from camunda queue {topic_name}.")
 
     # Clients
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    camunda_client = CamundaClient(config)
     TASK_LOGGER.debug("Searching for plugins")
 
     try:
@@ -161,7 +160,7 @@ def qhana_step_watcher(
     TASK_LOGGER.info(f"Received task {external_task_id} from camunda queue {topic_name}.")
 
     # Clients
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    camunda_client = CamundaClient(config)
     TASK_LOGGER.debug("Receiving plugin step.")
 
     try:
@@ -241,7 +240,7 @@ def qhana_step_watcher(
 def check_task_status(self, url: str, external_task_id: str, last_step_count=0):
     # TODO: Timeout if no result after a long time (or workflow task removed)
     try:
-        response = requests.get(url, timeout=config.get("request_timeout", 5 * 60))
+        response = requests.get(url, timeout=config["request_timeout"])
         response.raise_for_status()
         contents = response.json()
 
@@ -275,7 +274,7 @@ def check_task_status(self, url: str, external_task_id: str, last_step_count=0):
 
         outputs = [QhanaOutput.deserialize(output) for output in contents["outputs"]]
 
-        camunda_client = CamundaClient(CamundaConfig.from_config(config))
+        camunda_client = CamundaClient(config)
 
         # Complete external task with qhana task result
         external_task_result = {
@@ -323,7 +322,7 @@ def check_task_status(self, url: str, external_task_id: str, last_step_count=0):
                 }
             }
 
-            camunda_client = CamundaClient(CamundaConfig.from_config(config))
+            camunda_client = CamundaClient(config)
             camunda_client.complete_task(external_task_id, external_task_result)
             return  # exit without retry
 

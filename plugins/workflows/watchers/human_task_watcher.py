@@ -12,9 +12,8 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 from .. import Workflows
-from ..exceptions import WorkflowStoppedError
 from ..clients.camunda_client import CamundaClient
-from ..datatypes.camunda_datatypes import CamundaConfig
+from ..exceptions import WorkflowStoppedError
 
 config = Workflows.instance.config
 
@@ -37,20 +36,13 @@ def persist_workflow_output(
     data_outputs = []
 
     returned_entities = []
-    for var in return_variables:
-        value = var.get("value")
-        name: str = var["name"]
-        while (
-            name.startswith((f'{config["workflow_out"]["prefix"]}.', "qoutput."))
-            and "." in name  # this prevents infinite loops!
-        ):
-            name = name.split(".", maxsplit=1)[-1]
+    for name, var in return_variables.items():
         returned_entities.append(
             {
                 "ID": var["id"],
-                "href": f'{camunda_client.camunda_config.base_url}/history/variable-instance/{var["id"]}',
+                "href": f'{config["camunda_base_url"].rstrip("/")}/history/variable-instance/{var["id"]}',
                 "name": name,
-                "value": value,
+                "value": var["value"],
                 "processDefinitionId": var["processDefinitionId"],
                 "processInstanceId": var["processInstanceId"],
                 "executionId": var["executionId"],
@@ -110,7 +102,7 @@ def human_task_watcher(self, db_id: int) -> None:
     process_instance_id: str = db_task.data["camunda_process_instance_id"]
 
     # Client
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    camunda_client = CamundaClient(config)
 
     # Spawn new human task watcher if workflow instance is still active
     if not camunda_client.is_process_active(process_instance_id):
@@ -157,7 +149,7 @@ def human_task_watcher(self, db_id: int) -> None:
         process_definition_id = db_task.data["camunda_process_definition_id"]
 
         bpmn_properties = {
-            "bpmn_xml_url": f"{camunda_client.camunda_config.base_url}/process-definition/{process_definition_id}/xml",
+            "bpmn_xml_url": f"{camunda_client.config.base_url}/process-definition/{process_definition_id}/xml",
             "human_task_definition_key": human_task.task_definition_key,
         }
 
