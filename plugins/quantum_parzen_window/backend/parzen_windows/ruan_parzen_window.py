@@ -166,8 +166,9 @@ class RuanParzenWindow(ParzenWindow):
         for sample in samples:
             if sample[-1] == 1:
                 label = bitlist_to_int(sample[:-1])
-                label_probs[label] += 1
-                samples_with_one += 1
+                if label < len(label_probs):
+                    label_probs[label] += 1
+                    samples_with_one += 1
         return self.unique_labels[label_probs.argmax()]
 
     def label_point(self, x: np.ndarray) -> int:
