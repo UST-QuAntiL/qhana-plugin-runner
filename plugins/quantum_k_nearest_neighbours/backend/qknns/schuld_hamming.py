@@ -18,7 +18,13 @@ import numpy as np
 import pennylane as qml
 from ..data_loading_circuits import QAM
 from .qknn import QkNN
-from ..utils import bitlist_to_int, int_to_bitlist, check_binary, ceil_log2, check_for_duplicates
+from ..utils import (
+    bitlist_to_int,
+    int_to_bitlist,
+    check_binary,
+    ceil_log2,
+    check_for_duplicates,
+)
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -43,8 +49,7 @@ class SchuldQkNN(QkNN):
         )
 
         check_for_duplicates(
-            self.train_data,
-            "The training data may not contain duplicates."
+            self.train_data, "The training data may not contain duplicates."
         )
 
         self.train_data = np.array(train_data, dtype=int)

@@ -80,8 +80,7 @@ class SimpleHammingQkNN(SimpleQkNN):
             "All the data needs to be binary, when dealing with the hamming distance",
         )
         check_for_duplicates(
-            self.train_data,
-            "The training data may not contain duplicates."
+            self.train_data, "The training data may not contain duplicates."
         )
         self.train_data = np.array(train_data, dtype=int)
 

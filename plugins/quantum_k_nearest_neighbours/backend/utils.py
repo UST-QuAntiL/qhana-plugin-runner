@@ -53,4 +53,3 @@ def check_for_duplicates(data: np.ndarray, error_msg: str):
     print(f"Checking the following data for duplicates:\n{data}")
     if len(np.unique(data, axis=0)) != len(data):
         raise ValueError(error_msg)
-
