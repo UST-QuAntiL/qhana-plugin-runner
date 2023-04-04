@@ -102,7 +102,7 @@ class SchuldQkNN(QkNN):
         label_probs = np.zeros(len(self.unique_labels))
         for sample in samples:
             label = bitlist_to_int(sample[1:])
-            if sample[0] == 0:
+            if sample[0] == 0 and label < len(label_probs):
                 label_probs[label] += 1
         return self.unique_labels[label_probs.argmax()]
 

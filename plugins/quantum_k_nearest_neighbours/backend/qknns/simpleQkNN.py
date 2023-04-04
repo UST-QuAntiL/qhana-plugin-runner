@@ -145,10 +145,11 @@ class SimpleHammingQkNN(SimpleQkNN):
         # Count how often a certain point was measured (total_ancilla)
         # and how often the ancilla qubit was zero (num_zero_ancilla)
         for sample in samples:
-            idx = self.point_num_to_idx[bitlist_to_int(sample[:-1])]
-            total_ancilla[idx] += 1
-            if sample[-1] == 0:
-                num_zero_ancilla[idx] += 1
+            idx = self.point_num_to_idx.get(bitlist_to_int(sample[:-1]), None)
+            if idx is not None:
+                total_ancilla[idx] += 1
+                if sample[-1] == 0:
+                    num_zero_ancilla[idx] += 1
         # Get prob for ancilla qubit to be equal to 0
         for i, (total_anc_, num_zero_anc) in enumerate(
             zip(total_ancilla, num_zero_ancilla)
