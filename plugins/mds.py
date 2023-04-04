@@ -358,11 +358,13 @@ def calculation_task(self, db_id: int) -> str:
     transformed = mds.fit_transform(distance_matrix)
 
     entity_points = []
+    dim_attributes = _get_dim_attributes(dimensions)
 
     for ent_id, idx in id_to_idx.items():
-        entity_points.append(
-            {"ID": ent_id, "href": "", "point": [x for x in transformed[idx]]}
-        )
+        new_entity_point = {"ID": ent_id, "href": ""}
+        new_entity_point.update({d: x for d, x in zip(dim_attributes, transformed[idx])})
+
+        entity_points.append(new_entity_point)
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
@@ -375,3 +377,16 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     return "Result stored in file"
+
+
+def _get_dim_attributes(dim):
+    """
+    Returns the attributes for each dimension, with the correct length.
+    For each dimension we have an attribute, i.e. dimension 0 = dim0, dimension 1 = dim1, ...
+    This method adds a zero padding to ensure that every dim<int> has the same length, e.g. dim00, dim01, ..., dim10, dim11
+    :params dim: int number of dimensions
+    :return: list[str]
+    """
+    zero_padding = len(str(dim - 1))
+    dim_attributes = [f"dim{d:0{zero_padding}}" for d in range(dim)]
+    return dim_attributes
