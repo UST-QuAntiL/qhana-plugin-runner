@@ -61,6 +61,7 @@ def calculation_task(self, db_id: int) -> str:
     maxiter = input_params.maxiter
     init_enum = input_params.init_enum
     method_enum = input_params.method_enum
+    visualize = input_params.visualize
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
@@ -79,13 +80,15 @@ def calculation_task(self, db_id: int) -> str:
         for _id, _label in zip(id_list, predictions)
     ]
 
-    fig = plot_data(
-        points,
-        id_list,
-        predictions,
-        only_first_100=True,
-        title=f"Classical {num_clusters}-Medoids Clusters",
-    )
+    fig = None
+    if visualize:
+        fig = plot_data(
+            points,
+            id_list,
+            predictions,
+            only_first_100=True,
+            title=f"Classical {num_clusters}-Medoids Clusters",
+        )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:

@@ -39,12 +39,14 @@ class InputParameters:
         maxiter: int,
         init_enum: None,
         method_enum: None,
+        visualize: bool = False,
     ):
         self.entity_points_url = entity_points_url
         self.num_clusters = num_clusters
         self.maxiter = maxiter
         self.init_enum = init_enum
         self.method_enum = method_enum
+        self.visualize = visualize
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -109,6 +111,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Method",
             "description": "Which algorithm to use. ‘alternate’ is faster while ‘pam’ is more accurate.",
             "input_type": "select",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Visualize",
+            "description": "Plot the clustered data.",
+            "input_type": "checkbox",
         },
     )
 
