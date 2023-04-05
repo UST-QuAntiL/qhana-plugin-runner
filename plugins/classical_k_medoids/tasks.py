@@ -32,6 +32,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 from qhana_plugin_runner.storage import STORE
 
 from .backend.load_utils import get_indices_and_point_arr
+from .backend.visualize import plot_data
 
 from sklearn_extra.cluster import KMedoids
 
@@ -72,10 +73,19 @@ def calculation_task(self, db_id: int) -> str:
         random_state=0,
         max_iter=maxiter,
     )
+    predictions = kmeans.fit_predict(points)
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
-        for _id, _label in zip(id_list, kmeans.fit_predict(points))
+        for _id, _label in zip(id_list, predictions)
     ]
+
+    fig = plot_data(
+        points,
+        id_list,
+        predictions,
+        only_first_100=True,
+        title=f"Classical {num_clusters}-Medoids Clusters",
+    )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
@@ -87,5 +97,18 @@ def calculation_task(self, db_id: int) -> str:
             "entity/label",
             "application/json",
         )
+
+    if fig is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "cluster_plot.html",
+                "plot",
+                "text/html",
+            )
 
     return "Result stored in file"
