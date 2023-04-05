@@ -46,7 +46,7 @@ class ClassicalKMedoids(QHAnaPluginBase):
         return ClassicKMedoids_BLP
 
     def get_requirements(self) -> str:
-        return "scikit-learn-extra~=0.2.0"
+        return "plotly~=5.6.0\nscikit-learn-extra~=0.2.0"
 
 
 try:
