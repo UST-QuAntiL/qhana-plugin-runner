@@ -14,9 +14,7 @@
 
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import numpy as np
-from sklearn.metrics import confusion_matrix
 
 
 def plot_data(
