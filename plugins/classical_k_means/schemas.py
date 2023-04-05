@@ -35,11 +35,13 @@ class InputParameters:
         num_clusters: int,
         maxiter: int,
         relative_residual: float,
+        visualize: bool = False,
     ):
         self.entity_points_url = entity_points_url
         self.num_clusters = num_clusters
         self.maxiter = maxiter
         self.relative_residual = relative_residual
+        self.visualize = visualize
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -84,6 +86,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Relative Residual",
             "description": "The amount in percentage of how many data points can change their labels between two runs, e.g. if set to 5, then less than 5% of the data points may change for the algorithm to be considered as converged.",
             "input_type": "number",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Visualize",
+            "description": "Plot the clustered data.",
+            "input_type": "checkbox",
         },
     )
 

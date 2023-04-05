@@ -32,6 +32,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 from qhana_plugin_runner.storage import STORE
 
 from .backend.load_utils import get_indices_and_point_arr
+from .backend.visualize import plot_data
 from sklearn.cluster import KMeans
 
 
@@ -58,6 +59,7 @@ def calculation_task(self, db_id: int) -> str:
     num_clusters = input_params.num_clusters
     maxiter = input_params.maxiter
     relative_residual = input_params.relative_residual
+    visualize = input_params.visualize
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
@@ -65,11 +67,21 @@ def calculation_task(self, db_id: int) -> str:
 
     tol = relative_residual / 100.0
     kmeans = KMeans(n_clusters=num_clusters, random_state=0, max_iter=maxiter, tol=tol)
+    predictions = kmeans.fit_predict(points)
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
-        for _id, _label in zip(id_list, kmeans.fit_predict(points))
+        for _id, _label in zip(id_list, predictions)
     ]
-    print(f"labels: {labels}")
+
+    fig = None
+    if visualize:
+        fig = plot_data(
+            points,
+            id_list,
+            predictions,
+            only_first_100=True,
+            title=f"Classical {num_clusters}-Medoids Clusters",
+        )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
@@ -81,5 +93,18 @@ def calculation_task(self, db_id: int) -> str:
             "entity/label",
             "application/json",
         )
+
+    if fig is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "cluster_plot.html",
+                "plot",
+                "text/html",
+            )
 
     return "Result stored in file"
