@@ -16,7 +16,6 @@ import os
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
-import numpy as np
 
 from celery.utils.log import get_task_logger
 
@@ -33,7 +32,10 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 )
 from qhana_plugin_runner.storage import STORE
 
+import numpy as np
+
 from .backend.load_utils import load_matrix_url
+from .backend.max_cut_clustering import MaxCutClustering
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -91,8 +93,9 @@ def calculation_task(self, db_id: int) -> str:
     )
 
     # Cluster data
-    cluster_algo = max_cut_enum.get_max_cut(num_clusters, **quantum_parameters)
-    labels = cluster_algo.create_cluster(None, np.array(similarity_matrix))
+    max_cut_solver = max_cut_enum.get_solver(**quantum_parameters)
+    max_cut_cluster = MaxCutClustering(max_cut_solver, num_clusters)
+    labels = max_cut_cluster.create_cluster(np.array(similarity_matrix))
 
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}

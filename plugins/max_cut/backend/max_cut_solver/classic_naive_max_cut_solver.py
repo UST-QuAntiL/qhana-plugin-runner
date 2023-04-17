@@ -1,4 +1,4 @@
-from . import MaxCutSolver
+import numpy as np
 import networkx as nx
 from itertools import chain, combinations
 from typing import Set
@@ -10,14 +10,9 @@ from celery.utils.log import get_task_logger
 TASK_LOGGER = get_task_logger(__name__)
 
 
-class ClassicNaiveMaxCutSolver(MaxCutSolver):
-    """
-    Instantiates the ClassicNaiveMaxCutSolver with the graph.
-    """
-
-    def __init__(self, graph: nx.Graph) -> None:
-        super().__init__(graph)
-        return
+class ClassicNaiveMaxCutSolver:
+    def __init__(self, graph: nx.Graph):
+        self.graph = graph
 
     """
     Solves the max cut problem classically and
@@ -27,28 +22,24 @@ class ClassicNaiveMaxCutSolver(MaxCutSolver):
     correspond to the cut.
     """
 
-    def solve(self):
-        cut = []
+    def solve(self) -> (np.array, float):
         nodes = set(self.graph.nodes())
         powerset = set(self.__get_powerset(nodes))
 
         largestCutValue = 0.0
-        lagestCutSubset = None
+        largestCutSubset = None
         tempCutValue = 0.0
 
         printMod = 100
         probsize = len(powerset)
         count = 0
 
-        TASK_LOGGER.debug("Start solving maxcut using classical naive solver")
-        TASK_LOGGER.debug("Problem size (i.e. edges) = " + str(probsize))
-
         for subset in powerset:
             count = count + 1
             tempCutValue = self.__calculate_cut_value(nodes, set(subset))
             if tempCutValue > largestCutValue:
                 largestCutValue = tempCutValue
-                lagestCutSubset = set(subset)
+                largestCutSubset = list(subset)
 
             # Print output
             if count % printMod == 0:
@@ -56,7 +47,11 @@ class ClassicNaiveMaxCutSolver(MaxCutSolver):
             if count >= probsize:
                 break
 
-        return (largestCutValue, self.__calculate_cut_edges(nodes, lagestCutSubset))
+        largestCutSubset = np.array(largestCutSubset)
+        cut = np.zeros(len(nodes))
+        cut[largestCutSubset] = 1
+
+        return cut, largestCutValue
 
     def __calculate_cut_edges(self, set: Set, subset: Set):
         diffSubSet = set - subset

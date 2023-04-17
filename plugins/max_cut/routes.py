@@ -55,7 +55,7 @@ class PluginsView(MethodView):
             description=MaxCut.instance.description,
             name=MaxCut.instance.identifier,
             version=MaxCut.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{MaxCut_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{MaxCut_BLP.name}.MicroFrontend"),

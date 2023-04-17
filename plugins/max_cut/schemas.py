@@ -24,7 +24,7 @@ from qhana_plugin_runner.api.util import (
 from .backend.entanglement_pattern import EntanglementPatternEnum
 from .backend.optimizer import OptimizerEnum
 from .backend.qiskit_backends import QiskitBackendEnum
-from .backend.max_cut_clustering import MaxCutClusteringEnum
+from .backend.max_cut_solver import MaxCutSolverEnum
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -37,7 +37,7 @@ class InputParameters:
     def __init__(
         self,
         similarity_matrix_url: str,
-        max_cut_enum: MaxCutClusteringEnum,
+        max_cut_enum: MaxCutSolverEnum,
         num_clusters: int,
         optimizer: OptimizerEnum,
         max_trials: int,
@@ -79,12 +79,12 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
     max_cut_enum = EnumField(
-        MaxCutClusteringEnum,
+        MaxCutSolverEnum,
         required=True,
         allow_none=False,
         metadata={
-            "label": "Max Cut Type",
-            "description": "Determines the max cut type.",
+            "label": "Max Cut Solver",
+            "description": "Determines the max cut solver.",
             "input_type": "select",
         },
     )
