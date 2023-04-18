@@ -63,7 +63,9 @@ def calculation_task(self, db_id: int) -> str:
     epsilon = None if input_params.epsilon < 0 else input_params.epsilon
     xi = input_params.xi
     predecessor_correction = input_params.predecessor_correction
-    min_cluster_size = None if input_params.min_cluster_size < 0 else input_params.min_cluster_size
+    min_cluster_size = (
+        None if input_params.min_cluster_size < 0 else input_params.min_cluster_size
+    )
     algorithm_enum = input_params.algorithm_enum
     leaf_size = input_params.leaf_size
 

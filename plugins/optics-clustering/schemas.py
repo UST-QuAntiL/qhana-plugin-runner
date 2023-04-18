@@ -90,9 +90,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
         validate=ma.validate.And(
-            validate_float_in_interval_else_int(0, 1, min_inclusive=True, max_inclusive=True),
-            ma.validate.Range(min=0, min_inclusive=True)
-        )
+            validate_float_in_interval_else_int(
+                0, 1, min_inclusive=True, max_inclusive=True
+            ),
+            ma.validate.Range(min=0, min_inclusive=True),
+        ),
     )
     max_epsilon = ma.fields.Float(
         required=True,
@@ -149,7 +151,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Determines the minimum steepness on the reachability plot that constitutes a cluster boundary. For example, an upwards point in the reachability plot is defined by the ratio from one point to its successor being at most 1-xi. Used only when cluster_method='xi'.",
             "input_type": "number",
         },
-        validate=ma.validate.Range(min=0, max=1, min_inclusive=True, max_inclusive=False)
+        validate=ma.validate.Range(min=0, max=1, min_inclusive=True, max_inclusive=False),
     )
     predecessor_correction = ma.fields.Boolean(
         required=False,
