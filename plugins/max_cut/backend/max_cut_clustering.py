@@ -65,6 +65,10 @@ class MaxCutClustering:
         else:
             if len(label) == 1 or len(label) == 0:
                 return label
+
+            if not similarity_matrix.any():
+                return np.zeros(similarity_matrix.shape[0], dtype=int)
+
             new_label = self.__label_via_max_cut(similarity_matrix)
 
             z = -1
@@ -104,9 +108,6 @@ class MaxCutClustering:
             return label_all
 
     def __label_via_max_cut(self, adjacency_matrix: np.array) -> np.array:
-        if not adjacency_matrix.any():
-            return np.zeros(adjacency_matrix.shape[0], dtype=int)
-
         # Solve
         (cut, cutValue) = self.__max_cut_solver(adjacency_matrix)
 
