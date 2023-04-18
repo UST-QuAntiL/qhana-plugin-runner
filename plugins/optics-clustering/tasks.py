@@ -56,14 +56,14 @@ def calculation_task(self, db_id: int) -> str:
 
     entity_points_url = input_params.entity_points_url
     min_samples = input_params.min_samples
-    max_epsilon = input_params.max_epsilon
+    max_epsilon = np.inf if input_params.max_epsilon < 0 else input_params.max_epsilon
     metric_enum = input_params.metric_enum
     minkowski_p = input_params.minkowski_p
     method_enum = input_params.method_enum
-    epsilon = input_params.epsilon
+    epsilon = None if input_params.epsilon < 0 else input_params.epsilon
     xi = input_params.xi
     predecessor_correction = input_params.predecessor_correction
-    min_cluster_size = input_params.min_cluster_size
+    min_cluster_size = None if input_params.min_cluster_size < 0 else input_params.min_cluster_size
     algorithm_enum = input_params.algorithm_enum
     leaf_size = input_params.leaf_size
 

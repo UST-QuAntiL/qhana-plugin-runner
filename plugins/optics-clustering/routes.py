@@ -120,7 +120,15 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         fields = schema.fields
         # define default values
-        default_values = {}
+        default_values = {
+            fields["min_samples"].data_key: 5,
+            fields["max_epsilon"].data_key: -1,
+            fields["minkowski_p"].data_key: 2,
+            fields["epsilon"].data_key: -1,
+            fields["xi"].data_key: 0.05,
+            fields["min_cluster_size"].data_key: -1,
+            fields["leaf_size"].data_key: 30,
+        }
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)

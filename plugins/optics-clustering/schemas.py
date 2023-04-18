@@ -21,6 +21,8 @@ from qhana_plugin_runner.api.util import (
     FileUrl,
 )
 
+from .validation_functions import validate_float_in_interval_else_int
+
 from .backend.cluster_methods import MethodEnum
 from .backend.metrics import MetricEnum
 from .backend.algorithms import AlgorithmEnum
@@ -37,15 +39,15 @@ class InputParameters:
         self,
         entity_points_url: str,
         min_samples: int,
-        max_epsilon: float,
         metric_enum: None,
         minkowski_p: int,
         method_enum: None,
-        epsilon: float,
         xi: float,
-        min_cluster_size: float,
         algorithm_enum: None,
         leaf_size: int,
+        max_epsilon: float,
+        epsilon: float = None,
+        min_cluster_size: float = None,
         predecessor_correction: bool = False,
     ):
         self.entity_points_url = entity_points_url
@@ -79,7 +81,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    min_samples = ma.fields.Integer(
+    min_samples = ma.fields.Float(
         required=True,
         allow_none=False,
         metadata={
@@ -87,13 +89,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The number of samples in a neighborhood for a point to be considered as a core point. Also, up and down steep regions can’t have more then min_samples consecutive non-steep points. Expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2).",
             "input_type": "number",
         },
+        validate=ma.validate.And(
+            validate_float_in_interval_else_int(0, 1, min_inclusive=True, max_inclusive=True),
+            ma.validate.Range(min=0, min_inclusive=True)
+        )
     )
     max_epsilon = ma.fields.Float(
         required=True,
         allow_none=False,
         metadata={
             "label": "Max Epsilon",
-            "description": "The maximum distance between two samples for one to be considered as in the neighborhood of the other. Default value of np.inf will identify clusters across all scales; reducing max_eps will result in shorter run times.",
+            "description": "The maximum distance between two samples for one to be considered as in the neighborhood of the other. If less than 0, then the value is set to np.inf and thus, will identify clusters across all scales; reducing max_eps will result in shorter run times.",
             "input_type": "number",
         },
     )
@@ -107,7 +113,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    minkowski_p = ma.fields.Integer(
+    minkowski_p = ma.fields.Float(
         required=True,
         allow_none=False,
         metadata={
@@ -131,7 +137,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Epsilon",
-            "description": "The maximum distance between two samples for one to be considered as in the neighborhood of the other. By default it assumes the same value as max_eps. Used only when cluster_method='dbscan'.",
+            "description": "The maximum distance between two samples for one to be considered as in the neighborhood of the other. If less than 0, it assumes the same value as max_eps. Used only when cluster_method='dbscan'.",
             "input_type": "number",
         },
     )
@@ -143,10 +149,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Determines the minimum steepness on the reachability plot that constitutes a cluster boundary. For example, an upwards point in the reachability plot is defined by the ratio from one point to its successor being at most 1-xi. Used only when cluster_method='xi'.",
             "input_type": "number",
         },
+        validate=ma.validate.Range(min=0, max=1, min_inclusive=True, max_inclusive=False)
     )
     predecessor_correction = ma.fields.Boolean(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={
             "label": "Predecessor Correction",
             "description": "Correct clusters according to the predecessors calculated by OPTICS [R2c55e37003fe-2]. This parameter has minimal effect on most datasets. Used only when cluster_method='xi'.",
@@ -158,7 +165,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Min Cluster Size",
-            "description": "Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If None, the value of min_samples is used instead. Used only when cluster_method='xi'.",
+            "description": "Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If less than 0, the value of min_samples is used instead. Used only when cluster_method='xi'.",
             "input_type": "number",
         },
     )
