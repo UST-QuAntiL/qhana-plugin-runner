@@ -55,7 +55,11 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entity_points_url = input_params.entity_points_url
-    min_samples = int(input_params.min_samples) if input_params.min_samples > 1 else input_params.min_samples
+    min_samples = (
+        int(input_params.min_samples)
+        if input_params.min_samples > 1
+        else input_params.min_samples
+    )
     max_epsilon = np.inf if input_params.max_epsilon < 0 else input_params.max_epsilon
     metric_enum = input_params.metric_enum
     minkowski_p = input_params.minkowski_p
