@@ -110,7 +110,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "Initialization",
+            "label": "Metric",
             "description": "Metric to use for distance computation. Any metric from scikit-learn or scipy.spatial.distance can be used.",
             "input_type": "select",
         },
