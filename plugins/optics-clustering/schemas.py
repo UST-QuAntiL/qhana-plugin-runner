@@ -81,6 +81,26 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    method_enum = EnumField(
+        MethodEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Cluster Method",
+            "description": "The extraction method used to extract clusters using the calculated reachability and ordering. Possible values are “xi” and “dbscan”.",
+            "input_type": "select",
+        },
+    )
+    algorithm_enum = EnumField(
+        AlgorithmEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Algorithm",
+            "description": "Optional algorithm used to compute the nearest neighbors: ‘ball_tree’ will use BallTree ‘kd_tree’ will use KDTree ‘brute’ will use a brute-force search. ‘auto’ will attempt to decide the most appropriate algorithm based on the values passed to fit method.",
+            "input_type": "select",
+        },
+    )
     min_samples = ma.fields.Float(
         required=True,
         allow_none=False,
@@ -124,16 +144,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
     )
-    method_enum = EnumField(
-        MethodEnum,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Cluster Method",
-            "description": "The extraction method used to extract clusters using the calculated reachability and ordering. Possible values are “xi” and “dbscan”.",
-            "input_type": "select",
-        },
-    )
     epsilon = ma.fields.Float(
         required=True,
         allow_none=False,
@@ -169,16 +179,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Min Cluster Size",
             "description": "Minimum number of samples in an OPTICS cluster, expressed as an absolute number or a fraction of the number of samples (rounded to be at least 2). If less than 0, the value of min_samples is used instead. Used only when cluster_method='xi'.",
             "input_type": "number",
-        },
-    )
-    algorithm_enum = EnumField(
-        AlgorithmEnum,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Algorithm",
-            "description": "Optional algorithm used to compute the nearest neighbors: ‘ball_tree’ will use BallTree ‘kd_tree’ will use KDTree ‘brute’ will use a brute-force search. ‘auto’ will attempt to decide the most appropriate algorithm based on the values passed to fit method.",
-            "input_type": "select",
         },
     )
     leaf_size = ma.fields.Integer(

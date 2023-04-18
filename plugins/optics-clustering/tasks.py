@@ -19,6 +19,7 @@ from typing import Optional
 from celery.utils.log import get_task_logger
 
 from . import Optics
+from sklearn.cluster import OPTICS
 
 from .schemas import (
     InputParameters,
@@ -33,7 +34,6 @@ from qhana_plugin_runner.storage import STORE
 
 import numpy as np
 
-from .backend.optics import OpticsClustering
 from .backend.load_utils import get_indices_and_point_arr
 
 
@@ -55,7 +55,7 @@ def calculation_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     entity_points_url = input_params.entity_points_url
-    min_samples = input_params.min_samples
+    min_samples = int(input_params.min_samples) if input_params.min_samples > 1 else input_params.min_samples
     max_epsilon = np.inf if input_params.max_epsilon < 0 else input_params.max_epsilon
     metric_enum = input_params.metric_enum
     minkowski_p = input_params.minkowski_p
@@ -73,21 +73,22 @@ def calculation_task(self, db_id: int) -> str:
 
     id_list, points = get_indices_and_point_arr(entity_points_url)
 
-    optics_clustering = OpticsClustering(
-        min_samples,
-        max_epsilon,
-        metric_enum.get_metric(),
-        minkowski_p,
-        None,
-        method_enum.get_method(),
-        epsilon,
-        xi,
-        predecessor_correction,
-        min_cluster_size,
-        algorithm_enum.get_algorithm(),
-        leaf_size,
+    optics = OPTICS(
+        min_samples=min_samples,
+        max_eps=max_epsilon,
+        metric=metric_enum.get_metric(),
+        p=minkowski_p,
+        # metric_params=None,
+        cluster_method=method_enum.get_method(),
+        eps=epsilon,
+        xi=xi,
+        predecessor_correction=predecessor_correction,
+        min_cluster_size=min_cluster_size,
+        algorithm=algorithm_enum.get_algorithm(),
+        leaf_size=leaf_size,
+        # n_jobs=n_jobs,
     )
-    labels = optics_clustering.create_cluster(np.array(points), None)
+    labels = optics.fit_predict(np.array(points))
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
         for _id, _label in zip(id_list, labels)
