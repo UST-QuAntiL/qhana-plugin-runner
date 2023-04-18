@@ -9,6 +9,7 @@ class MaxCutClustering:
     """
     Interface for Clustering Object
     """
+
     def __init__(self, max_cut_solver, number_of_clusters=1):
         self.__max_cut_solver = max_cut_solver
         self.__number_of_clusters = number_of_clusters
@@ -103,7 +104,6 @@ class MaxCutClustering:
             return label_all
 
     def __label_via_max_cut(self, adjacency_matrix: np.array) -> np.array:
-
         if not adjacency_matrix.any():
             return np.zeros(adjacency_matrix.shape[0], dtype=int)
 

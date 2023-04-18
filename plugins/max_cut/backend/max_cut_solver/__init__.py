@@ -37,8 +37,10 @@ class MaxCutSolverEnum(Enum):
         elif self == MaxCutSolverEnum.classic_naive:
             return classic_naive_maxcut
         elif self == MaxCutSolverEnum.vqe:
+
             def simpler_vqe(adjacency_matrix) -> (np.array, float):
                 return vqe_maxcut(adjacency_matrix, **kwargs)
+
             return simpler_vqe
 
 
@@ -66,7 +68,13 @@ def classic_naive_maxcut(adjacency_matrix: np.array) -> (np.array, float):
 
 def vqe_maxcut(
     adjacency_matrix: np.array,
-    backend: BaseSampler, optimizer: Optimizer, reps: int, entanglement: str, **kwargs
+    backend: BaseSampler,
+    optimizer: Optimizer,
+    reps: int,
+    entanglement: str,
+    **kwargs,
 ) -> (np.array, float):
-    vqe = VQEMaxCutSolver(adjacency_matrix, backend, optimizer, reps=reps, entanglement=entanglement)
+    vqe = VQEMaxCutSolver(
+        adjacency_matrix, backend, optimizer, reps=reps, entanglement=entanglement
+    )
     return vqe.solve()
