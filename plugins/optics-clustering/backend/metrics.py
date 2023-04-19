@@ -24,10 +24,10 @@ class MetricEnum(Enum):
     # precomputed = "precomputed" # possible but not implemented
     rogerstanimoto = "rogerstanimoto"  # Ball_Tree, Brute
     russellrao = "russellrao"  # Ball_Tree, Brute
-    seuclidean = "seuclidean"  # Ball_Tree, Brute
+    # seuclidean = "seuclidean"  # Ball_Tree, Brute # possible but expects more input parameters
     sokalmichener = "sokalmichener"  # Ball_Tree, Brute
     sokalsneath = "sokalsneath"  # Ball_Tree, Brute
-    # sqeuclidean = "sqeuclidean"  # Brute  # possible but expects more input parameters
+    sqeuclidean = "sqeuclidean"  # Brute
     # wminkowski = "wminkowski"  # Ball_Tree    # possible but expects more input parameters
     yule = "yule"  # Brute
 
