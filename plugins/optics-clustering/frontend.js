@@ -1,5 +1,19 @@
 var algorithm_enum_val = document.getElementById("algorithm_enum");
 var metric_enum_val = document.getElementById("metric_enum");
+var method_enum_val = document.getElementById("method_enum");
+var epsilon_val = document.getElementById("epsilon");
+var xi_val = document.getElementById("xi");
+var min_cluster_size_val = document.getElementById("min_cluster_size");
+var leaf_size_val = document.getElementById("leaf_size");
+var minkowski_p_val = document.getElementById("minkowski_p");
+
+
+var epsilon_dis = epsilon_val.parentNode.parentNode;
+var xi_dis = xi_val.parentNode.parentNode;
+var predecessor_correction_dis = document.getElementById("predecessor_correction").parentNode.parentNode;
+var min_cluster_size_dis = min_cluster_size_val.parentNode.parentNode;
+var leaf_size_dis = leaf_size_val.parentNode.parentNode;
+var minkowski_p_dis = minkowski_p_val.parentNode.parentNode;
 
 function set_union(setA, setB) {
     const _union = new Set(setA);
@@ -23,7 +37,7 @@ function set_metric_options(active_options) {
 
 
 function algorithm_enum_change() {
-    console.log("change algorithm enum")
+    leaf_size_dis.style.display = "block"
     if (algorithm_enum_val.value === "ball_tree") {
         set_metric_options(ball_tree_metrics);
     }
@@ -31,6 +45,8 @@ function algorithm_enum_change() {
         set_metric_options(kd_tree_metrics);
     }
     else if (algorithm_enum_val.value === "brute") {
+        leaf_size_dis.style.display = "none"
+        leaf_size_val.value = 30;
         set_metric_options(brute_metrics);
     }
     else if (algorithm_enum_val.value === "auto") {
@@ -39,5 +55,41 @@ function algorithm_enum_change() {
 }
 
 
+function method_enum_change() {
+    epsilon_dis.style.display = "none";
+    xi_dis.style.display = "none";
+    predecessor_correction_dis.style.display = "none";
+    min_cluster_size_dis.style.display = "none";
+    if (method_enum_val.value === "dbscan") {
+        epsilon_dis.style.display = "block";
+
+        xi_val.value = 0.05;
+        min_cluster_size_val.value = -1;
+    }
+    else if (method_enum_val.value === "xi") {
+        xi_dis.style.display = "block";
+        predecessor_correction_dis.style.display = "block";
+        min_cluster_size_dis.style.display = "block";
+
+        epsilon_val.value = -1;
+    }
+}
+
+
+function metric_enum_change() {
+    minkowski_p_dis.style.display = "none";
+    if (metric_enum_val.value === "minkowski") {
+        minkowski_p_dis.style.display = "block";
+    }
+    else {
+        minkowski_p_val.value = 2;
+    }
+}
+
+
 algorithm_enum_val.addEventListener("change", algorithm_enum_change);
 algorithm_enum_change();
+method_enum_val.addEventListener("change", method_enum_change);
+method_enum_change();
+metric_enum_val.addEventListener("change", metric_enum_change);
+metric_enum_change();

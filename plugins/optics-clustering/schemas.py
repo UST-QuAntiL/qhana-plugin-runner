@@ -91,16 +91,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    algorithm_enum = EnumField(
-        AlgorithmEnum,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Algorithm",
-            "description": "Optional algorithm used to compute the nearest neighbors: ‘ball_tree’ will use BallTree ‘kd_tree’ will use KDTree ‘brute’ will use a brute-force search. ‘auto’ will attempt to decide the most appropriate algorithm based on the values passed to fit method.",
-            "input_type": "select",
-        },
-    )
     min_samples = ma.fields.Float(
         required=True,
         allow_none=False,
@@ -122,25 +112,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Max Epsilon",
             "description": "The maximum distance between two samples for one to be considered as in the neighborhood of the other. If less than 0, then the value is set to np.inf and thus, will identify clusters across all scales; reducing max_eps will result in shorter run times.",
-            "input_type": "number",
-        },
-    )
-    metric_enum = EnumField(
-        MetricEnum,
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Metric",
-            "description": "Metric to use for distance computation. Any metric from scikit-learn or scipy.spatial.distance can be used.",
-            "input_type": "select",
-        },
-    )
-    minkowski_p = ma.fields.Float(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Minkowski Parameter p",
-            "description": "Parameter for the Minkowski metric from sklearn.metrics.pairwise_distances. When p = 1, this is equivalent to using manhattan_distance (l1), and euclidean_distance (l2) for p = 2. For arbitrary p, minkowski_distance (l_p) is used.",
             "input_type": "number",
         },
     )
@@ -181,12 +152,41 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
     )
+    algorithm_enum = EnumField(
+        AlgorithmEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Algorithm",
+            "description": "Optional algorithm used to compute the nearest neighbors: ‘ball_tree’ will use BallTree ‘kd_tree’ will use KDTree ‘brute’ will use a brute-force search. ‘auto’ will attempt to decide the most appropriate algorithm based on the values passed to fit method.",
+            "input_type": "select",
+        },
+    )
     leaf_size = ma.fields.Integer(
         required=True,
         allow_none=False,
         metadata={
             "label": "Leaf Size",
             "description": "Leaf size passed to BallTree or KDTree. This can affect the speed of the construction and query, as well as the memory required to store the tree. The optimal value depends on the nature of the problem.",
+            "input_type": "number",
+        },
+    )
+    metric_enum = EnumField(
+        MetricEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Metric",
+            "description": "Metric to use for distance computation. Any metric from scikit-learn or scipy.spatial.distance can be used.",
+            "input_type": "select",
+        },
+    )
+    minkowski_p = ma.fields.Float(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Minkowski Parameter p",
+            "description": "Parameter for the Minkowski metric from sklearn.metrics.pairwise_distances. When p = 1, this is equivalent to using manhattan_distance (l1), and euclidean_distance (l2) for p = 2. For arbitrary p, minkowski_distance (l_p) is used.",
             "input_type": "number",
         },
     )
