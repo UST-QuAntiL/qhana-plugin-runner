@@ -16,7 +16,7 @@ class MetricEnum(Enum):
     kulsinski = "kulsinski"  # Ball_Tree, Brute
     l1 = "l1"  # Ball_Tree, KD_Tree, Brute
     l2 = "l2"  # Ball_Tree, KD_Tree, Brute
-    mahalanobis = "mahalanobis"  # Ball_Tree, Brute
+    # mahalanobis = "mahalanobis"  # Ball_Tree, Brute   # possible but expects more input parameters
     manhattan = "manhattan"  # Ball_Tree, KD_Tree, Brute
     matching = "matching"  # Ball_Tree, Brute, Brute
     minkowski = "minkowski"  # Ball_Tree, KD_Tree, Brute
@@ -27,8 +27,8 @@ class MetricEnum(Enum):
     seuclidean = "seuclidean"  # Ball_Tree, Brute
     sokalmichener = "sokalmichener"  # Ball_Tree, Brute
     sokalsneath = "sokalsneath"  # Ball_Tree, Brute
-    sqeuclidean = "sqeuclidean"  # Brute
-    wminkowski = "wminkowski"  # Ball_Tree
+    # sqeuclidean = "sqeuclidean"  # Brute  # possible but expects more input parameters
+    # wminkowski = "wminkowski"  # Ball_Tree    # possible but expects more input parameters
     yule = "yule"  # Brute
 
     def get_metric(self) -> str:
