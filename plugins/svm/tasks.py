@@ -175,10 +175,11 @@ def calculation_task(self, db_id: int) -> str:
             test_data,
             test_id_list,
             test_labels,
-            resolution,
-            predictor,
+            resolution=resolution,
+            predictor=predictor,
             title=plot_title,
             label_to_int=label_to_int,
+            support_vectors=svc.support_,
         )
 
     # Prepare support vectors

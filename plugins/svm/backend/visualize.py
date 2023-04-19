@@ -126,6 +126,13 @@ def add_background(
     return scatter
 
 
+def correct_markers(scatter_plot):
+    for sca_plt in scatter_plot.data:
+        sca_plt.marker["symbol"] = "cross-dot" if "support vectors" in sca_plt.legendgroup else sca_plt.marker["symbol"]
+        sca_plt.marker["symbol"] = "diamond" if "test" in sca_plt.legendgroup else sca_plt.marker["symbol"]
+    return scatter_plot
+
+
 def plot_data(
     train_data,
     train_id_list,
@@ -138,6 +145,7 @@ def plot_data(
     only_first_100=True,
     title="",
     label_to_int=None,
+    support_vectors=None,
 ):
     # Prepare data
     dim = len(train_data[0])
@@ -155,11 +163,16 @@ def plot_data(
     test_labels = [str(el) for el in test_labels[:test_end]]
     labels = train_labels + test_labels
 
+    train_types = ["train"] * len(train_data)
+    if support_vectors is not None:
+        for i in support_vectors:
+            train_types[i] = "support vectors"
+
     data_frame_content = dict(
         ID=ids,
         size=[10] * len(ids),
         label=labels,
-        type=["train"] * len(train_data) + ["test"] * len(test_data),
+        type=train_types + ["test"] * len(test_data),
     )
     for d, d_name in enumerate(dimensions):
         data_frame_content[d_name] = points[:, d]
@@ -178,10 +191,12 @@ def plot_data(
             color="label",
             symbol="type",
         )
+        fig = correct_markers(fig)
     elif dim == 2:
         fig = px.scatter(
             df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
+        fig = correct_markers(fig)
 
         if resolution > 0 and predictor is not None:
             fig = add_background(
@@ -197,6 +212,7 @@ def plot_data(
         fig = px.scatter(
             df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
+        fig = correct_markers(fig)
 
     fig.update_layout(
         dict(
