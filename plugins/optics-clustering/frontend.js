@@ -7,8 +7,9 @@ function set_union(setA, setB) {
     return _union;
 }
 
-const ball_tree_metrics = new Set(["braycurtis", "canberra", "chebyshev", "cityblock", "dice", "euclidean", "hamming", "haversine", "infinity", "jaccard", "kulsinski", "l1", "l2", "mahalanobis", "manhattan", "matching", "minkowski", "p", "pyfunc", "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener", "sokalsneath", "wminkowski"]);
-const kd_tree_metrics = new Set(['chebyshev', 'cityblock', 'euclidean', 'infinity', 'l1', 'l2', 'manhattan', 'minkowski', 'p']);
+//seuclidean, wminkowski, mahalanobis need more params
+const ball_tree_metrics = new Set(["braycurtis", "canberra", "chebyshev", "cityblock", "dice", "euclidean", "hamming", "haversine", "jaccard", "kulsinski", "l1", "l2", "mahalanobis", "manhattan", "matching", "minkowski", "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener", "sokalsneath", "wminkowski"]);
+const kd_tree_metrics = new Set(['chebyshev', 'cityblock', 'euclidean', 'l1', 'l2', 'manhattan', 'minkowski']);
 const brute_metrics = new Set(['braycurtis', 'canberra', 'chebyshev', 'cityblock', 'correlation', 'cosine', 'dice', 'euclidean', 'hamming', 'haversine', 'jaccard', 'kulsinski', 'l1', 'l2', 'mahalanobis', 'manhattan', 'matching', 'minkowski', 'nan_euclidean', 'precomputed', 'rogerstanimoto', 'russellrao', 'seuclidean', 'sokalmichener', 'sokalsneath', 'sqeuclidean', 'yule']);
 const auto_metrics = set_union(set_union(ball_tree_metrics, kd_tree_metrics), brute_metrics);
 

@@ -12,7 +12,6 @@ class MetricEnum(Enum):
     euclidean = "euclidean"  # Ball_Tree, KD_Tree, Brute
     hamming = "hamming"  # Ball_Tree, Brute
     haversine = "haversine"  # Ball_Tree, Brute
-    infinity = "infinity"  # Ball_Tree, KD_Tree
     jaccard = "jaccard"  # Ball_Tree, Brute
     kulsinski = "kulsinski"  # Ball_Tree, Brute
     l1 = "l1"  # Ball_Tree, KD_Tree, Brute
@@ -22,7 +21,6 @@ class MetricEnum(Enum):
     matching = "matching"  # Ball_Tree, Brute, Brute
     minkowski = "minkowski"  # Ball_Tree, KD_Tree, Brute
     nan_euclidean = "nan_euclidean"  # Brute
-    p = "p"  # Ball_Tree, KD_Tree
     # precomputed = "precomputed" # possible but not implemented
     rogerstanimoto = "rogerstanimoto"  # Ball_Tree, Brute
     russellrao = "russellrao"  # Ball_Tree, Brute
