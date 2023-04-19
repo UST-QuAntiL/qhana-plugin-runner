@@ -128,8 +128,14 @@ def add_background(
 
 def correct_markers(scatter_plot):
     for sca_plt in scatter_plot.data:
-        sca_plt.marker["symbol"] = "cross-dot" if "support vectors" in sca_plt.legendgroup else sca_plt.marker["symbol"]
-        sca_plt.marker["symbol"] = "diamond" if "test" in sca_plt.legendgroup else sca_plt.marker["symbol"]
+        sca_plt.marker["symbol"] = (
+            "cross-dot"
+            if "support vectors" in sca_plt.legendgroup
+            else sca_plt.marker["symbol"]
+        )
+        sca_plt.marker["symbol"] = (
+            "diamond" if "test" in sca_plt.legendgroup else sca_plt.marker["symbol"]
+        )
     return scatter_plot
 
 
