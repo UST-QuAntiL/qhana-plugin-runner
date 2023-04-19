@@ -76,6 +76,7 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     id_list, points = get_indices_and_point_arr(entity_points_url)
+    points = np.array(points)
 
     optics = OPTICS(
         min_samples=min_samples,
@@ -92,7 +93,7 @@ def calculation_task(self, db_id: int) -> str:
         leaf_size=leaf_size,
         # n_jobs=n_jobs,
     )
-    labels = optics.fit_predict(np.array(points))
+    labels = optics.fit_predict(points)
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
         for _id, _label in zip(id_list, labels)
