@@ -1,13 +1,24 @@
 var max_cut_enum_val = document.getElementById("max_cut_enum");
+var max_trials_val = document.getElementById("max_trials");
+var reps_val = document.getElementById("reps");
+var shots_val = document.getElementById("");
 
 var optimizer_dis = document.getElementById("optimizer").parentNode.parentNode;
-var max_trials_dis = document.getElementById("max_trials").parentNode.parentNode;
-var reps_dis = document.getElementById("reps").parentNode.parentNode;
+var max_trials_dis = max_trials_val.parentNode.parentNode;
+var reps_dis = reps_val.parentNode.parentNode;
 var entanglement_pattern_enum_dis = document.getElementById("entanglement_pattern_enum").parentNode.parentNode;
 var backend_dis = document.getElementById("backend").parentNode.parentNode;
-var shots_dis = document.getElementById("shots").parentNode.parentNode;
+var shots_dis = shots_val.parentNode.parentNode;
 var ibmq_custom_backend_dis = document.getElementById("ibmq_custom_backend").parentNode.parentNode;
 var ibmq_token_dis = document.getElementById("ibmq_token").parentNode.parentNode;
+
+
+function default_values() {
+    max_trials_val.value = 10;
+    reps_val.value = 4;
+    shots_val.value = 1000;
+}
+
 
 function max_cut_enum_change() {
     optimizer_dis.style.display = "none";
@@ -27,6 +38,10 @@ function max_cut_enum_change() {
         shots_dis.style.display = "block";
         ibmq_custom_backend_dis.style.display = "block";
         ibmq_token_dis.style.display = "block";
+    }
+    else {
+        // Sets default value for hidden variables, avoiding validation errors
+        default_values();
     }
 }
 
