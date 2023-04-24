@@ -55,7 +55,7 @@ class PluginsView(MethodView):
             description=QParzenWindow.instance.description,
             name=QParzenWindow.instance.name,
             version=QParzenWindow.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{QParzenWindow_BLP.name}.CalcView"),
                 ui_href=url_for(f"{QParzenWindow_BLP.name}.MicroFrontend"),
