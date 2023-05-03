@@ -88,6 +88,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
         self.inputs[key] = ma.fields.String(
             required=True,
             allow_none=False,
+            data_key=key,
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
@@ -110,6 +111,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
             choices_enum,
             required=True,
             allow_none=False,
+            data_key=key,
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
@@ -133,6 +135,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
             choices_enum,
             required=True,
             allow_none=False,
+            data_key=key,
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
@@ -150,6 +153,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
         self.inputs[key] = FileUrl(
             required=True,
             allow_none=False,
+            data_key=key,
             data_input_type=data_input_type,
             data_content_types=data_content_types,
             metadata={
