@@ -1,7 +1,12 @@
 from typing import Optional
 
 from celery.utils.log import get_task_logger
-from requests.exceptions import RequestException
+from requests.exceptions import (
+    ConnectionError,
+    HTTPError,
+    InvalidJSONError,
+    RequestException,
+)
 
 from qhana_plugin_runner.celery import CELERY
 
@@ -12,6 +17,7 @@ from ...datatypes.camunda_datatypes import ExternalTask
 from ...exceptions import (
     BadInputsError,
     BadTaskDefinitionError,
+    CamundaServerError,
     ExecutionError,
     InvocationError,
     PluginNotFoundError,
@@ -41,7 +47,7 @@ def execute_task(external_task: ExternalTask, camunda_client: CamundaClient, wat
         process_instance_id=external_task.process_instance_id,
     )
     instance_task.link_error(process_workflow_error.s(external_task_id=external_task.id))
-    instance_task.link_error(unlock_task.si(external_task_id=external_task.id))
+
     instance_task.apply_async()
 
 
@@ -111,8 +117,6 @@ def camunda_task_watcher():
     ignore_result=True,
 )
 def process_workflow_error(request, exc, traceback, external_task_id: str):
-    camunda_client = CamundaClient(config)
-
     error_code_prefix = config["workflow_conf"]["workflow_error_prefix"]
 
     error_code = "unknown-error"
@@ -137,9 +141,80 @@ def process_workflow_error(request, exc, traceback, external_task_id: str):
     if message is None:
         message = str(exc)
 
-    camunda_client.external_task_bpmn_error(
+    error_task = send_workflow_error.s(
         external_task_id=external_task_id,
         error_code=f"{error_code_prefix}-{error_code}",
+        message=message,
+    )
+    error_task.link_error(
+        send_workflow_task_failure.si(
+            external_task_id=external_task_id,
+            error_code=f"{error_code_prefix}-{error_code}",
+            message=message,
+        )
+    )
+    error_task.link_error(unlock_task.si(external_task_id=external_task_id))
+
+    error_task.apply_async()
+
+
+@CELERY.task(
+    name=f"{Workflows.instance.identifier}.external.send_workflow_error",
+    ignore_result=True,
+    autoretry_for=(ConnectionError,),
+    retry_backoff=True,
+    max_retries=10,
+)
+def send_workflow_error(external_task_id: str, error_code: str, message: str):
+    camunda_client = CamundaClient(config)
+    try:
+        camunda_client.external_task_bpmn_error(
+            external_task_id=external_task_id,
+            error_code=error_code,
+            error_message=message,
+        )
+    except HTTPError as err:
+        if err.response is not None and err.response.status_code:
+            response_status = err.response.status_code
+            if 400 <= response_status < 500:
+                TASK_LOGGER.error(
+                    f"Malformed error request, could not set error for workflow task {external_task_id}!"
+                )
+            if 500 <= response_status < 600:
+                try:
+                    server_error = err.response.json()
+                    if server_error["type"] == "ProcessEngineException" and server_error[
+                        "message"
+                    ].startswith("ENGINE-13033 "):
+                        camunda_client.external_task_report_failure(
+                            external_task_id=external_task_id,
+                            error_code=error_code,
+                            error_message=message,
+                        )
+                        return  # successfully reported the task failure!
+                except InvalidJSONError as json_err:
+                    print(json_err)
+                    pass
+                TASK_LOGGER.warning(
+                    f"Server error when setting task error for task {external_task_id}! (Response body: {err.response.text})"
+                )
+                raise CamundaServerError(
+                    message=f"Error while setting the error message for external task {external_task_id}."
+                ) from err
+
+
+@CELERY.task(
+    name=f"{Workflows.instance.identifier}.external.send_workflow_task_failure",
+    ignore_result=True,
+    autoretry_for=(ConnectionError,),
+    retry_backoff=True,
+    max_retries=50,
+)
+def send_workflow_task_failure(external_task_id: str, error_code: str, message: str):
+    camunda_client = CamundaClient(config)
+    camunda_client.external_task_report_failure(
+        external_task_id=external_task_id,
+        error_code=error_code,
         error_message=message,
     )
 
@@ -152,6 +227,6 @@ def unlock_task(external_task_id: str):
     camunda_client = CamundaClient(config)
     try:
         camunda_client.unlock(external_task_id)
-    except:
+    except Exception:
         # FIXME fix exception handling in client function (should throw more specific exception)
         pass

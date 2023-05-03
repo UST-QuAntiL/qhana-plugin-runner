@@ -209,6 +209,25 @@ class CamundaClient:
         )
         response.raise_for_status()
 
+    def external_task_report_failure(
+        self, external_task_id: str, error_code: str, error_message: str
+    ):
+        """
+        Notifies camunda of the task failure.
+        :param external_task_id: The id of the failed task
+        :param error_code: Code for exception
+        :param error_message: Description of the exception
+        """
+        response = requests.post(
+            url=f"{self.base_url}/external-task/{external_task_id}/failure",
+            json={
+                "workerId": self.worker_id,
+                "errorMessage": f"{error_code}: {error_message}",
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
     def complete_task(self, external_task_id: str, result: dict):
         """
         External task is removed from the external tasks list from the workflow instance

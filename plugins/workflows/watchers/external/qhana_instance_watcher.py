@@ -81,6 +81,8 @@ def qhana_instance_watcher(
         plugin_response = PLUGIN_REGISTRY_CLIENT.search_by_rel(
             "plugin", query_params=query_params, allow_collection_resource=False
         )
+    except ConnectionError:
+        raise  # re-raise connection error to allow for retries when registry is not available!
     except RequestException or ValueError as err:
         raise PluginNotFoundError(
             message=f"Plugin {plugin_name} could not be found because of an error!"
@@ -107,7 +109,7 @@ def qhana_instance_watcher(
     try:
         url = qhana_client.call_qhana_plugin(plugin, parameters)
     except HTTPError as err:
-        if err.response and err.response.status_code:
+        if err.response is not None and err.response.status_code:
             response_status: int = err.response.status_code
             if response_status == 404:
                 raise PluginNotFoundError(
