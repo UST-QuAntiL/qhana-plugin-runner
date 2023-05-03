@@ -1,9 +1,10 @@
 import uuid
 from os import PathLike, environ
 from pathlib import Path
-from typing import Required, TypedDict, Tuple, Sequence
+from typing import Sequence, Tuple
 
 from flask import Flask
+from typing_extensions import Required, TypedDict
 
 
 class FormInputConfig(TypedDict):
