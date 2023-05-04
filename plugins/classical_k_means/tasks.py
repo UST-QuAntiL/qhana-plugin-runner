@@ -80,7 +80,7 @@ def calculation_task(self, db_id: int) -> str:
             id_list,
             predictions,
             only_first_100=True,
-            title=f"Classical {num_clusters}-Medoids Clusters",
+            title=f"Classical {num_clusters}-Means Clusters",
         )
 
     # Output data
