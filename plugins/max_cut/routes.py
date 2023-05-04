@@ -78,6 +78,13 @@ class PluginsView(MethodView):
                         ],
                         required=True,
                     ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=[
+                            "text/html",
+                        ],
+                        required=False,
+                    ),
                 ],
             ),
             tags=MaxCut.instance.tags,

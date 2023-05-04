@@ -47,6 +47,7 @@ class InputParameters:
         shots: int,
         ibmq_custom_backend: str = "",
         ibmq_token: str = "",
+        visualize: bool = False,
     ):
         self.similarity_matrix_url = similarity_matrix_url
         self.max_cut_enum = max_cut_enum
@@ -59,6 +60,7 @@ class InputParameters:
         self.shots = shots
         self.ibmq_custom_backend = ibmq_custom_backend
         self.ibmq_token = ibmq_token
+        self.visualize = visualize
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -170,6 +172,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "IBMQ Token",
             "description": "IBMQ Token",
             "input_type": "text",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Visualize",
+            "description": "Plot the clustered data.",
+            "input_type": "checkbox",
         },
     )
 

@@ -36,6 +36,7 @@ import numpy as np
 
 from .backend.load_utils import load_matrix_url
 from .backend.max_cut_clustering import MaxCutClustering
+from .backend.visualize import plot_graph
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -66,6 +67,7 @@ def calculation_task(self, db_id: int) -> str:
     shots = input_params.shots
     ibmq_custom_backend = input_params.ibmq_custom_backend
     ibmq_token = input_params.ibmq_token
+    visualize = input_params.visualize
 
     if ibmq_token == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
@@ -80,9 +82,7 @@ def calculation_task(self, db_id: int) -> str:
 
     # Load data
     id_list1, id_list2, similarity_matrix = load_matrix_url(similarity_matrix_url)
-    print(f"id_list1: {id_list1}")
-    print(f"id_list2: {id_list2}")
-    print(f"similarity_matrix: {similarity_matrix}")
+    similarity_matrix = np.array(similarity_matrix)
 
     # Prepare quantum parameters
     quantum_parameters = dict(
@@ -95,12 +95,20 @@ def calculation_task(self, db_id: int) -> str:
     # Cluster data
     max_cut_solver = max_cut_enum.get_solver(**quantum_parameters)
     max_cut_cluster = MaxCutClustering(max_cut_solver, num_clusters)
-    labels = max_cut_cluster.create_cluster(np.array(similarity_matrix))
+    predictions = max_cut_cluster.create_cluster(similarity_matrix)
 
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
-        for _id, _label in zip(id_list1, labels)
+        for _id, _label in zip(id_list1, predictions)
     ]
+
+    fig = None
+    if visualize:
+        fig = plot_graph(
+            similarity_matrix,
+            predictions,
+            title=f"MaxCut Clusters",
+        )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
@@ -112,5 +120,18 @@ def calculation_task(self, db_id: int) -> str:
             "entity/label",
             "application/json",
         )
+
+    if fig is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "cluster_plot.html",
+                "plot",
+                "text/html",
+            )
 
     return "Result stored in file"
