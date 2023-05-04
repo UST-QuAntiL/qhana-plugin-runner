@@ -51,7 +51,7 @@ class Optics(QHAnaPluginBase):
         return Optics_BLP
 
     def get_requirements(self) -> str:
-        return f"scikit-learn~={sklearn_version}"
+        return f"scikit-learn~={sklearn_version}\nplotly~=5.6.0\npandas~=1.5.0"
 
 
 try:
