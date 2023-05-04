@@ -81,7 +81,7 @@ def make_edge(x, y, text, weight, min_weight=1, max_weight=1):
         mode="lines+text",
         line=dict(
             width=get_width(weight, min_weight=min_weight, max_weight=max_weight),
-            color='cornflowerblue',
+            color="cornflowerblue",
         ),
         text=(["", text, ""]),
         showlegend=False,
@@ -103,18 +103,25 @@ def plot_graph(
 
     # For each edge, make an edge_trace, append to list
     for edge in graph.edges():
-
-        if graph.edges()[edge]['weight'] != 0:
+        if graph.edges()[edge]["weight"] != 0:
             char_1 = edge[0]
             char_2 = edge[1]
             x0, y0 = positions[char_1]
             x1, y1 = positions[char_2]
 
-            trace = make_edge([x0, (x0 + x1) / 2., x1], [y0, (y0 + y1) / 2., y1], str(graph.edges()[edge]['weight']),
-                              weight=graph.edges()[edge]['weight'], min_weight=min_weight, max_weight=max_weight)
+            trace = make_edge(
+                [x0, (x0 + x1) / 2.0, x1],
+                [y0, (y0 + y1) / 2.0, y1],
+                str(graph.edges()[edge]["weight"]),
+                weight=graph.edges()[edge]["weight"],
+                min_weight=min_weight,
+                max_weight=max_weight,
+            )
             fig.add_trace(trace)
 
-    fig.add_traces(plot_data(positions, list(range(len(positions))), labels, title=title).data)
+    fig.add_traces(
+        plot_data(positions, list(range(len(positions))), labels, title=title).data
+    )
 
     fig.update_layout(
         font=dict(size=15),
