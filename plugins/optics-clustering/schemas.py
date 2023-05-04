@@ -49,6 +49,7 @@ class InputParameters:
         epsilon: float = None,
         min_cluster_size: float = None,
         predecessor_correction: bool = False,
+        visualize: bool = False,
     ):
         self.entity_points_url = entity_points_url
         self.min_samples = min_samples
@@ -62,6 +63,7 @@ class InputParameters:
         self.algorithm_enum = algorithm_enum
         self.leaf_size = leaf_size
         self.predecessor_correction = predecessor_correction
+        self.visualize = visualize
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -188,6 +190,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Minkowski Parameter p",
             "description": "Parameter for the Minkowski metric from sklearn.metrics.pairwise_distances. When p = 1, this is equivalent to using manhattan_distance (l1), and euclidean_distance (l2) for p = 2. For arbitrary p, minkowski_distance (l_p) is used.",
             "input_type": "number",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Visualize",
+            "description": "Plot the clustered data.",
+            "input_type": "checkbox",
         },
     )
 

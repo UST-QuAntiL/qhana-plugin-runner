@@ -35,6 +35,7 @@ from qhana_plugin_runner.storage import STORE
 import numpy as np
 
 from .backend.load_utils import get_indices_and_point_arr
+from .backend.visualize import plot_data
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -72,6 +73,7 @@ def calculation_task(self, db_id: int) -> str:
     )
     algorithm_enum = input_params.algorithm_enum
     leaf_size = input_params.leaf_size
+    visualize = input_params.visualize
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
@@ -93,11 +95,21 @@ def calculation_task(self, db_id: int) -> str:
         leaf_size=leaf_size,
         # n_jobs=n_jobs,
     )
-    labels = optics.fit_predict(points)
+    predictions = optics.fit_predict(points)
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
-        for _id, _label in zip(id_list, labels)
+        for _id, _label in zip(id_list, predictions)
     ]
+
+    fig = None
+    if visualize:
+        fig = plot_data(
+            points,
+            id_list,
+            predictions,
+            only_first_100=True,
+            title=f"OPTICS Clusters",
+        )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
@@ -109,5 +121,18 @@ def calculation_task(self, db_id: int) -> str:
             "entity/label",
             "application/json",
         )
+
+    if fig is not None:
+        with SpooledTemporaryFile(mode="wt") as output:
+            html = fig.to_html()
+            output.write(html)
+
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "cluster_plot.html",
+                "plot",
+                "text/html",
+            )
 
     return "Result stored in file"
