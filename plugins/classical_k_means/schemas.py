@@ -19,7 +19,6 @@ from qhana_plugin_runner.api.util import (
     MaBaseSchema,
     FileUrl,
 )
-from celery.utils.log import get_task_logger
 
 
 class TaskResponseSchema(MaBaseSchema):
