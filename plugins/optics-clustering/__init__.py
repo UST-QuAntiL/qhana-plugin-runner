@@ -31,12 +31,17 @@ Optics_BLP = SecurityBlueprint(
     description="Optics plugin API",
 )
 
+sklearn_version = "1.1"
+
 
 class Optics(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Clusters data with the optics algorithm."
-
+    description = (
+        "Clusters data with the OPTICS algorithm. "
+        f"The plugin uses the implementation by scikit-learn v{sklearn_version}. "
+        "More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS)."
+    )
     tags = []
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -46,7 +51,7 @@ class Optics(QHAnaPluginBase):
         return Optics_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return f"scikit-learn~={sklearn_version}"
 
 
 try:
