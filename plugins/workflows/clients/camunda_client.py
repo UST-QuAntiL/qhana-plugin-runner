@@ -2,13 +2,13 @@ import datetime
 import logging
 import re
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Mapping, Optional, Sequence
 
 import requests
 from requests.exceptions import HTTPError
 
 from ..config import WorkflowPluginConfig, separate_prefixes
-from ..datatypes.camunda_datatypes import ExternalTask, HumanTask
+from ..datatypes.camunda_datatypes import ExternalTask, HumanTask, WorkflowIncident
 from ..exceptions import WorkflowDeploymentError
 
 logger = logging.getLogger(__name__)
@@ -77,9 +77,16 @@ class CamundaManagementClient:
         response.raise_for_status()
         return response.text
 
-    # TODO add method to start a workflow without variiables and with variables
-    # with variables should use http://localhost:8080/swaggerui/#/Process%20Definition/submitForm
-    # without variables can use /start
+    def start_workflow(self, definition_id: str, form_inputs: Mapping):
+        response = requests.post(
+            url=f"{self.camunda_endpoint}/process-definition/{definition_id}/start",
+            json={"variables": form_inputs},
+            timeout=self.timeout,
+        )
+
+        response.raise_for_status()
+
+        return response.json()
 
 
 class CamundaClient:
@@ -196,7 +203,12 @@ class CamundaClient:
 
         # Completing an external task always requires specifying output variables. This output variable should not be
         # used, instead refer to error_code and error_message for further exception handling.
-        output_variables = {"output": {"value": "Exception thrown.", "type": "String"}}
+        output_variables = {
+            "output": {
+                "value": "Exception thrown, see error code and error message!",
+                "type": "String",
+            }
+        }
         response = requests.post(
             url=f"{self.base_url}/external-task/{external_task_id}/bpmnError",
             json={
@@ -250,6 +262,37 @@ class CamundaClient:
         response = requests.post(
             f"{self.base_url}/task/{human_task_id}/complete",
             json={"workerId": self.worker_id, "variables": result},
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+    def get_workflow_incidents(
+        self, process_instance_id: str
+    ) -> Sequence[WorkflowIncident]:
+        """Get all unresolved incidents of a given process instance."""
+        response = requests.get(
+            f"{self.base_url}/incident",
+            params={
+                "processInstanceId": process_instance_id,
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_workflow_incident(self, incident_id: str) -> WorkflowIncident:
+        """Get a specific incident."""
+        response = requests.get(
+            f"{self.base_url}/incident/{incident_id}",
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def resolve_workflow_incident(self, incident_id: str) -> None:
+        """Resolve a specific incident (only works for some incidents!)."""
+        response = requests.delete(
+            f"{self.base_url}/incident/{incident_id}",
             timeout=self.timeout,
         )
         response.raise_for_status()
@@ -479,3 +522,12 @@ class CamundaClient:
             return False
         response.raise_for_status()
         return False
+
+    def cancel_running_workflow(self, process_instance_id: str) -> None:
+        """Cancel a running workflow (e.g. if an unrecoverable incident occurred)."""
+        response = requests.delete(
+            f"{self.base_url}/process-instance/{process_instance_id}",
+            params={"skipIoMappings": "true", "failIfNotExists": "false"},
+            timeout=self.timeout,
+        )
+        response.raise_for_status()

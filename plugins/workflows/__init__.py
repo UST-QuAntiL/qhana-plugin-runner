@@ -1,6 +1,3 @@
-import uuid
-from os import environ
-from pathlib import Path
 from typing import ClassVar, Optional
 
 from celery.utils.log import get_task_logger
@@ -8,7 +5,9 @@ from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from .config import get_config, WorkflowPluginConfig
+
+
+from .config import WorkflowPluginConfig, get_config
 
 TASK_LOGGER = get_task_logger(__name__)
 

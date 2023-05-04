@@ -103,7 +103,6 @@
  */
 function instrumentDeploymentForm() {
     const forms = document.querySelectorAll('form.qhana-deployment-form');
-    console.log(forms)
     forms.forEach(form => {
         form.addEventListener("submit", (event) => {
             onDeploymentFormSubmit(event)
@@ -115,7 +114,6 @@ function onDeploymentFormSubmit(event) {
     event.preventDefault(); // cancel submit; need to do this manually...
     const form = event.target;
     const submitter = event.submitter;
-    console.log(form, submitter)
     let submitMethod = submitter.getAttribute("method");
     const formAction = new URL(form.action);
     const submitUrl = formAction.toString();

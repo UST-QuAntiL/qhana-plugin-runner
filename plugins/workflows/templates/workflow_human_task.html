@@ -12,6 +12,11 @@
         #canvas {
             height: 25rem;
         }
+
+
+        .highlight:not(.djs-connection) .djs-visual > :nth-child(1) {
+            fill: var(--color-primary-lighter, #b488ff) !important;
+        }
     </style>
 {% endblock head %}
 
@@ -25,6 +30,7 @@
     {{ super() }}
 
     <script>
+    var humanTaskId = {{human_task_id | tojson}};
 
     // viewer instance
     var bpmnViewer = new BpmnJS({
@@ -39,6 +45,10 @@
             var canvas = bpmnViewer.get('canvas');
 
             canvas.zoom('fit-viewport');
+
+            if (humanTaskId) {
+                canvas.addMarker(humanTaskId, 'highlight');
+            }
         });
     } catch (err) {
         console.error('could not import BPMN 2.0 diagram', err);

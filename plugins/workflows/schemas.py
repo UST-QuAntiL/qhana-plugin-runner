@@ -47,6 +47,11 @@ class WorkflowsParametersSchema(FrontendFormBaseSchema):
         return InputParameters(**data)
 
 
+class WorkflowIncidentSchema(MaBaseSchema):
+    action = ma.fields.String(required=True, allow_none=False)
+    incident_id = ma.fields.String(required=False, allow_none=True, default="")
+
+
 class AnyInputSchema(FrontendFormBaseSchema):
     def __init__(self, params=None):
         super().__init__(unknown=INCLUDE)

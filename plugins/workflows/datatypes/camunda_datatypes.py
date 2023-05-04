@@ -1,5 +1,23 @@
 import dataclasses
-from typing import Optional
+from typing import Optional, TypedDict, Literal, Union
+
+
+class WorkflowIncident(TypedDict):
+    id: str
+    processDefinitionId: str
+    processInstanceId: str
+    executionId: Optional[str]
+    incidentTimestamp: str
+    incidentType: Union[Literal["failedJob", "failedExternalTask"], str]
+    activityId: Optional[str]
+    failedActivityId: Optional[str]
+    causeIncidentId: Optional[str]
+    rootCauseIncidentId: Optional[str]
+    configuration: Optional[str]
+    tenantId: Optional[str]
+    incidentMessage: Optional[str]
+    jobDefinitionId: Optional[str]
+    annotation: Optional[str]
 
 
 #
@@ -53,4 +71,3 @@ class HumanTask:
             process_instance_id=serialized["processInstanceId"],
             task_definition_key=serialized["taskDefinitionKey"],
         )
-
