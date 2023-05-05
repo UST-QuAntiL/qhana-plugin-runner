@@ -72,7 +72,7 @@ def plot_data(
 
 def get_width(weight, min_weight=1, max_weight=1, min_width=0.75, max_width=5):
     if min_weight == max_weight:
-        return (max_width - min_width) / 2.
+        return (max_width - min_width) / 2.0
     return (weight - min_weight) / max_weight * (max_width - min_width) + min_width
 
 
