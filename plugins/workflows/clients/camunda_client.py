@@ -3,9 +3,12 @@ import logging
 import re
 from pathlib import Path
 from typing import List, Mapping, Optional, Sequence
+from xml.etree import ElementTree
 
 import requests
 from requests.exceptions import HTTPError
+
+from qhana_plugin_runner.requests import open_url
 
 from ..config import WorkflowPluginConfig, separate_prefixes
 from ..datatypes.camunda_datatypes import ExternalTask, HumanTask, WorkflowIncident
@@ -14,10 +17,68 @@ from ..exceptions import WorkflowDeploymentError
 logger = logging.getLogger(__name__)
 
 
+def extract_id_and_name(bpmn_url: str):
+    with open_url(bpmn_url, stream=True) as bpmn:
+        id_ = "unknown"
+        name = None
+        for _event, node in ElementTree.iterparse(bpmn.raw, ["start"]):
+            if node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}definitions":
+                continue
+            if node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}process":
+                name = node.attrib.get("name", None)
+                id_ = node.attrib["id"]
+            elif node.tag.endswith("process"):
+                name = node.attrib.get("name", None)
+                id_ = node.attrib.get("id", id_)
+            break
+        return id_, name
+
+
 class CamundaManagementClient:
     def __init__(self, config: WorkflowPluginConfig, timeout: float | None = None):
         self.camunda_endpoint = config["camunda_base_url"].rstrip("/")
+        self.worker_id = config["worker_id"]
         self.timeout = timeout if timeout else config["request_timeout"]
+
+    def deploy_bpmn(self, bpmn_url: str) -> str:
+        """
+        Deploy a BPMN model to the Camunda Engine.
+        Return the process definition id.
+        """
+        if not bpmn_url:
+            raise ValueError("No BPMN File specified!")
+        id_, name = extract_id_and_name(bpmn_url)
+        with open_url(bpmn_url, stream=True) as bpmn:
+            response = requests.post(
+                url=f"{self.camunda_endpoint}/deployment/create",
+                params={
+                    "deployment-name": id_,
+                    "enable-duplicate-filtering": "true",
+                    "deployment-source": self.worker_id,
+                    # TODO add path to deployment source? hashing?
+                },
+                files={id_: bpmn.raw},
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+
+        deployment_id = response.json().get("id", None)
+        process_def_response = requests.get(
+            url=f"{self.camunda_endpoint}/process-definition",
+            params={
+                "deploymentId": deployment_id,
+            },
+            timeout=self.timeout,
+        )
+        process_def_response.raise_for_status()
+        deployed_process_defs = process_def_response.json()
+        if len(deployed_process_defs) != 1:
+            raise WorkflowDeploymentError(
+                "The deployed BPMN file did not contain a process definition!"
+            )
+
+        process_definition_id = deployed_process_defs[0]["id"]
+        return process_definition_id
 
     def get_process_definitions(self):
         response = requests.get(
@@ -89,6 +150,7 @@ class CamundaManagementClient:
         return response.json()
 
 
+# TODO remove unused functions
 class CamundaClient:
     """
     Handles setup for deployments, process instances and listeners.

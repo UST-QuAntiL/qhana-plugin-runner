@@ -11,7 +11,7 @@ from requests.exceptions import (
 from qhana_plugin_runner.celery import CELERY
 
 from .qhana_instance_watcher import qhana_instance_watcher, qhana_step_watcher
-from ... import Workflows
+from ... import DeployWorkflow
 from ...clients.camunda_client import CamundaClient
 from ...datatypes.camunda_datatypes import ExternalTask
 from ...exceptions import (
@@ -25,7 +25,7 @@ from ...exceptions import (
     WorkflowTaskError,
 )
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -52,7 +52,7 @@ def execute_task(external_task: ExternalTask, camunda_client: CamundaClient, wat
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.camunda_task_watcher",
+    name=f"{DeployWorkflow.instance.identifier}.external.camunda_task_watcher",
     ignore_result=True,
 )
 def camunda_task_watcher():
@@ -113,7 +113,7 @@ def camunda_task_watcher():
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.process_workflow_error",
+    name=f"{DeployWorkflow.instance.identifier}.external.process_workflow_error",
     ignore_result=True,
 )
 def process_workflow_error(request, exc, traceback, external_task_id: str):
@@ -159,7 +159,7 @@ def process_workflow_error(request, exc, traceback, external_task_id: str):
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.send_workflow_error",
+    name=f"{DeployWorkflow.instance.identifier}.external.send_workflow_error",
     ignore_result=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
@@ -204,7 +204,7 @@ def send_workflow_error(external_task_id: str, error_code: str, message: str):
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.send_workflow_task_failure",
+    name=f"{DeployWorkflow.instance.identifier}.external.send_workflow_task_failure",
     ignore_result=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
@@ -220,7 +220,7 @@ def send_workflow_task_failure(external_task_id: str, error_code: str, message: 
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.camunda_unlock_task",
+    name=f"{DeployWorkflow.instance.identifier}.external.camunda_unlock_task",
     ignore_result=True,
 )
 def unlock_task(external_task_id: str):

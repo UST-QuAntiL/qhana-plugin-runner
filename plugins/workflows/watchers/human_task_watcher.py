@@ -9,20 +9,15 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
+from qhana_plugin_runner.tasks import save_task_result
 
-from .. import Workflows
+from .. import DeployWorkflow
 from ..clients.camunda_client import CamundaClient
 from ..exceptions import WorkflowStoppedError
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-# TODO remove old error
-class NoHumanTaskError(Exception):
-    pass
 
 
 class WorkflowNotFinished(Exception):
@@ -96,6 +91,8 @@ def check_for_incidents(
     if not incidents:
         return False
 
+    assert isinstance(db_task.data, dict)
+
     db_task.add_next_step(
         step_id="workflow-incident",
         href=db_task.data["href_incident"],
@@ -151,7 +148,7 @@ def check_for_human_tasks(
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.workflow_status_watcher",
+    name=f"{DeployWorkflow.instance.identifier}.workflow_status_watcher",
     bind=True,
     ignore_result=True,
     autoretry_for=(WorkflowNotFinished,),
@@ -207,101 +204,3 @@ def workflow_status_watcher(self, db_id: int) -> None:
         return  # do not check for further updates, wait for user response to sub-task first
 
     raise WorkflowNotFinished  # continue polling for updates
-
-
-# TODO remove old workflow status watching task
-@CELERY.task(
-    name=f"{Workflows.instance.identifier}.human_task_watcher",
-    bind=True,
-    ignore_result=True,
-    autoretry_for=(NoHumanTaskError,),
-    retry_backoff=True,
-    max_retries=None,
-)
-def human_task_watcher(self, db_id: int) -> None:
-    db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-
-    if db_task is None:
-        msg = f"Could not load task data with id {db_id} to read parameters!"
-        TASK_LOGGER.error(msg)
-        raise KeyError(msg)
-
-    assert isinstance(db_task.data, dict)
-
-    process_instance_id: str = db_task.data["camunda_process_instance_id"]
-
-    # Client
-    camunda_client = CamundaClient(config)
-
-    # Spawn new human task watcher if workflow instance is still active
-    if not camunda_client.is_process_active(process_instance_id):
-        if not camunda_client.has_process_completed(process_instance_id):
-            db_task.add_task_log_entry(
-                "Workflow process instance was stopped unexpectedly."
-            )
-            db_task.save(commit=True)
-            raise WorkflowStoppedError(
-                "Workflow process instance was stopped unexpectedly."
-            )
-        persist_workflow_output(db_task, camunda_client, process_instance_id)
-
-        save_task_result.s(
-            task_log="Stored workflow output.",
-            db_id=db_id,
-        ).delay()
-        return
-
-    # Get all Camunda human tasks
-    try:
-        human_tasks = camunda_client.get_human_tasks(
-            process_instance_id=process_instance_id
-        )
-    except RequestException as err:
-        TASK_LOGGER.info(f"Exception while retrieving human tasks: {err}")
-        # camunda could not be reached/produced an error => retry later
-        raise NoHumanTaskError  # retry
-
-    TASK_LOGGER.debug(f"Human Tasks: {human_tasks}")
-
-    for human_task in human_tasks:
-        assert (
-            human_task.process_instance_id == process_instance_id
-        ), "camunda client returned a human task for a different process instance!"
-        if human_task.delegation_state not in ("PENDING", None):
-            continue  # task is already taken
-
-        # Extract form variables from the rendered form. Cannot use camunda endpoint for form variables (broken)
-        form_variables = camunda_client.get_human_task_form_variables(
-            human_task_id=human_task.id
-        )
-
-        process_definition_id = db_task.data["camunda_process_definition_id"]
-
-        bpmn_properties = {
-            "bpmn_xml_url": f"{camunda_client.config.base_url}/process-definition/{process_definition_id}/xml",
-            "human_task_definition_key": human_task.task_definition_key,
-        }
-
-        db_task.add_task_log_entry(f"Found new human task '{human_task.id}'.")
-        db_task.data["form_params"] = json.dumps(form_variables)
-        db_task.data["bpmn"] = json.dumps(bpmn_properties)
-        db_task.data["human_task_id"] = human_task.id
-        db_task.save(commit=True)
-
-        # Add new sub-step task for input gathering
-        new_sub_step_task = add_step.s(
-            db_id=db_id,
-            step_id=human_task.id,
-            href=db_task.data["href"],
-            ui_href=db_task.data["ui_href"],
-            prog_value=42,
-            task_log="",
-        )
-
-        new_sub_step_task.link_error(save_task_error.s(db_id=db_id))
-        new_sub_step_task.apply_async()
-
-        TASK_LOGGER.info(f"Started step...")
-        return
-
-    raise NoHumanTaskError  # retry

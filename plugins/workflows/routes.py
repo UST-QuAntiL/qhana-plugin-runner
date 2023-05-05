@@ -1,6 +1,5 @@
-import json
 from http import HTTPStatus
-from typing import Mapping, Optional
+from typing import Mapping
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
@@ -17,20 +16,14 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
-from . import WORKFLOWS_BLP, Workflows
-from .schemas import (
-    AnyInputSchema,
-    InputParameters,
-    WorkflowsParametersSchema,
-)
-from .tasks import process_input, start_workflow
-from .watchers.human_task_watcher import human_task_watcher
+from . import WORKFLOWS_BLP, DeployWorkflow
+from .schemas import DeployWorkflowSchema
+from .tasks import deploy_workflow
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -45,30 +38,30 @@ class PluginsView(MethodView):
         """Endpoint returning the plugin metadata"""
 
         return PluginMetadata(
-            title="Workflows",
-            description="Runs workflows",
-            name=Workflows.instance.name,
-            version=Workflows.instance.version,
+            title="Deploy Workflow",
+            description="Deploys a BPMN workflow to Camunda and exposes it as a plugin.",
+            name=DeployWorkflow.instance.name,
+            version=DeployWorkflow.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{WORKFLOWS_BLP.name}.ProcessView"),
-                ui_href=url_for(f"{WORKFLOWS_BLP.name}.MicroFrontend"),
+                href=url_for(f"{WORKFLOWS_BLP.name}.{DeployWorkflowView.__name__}"),
+                ui_href=url_for(f"{WORKFLOWS_BLP.name}.{MicroFrontend.__name__}"),
                 data_input=[],
                 data_output=[],
             ),
-            tags=["bpmn", "camunda engine"],
+            tags=["workflow", "bpmn", "camunda-engine"],
         )
 
 
 @WORKFLOWS_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the workflows plugin."""
+    """Micro frontend for the deploy workflow plugin."""
 
     @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the workflows plugin."
+        HTTPStatus.OK, description="Micro frontend of the deploy workflow plugin."
     )
     @WORKFLOWS_BLP.arguments(
-        WorkflowsParametersSchema(
+        DeployWorkflowSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -80,10 +73,10 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors, False)
 
     @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the workflows plugin."
+        HTTPStatus.OK, description="Micro frontend of the deploy workflow plugin."
     )
     @WORKFLOWS_BLP.arguments(
-        WorkflowsParametersSchema(
+        DeployWorkflowSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -98,216 +91,49 @@ class MicroFrontend(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=Workflows.instance.name,
-                version=Workflows.instance.version,
-                schema=WorkflowsParametersSchema(),
+                name=DeployWorkflow.instance.name,
+                version=DeployWorkflow.instance.version,
+                schema=DeployWorkflowSchema(),
                 valid=valid,
                 values=dict(data),
                 errors=errors,
-                process=url_for(f"{WORKFLOWS_BLP.name}.ProcessView"),
+                process=url_for(f"{WORKFLOWS_BLP.name}.{DeployWorkflowView.__name__}"),
             )
         )
 
 
-@WORKFLOWS_BLP.route("/process/")
-class ProcessView(MethodView):
-    """Start a long running processing task."""
+@WORKFLOWS_BLP.route("/deploy/")
+class DeployWorkflowView(MethodView):
+    """Deploy the workflow to camunda and as a virtual plugin."""
 
-    @WORKFLOWS_BLP.arguments(WorkflowsParametersSchema(unknown=EXCLUDE), location="form")
+    @WORKFLOWS_BLP.arguments(DeployWorkflowSchema(unknown=EXCLUDE), location="form")
     @WORKFLOWS_BLP.response(HTTPStatus.SEE_OTHER)
     @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_params: InputParameters):
+    def post(self, data: dict):
+        from .management_routes import WORKFLOW_MGMNT_BLP, VirtualPluginView
+
         db_task = ProcessingTask(
-            task_name=start_workflow.name,
-            parameters=WorkflowsParametersSchema().dumps(input_params),
+            task_name="TODO",
+            parameters=data["workflow"],
         )
-        db_task.save(commit=False)
-        DB.session.flush()  # flsuh to DB to get db_task id populated
 
         assert isinstance(db_task.data, dict)
 
-        db_task.data["href"] = url_for(
-            f"{WORKFLOWS_BLP.name}.{HumanTaskProcessView.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
-        db_task.data["ui_href"] = url_for(
-            f"{WORKFLOWS_BLP.name}.{HumanTaskFrontend.__name__}",
-            db_id=db_task.id,
+        db_task.data["plugin_url_template"] = url_for(
+            f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
+            process_definition_id="{process_definition_id}",
             _external=True,
         )
 
         db_task.save(commit=True)
 
-        task: chain = start_workflow.s(db_id=db_task.id) | human_task_watcher.si(
+        task: chain = deploy_workflow.s(db_id=db_task.id) | save_task_result.s(
             db_id=db_task.id
         )
         task.link_error(save_task_error.s(db_id=db_task.id))
 
         task.apply_async()
-        db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
-        )
-
-
-@WORKFLOWS_BLP.route("/<int:db_id>/human-task-ui/")
-class HumanTaskFrontend(MethodView):
-    """Micro frontend of a workflow human task."""
-
-    @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of a workflow human task."
-    )
-    @WORKFLOWS_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="query",
-        required=False,
-    )
-    @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, db_id: int):
-        """Return the micro frontend."""
-        return self.render(request.args, db_id, errors, False)
-
-    @WORKFLOWS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of a workflow human task."
-    )
-    @WORKFLOWS_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="form",
-        required=False,
-    )
-    @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, db_id: int):
-        """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors, not errors)
-
-    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        form_params = None
-
-        if not data:
-            assert isinstance(db_task.data, dict)
-            try:
-                form_params = json.loads(db_task.data["form_params"])
-            except:
-                form_params = None  # TODO raise proper error here (will throw generic one two lines later)
-
-        data = {}
-        for key, val in form_params.items():
-            prefix_file_url = config["workflow_conf"]["form_conf"]["file_url_prefix"]
-            prefix_delimiter = config["workflow_conf"]["form_conf"]["value_separator"]
-            if val["value"]:
-                if not (
-                    val["type"] == "String"
-                    and val["value"].startswith(f"{prefix_file_url}{prefix_delimiter}")
-                ):
-                    data[key] = val["value"]
-
-        schema = AnyInputSchema(form_params)
-
-        return Response(
-            render_template(
-                "workflows_template.html",
-                name=Workflows.instance.name,
-                version=Workflows.instance.version,
-                schema=schema,
-                valid=valid,
-                values=data,
-                errors=errors,
-                process=url_for(
-                    f"{WORKFLOWS_BLP.name}.HumanTaskProcessView", db_id=db_id
-                ),
-            )
-        )
-
-
-@WORKFLOWS_BLP.route("/<int:db_id>/human-task-ui/bpmn_io")
-class HumanTaskBPMNVisualizationFrontend(MethodView):
-    """Micro frontend for bpmn io."""
-
-    @WORKFLOWS_BLP.html_response(HTTPStatus.OK, description="Micro frontend for bpmn io.")
-    @WORKFLOWS_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="query",
-        required=False,
-    )
-    @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, db_id: int):
-        """Return the micro frontend."""
-        return self.render(request.args, db_id, errors, False)
-
-    @WORKFLOWS_BLP.html_response(HTTPStatus.OK, description="Micro frontend for bpmn io.")
-    @WORKFLOWS_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="form",
-        required=False,
-    )
-    @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, db_id: int):
-        """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors, not errors)
-
-    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        bpmn_properties = None
-
-        if not data:
-            try:
-                assert isinstance(db_task.data, dict)
-                bpmn_properties = json.loads(db_task.data["bpmn"])  # FIXME!!!
-            except:
-                bpmn_properties = None
-
-        return Response(
-            render_template("bpmn_io.html", values=bpmn_properties, valid=valid)
-        )
-
-
-@WORKFLOWS_BLP.route("/<int:db_id>/human-task-process/")
-class HumanTaskProcessView(MethodView):
-    """Start a long running processing task."""
-
-    @WORKFLOWS_BLP.arguments(AnyInputSchema(), location="form")
-    @WORKFLOWS_BLP.response(HTTPStatus.SEE_OTHER)
-    @WORKFLOWS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        db_task.parameters = json.dumps(arguments)
-        db_task.save(commit=True)
-
-        # all tasks need to know about db id to load the db entry
-        task: chain = process_input.s(db_id=db_task.id) | human_task_watcher.si(
-            db_id=db_task.id
-        )
-
-        # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async()
-
-        return redirect(
-            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )

@@ -50,10 +50,10 @@
                     <dd>{{workflow["id"]}}</dd>
                     {% if workflow["deployed"] %}
                     <dt>Plugin UI</dt>
-                    <dd><a href="{{url_for(pluginUiEndpoint, instance_id=workflow['id'], _external=True)}}">link</a></dd>
+                    <dd><a href="{{url_for(pluginUiEndpoint, process_definition_id=workflow['id'], _external=True)}}">link</a></dd>
                     {% endif %}
                 </dl>
-                <form class="qhana-form qhana-deployment-form" action="{{url_for(deployEndpoint, instance_id=workflow['id'], _external=True)}}">
+                <form class="qhana-form qhana-deployment-form" action="{{url_for(deployEndpoint, process_definition_id=workflow['id'], _external=True)}}">
                 {% if workflow["deployed"] %}
                     <button class="qhana-form-submit" type="submit" method="DELETE">Undeploy</button>
                 {% else %}

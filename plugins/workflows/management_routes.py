@@ -11,7 +11,7 @@ from flask.helpers import url_for
 from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
-from marshmallow import EXCLUDE
+from marshmallow import INCLUDE
 from requests.exceptions import HTTPError, RequestException
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -28,7 +28,7 @@ from qhana_plugin_runner.tasks import save_task_error
 from .clients.camunda_client import CamundaClient, CamundaManagementClient
 from .datatypes.camunda_datatypes import WorkflowIncident
 from .management import WORKFLOW_MGMNT_BLP, WorkflowManagement
-from .schemas import AnyInputSchema, WorkflowIncidentSchema, WorkflowsParametersSchema
+from .schemas import AnyInputSchema, GenericInputsSchema, WorkflowIncidentSchema
 from .tasks import process_input, start_workflow_with_arguments
 from .watchers.human_task_watcher import workflow_status_watcher
 
@@ -47,7 +47,7 @@ def add_deployed_info(
     if isinstance(process_definition, dict):
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-            instance_id=process_definition.get("id"),
+            process_definition_id=process_definition.get("id"),
             _external=True,
         )
         process_definition["pluginHref"] = plugin_url
@@ -60,7 +60,7 @@ def add_deployed_info(
     for proc_def in process_definition:
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-            instance_id=proc_def.get("id"),
+            process_definition_id=proc_def.get("id"),
             _external=True,
         )
         proc_def["pluginHref"] = plugin_url
@@ -78,7 +78,7 @@ class WfManagementView(MethodView):
 
         return PluginMetadata(
             title="Workflow Management",
-            description="Manage workflows deploayed in Camunda.",
+            description="Manage workflows deployed in Camunda.",
             name=WorkflowManagement.instance.name,
             version=WorkflowManagement.instance.version,
             type=PluginType.interaction,
@@ -90,7 +90,7 @@ class WfManagementView(MethodView):
                 data_input=[],
                 data_output=[],
             ),
-            tags=["bpmn", "camunda engine"],
+            tags=["workflow", "bpmn", "camunda-engine"],
         )
 
 
@@ -142,15 +142,19 @@ class WorkflowsView(MethodView):
         return process_definitions
 
 
-@WORKFLOW_MGMNT_BLP.route("/workflows/<string:instance_id>/")  # FIXME wrong variable name
+@WORKFLOW_MGMNT_BLP.route(
+    "/workflows/<string:process_definition_id>/"
+)  # FIXME wrong variable name
 class WorkflowView(MethodView):
     """Manage a workflow instance."""
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def get(self, instance_id: str):
+    def get(self, process_definition_id: str):
         camunda = CamundaManagementClient(config)
         try:
-            process_def = camunda.get_process_definition(definition_id=instance_id)
+            process_def = camunda.get_process_definition(
+                definition_id=process_definition_id
+            )
         except RequestException as err:
             if isinstance(err, HTTPError) and err.response.status_code == 404:
                 abort(404, message="Process definition does not exist.")
@@ -159,10 +163,21 @@ class WorkflowView(MethodView):
         return process_def
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def post(self, instance_id: str):
+    def post(self, process_definition_id: str):
+        plugin_url = url_for(
+            f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
+            process_definition_id=process_definition_id,
+            _external=True,
+        )
+
+        if VirtualPlugin.exists([VirtualPlugin.href == plugin_url]):
+            return self.get(process_definition_id)
+
         camunda = CamundaManagementClient(config)
         try:
-            process_instance = camunda.get_process_definition(definition_id=instance_id)
+            process_instance = camunda.get_process_definition(
+                definition_id=process_definition_id
+            )
         except RequestException as err:
             if isinstance(err, HTTPError) and err.response.status_code == 404:
                 abort(404, message="Process definition does not exist.")
@@ -172,29 +187,16 @@ class WorkflowView(MethodView):
         description: Optional[str] = process_instance.get("description")
         key: Optional[str] = process_instance.get("key")
 
-        plugin_url = url_for(
-            f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-            instance_id=instance_id,
-            _external=True,
-        )
-
-        if VirtualPlugin.exists([VirtualPlugin.href == plugin_url]):
-            return self.get(instance_id)
-
         plugin = VirtualPlugin(
             parent_id=WorkflowManagement.instance.identifier,
-            name=key if key else instance_id,
+            name=key if key else process_definition_id,
             version=version,
             tags="\n".join(["workflow", "bpmn"]),
             description=description if description else "",
-            href=url_for(
-                f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-                instance_id=instance_id,
-                _external=True,
-            ),
+            href=plugin_url,
         )
 
-        variables = camunda.get_workflow_start_form_variables(instance_id)
+        variables = camunda.get_workflow_start_form_variables(process_definition_id)
         if variables:
             PluginState.set_value(
                 WorkflowManagement.instance.identifier, plugin_url, variables
@@ -202,13 +204,13 @@ class WorkflowView(MethodView):
 
         DB.session.add(plugin)
         DB.session.commit()
-        return self.get(instance_id)
+        return self.get(process_definition_id)
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def delete(self, instance_id: str):
+    def delete(self, process_definition_id: str):
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-            instance_id=instance_id,
+            process_definition_id=process_definition_id,
             _external=True,
         )
 
@@ -218,7 +220,7 @@ class WorkflowView(MethodView):
 
         DB.session.commit()
 
-        return self.get(instance_id)
+        return self.get(process_definition_id)
 
 
 @WORKFLOW_MGMNT_BLP.route("/plugins/<string:plugin_url>/")
@@ -240,16 +242,16 @@ class UndeployPluginView(MethodView):
         return Response(status=HTTPStatus.NO_CONTENT)
 
 
-@WORKFLOW_MGMNT_BLP.route("/workflows/<string:instance_id>/bpmn/")
+@WORKFLOW_MGMNT_BLP.route("/workflows/<string:process_definition_id>/bpmn/")
 class WorkflowBPMNView(MethodView):
     """Manage a workflow instance."""
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def get(self, instance_id: str):
+    def get(self, process_definition_id: str):
         camunda = CamundaManagementClient(config)
         try:
             process_xml: str = camunda.get_process_definition_xml(
-                definition_id=instance_id
+                definition_id=process_definition_id
             )
         except RequestException as err:
             if isinstance(err, HTTPError) and err.response.status_code == 404:
@@ -258,20 +260,22 @@ class WorkflowBPMNView(MethodView):
         return Response(process_xml, status=HTTPStatus.OK, content_type="application/xml")
 
 
-@WORKFLOW_MGMNT_BLP.route("/workflows/<string:instance_id>/plugin/")
+@WORKFLOW_MGMNT_BLP.route("/workflows/<string:process_definition_id>/plugin/")
 class VirtualPluginView(MethodView):
     """Metadata endpoint for a virtual workflow plugin."""
 
     @WORKFLOW_MGMNT_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def get(self, instance_id: str):
+    def get(self, process_definition_id: str):
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-            instance_id=instance_id,
+            process_definition_id=process_definition_id,
             _external=True,
         )
         camunda = CamundaManagementClient(config)
-        process_definition = camunda.get_process_definition(definition_id=instance_id)
+        process_definition = camunda.get_process_definition(
+            definition_id=process_definition_id
+        )
         plugin = VirtualPlugin.get_by_href(
             plugin_url, WorkflowManagement.instance.identifier
         )
@@ -290,7 +294,7 @@ class VirtualPluginView(MethodView):
             else process_definition.get("description", ""),
             name=plugin.name
             if plugin and plugin.name
-            else process_definition.get("key", instance_id),
+            else process_definition.get("key", process_definition_id),
             version=plugin.version
             if plugin and plugin.version is not None
             else str(process_definition.get("version", 1)),
@@ -299,12 +303,12 @@ class VirtualPluginView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(
                     f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginUi.__name__}",
-                    instance_id=instance_id,
+                    process_definition_id=process_definition_id,
                     _external=True,
                 ),
                 ui_href=url_for(
                     f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginProcess.__name__}",
-                    instance_id=instance_id,
+                    process_definition_id=process_definition_id,
                     _external=True,
                 ),
                 data_input=[],
@@ -313,7 +317,7 @@ class VirtualPluginView(MethodView):
         )
 
 
-@WORKFLOW_MGMNT_BLP.route("/workflows/<string:instance_id>/plugin/ui/")
+@WORKFLOW_MGMNT_BLP.route("/workflows/<string:process_definition_id>/plugin/ui/")
 class VirtualPluginUi(MethodView):
     """Micro frontend for a virtual plugin."""
 
@@ -321,37 +325,39 @@ class VirtualPluginUi(MethodView):
         HTTPStatus.OK, description="Micro frontend for a virtual workflow plugin."
     )
     @WORKFLOW_MGMNT_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        GenericInputsSchema(
+            partial=True, unknown=INCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, instance_id: str):
-        return self.render(request.args, instance_id, errors)
+    def get(self, errors, process_definition_id: str):
+        return self.render(request.args, process_definition_id, errors)
 
     @WORKFLOW_MGMNT_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend for a virtual workflow plugin."
     )
     @WORKFLOW_MGMNT_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        GenericInputsSchema(
+            partial=True, unknown=INCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, instance_id: str):
-        return self.render(request.form, instance_id, errors)
+    def post(self, errors, process_definition_id: str):
+        return self.render(request.form, process_definition_id, errors)
 
-    def render(self, data: Mapping, instance_id: str, errors: dict):
+    def render(self, data: Mapping, process_definition_id: str, errors: dict):
         camunda = CamundaManagementClient(config)
-        process_xml: str = camunda.get_process_definition_xml(definition_id=instance_id)
+        process_xml: str = camunda.get_process_definition_xml(
+            definition_id=process_definition_id
+        )
 
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-            instance_id=instance_id,
+            process_definition_id=process_definition_id,
             _external=True,
         )
         plugin = VirtualPlugin.get_by_href(
@@ -388,20 +394,20 @@ class VirtualPluginUi(MethodView):
                 errors=errors,
                 process=url_for(
                     f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginProcess.__name__}",
-                    instance_id=instance_id,
+                    process_definition_id=process_definition_id,
                 ),
             )
         )
 
 
-@WORKFLOW_MGMNT_BLP.route("/workflows/<string:instance_id>/plugin/process/")
+@WORKFLOW_MGMNT_BLP.route("/workflows/<string:process_definition_id>/plugin/process/")
 class VirtualPluginProcess(MethodView):
     """Micro frontend for a virtual plugin."""
 
-    def _map_variables(self, instance_id: str, arguments: Mapping):
+    def _map_variables(self, process_definition_id: str, arguments: Mapping):
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
-            instance_id=instance_id,
+            process_definition_id=process_definition_id,
             _external=True,
         )
 
@@ -419,10 +425,10 @@ class VirtualPluginProcess(MethodView):
     @WORKFLOW_MGMNT_BLP.arguments(AnyInputSchema(), location="form")
     @WORKFLOW_MGMNT_BLP.response(HTTPStatus.SEE_OTHER)
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: Mapping, instance_id: str):
+    def post(self, arguments: Mapping, process_definition_id: str):
         db_task = ProcessingTask(
             task_name=start_workflow_with_arguments.name,
-            parameters=json.dumps(self._map_variables(instance_id, arguments)),
+            parameters=json.dumps(self._map_variables(process_definition_id, arguments)),
         )
         db_task.save(commit=False)
         DB.session.flush()  # flsuh to DB to get db_task id populated
@@ -454,7 +460,7 @@ class VirtualPluginProcess(MethodView):
         db_task.save(commit=True)
 
         task: chain = start_workflow_with_arguments.s(
-            db_id=db_task.id, workflow_id=instance_id
+            db_id=db_task.id, workflow_id=process_definition_id
         ) | workflow_status_watcher.si(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
 
@@ -496,7 +502,9 @@ class IncidentsFrontend(MethodView):
 
         camunda_client = CamundaClient(config=config)
 
-        incidents = camunda_client.get_workflow_incidents(process_instance_id)
+        incidents = camunda_client.get_workflow_incidents(
+            process_instance_id=process_instance_id
+        )
         incidents = cast(Sequence[WorkflowIncidentWithDate], incidents)
 
         for incident in incidents:
@@ -559,7 +567,9 @@ class IncidentsProcessView(MethodView):
             )
         else:
             if arguments["action"] == "continue":
-                if not camunda_client.get_workflow_incidents(process_instance_id):
+                if not camunda_client.get_workflow_incidents(
+                    process_instance_id=process_instance_id
+                ):
                     db_task.clear_previous_step()
                     db_task.add_task_log_entry(
                         "Continuing with the workflow.", commit=True
@@ -597,8 +607,8 @@ class HumanTaskFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of a workflow human task."
     )
     @WORKFLOW_MGMNT_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        GenericInputsSchema(
+            partial=True, unknown=INCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
@@ -612,8 +622,8 @@ class HumanTaskFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of a workflow human task."
     )
     @WORKFLOW_MGMNT_BLP.arguments(
-        WorkflowsParametersSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        GenericInputsSchema(
+            partial=True, unknown=INCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,

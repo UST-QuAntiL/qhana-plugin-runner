@@ -8,7 +8,7 @@ from requests.exceptions import ConnectionError, HTTPError, RequestException
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
-from ... import Workflows
+from ... import DeployWorkflow
 from ...clients.camunda_client import CamundaClient
 from ...clients.qhana_task_client import ParameterParsingError, QhanaTaskClient
 from ...datatypes.qhana_datatypes import QhanaOutput
@@ -22,7 +22,7 @@ from ...exceptions import (
     StepNotFoundError,
 )
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -41,7 +41,7 @@ def extract_second_topic_component(topic: str):
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.qhana_instance_watcher",
+    name=f"{DeployWorkflow.instance.identifier}.external.qhana_instance_watcher",
     bind=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
@@ -143,7 +143,7 @@ def qhana_instance_watcher(
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.qhana_step_watcher",
+    name=f"{DeployWorkflow.instance.identifier}.external.qhana_step_watcher",
     bind=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
@@ -233,7 +233,7 @@ def qhana_step_watcher(
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.check_task_status",
+    name=f"{DeployWorkflow.instance.identifier}.external.check_task_status",
     bind=True,
     autoretry_for=(TaskNotFinishedError,),
     retry_backoff=True,

@@ -6,13 +6,12 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-
 from .config import WorkflowPluginConfig, get_config
 
 TASK_LOGGER = get_task_logger(__name__)
 
-_plugin_name = "workflows"
-__version__ = "v0.6.0"
+_plugin_name = "deploy-workflow"
+__version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 WORKFLOWS_BLP = SecurityBlueprint(
@@ -23,13 +22,13 @@ WORKFLOWS_BLP = SecurityBlueprint(
 )
 
 
-class Workflows(QHAnaPluginBase):
+class DeployWorkflow(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "WIP Workflow plugin executing workflows using the camunda bpmn engine."
-    tags = ["workflow", "bpmn"]
+    tags = ["workflow", "bpmn", "camunda-engine"]
 
-    instance: ClassVar["Workflows"]
+    instance: ClassVar["DeployWorkflow"]
 
     config: WorkflowPluginConfig
 

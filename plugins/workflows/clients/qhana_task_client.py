@@ -8,11 +8,11 @@ import requests
 from celery.utils.log import get_task_logger
 from requests import HTTPError
 
-from .. import Workflows
-from ..datatypes.qhana_datatypes import QhanaInput, QhanaOutput
+from .. import DeployWorkflow
 from ..config import separate_prefixes
+from ..datatypes.qhana_datatypes import QhanaInput, QhanaOutput
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 

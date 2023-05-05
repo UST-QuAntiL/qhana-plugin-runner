@@ -3,14 +3,14 @@ from collections import OrderedDict
 from typing import Dict
 
 import marshmallow as ma
-from marshmallow import INCLUDE, post_load
+from marshmallow import INCLUDE
 
 from qhana_plugin_runner.api import EnumField, MaBaseSchema
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
-from . import Workflows
+from . import DeployWorkflow
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 
 class WorkflowsResponseSchema(MaBaseSchema):
@@ -23,28 +23,21 @@ class WorkflowsResponseSchema(MaBaseSchema):
     )
 
 
-class InputParameters:
-    def __init__(
-        self,
-        input_bpmn: str,
-    ):
-        self.input_bpmn = input_bpmn
-
-
-class WorkflowsParametersSchema(FrontendFormBaseSchema):
-    input_bpmn = ma.fields.String(
+class DeployWorkflowSchema(FrontendFormBaseSchema):
+    workflow = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="executable/workflow",
+        data_content_types=["application/xml", "application/bpmn+xml"],
         metadata={
-            "label": "Input BPMN model name",
-            "description": "BPMN model to run.",
-            "input_type": "text",
+            "label": "Workflow Definition",
+            "description": "URL to the BPMN file defining the workflow.",
         },
     )
 
-    @post_load
-    def make_input_params(self, data, **kwargs) -> InputParameters:
-        return InputParameters(**data)
+
+class GenericInputsSchema(FrontendFormBaseSchema):
+    pass
 
 
 class WorkflowIncidentSchema(MaBaseSchema):

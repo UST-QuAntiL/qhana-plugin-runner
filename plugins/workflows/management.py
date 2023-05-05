@@ -1,6 +1,4 @@
-from os import environ
-from pathlib import Path
-from typing import Any, ClassVar, Dict, Optional
+from typing import ClassVar, Optional
 
 from celery.utils.log import get_task_logger
 from flask import Flask
@@ -30,7 +28,7 @@ class WorkflowManagement(
     name = _plugin_name
     version = __version__
     description = "Plugin for managing BPMN workflows deployed in Camunda."
-    tags = ["workflow", "bpmn"]
+    tags = ["workflow", "bpmn", "camunda-engine"]
 
     instance: ClassVar["WorkflowManagement"]
 
