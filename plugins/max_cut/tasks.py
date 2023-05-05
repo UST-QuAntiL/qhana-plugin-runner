@@ -56,7 +56,7 @@ def calculation_task(self, db_id: int) -> str:
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
-    similarity_matrix_url = input_params.similarity_matrix_url
+    adjacency_matrix_url = input_params.adjacency_matrix_url
     max_cut_enum = input_params.max_cut_enum
     num_clusters = input_params.num_clusters
     optimizer = input_params.optimizer
@@ -81,8 +81,8 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     # Load data
-    id_list1, id_list2, similarity_matrix = load_matrix_url(similarity_matrix_url)
-    similarity_matrix = np.array(similarity_matrix)
+    id_list1, id_list2, adjacency_matrix = load_matrix_url(adjacency_matrix_url)
+    adjacency_matrix = np.array(adjacency_matrix)
 
     # Prepare quantum parameters
     quantum_parameters = dict(
@@ -95,7 +95,7 @@ def calculation_task(self, db_id: int) -> str:
     # Cluster data
     max_cut_solver = max_cut_enum.get_solver(**quantum_parameters)
     max_cut_cluster = MaxCutClustering(max_cut_solver, num_clusters)
-    predictions = max_cut_cluster.create_cluster(similarity_matrix)
+    predictions = max_cut_cluster.create_cluster(adjacency_matrix)
 
     labels = [
         {"ID": _id, "href": "", "label": int(_label)}
@@ -105,7 +105,7 @@ def calculation_task(self, db_id: int) -> str:
     fig = None
     if visualize:
         fig = plot_graph(
-            similarity_matrix,
+            adjacency_matrix,
             predictions,
             title=f"MaxCut Clusters",
         )

@@ -36,7 +36,7 @@ class TaskResponseSchema(MaBaseSchema):
 class InputParameters:
     def __init__(
         self,
-        similarity_matrix_url: str,
+        adjacency_matrix_url: str,
         max_cut_enum: MaxCutSolverEnum,
         num_clusters: int,
         optimizer: OptimizerEnum,
@@ -49,7 +49,7 @@ class InputParameters:
         ibmq_token: str = "",
         visualize: bool = False,
     ):
-        self.similarity_matrix_url = similarity_matrix_url
+        self.adjacency_matrix_url = adjacency_matrix_url
         self.max_cut_enum = max_cut_enum
         self.num_clusters = num_clusters
         self.optimizer = optimizer
@@ -69,14 +69,14 @@ class InputParameters:
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
-    similarity_matrix_url = FileUrl(
+    adjacency_matrix_url = FileUrl(
         required=True,
         allow_none=False,
         data_input_type="entity/vector",
         data_content_types=["application/json"],
         metadata={
-            "label": "Similarity Matrix URL",
-            "description": "URL to a json file containing a similarity matrix.",
+            "label": "Weighted Adjacency Matrix URL",
+            "description": "URL to a json file containing a weighted adjacency matrix for a graph.",
             "input_type": "text",
         },
     )

@@ -29,9 +29,9 @@ class MaxCutClustering:
         self.__number_of_clusters = number_of_clusters
 
     def __split_Matrix(
-        self, similarity_matrix: np.array, label: np.array, category: int
+        self, adjacency_matrix: np.array, label: np.array, category: int
     ) -> np.array:
-        # split the similarity matrix in one smaller matrix. These matrix contains only similarities with the right label
+        # split the adjacency matrix in one smaller matrix. These matrix contains only adjacency with the right label
         npl = 0
         for i in range(len(label)):
             if label[i] == category:
@@ -47,20 +47,20 @@ class MaxCutClustering:
                 for j in range(len(label)):
                     if label[j] == category:
                         t += 1
-                        NSM[s, t] = similarity_matrix[i, j]
+                        NSM[s, t] = adjacency_matrix[i, j]
         return NSM
 
-    def create_cluster(self, similarity_matrix: np.array) -> np.array:
+    def create_cluster(self, adjacency_matrix: np.array) -> np.array:
         if self.__number_of_clusters == 1:
-            return self.__label_via_max_cut(similarity_matrix)
+            return self.__label_via_max_cut(adjacency_matrix)
         else:
             # rekursiv Algorithmus for more than two clusters
-            label = np.ones(similarity_matrix.shape[0])
+            label = np.ones(adjacency_matrix.shape[0])
             label.astype(np.int)
-            label_all = np.zeros(similarity_matrix.shape[0])
+            label_all = np.zeros(adjacency_matrix.shape[0])
             label_all.astype(np.int)
             label = self.__rekursivAlgorithmus(
-                self.__number_of_clusters, similarity_matrix, label, label_all, 1
+                self.__number_of_clusters, adjacency_matrix, label, label_all, 1
             )
             # print("Done")
             return label.astype(np.int)
@@ -68,7 +68,7 @@ class MaxCutClustering:
     def __rekursivAlgorithmus(
         self,
         iteration: int,
-        similarity_matrix: np.array,
+        adjacency_matrix: np.array,
         label: np.array,
         label_all: np.array,
         category: int,
@@ -80,10 +80,10 @@ class MaxCutClustering:
             if len(label) == 1 or len(label) == 0:
                 return label
 
-            if not similarity_matrix.any():
-                return np.zeros(similarity_matrix.shape[0], dtype=int)
+            if not adjacency_matrix.any():
+                return np.zeros(adjacency_matrix.shape[0], dtype=int)
 
-            new_label = self.__label_via_max_cut(similarity_matrix)
+            new_label = self.__label_via_max_cut(adjacency_matrix)
 
             z = -1
             check_label = np.ones(len(label))
@@ -100,7 +100,7 @@ class MaxCutClustering:
             )
 
             # ones: rekursion only with ones labels in new label
-            ones = self.__split_Matrix(similarity_matrix, new_label, 1)
+            ones = self.__split_Matrix(adjacency_matrix, new_label, 1)
             self.__rekursivAlgorithmus(iteration - 1, ones, label, label_all, 1)
 
             # change label for the zero cluster
@@ -116,7 +116,7 @@ class MaxCutClustering:
                     label[i] = 0
 
             # zeros: rekursion only with zero labels in new label
-            zeros = self.__split_Matrix(similarity_matrix, new_label, 0)
+            zeros = self.__split_Matrix(adjacency_matrix, new_label, 0)
 
             self.__rekursivAlgorithmus(iteration - 1, zeros, label, label_all, 1)
             return label_all

@@ -67,7 +67,7 @@ class PluginsView(MethodView):
                         data_type="entity/vector",
                         content_type=["application/json"],
                         required=True,
-                        parameter="similarityMatrix",
+                        parameter="adjacencyMatrixUrl",
                     ),
                 ],
                 data_output=[
