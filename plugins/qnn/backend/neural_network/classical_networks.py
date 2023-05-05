@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from torch import nn
+from torch import Tensor
 from plugins.qnn.schemas import WeightInitEnum
 from typing import List
 
@@ -74,7 +75,7 @@ class FeedForwardNetwork(nn.Module):
         self.weight_init = weight_init
         self.apply(self._init_weights)
 
-    def _init_weights(self, module):
+    def _init_weights(self, module: nn.Module):
         if isinstance(module, nn.Linear):
             # init weights according to initialization type
             if self.weight_init == WeightInitEnum.standard_normal:
@@ -90,7 +91,7 @@ class FeedForwardNetwork(nn.Module):
             if module.bias is not None:
                 module.bias.data.zero_()
 
-    def forward(self, input_features):
+    def forward(self, input_features: Tensor):
         """
         pass input features through classical layers
         """
