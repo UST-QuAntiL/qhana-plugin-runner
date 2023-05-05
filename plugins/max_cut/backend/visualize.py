@@ -71,10 +71,12 @@ def plot_data(
 
 
 def get_width(weight, min_weight=1, max_weight=1, min_width=0.75, max_width=5):
+    if min_weight == max_weight:
+        return (max_width - min_width) / 2.
     return (weight - min_weight) / max_weight * (max_width - min_width) + min_width
 
 
-def make_edge(x, y, text, weight, min_weight=1, max_weight=1):
+def make_edge(x, y, text, weight, min_weight=1, max_weight=1, showlegend=False):
     return go.Scatter(
         x=x,
         y=y,
@@ -84,7 +86,9 @@ def make_edge(x, y, text, weight, min_weight=1, max_weight=1):
             color="cornflowerblue",
         ),
         text=(["", text, ""]),
-        showlegend=False,
+        name="Edges",
+        showlegend=showlegend,
+        legendgroup="edges",
     )
 
 
@@ -102,6 +106,7 @@ def plot_graph(
     fig = go.Figure()
 
     # For each edge, make an edge_trace, append to list
+    showlegend = True
     for edge in graph.edges():
         if graph.edges()[edge]["weight"] != 0:
             char_1 = edge[0]
@@ -116,8 +121,10 @@ def plot_graph(
                 weight=graph.edges()[edge]["weight"],
                 min_weight=min_weight,
                 max_weight=max_weight,
+                showlegend=showlegend,
             )
             fig.add_trace(trace)
+            showlegend = False
 
     fig.add_traces(
         plot_data(positions, list(range(len(positions))), labels, title=title).data
@@ -139,25 +146,5 @@ def plot_graph(
             )
         )
     )
-
-    # Make a node trace
-    # node_trace = go.Scatter(x=[],
-    #                         y=[],
-    #                         text=[],
-    #                         textposition="top center",
-    #                         textfont_size=10,
-    #                         mode='markers+text',
-    #                         hoverinfo='none',
-    #                         marker=dict(color=[],
-    #                                     size=[],
-    #                                     line=None))
-    # For each node in midsummer, get the position and size and add to the node_trace
-    # for node in graph.nodes():
-    #     x, y = positions[node]
-    #     node_trace['x'] += tuple([x])
-    #     node_trace['y'] += tuple([y])
-    #     node_trace['marker']['color'] += tuple(['cornflowerblue'])
-    #     # node_trace['marker']['size'] += tuple([5 * graph.nodes()[node]['size']])
-    #     node_trace['text'] += tuple(['<b>' + str(node) + '</b>'])
 
     return fig
