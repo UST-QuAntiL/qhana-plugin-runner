@@ -90,13 +90,11 @@ def calculation_task(self, db_id: int) -> str:
     train_label_points_url = input_params.train_label_points_url
     test_points_url = input_params.test_points_url
     test_label_points_url = input_params.test_label_points_url
-    # set variables to loaded values
-    n_qubits = input_params.n_qubits  # Number of qubits
-    lr = input_params.lr  # Learning rate
-    batch_size = input_params.batch_size  # Numbre of samples (points) for each mini-batch
-    q_depth = input_params.q_depth  # number of variational layers
+    n_qubits = input_params.n_qubits
+    lr = input_params.lr
+    batch_size = input_params.batch_size
+    q_depth = input_params.q_depth
     network_enum = input_params.network_enum
-    # Number of optimization steps (step= 1 batch)
     epochs = input_params.epochs
     shots = input_params.shots
     optimizer = input_params.optimizer
