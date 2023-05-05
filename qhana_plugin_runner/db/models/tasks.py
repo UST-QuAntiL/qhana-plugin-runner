@@ -12,28 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional, Sequence, Union
 
-from sqlalchemy.orm import relation, relationship
-from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import select
-from sqlalchemy.sql.schema import (
-    Column,
-    ForeignKey,
-)
-from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.event import listens_for
+from sqlalchemy.sql.schema import ForeignKey
 
 from .mutable_json import MutableJSON
 from ..db import DB, REGISTRY
 
 
-@REGISTRY.mapped
-@dataclass
+@REGISTRY.mapped_as_dataclass
 class Step:
     """Step for multi-step plugins
 
@@ -47,22 +39,15 @@ class Step:
 
     __tablename__ = "Step"
 
-    __sa_dataclass_metadata_key__ = "sa"
-
-    id: int = field(
-        metadata={"sa": Column(ForeignKey("ProcessingTask.id"), primary_key=True)},
-    )
-    step_id: str = field(metadata={"sa": Column(sql.String(500))})
-    number: int = field(
-        init=False, metadata={"sa": Column(sql.Integer(), primary_key=True)}
-    )
-    href: str = field(metadata={"sa": Column(sql.String(500))})
-    ui_href: str = field(metadata={"sa": Column(sql.String(500))})
-    cleared: bool = field(metadata={"sa": Column(sql.Boolean())}, default=False)
+    id: Mapped[int] = mapped_column(ForeignKey("ProcessingTask.id"), primary_key=True)
+    step_id: Mapped[str] = mapped_column(sql.String(500))
+    number: Mapped[int] = mapped_column(sql.Integer(), init=False, primary_key=True)
+    href: Mapped[str] = mapped_column(sql.String(500))
+    ui_href: Mapped[str] = mapped_column(sql.String(500))
+    cleared: Mapped[bool] = mapped_column(sql.Boolean(), default=False)
 
 
-@REGISTRY.mapped
-@dataclass
+@REGISTRY.mapped_as_dataclass
 class ProcessingTask:
     """Dataclass for persisting (logical) task information.
 
@@ -86,56 +71,47 @@ class ProcessingTask:
 
     __tablename__ = "ProcessingTask"
 
-    __sa_dataclass_metadata_key__ = "sa"
+    id: Mapped[int] = mapped_column(sql.INTEGER(), init=False, primary_key=True)
+    task_name: Mapped[str] = mapped_column(sql.String(500))
 
-    id: int = field(init=False, metadata={"sa": Column(sql.INTEGER(), primary_key=True)})
-    task_name: str = field(metadata={"sa": Column(sql.String(500))})
-
-    started_at: datetime = field(
-        default=datetime.utcnow(), metadata={"sa": Column(sql.TIMESTAMP(timezone=True))}
+    started_at: Mapped[datetime] = mapped_column(
+        sql.TIMESTAMP(timezone=True), default=datetime.utcnow()
     )
-    finished_at: Optional[datetime] = field(
-        default=None, metadata={"sa": Column(sql.TIMESTAMP(timezone=True), nullable=True)}
+    finished_at: Mapped[Optional[datetime]] = mapped_column(
+        sql.TIMESTAMP(timezone=True), default=None, nullable=True
     )
 
-    parameters: str = field(default="", metadata={"sa": Column(sql.Text())})
+    parameters: Mapped[str] = mapped_column(sql.Text(), default="")
 
-    data: Union[dict, list, str, float, int, bool, None] = field(
-        default_factory=dict, metadata={"sa": Column(MutableJSON)}
+    data: Mapped[Union[dict, list, str, float, int, bool, None]] = mapped_column(
+        MutableJSON, default_factory=dict
     )
 
-    multi_step: bool = field(default=False, metadata={"sa": Column(sql.Boolean())})
+    multi_step: Mapped[bool] = mapped_column(sql.Boolean(), default=False)
 
-    steps: OrderingList = field(
+    steps: Mapped[OrderingList] = relationship(
+        "Step",
+        order_by="Step.number",
+        collection_class=ordering_list("number"),
+        cascade="all, delete-orphan",
         default_factory=list,
-        metadata={
-            "sa": relationship(
-                "Step",
-                order_by="Step.number",
-                collection_class=ordering_list("number"),
-                cascade="all, delete-orphan",
-            )
-        },
     )
 
-    current_step: int = field(default=-1, metadata={"sa": Column(sql.Integer())})
+    current_step: Mapped[int] = mapped_column(sql.Integer(), default=-1)
 
-    progress_value: float = field(
-        default=None, metadata={"sa": Column(sql.Float(), nullable=True)}
+    progress_value: Mapped[float] = mapped_column(
+        sql.Float(), default=None, nullable=True
     )
-    progress_start: float = field(default=0, metadata={"sa": Column(sql.Float())})
-    progress_target: float = field(default=100, metadata={"sa": Column(sql.Float())})
-    progress_unit: str = field(default="%", metadata={"sa": Column(sql.String(100))})
+    progress_start: Mapped[float] = mapped_column(sql.Float(), default=0)
+    progress_target: Mapped[float] = mapped_column(sql.Float(), default=100)
+    progress_unit: Mapped[str] = mapped_column(sql.String(100), default="%")
 
-    task_status: Optional[str] = field(
-        default=None, metadata={"sa": Column(sql.String(100))}
-    )
+    task_status: Mapped[Optional[str]] = mapped_column(sql.String(100), default=None)
 
-    task_log: str = field(default="", metadata={"sa": Column(sql.Text(), nullable=False)})
+    task_log: Mapped[str] = mapped_column(sql.Text(), default="", nullable=False)
 
-    outputs: List["TaskFile"] = field(
-        default_factory=list,
-        metadata={"sa": relationship("TaskFile", back_populates="task", lazy="select")},
+    outputs: Mapped[List["TaskFile"]] = relationship(
+        "TaskFile", back_populates="task", lazy="select", default_factory=list
     )
 
     @property
@@ -238,43 +214,32 @@ class ProcessingTask:
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
 
 
-@REGISTRY.mapped
-@dataclass
+@REGISTRY.mapped_as_dataclass
 class TaskFile:
     __tablename__ = "TaskFile"
 
-    __sa_dataclass_metadata_key__ = "sa"
-
-    id: int = field(init=False, metadata={"sa": Column(sql.INTEGER(), primary_key=True)})
-    task: ProcessingTask = field(
-        metadata={
-            "sa": relationship(
-                "ProcessingTask", back_populates="outputs", lazy="selectin"
-            )
-        }
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    task: Mapped[ProcessingTask] = relationship(
+        "ProcessingTask", back_populates="outputs", lazy="selectin"
     )
-    security_tag: str = field(metadata={"sa": Column(sql.String(64), nullable=False)})
-    storage_provider: str = field(metadata={"sa": Column(sql.String(64), nullable=False)})
-    file_name: str = field(
-        metadata={"sa": Column(sql.String(500), index=True, nullable=False)}
+    security_tag: Mapped[str] = mapped_column(sql.String(64), nullable=False)
+    storage_provider: Mapped[str] = mapped_column(sql.String(64), nullable=False)
+    file_name: Mapped[str] = mapped_column(sql.String(500), index=True, nullable=False)
+    file_storage_data: Mapped[str] = mapped_column(sql.Text(), nullable=False)
+    file_type: Mapped[Optional[str]] = mapped_column(sql.String(255), nullable=True)
+    mimetype: Mapped[Optional[str]] = mapped_column(
+        sql.String(255), nullable=True, default=None
     )
-    file_storage_data: str = field(metadata={"sa": Column(sql.Text(), nullable=False)})
-    file_type: Optional[str] = field(
-        default=None, metadata={"sa": Column(sql.String(255), nullable=True)}
+    created_at: Mapped[datetime] = mapped_column(
+        sql.TIMESTAMP(timezone=True), default=datetime.utcnow()
     )
-    mimetype: Optional[str] = field(
-        default=None, metadata={"sa": Column(sql.String(255), nullable=True)}
-    )
-    created_at: datetime = field(
-        default=datetime.utcnow(), metadata={"sa": Column(sql.TIMESTAMP(timezone=True))}
-    )
-    task_id: Optional[int] = field(
+    task_id: Mapped[Optional[int]] = mapped_column(
+        sql.INTEGER(),
+        ForeignKey(ProcessingTask.id),
         default=None,
         init=False,
         repr=False,
         compare=False,
-        hash=False,
-        metadata={"sa": Column(sql.INTEGER(), ForeignKey(ProcessingTask.id))},
     )
 
     def save(self, commit: bool = False):

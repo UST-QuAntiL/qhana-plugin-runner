@@ -40,7 +40,7 @@ from typing import (
 )
 from unicodedata import category, normalize
 
-from typing_extensions import Protocol
+from typing import Protocol
 
 
 class EntityTupleMixin:
