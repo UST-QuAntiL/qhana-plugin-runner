@@ -28,6 +28,9 @@ def add_background(
     two_classes: bool = False,
     label_to_int: dict = None,
 ) -> go.Figure:
+    """
+    Adds heatmap to given scatter plot. Heatmap shows the areas in which the predictor predicts a certain label.
+    """
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -133,6 +136,9 @@ def add_background(
 
 
 def correct_markers(scatter_plot: go.Figure) -> go.Figure:
+    """
+    Sets markers for support vectors to crosses and markers for training data to diamonds.
+    """
     for sca_plt in scatter_plot.data:
         sca_plt.marker["symbol"] = (
             "cross-dot"
@@ -159,6 +165,9 @@ def plot_data(
     label_to_int: dict = None,
     support_vectors: List[int] = None,
 ) -> go.Figure:
+    """
+    Returns plotly plot of data
+    """
     # Prepare data
     dim = len(train_data[0])
     train_end = 100 if only_first_100 else len(train_data)
@@ -252,6 +261,9 @@ def plot_data(
 
 
 def plot_confusion_matrix(y_true: list, y_pred: list, labels: list) -> go.Figure:
+    """
+    Given predicted labels and true labels, this method returns the confusion matrix as a plotly figure.
+    """
     labels.sort()
     conf_matrix = confusion_matrix(y_true, y_pred, labels=labels).T
 
