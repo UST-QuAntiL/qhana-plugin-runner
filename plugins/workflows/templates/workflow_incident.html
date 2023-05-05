@@ -42,7 +42,6 @@
             <button class="qhana-form-submit" dtype="submit" value="continue">Continue Workflow</button>
         {% endif %}
     </form>
-    <!-- TODO add form to stop/resume workflow -->
 {% endblock content %}
 
 {% block script %}
@@ -92,7 +91,6 @@
                             }
                         },
                         (error) => {
-                            // TODO notify in case of error
                             sendMessage({
                                 type: "form-error",
                                 status: 500,

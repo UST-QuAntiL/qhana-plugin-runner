@@ -659,7 +659,7 @@ class HumanTaskFrontend(MethodView):
             try:
                 form_params = json.loads(db_task.data["form_params"])
             except Exception:
-                pass  # TODO raise proper error here (will throw generic one two lines later)
+                # TODO raise proper error here (will throw generic one two lines later)
                 form_params = {}
 
         default_values = {}

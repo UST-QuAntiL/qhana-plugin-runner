@@ -150,7 +150,6 @@ class CamundaManagementClient:
         return response.json()
 
 
-# TODO remove unused functions
 class CamundaClient:
     """
     Handles setup for deployments, process instances and listeners.
@@ -496,59 +495,6 @@ class CamundaClient:
         )
         response.raise_for_status()
         return response.text
-
-    def deploy(self, bpmn_location: Path) -> str:
-        """
-        Deploy a BPMN model to the Camunda Engine.
-        Return the process definition id.
-        """
-        if bpmn_location is None:
-            raise ValueError("No BPMN File specified!")
-        with bpmn_location.open(mode="rb") as bpmn:
-            response = requests.post(
-                url=f"{self.base_url}/deployment/create",
-                params={
-                    "deployment-name": bpmn_location.name,
-                    "enable-duplicate-filtering": "true",
-                    "deployment-source": self.worker_id,  # TODO add path to deployment source? hashing?
-                },
-                files={bpmn_location.name: bpmn},
-                timeout=self.timeout,
-            )
-            response.raise_for_status()
-
-        deployment_id = response.json().get("id", None)
-        process_def_response = requests.get(
-            url=f"{self.base_url}/process-definition",
-            params={
-                "deploymentId": deployment_id,
-            },
-            timeout=self.timeout,
-        )
-        process_def_response.raise_for_status()
-        deployed_process_defs = process_def_response.json()
-        if len(deployed_process_defs) != 1:
-            raise WorkflowDeploymentError(
-                "The deployed BPMN file did not contain a process definition!"
-            )
-
-        process_definition_id = deployed_process_defs[0]["id"]
-        return process_definition_id
-
-    def create_instance(self, process_definition_id: str):
-        """
-        Create a workflow instance from the deployed BPMN model
-        """
-        response = requests.post(
-            url=f"{self.base_url}/process-definition/{process_definition_id}/start",
-            json={"variables": {}},
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
-
-        process_instance_id = response.json()["id"]
-
-        return process_instance_id
 
     def is_process_active(self, process_instance_id: str):
         """

@@ -113,7 +113,7 @@ class DeployWorkflowView(MethodView):
         from .management_routes import WORKFLOW_MGMNT_BLP, VirtualPluginView
 
         db_task = ProcessingTask(
-            task_name="TODO",
+            task_name=deploy_workflow.__name__,
             parameters=data["workflow"],
         )
 
