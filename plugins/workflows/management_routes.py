@@ -30,7 +30,7 @@ from .datatypes.camunda_datatypes import WorkflowIncident
 from .management import WORKFLOW_MGMNT_BLP, WorkflowManagement
 from .schemas import AnyInputSchema, GenericInputsSchema, WorkflowIncidentSchema
 from .tasks import process_input, start_workflow_with_arguments
-from .watchers.human_task_watcher import workflow_status_watcher
+from .watchers.workflow_status import workflow_status_watcher
 
 config = WorkflowManagement.instance.config
 
