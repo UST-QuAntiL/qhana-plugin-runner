@@ -49,7 +49,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Dataset Type",
-            "description": "Currently available dataset types are:\n\n- Two Spiral: Creates two spirals, spiraling out from the same point. Both spirals have a different label.",
+            "description": "Currently available dataset types are:\n- Two Spiral: Creates two spirals, spiraling out from the same point. Both spirals have a different label.",
             "input_type": "select",
         },
     )
