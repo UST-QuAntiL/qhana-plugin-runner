@@ -20,6 +20,7 @@ from qhana_plugin_runner.api.util import (
     MaBaseSchema,
 )
 
+from dataclasses import dataclass
 from .backend.datasets import DataTypeEnum
 
 
@@ -29,25 +30,16 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+@dataclass(repr=False)
 class InputParameters:
-    def __init__(
-        self,
-        dataset_type: DataTypeEnum,
-        num_train_points: int,
-        num_test_points: int,
-        noise: float = None,
-        turns: float = None,
-    ):
-        self.dataset_type = dataset_type
-        self.num_train_points = num_train_points
-        self.num_test_points = num_test_points
-        self.noise = noise
-        self.turns = turns
+    dataset_type: DataTypeEnum
+    num_train_points: int
+    num_test_points: int
+    turns: float = None
+    noise: float = None
 
     def __str__(self):
-        variables = self.__dict__.copy()
-        variables["ibmq_token"] = ""
-        return str(variables)
+        return str(self.__dict__.copy())
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
