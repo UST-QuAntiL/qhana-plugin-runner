@@ -19,7 +19,6 @@
 from enum import Enum
 
 import pennylane as qml
-from pennylane import numpy as np
 
 # PyTorch
 import torch
@@ -27,7 +26,7 @@ import torch.nn as nn
 
 from plugins.qnn.schemas import WeightInitEnum
 
-from typing import List, Iterator, Tuple
+from typing import List, Iterator
 
 from abc import ABCMeta, abstractmethod
 
