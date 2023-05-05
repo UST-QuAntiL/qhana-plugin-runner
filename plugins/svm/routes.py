@@ -65,7 +65,7 @@ class PluginsView(MethodView):
                     InputDataMetadata(
                         data_type="entity/vector",
                         content_type=["text/csv", "application/json"],
-                        required=True,
+                        required=False,
                         parameter="trainPointsUrl",
                     ),
                     InputDataMetadata(
@@ -77,7 +77,7 @@ class PluginsView(MethodView):
                     InputDataMetadata(
                         data_type="entity/vector",
                         content_type=["text/csv", "application/json"],
-                        required=True,
+                        required=False,
                         parameter="testPointsUrl",
                     ),
                     InputDataMetadata(
@@ -112,14 +112,14 @@ class PluginsView(MethodView):
                         content_type=[
                             "text/html",
                         ],
-                        required=True,
+                        required=False,
                     ),
                     DataMetadata(
                         data_type="plot",
                         content_type=[
                             "text/html",
                         ],
-                        required=True,
+                        required=False,
                     ),
                     DataMetadata(
                         data_type="entity/vector",
