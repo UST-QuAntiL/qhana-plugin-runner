@@ -35,6 +35,10 @@ def get_entity_generator(entity_url: str):
 
 
 def load_matrix_url(matrix_url: str) -> (List, List, List[List[float]]):
+    """
+    Returns a 2d List (matrix) from the given url.
+    :param matrix_url: url to the matrix
+    """
     matrix_generator = get_entity_generator(matrix_url)
     matrix = []
     id_list_row = []

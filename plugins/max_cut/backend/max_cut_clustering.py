@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable, Tuple
 import numpy as np
 from celery.utils.log import get_task_logger
 
@@ -24,13 +25,23 @@ class MaxCutClustering:
     Interface for Clustering Object
     """
 
-    def __init__(self, max_cut_solver, number_of_clusters=1):
+    def __init__(
+        self,
+        max_cut_solver: Callable[[np.array], Tuple[np.array, float]],
+        number_of_clusters: int = 1,
+    ):
         self.__max_cut_solver = max_cut_solver
         self.__number_of_clusters = number_of_clusters
 
     def __split_Matrix(
         self, adjacency_matrix: np.array, label: np.array, category: int
     ) -> np.array:
+        """
+        This function returns the submatrix that contains only rows and columns with the label equal to the category.
+        :param adjacency_matrix: a matrix
+        :param label: numpy array containing the label for each element associated with a column/row
+        :param category: integer. Category to split the matrix by
+        """
         # split the adjacency matrix in one smaller matrix. These matrix contains only adjacency with the right label
         npl = 0
         for i in range(len(label)):
@@ -73,6 +84,16 @@ class MaxCutClustering:
         label_all: np.array,
         category: int,
     ) -> np.array:
+        """
+        Returns a list of labels for each node, by splitting a given graph into two subgraphs via a maxcut. It continues
+        this process for each subgraph, until the recursion depth is equal to the parameter iteration. Nodes
+        within the same subgraph get assigned the same label.
+        :param iteration: integer determining the recursion's depth.
+        :param adjacency_matrix: numpy array representing the weighted adjacency matrix of a graph/subgraph.
+        :param label: numpy array with labels associated with the nodes in the graph/subgraph.
+        :param label_all: numpy array with all the labels associated with the original graph.
+        :param category: integer determining the category to split by.a
+        """
         # rekursiv Algorithmus for more than two clusters
         if iteration == 0:
             return label
@@ -122,7 +143,10 @@ class MaxCutClustering:
             return label_all
 
     def __label_via_max_cut(self, adjacency_matrix: np.array) -> np.array:
-        # Solve
+        """
+        Executes a max cut and returns labels for each node, depending on the max cut.
+        :param adjacency_matrix: numpy array containing the weighted adjacency matrix of a graph.
+        """
         (cut, cutValue) = self.__max_cut_solver(adjacency_matrix)
 
         return cut.astype(int)

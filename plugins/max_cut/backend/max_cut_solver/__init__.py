@@ -27,6 +27,9 @@ from qiskit.algorithms.optimizers.optimizer import Optimizer
 
 
 def create_graph(adjacency_matrix: np.array) -> nx.Graph:
+    """
+    Creates a networkx.Graph object out of a weighted adjacency matrix.
+    """
     graph = nx.Graph()
 
     for i in range(adjacency_matrix.shape[0]):
@@ -44,6 +47,10 @@ class MaxCutSolverEnum(Enum):
     vqe = "Variational Quantum Eigensolver (VQE)"
 
     def get_solver(self, **kwargs) -> Callable[[np.array], Tuple[np.array, float]]:
+        """
+        Returns a function that given an adjacency matrix returns the max cut and its value.
+        The functions returned depends on the chosen enum.
+        """
         if self == MaxCutSolverEnum.bm:
             return bm_maxcut
         elif self == MaxCutSolverEnum.sdp:

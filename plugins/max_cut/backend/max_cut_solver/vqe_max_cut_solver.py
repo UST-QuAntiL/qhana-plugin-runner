@@ -42,16 +42,10 @@ class VQEMaxCutSolver:
     def solve(self) -> (np.array, float):
         max_cut = Maxcut(self.adjacency_matrix)
         qp = max_cut.to_quadratic_program()
-        # print(f"__vqeAlgorithmus: qp\n{qp}")
-        # print(qp.prettyprint())
 
         qubitOp, offset = qp.to_ising()
-        # print("Offset:", offset)
-        # print("Ising Hamiltonian:")
-        # print(str(qubitOp))
 
         # construct SamplingVQE
-        # print(f"qubitOp.num_qubits: {qubitOp.num_qubits}")
         ry = TwoLocal(
             qubitOp.num_qubits,
             "ry",
@@ -62,16 +56,9 @@ class VQEMaxCutSolver:
         vqe = SamplingVQE(sampler=self.backend, ansatz=ry, optimizer=self.optimizer)
 
         # run SamplingVQE
-        # print(f"__vqeAlgorithmus: qubitOp\n{qubitOp}")
         result = vqe.compute_minimum_eigenvalue(qubitOp)
 
-        # print results
         x = max_cut.sample_most_likely(result.eigenstate)
         x = np.array(list(x) + [0] * (qubitOp.num_qubits - len(x)), dtype=np.int)
-        # print("energy:", result.eigenvalue.real)
-        # print("time:", result.optimizer_time)
-        # print("max-cut objective:", result.eigenvalue.real + offset)
-        # print("solution:", x)
-        # print("solution objective:", qp.objective.evaluate(x))
 
         return x, qp.objective.evaluate(x)

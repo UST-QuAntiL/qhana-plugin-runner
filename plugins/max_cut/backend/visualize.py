@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -21,11 +22,11 @@ from .max_cut_solver import create_graph
 
 
 def plot_data(
-    points,
-    ids,
-    labels,
+    points: np.array,
+    ids: List,
+    labels: np.array,
     title="",
-):
+) -> go.Figure:
     # Prepare data
     dim = len(points[0])
 
@@ -70,13 +71,27 @@ def plot_data(
     return fig
 
 
-def get_width(weight, min_weight=1, max_weight=1, min_width=0.75, max_width=5):
+def get_width(
+    weight: float,
+    min_weight: float = 1,
+    max_weight: float = 1,
+    min_width: float = 0.75,
+    max_width: float = 5,
+) -> float:
     if min_weight == max_weight:
         return (max_width - min_width) / 2.0
     return (weight - min_weight) / max_weight * (max_width - min_width) + min_width
 
 
-def make_edge(x, y, text, weight, min_weight=1, max_weight=1, showlegend=False):
+def make_edge(
+    x: List[float],
+    y: List[float],
+    text: str,
+    weight: float,
+    min_weight: float = 1,
+    max_weight: float = 1,
+    showlegend: bool = False,
+) -> go.Scatter:
     return go.Scatter(
         x=x,
         y=y,
@@ -94,9 +109,9 @@ def make_edge(x, y, text, weight, min_weight=1, max_weight=1, showlegend=False):
 
 def plot_graph(
     adjacency_matrix: np.array,
-    labels,
+    labels: np.array,
     title="",
-):
+) -> go.Figure:
     min_weight = np.min(adjacency_matrix[np.nonzero(adjacency_matrix)])
     max_weight = np.max(adjacency_matrix[np.nonzero(adjacency_matrix)])
     graph = create_graph(adjacency_matrix)
