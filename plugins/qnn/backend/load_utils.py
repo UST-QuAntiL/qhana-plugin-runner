@@ -22,7 +22,6 @@ from typing import List
 import numpy as np
 
 
-
 def get_point(ent: dict) -> np.ndarray:
     dimension_keys = [k for k in ent.keys() if k not in ("ID", "href")]
     dimension_keys.sort()
