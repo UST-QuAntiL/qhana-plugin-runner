@@ -696,7 +696,7 @@ SQLAlchemy = ">=1.4.18"
 name = "fspath"
 version = "20230218"
 description = "semantic path names and more"
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -948,7 +948,7 @@ zookeeper = ["kazoo (>=1.3.1)"]
 name = "linuxdoc"
 version = "20221025"
 description = "Sphinx-doc extensions & tools to extract documentation from C/C++ source file comments."
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -1596,7 +1596,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 name = "setuptools"
 version = "67.6.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2059,4 +2059,4 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "dfbc3c58072da8a8ab4858c71ec92c1b140d95e543208139ce7903c1eee4e32c"
+content-hash = "512d6b6fb1e70f212dd8739b66e83dacff35a53573cb11ed0a7a56e247efad93"
