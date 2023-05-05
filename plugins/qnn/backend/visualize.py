@@ -139,16 +139,16 @@ def add_background(
 def plot_data(
     train_data: Tensor,
     train_id_list: list,
-    train_labels: Tensor,
+    train_labels: list,
     test_data: Tensor,
     test_id_list: list,
-    test_labels: Tensor,
+    test_labels: list,
     resolution: int = 0,
     predictor: Callable[[Tensor], Tensor] = None,
     only_first_100: bool = True,
     title: str = "",
     label_to_int: dict = None,
-) -> go.Scatter:
+) -> go.Figure:
     """
     Returns plotly plot of data
     """
