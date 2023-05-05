@@ -107,14 +107,29 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
+                        data_type="entity/label",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
+                    DataMetadata(
                         data_type="plot",
                         content_type=["text/html"],
-                        required=True,
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="plot",
+                        content_type=["text/html"],
+                        required=False,
                     ),
                     DataMetadata(
                         data_type="qnn-weights",
                         content_type=["application/json"],
                         required=True,
+                    ),
+                    DataMetadata(
+                        data_type="representative-circuit",
+                        content_type=["application/qasm"],
+                        required=False,
                     ),
                 ],
             ),

@@ -307,8 +307,8 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "qasm-quantum-circuit.qasm",
-                "qasm-quantum-circuit",
+                "representative-circuit.qasm",
+                "representative-circuit",
                 "application/qasm",
             )
 
