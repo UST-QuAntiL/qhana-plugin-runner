@@ -19,7 +19,7 @@
 import os
 from tempfile import SpooledTemporaryFile
 
-from typing import Optional, List
+from typing import Optional
 
 from celery.utils.log import get_task_logger
 
@@ -32,12 +32,9 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.requests import open_url
 
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
-    load_entities,
-    ensure_dict,
 )
 
 import numpy as np
@@ -55,91 +52,13 @@ from torch.utils.data.dataloader import DataLoader
 
 from sklearn.metrics import accuracy_score
 
+from .backend.load_utils import get_indices_and_point_arr, get_label_arr
 from .backend.datasets import OneHotDataset
 from .backend.train_and_test import train
 from .backend.visualize import plot_data, plot_confusion_matrix
 
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_point(ent: dict) -> np.ndarray:
-    dimension_keys = [k for k in ent.keys() if k not in ("ID", "href")]
-    dimension_keys.sort()
-    point = np.empty(len(dimension_keys))
-    for idx, d in enumerate(dimension_keys):
-        point[idx] = ent[d]
-    return point
-
-
-def get_entity_generator(entity_points_url: str):
-    """
-    Return a generator for the entity points, given an url to them.
-    :param entity_points_url: url to the entity points
-    """
-    file_ = open_url(entity_points_url)
-    file_.encoding = "utf-8"
-    file_type = file_.headers["Content-Type"]
-    entities_generator = load_entities(file_, mimetype=file_type)
-    entities_generator = ensure_dict(entities_generator)
-    for ent in entities_generator:
-        yield {"ID": ent["ID"], "href": ent.get("href", ""), "point": get_point(ent)}
-
-
-def get_indices_and_point_arr(entity_points_url: str) -> (List, np.array):
-    entity_points = list(get_entity_generator(entity_points_url))
-    id_list = []
-    points_arr = []
-
-    for ent in entity_points:
-        if ent["ID"] in id_list:
-            raise ValueError("Duplicate ID: ", ent["ID"])
-        id_list.append(ent["ID"])
-        points_arr.append(ent["point"])
-
-    return id_list, np.array(points_arr)
-
-
-def get_label_generator(entity_labels_url: str):
-    """
-    Return a generator for the entity labels, given an url to them.
-    :param entity_labels_url: url to the entity labels
-    """
-    file_ = open_url(entity_labels_url)
-    file_.encoding = "utf-8"
-    file_type = file_.headers["Content-Type"]
-    entities_generator = load_entities(file_, mimetype=file_type)
-    entities_generator = ensure_dict(entities_generator)
-    for ent in entities_generator:
-        yield {"ID": ent["ID"], "href": ent.get("href", ""), "label": ent["label"]}
-
-
-def get_label_arr(
-    entity_labels_url: str,
-    id_list: list,
-    label_to_int: dict = None,
-    int_to_label: list = None,
-) -> (dict, List[List[float]]):
-    entity_labels = list(get_label_generator(entity_labels_url))
-
-    # Initialise label array
-    labels = np.zeros(len(id_list), dtype=int)
-
-    if label_to_int is None:
-        label_to_int = dict()
-    if int_to_label is None:
-        int_to_label = list()
-
-    id_to_idx = {value: idx for idx, value in enumerate(id_list)}
-    for ent in entity_labels:
-        label = ent["label"]
-        label_str = str(label)
-        if label_str not in label_to_int:
-            label_to_int[label_str] = len(int_to_label)
-            int_to_label.append(label)
-        labels[id_to_idx[ent["ID"]]] = label_to_int[label_str]
-
-    return labels, label_to_int, int_to_label
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
