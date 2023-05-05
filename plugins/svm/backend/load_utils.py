@@ -1,4 +1,18 @@
-from typing import List, Optional
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from typing import List, Optional, Generator
 import numpy as np
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
@@ -16,7 +30,7 @@ def get_point(ent: dict) -> np.ndarray:
     return point
 
 
-def get_entity_generator(entity_points_url: str):
+def get_entity_generator(entity_points_url: str) -> Generator[dict, None, None]:
     """
     Return a generator for the entity points, given an url to them.
     :param entity_points_url: url to the entity points
@@ -44,7 +58,7 @@ def get_indices_and_point_arr(entity_points_url: str) -> (dict, np.array):
     return id_list, np.array(points_arr)
 
 
-def get_label_generator(entity_labels_url: str):
+def get_label_generator(entity_labels_url: str) -> Generator[dict, None, None]:
     """
     Return a generator for the entity labels, given an url to them.
     :param entity_labels_url: url to the entity labels
@@ -60,7 +74,7 @@ def get_label_generator(entity_labels_url: str):
 
 def get_label_arr(
     entity_labels_url: str, id_list: list, label_to_int=None, int_to_label=None
-) -> (dict, List[List[float]]):
+) -> (np.array, dict, List):
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
@@ -92,7 +106,7 @@ def get_id_list(id_to_idx: dict):
 
 
 def load_kernel_matrix(
-    kernel_url: str, id_to_idx_X: Optional[dict] = None
+    kernel_url: str, id_to_idx_X: Optional[dict] = None,
 ) -> (dict, dict, np.array):
     """
     Loads in a kernel matrix, given its url

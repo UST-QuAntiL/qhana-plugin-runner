@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Callable, List
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -20,8 +21,8 @@ from sklearn.metrics import confusion_matrix
 
 
 def add_background(
-    points, resolution, predictor, scatter, two_classes=False, label_to_int=None
-):
+    points: np.array, resolution: int, predictor: Callable[[np.array | List[List[float]]], List[float]], scatter: go.Figure, two_classes: bool = False, label_to_int: dict = None,
+) -> go.Figure:
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -126,7 +127,7 @@ def add_background(
     return scatter
 
 
-def correct_markers(scatter_plot):
+def correct_markers(scatter_plot: go.Figure) -> go.Figure:
     for sca_plt in scatter_plot.data:
         sca_plt.marker["symbol"] = (
             "cross-dot"
@@ -140,19 +141,19 @@ def correct_markers(scatter_plot):
 
 
 def plot_data(
-    train_data,
-    train_id_list,
-    train_labels,
-    test_data,
-    test_id_list,
-    test_labels,
-    resolution=0,
-    predictor=None,
-    only_first_100=True,
-    title="",
-    label_to_int=None,
-    support_vectors=None,
-):
+    train_data: np.array,
+    train_id_list: List,
+    train_labels: List,
+    test_data: np.array,
+    test_id_list: List,
+    test_labels: List,
+    resolution: int = 0,
+    predictor: Callable[[np.array | List[List[float]]], List[float]] = None,
+    only_first_100: bool = True,
+    title: str = "",
+    label_to_int: dict = None,
+    support_vectors: List[int] = None,
+) -> go.Figure:
     # Prepare data
     dim = len(train_data[0])
     train_end = 100 if only_first_100 else len(train_data)
@@ -172,7 +173,8 @@ def plot_data(
     train_types = ["train"] * len(train_data)
     if support_vectors is not None:
         for i in support_vectors:
-            train_types[i] = "support vectors"
+            if i < train_end:
+                train_types[i] = "support vectors"
 
     data_frame_content = dict(
         ID=ids,
@@ -244,7 +246,7 @@ def plot_data(
     return fig
 
 
-def plot_confusion_matrix(y_true, y_pred, labels: list):
+def plot_confusion_matrix(y_true: list, y_pred: list, labels: list) -> go.Figure:
     labels.sort()
     conf_matrix = confusion_matrix(y_true, y_pred, labels=labels).T
 
