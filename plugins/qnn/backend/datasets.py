@@ -1,19 +1,33 @@
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from torch.utils.data.dataset import Dataset
-import torch
+from torch import eye, Tensor
 
 
-def digits2position(vec_of_digits, n_positions):
+def digits2position(vec_of_digits: Tensor, n_positions: int):
     """One-hot encoding of a batch of vectors."""
-    return torch.eye(n_positions)[vec_of_digits]
+    return eye(n_positions)[vec_of_digits]
 
 
 class OneHotDataset(Dataset):
-    def __init__(self, data, labels, n_classes):
+    def __init__(self, data: Tensor, labels: Tensor, n_classes: int):
         self.data = data
         self.labels = digits2position(labels, n_classes)
 
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         return self.data[idx], self.labels[idx]

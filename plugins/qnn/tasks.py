@@ -1,3 +1,17 @@
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # hybrid quantum neural network implemented based on:
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
@@ -41,29 +55,12 @@ from torch.utils.data.dataloader import DataLoader
 
 from sklearn.metrics import accuracy_score
 
-from .backend.datasets import OneHotDataset, digits2position
+from .backend.datasets import OneHotDataset
 from .backend.train_and_test import train
 from .backend.visualize import plot_data, plot_confusion_matrix
 
-# Plot to html
-import base64
-from io import BytesIO
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-# ------------------------------
-#       dataset generation
-# ------------------------------
-def twospirals(n_points, noise=0.7, turns=1.52):
-    """Returns the two spirals dataset."""
-    n = np.sqrt(np.random.rand(n_points, 1)) * turns * (2 * np.pi)
-    d1x = -np.cos(n) * n + np.random.rand(n_points, 1) * noise
-    d1y = np.sin(n) * n + np.random.rand(n_points, 1) * noise
-    return (
-        np.vstack((np.hstack((d1x, d1y)), np.hstack((-d1x, -d1y)))),
-        np.hstack((np.zeros(n_points).astype(int), np.ones(n_points).astype(int))),
-    )
 
 
 def get_point(ent: dict) -> np.ndarray:
@@ -89,7 +86,7 @@ def get_entity_generator(entity_points_url: str):
         yield {"ID": ent["ID"], "href": ent.get("href", ""), "point": get_point(ent)}
 
 
-def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]]):
+def get_indices_and_point_arr(entity_points_url: str) -> (List, np.array):
     entity_points = list(get_entity_generator(entity_points_url))
     id_list = []
     points_arr = []
@@ -118,7 +115,7 @@ def get_label_generator(entity_labels_url: str):
 
 
 def get_label_arr(
-    entity_labels_url: str, id_list: list, label_to_int=None, int_to_label=None
+    entity_labels_url: str, id_list: list, label_to_int: dict = None, int_to_label: list = None
 ) -> (dict, List[List[float]]):
     entity_labels = list(get_label_generator(entity_labels_url))
 

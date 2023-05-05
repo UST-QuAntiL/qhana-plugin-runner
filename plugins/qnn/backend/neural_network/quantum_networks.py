@@ -1,3 +1,17 @@
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # implementation based on:
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
@@ -53,19 +67,19 @@ class QuantumNet(nn.Module, metaclass=ABCMeta):
 
 
 # define quantum layers
-def H_layer(nqubits):
+def H_layer(nqubits: int):
     """Layer of single-qubit Hadamard gates."""
     for idx in range(nqubits):
         qml.Hadamard(wires=idx)
 
 
-def RY_layer(w):
+def RY_layer(w: List[float]):
     """Layer of parametrized qubit rotations around the y axis."""
     for idx, element in enumerate(w):
         qml.RY(element, wires=idx)
 
 
-def entangling_layer(nqubits):
+def entangling_layer(nqubits: int):
     """Layer of CNOTs followed by another shifted layer of CNOT."""
     # In other words it should apply something like :
     # CNOT  CNOT  CNOT  CNOT...  CNOT
@@ -84,12 +98,12 @@ class DressedQuantumNet(QuantumNet):
 
     def __init__(
         self,
-        input_size,
-        output_size,
-        n_qubits,
-        quantum_device,
-        q_depth,
-        weight_init,
+        input_size: int,
+        output_size: int,
+        n_qubits: int,
+        quantum_device: qml.Device,
+        q_depth: int,
+        weight_init: WeightInitEnum,
         preprocess_layers: List[int],
         postprocess_layers: List[int],
         diff_method: DiffMethodEnum,
@@ -170,7 +184,7 @@ class DressedQuantumNet(QuantumNet):
         self.q_net = quantum_net
         self.n_qubits = n_qubits
 
-    def forward(self, input_features):
+    def forward(self, input_features: torch.Tensor):
         """
         pass input features through preprocessing, quantum and postprocessing layers
         """
@@ -193,7 +207,7 @@ class DressedQuantumNet(QuantumNet):
         for name, param in self.named_parameters(recurse=recurse):
             yield param
 
-    def get_quantum_parameters(self):
+    def get_quantum_parameters(self) -> nn.Parameter | List[nn.Parameter]:
         return self.q_params
 
     def get_representative_circuit(self) -> str:

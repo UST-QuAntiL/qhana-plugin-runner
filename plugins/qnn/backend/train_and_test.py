@@ -1,16 +1,32 @@
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # implementation based on:
 # https://github.com/XanaduAI/quantum-transfer-learning/blob/master/dressed_circuit.ipynb
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
-
-from pennylane import numpy as np
 
 # PyTorch
 import torch
 
 import time
+from torch.nn import Module
+from torch.utils.data.dataloader import DataLoader
+from torch.nn.modules.loss import _Loss
+from torch.optim.optimizer import Optimizer
 
 
-def train(model, dataloader, loss_fn, optimizer, num_iterations, weights_to_wiggle):
+def train(model: Module, dataloader: DataLoader, loss_fn: _Loss, optimizer: Optimizer, num_iterations: int, weights_to_wiggle: int):
     """
     train the model with the given data and parameters
 
@@ -77,7 +93,7 @@ def train(model, dataloader, loss_fn, optimizer, num_iterations, weights_to_wigg
     torch.set_grad_enabled(False)
 
 
-def test(model, X_test, Y_test, loss_fn):
+def test(model: Module, X_test: torch.Tensor, Y_test: torch.Tensor, loss_fn: _Loss):
     """
     test the model with the given data and parameters
 
