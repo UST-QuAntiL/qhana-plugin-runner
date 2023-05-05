@@ -100,7 +100,7 @@ def train(
     torch.set_grad_enabled(False)
 
 
-def test(model: Module, X_test: torch.Tensor, Y_test: torch.Tensor, loss_fn: _Loss):
+def test(model: Module, X_test: torch.Tensor, Y_test: torch.Tensor, loss_fn: _Loss) -> float:
     """
     test the model with the given data and parameters
 

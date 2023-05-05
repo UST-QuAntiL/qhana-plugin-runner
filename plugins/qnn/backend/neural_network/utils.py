@@ -17,5 +17,10 @@ from typing import Iterator
 
 
 def grouper(iterator: Iterator, n: int) -> Iterator[list]:
+    """
+    This method is a generator that returns n elements of an iterator at once.
+    :param iterator: An iterator
+    :param n: int
+    """
     while chunk := list(islice(iterator, n)):
         yield chunk

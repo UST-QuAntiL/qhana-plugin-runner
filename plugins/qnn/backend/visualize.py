@@ -29,6 +29,9 @@ def add_background(
     two_classes: bool = False,
     label_to_int: dict = None,
 ) -> go.Figure:
+    """
+    Adds heatmap to given scatter plot. Heatmap shows the areas in which the predictor predicts a certain label.
+    """
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
     min_vec = points.min(axis=0)
@@ -146,6 +149,9 @@ def plot_data(
     title: str = "",
     label_to_int: dict = None,
 ) -> go.Scatter:
+    """
+    Returns plotly plot of data
+    """
     # Prepare data
     dim = len(train_data[0])
     train_end = 100 if only_first_100 else len(train_data)
@@ -230,6 +236,9 @@ def plot_data(
 
 
 def plot_confusion_matrix(y_true: list, y_pred: list, labels: list) -> go.Figure:
+    """
+    Given predicted labels and true labels, this method returns the confusion matrix as a plotly figure.
+    """
     labels.sort()
     conf_matrix = confusion_matrix(y_true, y_pred, labels=labels).T
 

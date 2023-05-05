@@ -16,6 +16,10 @@ import marshmallow as ma
 
 
 def validate_floats_seperated_by_comma(value: str):
+    """
+    Checks if a given string consits of floats separated by commas and each float is greater than 0. Whitespaces are
+    ignored. If this is not the case, then it throws a ValidationError.
+    """
     if value != "":
         value = value.replace(" ", "")
         value = value.split(",")
