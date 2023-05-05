@@ -115,7 +115,10 @@ def get_label_generator(entity_labels_url: str):
 
 
 def get_label_arr(
-    entity_labels_url: str, id_list: list, label_to_int: dict = None, int_to_label: list = None
+    entity_labels_url: str,
+    id_list: list,
+    label_to_int: dict = None,
+    int_to_label: list = None,
 ) -> (dict, List[List[float]]):
     entity_labels = list(get_label_generator(entity_labels_url))
 

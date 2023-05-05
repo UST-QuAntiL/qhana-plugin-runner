@@ -22,7 +22,12 @@ from torch import Tensor
 
 
 def add_background(
-    points: np.array, resolution: int, predictor: Callable[[Tensor], Tensor], scatter: go.Scatter, two_classes: bool = False, label_to_int: dict = None
+    points: np.array,
+    resolution: int,
+    predictor: Callable[[Tensor], Tensor],
+    scatter: go.Scatter,
+    two_classes: bool = False,
+    label_to_int: dict = None,
 ) -> go.Figure:
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector

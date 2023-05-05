@@ -26,7 +26,14 @@ from torch.nn.modules.loss import _Loss
 from torch.optim.optimizer import Optimizer
 
 
-def train(model: Module, dataloader: DataLoader, loss_fn: _Loss, optimizer: Optimizer, num_iterations: int, weights_to_wiggle: int):
+def train(
+    model: Module,
+    dataloader: DataLoader,
+    loss_fn: _Loss,
+    optimizer: Optimizer,
+    num_iterations: int,
+    weights_to_wiggle: int,
+):
     """
     train the model with the given data and parameters
 
