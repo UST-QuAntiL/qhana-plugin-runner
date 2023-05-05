@@ -35,7 +35,7 @@ DataCreator_BLP = SecurityBlueprint(
 class DataCreator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "A plugin to create datasets"
+    description = "A plugin to create datasets."
 
     tags = []
 

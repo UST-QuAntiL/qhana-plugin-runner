@@ -70,7 +70,21 @@ class PluginsView(MethodView):
                         required=True,
                     ),
                     DataMetadata(
+                        data_type="entity/label",
+                        content_type=[
+                            "application/json",
+                        ],
+                        required=True,
+                    ),
+                    DataMetadata(
                         data_type="entity/vector",
+                        content_type=[
+                            "application/json",
+                        ],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="entity/label",
                         content_type=[
                             "application/json",
                         ],
