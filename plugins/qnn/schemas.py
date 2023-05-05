@@ -21,7 +21,7 @@ from qhana_plugin_runner.api.util import (
 )
 from marshmallow import post_load
 
-from .validation_functions import validate_floats_seperated_by_comma
+from .validation_functions import validate_ints_seperated_by_comma
 
 from .backend.neural_network import WeightInitEnum, NeuralNetworkEnum
 from .backend.neural_network.quantum_networks import DiffMethodEnum
@@ -196,7 +196,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "Please separate the layer sizes by a comma, e.g. ``4,5,10,4``",
             "input_type": "text",
         },
-        validate=validate_floats_seperated_by_comma,
+        validate=validate_ints_seperated_by_comma,
     )
     postprocess_layers = ma.fields.String(
         required=False,
@@ -209,7 +209,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "hidden layer.",
             "input_type": "text",
         },
-        validate=validate_floats_seperated_by_comma,
+        validate=validate_ints_seperated_by_comma,
     )
     hidden_layers = ma.fields.String(
         required=False,
@@ -220,7 +220,7 @@ class QNNParametersSchema(FrontendFormBaseSchema):
             "number of neurons in the i'th hidden layer.",
             "input_type": "text",
         },
-        validate=validate_floats_seperated_by_comma,
+        validate=validate_ints_seperated_by_comma,
     )
     batch_size = ma.fields.Int(
         required=True,

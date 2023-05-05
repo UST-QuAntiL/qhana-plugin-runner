@@ -15,9 +15,9 @@
 import marshmallow as ma
 
 
-def validate_floats_seperated_by_comma(value: str):
+def validate_ints_seperated_by_comma(value: str):
     """
-    Checks if a given string consits of floats separated by commas and each float is greater than 0. Whitespaces are
+    Checks if a given string consists of integers separated by commas and each float is greater than 0. Whitespaces are
     ignored. If this is not the case, then it throws a ValidationError.
     """
     if value != "":
