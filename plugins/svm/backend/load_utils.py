@@ -106,7 +106,8 @@ def get_id_list(id_to_idx: dict):
 
 
 def load_kernel_matrix(
-    kernel_url: str, id_to_idx_X: Optional[dict] = None,
+    kernel_url: str,
+    id_to_idx_X: Optional[dict] = None,
 ) -> (dict, dict, np.array):
     """
     Loads in a kernel matrix, given its url

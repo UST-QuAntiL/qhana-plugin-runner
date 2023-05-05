@@ -21,7 +21,12 @@ from sklearn.metrics import confusion_matrix
 
 
 def add_background(
-    points: np.array, resolution: int, predictor: Callable[[np.array | List[List[float]]], List[float]], scatter: go.Figure, two_classes: bool = False, label_to_int: dict = None,
+    points: np.array,
+    resolution: int,
+    predictor: Callable[[np.array | List[List[float]]], List[float]],
+    scatter: go.Figure,
+    two_classes: bool = False,
+    label_to_int: dict = None,
 ) -> go.Figure:
     # Prep for grid (heatmap)
     # Get min and max of each dimension (here x and y) and write them into vector
