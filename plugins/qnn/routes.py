@@ -63,7 +63,7 @@ class PluginsView(MethodView):
             description="Simple QNN with variable number of variational quantum layers",
             name=QNN.instance.identifier,
             version=QNN.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{QNN_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{QNN_BLP.name}.MicroFrontend"),
