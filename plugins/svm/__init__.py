@@ -47,7 +47,7 @@ class SVM(QHAnaPluginBase):
                   "[2] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)\n" \
                   "[3] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
 
-    tags = []
+    tags = ["quantum", "classical", "supervised"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
