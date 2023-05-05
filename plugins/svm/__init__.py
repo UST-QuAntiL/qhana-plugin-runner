@@ -56,7 +56,7 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return f"scikit-learn~={sklearn_version}\nplotly~=5.6.0\npandas~=1.5.0"
+        return f"qiskit~=0.27\nqiskit-machine-learning~=0.4.0\nscikit-learn~={sklearn_version}\nplotly~=5.6.0\npandas~=1.5.0"
 
 
 try:
