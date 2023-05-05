@@ -31,11 +31,21 @@ SVM_BLP = SecurityBlueprint(
     description="SVM plugin API",
 )
 
+sklearn_version = "1.1"
 
 class SVM(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Classifies data with a support vector machine"
+    description = "Classifies data with a support vector machine. This plugin uses the implementation of " \
+                  f"scikit-learn {sklearn_version} [0]. The quantum kernels are from Qiskit [1] and the data maps " \
+                  f"are from Havlíček et al. [2] and Suzuki et al. [3].\n\n" \
+                  "Source:\n" \
+                  "[0] [https://scikit-learn.org/1.1/modules/svm.html#svm](https://scikit-learn.org/1.1/modules/svm.html#svm)\n" \
+                  "[1] Qiskit's quantum kernels [ZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZFeatureMap.html), " \
+                  "[ZZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZZFeatureMap.html) and " \
+                  "[PauliFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.PauliFeatureMap.html)\n" \
+                  "[2] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)\n" \
+                  "[3] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
 
     tags = []
 
@@ -46,7 +56,7 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return f"scikit-learn~={sklearn_version}\nplotly~=5.6.0\npandas~=1.5.0"
 
 
 try:
