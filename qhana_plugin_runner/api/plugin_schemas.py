@@ -26,14 +26,20 @@ from qhana_plugin_runner.api.util import MaBaseSchema
 
 
 class PluginType(Enum):
-    """Type of the plugin."""
+    """Type of the plugin.
 
-    processing = (
-        "processing"  # type for processing data (data comes in, processed data comes out)
-    )
-    visualization = "visualization"  # type for visualizing data (used as data previews)
-    conversion = "conversion"  # type for converting between data (and content) types
-    interaction = "interaction"  # type for plugins that do not handle data but provide user interaction
+    - ``processing``: type for processing data (data comes in, processed data comes out)
+    - ``visualization``: type for visualizing data (used as data previews)
+    - ``conversion``: type for converting between data (and content) types
+    - ``dataloader``: type for loading data into the qhana ecosystem
+    - ``interaction``: type for plugins that do not handle data but provide user interaction
+    """
+
+    processing = "processing"
+    visualization = "visualization"
+    conversion = "conversion"
+    dataloader = "dataloader"
+    interaction = "interaction"
 
 
 @dataclass
