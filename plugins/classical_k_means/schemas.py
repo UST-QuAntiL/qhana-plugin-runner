@@ -20,6 +20,7 @@ from qhana_plugin_runner.api.util import (
     FileUrl,
 )
 
+from dataclasses import dataclass
 
 class TaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
@@ -27,25 +28,13 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
+@dataclass(repr=False)
 class InputParameters:
-    def __init__(
-        self,
-        entity_points_url: str,
-        num_clusters: int,
-        maxiter: int,
-        relative_residual: float,
-        visualize: bool = False,
-    ):
-        self.entity_points_url = entity_points_url
-        self.num_clusters = num_clusters
-        self.maxiter = maxiter
-        self.relative_residual = relative_residual
-        self.visualize = visualize
-
-    def __str__(self):
-        variables = self.__dict__.copy()
-        variables["ibmq_token"] = ""
-        return str(variables)
+    entity_points_url: str
+    num_clusters: int
+    maxiter: int
+    relative_residual: float
+    visualize: bool = False
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
