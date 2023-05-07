@@ -196,7 +196,9 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
         )
 
 
-def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
+def _load_plugins_from_folder(
+    app: Flask, folder: Union[str, Path], recursive: bool = True
+):
     """Load all plugins from a folder path.
 
     Every importable python module in the folder is considered a plugin and
@@ -209,6 +211,7 @@ def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
     Args:
         app (Flask): the app instance (used for logging only)
         folder (Union[str, Path]): the folder path to scan for plugins
+        recursive (bool, optional): If true, recursively scan subfolders for plugins. Defaults to True.
     """
     if isinstance(folder, str):
         folder = Path(folder)
@@ -229,17 +232,28 @@ def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
     if (folder / Path("__init__.py")).exists():
         _append_source_path(app, folder.parent)
         _try_load_plugin_package(app, folder)
-        return
-
-    _append_source_path(app, folder)
+    else:
+        _append_source_path(app, folder)
 
     for child in folder.iterdir():
         if child.name.startswith("."):
             continue
         if child.is_file():
             _try_load_plugin_file(app, child)
-        if child.is_dir():
-            _try_load_plugin_package(app, child)
+        if child.is_dir() and recursive:
+            is_ignore_folder: bool = (child / Path(".ignore")).exists()
+            if is_ignore_folder:
+                app.logger.info(
+                    f"Skipping folder '{child}' because it is marked as ignored."
+                )
+                continue
+
+            is_plugin_folder: bool = (child / Path("__init__.py")).exists()
+
+            if is_plugin_folder:
+                _try_load_plugin_package(app, child)
+            elif recursive:
+                _load_plugins_from_folder(app, child, recursive)
 
 
 def register_plugins(app: Flask):
