@@ -302,12 +302,12 @@ class VirtualPluginView(MethodView):
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(
-                    f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginUi.__name__}",
+                    f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginProcess.__name__}",
                     process_definition_id=process_definition_id,
                     _external=True,
                 ),
                 ui_href=url_for(
-                    f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginProcess.__name__}",
+                    f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginUi.__name__}",
                     process_definition_id=process_definition_id,
                     _external=True,
                 ),
