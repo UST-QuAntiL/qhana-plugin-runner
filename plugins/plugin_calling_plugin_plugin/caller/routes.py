@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from http import HTTPStatus
 from typing import Mapping, Optional
 from logging import Logger
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+
+from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
 
 from . import CALLER_BLP, Caller
 from .schemas import (
@@ -40,7 +40,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result, add_step
@@ -182,7 +181,8 @@ class ProcessStep1View(MethodView):
         db_task.save(commit=True)
 
         # extract the plugin name from the plugin url
-        plugin_name = arguments["callee_plugin_selector"].split("/")[-1]
+        plugin_url = arguments["callee_plugin_selector"]
+        plugin_name = get_plugin_name_from_plugin_url(plugin_url)
         # add new step where the "callee" plugin is executed
 
         # name of the next step
