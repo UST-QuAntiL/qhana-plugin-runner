@@ -46,3 +46,33 @@ def demo_task(self, db_id: int) -> str:
             "text/plain",
         )
     return "result: " + repr(out_str)
+
+
+@CELERY.task(name=f"{Callee.instance.identifier}.demo_task", bind=True)
+def demo_task_2(self, db_id: int) -> str:
+    """
+    Demo processing task. We already showed how to retrieve the input data from the database in the first demo task.
+    Here we just show that a second task in the invoked plugin can be called.
+    @param self:
+    @param db_id: database ID that will be used to retrieve the task data from the database
+    @return: log message
+    """
+    TASK_LOGGER.info(f"Starting second invoked task with db id '{db_id}'")
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    with SpooledTemporaryFile(mode="w") as output:
+        out_str = "This is the second invoked task."
+        output.write(out_str)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "output_callee_step_2.txt",
+            "hello-world-output",
+            "text/plain",
+        )
+    return "result: " + repr(out_str)
