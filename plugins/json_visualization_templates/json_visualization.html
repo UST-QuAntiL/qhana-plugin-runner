@@ -64,7 +64,7 @@
             const url = getUrl()
 
             if (checkUrl(url)) {
-                fetch(url, { "credentials": "include" })
+                fetch(url)
                     .then((response) => response.text())
                     .then((json_str) => addJsonToPreview(json_str))
             }
