@@ -53,7 +53,6 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    print(task_data.parameters)
     input_params: InputParameters = HybridAutoencoderPennylaneRequestSchema().loads(task_data.parameters)
 
     train_data_url = input_params.train_points_url
