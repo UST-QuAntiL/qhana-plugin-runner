@@ -30,7 +30,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Training Entity points URL",
-            "description": "URL to a json file with the entity points used to fit the svm.",
+            "description": "URL to a json file with the entity points used to train the autoencoder.",
             "input_type": "text",
         },
     )
@@ -41,7 +41,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Test Entity points URL",
-            "description": "URL to a json file with the entity points that should be used for testing. These points will be labeled.",
+            "description": "URL to a json file with the entity points that should be used for testing. These points will be transformed by the trained autoencoder.",
             "input_type": "text",
         },
     )
