@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
-_plugin_name = "quantum-cnn"
+_plugin_name = "quantum_cnn"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
@@ -35,7 +35,7 @@ QCNN_BLP = SecurityBlueprint(
 class QCNN(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Labels data with the help of a quantum convolutional neural network."
+    description = "Labels data with the help of a quantum convolutional neural network"
 
     tags = []
 

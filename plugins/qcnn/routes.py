@@ -64,13 +64,25 @@ class PluginsView(MethodView):
                         data_type="entity/shaped_vector",
                         content_type=
                         required=True,
-                        parameter="testDataUrl",
+                        parameter="trainDataUrl",
+                    ),
+                    DataMetadata(
+                        data_type="entity/label",
+                        content_type=
+                        required=True,
+                        parameter="trainLabelUrl",
                     ),
                     DataMetadata(
                         data_type="entity/shaped_vector",
                         content_type=
                         required=True,
-                        parameter="trainDataUrl",
+                        parameter="testDataUrl",
+                    ),
+                    DataMetadata(
+                        data_type="entity/shaped_vector",
+                        content_type=
+                        required=False,
+                        parameter="testLabelUrl",
                     ),
                 ],
                 data_output=[
@@ -146,6 +158,9 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
         }
+
+        if "IBMQ_TOKEN" in os.environ:
+            default_values[fields["ibmq_token"].data_key] = "****"
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)

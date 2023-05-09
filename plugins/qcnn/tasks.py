@@ -58,16 +58,36 @@ def calculation_task(self, db_id: int) -> str:
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
     
-    test_data_url = input_params.test_data_url
-    min_samples = input_params.min_samples
-    max_epsilon = input_params.max_epsilon
-    metric_enum = input_params.metric_enum
     train_data_url = input_params.train_data_url
-    predecessor_correction = input_params.predecessor_correction
+    train_label_url = input_params.train_label_url
+    test_data_url = input_params.test_data_url
+    test_label_url = input_params.test_label_url
+    randomly_shuffle = input_params.randomly_shuffle
+    epochs = input_params.epochs
+    optimizer = input_params.optimizer
+    lr = input_params.lr
+    qcnn_enum = input_params.qcnn_enum
+    num_layers = input_params.num_layers
+    batch_size = input_params.batch_size
+    weight_init = input_params.weight_init
+    weights_to_wiggle = input_params.weights_to_wiggle
+    backend = input_params.backend
+    shots = input_params.shots
+    ibmq_token = input_params.ibmq_token
+    custom_backend = input_params.custom_backend
+
+    if ibmq_token == "****":
+        TASK_LOGGER.info("Loading IBMQ token from environment variable")
+
+        if "IBMQ_TOKEN" in os.environ:
+            ibmq_token = os.environ["IBMQ_TOKEN"]
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
+        else:
+            TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
     
-    # hier könnte ihr Code stehen
+# hier könnte ihr Code stehen
     
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
