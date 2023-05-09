@@ -160,4 +160,4 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
             "application/json",
         )
 
-    return f"The autoencoder achieved {accuracy}% accuracy on the test data."
+    return f"The autoencoder achieved {accuracy*100}% accuracy on the test data."
