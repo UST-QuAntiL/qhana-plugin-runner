@@ -75,7 +75,7 @@ class PluginsView(MethodView):
                         ],
                         required=False,
                         parameter="testPointsUrl",
-                    )
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
@@ -92,7 +92,7 @@ class PluginsView(MethodView):
                         data_type="qnn-weights",
                         content_type=["application/json"],
                         required=True,
-                    )
+                    ),
                 ],
             ),
             tags=HybridAutoencoderPlugin.instance.tags,
@@ -142,7 +142,10 @@ class MicroFrontend(MethodView):
         # Render schema errors on fields
         schema_error = errors.get("_schema", None)
         if schema_error:
-            if "The number of qubits must be greater or equal to the embedding size." in schema_error:
+            if (
+                "The number of qubits must be greater or equal to the embedding size."
+                in schema_error
+            ):
                 errors["numberOfQubits"] = errors.get("numberOfQubits", []) + [
                     "The number of qubits must be greater or equal to the embedding size."
                 ]

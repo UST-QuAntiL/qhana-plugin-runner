@@ -32,7 +32,12 @@ from .quantum.qiskit.hybrid import (
 
 
 def pennylane_hybrid_autoencoder(
-    input_data: np.ndarray, q_num: int, embedding_size: int, qnn_name: str, steps: int, dev: qml.Device
+    input_data: np.ndarray,
+    q_num: int,
+    embedding_size: int,
+    qnn_name: str,
+    steps: int,
+    dev: qml.Device,
 ) -> Tuple[np.ndarray, PLHybridAutoencoder, Optimizer, Optimizer]:
     model = PLHybridAutoencoder(input_data.shape[1], q_num, embedding_size, qnn_name, dev)
     c_optim = Adam(model.get_classical_parameters())

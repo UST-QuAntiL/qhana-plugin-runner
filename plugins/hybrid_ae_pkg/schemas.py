@@ -36,7 +36,6 @@ class InputParameters:
     ibmq_token: str
     custom_backend: str
 
-
     def __str__(self):
         variables = self.__dict__.copy()
         variables["ibmq_token"] = ""
@@ -157,4 +156,6 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
             embedding_size = data.get("embedding_size", None)
             if number_of_qubits is not None and embedding_size is not None:
                 if embedding_size > number_of_qubits:
-                    raise ma.ValidationError("The number of qubits must be greater or equal to the embedding size.")
+                    raise ma.ValidationError(
+                        "The number of qubits must be greater or equal to the embedding size."
+                    )

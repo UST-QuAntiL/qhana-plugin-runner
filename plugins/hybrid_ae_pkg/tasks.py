@@ -40,12 +40,12 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def prepare_data_for_output(id_list: list, data: List[List[float]]):
     return [
-            {
-                **{"ID": id_, "href": ""},
-                **{f"dim{dim}": value for dim, value in enumerate(point)},
-            }
-            for id_, point in zip(id_list, data)
-        ]
+        {
+            **{"ID": id_, "href": ""},
+            **{f"dim{dim}": value for dim, value in enumerate(point)},
+        }
+        for id_, point in zip(id_list, data)
+    ]
 
 
 @CELERY.task(
@@ -67,7 +67,9 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: InputParameters = HybridAutoencoderPennylaneRequestSchema().loads(task_data.parameters)
+    input_params: InputParameters = HybridAutoencoderPennylaneRequestSchema().loads(
+        task_data.parameters
+    )
 
     train_data_url = input_params.train_points_url
     test_data_url = input_params.test_points_url
@@ -89,9 +91,18 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     train_id_list, train_data = get_indices_and_point_arr(train_data_url)
     test_id_list, test_data = get_indices_and_point_arr(test_data_url)
 
-    embedded_train_data, model, c_optim, q_optim = simple_api.pennylane_hybrid_autoencoder(
-        train_data, q_num, embedding_size, qnn_name, steps,
-        q_device_enum.get_pennylane_backend(ibmq_token, custom_backend, q_num, shots)
+    (
+        embedded_train_data,
+        model,
+        c_optim,
+        q_optim,
+    ) = simple_api.pennylane_hybrid_autoencoder(
+        train_data,
+        q_num,
+        embedding_size,
+        qnn_name,
+        steps,
+        q_device_enum.get_pennylane_backend(ibmq_token, custom_backend, q_num, shots),
     )
     test_data = tensor(test_data, dtype=float32)
     embedded_test_data = model.embed(test_data)
@@ -111,7 +122,11 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(prepare_data_for_output(train_id_list, embedded_train_data.tolist()), output, "application/json")
+        save_entities(
+            prepare_data_for_output(train_id_list, embedded_train_data.tolist()),
+            output,
+            "application/json",
+        )
         STORE.persist_task_result(
             db_id,
             output,
@@ -121,7 +136,11 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         )
 
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(prepare_data_for_output(test_id_list, embedded_test_data.tolist()), output, "application/json")
+        save_entities(
+            prepare_data_for_output(test_id_list, embedded_test_data.tolist()),
+            output,
+            "application/json",
+        )
         STORE.persist_task_result(
             db_id,
             output,
