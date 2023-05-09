@@ -6,6 +6,7 @@ from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema, FileUrl
 
 from .backend.quantum.pl import QNNEnum
+from .backend.quantum.quantum_backends import QuantumBackends
 
 
 @dataclass(repr=False)
@@ -16,9 +17,15 @@ class InputParameters:
     embedding_size: int
     qnn_name: QNNEnum
     training_steps: int
+    backend: QuantumBackends
+    shots: int
+    ibmq_token: str
+    custom_backend: str
+
 
     def __str__(self):
         variables = self.__dict__.copy()
+        variables["ibmq_token"] = ""
         return str(variables)
 
 
@@ -84,6 +91,44 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
         validate=validate.Range(min=0, min_inclusive=False),
+    )
+    backend = EnumField(
+        QuantumBackends,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Backend",
+            "description": "QC or simulator that will be used.",
+            "input_type": "select",
+        },
+    )
+    shots = ma.fields.Int(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Shots",
+            "description": "Number of shots.",
+            "input_type": "number",
+        },
+        validate=validate.Range(min=0, min_inclusive=False),
+    )
+    ibmq_token = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "text",
+        },
+    )
+    custom_backend = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Custom backend",
+            "description": "Custom backend for IBMQ.",
+            "input_type": "text",
+        },
     )
 
     @post_load

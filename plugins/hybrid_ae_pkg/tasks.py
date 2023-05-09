@@ -62,6 +62,10 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     embedding_size = input_params.embedding_size
     qnn_name = input_params.qnn_name.get_qnn()
     steps = input_params.training_steps
+    q_device_enum = input_params.backend
+    shots = input_params.shots
+    ibmq_token = input_params.ibmq_token
+    custom_backend = input_params.custom_backend
 
     # Log information about the input parameters
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
@@ -73,7 +77,8 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     test_id_list, test_data = get_indices_and_point_arr(test_data_url)
 
     embedded_train_data, model, c_optim, q_optim = simple_api.pennylane_hybrid_autoencoder(
-        train_data, q_num, embedding_size, qnn_name, steps
+        train_data, q_num, embedding_size, qnn_name, steps,
+        q_device_enum.get_pennylane_backend(ibmq_token, custom_backend, q_num, shots)
     )
     test_data = tensor(test_data, dtype=float32)
     embedded_test_data = model.embed(test_data)

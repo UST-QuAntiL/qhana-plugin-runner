@@ -18,11 +18,8 @@ from .quantum.qiskit.hybrid import (
 
 
 def pennylane_hybrid_autoencoder(
-    input_data: np.ndarray, q_num: int, embedding_size: int, qnn_name: str, steps: int
+    input_data: np.ndarray, q_num: int, embedding_size: int, qnn_name: str, steps: int, dev: qml.Device
 ) -> Tuple[np.ndarray, PLHybridAutoencoder, Optimizer, Optimizer]:
-    dev = qml.device("default.qubit", wires=q_num, shots=500)
-    # dev = qml.device("forest.qvm", device="3q-qvm")
-    # dev = qml.device("braket.local.qubit", wires=3)
     model = PLHybridAutoencoder(input_data.shape[1], q_num, embedding_size, qnn_name, dev)
     c_optim = Adam(model.get_classical_parameters())
     q_optim = Adam(model.get_quantum_parameters(), lr=0.1)

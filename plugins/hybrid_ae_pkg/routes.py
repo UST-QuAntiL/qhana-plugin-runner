@@ -145,6 +145,7 @@ class MicroFrontend(MethodView):
             fields["number_of_qubits"].data_key: 3,
             fields["embedding_size"].data_key: 2,
             fields["training_steps"].data_key: 100,
+            fields["shots"].data_key: 100,
         }
 
         # overwrite default values with other values if possible
