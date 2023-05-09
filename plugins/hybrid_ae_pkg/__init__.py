@@ -44,7 +44,7 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
         return HA_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "qiskit~=0.27\npennylane~=0.16\ntorch~=1.13.1"
 
 
 try:
