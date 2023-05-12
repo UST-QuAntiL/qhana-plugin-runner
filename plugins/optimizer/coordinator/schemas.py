@@ -29,10 +29,11 @@ class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
     input_file_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="*",
+        data_content_types=["text/csv"],
         metadata={
             "label": "Dataset URL",
             "description": "URL to a csv file with optimizable data.",
-            "input_type": "text",
         },
     )
     objective_function_plugin_selector = PluginUrl(
