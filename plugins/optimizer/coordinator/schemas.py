@@ -13,7 +13,28 @@ class OptimizerTaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class SelectObjecriveFunctionInputSchema(FrontendFormBaseSchema):
+class OptimizerCallbackTaskInputSchema(FrontendFormBaseSchema):
+    input_str = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Input String",
+            "description": "A simple string input.",
+            "input_type": "textarea",
+        },
+    )
+
+
+class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
+    input_file_url = FileUrl(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Dataset URL",
+            "description": "URL to a csv file with optimizable data.",
+            "input_type": "text",
+        },
+    )
     objective_function_plugin_selector = PluginUrl(
         required=True,
         allow_none=False,
@@ -21,18 +42,6 @@ class SelectObjecriveFunctionInputSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Objective-Function Plugin Selector",
             "description": "URL of objective-function-plugin.",
-            "input_type": "text",
-        },
-    )
-
-
-class SelectDatasetInputSchema(FrontendFormBaseSchema):
-    input_file_url = FileUrl(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Dataset URL",
-            "description": "URL to a csv file with optimizable data.",
             "input_type": "text",
         },
     )

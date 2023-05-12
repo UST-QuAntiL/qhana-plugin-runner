@@ -29,11 +29,11 @@ from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plug
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import (
+    OptimizerCallbackTaskInputSchema,
     OptimizerTaskResponseSchema,
-    SelectDatasetInputSchema,
-    SelectObjecriveFunctionInputSchema,
+    OptimizerSetupTaskInputSchema,
 )
-from .tasks import objective_function_selection, dataset_selection
+from .tasks import no_op_task
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -62,10 +62,10 @@ class MetadataView(MethodView):
             tags=Optimizer.instance.tags,
             entry_point=EntryPoint(
                 href=url_for(
-                    f"{OPTIMIZER_BLP.name}.ObjectiveFunctionSelectionProcessStep"
+                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupProcessStep.__name__}"
                 ),  # URL for the first process endpoint
                 ui_href=url_for(
-                    f"{OPTIMIZER_BLP.name}.ObjectiveFunctionSelectionMicroFrontend"
+                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupMicroFrontend.__name__}"
                 ),  # URL for the first micro frontend endpoint
                 data_input=[],
                 data_output=[
@@ -84,18 +84,18 @@ class MetadataView(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/ui-of-selection/")
-class ObjectiveFunctionSelectionMicroFrontend(MethodView):
-    """Micro frontend for the objective-function selection in the optimizer plugin."""
+@OPTIMIZER_BLP.route("/ui-setup/")
+class OptimizerSetupMicroFrontend(MethodView):
+    """Micro frontend for the objective-function and dataset selection in the optimizer plugin."""
 
     example_inputs = {}
 
     @OPTIMIZER_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for the objective-function selection in the optimizer plugin.",
+        description="Micro frontend for the objective-function and dataset selection in the optimizer plugin.",
     )
     @OPTIMIZER_BLP.arguments(
-        SelectObjecriveFunctionInputSchema(
+        OptimizerSetupTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -108,10 +108,10 @@ class ObjectiveFunctionSelectionMicroFrontend(MethodView):
 
     @OPTIMIZER_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for the objective-function selection in the optimizer plugin.",
+        description="Micro frontend for the objective-function and dataset selection in the optimizer plugin.",
     )
     @OPTIMIZER_BLP.arguments(
-        SelectObjecriveFunctionInputSchema(
+        OptimizerSetupTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -123,7 +123,7 @@ class ObjectiveFunctionSelectionMicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        schema = SelectObjecriveFunctionInputSchema()
+        schema = OptimizerSetupTaskInputSchema()
         return Response(
             render_template(
                 "simple_template.html",
@@ -133,10 +133,10 @@ class ObjectiveFunctionSelectionMicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTIMIZER_BLP.name}.ObjectiveFunctionSelectionProcessStep"
+                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupProcessStep.__name__}"
                 ),  # URL of the first processing step
                 example_values=url_for(
-                    f"{OPTIMIZER_BLP.name}.ObjectiveFunctionSelectionMicroFrontend",
+                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupMicroFrontend.__name__}",
                     **self.example_inputs,
                 ),
             )
@@ -146,38 +146,42 @@ class ObjectiveFunctionSelectionMicroFrontend(MethodView):
 TASK_LOGGER: Logger = get_task_logger(__name__)
 
 
-@OPTIMIZER_BLP.route("/process-of-selection/")
-class ObjectiveFunctionSelectionProcessStep(MethodView):
+@OPTIMIZER_BLP.route("/process-setup/")
+class OptimizerSetupProcessStep(MethodView):
     """Start the process step of the objective-function selection."""
 
     @OPTIMIZER_BLP.arguments(
-        SelectObjecriveFunctionInputSchema(unknown=EXCLUDE), location="form"
+        OptimizerSetupTaskInputSchema(unknown=EXCLUDE), location="form"
     )
     @OPTIMIZER_BLP.response(HTTPStatus.OK, OptimizerTaskResponseSchema())
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
         db_task = ProcessingTask(
-            task_name=objective_function_selection.name,
+            task_name=no_op_task.name,
         )
         db_task.save(commit=True)
         db_task.data["next_step_id"] = "callback optimzer plugin"
         db_task.data["opt_href"] = url_for(
-            f"{OPTIMIZER_BLP.name}.ProcessStep2View",
+            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackProcessStep.__name__}",
             db_id=db_task.id,
             _external=True,
         )
         db_task.data["opt_ui_href"] = url_for(
-            f"{OPTIMIZER_BLP.name}.MicroFrontendStep2",
+            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackMicroFrontend.__name__}",
             db_id=db_task.id,
             _external=True,
         )
-        db_task.save(commit=True)
 
         # extract the plugin name from the plugin url
         plugin_url = arguments["objective_function_plugin_selector"]
         plugin_name = get_plugin_name_from_plugin_url(plugin_url)
         db_task.data["invoked_plugin"] = plugin_name
+        
+        # save the input file url to the database
+        db_task.data["input_file_url"] = arguments["input_file_url"]
+        
+        db_task.save(commit=True)
 
         # add new step where the objective-function plugin is executed
 
@@ -185,11 +189,11 @@ class ObjectiveFunctionSelectionProcessStep(MethodView):
         step_id = "hyperparamter selection"
         # URL of the process endpoint of the invoked plugin
         href = url_for(
-            f"{plugin_name}.ProcessView", db_id=db_task.id, _external=True
+            f"{plugin_name}.OptimizationProcessView", db_id=db_task.id, _external=True
         )  # FIXME replace the process view with the actual name of the first processing step of the invoked plugin
         # URL of the micro frontend endpoint of the invoked plugin
         ui_href = url_for(
-            f"{plugin_name}.MicroFrontend", db_id=db_task.id, _external=True
+            f"{plugin_name}.HyperparameterSelectionMicroFrontend", db_id=db_task.id, _external=True
         )  # FIXME replace the micro frontend with the actual name of the first ui step of the invoked plugin
 
         # Chain the first processing task with executing the objective-function plugin.
@@ -209,18 +213,18 @@ class ObjectiveFunctionSelectionProcessStep(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/ui-data-selection/")
-class DataSelectionMicroFrontend(MethodView):
-    """Micro frontend for selecting the dataset."""
+@OPTIMIZER_BLP.route("/<int:db_id>/ui-callback/")
+class OptimizerCallbackMicroFrontend(MethodView):
+    """Micro frontend for the optimizer callback function."""
 
     example_inputs = {}
 
     @OPTIMIZER_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for selecting the dataset.",
+        description="Micro frontend for the optimizer callback function.",
     )
     @OPTIMIZER_BLP.arguments(
-        SelectDatasetInputSchema(
+        OptimizerCallbackTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -233,10 +237,10 @@ class DataSelectionMicroFrontend(MethodView):
 
     @OPTIMIZER_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend for selecting the dataset.",
+        description="Micro frontend for the optimizer callback function.",
     )
     @OPTIMIZER_BLP.arguments(
-        SelectDatasetInputSchema(
+        OptimizerCallbackTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -254,7 +258,7 @@ class DataSelectionMicroFrontend(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        schema = SelectDatasetInputSchema()
+        schema = OptimizerCallbackTaskInputSchema()
         return Response(
             render_template(
                 "simple_template.html",
@@ -264,11 +268,11 @@ class DataSelectionMicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTIMIZER_BLP.name}.DataSelectionProcessStep",
+                    f"{OPTIMIZER_BLP.name}.{OptimizerCallbackProcessStep.__name__}",
                     db_id=db_id,
                 ),
                 example_values=url_for(
-                    f"{OPTIMIZER_BLP.name}.DataSelectionMicroFrontend",
+                    f"{OPTIMIZER_BLP.name}.{OptimizerCallbackMicroFrontend.__name__}",
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -276,11 +280,11 @@ class DataSelectionMicroFrontend(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/process-step-2/")
-class DataSelectionProcessStep(MethodView):
-    """Start the processing task for the data selection."""
+@OPTIMIZER_BLP.route("/<int:db_id>/process-callback/")
+class OptimizerCallbackProcessStep(MethodView):
+    """Start the processing task for optimizer callback function."""
 
-    @OPTIMIZER_BLP.arguments(SelectDatasetInputSchema(unknown=EXCLUDE), location="form")
+    @OPTIMIZER_BLP.arguments(OptimizerCallbackTaskInputSchema(unknown=EXCLUDE), location="form")
     @OPTIMIZER_BLP.response(HTTPStatus.OK, OptimizerTaskResponseSchema())
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
@@ -291,12 +295,12 @@ class DataSelectionProcessStep(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.data["input_file_url"] = arguments["input_file_url"]
+        db_task.data["input_str"] = arguments["input_str"]
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
         # Chain the second processing task with executing the task that saves the results and ends the execution.
-        task: chain = dataset_selection.s(db_id=db_task.id) | save_task_result.s(
+        task: chain = no_op_task.s(db_id=db_task.id) | save_task_result.s(
             db_id=db_id
         )
 
