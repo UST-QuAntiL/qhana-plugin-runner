@@ -154,7 +154,12 @@ def optimize(self, db_id: int) -> str:
     w = minimize_(X, y, alpha)
 
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(entities=[{"w": w.tolist()}], file_=output, mimetype="text/csv", attributes=["w"])
+        save_entities(
+            entities=[{"w": w.tolist()}],
+            file_=output,
+            mimetype="text/csv",
+            attributes=["w"],
+        )
         STORE.persist_task_result(
             db_id,
             output,

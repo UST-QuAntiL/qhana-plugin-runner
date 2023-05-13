@@ -177,12 +177,12 @@ class OptimizerSetupProcessStep(MethodView):
         plugin_url = arguments["objective_function_plugin_selector"]
         plugin_name = get_plugin_name_from_plugin_url(plugin_url)
         db_task.data["invoked_plugin"] = plugin_name
-        
+
         # save the input file url to the database
         db_task.data["input_file_url"] = arguments["input_file_url"]
-        
+
         db_task.data["target_variable"] = arguments["target_variable"]
-        
+
         db_task.save(commit=True)
 
         # add new step where the objective-function plugin is executed
@@ -195,7 +195,9 @@ class OptimizerSetupProcessStep(MethodView):
         )  # FIXME replace the process view with the actual name of the first processing step of the invoked plugin
         # URL of the micro frontend endpoint of the invoked plugin
         ui_href = url_for(
-            f"{plugin_name}.HyperparameterSelectionMicroFrontend", db_id=db_task.id, _external=True
+            f"{plugin_name}.HyperparameterSelectionMicroFrontend",
+            db_id=db_task.id,
+            _external=True,
         )  # FIXME replace the micro frontend with the actual name of the first ui step of the invoked plugin
 
         # Chain the first processing task with executing the objective-function plugin.
@@ -286,7 +288,9 @@ class OptimizerCallbackMicroFrontend(MethodView):
 class OptimizerCallbackProcessStep(MethodView):
     """Start the processing task for optimizer callback function."""
 
-    @OPTIMIZER_BLP.arguments(OptimizerCallbackTaskInputSchema(unknown=EXCLUDE), location="form")
+    @OPTIMIZER_BLP.arguments(
+        OptimizerCallbackTaskInputSchema(unknown=EXCLUDE), location="form"
+    )
     @OPTIMIZER_BLP.response(HTTPStatus.OK, OptimizerTaskResponseSchema())
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
@@ -302,9 +306,7 @@ class OptimizerCallbackProcessStep(MethodView):
         db_task.save(commit=True)
 
         # Chain the second processing task with executing the task that saves the results and ends the execution.
-        task: chain = no_op_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_id
-        )
+        task: chain = no_op_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_id)
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
