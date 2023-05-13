@@ -101,7 +101,7 @@ def get_entity_generator(
                 "ID": ent["ID"],
                 "href": ent.get("href", ""),
                 "features": get_features(ent, target_variable_name),
-                "target": ent[target_variable_name],
+                "target": float(ent[target_variable_name]),
             }
 
 
@@ -154,7 +154,7 @@ def optimize(self, db_id: int) -> str:
     w = minimize_(X, y, alpha)
 
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(entities=[{"w": w.tolist()}], file_=output, mimetype="text/csv")
+        save_entities(entities=[{"w": w.tolist()}], file_=output, mimetype="text/csv", attributes=["w"])
         STORE.persist_task_result(
             db_id,
             output,
