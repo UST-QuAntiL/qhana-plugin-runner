@@ -36,6 +36,15 @@ class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
             "description": "URL to a csv file with optimizable data.",
         },
     )
+    target_variable = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Target Variable",
+            "description": "Name of the target variable in the dataset.",
+            "input_type": "text",
+        },
+    )
     objective_function_plugin_selector = PluginUrl(
         required=True,
         allow_none=False,
