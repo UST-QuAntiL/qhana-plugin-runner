@@ -48,7 +48,7 @@ def demo_task(self, db_id: int) -> str:
     return "result: " + repr(out_str)
 
 
-@CELERY.task(name=f"{Callee.instance.identifier}.demo_task", bind=True)
+@CELERY.task(name=f"{Callee.instance.identifier}.demo_task_2", bind=True)
 def demo_task_2(self, db_id: int) -> str:
     """
     Demo processing task. We already showed how to retrieve the input data from the database in the first demo task.
