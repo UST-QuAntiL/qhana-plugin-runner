@@ -20,7 +20,8 @@ from . import RidgeLoss
 
 TASK_LOGGER = get_task_logger(__name__)
 
-def ridge_loss(w, X, y, alpha):
+
+def ridge_loss(w: np.ndarray, X: np.ndarray, y: np.ndarray, alpha: float) -> float:
     """
     Calculate the ridge loss given weights, features, target, and alpha.
 
@@ -35,10 +36,11 @@ def ridge_loss(w, X, y, alpha):
     """
     y_pred = np.dot(X, w)
     mse = np.mean((y - y_pred) ** 2)
-    ridge_penalty = alpha * np.sum(w ** 2)
+    ridge_penalty = alpha * np.sum(w**2)
     return mse + ridge_penalty
 
-def optimize(X, y, alpha=1.0) -> np.ndarray:
+
+def minimize_(X: np.ndarray, y: np.ndarray, alpha: float = 1.0) -> np.ndarray:
     """
     Optimize the input data using ridge loss as the objective function.
 
@@ -51,7 +53,7 @@ def optimize(X, y, alpha=1.0) -> np.ndarray:
         Optimized weights.
     """
     initial_weights = np.random.randn(X.shape[1])
-    result = minimize(ridge_loss, initial_weights, args=(X, y, alpha), method='L-BFGS-B')
+    result = minimize(ridge_loss, initial_weights, args=(X, y, alpha), method="L-BFGS-B")
     return result.x
 
 
@@ -143,13 +145,13 @@ def optimize(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    alpha = task_data.data.get("alpha")
-    input_file_url = task_data.data.get("input_file_url")
-    target_variable_name = task_data.data.get("target_variable")
+    alpha: float = task_data.data.get("alpha")
+    input_file_url: str = task_data.data.get("input_file_url")
+    target_variable_name: str = task_data.data.get("target_variable")
 
     X, y = get_features_and_target(input_file_url, target_variable_name)
-    
-    w = optimize(X, y, alpha)
+
+    w = minimize_(X, y, alpha)
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entities=[{"w": w.tolist()}], file_=output, mimetype="text/csv")
