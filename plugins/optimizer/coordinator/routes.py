@@ -181,6 +181,8 @@ class OptimizerSetupProcessStep(MethodView):
         # save the input file url to the database
         db_task.data["input_file_url"] = arguments["input_file_url"]
         
+        db_task.data["target_variable"] = arguments["target_variable"]
+        
         db_task.save(commit=True)
 
         # add new step where the objective-function plugin is executed
@@ -199,7 +201,7 @@ class OptimizerSetupProcessStep(MethodView):
         # Chain the first processing task with executing the objective-function plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
         # steps in the database.
-        task: chain = dataset_selection.s(db_id=db_task.id) | add_step.s(
+        task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
             db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=20
         )
 
