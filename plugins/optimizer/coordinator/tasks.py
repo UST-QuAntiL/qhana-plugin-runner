@@ -13,9 +13,7 @@ from qhana_plugin_runner.storage import STORE
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(
-    name=f"{Optimizer.instance.identifier}.no_op_task", bind=True
-)
+@CELERY.task(name=f"{Optimizer.instance.identifier}.no_op_task", bind=True)
 def no_op_task(self, db_id: int) -> str:
     """
     A no operation task that is run when no operation is needed.
