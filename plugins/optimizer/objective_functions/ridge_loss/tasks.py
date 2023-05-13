@@ -10,6 +10,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
+    save_entities,
 )
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
@@ -149,16 +150,14 @@ def optimize(self, db_id: int) -> str:
     X, y = get_features_and_target(input_file_url, target_variable_name)
     
     w = optimize(X, y, alpha)
-    # make a csv 
 
     with SpooledTemporaryFile(mode="w") as output:
-        out_str = f"Value of alpha: {alpha} \n Value of dataset_url: {input_file_url}"
-        output.write(out_str)
+        save_entities(entities=[{"w": w.tolist()}], file_=output, mimetype="text/csv")
         STORE.persist_task_result(
             db_id,
             output,
-            "output_ridgeloss.txt",
-            "hello-world-output",
-            "text/plain",
+            "output_ridgeloss.csv",
+            "objective-function-output",
+            "text/csv",
         )
-    return "result: " + repr(out_str)
+    return "Optimization finished."
