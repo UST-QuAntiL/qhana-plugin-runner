@@ -43,6 +43,7 @@ from .util.config import DebugConfig, ProductionConfig
 from .util.jinja_helpers import register_helpers
 from .util.plugins import register_plugins
 from .util.request_helpers import register_additional_schemas
+from .util.reverse_proxy_fix import apply_reverse_proxy_fix
 from .util.templates import register_templates
 
 # change this to change tha flask app name and the config env var prefix
@@ -133,6 +134,10 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
 
         if "PLUGIN_REGISTRY_URL" in os.environ:
             config["PLUGIN_REGISTRY_URL"] = os.environ["PLUGIN_REGISTRY_URL"]
+
+        if "REVERSE_PROXY_COUNT" in os.environ:
+            config["REVERSE_PROXY_COUNT"] = int(os.environ["REVERSE_PROXY_COUNT"])
+            apply_reverse_proxy_fix(app)
     else:
         # load the test config if passed in
         config.from_mapping(test_config)
