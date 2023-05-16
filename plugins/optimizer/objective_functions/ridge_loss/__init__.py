@@ -46,7 +46,7 @@ class RidgeLoss(QHAnaPluginBase):
         return RIDGELOSS_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "scipy~=1.10.1"
 
 
 try:
