@@ -1,5 +1,7 @@
+import urllib.parse
 from datetime import datetime
 
+import requests
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from sqlalchemy.sql.expression import select
@@ -128,3 +130,13 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     # TODO: maybe clean TaskData entries
 
     result.forget()
+
+
+@CELERY.task(name=f"{_name}.callback-task", bind=True, ignore_result=True)
+def callback_task(self, _, callback_url: str) -> None:
+    TASK_LOGGER.info(f"Callback task with url '{callback_url}' started.")
+
+    callback_url = urllib.parse.unquote(callback_url)
+    requests.post(callback_url)
+
+    AsyncResult(self.request.parent_id, app=CELERY).forget()
