@@ -12,28 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import urllib
 from http import HTTPStatus
-from typing import Mapping, Optional
 from logging import Logger
+from typing import Mapping, Optional
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response, redirect, current_app as app
+from flask import Response
+from flask import current_app as app
+from flask import redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
-
-from . import OPTIMIZER_BLP, Optimizer
-from .schemas import (
-    OptimizerCallbackTaskInputSchema,
-    OptimizerTaskResponseSchema,
-    OptimizerSetupTaskInputSchema,
-)
-from .tasks import no_op_task
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -42,7 +36,16 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result, add_step
+from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
+
+from . import OPTIMIZER_BLP, Optimizer
+from .schemas import (
+    OptimizerCallbackTaskInputSchema,
+    OptimizerSetupTaskInputSchema,
+    OptimizerTaskResponseSchema,
+)
+from .tasks import no_op_task
 
 
 @OPTIMIZER_BLP.route("/")
@@ -190,15 +193,23 @@ class OptimizerSetupProcessStep(MethodView):
         # name of the next step
         step_id = "hyperparamter selection"
         # URL of the process endpoint of the invoked plugin
+        callback_url = url_for(
+            f"{OPTIMIZER_BLP.name}.{ObjectiveFunctionCallback.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+        callback_url = urllib.parse.unquote(callback_url)
         href = url_for(
-            f"{plugin_name}.OptimizationProcessView", db_id=db_task.id, _external=True
-        )  # FIXME replace the process view with the actual name of the first processing step of the invoked plugin
+            f"{plugin_name}.OptimizationProcessView",
+            callbackUrl=callback_url,
+            _external=True,
+        )
         # URL of the micro frontend endpoint of the invoked plugin
         ui_href = url_for(
             f"{plugin_name}.HyperparameterSelectionMicroFrontend",
-            db_id=db_task.id,
+            callbackUrl=callback_url,
             _external=True,
-        )  # FIXME replace the micro frontend with the actual name of the first ui step of the invoked plugin
+        )  # FIXME get the method names of the objective function plugin via a metadata endpoint
 
         # Chain the first processing task with executing the objective-function plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
@@ -215,6 +226,47 @@ class OptimizerSetupProcessStep(MethodView):
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
+
+
+@OPTIMIZER_BLP.route("/<int:db_id>/objective-function-callback/")
+class ObjectiveFunctionCallback(MethodView):
+    """Callback function for the objective-function plugin."""
+
+    @OPTIMIZER_BLP.response(HTTPStatus.OK)
+    def post(self, db_id: int):
+        """starts the next step of the optimizer plugin"""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        # add new step where the objective-function plugin is executed
+
+        # name of the next step
+        step_id = "final step"
+        # URL of the process endpoint of the invoked plugin
+        href = url_for(
+            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackProcessStep.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+
+        ui_href = url_for(
+            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackMicroFrontend.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+
+        task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=100
+        )
+
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
 
 
 @OPTIMIZER_BLP.route("/<int:db_id>/ui-callback/")
