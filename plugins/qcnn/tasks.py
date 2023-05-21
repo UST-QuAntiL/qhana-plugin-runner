@@ -131,6 +131,7 @@ def calculation_task(self, db_id: int) -> str:
 
     q_parameters = dict(
         n_qubits=n_qubits,
+        num_layers=num_layers,
         weight_init=weight_init,
         diff_method=diff_method,
         single_q_params=(weights_to_wiggle != 0),

@@ -17,7 +17,6 @@
 # https://pennylane.ai/qml/demos/tutorial_quantum_transfer_learning.html
 
 from enum import Enum
-from typing import Callable
 
 import pennylane as qml
 
@@ -31,6 +30,8 @@ from . import WeightInitEnum
 from typing import List, Iterator
 
 from abc import ABCMeta, abstractmethod
+
+from .utils import grouper
 
 
 class DiffMethodEnum(Enum):
@@ -100,6 +101,7 @@ class QCNN1(QuantumCNN):
     def __init__(
         self,
         n_qubits: int,
+        num_layers: int,
         quantum_device: qml.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
@@ -119,11 +121,11 @@ class QCNN1(QuantumCNN):
 
         # weight init
         if weight_init == WeightInitEnum.standard_normal:
-            params = 0.01 * torch.randn(n_qubits)
+            params = 0.01 * torch.randn(num_layers*n_qubits)
         elif weight_init == WeightInitEnum.uniform:
-            params = 0.01 * torch.rand(n_qubits)
+            params = 0.01 * torch.rand(num_layers*n_qubits)
         elif weight_init == WeightInitEnum.zero:
-            params = torch.zeros(n_qubits)
+            params = torch.zeros(num_layers*n_qubits)
         else:
             raise NotImplementedError("Unknown weight init method")
 
@@ -135,6 +137,7 @@ class QCNN1(QuantumCNN):
             self.params = nn.Parameter(params, requires_grad=True)
 
         self.n_qubits = n_qubits
+        self.num_layers = num_layers
         self.diff_method = diff_method.get_value_for_pennylane()
 
     def circuit(self, data: Tensor) -> qml.QNode:
@@ -142,13 +145,14 @@ class QCNN1(QuantumCNN):
             """
             The variational quantum circuit.
             """
-            for j in range(self.n_qubits):
-                qml.RY(torch.pi * data[j], wires=j)
+            for params in grouper(self.params, self.n_qubits):
+                for j in range(self.n_qubits):
+                    qml.RY(torch.pi * data[j], wires=j)
 
-            for j in range(self.n_qubits):
-                qml.RX(self.params[j], wires=j)
-            for j in range(self.n_qubits - 1):
-                qml.CNOT(wires=[j, j + 1])
+                for j in range(self.n_qubits):
+                    qml.RX(params[j], wires=j)
+                for j in range(self.n_qubits - 1):
+                    qml.CNOT(wires=[j, j + 1])
 
             # Expectation values in the Z basis
             return [qml.expval(qml.PauliZ(wires=qubit)) for qubit in range(self.n_qubits)]
@@ -181,7 +185,7 @@ class QCNN1(QuantumCNN):
             yield param
 
     def get_quantum_parameters(self) -> nn.Parameter | List[nn.Parameter]:
-        return self.q_params
+        return self.params
 
     @staticmethod
     def number_of_qubits_needed(image: Tensor):
