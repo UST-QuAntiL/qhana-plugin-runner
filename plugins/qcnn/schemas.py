@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from marshmallow import post_load
+from marshmallow import post_load, validate
 import marshmallow as ma
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
@@ -141,6 +141,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Number of total training epochs.",
             "input_type": "number",
         },
+        validate=validate.Range(min=0, min_inclusive=True),
     )
     optimizer = EnumField(
         OptimizerEnum,
@@ -160,6 +161,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Learning rate for the training of the QCNN.",
             "input_type": "number",
         },
+        validate=validate.Range(min=0, min_inclusive=False),
     )
     qcnn_enum = EnumField(
         QCNNEnum,
@@ -179,6 +181,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The number of layers of the QCNN.",
             "input_type": "number",
         },
+        validate=validate.Range(min=1, min_inclusive=True),
     )
     batch_size = ma.fields.Integer(
         required=True,
@@ -188,6 +191,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The size of training batches.",
             "input_type": "number",
         },
+        validate=validate.Range(min=1, min_inclusive=True),
     )
     weight_init = EnumField(
         WeightInitEnum,
@@ -207,6 +211,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "The number of weights in the quantum circuit to update in one optimization step. 0 means all.",
             "input_type": "number",
         },
+        validate=validate.Range(min=0, min_inclusive=True),
     )
     diff_method = EnumField(
         DiffMethodEnum,
@@ -238,6 +243,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Number of shots.",
             "input_type": "number",
         },
+        validate=validate.Range(min=1, min_inclusive=True),
     )
     ibmq_token = ma.fields.String(
         required=False,
