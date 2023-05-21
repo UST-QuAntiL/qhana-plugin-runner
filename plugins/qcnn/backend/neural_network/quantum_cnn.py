@@ -121,11 +121,11 @@ class QCNN1(QuantumCNN):
 
         # weight init
         if weight_init == WeightInitEnum.standard_normal:
-            params = 0.01 * torch.randn(num_layers*n_qubits)
+            params = 0.01 * torch.randn(num_layers * n_qubits)
         elif weight_init == WeightInitEnum.uniform:
-            params = 0.01 * torch.rand(num_layers*n_qubits)
+            params = 0.01 * torch.rand(num_layers * n_qubits)
         elif weight_init == WeightInitEnum.zero:
-            params = torch.zeros(num_layers*n_qubits)
+            params = torch.zeros(num_layers * n_qubits)
         else:
             raise NotImplementedError("Unknown weight init method")
 
