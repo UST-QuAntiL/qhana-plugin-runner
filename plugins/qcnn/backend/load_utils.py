@@ -42,7 +42,11 @@ def get_entity_generator(entity_points_url: str):
     entities_generator = load_entities(file_, mimetype=file_type)
     entities_generator = ensure_dict(entities_generator)
     for ent in entities_generator:
-        yield {"ID": ent["ID"], "href": ent.get("href", ""), "point": get_point(ent).reshape(ent["shape"])}
+        yield {
+            "ID": ent["ID"],
+            "href": ent.get("href", ""),
+            "point": get_point(ent).reshape(ent["shape"]),
+        }
 
 
 def get_ids_and_data_arr(data_url: str) -> (List, np.array):

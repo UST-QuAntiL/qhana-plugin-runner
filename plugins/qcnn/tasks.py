@@ -51,9 +51,7 @@ TASK_LOGGER = get_task_logger(__name__)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(
-        f"Starting new quantum cnn calculation task with db id '{db_id}'"
-    )
+    TASK_LOGGER.info(f"Starting new quantum cnn calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -62,7 +60,7 @@ def calculation_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-    
+
     train_data_url = input_params.train_data_url
     train_label_url = input_params.train_label_url
     test_data_url = input_params.test_data_url
@@ -144,7 +142,9 @@ def calculation_task(self, db_id: int) -> str:
 
     model = nn.Sequential()
     model.add_module("quantum_ccn", qcnn_enum.get_neural_network(q_parameters))
-    model.add_module("pooling1", nn.MaxPool2d(kernel_size=(2, 2), stride=(1, 1), padding=(1, 1)))
+    model.add_module(
+        "pooling1", nn.MaxPool2d(kernel_size=(2, 2), stride=(1, 1), padding=(1, 1))
+    )
     model.add_module("flatten1", nn.Flatten())
     model.add_module("linear1", nn.LazyLinear(64))
     model.add_module("act_func1", nn.ReLU())
@@ -193,7 +193,7 @@ def calculation_task(self, db_id: int) -> str:
         if isinstance(value, torch.Tensor):
             weights_dict[key] = value.tolist()
     weights_dict["net_type"] = str(model.__class__.__name__)
-    
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
@@ -242,4 +242,11 @@ def calculation_task(self, db_id: int) -> str:
     minutes = total_time // 60
     seconds = round(total_time - minutes * 60)
 
-    return "Total time: " + str(minutes) + " min, " + str(seconds) + " seconds" + test_accuracy
+    return (
+        "Total time: "
+        + str(minutes)
+        + " min, "
+        + str(seconds)
+        + " seconds"
+        + test_accuracy
+    )

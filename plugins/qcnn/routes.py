@@ -136,7 +136,9 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the quantum cnn plugin."""
 
-    @QCNN_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the quantum cnn plugin.")
+    @QCNN_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the quantum cnn plugin."
+    )
     @QCNN_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -149,7 +151,9 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @QCNN_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the quantum cnn plugin.")
+    @QCNN_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the quantum cnn plugin."
+    )
     @QCNN_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -168,8 +172,7 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         fields = schema.fields
         # define default values
-        default_values = {
-        }
+        default_values = {}
 
         if "IBMQ_TOKEN" in os.environ:
             default_values[fields["ibmq_token"].data_key] = "****"

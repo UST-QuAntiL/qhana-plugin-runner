@@ -33,7 +33,6 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 class InputParameters:
-    
     def __init__(
         self,
         train_data_url: str,
@@ -85,9 +84,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/shaped_vector",
-        data_content_types=[
-            "application/json"
-        ],
+        data_content_types=["application/json"],
         metadata={
             "label": "Training Data URL",
             "description": "URL to a json file containing the training images.",
@@ -98,9 +95,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/label",
-        data_content_types=[
-            "application/json"
-        ],
+        data_content_types=["application/json"],
         metadata={
             "label": "Training Labels URL",
             "description": "URL to a json file containing the labels of the training images.",
@@ -111,9 +106,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/shaped_vector",
-        data_content_types=[
-            "application/json"
-        ],
+        data_content_types=["application/json"],
         metadata={
             "label": "Test Data URL",
             "description": "URL to a json file containing the test images. These images will be labeled.",
@@ -124,9 +117,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=True,
         data_input_type="entity/shaped_vector",
-        data_content_types=[
-            "application/json"
-        ],
+        data_content_types=["application/json"],
         metadata={
             "label": "Test Label URL",
             "description": "URL to a json file containing the labels of the test entity points. If no url is provided, then the accuracy will not be calculated.",

@@ -66,10 +66,10 @@ class QuantumCNN(nn.Module, metaclass=ABCMeta):
             for k in range(0, image.shape[1], 2):
                 q_results = torch.empty((4 * image.shape[2]))
                 for channel in range(image.shape[2]):
-                    q_results[4*channel + 0] = image[j, k, channel]
-                    q_results[4*channel + 1] = image[j, k + 1, channel]
-                    q_results[4*channel + 2] = image[j + 1, k, channel]
-                    q_results[4*channel + 3] = image[j + 1, k + 1, channel]
+                    q_results[4 * channel + 0] = image[j, k, channel]
+                    q_results[4 * channel + 1] = image[j, k + 1, channel]
+                    q_results[4 * channel + 2] = image[j + 1, k, channel]
+                    q_results[4 * channel + 3] = image[j + 1, k + 1, channel]
                 q_results = self.circuit(q_results)()
 
                 out[j // 2, k // 2] = q_results
@@ -82,10 +82,10 @@ class QuantumCNN(nn.Module, metaclass=ABCMeta):
         """
         subimage = torch.empty((4 * image.shape[2]))
         for channel in range(image.shape[2]):
-            subimage[4*channel + 0] = image[0, 0, channel]
-            subimage[4*channel + 1] = image[0, 1, channel]
-            subimage[4*channel + 2] = image[1, 0, channel]
-            subimage[4*channel + 3] = image[1, 1, channel]
+            subimage[4 * channel + 0] = image[0, 0, channel]
+            subimage[4 * channel + 1] = image[0, 1, channel]
+            subimage[4 * channel + 2] = image[1, 0, channel]
+            subimage[4 * channel + 3] = image[1, 1, channel]
         qnode = self.circuit(subimage)
         qnode.construct([], {})
         return qnode.qtape.to_openqasm()
@@ -152,13 +152,26 @@ class QCNN1(QuantumCNN):
 
             # Expectation values in the Z basis
             return [qml.expval(qml.PauliZ(wires=qubit)) for qubit in range(self.n_qubits)]
-        return qml.QNode(quantum_net, self.quantum_device, interface="torch", diff_method=self.diff_method)
+
+        return qml.QNode(
+            quantum_net,
+            self.quantum_device,
+            interface="torch",
+            diff_method=self.diff_method,
+        )
 
     def forward(self, images: Tensor):
         """
         pass image through quantum cnn layer
         """
-        out_tensor = torch.empty((images.shape[0], images.shape[1] // 2, images.shape[2] // 2, images.shape[3] * 4))
+        out_tensor = torch.empty(
+            (
+                images.shape[0],
+                images.shape[1] // 2,
+                images.shape[2] // 2,
+                images.shape[3] * 4,
+            )
+        )
         for idx, image in enumerate(images):
             out_tensor[idx] = self.quanv(image)
         return out_tensor
