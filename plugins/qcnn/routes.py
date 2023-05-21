@@ -60,27 +60,39 @@ class PluginsView(MethodView):
                 href=url_for(f"{QCNN_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{QCNN_BLP.name}.MicroFrontend"),
                 data_input=[
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity/shaped_vector",
-                        content_type=
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="trainDataUrl",
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity/label",
-                        content_type=
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="trainLabelUrl",
                     ),
-                    DataMetadata(
+                    InputDataMetadata(
                         data_type="entity/shaped_vector",
-                        content_type=
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="testDataUrl",
                     ),
-                    DataMetadata(
-                        data_type="entity/shaped_vector",
-                        content_type=
+                    InputDataMetadata(
+                        data_type="entity/label",
+                        content_type=[
+                            "application/json",
+                            "text/csv",
+                        ],
                         required=False,
                         parameter="testLabelUrl",
                     ),

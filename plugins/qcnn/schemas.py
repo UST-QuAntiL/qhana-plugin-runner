@@ -14,12 +14,16 @@
 
 from marshmallow import post_load
 import marshmallow as ma
+from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     FileUrl,
 )
-from celery.utils.log import get_task_logger
+from .backend.optimizer import OptimizerEnum
+from .backend.quantum_backends import QuantumBackends
+from .backend.neural_network import WeightInitEnum, QCNNEnum
+from .backend.neural_network.quantum_cnn import DiffMethodEnum
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -43,6 +47,7 @@ class InputParameters:
         num_layers: int,
         batch_size: int,
         weight_init: None,
+        diff_method: DiffMethodEnum,
         backend: None,
         shots: int,
         ibmq_token: str,
@@ -61,6 +66,7 @@ class InputParameters:
         self.num_layers = num_layers
         self.batch_size = batch_size
         self.weight_init = weight_init
+        self.diff_method = diff_method
         self.backend = backend
         self.shots = shots
         self.ibmq_token = ibmq_token
@@ -122,7 +128,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "application/json"
         ],
         metadata={
-            "label": "Train Data URL",
+            "label": "Test Label URL",
             "description": "URL to a json file containing the labels of the test entity points. If no url is provided, then the accuracy will not be calculated.",
             "input_type": "text",
         },
@@ -202,13 +208,25 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    weights_to_wiggle = ma.fields.Boolean(
+    weights_to_wiggle = ma.fields.Integer(
         required=True,
         allow_none=False,
         metadata={
             "label": "Quantum Layer: Weights to wiggle",
             "description": "The number of weights in the quantum circuit to update in one optimization step. 0 means all.",
-            "input_type": "checkbox",
+            "input_type": "number",
+        },
+    )
+    diff_method = EnumField(
+        DiffMethodEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Differentiation Method",
+            "description": "This parameter allows to select the method used to calculate the gradients of the quantum "
+            "gates. The option `Best`, chooses the best method and even allows for normal "
+            "backpropagation, if a classical simulator is used.",
+            "input_type": "select",
         },
     )
     backend = EnumField(
