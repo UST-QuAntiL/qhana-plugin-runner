@@ -1,14 +1,13 @@
 import datetime
 import logging
 import re
-from pathlib import Path
 from typing import List, Mapping, Optional, Sequence
 from xml.etree import ElementTree
 
 import requests
 from requests.exceptions import HTTPError
 
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url_as_file_like
 
 from ..config import WorkflowPluginConfig, separate_prefixes
 from ..datatypes.camunda_datatypes import ExternalTask, HumanTask, WorkflowIncident
@@ -18,17 +17,17 @@ logger = logging.getLogger(__name__)
 
 
 def extract_id_and_name(bpmn_url: str):
-    with open_url(bpmn_url, stream=True) as bpmn:
+    with open_url_as_file_like(bpmn_url) as (filename, bpmn, _):
         id_ = "unknown"
-        name = None
-        for _event, node in ElementTree.iterparse(bpmn.raw, ["start"]):
+        name = filename
+        for _event, node in ElementTree.iterparse(bpmn, ["start"]):
             if node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}definitions":
                 continue
             if node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}process":
-                name = node.attrib.get("name", None)
+                name = node.attrib.get("name", name)
                 id_ = node.attrib["id"]
             elif node.tag.endswith("process"):
-                name = node.attrib.get("name", None)
+                name = node.attrib.get("name", name)
                 id_ = node.attrib.get("id", id_)
             break
         return id_, name
@@ -48,7 +47,9 @@ class CamundaManagementClient:
         if not bpmn_url:
             raise ValueError("No BPMN File specified!")
         id_, name = extract_id_and_name(bpmn_url)
-        with open_url(bpmn_url, stream=True) as bpmn:
+        with open_url_as_file_like(bpmn_url) as (filename, bpmn, content_type):
+            file_ = (filename, bpmn, content_type) if content_type else (filename, bpmn)
+
             response = requests.post(
                 url=f"{self.camunda_endpoint}/deployment/create",
                 params={
@@ -57,7 +58,7 @@ class CamundaManagementClient:
                     "deployment-source": self.worker_id,
                     # TODO add path to deployment source? hashing?
                 },
-                files={id_: bpmn.raw},
+                files={id_: file_},
                 timeout=self.timeout,
             )
             response.raise_for_status()
@@ -74,7 +75,7 @@ class CamundaManagementClient:
         deployed_process_defs = process_def_response.json()
         if len(deployed_process_defs) != 1:
             raise WorkflowDeploymentError(
-                "The deployed BPMN file did not contain a process definition!"
+                f"The deployed BPMN file did not contain a process definition! (deploymentId: {deployment_id})"
             )
 
         process_definition_id = deployed_process_defs[0]["id"]

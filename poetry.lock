@@ -1393,6 +1393,36 @@ ed25519 = ["PyNaCl (>=1.4.0)"]
 rsa = ["cryptography"]
 
 [[package]]
+name = "pyparsing"
+version = "3.0.9"
+description = "pyparsing module - Classes and methods to define and execute parsing grammars"
+category = "main"
+optional = false
+python-versions = ">=3.6.8"
+files = [
+    {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
+    {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
+]
+
+[package.extras]
+diagrams = ["jinja2", "railroad-diagrams"]
+
+[[package]]
+name = "pyrfc6266"
+version = "1.0.2"
+description = "RFC6266 implementation in Python"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pyrfc6266-1.0.2-py3-none-any.whl", hash = "sha256:0532307f319566f337dba97577dfaefe493c3e0c40ab211449ba4566fc2cf73d"},
+    {file = "pyrfc6266-1.0.2.tar.gz", hash = "sha256:3c41616b6a1f2e9a26df7f005fbaa634f960121769ccc4445acfb404e9f8fd4c"},
+]
+
+[package.dependencies]
+pyparsing = ">=3.0.7,<3.1.0"
+
+[[package]]
 name = "pyrsistent"
 version = "0.19.3"
 description = "Persistent/Functional/Immutable data structures"
@@ -2059,4 +2089,4 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "512d6b6fb1e70f212dd8739b66e83dacff35a53573cb11ed0a7a56e247efad93"
+content-hash = "d1f7855e16a5c591bab64b6d7dad751b2f3552c0f3db2efc697e86060bf11788"
