@@ -176,7 +176,7 @@ class MicroFrontend(MethodView):
             schema.fields["shots"].data_key: 1000,
             schema.fields["lr"].data_key: 0.01,
             schema.fields["epochs"].data_key: 2,
-            schema.fields["num_layers"].data_key: 5,
+            schema.fields["num_layers"].data_key: 1,
             schema.fields["batch_size"].data_key: 10,
             schema.fields["randomly_shuffle"].data_key: True,
             schema.fields["weights_to_wiggle"].data_key: 0,
