@@ -121,18 +121,19 @@ class QCNN1(QuantumCNN):
 
         # weight init
         if weight_init == WeightInitEnum.standard_normal:
-            params = 0.01 * torch.randn(num_layers * n_qubits)
+            params = 0.01 * torch.randn(num_layers, n_qubits)
         elif weight_init == WeightInitEnum.uniform:
-            params = 0.01 * torch.rand(num_layers * n_qubits)
+            params = 0.01 * torch.rand(num_layers, n_qubits)
         elif weight_init == WeightInitEnum.zero:
-            params = torch.zeros(num_layers * n_qubits)
+            params = torch.zeros(num_layers, n_qubits)
         else:
             raise NotImplementedError("Unknown weight init method")
 
         if single_q_params:
-            self.params = [nn.Parameter(el, requires_grad=True) for el in params]
-            for i in range(len(self.params)):
-                self.register_parameter(f"params{i}", self.params[i])
+            self.params = [[nn.Parameter(el, requires_grad=True) for el in layer_params] for layer_params in params]
+            for layer_idx, layer_params in enumerate(self.params):
+                for i, p in enumerate(layer_params):
+                    self.register_parameter(f"params({layer_idx}, {i})", p)
         else:
             self.params = nn.Parameter(params, requires_grad=True)
 
@@ -145,12 +146,12 @@ class QCNN1(QuantumCNN):
             """
             The variational quantum circuit.
             """
-            for params in grouper(self.params, self.n_qubits):
+            for layer_params in self.params:
                 for j in range(self.n_qubits):
                     qml.RY(torch.pi * data[j], wires=j)
 
-                for j in range(self.n_qubits):
-                    qml.RX(params[j], wires=j)
+                for j, p in enumerate(layer_params):
+                    qml.RX(p, wires=j)
                 for j in range(self.n_qubits - 1):
                     qml.CNOT(wires=[j, j + 1])
 
@@ -184,8 +185,8 @@ class QCNN1(QuantumCNN):
         for name, param in self.named_parameters(recurse=recurse):
             yield param
 
-    def get_quantum_parameters(self) -> nn.Parameter | List[nn.Parameter]:
-        return self.params
+    def get_quantum_parameters(self) -> List[nn.Parameter]:
+        return list(self.parameters())
 
     @staticmethod
     def number_of_qubits_needed(image: Tensor):
