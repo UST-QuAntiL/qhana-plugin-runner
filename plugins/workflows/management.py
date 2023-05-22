@@ -22,9 +22,7 @@ WORKFLOW_MGMNT_BLP = SecurityBlueprint(
 )
 
 
-class WorkflowManagement(
-    QHAnaPluginBase
-):  # FIXME this should replace the current workflows plugin completely
+class WorkflowManagement(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Plugin for managing BPMN workflows deployed in Camunda."
