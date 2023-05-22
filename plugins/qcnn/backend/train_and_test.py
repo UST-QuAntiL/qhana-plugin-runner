@@ -55,11 +55,15 @@ def train(
         start_it_time = time.time()
 
         correctly_labeled = 0
+        rnd_indices = None
         for train_data, train_labels in dataloader:
             if weights_to_wiggle != 0:
-                rnd_indices = torch.randperm(len(model.q_params))[weights_to_wiggle:]
-                for idx in rnd_indices:
-                    model.q_params[idx].requires_grad = False
+                qcnn = getattr(model, "quantum_ccn", None)
+                if qcnn is not None:
+                    q_params = qcnn.get_quantum_parameters()
+                    rnd_indices = torch.randperm(len(q_params))[weights_to_wiggle:]
+                    for idx in rnd_indices:
+                        q_params[idx].requires_grad = False
 
             # zero gradients
             optimizer.zero_grad(set_to_none=True)
@@ -86,8 +90,9 @@ def train(
             seconds_it = round(total_it_time - minutes_it * 60)
 
             if weights_to_wiggle != 0:
-                for idx in rnd_indices:
-                    model.q_params[idx].requires_grad = True
+                if rnd_indices is not None:
+                    for idx in rnd_indices:
+                        q_params[idx].requires_grad = True
 
         # print loss, accuracy and time of this iteration
         accuracy = correctly_labeled / len(dataloader.dataset)
