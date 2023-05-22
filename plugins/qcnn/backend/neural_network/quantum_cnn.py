@@ -130,7 +130,10 @@ class QCNN1(QuantumCNN):
             raise NotImplementedError("Unknown weight init method")
 
         if single_q_params:
-            self.params = [[nn.Parameter(el, requires_grad=True) for el in layer_params] for layer_params in params]
+            self.params = [
+                [nn.Parameter(el, requires_grad=True) for el in layer_params]
+                for layer_params in params
+            ]
             for layer_idx, layer_params in enumerate(self.params):
                 for i, p in enumerate(layer_params):
                     self.register_parameter(f"params({layer_idx}, {i})", p)
