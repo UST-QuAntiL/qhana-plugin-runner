@@ -46,6 +46,6 @@ def load_matrix_url(matrix_url: str) -> (List, List, List[List[float]]):
     for entity in matrix_generator:
         id_list_row.append(entity["ID"])
         if id_list_col is None:
-            id_list_col = [k for k in entity.keys() if k != "ID"]
+            id_list_col = [k for k in entity.keys() if k not in ("ID", "href")]
         matrix.append([entity[id2] for id2 in id_list_col])
     return id_list_row, id_list_col, matrix
