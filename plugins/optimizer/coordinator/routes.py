@@ -37,12 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
-from qhana_plugin_runner.tasks import (
-    add_step,
-    no_op_task,
-    save_task_error,
-    save_task_result,
-)
+from qhana_plugin_runner.tasks import add_step, no_op_task, save_task_error
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import (

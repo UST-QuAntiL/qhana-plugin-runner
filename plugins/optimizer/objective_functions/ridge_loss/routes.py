@@ -23,11 +23,11 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+
 from plugins.optimizer.coordinator.schemas import (
     ObjectiveFunctionHyperparameterCallbackData,
     ObjectiveFunctionHyperparameterCallbackSchema,
 )
-
 from plugins.optimizer.shared.schemas import (
     CalcInputData,
     CalcInputDataSchema,
@@ -42,17 +42,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import (
-    callback_task,
-    no_op_task,
-    save_task_error,
-)
+from qhana_plugin_runner.tasks import callback_task, no_op_task, save_task_error
 
 from . import RIDGELOSS_BLP, RidgeLoss
-from .schemas import (
-    HyperparamterInputSchema,
-    RidgeLossTaskResponseSchema,
-)
+from .schemas import HyperparamterInputSchema, RidgeLossTaskResponseSchema
 from .tasks import ridge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -227,7 +220,7 @@ class CalcCallbackEndpoint(MethodView):
         CalcInputDataSchema(unknown=EXCLUDE), location="json", required=True
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data) -> dict:
+    def post(self, input_data: CalcInputData) -> dict:
         """Endpoint for the calculation callback."""
 
         loss = ridge_loss(
