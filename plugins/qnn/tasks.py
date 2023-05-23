@@ -23,8 +23,8 @@ from typing import Optional
 
 from celery.utils.log import get_task_logger
 
-from plugins.qnn import QNN
-from plugins.qnn.schemas import (
+from . import QNN
+from .schemas import (
     InputParameters,
     QNNParametersSchema,
 )

@@ -24,7 +24,7 @@ import pennylane as qml
 import torch
 import torch.nn as nn
 
-from plugins.qnn.schemas import WeightInitEnum
+from . import WeightInitEnum
 
 from typing import List, Iterator
 

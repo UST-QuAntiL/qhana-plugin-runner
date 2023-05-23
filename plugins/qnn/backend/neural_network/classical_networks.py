@@ -14,7 +14,7 @@
 
 from torch import nn
 from torch import Tensor
-from plugins.qnn.schemas import WeightInitEnum
+from . import WeightInitEnum
 from typing import List
 
 

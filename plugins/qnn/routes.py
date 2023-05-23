@@ -27,7 +27,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 import os
 
-from plugins.qnn import QNN_BLP, QNN
+from . import QNN_BLP, QNN
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginMetadata,
@@ -36,7 +36,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     InputDataMetadata,
 )
-from plugins.qnn.schemas import (
+from .schemas import (
     QuantumBackends,
     OptimizerEnum,
     WeightInitEnum,
@@ -44,7 +44,7 @@ from plugins.qnn.schemas import (
     TaskResponseSchema,
 )
 
-from plugins.qnn.tasks import calculation_task
+from .tasks import calculation_task
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
