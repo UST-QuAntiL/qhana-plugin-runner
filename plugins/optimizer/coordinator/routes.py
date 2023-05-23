@@ -37,15 +37,22 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
-from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
+from qhana_plugin_runner.tasks import (
+    add_step,
+    no_op_task,
+    save_task_error,
+    save_task_result,
+)
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import (
+    ObjectiveFunctionHyperparameterCallbackData,
+    ObjectiveFunctionHyperparameterCallbackSchema,
     OptimizerCallbackTaskInputSchema,
     OptimizerSetupTaskInputSchema,
     OptimizerTaskResponseSchema,
 )
-from .tasks import no_op_task
+from .tasks import minimize_task
 
 
 @OPTIMIZER_BLP.route("/")
@@ -161,17 +168,17 @@ class OptimizerSetupProcessStep(MethodView):
     def post(self, arguments):
         """Start the demo task."""
         db_task = ProcessingTask(
-            task_name=no_op_task.name,
+            task_name="hyperparameter_selection",
         )
         db_task.save(commit=True)
         db_task.data["next_step_id"] = "callback optimzer plugin"
         db_task.data["opt_href"] = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackProcessStep.__name__}",
+            f"{OPTIMIZER_BLP.name}.{OptimizationProcessStep.__name__}",
             db_id=db_task.id,
             _external=True,
         )
         db_task.data["opt_ui_href"] = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackMicroFrontend.__name__}",
+            f"{OPTIMIZER_BLP.name}.{OptimizationMicroFrontend.__name__}",
             db_id=db_task.id,
             _external=True,
         )
@@ -200,7 +207,7 @@ class OptimizerSetupProcessStep(MethodView):
         )
         callback_url = urllib.parse.unquote(callback_url)
         href = url_for(
-            f"{plugin_name}.OptimizationProcessView",
+            f"{plugin_name}.OptimizerCallbackProcess",
             callbackUrl=callback_url,
             _external=True,
         )
@@ -233,7 +240,10 @@ class ObjectiveFunctionCallback(MethodView):
     """Callback function for the objective-function plugin."""
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
-    def post(self, db_id: int):
+    @OPTIMIZER_BLP.arguments(
+        ObjectiveFunctionHyperparameterCallbackSchema(unknown=EXCLUDE), location="json"
+    )
+    def post(self, arguments: ObjectiveFunctionHyperparameterCallbackData, db_id: int):
         """starts the next step of the optimizer plugin"""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -241,36 +251,48 @@ class ObjectiveFunctionCallback(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
+        if arguments.hyperparameters != None:
+            db_task.data["hyperparameters"] = arguments.hyperparameters
+
+        calc_url = arguments.calc_loss_enpoint_url
+        db_task.data["calc_loss_endpoint_url"] = calc_url
+
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
         # add new step where the objective-function plugin is executed
 
         # name of the next step
-        step_id = "final step"
+        step_id = "minimization step"
         # URL of the process endpoint of the invoked plugin
         href = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackProcessStep.__name__}",
+            f"{OPTIMIZER_BLP.name}.{OptimizationProcessStep.__name__}",
             db_id=db_task.id,
             _external=True,
         )
 
         ui_href = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizerCallbackMicroFrontend.__name__}",
+            f"{OPTIMIZER_BLP.name}.{OptimizationMicroFrontend.__name__}",
             db_id=db_task.id,
             _external=True,
         )
 
         task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
-            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=100
+            db_id=db_task.id,
+            step_id=step_id,
+            href=href,
+            ui_href=ui_href,
+            prog_value=100
+            # todo set to cleared to avoid ui
+            # todo do not make chain and not add step make own task
         )
 
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/ui-callback/")
-class OptimizerCallbackMicroFrontend(MethodView):
+@OPTIMIZER_BLP.route("/<int:db_id>/ui-optimization/")
+class OptimizationMicroFrontend(MethodView):
     """Micro frontend for the optimizer callback function."""
 
     example_inputs = {}
@@ -324,11 +346,11 @@ class OptimizerCallbackMicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizerCallbackProcessStep.__name__}",
+                    f"{OPTIMIZER_BLP.name}.{OptimizationProcessStep.__name__}",
                     db_id=db_id,
                 ),
                 example_values=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizerCallbackMicroFrontend.__name__}",
+                    f"{OPTIMIZER_BLP.name}.{OptimizationMicroFrontend.__name__}",
                     db_id=db_id,
                     **self.example_inputs,
                 ),
@@ -336,8 +358,8 @@ class OptimizerCallbackMicroFrontend(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/process-callback/")
-class OptimizerCallbackProcessStep(MethodView):
+@OPTIMIZER_BLP.route("/<int:db_id>/process-optimization/")
+class OptimizationProcessStep(MethodView):
     """Start the processing task for optimizer callback function."""
 
     @OPTIMIZER_BLP.arguments(
@@ -358,7 +380,7 @@ class OptimizerCallbackProcessStep(MethodView):
         db_task.save(commit=True)
 
         # Chain the second processing task with executing the task that saves the results and ends the execution.
-        task: chain = no_op_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_id)
+        task = minimize_task.s(db_id=db_task.id)
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
