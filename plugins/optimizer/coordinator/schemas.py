@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import marshmallow as ma
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -23,6 +24,23 @@ class OptimizerCallbackTaskInputSchema(FrontendFormBaseSchema):
             "input_type": "textarea",
         },
     )
+
+
+@dataclass
+class ObjectiveFunctionHyperparameterCallbackData:
+    hyperparameters: dict
+    calc_loss_enpoint_url: str
+
+
+class ObjectiveFunctionHyperparameterCallbackSchema(MaBaseSchema):
+    hyperparameters = ma.fields.Dict(
+        keys=ma.fields.String(), values=ma.fields.Float(), required=False, allow_none=True
+    )
+    calc_loss_enpoint_url = ma.fields.Url(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return ObjectiveFunctionHyperparameterCallbackData(**data)
 
 
 class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):

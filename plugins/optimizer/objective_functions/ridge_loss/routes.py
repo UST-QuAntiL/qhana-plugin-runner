@@ -23,9 +23,17 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+from plugins.optimizer.coordinator.schemas import (
+    ObjectiveFunctionHyperparameterCallbackData,
+    ObjectiveFunctionHyperparameterCallbackSchema,
+)
 
-from plugins.optimizer.coordinator.tasks import no_op_task
-from plugins.optimizer.shared.schemas import CallbackURLSchema
+from plugins.optimizer.shared.schemas import (
+    CalcInputData,
+    CalcInputDataSchema,
+    CallbackURLSchema,
+    LossResponseSchema,
+)
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -36,12 +44,16 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import (
     callback_task,
+    no_op_task,
     save_task_error,
 )
 
 from . import RIDGELOSS_BLP, RidgeLoss
-from .schemas import HyperparamterInputSchema, RidgeLossTaskResponseSchema
-from .tasks import optimize
+from .schemas import (
+    HyperparamterInputSchema,
+    RidgeLossTaskResponseSchema,
+)
+from .tasks import ridge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -62,7 +74,7 @@ class PluginsView(MethodView):
             type=PluginType.processing,
             tags=RidgeLoss.instance.tags,
             entry_point=EntryPoint(
-                href=url_for(f"{RIDGELOSS_BLP.name}.{OptimizationProcessView.__name__}"),
+                href=url_for(f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
                 ui_href=url_for(
                     f"{RIDGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
                 ),
@@ -136,7 +148,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         if not data:
             data = {"alpha": 0.1}
         process_url = url_for(
-            f"{RIDGELOSS_BLP.name}.{OptimizationProcessView.__name__}",
+            f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
             callbackUrl=callback["callback_url"],
         )
         example_values_url = url_for(
@@ -160,9 +172,9 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         )
 
 
-@RIDGELOSS_BLP.route("/process-optimizer/")
-class OptimizationProcessView(MethodView):
-    """Start a long running processing task."""
+@RIDGELOSS_BLP.route("/optimizer-callback/")
+class OptimizerCallbackProcess(MethodView):
+    """Make a callback to the optimizer plugin after selection the hyperparameter."""
 
     @RIDGELOSS_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @RIDGELOSS_BLP.arguments(
@@ -174,14 +186,26 @@ class OptimizationProcessView(MethodView):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
-            task_name=optimize.name,
+            task_name=no_op_task.__name__,
         )
         db_task.data["alpha"] = arguments["alpha"]
         callback_url = callback["callback_url"]
+        hyperparameters = {"alpha": arguments["alpha"]}
+        calc_enpoint_url = url_for(
+            f"{RIDGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
+            _external=True,
+        )
         db_task.save(commit=True)
 
+        callback_schema = ObjectiveFunctionHyperparameterCallbackSchema()
+        callback_data = callback_schema.dump(
+            ObjectiveFunctionHyperparameterCallbackData(
+                hyperparameters=hyperparameters, calc_loss_enpoint_url=calc_enpoint_url
+            )
+        )
+
         task: chain = no_op_task.s(db_id=db_task.id) | callback_task.s(
-            callback_url=callback_url
+            callback_url=callback_url, callback_data=callback_data
         )
 
         # save errors to db
@@ -192,3 +216,21 @@ class OptimizationProcessView(MethodView):
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
+
+
+@RIDGELOSS_BLP.route("/calc-callback-endpoint/")
+class CalcCallbackEndpoint(MethodView):
+    """Endpoint for the calculation callback."""
+
+    @RIDGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
+    @RIDGELOSS_BLP.arguments(
+        CalcInputDataSchema(unknown=EXCLUDE), location="json", required=True
+    )
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def post(self, input_data) -> dict:
+        """Endpoint for the calculation callback."""
+
+        loss = ridge_loss(
+            input_data.x, input_data.y, input_data.x0, input_data.hyperparameters["alpha"]
+        )
+        return {"loss": loss}
