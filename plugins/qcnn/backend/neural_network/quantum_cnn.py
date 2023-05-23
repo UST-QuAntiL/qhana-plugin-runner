@@ -252,7 +252,7 @@ class QCNN2(QuantumCNN):
             The variational quantum circuit.
             """
             for layer_params in self.params:
-                for j, d in enumerate(data[:self.n_qubits]):
+                for j, d in enumerate(data[: self.n_qubits]):
                     qml.RX(torch.pi * d, wires=j)
 
                 for j, p in enumerate(layer_params):
@@ -366,14 +366,20 @@ class QCNN3(QuantumCNN):
             The variational quantum circuit.
             """
             for layer_params in self.params:
-                for i, d in enumerate(data[:self.n_qubits]):
+                for i, d in enumerate(data[: self.n_qubits]):
                     qml.RX(torch.pi * data[i], wires=i)
 
                 for i, p in enumerate(layer_params[0]):
                     qml.RX(p, wires=i)
                     qml.RZ(p, wires=i)
                 for i, p in enumerate(layer_params[1]):
-                    qml.CRX(p, wires=[self.n_qubits - 1 - i, (self.n_qubits - 2 - i) % self.n_qubits])
+                    qml.CRX(
+                        p,
+                        wires=[
+                            self.n_qubits - 1 - i,
+                            (self.n_qubits - 2 - i) % self.n_qubits,
+                        ],
+                    )
 
             # Expectation values in the Z basis
             return [qml.expval(qml.PauliZ(wires=qubit)) for qubit in range(self.n_qubits)]
@@ -463,7 +469,7 @@ class QCNN4(QuantumCNN):
             The variational quantum circuit.
             """
             for layer_params in self.params:
-                for i, d in enumerate(data[:self.n_qubits]):
+                for i, d in enumerate(data[: self.n_qubits]):
                     qml.RY(torch.pi * d, wires=i)
 
                 for _ in range(2):
@@ -566,7 +572,7 @@ class QCNN5(QuantumCNN):
             The variational quantum circuit.
             """
             for layer_params in self.params:
-                for i, d in enumerate(data[:self.n_qubits]):
+                for i, d in enumerate(data[: self.n_qubits]):
                     qml.RY(torch.pi * d, wires=i)
 
                 for j, p in enumerate(layer_params):
@@ -673,7 +679,7 @@ class QCNN6(QuantumCNN):
             The variational quantum circuit.
             """
             for layer_params in self.params:
-                for i, d in enumerate(data[:self.n_qubits]):
+                for i, d in enumerate(data[: self.n_qubits]):
                     qml.RY(torch.pi * d, wires=i)
 
                 for idx in range(self.n_qubits):
@@ -761,7 +767,9 @@ class QCNN7(QuantumCNN):
             for layer_idx, layer_params in enumerate(self.params):
                 for i, p in enumerate(layer_params):
                     for j, u_params in enumerate(layer_params):
-                        self.register_parameter(f"params({layer_idx}, {i}, {j})", u_params)
+                        self.register_parameter(
+                            f"params({layer_idx}, {i}, {j})", u_params
+                        )
         else:
             self.params = nn.Parameter(params, requires_grad=True)
 
@@ -775,7 +783,7 @@ class QCNN7(QuantumCNN):
             The variational quantum circuit.
             """
             for layer_params in self.params:
-                for i, d in enumerate(data[:self.n_qubits]):
+                for i, d in enumerate(data[: self.n_qubits]):
                     qml.RY(torch.pi * d, wires=i)
 
                 for i in range(self.n_qubits):
