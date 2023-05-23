@@ -97,8 +97,8 @@ def check_for_incidents(
         step_id="workflow-incident",
         href=db_task.data["href_incident"],
         ui_href=db_task.data["ui_href_incident"],
+        commit=True,
     )
-    db_task.save(commit=True)
 
     return True
 
@@ -142,7 +142,6 @@ def check_for_human_tasks(
             ui_href=db_task.data["ui_href"],
             commit=True,
         )
-        db_task.save(commit=True)
 
         return True
 
