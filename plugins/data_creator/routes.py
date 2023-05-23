@@ -56,7 +56,7 @@ class PluginsView(MethodView):
             description=DataCreator.instance.description,
             name=DataCreator.instance.identifier,
             version=DataCreator.instance.version,
-            type=PluginType.simple,
+            type=PluginType.dataloader,
             entry_point=EntryPoint(
                 href=url_for(f"{DataCreator_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{DataCreator_BLP.name}.MicroFrontend"),
