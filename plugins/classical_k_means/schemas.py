@@ -37,6 +37,9 @@ class InputParameters:
     relative_residual: float
     visualize: bool = False
 
+    def __str__(self):
+        return str(self.__dict__)
+
 
 class InputParametersSchema(FrontendFormBaseSchema):
     entity_points_url = FileUrl(
