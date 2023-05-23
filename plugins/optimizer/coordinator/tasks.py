@@ -1,12 +1,10 @@
-from tempfile import SpooledTemporaryFile
-
 from typing import Iterator, Optional
 
 from celery.utils.log import get_task_logger
 import numpy as np
 import requests
 from scipy.optimize import minimize as scipy_minimize
-from plugins.optimizer.shared.schemas import (
+from ..shared.schemas import (
     CalcInputData,
     CalcInputDataSchema,
     LossResponseData,
@@ -20,7 +18,6 @@ from . import Optimizer
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
-from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
 
