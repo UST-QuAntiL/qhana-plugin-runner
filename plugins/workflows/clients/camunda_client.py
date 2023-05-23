@@ -198,7 +198,7 @@ class CamundaClient:
         Raises:
             ValueError: the limits have illegal values
         """
-        params = {"active": "true", "notLocked": "true"}
+        params = {"active": "true", "notLocked": "true", "withRetriesLeft": "true"}
         if limit is not None:
             if limit < 1:
                 raise ValueError("The limit must not be smaller than 1!")
