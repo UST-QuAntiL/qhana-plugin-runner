@@ -1,14 +1,9 @@
 from dataclasses import dataclass
 import marshmallow as ma
-from qhana_plugin_runner.api.util import (
-    FrontendFormBaseSchema,
-    MaBaseSchema,
-)
+import numpy as np
 
-
-@dataclass
-class Hyperparaters:
-    aplpha: float
+from plugins.optimizer.shared.schemas import NumpyArray
+from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema
 
 
 class RidgeLossTaskResponseSchema(MaBaseSchema):
