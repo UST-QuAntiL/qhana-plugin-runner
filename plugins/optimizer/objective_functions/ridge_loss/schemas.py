@@ -1,8 +1,5 @@
-from dataclasses import dataclass
 import marshmallow as ma
-import numpy as np
 
-from plugins.optimizer.shared.schemas import NumpyArray
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema
 
 

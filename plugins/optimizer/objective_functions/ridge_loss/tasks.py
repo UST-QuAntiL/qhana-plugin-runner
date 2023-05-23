@@ -1,12 +1,6 @@
-from typing import Optional
-
 import numpy as np
 from celery.utils.log import get_task_logger
 
-from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-
-from . import RidgeLoss
 
 TASK_LOGGER = get_task_logger(__name__)
 
