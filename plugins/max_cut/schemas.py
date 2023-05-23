@@ -72,7 +72,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     adjacency_matrix_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity/vector",
+        data_input_type="entity/matrix",
         data_content_types=["application/json"],
         metadata={
             "label": "Weighted Adjacency Matrix URL",
