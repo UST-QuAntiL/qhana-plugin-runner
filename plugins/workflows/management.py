@@ -10,25 +10,25 @@ from .config import WorkflowPluginConfig, get_config
 
 TASK_LOGGER = get_task_logger(__name__)
 
-_plugin_name = "deploy-workflow"
+_plugin_name = "workflow-management"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
-WORKFLOWS_BLP = SecurityBlueprint(
+WORKFLOW_MGMNT_BLP = SecurityBlueprint(
     _identifier,
     __name__,
-    description="BPMN workflows plugin API.",
+    description="Plugin for managing BPMN workflows deployed in Camunda.",
     template_folder="templates",
 )
 
 
-class DeployWorkflow(QHAnaPluginBase):
+class WorkflowManagement(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "WIP Workflow plugin executing workflows using the camunda bpmn engine."
+    description = "Plugin for managing BPMN workflows deployed in Camunda."
     tags = ["workflow", "bpmn", "camunda-engine"]
 
-    instance: ClassVar["DeployWorkflow"]
+    instance: ClassVar["WorkflowManagement"]
 
     config: WorkflowPluginConfig
 
@@ -40,15 +40,13 @@ class DeployWorkflow(QHAnaPluginBase):
         self.config = conf
 
     def get_api_blueprint(self):
-        return WORKFLOWS_BLP
+        return WORKFLOW_MGMNT_BLP
 
 
 try:
     # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
     # accessed as soon as the routes are imported.
-    from . import routes  # noqa
-    from .watchers.external import schedule  # noqa
-    from . import management  # noqa
+    from . import management_routes  # noqa
 except ImportError as e:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.
