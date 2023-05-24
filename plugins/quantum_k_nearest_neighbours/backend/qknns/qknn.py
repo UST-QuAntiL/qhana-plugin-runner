@@ -91,10 +91,10 @@ class QkNNEnum(Enum):
                 SchuldQkNN, max_wires, train_data=train_data, train_labels=train_labels
             )
             if use_access_wires:
-                wires[2] = wires[2] + access_wires
+                wires[3] = wires[3] + access_wires
 
             return SchuldQkNN(
-                train_data, train_labels, wires[0], wires[1], wires[2], None
+                train_data, train_labels, wires[0], wires[1], wires[2], wires[3], None
             ), count_wires(wires)
         elif self == QkNNEnum.simple_hamming_qknn:
             from .simpleQkNN import SimpleHammingQkNN
