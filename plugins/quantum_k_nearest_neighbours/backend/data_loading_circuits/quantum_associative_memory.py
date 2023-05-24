@@ -47,7 +47,7 @@ class QAM:
             raise ValueError(
                 "A QAM (Quantum Associative Memory) can only load binary data"
             )
-        self.xor_X = self.create_xor_X(X)
+        self.xor_X = self.create_xor_X(self.X)
 
         if additional_bits is not None:
             if not is_binary(additional_bits):
@@ -90,7 +90,7 @@ class QAM:
         self.ancilla_wires = self.ancilla_wires[2:]
 
         if amplitudes is None:
-            self.amplitudes = [1 / np.sqrt(X.shape[0], dtype=np.float64)] * X.shape[0]
+            self.amplitudes = [1 / np.sqrt(self.X.shape[0], dtype=np.float64)] * self.X.shape[0]
         else:
             self.amplitudes = amplitudes
 
