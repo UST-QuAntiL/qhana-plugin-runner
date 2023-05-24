@@ -21,7 +21,7 @@ from typing import List, Tuple
 from .qknn import QkNN
 from ..data_loading_circuits import QAM
 from ..data_loading_circuits import TreeLoader
-from ..utils import bitlist_to_int, check_binary, ceil_log2, check_for_duplicates
+from ..utils import int_to_bitlist, bitlist_to_int, check_binary, ceil_log2
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
 
@@ -52,12 +52,15 @@ class SimpleQkNN(QkNN):
             new_label = np.bincount(self.train_labels).argmax()
         else:
             distances = np.array(self.calculate_distances(x))  # Get distances
+            print(f"distances: {distances}")
             indices = np.argpartition(distances, self.k)[
                 : self.k
             ]  # Get k smallest values
+            print(f"{self.k} indices with smallest value: {indices}")
             counts = Counter(
                 self.train_labels[indices]
             )  # Count occurrences of labels in k smallest values
+            print(f"label counts: {counts}")
             new_label = max(counts, key=counts.get)  # Get most frequent label
         return new_label
 
@@ -68,6 +71,7 @@ class SimpleHammingQkNN(SimpleQkNN):
         train_data: np.ndarray,
         train_labels: np.ndarray,
         k: int,
+        idx_wires: List[int],
         train_wires: List[int],
         qam_ancilla_wires: List[int],
         backend: qml.Device,
@@ -79,31 +83,30 @@ class SimpleHammingQkNN(SimpleQkNN):
             self.train_data,
             "All the data needs to be binary, when dealing with the hamming distance",
         )
-        check_for_duplicates(
-            self.train_data, "The training data may not contain duplicates."
-        )
         self.train_data = np.array(train_data, dtype=int)
 
-        self.point_num_to_idx = {}
-        for i, vec in enumerate(self.train_data):
-            self.point_num_to_idx[bitlist_to_int(vec)] = i
-
         self.unclean_wires = [] if unclean_wires is None else unclean_wires
+        self.idx_wires = idx_wires
         self.train_wires = train_wires
         self.qam_ancilla_wires = qam_ancilla_wires
-        wire_types = ["train", "qam_ancilla", "unclean"]
-        num_wires = [self.train_data.shape[1], max(self.train_data.shape[1], 2)]
+        wire_types = ["idx", "train", "qam_ancilla", "unclean"]
+        num_idx_wires = int(np.ceil(np.log2(self.train_data.shape[0])))
+        num_wires = [num_idx_wires, self.train_data.shape[1], max(self.train_data.shape[0], 2)]
         error_msgs = [
+            "the round up log2 of the number of points, i.e. ceil(log2(no. points))."
             "the points' dimensionality.",
             "the points' dimensionality and greater or equal to 2.",
         ]
+
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
         self.qam = QAM(
-            self.train_data,
-            self.train_wires,
+            np.array([int_to_bitlist(i, num_idx_wires) for i in range(self.train_data.shape[0])]),    # The indices
+            self.idx_wires,
             self.qam_ancilla_wires,
             unclean_wires=self.unclean_wires,
+            additional_wires=self.train_wires,
+            additional_bits=self.train_data,
         )
 
     def get_quantum_circuit(self, x: np.ndarray):
@@ -130,10 +133,8 @@ class SimpleHammingQkNN(SimpleQkNN):
             for train_wire in self.train_wires:
                 # QAM ancilla wires are 0 after QAM -> use one of those wires
                 qml.CRX(rot_angle, wires=(train_wire, self.qam_ancilla_wires[0]))
-            for x_, train_wire in zip(x, self.train_wires):
-                if x_ == 0:
-                    qml.PauliX((train_wire,))
-            return qml.sample(wires=self.train_wires + [self.qam_ancilla_wires[0]])
+
+            return qml.sample(wires=self.idx_wires + [self.qam_ancilla_wires[0]])
 
         return quantum_circuit
 
@@ -144,8 +145,8 @@ class SimpleHammingQkNN(SimpleQkNN):
         # Count how often a certain point was measured (total_ancilla)
         # and how often the ancilla qubit was zero (num_zero_ancilla)
         for sample in samples:
-            idx = self.point_num_to_idx.get(bitlist_to_int(sample[:-1]), None)
-            if idx is not None:
+            idx = bitlist_to_int(sample[:-1])
+            if idx < len(self.train_data):
                 total_ancilla[idx] += 1
                 if sample[-1] == 0:
                     num_zero_ancilla[idx] += 1
@@ -159,8 +160,8 @@ class SimpleHammingQkNN(SimpleQkNN):
         return num_zero_ancilla
 
     @staticmethod
-    def get_necessary_wires(train_data: np.ndarray) -> Tuple[int, int]:
-        return len(train_data[0]), max(len(train_data[0]), 2)
+    def get_necessary_wires(train_data: np.ndarray) -> Tuple[int, int, int]:
+        return int(np.ceil(np.log2(train_data.shape[0]))), len(train_data[0]), max(len(train_data[0]), 2)
 
     def get_representative_circuit(self, X: np.ndarray) -> str:
         circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)
