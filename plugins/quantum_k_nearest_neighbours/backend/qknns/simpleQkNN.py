@@ -91,7 +91,11 @@ class SimpleHammingQkNN(SimpleQkNN):
         self.qam_ancilla_wires = qam_ancilla_wires
         wire_types = ["idx", "train", "qam_ancilla", "unclean"]
         num_idx_wires = int(np.ceil(np.log2(self.train_data.shape[0])))
-        num_wires = [num_idx_wires, self.train_data.shape[1], max(self.train_data.shape[0], 2)]
+        num_wires = [
+            num_idx_wires,
+            self.train_data.shape[1],
+            max(self.train_data.shape[0], 2),
+        ]
         error_msgs = [
             "the round up log2 of the number of points, i.e. ceil(log2(no. points))."
             "the points' dimensionality.",
@@ -101,7 +105,12 @@ class SimpleHammingQkNN(SimpleQkNN):
         check_wires_uniqueness(self, wire_types)
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
         self.qam = QAM(
-            np.array([int_to_bitlist(i, num_idx_wires) for i in range(self.train_data.shape[0])]),    # The indices
+            np.array(
+                [
+                    int_to_bitlist(i, num_idx_wires)
+                    for i in range(self.train_data.shape[0])
+                ]
+            ),  # The indices
             self.idx_wires,
             self.qam_ancilla_wires,
             unclean_wires=self.unclean_wires,
@@ -161,7 +170,11 @@ class SimpleHammingQkNN(SimpleQkNN):
 
     @staticmethod
     def get_necessary_wires(train_data: np.ndarray) -> Tuple[int, int, int]:
-        return int(np.ceil(np.log2(train_data.shape[0]))), len(train_data[0]), max(len(train_data[0]), 2)
+        return (
+            int(np.ceil(np.log2(train_data.shape[0]))),
+            len(train_data[0]),
+            max(len(train_data[0]), 2),
+        )
 
     def get_representative_circuit(self, X: np.ndarray) -> str:
         circuit = qml.QNode(self.get_quantum_circuit(X[0]), self.backend)

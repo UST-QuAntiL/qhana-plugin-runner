@@ -90,7 +90,9 @@ class QAM:
         self.ancilla_wires = self.ancilla_wires[2:]
 
         if amplitudes is None:
-            self.amplitudes = [1 / np.sqrt(self.X.shape[0], dtype=np.float64)] * self.X.shape[0]
+            self.amplitudes = [
+                1 / np.sqrt(self.X.shape[0], dtype=np.float64)
+            ] * self.X.shape[0]
         else:
             self.amplitudes = amplitudes
 
