@@ -16,7 +16,10 @@ import os
 from http import HTTPStatus
 from typing import Mapping
 
+from pathlib import Path
+
 from celery.canvas import chain
+from flask import send_file
 from flask import Response
 from flask import redirect
 from flask.globals import request
@@ -191,8 +194,14 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QParzenWindow_BLP.name}.CalcView"),
+                frontendjs=url_for(f"{QParzenWindow_BLP.name}.get_frontend_js"),
             )
         )
+
+
+@QParzenWindow_BLP.route("/ui/frontend_js/")
+def get_frontend_js():
+    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @QParzenWindow_BLP.route("/process/")
