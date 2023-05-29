@@ -52,15 +52,12 @@ class SimpleQkNN(QkNN):
             new_label = np.bincount(self.train_labels).argmax()
         else:
             distances = np.array(self.calculate_distances(x))  # Get distances
-            print(f"distances: {distances}")
             indices = np.argpartition(distances, self.k)[
                 : self.k
             ]  # Get k smallest values
-            print(f"{self.k} indices with smallest value: {indices}")
             counts = Counter(
                 self.train_labels[indices]
             )  # Count occurrences of labels in k smallest values
-            print(f"label counts: {counts}")
             new_label = max(counts, key=counts.get)  # Get most frequent label
         return new_label
 

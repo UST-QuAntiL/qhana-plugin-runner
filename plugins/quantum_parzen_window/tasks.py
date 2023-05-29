@@ -109,7 +109,6 @@ def get_label_arr(
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
-    print(f"id_to_idx type: {type(id_to_idx)}\nid_to_idx: {id_to_idx}")
     labels = np.zeros(len(id_to_idx.keys()), dtype=int)
 
     if label_to_int is None:
