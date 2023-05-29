@@ -130,7 +130,7 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "transformed_train_data.json",
+            "training_data_embedding.json",
             "entity/vector",
             "application/json",
         )
@@ -144,7 +144,7 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "transformed_test_data.json",
+            "test_data_embedding.json",
             "entity/vector",
             "application/json",
         )
