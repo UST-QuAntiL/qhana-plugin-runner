@@ -31,6 +31,7 @@ from qhana_plugin_runner.storage import STORE
 
 from typing import List
 from torch import Tensor, tensor, float32, less_equal
+from torch.nn import MSELoss
 
 from .backend.load_utils import get_indices_and_point_arr
 
@@ -107,11 +108,8 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     test_data = tensor(test_data, dtype=float32)
     embedded_test_data = model.embed(test_data)
     recovered_test_data = model.reconstruct(embedded_test_data)
-    accuracy = 0
-    for original_point, recovered_point in zip(test_data, recovered_test_data):
-        if less_equal(original_point - recovered_point, 1e-12).all():
-            accuracy += 1
-    accuracy /= len(test_data)
+
+    mse = MSELoss()(recovered_test_data, test_data)
 
     # prepare weights output
     weights_dict = model.state_dict()
@@ -160,4 +158,4 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
             "application/json",
         )
 
-    return f"The autoencoder achieved {accuracy*100}% accuracy on the test data."
+    return f"The autoencoder achieved a mean squared error of {mse} on the test data."
