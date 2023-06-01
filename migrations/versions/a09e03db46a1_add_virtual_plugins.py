@@ -21,7 +21,7 @@ def upgrade():
         "DataBlob",
         sa.Column("id", sa.INTEGER(), nullable=False),
         sa.Column("plugin_id", sa.String(length=550), nullable=False),
-        sa.Column("value", sa.BLOB(), nullable=False),
+        sa.Column("value", sa.LargeBinary(), nullable=False),
         sa.PrimaryKeyConstraint("id", "plugin_id", name=op.f("pk_DataBlob")),
     )
     op.create_table(

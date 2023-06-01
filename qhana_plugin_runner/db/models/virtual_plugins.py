@@ -266,4 +266,4 @@ class DataBlob:
 
     id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
     plugin_id: Mapped[str] = mapped_column(sql.String(550), primary_key=True)
-    value: Mapped[bytes] = mapped_column(sql.BLOB())
+    value: Mapped[bytes] = mapped_column(sql.LargeBinary())
