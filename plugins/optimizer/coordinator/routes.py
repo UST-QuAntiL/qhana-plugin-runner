@@ -19,9 +19,7 @@ from typing import Mapping, Optional
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import current_app as app
-from flask import redirect
+from flask import Response, redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -37,13 +35,17 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
-from qhana_plugin_runner.tasks import add_step, save_task_error
+from qhana_plugin_runner.tasks import (
+    add_step_without_ui,
+    invoke_task,
+    save_task_error,
+    save_task_result,
+)
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import (
     ObjectiveFunctionHyperparameterCallbackData,
     ObjectiveFunctionHyperparameterCallbackSchema,
-    OptimizerCallbackTaskInputSchema,
     OptimizerSetupTaskInputSchema,
     OptimizerTaskResponseSchema,
 )
@@ -166,17 +168,6 @@ class OptimizerSetupProcessStep(MethodView):
             task_name="hyperparameter_selection",
         )
         db_task.save(commit=True)
-        db_task.data["next_step_id"] = "callback optimzer plugin"
-        db_task.data["opt_href"] = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizationProcessStep.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
-        db_task.data["opt_ui_href"] = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizationMicroFrontend.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
 
         # extract the plugin name from the plugin url
         plugin_url = arguments["objective_function_plugin_selector"]
@@ -203,24 +194,23 @@ class OptimizerSetupProcessStep(MethodView):
         callback_url = urllib.parse.unquote(callback_url)
         href = url_for(
             f"{plugin_name}.OptimizerCallbackProcess",
-            callbackUrl=callback_url,
             _external=True,
         )
         # URL of the micro frontend endpoint of the invoked plugin
         ui_href = url_for(
             f"{plugin_name}.HyperparameterSelectionMicroFrontend",
-            callbackUrl=callback_url,
             _external=True,
         )  # FIXME get the method names of the objective function plugin via a metadata endpoint
 
         # Chain the first processing task with executing the objective-function plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
         # steps in the database.
-        task = add_step.s(
+        task = invoke_task.s(
             db_id=db_task.id,
             step_id=step_id,
             href=href,
             ui_href=ui_href,
+            callback_url=callback_url,
             prog_value=20,
             task_log="hyperparameter selection step added",
         )
@@ -271,17 +261,10 @@ class ObjectiveFunctionCallback(MethodView):
             _external=True,
         )
 
-        ui_href = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizationMicroFrontend.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
-
-        task = add_step.s(
+        task = add_step_without_ui.s(
             db_id=db_task.id,
             step_id=step_id,
             href=href,
-            ui_href=ui_href,
             prog_value=50,
             task_log="minimization step added",
             # todo set to cleared to avoid ui
@@ -292,83 +275,13 @@ class ObjectiveFunctionCallback(MethodView):
         task.apply_async()
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/ui-optimization/")
-class OptimizationMicroFrontend(MethodView):
-    """Micro frontend for the optimizer callback function."""
-
-    example_inputs = {}
-
-    @OPTIMIZER_BLP.html_response(
-        HTTPStatus.OK,
-        description="Micro frontend for the optimizer callback function.",
-    )
-    @OPTIMIZER_BLP.arguments(
-        OptimizerCallbackTaskInputSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="query",
-        required=False,
-    )
-    @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, db_id: int):
-        """Return the micro frontend."""
-        return self.render(request.args, db_id, errors)
-
-    @OPTIMIZER_BLP.html_response(
-        HTTPStatus.OK,
-        description="Micro frontend for the optimizer callback function.",
-    )
-    @OPTIMIZER_BLP.arguments(
-        OptimizerCallbackTaskInputSchema(
-            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
-        ),
-        location="form",
-        required=False,
-    )
-    @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, db_id: int):
-        """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, db_id, errors)
-
-    def render(self, data: Mapping, db_id: int, errors: dict):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        schema = OptimizerCallbackTaskInputSchema()
-        return Response(
-            render_template(
-                "simple_template.html",
-                name=Optimizer.instance.name,
-                version=Optimizer.instance.version,
-                schema=schema,
-                values=data,
-                errors=errors,
-                process=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizationProcessStep.__name__}",
-                    db_id=db_id,
-                ),
-                example_values=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizationMicroFrontend.__name__}",
-                    db_id=db_id,
-                    **self.example_inputs,
-                ),
-            )
-        )
-
-
 @OPTIMIZER_BLP.route("/<int:db_id>/process-optimization/")
 class OptimizationProcessStep(MethodView):
     """Start the processing task for optimizer callback function."""
 
-    @OPTIMIZER_BLP.arguments(
-        OptimizerCallbackTaskInputSchema(unknown=EXCLUDE), location="form"
-    )
     @OPTIMIZER_BLP.response(HTTPStatus.OK, OptimizerTaskResponseSchema())
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int):
+    def post(self, db_id: int):
         """Start the demo task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -376,12 +289,11 @@ class OptimizationProcessStep(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.data["input_str"] = arguments["input_str"]
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
         # Chain the second processing task with executing the task that saves the results and ends the execution.
-        task = minimize_task.s(db_id=db_task.id)
+        task: chain = minimize_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_id)
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
