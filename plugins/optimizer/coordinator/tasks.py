@@ -123,7 +123,6 @@ def minimize_task(self, db_id: int) -> str:
 
     X, y = get_features_and_target(input_file_url, target_variable_name)
 
-    # TASK_LOGGER.info(f"Loaded input data from file X='{X}' and y='{y}'")
 
     loss_fun = loss_(loss_calc_endpoint_url)
 
@@ -131,4 +130,6 @@ def minimize_task(self, db_id: int) -> str:
     result = scipy_minimize(
         loss_fun, initial_weights, args=(X, y, hyperparameters), method="L-BFGS-B"
     )
+    
+    TASK_LOGGER.info(f"Optimization result: {result}")
     return ", ".join(map(str, result.x.flatten()))

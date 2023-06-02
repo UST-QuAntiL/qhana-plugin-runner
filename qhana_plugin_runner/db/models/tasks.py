@@ -185,6 +185,41 @@ class ProcessingTask:
         if commit:
             DB.session.commit()
 
+    def add_next_step_without_ui(self, href: str, step_id: str, commit: bool = False):
+        """Adds new step for multi-step plugin.
+
+        Args:
+            href (str): The URL of the REST entry point resource.
+            ui_href (str): The URL of the micro frontend that corresponds to the REST entry point resource.
+            step_id (str): ID of step, e.g., ``"step1"`` or ``"step2b"``, is automatically appended to previous step
+
+        Raises:
+            AssertionError: raised in case the previous step was not cleared before this method is called.
+        """
+        if self.current_step >= 0:
+            if not self.steps[self.current_step].cleared:
+                raise AssertionError(
+                    "Previous step must be cleared first before adding a new step!"
+                )
+            step_id = step_id
+        else:
+            self.multi_step = True
+
+        self.current_step += 1
+        new_step: Step = Step(
+            id=self.id,
+            step_id=step_id,
+            href=href,
+            ui_href="skipped",
+            cleared=True,
+        )
+        self.steps.append(new_step)
+
+        DB.session.add(new_step)
+        DB.session.add(self)
+        if commit:
+            DB.session.commit()
+        
     def add_task_log_entry(self, task_log: str, commit: bool = False):
         """Appends ``task_log`` separated by a new line.
 
