@@ -1,0 +1,132 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+    {{ super() }}
+    <!-- required viewer styles -->
+    <link rel="stylesheet" href="https://unpkg.com/bpmn-js@9.0.3/dist/assets/bpmn-js.css">
+
+    <!-- viewer distro (with pan and zoom) -->
+    <script src="https://unpkg.com/bpmn-js@9.0.3/dist/bpmn-navigated-viewer.development.js"></script>
+
+    <style>
+        #canvas {
+            height: 25rem;
+        }
+
+        .needs-discussion:not(.djs-connection) .djs-visual > :nth-child(1) {
+            stroke: var(--color-warn, red) !important;
+        }
+    </style>
+{% endblock head %}
+
+{% block content %}
+    <div id="canvas"></div>
+
+    <h2>Incidents</h2>
+
+    <ul>
+        {% for incident in incidents %}
+        <li>
+            <strong>{{incident["incidentType"]}}</strong> (<time datetime="{{incident['incidentTimestamp']}}">{{incident["incidentDatetime"].strftime("%c")}}</time>)
+            {{incident["incidentMessage"]}}
+            <!-- TODO add buttons to resolve incidents -->
+        </li>
+        {% endfor %}
+    </ul>
+
+
+    <form class="qhana-form qhana-incident-form">
+        {% if incidents %}
+            <button class="qhana-form-submit" type="submit" value="cancel">Cancel Workflow</button>
+        {% else %}
+            <button class="qhana-form-submit" dtype="submit" value="continue">Continue Workflow</button>
+        {% endif %}
+    </form>
+{% endblock content %}
+
+{% block script %}
+    {{ super() }}
+
+    <script>
+
+    /**
+    * Instrument embedded html forms to listen for submit events.
+    */
+    function instrumentIncidentForm() {
+        const form = document.querySelector('form.qhana-incident-form');
+        form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const eventType = event.submitter.value;
+                const formData = new FormData();
+                const submitUrl = {{process|tojson}};
+
+                formData.set("action", eventType)
+
+                submitFormData(formData, submitUrl, "post")
+                    .then(
+                        (response) => {
+                            if (response.status === 200) {
+                                sendMessage({
+                                    type: "form-submit",
+                                    formData: (new URLSearchParams(formData)).toString(),
+                                    formDataType: "application/x-www-form-urlencoded",
+                                    dataInputs: [],
+                                    submitUrl: submitUrl,
+                                    resultUrl: response.url,
+                                });
+                            } else {
+                                response.json().then((jsonBody) => {
+                                    sendMessage({
+                                        type: "form-error",
+                                        status: response.status,
+                                        error: jsonBody,
+                                    }, (error) => {
+                                        sendMessage({
+                                            type: "form-error",
+                                            status: response.status,
+                                            error: "unknown error",
+                                        });
+                                    });
+                                });
+                            }
+                        },
+                        (error) => {
+                            sendMessage({
+                                type: "form-error",
+                                status: 500,
+                                error: "unknown error",
+                            });
+                        }
+                    );
+        });
+    }
+
+    instrumentIncidentForm();
+
+    var incidents = {{incidents | tojson}};
+
+    // viewer instance
+    var bpmnViewer = new BpmnJS({
+        container: '#canvas'
+    });
+
+    // import diagram
+    try {
+        bpmnViewer.importXML({{workflow_xml|tojson}}).then(() => {
+            // access viewer components
+            var canvas = bpmnViewer.get('canvas');
+
+            canvas.zoom('fit-viewport');
+
+            incidents.forEach(incident => {
+                if (incident.activityId) {
+                    canvas.addMarker(incident.activityId, 'needs-discussion');
+                }
+            });
+        });
+    } catch (err) {
+        console.error('could not import BPMN 2.0 diagram', err);
+    }
+    </script>
+
+{% endblock script %}

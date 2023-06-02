@@ -8,10 +8,9 @@ from requests.exceptions import ConnectionError, HTTPError, RequestException
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
-from ... import Workflows
+from ... import DeployWorkflow
 from ...clients.camunda_client import CamundaClient
 from ...clients.qhana_task_client import ParameterParsingError, QhanaTaskClient
-from ...datatypes.camunda_datatypes import CamundaConfig
 from ...datatypes.qhana_datatypes import QhanaOutput
 from ...exceptions import (
     BadInputsError,
@@ -23,7 +22,7 @@ from ...exceptions import (
     StepNotFoundError,
 )
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -42,7 +41,7 @@ def extract_second_topic_component(topic: str):
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.qhana_instance_watcher",
+    name=f"{DeployWorkflow.instance.identifier}.external.qhana_instance_watcher",
     bind=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
@@ -61,7 +60,7 @@ def qhana_instance_watcher(
     TASK_LOGGER.info(f"Received task {external_task_id} from camunda queue {topic_name}.")
 
     # Clients
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    camunda_client = CamundaClient(config)
     TASK_LOGGER.debug("Searching for plugins")
 
     try:
@@ -82,6 +81,8 @@ def qhana_instance_watcher(
         plugin_response = PLUGIN_REGISTRY_CLIENT.search_by_rel(
             "plugin", query_params=query_params, allow_collection_resource=False
         )
+    except ConnectionError:
+        raise  # re-raise connection error to allow for retries when registry is not available!
     except RequestException or ValueError as err:
         raise PluginNotFoundError(
             message=f"Plugin {plugin_name} could not be found because of an error!"
@@ -108,7 +109,7 @@ def qhana_instance_watcher(
     try:
         url = qhana_client.call_qhana_plugin(plugin, parameters)
     except HTTPError as err:
-        if err.response and err.response.status_code:
+        if err.response is not None and err.response.status_code:
             response_status: int = err.response.status_code
             if response_status == 404:
                 raise PluginNotFoundError(
@@ -142,7 +143,7 @@ def qhana_instance_watcher(
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.qhana_step_watcher",
+    name=f"{DeployWorkflow.instance.identifier}.external.qhana_step_watcher",
     bind=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
@@ -161,7 +162,7 @@ def qhana_step_watcher(
     TASK_LOGGER.info(f"Received task {external_task_id} from camunda queue {topic_name}.")
 
     # Clients
-    camunda_client = CamundaClient(CamundaConfig.from_config(config))
+    camunda_client = CamundaClient(config)
     TASK_LOGGER.debug("Receiving plugin step.")
 
     try:
@@ -232,7 +233,7 @@ def qhana_step_watcher(
 
 
 @CELERY.task(
-    name=f"{Workflows.instance.identifier}.external.check_task_status",
+    name=f"{DeployWorkflow.instance.identifier}.external.check_task_status",
     bind=True,
     autoretry_for=(TaskNotFinishedError,),
     retry_backoff=True,
@@ -241,7 +242,7 @@ def qhana_step_watcher(
 def check_task_status(self, url: str, external_task_id: str, last_step_count=0):
     # TODO: Timeout if no result after a long time (or workflow task removed)
     try:
-        response = requests.get(url, timeout=config.get("request_timeout", 5 * 60))
+        response = requests.get(url, timeout=config["request_timeout"])
         response.raise_for_status()
         contents = response.json()
 
@@ -275,7 +276,7 @@ def check_task_status(self, url: str, external_task_id: str, last_step_count=0):
 
         outputs = [QhanaOutput.deserialize(output) for output in contents["outputs"]]
 
-        camunda_client = CamundaClient(CamundaConfig.from_config(config))
+        camunda_client = CamundaClient(config)
 
         # Complete external task with qhana task result
         external_task_result = {
@@ -323,7 +324,7 @@ def check_task_status(self, url: str, external_task_id: str, last_step_count=0):
                 }
             }
 
-            camunda_client = CamundaClient(CamundaConfig.from_config(config))
+            camunda_client = CamundaClient(config)
             camunda_client.complete_task(external_task_id, external_task_result)
             return  # exit without retry
 
