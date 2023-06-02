@@ -36,7 +36,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
 from qhana_plugin_runner.tasks import (
-    add_step_without_ui,
     invoke_task,
     save_task_error,
     save_task_result,
@@ -255,51 +254,8 @@ class ObjectiveFunctionCallback(MethodView):
         # name of the next step
         step_id = "minimization step"
         # URL of the process endpoint of the invoked plugin
-        href = url_for(
-            f"{OPTIMIZER_BLP.name}.{OptimizationProcessStep.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
 
-        task = add_step_without_ui.s(
-            db_id=db_task.id,
-            step_id=step_id,
-            href=href,
-            prog_value=50,
-            task_log="minimization step added",
-            # todo set to cleared to avoid ui
-            # todo do not make chain and not add step make own task
-        )
-
-        task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async()
-
-
-@OPTIMIZER_BLP.route("/<int:db_id>/process-optimization/")
-class OptimizationProcessStep(MethodView):
-    """Start the processing task for optimizer callback function."""
-
-    @OPTIMIZER_BLP.response(HTTPStatus.OK, OptimizerTaskResponseSchema())
-    @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, db_id: int):
-        """Start the demo task."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        db_task.clear_previous_step()
-        db_task.save(commit=True)
-
-        # Chain the second processing task with executing the task that saves the results and ends the execution.
         task: chain = minimize_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_id)
 
-        # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        # start tasks
         task.apply_async()
-
-        return redirect(
-            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
-        )
