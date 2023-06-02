@@ -134,29 +134,10 @@ def save_task_error(self, failing_task_id: str, db_id: int):
 
 
 @CELERY.task(name=f"{_name}.callback-task", bind=True, ignore_result=True)
-def callback_task(self, _, callback_url: str, callback_data) -> None:
+def callback_task(self, callback_url: str, callback_data) -> None:
     TASK_LOGGER.info(f"Callback task with url '{callback_url}' started.")
 
     callback_url = urllib.parse.unquote(callback_url)
     requests.post(callback_url, json=callback_data)
 
     AsyncResult(self.request.parent_id, app=CELERY).forget()
-
-
-@CELERY.task(name=f"{_name}.no_op_task", bind=True)
-def no_op_task(self, db_id: int) -> str:
-    """
-    A no operation task that is run when no operation is needed.
-    @param self:
-    @param db_id: database ID that will be used to retrieve the task data from the database
-    @return: log message
-    """
-    TASK_LOGGER.info(f"Starting no op task with db id '{db_id}'")
-    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-
-    if task_data is None:
-        msg = f"Could not load task data with id {db_id} to read parameters!"
-        TASK_LOGGER.error(msg)
-        raise KeyError(msg)
-
-    return ""
