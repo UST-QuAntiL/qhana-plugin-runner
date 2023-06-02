@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import http.client
 import json
-from typing import TYPE_CHECKING, List, Optional, Sequence, Dict, Any
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import requests
 from celery.utils.log import get_task_logger
 from requests import HTTPError
 
-from .. import Workflows
-from ..datatypes.qhana_datatypes import QhanaInput, QhanaOutput, QhanaPlugin
+from .. import DeployWorkflow
+from ..config import separate_prefixes
+from ..datatypes.qhana_datatypes import QhanaInput, QhanaOutput
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -32,10 +33,8 @@ class QhanaTaskClient:
     Completes camunda external tasks and forwards results to the result store
     """
 
-    def __init__(
-        self,
-    ):
-        self.timeout: int = config.get("request_timeout", 5 * 60)
+    def __init__(self):
+        self.timeout: float = config["request_timeout"]
 
     def call_qhana_plugin(self, plugin: Dict[str, Any], params):
         process_endpoint: Optional[str] = None
@@ -101,21 +100,21 @@ class QhanaTaskClient:
         :param camunda_client: Client to be used
         :return:
         """
-        prefix = config["qhana_input"]["prefix"]
-        workflow_result_prefix = config["workflow_out"]["prefix"]
-        input_mode_text = config["qhana_input"]["mode_text"]
-        input_mode_filename = config["qhana_input"]["mode_filename"]
-        input_mode_datatype = config["qhana_input"]["mode_datatype"]
+
+        input_prefix = config["workflow_conf"]["task_input_variable_prefix"]
+
+        input_config = config["workflow_conf"]["form_conf"]
+        input_mode_text = input_config["text_input_mode"]
+        input_mode_filename = input_config["filename_input_mode"]
+        input_mode_datatype = input_config["datatype_input_mode"]
+
         plugin_inputs = {}
 
         for key, item in local_variables.items():
-            # Cut off result prefix if found
-            if key.startswith(workflow_result_prefix):
-                key = key[len(workflow_result_prefix) + 1 : len(key)]
+            input_parameter, prefixes = separate_prefixes(key, config["workflow_conf"])
 
             # Check if variable is a qhana input
-            if key.startswith(prefix):
-                input_parameter = key.split(".")[-1]
+            if input_prefix in prefixes:
                 output_name, select = list(item["value"].items())[0]
 
                 # Retrieves the contents of an output that is used as input

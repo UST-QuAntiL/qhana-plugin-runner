@@ -119,7 +119,7 @@ def save_task_error(self, failing_task_id: str, db_id: int):
         )
         return  # TODO start new error logging task or save to extra db table
 
-    task_data.task_status = result.state
+    task_data.task_status = "FAILURE"
     task_data.finished_at = datetime.utcnow()
     task_data.add_task_log_entry(f"{exc!r}\n\n{traceback}")
 

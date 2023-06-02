@@ -16,23 +16,30 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import marshmallow as ma
 from marshmallow.validate import Regexp
-from typing import Literal
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import MaBaseSchema
 
 
 class PluginType(Enum):
-    """Type of the plugin."""
+    """Type of the plugin.
+
+    - ``processing``: type for processing data (data comes in, processed data comes out)
+    - ``visualization``: type for visualizing data (used as data previews)
+    - ``conversion``: type for converting between data (and content) types
+    - ``dataloader``: type for loading data into the qhana ecosystem
+    - ``interaction``: type for plugins that do not handle data but provide user interaction
+    """
 
     processing = "processing"
     visualization = "visualization"
     conversion = "conversion"
     dataloader = "dataloader"
+    interaction = "interaction"
 
 
 @dataclass
@@ -274,7 +281,12 @@ class PluginMetadata:
     name: str
     version: str
     # TODO replace literal with PluginType after removing deprecated values
-    type: Literal[PluginType.processing, PluginType.visualization, PluginType.conversion]
+    type: Literal[
+        PluginType.processing,
+        PluginType.visualization,
+        PluginType.conversion,
+        PluginType.interaction,
+    ]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
 

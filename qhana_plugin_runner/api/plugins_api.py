@@ -26,6 +26,7 @@ from werkzeug.utils import redirect
 
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
+from qhana_plugin_runner.db.models.virtual_plugins import VirtualPlugin
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 
 PLUGINS_API = SmorestBlueprint(
@@ -71,25 +72,39 @@ class PluginsView(MethodView):
     @PLUGINS_API.response(HTTPStatus.OK, PluginCollectionSchema())
     def get(self):
         """Get all loaded plugins."""
-        plugins = sorted(
-            (p for p in QHAnaPluginBase.get_plugins().values() if p.has_api),
-            key=lambda p: (p.name, p.parsed_version),
-        )
-        return PluginCollectionData(
-            plugins=[
-                PluginData(
-                    p.name,
-                    p.version,
-                    p.identifier,
-                    url_for(
-                        "plugins-api.PluginView", plugin=p.identifier, _external=True
-                    ),
-                    p.description,
-                    p.tags,
-                )
-                for p in plugins
-            ]
-        )
+        plugins = [p for p in QHAnaPluginBase.get_plugins().values() if p.has_api]
+
+        plugin_ids = {p.identifier for p in plugins} | {p.name for p in plugins}
+
+        VirtualPlugin.get_all(for_parents=plugin_ids)
+
+        plugins_list = [
+            PluginData(
+                p.name,
+                p.version,
+                p.identifier,
+                url_for("plugins-api.PluginView", plugin=p.identifier, _external=True),
+                p.description,
+                p.tags,
+            )
+            for p in plugins
+        ]
+
+        plugins_list += [
+            PluginData(
+                p.name,
+                p.version,
+                p.identifier,
+                p.href,
+                p.description,
+                p.tag_list,
+            )
+            for p in VirtualPlugin.get_all(for_parents=plugin_ids)
+        ]
+
+        plugins_list.sort(key=lambda p: (p.name, p.version))
+
+        return PluginCollectionData(plugins=plugins_list)
 
 
 @PLUGINS_API.route("/<string:plugin>/")

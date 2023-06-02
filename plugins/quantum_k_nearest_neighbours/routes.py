@@ -58,7 +58,7 @@ class PluginsView(MethodView):
             description=QKNN.instance.description,
             name=QKNN.instance.name,
             version=QKNN.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{QKNN_BLP.name}.CalcView"),
                 ui_href=url_for(f"{QKNN_BLP.name}.MicroFrontend"),
