@@ -53,12 +53,6 @@
     {% endif %}
     {% endblock %}
 
-    {% block javascript %}
-    {% if frontendjs %}
-        <script src={{frontendjs}}></script>
-    {% endif %}
-    {% endblock %}
-
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
     {% endblock script %}
 
