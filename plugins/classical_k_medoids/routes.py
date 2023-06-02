@@ -54,7 +54,7 @@ class PluginsView(MethodView):
             description=ClassicalKMedoids.instance.description,
             name=ClassicalKMedoids.instance.identifier,
             version=ClassicalKMedoids.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{ClassicKMedoids_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{ClassicKMedoids_BLP.name}.MicroFrontend"),
