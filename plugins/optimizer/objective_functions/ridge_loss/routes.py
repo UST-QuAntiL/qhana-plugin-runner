@@ -42,7 +42,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import callback_task, no_op_task, save_task_error
+from qhana_plugin_runner.tasks import callback_task, save_task_error
 
 from . import RIDGELOSS_BLP, RidgeLoss
 from .schemas import HyperparamterInputSchema, RidgeLossTaskResponseSchema
@@ -179,7 +179,7 @@ class OptimizerCallbackProcess(MethodView):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
-            task_name=no_op_task.__name__,
+            task_name="ridge-loss",
         )
         db_task.data["alpha"] = arguments["alpha"]
         callback_url = callback["callback_url"]
@@ -197,9 +197,7 @@ class OptimizerCallbackProcess(MethodView):
             )
         )
 
-        task: chain = no_op_task.s(db_id=db_task.id) | callback_task.s(
-            callback_url=callback_url, callback_data=callback_data
-        )
+        task = callback_task.s(callback_url=callback_url, callback_data=callback_data)
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
