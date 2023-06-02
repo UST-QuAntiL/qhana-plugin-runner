@@ -10,6 +10,7 @@ Subpackages
    qhana_plugin_runner.api
    qhana_plugin_runner.db
    qhana_plugin_runner.plugin_utils
+   qhana_plugin_runner.registry_client
    qhana_plugin_runner.util
 
 Submodules

@@ -91,7 +91,7 @@ class PluginsView(MethodView):
             description=plugin.description,
             name=plugin.name,
             version=plugin.version,
-            type=PluginType.processing,
+            type=PluginType.dataloader,
             entry_point=EntryPoint(
                 href=url_for(f"{FILE_UPLOAD_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{FILE_UPLOAD_BLP.name}.MicroFrontend"),
