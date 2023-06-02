@@ -1,0 +1,128 @@
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+            }
+            h3 {
+                padding-inline: 1rem;
+            }
+            .workflow {
+                padding-inline: 1rem;
+                padding-block: 1rem;
+                display: flex;
+                gap: 0.5em;
+                justify-content: space-between;
+                border-block: 1px solid var(--border-color);
+            }
+            .workflow dl {
+                display: grid;
+                grid-template-columns: minmax(max-content, 3em) 1fr;
+                grid-template-rows: auto;
+                gap: 0.5em;
+            }
+            .workflow dt {
+                display: inline-block;
+                font-weight: bolder;
+            }
+            .workflow dd {
+                display: inline-block;
+            }
+        </style>
+    </head>
+
+    <body>
+        <h3>Camunda Workflows</h3>
+        {% for workflow in workflows %}
+            <div class="workflow">
+                <dl>
+                    <dt>Name</dt>
+                    <dd>{{workflow["name"]}}</dd>
+                    <dt>Status</dt>
+                    <dd>{% if workflow["deployed"] %}Deployed{% else %}Not deployed{% endif %}</dd>
+                    <dt>version</dt>
+                    <dd>{{workflow["version"]}}</dd>
+                    <dt>key</dt>
+                    <dd>{{workflow["key"]}}</dd>
+                    <dt>ID</dt>
+                    <dd>{{workflow["id"]}}</dd>
+                    {% if workflow["deployed"] %}
+                    <dt>Plugin UI</dt>
+                    <dd><a href="{{url_for(pluginUiEndpoint, process_definition_id=workflow['id'], _external=True)}}">link</a></dd>
+                    {% endif %}
+                </dl>
+                <form class="qhana-form qhana-deployment-form" action="{{url_for(deployEndpoint, process_definition_id=workflow['id'], _external=True)}}">
+                {% if workflow["deployed"] %}
+                    <button class="qhana-form-submit" type="submit" method="DELETE">Undeploy</button>
+                {% else %}
+                    <button class="qhana-form-submit" dtype="submit" method="POST">Deploy</button>
+                {% endif %}
+                </form>
+            </div>
+        
+        {% endfor %}
+
+        {% if plugins_wo_workflow %}
+        <h3>Plugins With Missing Workflow Definition</h3>
+        {% endif %}
+
+        {% for plugin in plugins_wo_workflow %}
+            <div class="workflow">
+                <dl>
+                    <dt>Name</dt>
+                    <dd>{{plugin.name}}</dd>
+                    <dt>Status</dt>
+                    <dd>Deployed</dd>
+                    <dt>version</dt>
+                    <dd>{{plugin.version}}</dd>
+                    <dt>UNDEPLOY</dt>
+                    <dd>{{url_for(undeployEndpoint, plugin_url=plugin.href.replace('/', '%2F'), _external=True)}}</dd>
+                </dl>
+                <form class="qhana-form qhana-deployment-form" action="{{url_for(undeployEndpoint, plugin_url=plugin.href.replace('/', '%2F'), _external=True)}}">
+                    <button class="qhana-form-submit" type="submit" method="DELETE">Undeploy</button>
+                </form>
+            </div>
+        
+        {% endfor %}
+
+{% macro submit(text, action=None, target="api", method=None, class="qhana-form-submit") -%}
+<button class="{{class}}" type="submit" data-target="{{target}}" {{field_attr('formaction', action)}}
+  {{field_attr('formmethod', method)}}>{{text}}</button>
+{%- endmacro %}
+
+
+        <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
+        <script>
+/**
+ * Instrument embedded html forms to listen for submit events.
+ */
+function instrumentDeploymentForm() {
+    const forms = document.querySelectorAll('form.qhana-deployment-form');
+    forms.forEach(form => {
+        form.addEventListener("submit", (event) => {
+            onDeploymentFormSubmit(event)
+        });
+    });
+}
+
+function onDeploymentFormSubmit(event) {
+    event.preventDefault(); // cancel submit; need to do this manually...
+    const form = event.target;
+    const submitter = event.submitter;
+    let submitMethod = submitter.getAttribute("method");
+    const formAction = new URL(form.action);
+    const submitUrl = formAction.toString();
+
+    fetch(formAction, {method: submitMethod}).then(window.location.reload());
+
+    sendMessage("ui-loading");
+}
+
+instrumentDeploymentForm();
+        </script>
+
+    </body>
+</html>

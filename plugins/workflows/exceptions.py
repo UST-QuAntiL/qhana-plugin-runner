@@ -4,12 +4,25 @@ from typing import Optional
 class CamundaError(Exception):
     """Base exception for errors during interaction with camunda."""
 
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+    def __init__(self, *args: object, message: Optional[str] = None) -> None:
+        self.message = message
+        super().__init__(message, *args)
+
+
+class CamundaServerError(CamundaError):
+    """Camunda returned an error code indicating a server error."""
+
+
+class CamundaClientError(CamundaError):
+    """Camunda returned an error code indicating a client error."""
 
 
 class WorkflowDeploymentError(CamundaError):
     """The workflow could not be deployed."""
+
+
+class WorkflowNotFoundError(CamundaError):
+    """The requested workflow was not found."""
 
 
 class WorkflowStoppedError(CamundaError):
@@ -18,10 +31,6 @@ class WorkflowStoppedError(CamundaError):
 
 class WorkflowTaskError(CamundaError):
     """Base error class for errors while executing an external task."""
-
-    def __init__(self, *args: object, message: Optional[str] = None, **kwargs) -> None:
-        self.message = message
-        super().__init__(message, *args)
 
 
 class InvocationError(WorkflowTaskError):

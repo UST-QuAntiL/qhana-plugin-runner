@@ -1,5 +1,23 @@
 import dataclasses
-from typing import Any, Dict, Optional
+from typing import Optional, TypedDict, Literal, Union
+
+
+class WorkflowIncident(TypedDict):
+    id: str
+    processDefinitionId: str
+    processInstanceId: str
+    executionId: Optional[str]
+    incidentTimestamp: str
+    incidentType: Union[Literal["failedJob", "failedExternalTask"], str]
+    activityId: Optional[str]
+    failedActivityId: Optional[str]
+    causeIncidentId: Optional[str]
+    rootCauseIncidentId: Optional[str]
+    configuration: Optional[str]
+    tenantId: Optional[str]
+    incidentMessage: Optional[str]
+    jobDefinitionId: Optional[str]
+    annotation: Optional[str]
 
 
 #
@@ -52,21 +70,4 @@ class HumanTask:
             delegation_state=serialized["delegationState"],
             process_instance_id=serialized["processInstanceId"],
             task_definition_key=serialized["taskDefinitionKey"],
-        )
-
-
-@dataclasses.dataclass
-class CamundaConfig:
-    base_url: str
-    poll_interval: int
-    worker_id: str
-    plugin_prefix: str = "plugin"
-    plugin_step_prefix: str = "plugin-step"
-
-    @staticmethod
-    def from_config(config: Dict[str, Any]):
-        return CamundaConfig(
-            base_url=config["CAMUNDA_BASE_URL"],
-            poll_interval=config["polling_rates"]["camunda_general"],
-            worker_id=config["worker_id"],
         )
