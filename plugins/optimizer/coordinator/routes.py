@@ -37,7 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
-from qhana_plugin_runner.tasks import add_step, no_op_task, save_task_error
+from qhana_plugin_runner.tasks import add_step, save_task_error
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import (
@@ -216,8 +216,13 @@ class OptimizerSetupProcessStep(MethodView):
         # Chain the first processing task with executing the objective-function plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
         # steps in the database.
-        task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
-            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=20
+        task = add_step.s(
+            db_id=db_task.id,
+            step_id=step_id,
+            href=href,
+            ui_href=ui_href,
+            prog_value=20,
+            task_log="hyperparameter selection step added",
         )
 
         # save errors to db
@@ -272,12 +277,13 @@ class ObjectiveFunctionCallback(MethodView):
             _external=True,
         )
 
-        task: chain = no_op_task.s(db_id=db_task.id) | add_step.s(
+        task = add_step.s(
             db_id=db_task.id,
             step_id=step_id,
             href=href,
             ui_href=ui_href,
-            prog_value=100
+            prog_value=50,
+            task_log="minimization step added",
             # todo set to cleared to avoid ui
             # todo do not make chain and not add step make own task
         )
