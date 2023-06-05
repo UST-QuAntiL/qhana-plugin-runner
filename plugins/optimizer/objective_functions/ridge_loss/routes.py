@@ -24,7 +24,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.schemas import (
+from plugins.optimizer.minimizer.schemas import (
     ObjectiveFunctionHyperparameterCallbackData,
     ObjectiveFunctionHyperparameterCallbackSchema,
 )
