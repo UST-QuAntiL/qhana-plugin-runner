@@ -17,6 +17,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
+from urllib.parse import unquote
 
 import marshmallow as ma
 from marshmallow.validate import Regexp
@@ -239,11 +240,13 @@ class EntryPointSchema(MaBaseSchema):
     href = ma.fields.Url(
         required=True,
         allow_none=False,
+        relative=True,
         metadata={"description": "The URL of the REST entry point resource."},
     )
     ui_href = ma.fields.Url(
         required=True,
         allow_none=False,
+        relative=True,
         metadata={
             "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
@@ -273,6 +276,20 @@ class EntryPointSchema(MaBaseSchema):
         )
     )
 
+    @ma.pre_load()
+    def unquote_url(self, data: Dict[str, Any], **kwargs):
+        """Unquote the url."""
+        url_fieds = ("href", "ui_href")
+        for field in url_fieds:
+            if field in data:
+                data[field] = unquote(data[field])
+        return data
+
+    @ma.post_load()
+    def make_entry_point(self, data: Dict[str, Any], **kwargs):
+        """Create a EntryPoint object from the deserialized data."""
+        return EntryPoint(**data)
+
 
 @dataclass
 class PluginMetadata:
@@ -295,47 +312,46 @@ class PluginMetadataSchema(MaBaseSchema):
     title = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Human readable plugin title."},
     )
     description = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Human readable plugin description."},
     )
     name = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Unique name of the plugin."},
     )
     version = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Version of the plugin."},
     )
     type = EnumField(
         PluginType,
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Type of the plugin"},
     )
     entry_point = ma.fields.Nested(
         EntryPointSchema,
         required=True,
         allow_none=False,
-        dump_only=True,
+        data_key="entryPoint",
         metadata={"description": "The entry point of the plugin"},
     )
     tags = ma.fields.List(
         ma.fields.String(),
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={
             "description": "A list of tags describing the plugin (e.g. classical-algorithm, quantum-algorithm, hybrid-algorithm)."
         },
     )
+
+    @ma.post_load()
+    def make_plugin_metadata(self, data: Dict[str, Any], **kwargs):
+        """Create a PluginMetadata object from the deserialized data."""
+        return PluginMetadata(**data)
