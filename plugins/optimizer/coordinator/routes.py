@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import urllib
 from http import HTTPStatus
 from logging import Logger
 from typing import Mapping, Optional
+from urllib.parse import unquote, urljoin
 
+import requests
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
@@ -34,12 +35,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.url_utils import get_plugin_name_from_plugin_url
-from qhana_plugin_runner.tasks import (
-    invoke_task,
-    save_task_error,
-    save_task_result,
-)
+from qhana_plugin_runner.tasks import invoke_task, save_task_error, save_task_result
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import (
@@ -49,6 +45,21 @@ from .schemas import (
     OptimizerTaskResponseSchema,
 )
 from .tasks import minimize_task
+
+
+def get_plugin_metadata(plugin_url) -> PluginMetadata:
+    """Get the metadata of a plugin.
+
+    Args:
+        plugin_name (str): The name of the plugin.
+
+    Returns:
+        PluginMetadata: The metadata of the plugin.
+    """
+    plugin_metadata = requests.get(plugin_url).json()
+    schema = PluginMetadataSchema()
+    metadata: PluginMetadata = schema.load(plugin_metadata)
+    return metadata
 
 
 @OPTIMIZER_BLP.route("/")
@@ -170,8 +181,6 @@ class OptimizerSetupProcessStep(MethodView):
 
         # extract the plugin name from the plugin url
         plugin_url = arguments["objective_function_plugin_selector"]
-        plugin_name = get_plugin_name_from_plugin_url(plugin_url)
-        db_task.data["invoked_plugin"] = plugin_name
 
         # save the input file url to the database
         db_task.data["input_file_url"] = arguments["input_file_url"]
@@ -190,16 +199,13 @@ class OptimizerSetupProcessStep(MethodView):
             db_id=db_task.id,
             _external=True,
         )
-        callback_url = urllib.parse.unquote(callback_url)
-        href = url_for(
-            f"{plugin_name}.OptimizerCallbackProcess",
-            _external=True,
-        )
+        callback_url = unquote(callback_url)
+
+        plugin_metadata: PluginMetadata = get_plugin_metadata(plugin_url)
+
+        href = urljoin(plugin_url, plugin_metadata.entry_point.href)
         # URL of the micro frontend endpoint of the invoked plugin
-        ui_href = url_for(
-            f"{plugin_name}.HyperparameterSelectionMicroFrontend",
-            _external=True,
-        )  # FIXME get the method names of the objective function plugin via a metadata endpoint
+        ui_href = urljoin(plugin_url, plugin_metadata.entry_point.ui_href)
 
         # Chain the first processing task with executing the objective-function plugin.
         # All tasks use the same db_id to be able to fetch data from the previous steps and to store data for the next
