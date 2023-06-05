@@ -1,75 +1,49 @@
 from dataclasses import dataclass
+from enum import Enum
 import marshmallow as ma
+from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
-    PluginUrl,
-    FileUrl,
 )
 
 
-class OptimizerTaskResponseSchema(MaBaseSchema):
+class MinimizerEnum(Enum):
+    nelder_mead = "Nelder-Mead"
+    powell = "Powell"
+    cg = "CG"
+    bfgs = "BFGS"
+    newton_cg = "Newton-CG"
+    lbfgsb = "L-BFGS-B"
+    tnc = "TNC"
+    cobyla = "COBYLA"
+    slsqp = "SLSQP"
+    trust_constr = "trust-constr"
+
+
+class MinimizerTaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class OptimizerCallbackTaskInputSchema(FrontendFormBaseSchema):
-    input_str = ma.fields.String(
+@dataclass
+class MinimizerSetupTaskInputData:
+    method: MinimizerEnum
+
+
+class MinimizerSetupTaskInputSchema(FrontendFormBaseSchema):
+    method = EnumField(
+        MinimizerEnum,
         required=True,
         allow_none=False,
         metadata={
-            "label": "Input String",
-            "description": "A simple string input.",
-            "input_type": "textarea",
+            "label": "Minimization Method",
+            "description": "The method used for minimization.",
+            "input_type": "select",
         },
     )
-
-
-@dataclass
-class ObjectiveFunctionHyperparameterCallbackData:
-    hyperparameters: dict
-    calc_loss_enpoint_url: str
-
-
-class ObjectiveFunctionHyperparameterCallbackSchema(MaBaseSchema):
-    hyperparameters = ma.fields.Dict(
-        keys=ma.fields.String(), values=ma.fields.Float(), required=False, allow_none=True
-    )
-    calc_loss_enpoint_url = ma.fields.Url(required=True, allow_none=False)
 
     @ma.post_load
-    def make_object(self, data, **kwargs):
-        return ObjectiveFunctionHyperparameterCallbackData(**data)
-
-
-class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
-    input_file_url = FileUrl(
-        required=True,
-        allow_none=False,
-        data_input_type="*",
-        data_content_types=["text/csv"],
-        metadata={
-            "label": "Dataset URL",
-            "description": "URL to a csv file with optimizable data.",
-        },
-    )
-    target_variable = ma.fields.String(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Target Variable",
-            "description": "Name of the target variable in the dataset.",
-            "input_type": "text",
-        },
-    )
-    objective_function_plugin_selector = PluginUrl(
-        required=True,
-        allow_none=False,
-        plugin_tags=["objective-function"],
-        metadata={
-            "label": "Objective-Function Plugin Selector",
-            "description": "URL of objective-function-plugin.",
-            "input_type": "text",
-        },
-    )
+    def make_task_input_data(self, data, **kwargs):
+        return MinimizerSetupTaskInputData(**data)

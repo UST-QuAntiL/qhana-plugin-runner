@@ -15,7 +15,6 @@
 from http import HTTPStatus
 from typing import Mapping
 
-from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import Response, abort, redirect
 from flask.globals import request
@@ -24,15 +23,13 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.minimizer.schemas import (
-    ObjectiveFunctionHyperparameterCallbackData,
-    ObjectiveFunctionHyperparameterCallbackSchema,
-)
-from plugins.optimizer.shared.schemas import (
-    CalcInputData,
-    CalcInputDataSchema,
+from plugins.optimizer.coordinator.shared_schemas import (
+    CalcLossInputData,
+    CalcLossInputDataSchema,
     CallbackURLSchema,
     LossResponseSchema,
+    ObjectiveFunctionHyperparameterCallbackData,
+    ObjectiveFunctionHyperparameterCallbackSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -184,7 +181,7 @@ class OptimizerCallbackProcess(MethodView):
         db_task.data["alpha"] = arguments["alpha"]
         callback_url = callback["callback_url"]
         hyperparameters = {"alpha": arguments["alpha"]}
-        calc_enpoint_url = url_for(
+        calc_endpoint_url = url_for(
             f"{RIDGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
             _external=True,
         )
@@ -193,7 +190,7 @@ class OptimizerCallbackProcess(MethodView):
         callback_schema = ObjectiveFunctionHyperparameterCallbackSchema()
         callback_data = callback_schema.dump(
             ObjectiveFunctionHyperparameterCallbackData(
-                hyperparameters=hyperparameters, calc_loss_enpoint_url=calc_enpoint_url
+                hyperparameters=hyperparameters, calc_loss_endpoint_url=calc_endpoint_url
             )
         )
 
@@ -215,10 +212,10 @@ class CalcCallbackEndpoint(MethodView):
 
     @RIDGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @RIDGELOSS_BLP.arguments(
-        CalcInputDataSchema(unknown=EXCLUDE), location="json", required=True
+        CalcLossInputDataSchema(unknown=EXCLUDE), location="json", required=True
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcInputData) -> dict:
+    def post(self, input_data: CalcLossInputData) -> dict:
         """Endpoint for the calculation callback."""
 
         loss = ridge_loss(
