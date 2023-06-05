@@ -14,7 +14,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict, loa
 
 from qhana_plugin_runner.requests import open_url
 
-from . import Optimizer
+from . import Minimizer
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -106,7 +106,7 @@ def loss_(loss_calc_endpoint_url):
     return loss
 
 
-@CELERY.task(name=f"{Optimizer.instance.identifier}.minimize", bind=True)
+@CELERY.task(name=f"{Minimizer.instance.identifier}.minimize", bind=True)
 def minimize_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting the optimization task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)

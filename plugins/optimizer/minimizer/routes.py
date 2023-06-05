@@ -37,7 +37,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import invoke_task, save_task_error, save_task_result
 
-from . import OPTIMIZER_BLP, Optimizer
+from . import MINIMIZER_BLP, Minimizer
 from .schemas import (
     ObjectiveFunctionHyperparameterCallbackData,
     ObjectiveFunctionHyperparameterCallbackSchema,
@@ -62,27 +62,27 @@ def get_plugin_metadata(plugin_url) -> PluginMetadata:
     return metadata
 
 
-@OPTIMIZER_BLP.route("/")
+@MINIMIZER_BLP.route("/")
 class MetadataView(MethodView):
     """Plugins collection resource."""
 
-    @OPTIMIZER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
-    @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
+    @MINIMIZER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
+    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Optimizer endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Optimizer plugin",
-            description=Optimizer.instance.description,
-            name=Optimizer.instance.name,
-            version=Optimizer.instance.version,
+            title="Minimizer plugin",
+            description=Minimizer.instance.description,
+            name=Minimizer.instance.name,
+            version=Minimizer.instance.version,
             type=PluginType.processing,
-            tags=Optimizer.instance.tags,
+            tags=Minimizer.instance.tags,
             entry_point=EntryPoint(
                 href=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupProcessStep.__name__}"
+                    f"{MINIMIZER_BLP.name}.{OptimizerSetupProcessStep.__name__}"
                 ),  # URL for the first process endpoint
                 ui_href=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupMicroFrontend.__name__}"
+                    f"{MINIMIZER_BLP.name}.{OptimizerSetupMicroFrontend.__name__}"
                 ),  # URL for the first micro frontend endpoint
                 data_input=[],
                 data_output=[
@@ -101,40 +101,40 @@ class MetadataView(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/ui-setup/")
+@MINIMIZER_BLP.route("/ui-setup/")
 class OptimizerSetupMicroFrontend(MethodView):
     """Micro frontend for the objective-function and dataset selection in the optimizer plugin."""
 
     example_inputs = {}
 
-    @OPTIMIZER_BLP.html_response(
+    @MINIMIZER_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the objective-function and dataset selection in the optimizer plugin.",
     )
-    @OPTIMIZER_BLP.arguments(
+    @MINIMIZER_BLP.arguments(
         OptimizerSetupTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
+    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @OPTIMIZER_BLP.html_response(
+    @MINIMIZER_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the objective-function and dataset selection in the optimizer plugin.",
     )
-    @OPTIMIZER_BLP.arguments(
+    @MINIMIZER_BLP.arguments(
         OptimizerSetupTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
+    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors)
@@ -144,16 +144,16 @@ class OptimizerSetupMicroFrontend(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=Optimizer.instance.name,
-                version=Optimizer.instance.version,
+                name=Minimizer.instance.name,
+                version=Minimizer.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
                 process=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupProcessStep.__name__}"
+                    f"{MINIMIZER_BLP.name}.{OptimizerSetupProcessStep.__name__}"
                 ),  # URL of the first processing step
                 example_values=url_for(
-                    f"{OPTIMIZER_BLP.name}.{OptimizerSetupMicroFrontend.__name__}",
+                    f"{MINIMIZER_BLP.name}.{OptimizerSetupMicroFrontend.__name__}",
                     **self.example_inputs,
                 ),
             )
@@ -163,15 +163,15 @@ class OptimizerSetupMicroFrontend(MethodView):
 TASK_LOGGER: Logger = get_task_logger(__name__)
 
 
-@OPTIMIZER_BLP.route("/process-setup/")
+@MINIMIZER_BLP.route("/process-setup/")
 class OptimizerSetupProcessStep(MethodView):
     """Start the process step of the objective-function selection."""
 
-    @OPTIMIZER_BLP.arguments(
+    @MINIMIZER_BLP.arguments(
         OptimizerSetupTaskInputSchema(unknown=EXCLUDE), location="form"
     )
-    @OPTIMIZER_BLP.response(HTTPStatus.OK, OptimizerTaskResponseSchema())
-    @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
+    @MINIMIZER_BLP.response(HTTPStatus.OK, OptimizerTaskResponseSchema())
+    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
         db_task = ProcessingTask(
@@ -195,7 +195,7 @@ class OptimizerSetupProcessStep(MethodView):
         step_id = "hyperparamter selection"
         # URL of the process endpoint of the invoked plugin
         callback_url = url_for(
-            f"{OPTIMIZER_BLP.name}.{ObjectiveFunctionCallback.__name__}",
+            f"{MINIMIZER_BLP.name}.{ObjectiveFunctionCallback.__name__}",
             db_id=db_task.id,
             _external=True,
         )
@@ -230,12 +230,12 @@ class OptimizerSetupProcessStep(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/objective-function-callback/")
+@MINIMIZER_BLP.route("/<int:db_id>/objective-function-callback/")
 class ObjectiveFunctionCallback(MethodView):
     """Callback function for the objective-function plugin."""
 
-    @OPTIMIZER_BLP.response(HTTPStatus.OK)
-    @OPTIMIZER_BLP.arguments(
+    @MINIMIZER_BLP.response(HTTPStatus.OK)
+    @MINIMIZER_BLP.arguments(
         ObjectiveFunctionHyperparameterCallbackSchema(unknown=EXCLUDE), location="json"
     )
     def post(self, arguments: ObjectiveFunctionHyperparameterCallbackData, db_id: int):
