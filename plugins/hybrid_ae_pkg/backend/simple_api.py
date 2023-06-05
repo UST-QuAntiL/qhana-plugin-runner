@@ -1,3 +1,17 @@
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import Tuple
 
 import numpy as np
@@ -18,11 +32,13 @@ from .quantum.qiskit.hybrid import (
 
 
 def pennylane_hybrid_autoencoder(
-    input_data: np.ndarray, q_num: int, embedding_size: int, qnn_name: str, steps: int
+    input_data: np.ndarray,
+    q_num: int,
+    embedding_size: int,
+    qnn_name: str,
+    steps: int,
+    dev: qml.Device,
 ) -> Tuple[np.ndarray, PLHybridAutoencoder, Optimizer, Optimizer]:
-    dev = qml.device("default.qubit", wires=q_num, shots=500)
-    # dev = qml.device("forest.qvm", device="3q-qvm")
-    # dev = qml.device("braket.local.qubit", wires=3)
     model = PLHybridAutoencoder(input_data.shape[1], q_num, embedding_size, qnn_name, dev)
     c_optim = Adam(model.get_classical_parameters())
     q_optim = Adam(model.get_quantum_parameters(), lr=0.1)
