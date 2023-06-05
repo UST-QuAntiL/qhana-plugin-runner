@@ -19,32 +19,31 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
-_plugin_name = "optimizer"
+_plugin_name = "minimizer"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-OPTIMIZER_BLP = SecurityBlueprint(
+MINIMIZER_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Optimizer Plugin API.",
+    description="Minimizer Plugin API.",
 )
 
 
-class Optimizer(QHAnaPluginBase):
+class Minimizer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = """
-        This plugin minimizes hyperparameters based on an objective function.
-        The user will choose the objective function and the hyperparameters to optimize.
+    This plugin provides an API to minimize a given objective function.
     """
-    tags = ["optimizer", "minimization", "interaction"]
+    tags = ["minimization", "interaction"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return OPTIMIZER_BLP
+        return MINIMIZER_BLP
 
     def get_requirements(self) -> str:
         return "numpy==1.23.2\nscipy==1.10.1"
