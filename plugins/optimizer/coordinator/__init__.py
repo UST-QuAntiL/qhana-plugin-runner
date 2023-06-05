@@ -47,7 +47,7 @@ class Optimizer(QHAnaPluginBase):
         return OPTIMIZER_BLP
 
     def get_requirements(self) -> str:
-        return "urllib"
+        return "numpy==1.23.2\nscipy==1.10.1"
 
 
 try:
