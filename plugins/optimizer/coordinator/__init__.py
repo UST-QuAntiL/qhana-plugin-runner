@@ -47,7 +47,7 @@ class Optimizer(QHAnaPluginBase):
         return OPTIMIZER_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "urllib"
 
 
 try:
