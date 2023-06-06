@@ -14,6 +14,7 @@
 
 from typing import Any, Iterable, List, Optional, Sequence, cast
 
+from flask import current_app
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import (
@@ -27,8 +28,11 @@ from sqlalchemy.sql.expression import (
 )
 
 from .mutable_json import JSON_LIKE, MutableJSON
-from ..db import DB, REGISTRY
+from ..db import DB, DB_SIGNALS, REGISTRY
 from ...util.plugins import plugin_identifier
+
+VIRTUAL_PLUGIN_CREATED = DB_SIGNALS.signal("virtual-plugin_created")
+VIRTUAL_PLUGIN_REMOVED = DB_SIGNALS.signal("virtual-plugin_removed")
 
 
 @REGISTRY.mapped_as_dataclass
