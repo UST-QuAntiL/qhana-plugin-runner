@@ -87,6 +87,7 @@ def open_url_as_file_like(
 
     content_type: Optional[str] = response.headers.get("content-type")
 
-    yield filename, response.raw, content_type
-
-    response.close()
+    try:
+        yield filename, response.raw, content_type
+    finally:
+        response.close()
