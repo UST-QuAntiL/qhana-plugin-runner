@@ -16,7 +16,6 @@ from logging import Logger
 
 from celery import Celery, Task
 from celery.signals import after_setup_task_logger
-from flask import globals as flask_flobals
 from flask.app import Flask
 
 
@@ -33,24 +32,5 @@ class FlaskTask(Task):
 
     def __call__(self, *args, **kwargs):
         """Execute task with an app context."""
-        if flask_flobals._app_ctx_stack.top is not None:
-            # app context already established
-            return self.run(*args, **kwargs)
         with self.app.flask_app.app_context():
-            # run task with app context
             return self.run(*args, **kwargs)
-
-
-CELERY = Celery(__name__, flask_app=None, task_cls=FlaskTask)
-
-
-def register_celery(app: Flask):
-    """Load the celery config from the app instance."""
-    CELERY.conf.update(
-        app.config.get("CELERY", {}),
-        beat_schedule={},
-    )
-    CELERY.flask_app = app  # set flask_app attribute used by FlaskTask
-    app.logger.info(
-        f"Celery settings:\n{CELERY.conf.humanize(with_defaults=False, censored=True)}\n"
-    )
