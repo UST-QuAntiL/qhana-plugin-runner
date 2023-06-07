@@ -34,3 +34,18 @@ class FlaskTask(Task):
         """Execute task with an app context."""
         with self.app.flask_app.app_context():
             return self.run(*args, **kwargs)
+
+
+CELERY = Celery(__name__, flask_app=None, task_cls=FlaskTask)
+
+
+def register_celery(app: Flask):
+    """Load the celery config from the app instance."""
+    CELERY.conf.update(
+        app.config.get("CELERY", {}),
+        beat_schedule={},
+    )
+    CELERY.flask_app = app  # set flask_app attribute used by FlaskTask
+    app.logger.info(
+        f"Celery settings:\n{CELERY.conf.humanize(with_defaults=False, censored=True)}\n"
+    )
