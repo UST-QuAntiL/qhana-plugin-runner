@@ -284,7 +284,7 @@ class QiskitSimulator(QHAnaPluginBase):
         return QISKIT_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.27"
+        return "qiskit~=0.43"
 
 
 TASK_LOGGER = get_task_logger(__name__)

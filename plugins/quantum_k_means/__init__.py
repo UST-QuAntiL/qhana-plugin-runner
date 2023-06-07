@@ -51,7 +51,7 @@ class QKMeans(QHAnaPluginBase):
         return QKMEANS_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16"
+        return "qiskit~=0.43\npennylane~=0.16\npennylane-qiskit~=0.16"
 
 
 try:
