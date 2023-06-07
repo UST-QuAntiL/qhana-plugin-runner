@@ -16,7 +16,7 @@ from http import HTTPStatus
 from urllib.parse import urljoin, urlencode, urlsplit, urlunsplit
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional
+from typing import Mapping, Optional, List
 from os import environ
 
 import marshmallow as ma
