@@ -50,7 +50,7 @@ class QParzenWindow(QHAnaPluginBase):
         return QParzenWindow_BLP
 
     def get_requirements(self) -> str:
-        return "pennylane~=0.16\npennylane-qiskit~=0.16\nscikit-learn~=1.1"
+        return "pennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1"
 
 
 try:
