@@ -23,12 +23,20 @@ import numpy as np
 
 
 def get_point(ent: dict) -> np.array:
-    dimension_keys = [k for k in ent.keys() if k not in ("ID", "href", "shape")]
+    dimension_keys = []
+    shape_keys = []
+    for k in ent.keys():
+        if k.startswith("shape"):
+            shape_keys.append(k)
+        elif k not in ("ID", "href"):
+            dimension_keys.append(k)
     dimension_keys.sort()
+    shape_keys.sort()
     point = np.empty(len(dimension_keys))
     for idx, d in enumerate(dimension_keys):
         point[idx] = ent[d]
-    return point
+    shape = [ent[s] for s in shape_keys]
+    return point.reshape(shape)
 
 
 def get_entity_generator(entity_points_url: str):
@@ -45,7 +53,7 @@ def get_entity_generator(entity_points_url: str):
         yield {
             "ID": ent["ID"],
             "href": ent.get("href", ""),
-            "point": get_point(ent).reshape(ent["shape"]),
+            "point": get_point(ent),
         }
 
 
