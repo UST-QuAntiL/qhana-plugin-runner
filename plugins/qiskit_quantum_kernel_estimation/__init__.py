@@ -31,7 +31,7 @@ QISKIT_QKE_BLP = SecurityBlueprint(
 )
 
 
-qiskit_version = "0.27"
+qiskit_version = "0.43"
 qiskit_ml_version = "0.4.0"
 
 
