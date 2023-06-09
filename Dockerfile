@@ -4,7 +4,7 @@ LABEL org.opencontainers.image.source="https://github.com/UST-QuAntiL/qhana-plug
 
 # install git and remove caches again in same layer
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends git && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends git build-essential cmake && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

@@ -3,14 +3,14 @@ from collections import OrderedDict
 from typing import Dict
 
 import marshmallow as ma
-from marshmallow import INCLUDE, post_load
+from marshmallow import INCLUDE
 
 from qhana_plugin_runner.api import EnumField, MaBaseSchema
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
-from . import Workflows
+from . import DeployWorkflow
 
-config = Workflows.instance.config
+config = DeployWorkflow.instance.config
 
 
 class WorkflowsResponseSchema(MaBaseSchema):
@@ -23,28 +23,26 @@ class WorkflowsResponseSchema(MaBaseSchema):
     )
 
 
-class InputParameters:
-    def __init__(
-        self,
-        input_bpmn: str,
-    ):
-        self.input_bpmn = input_bpmn
-
-
-class WorkflowsParametersSchema(FrontendFormBaseSchema):
-    input_bpmn = ma.fields.String(
+class DeployWorkflowSchema(FrontendFormBaseSchema):
+    workflow = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="executable/workflow",
+        data_content_types=["application/xml", "application/bpmn+xml"],
         metadata={
-            "label": "Input BPMN model name",
-            "description": "BPMN model to run.",
-            "input_type": "text",
+            "label": "Workflow Definition",
+            "description": "URL to the BPMN file defining the workflow.",
         },
     )
 
-    @post_load
-    def make_input_params(self, data, **kwargs) -> InputParameters:
-        return InputParameters(**data)
+
+class GenericInputsSchema(FrontendFormBaseSchema):
+    pass
+
+
+class WorkflowIncidentSchema(MaBaseSchema):
+    action = ma.fields.String(required=True, allow_none=False)
+    incident_id = ma.fields.String(required=False, allow_none=True, default="")
 
 
 class AnyInputSchema(FrontendFormBaseSchema):
@@ -56,10 +54,12 @@ class AnyInputSchema(FrontendFormBaseSchema):
 
         self.inputs: Dict = {}
 
-        self.prefix_choices = config["qhana_input"]["prefix_value_choice"]
-        self.prefix_enum = config["qhana_input"]["prefix_value_enum"]
-        self.prefix_file_url = config["qhana_input"]["prefix_value_file_url"]
-        self.prefix_delimiter = config["qhana_input"]["prefix_value_delimiter"]
+        input_config = config["workflow_conf"]["form_conf"]
+
+        self.prefix_choices = input_config["choice_value_prefix"]
+        self.prefix_enum = input_config["enum_value_prefix"]
+        self.prefix_file_url = input_config["file_url_prefix"]
+        self.prefix_delimiter = input_config["value_separator"]
 
         for key, val in params.items():
             if not val["value"]:
@@ -86,6 +86,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
         self.inputs[key] = ma.fields.String(
             required=True,
             allow_none=False,
+            data_key=key,
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
@@ -108,6 +109,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
             choices_enum,
             required=True,
             allow_none=False,
+            data_key=key,
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
@@ -131,6 +133,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
             choices_enum,
             required=True,
             allow_none=False,
+            data_key=key,
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
@@ -148,6 +151,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
         self.inputs[key] = FileUrl(
             required=True,
             allow_none=False,
+            data_key=key,
             data_input_type=data_input_type,
             data_content_types=data_content_types,
             metadata={

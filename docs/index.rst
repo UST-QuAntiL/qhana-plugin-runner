@@ -16,6 +16,7 @@ Welcome to QHAna-Plugin-Runner's documentation!
 
     readme
     plugins
+    plugins-advanced
     templates
     data-formats/index
     cli

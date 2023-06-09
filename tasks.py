@@ -49,6 +49,10 @@ ALLOWED_LICENSES = [
     "Mozilla Public License 2.0 (MPL 2.0)",
     "new BSD",
     "Python Software Foundation License",
+    # for linuxdocs
+    "GNU General Public License v2 (GPLv2)",
+    # for fspath (dependency of linuxdocs)
+    "GNU Affero General Public License v3 or later (AGPLv3+)",
 ]
 
 
@@ -787,9 +791,9 @@ def update_licenses(c, include_installed=False):
     c.run(
         join(cmd),
         echo=True,
-        hide="err",
         warn=True,
     )
+    print("")
 
 
 @task(update_licenses)

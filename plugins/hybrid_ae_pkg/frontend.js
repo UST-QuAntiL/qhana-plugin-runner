@@ -18,7 +18,6 @@ var custom_backend = document.getElementById("custom_backend").parentNode.parent
 backend_type = document.getElementById("backend");
 
 function backend_type_change() {
-    console.log("hi")
     ibmq_token.style.display = 'none';
     custom_backend.style.display = 'none';
     if (backend_type.value.startsWith("ibmq")) {
