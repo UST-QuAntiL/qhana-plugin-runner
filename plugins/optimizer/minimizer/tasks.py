@@ -1,9 +1,13 @@
+from tempfile import SpooledTemporaryFile
 from typing import Optional
 
 import numpy as np
 import requests
 from celery.utils.log import get_task_logger
 from scipy.optimize import minimize as scipy_minimize
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+
+from qhana_plugin_runner.storage import STORE
 
 from ..coordinator.shared_schemas import (
     CalcLossInputData,
@@ -70,4 +74,19 @@ def minimize_task(self, db_id: int) -> str:
     )
 
     TASK_LOGGER.info(f"Optimization result: {result}")
-    return ", ".join(map(str, result.x.flatten()))
+    output_data = ", ".join(map(str, result.x.flatten()))
+    csv_attributes = [f"weight_{i}" for i in range(len(result.x))]
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(
+            entities=output_data,
+            file_=output,
+            mimetype="text/csv",
+            attributes=csv_attributes,
+        )
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "weights.csv",
+            "entity/vector",
+            "text/csv",
+        )
