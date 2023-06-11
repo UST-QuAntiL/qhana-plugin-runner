@@ -44,7 +44,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import callback_task, save_task_error
+from qhana_plugin_runner.requests import make_callback
+from qhana_plugin_runner.tasks import save_task_error
 
 from .tasks import minimize_task
 
@@ -206,15 +207,7 @@ class MinimizerSetupProcessStep(MethodView):
                 method=arguments.method.value,
             )
         )
-        task = callback_task.s(callback_url=callback_url, callback_data=callback_data)
-        # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
-        # start tasks
-        task.apply_async()
-
-        return redirect(
-            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
-        )
+        make_callback(callback_url, callback_data)
 
 
 @MINIMIZER_BLP.route("<int:db_id>/minimize/")
