@@ -36,8 +36,8 @@ from .schemas import (
 from .shared_schemas import (
     MinimizerCallbackData,
     MinimizerCallbackSchema,
-    ObjectiveFunctionHyperparameterCallbackData,
-    ObjectiveFunctionHyperparameterCallbackSchema,
+    ObjectiveFunctionCallbackData,
+    ObjectiveFunctionCallbackSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -261,9 +261,9 @@ class ObjectiveFunctionCallback(MethodView):
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
     @OPTIMIZER_BLP.arguments(
-        ObjectiveFunctionHyperparameterCallbackSchema(unknown=EXCLUDE), location="json"
+        ObjectiveFunctionCallbackSchema(unknown=EXCLUDE), location="json"
     )
-    def post(self, arguments: ObjectiveFunctionHyperparameterCallbackData, db_id: int):
+    def post(self, arguments: ObjectiveFunctionCallbackData, db_id: int):
         """starts the next step of the optimizer plugin"""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:

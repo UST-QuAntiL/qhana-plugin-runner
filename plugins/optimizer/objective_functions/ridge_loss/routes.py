@@ -28,8 +28,8 @@ from plugins.optimizer.coordinator.shared_schemas import (
     CalcLossInputDataSchema,
     CallbackURLSchema,
     LossResponseSchema,
-    ObjectiveFunctionHyperparameterCallbackData,
-    ObjectiveFunctionHyperparameterCallbackSchema,
+    ObjectiveFunctionCallbackData,
+    ObjectiveFunctionCallbackSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -188,9 +188,9 @@ class OptimizerCallbackProcess(MethodView):
         )
         db_task.save(commit=True)
 
-        callback_schema = ObjectiveFunctionHyperparameterCallbackSchema()
+        callback_schema = ObjectiveFunctionCallbackSchema()
         callback_data = callback_schema.dump(
-            ObjectiveFunctionHyperparameterCallbackData(
+            ObjectiveFunctionCallbackData(
                 hyperparameters=hyperparameters, calc_loss_endpoint_url=calc_endpoint_url
             )
         )
