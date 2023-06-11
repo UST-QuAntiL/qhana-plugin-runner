@@ -133,14 +133,6 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     result.forget()
 
 
-@CELERY.task(name=f"{_name}.callback-task", bind=True, ignore_result=True)
-def callback_task(self, callback_url: str, callback_data) -> None:
-    TASK_LOGGER.info(f"Callback task with url '{callback_url}' started.")
-
-    callback_url = urllib.parse.unquote(callback_url)
-    requests.post(callback_url, json=callback_data)
-
-
 @CELERY.task(name=f"{_name}.invoke-task", bind=True, ignore_result=True)
 def invoke_task(
     self,
