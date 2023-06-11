@@ -45,7 +45,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import make_callback
-from qhana_plugin_runner.tasks import save_task_error
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .tasks import minimize_task
 
@@ -232,7 +232,7 @@ class MinimizationEndpoint(MethodView):
             "calcLossEndpointUrl"
         ]
         db_task.save(commit=True)
-        task = minimize_task.s(db_id=db_task.id)
+        task = minimize_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
 
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
