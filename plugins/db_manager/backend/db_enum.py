@@ -11,17 +11,24 @@ class DBEnum(Enum):
     def _get_db_managers(self) -> dict:
         # Keep SQLite as the last entry, since it likes to connect to every database during the guessing phase
         # and throwing an error later!
-        return {"postgresql": PostgreSQLManager, "mysql": MySQLManager, "sqlite": SQLiteManager}
+        return {
+            "postgresql": PostgreSQLManager,
+            "mysql": MySQLManager,
+            "sqlite": SQLiteManager,
+        }
 
-    def get_connected_db_manager(self, host: str, port: int, user: str, password: str, database: str) -> DBManager:
+    def get_connected_db_manager(
+        self, host: str, port: int, user: str, password: str, database: str
+    ) -> DBManager:
         if self == DBEnum.auto:
             return self._guess_db_manager(host, port, user, password, database)
         manager: DBManager = self._get_db_managers()[str(self.name)]()
         manager.connect(host, port, user, password, database)
         return manager
 
-
-    def _guess_db_manager(self, host: str, port: int, user: str, password: str, database: str) -> DBManager:
+    def _guess_db_manager(
+        self, host: str, port: int, user: str, password: str, database: str
+    ) -> DBManager:
         for manager_name, manager_class in self._get_db_managers().items():
             try:
                 manager: DBManager = manager_class()

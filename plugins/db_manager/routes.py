@@ -64,9 +64,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         "entity/vectors",
-                        content_type=[
-                            "application/json"
-                        ],
+                        content_type=["application/json"],
                         required=False,
                         parameter="dbHost",
                     )
@@ -89,7 +87,9 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the db manager plugin."""
 
-    @DBManager_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the db manager plugin.")
+    @DBManager_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+    )
     @DBManager_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -102,7 +102,9 @@ class MicroFrontend(MethodView):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @DBManager_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the db manager plugin.")
+    @DBManager_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+    )
     @DBManager_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
@@ -121,8 +123,7 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         fields = schema.fields
         # define default values
-        default_values = {
-        }
+        default_values = {}
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)

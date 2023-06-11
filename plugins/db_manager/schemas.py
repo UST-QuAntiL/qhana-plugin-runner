@@ -55,10 +55,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Database type",
             "description": "Determines the type of database, e.g. MySQL, SQLite, etc.<br>"
-                           "If ``auto`` is selected, then the plugin tries to resolve this itself. In the case of "
-                           "``auto``, not every field needs to be filled out, depending on the database. Thus, you "
-                           "should always try to submit, even if you are uncertain, if the provided information is "
-                           "sufficient.",
+            "If ``auto`` is selected, then the plugin tries to resolve this itself. In the case of "
+            "``auto``, not every field needs to be filled out, depending on the database. Thus, you "
+            "should always try to submit, even if you are uncertain, if the provided information is "
+            "sufficient.",
             "input_type": "select",
         },
     )
@@ -104,7 +104,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "DB database",
             "description": "Name of the database. "
-                           "In the case of SQLite, this parameter should be the path to the database file.",
+            "In the case of SQLite, this parameter should be the path to the database file.",
             "input_type": "text",
         },
     )
@@ -115,7 +115,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "DB query",
             "description": "The query to be executed on the database.",
             "input_type": "text",
-        }
+        },
     )
 
     @post_load

@@ -37,9 +37,7 @@ TASK_LOGGER = get_task_logger(__name__)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(
-        f"Starting new db manager calculation task with db id '{db_id}'"
-    )
+    TASK_LOGGER.info(f"Starting new db manager calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -58,12 +56,14 @@ def calculation_task(self, db_id: int) -> str:
     db_query = input_params.db_query
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
-    
-    db_manager = db_enum.get_connected_db_manager(db_host, db_port, db_user, db_password, db_database)
+
+    db_manager = db_enum.get_connected_db_manager(
+        db_host, db_port, db_user, db_password, db_database
+    )
 
     result = db_manager.execute_query(db_query)
     print(result)
-    
+
     # Output data
     # with SpooledTemporaryFile(mode="w") as output:
     #     STORE.persist_task_result(
@@ -73,6 +73,5 @@ def calculation_task(self, db_id: int) -> str:
     #         "entity/label",
     #         "application/json",
     #     )
-
 
     return "Result stored in file"
