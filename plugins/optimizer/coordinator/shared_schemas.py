@@ -54,12 +54,12 @@ class CalcLossInputDataSchema(MaBaseSchema):
 
 
 @dataclass
-class ObjectiveFunctionHyperparameterCallbackData:
+class ObjectiveFunctionCallbackData:
     hyperparameters: dict
     calc_loss_endpoint_url: str
 
 
-class ObjectiveFunctionHyperparameterCallbackSchema(MaBaseSchema):
+class ObjectiveFunctionCallbackSchema(MaBaseSchema):
     hyperparameters = ma.fields.Dict(
         keys=ma.fields.String(), values=ma.fields.Float(), required=False, allow_none=True
     )
@@ -67,7 +67,7 @@ class ObjectiveFunctionHyperparameterCallbackSchema(MaBaseSchema):
 
     @ma.post_load
     def make_object(self, data, **kwargs):
-        return ObjectiveFunctionHyperparameterCallbackData(**data)
+        return ObjectiveFunctionCallbackData(**data)
 
 
 @dataclass
