@@ -16,6 +16,7 @@ from http import HTTPStatus
 from logging import Logger
 from typing import Mapping, Optional
 from urllib.parse import urljoin
+from celery import chain
 
 import requests
 from celery.utils.log import get_task_logger
@@ -46,7 +47,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import invoke_task, save_task_error
+from qhana_plugin_runner.tasks import invoke_task, save_task_error, save_task_result
 
 from . import OPTIMIZER_BLP, Optimizer
 
@@ -315,11 +316,13 @@ class MinimizeCallback(MethodView):
             raise KeyError(msg)
 
         db_task.data["minimize_endpoint_url"] = arguments.minimize_endpoint_url
-
+        db_task.progress_value = 60
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        task = optimize_task.s(db_id=db_task.id)
+        task: chain = optimize_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
 
         task.link_error(save_task_error.s(db_id=db_task.id))
 
