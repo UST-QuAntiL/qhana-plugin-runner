@@ -85,10 +85,9 @@ def calculation_task(self, db_id: int) -> str:
         # If not, use indices
         else:
             df["ID"] = list(range(df.shape[0]))
-        df["href"] = [get_href(db_host, db_port, db_database)]*df.shape[0]
+        df["href"] = [get_href(db_host, db_port, db_database)] * df.shape[0]
     else:
         db_manager.execute_query(db_query)
-
 
     # Output data
     if df is not None:

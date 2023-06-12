@@ -127,7 +127,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Save queried table",
             "description": "Saves the queried table as a csv for further use.",
             "input_type": "checkbox",
-        }
+        },
     )
     id_attribute = ma.fields.String(
         required=False,
@@ -135,8 +135,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "ID attribute",
             "description": "This determines the attribute that should be used as the ID foreach entity. "
-                           "If the attribute is not unique for each entry in the queried table, then the index will "
-                           "be used as the entity's id.",
+            "If the attribute is not unique for each entry in the queried table, then the index will "
+            "be used as the entity's id.",
             "input_type": "text",
         },
     )

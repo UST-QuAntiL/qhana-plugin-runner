@@ -19,14 +19,28 @@ class DBEnum(Enum):
     def _get_db_dialect_drivers() -> dict:
         # Keep SQLite as the last entry, since it likes to connect to every database during the guessing phase
         # and throwing an error later!
-        return OrderedDict([
-            ("mysql", "mysql+pymysql"),
-            ("postgresql", "postgresql+psycopg2"),
-            ("sqlite", "sqlite"),
-        ])
+        return OrderedDict(
+            [
+                ("mysql", "mysql+pymysql"),
+                ("postgresql", "postgresql+psycopg2"),
+                ("sqlite", "sqlite"),
+            ]
+        )
 
-    def _get_db_url(self, host: str, port: int, user: str, password: str, database: str, dialect_drivers: str = None) -> URL:
-        dialect_drivers = DBEnum._get_db_dialect_drivers()[self.name] if dialect_drivers is None else dialect_drivers
+    def _get_db_url(
+        self,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        database: str,
+        dialect_drivers: str = None,
+    ) -> URL:
+        dialect_drivers = (
+            DBEnum._get_db_dialect_drivers()[self.name]
+            if dialect_drivers is None
+            else dialect_drivers
+        )
         if dialect_drivers == "sqlite":
             return URL.create(
                 dialect_drivers,
@@ -55,7 +69,9 @@ class DBEnum(Enum):
     ) -> DBManager:
         for manager_name, dialect_driver in DBEnum._get_db_dialect_drivers().items():
             try:
-                manager = DBManager(self._get_db_url(host, port, user, password, database, dialect_driver))
+                manager = DBManager(
+                    self._get_db_url(host, port, user, password, database, dialect_driver)
+                )
                 manager.connect()
                 TASK_LOGGER.info(f"Connected using {manager_name}")
                 return manager
