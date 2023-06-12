@@ -26,6 +26,7 @@ from marshmallow import EXCLUDE
 from plugins.optimizer.coordinator.shared_schemas import (
     CalcLossInputData,
     CalcLossInputDataSchema,
+    CallbackURLData,
     CallbackURLSchema,
     LossResponseSchema,
     ObjectiveFunctionCallbackData,
@@ -110,7 +111,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback):
+    def get(self, errors, callback: CallbackURLData):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -130,11 +131,11 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback):
+    def post(self, errors, callback: CallbackURLData):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback):
+    def render(self, data: Mapping, errors: dict, callback: CallbackURLData):
         plugin = RidgeLoss.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -144,11 +145,11 @@ class HyperparameterSelectionMicroFrontend(MethodView):
             data = {"alpha": 0.1}
         process_url = url_for(
             f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
-            callbackUrl=callback["callback_url"],
+            callbackUrl=callback.callback_url,
         )
         example_values_url = url_for(
             f"{RIDGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
-            callbackUrl=callback["callback_url"],
+            callbackUrl=callback.callback_url,
         )
 
         return Response(
@@ -177,14 +178,14 @@ class OptimizerCallbackProcess(MethodView):
     )
     @RIDGELOSS_BLP.response(HTTPStatus.OK, RidgeLossTaskResponseSchema())
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: HyperparamterInputData, callback):
+    def post(self, arguments: HyperparamterInputData, callback: CallbackURLData):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
             task_name="ridge-loss",
         )
         db_task.data["alpha"] = arguments.alpha
-        callback_url = callback["callback_url"]
+        callback_url = callback.callback_url
         hyperparameters = {"alpha": arguments.alpha}
         calc_endpoint_url = url_for(
             f"{RIDGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
