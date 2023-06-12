@@ -16,9 +16,9 @@ from http import HTTPStatus
 from logging import Logger
 from typing import Mapping, Optional
 from urllib.parse import urljoin
-from celery import chain
 
 import requests
+from celery import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
 from flask.globals import request
@@ -28,17 +28,6 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from plugins.optimizer.coordinator.tasks import optimize_task
-
-from .schemas import (
-    OptimizerSetupTaskInputData,
-    OptimizerSetupTaskInputSchema,
-)
-from .shared_schemas import (
-    MinimizerCallbackData,
-    MinimizerCallbackSchema,
-    ObjectiveFunctionCallbackData,
-    ObjectiveFunctionCallbackSchema,
-)
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -50,6 +39,13 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import invoke_task, save_task_error, save_task_result
 
 from . import OPTIMIZER_BLP, Optimizer
+from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
+from .shared_schemas import (
+    MinimizerCallbackData,
+    MinimizerCallbackSchema,
+    ObjectiveFunctionCallbackData,
+    ObjectiveFunctionCallbackSchema,
+)
 
 
 def get_plugin_metadata(plugin_url) -> PluginMetadata:
