@@ -1,3 +1,17 @@
+# Copyright 2023 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import Optional
 
 import numpy as np
@@ -25,7 +39,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def loss_(loss_calc_endpoint_url: str):
     """
-    Function generator to calculate loss. This returns a function that calculates loss 
+    Function generator to calculate loss. This returns a function that calculates loss
     for given input data and hyperparameters.
 
     Args:
@@ -34,6 +48,7 @@ def loss_(loss_calc_endpoint_url: str):
     Returns:
         A function that calculates the loss.
     """
+
     def loss(x, y, x0, hyperparameters):
         request_schema = CalcLossInputDataSchema()
         request_data = request_schema.dump(
