@@ -16,6 +16,8 @@ from ..coordinator.shared_schemas import (
     LossResponseSchema,
     MinimizerInputData,
     MinimizerInputSchema,
+    MinimizerResult,
+    MinimizerResultSchema,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -74,19 +76,7 @@ def minimize_task(self, db_id: int) -> str:
     )
 
     TASK_LOGGER.info(f"Optimization result: {result}")
-    output_data = ", ".join(map(str, result.x.flatten()))
-    csv_attributes = [f"weight_{i}" for i in range(len(result.x))]
-    with SpooledTemporaryFile(mode="w") as output:
-        save_entities(
-            entities=output_data,
-            file_=output,
-            mimetype="text/csv",
-            attributes=csv_attributes,
-        )
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "weights.csv",
-            "entity/vector",
-            "text/csv",
-        )
+    schema = MinimizerResultSchema()
+    weights = MinimizerResult(weights=result.x)
+    weights = schema.dump(weights)
+    return str(weights)

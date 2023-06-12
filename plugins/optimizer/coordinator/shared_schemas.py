@@ -104,3 +104,16 @@ class MinimizerInputSchema(MaBaseSchema):
     @ma.post_load
     def make_object(self, data, **kwargs):
         return MinimizerInputData(**data)
+
+
+@dataclass
+class MinimizerResult:
+    weights: np.ndarray
+
+
+class MinimizerResultSchema(MaBaseSchema):
+    weights = NumpyArray(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return MinimizerResult(**data)
