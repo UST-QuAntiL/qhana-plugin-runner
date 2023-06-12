@@ -43,7 +43,11 @@ from qhana_plugin_runner.requests import make_callback
 from qhana_plugin_runner.tasks import save_task_error
 
 from . import RIDGELOSS_BLP, RidgeLoss
-from .schemas import HyperparamterInputSchema, RidgeLossTaskResponseSchema
+from .schemas import (
+    HyperparamterInputData,
+    HyperparamterInputSchema,
+    RidgeLossTaskResponseSchema,
+)
 from .tasks import ridge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -173,15 +177,15 @@ class OptimizerCallbackProcess(MethodView):
     )
     @RIDGELOSS_BLP.response(HTTPStatus.OK, RidgeLossTaskResponseSchema())
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, callback):
+    def post(self, arguments: HyperparamterInputData, callback):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
             task_name="ridge-loss",
         )
-        db_task.data["alpha"] = arguments["alpha"]
+        db_task.data["alpha"] = arguments.alpha
         callback_url = callback["callback_url"]
-        hyperparameters = {"alpha": arguments["alpha"]}
+        hyperparameters = {"alpha": arguments.alpha}
         calc_endpoint_url = url_for(
             f"{RIDGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
             _external=True,
