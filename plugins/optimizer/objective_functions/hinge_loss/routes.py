@@ -146,6 +146,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         example_values_url = url_for(
             f"{HINGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
             callbackUrl=callback.callback_url,
+            **self.example_inputs,
         )
 
         return Response(
@@ -157,8 +158,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=process_url,  # URL of the processing step
-                help_text="This is an example help text with basic **Markdown** support.",
-                # TODO: give a proper description what c is with a link to the documentation
+                help_text="The Regularization Strength of the hinge loss.",
                 example_values=example_values_url,  # URL of this endpoint
             )
         )
