@@ -39,7 +39,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import make_callback
 
 from . import HINGELOSS_BLP, HingeLoss
-from .schemas import HingeLossTaskResponseSchema, HyperparamterInputSchema
+from .schemas import HingeLossTaskResponseSchema, HyperparamterInputData, HyperparamterInputSchema
 from .tasks import hinge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -169,15 +169,15 @@ class OptimizerCallbackProcess(MethodView):
     )
     @HINGELOSS_BLP.response(HTTPStatus.OK, HingeLossTaskResponseSchema())
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, callback):
+    def post(self, arguments: HyperparamterInputData, callback):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
             task_name="ridge-loss",
         )
-        db_task.data["c"] = arguments["c"]
+        db_task.data["c"] = arguments.c
         callback_url = callback["callback_url"]
-        hyperparameters = {"c": arguments["c"]}
+        hyperparameters = {"c": arguments.c}
         calc_endpoint_url = url_for(
             f"{HINGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
             _external=True,
