@@ -3,16 +3,16 @@ from tempfile import SpooledTemporaryFile
 from time import sleep
 from typing import Iterator, Optional
 
-from celery.utils.log import get_task_logger
 import numpy as np
 import requests
+from celery.utils.log import get_task_logger
+
 from plugins.optimizer.coordinator.shared_schemas import (
     MinimizerInputData,
     MinimizerInputSchema,
     MinimizerResult,
     MinimizerResultSchema,
 )
-
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
