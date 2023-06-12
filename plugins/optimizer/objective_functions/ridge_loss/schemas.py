@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import marshmallow as ma
 
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema
@@ -21,6 +22,11 @@ class RidgeLossTaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
+
+
+@dataclass
+class HyperparamterInputData:
+    alpha: float
 
 
 class HyperparamterInputSchema(FrontendFormBaseSchema):
@@ -33,3 +39,7 @@ class HyperparamterInputSchema(FrontendFormBaseSchema):
             "input_type": "textarea",
         },
     )
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return HyperparamterInputData(**data)
