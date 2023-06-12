@@ -17,7 +17,7 @@ from typing import Optional
 from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
-from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
+from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "ridge-loss"
 __version__ = "v0.1.0"

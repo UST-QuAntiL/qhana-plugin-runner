@@ -1,7 +1,6 @@
 import numpy as np
 from celery.utils.log import get_task_logger
 
-
 TASK_LOGGER = get_task_logger(__name__)
 
 
