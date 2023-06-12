@@ -64,6 +64,8 @@ def poll_task(url: str) -> str:
 
             if response_data["status"] == "SUCCESS":
                 return response_data["log"]
+            if response_data["status"] == "FAILURE":
+                raise Exception(response_data["log"])
 
             sleep(1)
         except requests.HTTPError as http_err:
@@ -72,6 +74,7 @@ def poll_task(url: str) -> str:
             print(f"Request to API ended in an error: {req_err}")
         except Exception as err:
             print(f"Other error occurred: {err}")
+            break
 
 
 def get_features(ent: dict, target_variable_name: str) -> np.ndarray:
