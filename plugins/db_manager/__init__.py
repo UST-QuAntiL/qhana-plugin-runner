@@ -46,7 +46,7 @@ class DBManagerPlugin(QHAnaPluginBase):
         return DBManager_BLP
 
     def get_requirements(self) -> str:
-        return "mysql-connector-python\npsycopg2"
+        return "pymysql\npsycopg2"
 
 
 try:

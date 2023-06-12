@@ -34,12 +34,14 @@ class TaskResponseSchema(MaBaseSchema):
 @dataclass(repr=False)
 class InputParameters:
     db_enum: DBEnum
-    db_host: str = ""
-    db_port: int = None
-    db_user: str = ""
-    db_password: str = ""
-    db_database: str = None
+    db_host: str
+    db_port: int
+    db_user: str
+    db_password: str
+    db_database: str
     db_query: str = ""
+    save_table: bool = False
+    id_attribute: str = ""
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -79,6 +81,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "Port of the database.",
             "input_type": "number",
         },
+        validate=ma.validate.Range(min=-1, min_inclusive=True),
     )
     db_user = ma.fields.String(
         required=False,
@@ -95,7 +98,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "DB passwort",
             "description": "Password for the database user.",
-            "input_type": "text",
+            "input_type": "password",
         },
     )
     db_database = ma.fields.String(
@@ -114,6 +117,26 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "DB query",
             "description": "The query to be executed on the database.",
+            "input_type": "text",
+        },
+    )
+    save_table = ma.fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Save queried table",
+            "description": "Saves the queried table as a csv for further use.",
+            "input_type": "checkbox",
+        }
+    )
+    id_attribute = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "ID attribute",
+            "description": "This determines the attribute that should be used as the ID foreach entity. "
+                           "If the attribute is not unique for each entry in the queried table, then the index will "
+                           "be used as the entity's id.",
             "input_type": "text",
         },
     )

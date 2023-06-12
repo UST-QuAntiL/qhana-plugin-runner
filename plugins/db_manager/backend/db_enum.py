@@ -1,5 +1,12 @@
 from enum import Enum
-from .db_manager import DBManager, SQLiteManager, MySQLManager, PostgreSQLManager
+from collections import OrderedDict
+from sqlalchemy import URL
+from .db_manager import DBManager
+
+from celery.utils.log import get_task_logger
+
+
+TASK_LOGGER = get_task_logger(__name__)
 
 
 class DBEnum(Enum):
@@ -8,32 +15,49 @@ class DBEnum(Enum):
     mysql = "MySQL"
     postgresql = "PostgreSQL"
 
-    def _get_db_managers(self) -> dict:
+    @staticmethod
+    def _get_db_dialect_drivers() -> dict:
         # Keep SQLite as the last entry, since it likes to connect to every database during the guessing phase
         # and throwing an error later!
-        return {
-            "postgresql": PostgreSQLManager,
-            "mysql": MySQLManager,
-            "sqlite": SQLiteManager,
-        }
+        return OrderedDict([
+            ("mysql", "mysql+pymysql"),
+            ("postgresql", "postgresql+psycopg2"),
+            ("sqlite", "sqlite"),
+        ])
+
+    def _get_db_url(self, host: str, port: int, user: str, password: str, database: str, dialect_drivers: str = None) -> URL:
+        dialect_drivers = DBEnum._get_db_dialect_drivers()[self.name] if dialect_drivers is None else dialect_drivers
+        if dialect_drivers == "sqlite":
+            return URL.create(
+                dialect_drivers,
+                database=database,
+            )
+        return URL.create(
+            dialect_drivers,
+            username=user,
+            password=password,  # plain (unescaped) text
+            host=host,
+            port=port,
+            database=database,
+        )
 
     def get_connected_db_manager(
         self, host: str, port: int, user: str, password: str, database: str
     ) -> DBManager:
         if self == DBEnum.auto:
             return self._guess_db_manager(host, port, user, password, database)
-        manager: DBManager = self._get_db_managers()[str(self.name)]()
-        manager.connect(host, port, user, password, database)
+        manager = DBManager(self._get_db_url(host, port, user, password, database))
+        manager.connect()
         return manager
 
     def _guess_db_manager(
         self, host: str, port: int, user: str, password: str, database: str
     ) -> DBManager:
-        for manager_name, manager_class in self._get_db_managers().items():
+        for manager_name, dialect_driver in DBEnum._get_db_dialect_drivers().items():
             try:
-                manager: DBManager = manager_class()
-                manager.connect(host, port, user, password, database)
-                print(f"Connected using {manager_name}")
+                manager = DBManager(self._get_db_url(host, port, user, password, database, dialect_driver))
+                manager.connect()
+                TASK_LOGGER.info(f"Connected using {manager_name}")
                 return manager
             except:
                 continue

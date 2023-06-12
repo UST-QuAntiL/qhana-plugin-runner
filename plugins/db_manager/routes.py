@@ -123,7 +123,10 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         fields = schema.fields
         # define default values
-        default_values = {}
+        default_values = {
+            schema.fields["db_host"].data_key: "localhost",
+            schema.fields["db_port"].data_key: -1,
+        }
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)
