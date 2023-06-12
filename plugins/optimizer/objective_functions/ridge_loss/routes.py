@@ -216,6 +216,6 @@ class CalcCallbackEndpoint(MethodView):
         """Endpoint for the calculation callback."""
 
         loss = ridge_loss(
-            input_data.x, input_data.y, input_data.x0, input_data.hyperparameters["alpha"]
+            X=input_data.x, y=input_data.y, w=input_data.x0, alpha=input_data.hyperparameters["alpha"]
         )
         return {"loss": loss}
