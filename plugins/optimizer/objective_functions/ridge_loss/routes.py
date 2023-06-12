@@ -150,7 +150,12 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         example_values_url = url_for(
             f"{RIDGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
             callbackUrl=callback.callback_url,
+            **self.example_inputs,
         )
+
+        help_text = r"""Alpha is the regularization strength. Larger values specify stronger regularization.
+        The formula for ridge loss with regularization strength alpha is:
+        \$\$\sum_{i=1}^n (y_i - w^T x_i)^2 + \alpha ||w||_2^2\$\$"""
 
         return Response(
             render_template(
@@ -161,8 +166,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=process_url,  # URL of the processing step
-                help_text="This is an example help text with basic **Markdown** support.",
-                # TODO: give a proper description what alpha is with a link to the documentation
+                help_text=help_text,
                 example_values=example_values_url,  # URL of this endpoint
             )
         )
@@ -216,6 +220,9 @@ class CalcCallbackEndpoint(MethodView):
         """Endpoint for the calculation callback."""
 
         loss = ridge_loss(
-            X=input_data.x, y=input_data.y, w=input_data.x0, alpha=input_data.hyperparameters["alpha"]
+            X=input_data.x,
+            y=input_data.y,
+            w=input_data.x0,
+            alpha=input_data.hyperparameters["alpha"],
         )
         return {"loss": loss}
