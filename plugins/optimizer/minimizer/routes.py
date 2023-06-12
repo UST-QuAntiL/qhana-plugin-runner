@@ -23,6 +23,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from plugins.optimizer.coordinator.shared_schemas import (
+    CallbackURLData,
     CallbackURLSchema,
     MinimizerCallbackData,
     MinimizerCallbackSchema,
@@ -114,7 +115,7 @@ class MinimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @MINIMIZER_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback):
+    def get(self, errors, callback: CallbackURLData):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -135,11 +136,11 @@ class MinimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @MINIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback):
+    def post(self, errors, callback: CallbackURLData):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback):
+    def render(self, data: Mapping, errors: dict, callback: CallbackURLData):
         schema = MinimizerSetupTaskInputSchema()
 
         if not data:
@@ -147,13 +148,13 @@ class MinimizerSetupMicroFrontend(MethodView):
 
         process_url = url_for(
             f"{MINIMIZER_BLP.name}.{MinimizerSetupProcessStep.__name__}",
-            callbackUrl=callback["callback_url"],
+            callbackUrl=callback.callback_url,
         )
 
         example_url = url_for(
             f"{MINIMIZER_BLP.name}.{MinimizerSetupMicroFrontend.__name__}",
             **self.example_inputs,
-            callbackUrl=callback["callback_url"],
+            callbackUrl=callback.callback_url,
         )
         return Response(
             render_template(
@@ -184,7 +185,7 @@ class MinimizerSetupProcessStep(MethodView):
     )
     @MINIMIZER_BLP.response(HTTPStatus.OK, MinimizerTaskResponseSchema())
     @MINIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: MinimizerSetupTaskInputData, callback):
+    def post(self, arguments: MinimizerSetupTaskInputData, callback: CallbackURLData):
         """Start the demo task."""
         db_task = ProcessingTask(
             task_name="minimizer_task",
@@ -192,7 +193,7 @@ class MinimizerSetupProcessStep(MethodView):
         db_task.data["method"] = arguments.method.value
         db_task.save(commit=True)
 
-        callback_url = callback["callback_url"]
+        callback_url = callback.callback_url
 
         minimize_endpoint = url_for(
             f"{MINIMIZER_BLP.name}.{MinimizationEndpoint.__name__}",

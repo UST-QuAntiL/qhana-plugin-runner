@@ -20,8 +20,17 @@ import numpy as np
 from qhana_plugin_runner.api.util import MaBaseSchema
 
 
+@dataclass
+class CallbackURLData:
+    callback_url: str
+
+
 class CallbackURLSchema(MaBaseSchema):
     callback_url = ma.fields.URL(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return CallbackURLData(**data)
 
 
 class NumpyArray(ma.fields.Field):
