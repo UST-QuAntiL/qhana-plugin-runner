@@ -23,6 +23,7 @@ from marshmallow import EXCLUDE
 from plugins.optimizer.coordinator.shared_schemas import (
     CalcLossInputData,
     CalcLossInputDataSchema,
+    CallbackURLData,
     CallbackURLSchema,
     LossResponseSchema,
     ObjectiveFunctionCallbackData,
@@ -39,7 +40,11 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import make_callback
 
 from . import HINGELOSS_BLP, HingeLoss
-from .schemas import HingeLossTaskResponseSchema, HyperparamterInputData, HyperparamterInputSchema
+from .schemas import (
+    HingeLossTaskResponseSchema,
+    HyperparamterInputData,
+    HyperparamterInputSchema,
+)
 from .tasks import hinge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -102,7 +107,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback):
+    def get(self, errors, callback: CallbackURLData):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -122,11 +127,11 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback):
+    def post(self, errors, callback: CallbackURLData):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback):
+    def render(self, data: Mapping, errors: dict, callback: CallbackURLData):
         plugin = HingeLoss.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -136,11 +141,11 @@ class HyperparameterSelectionMicroFrontend(MethodView):
             data = {"c": 1.0}
         process_url = url_for(
             f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
-            callbackUrl=callback["callback_url"],
+            callbackUrl=callback.callback_url,
         )
         example_values_url = url_for(
             f"{HINGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
-            callbackUrl=callback["callback_url"],
+            callbackUrl=callback.callback_url,
         )
 
         return Response(
@@ -169,14 +174,14 @@ class OptimizerCallbackProcess(MethodView):
     )
     @HINGELOSS_BLP.response(HTTPStatus.OK, HingeLossTaskResponseSchema())
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: HyperparamterInputData, callback):
+    def post(self, arguments: HyperparamterInputData, callback: CallbackURLData):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
             task_name="ridge-loss",
         )
         db_task.data["c"] = arguments.c
-        callback_url = callback["callback_url"]
+        callback_url = callback.callback_url
         hyperparameters = {"c": arguments.c}
         calc_endpoint_url = url_for(
             f"{HINGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
