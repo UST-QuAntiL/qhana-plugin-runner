@@ -49,7 +49,7 @@ def loss_(loss_calc_endpoint_url: str):
         A function that calculates the loss.
     """
 
-    def loss(x, y, x0, hyperparameters):
+    def loss(x0, x, y, hyperparameters):
         request_schema = CalcLossInputDataSchema()
         request_data = request_schema.dump(
             CalcLossInputData(x0=x0, x=x, y=y, hyperparameters=hyperparameters)
@@ -98,8 +98,8 @@ def minimize_task(self, db_id: int) -> str:
 
     initial_weights = np.random.randn(minimizer_input_data.x.shape[1])
     result = scipy_minimize(
-        loss_fun,
-        initial_weights,
+        fun=loss_fun,
+        x0=initial_weights,
         args=(
             minimizer_input_data.x,
             minimizer_input_data.y,
