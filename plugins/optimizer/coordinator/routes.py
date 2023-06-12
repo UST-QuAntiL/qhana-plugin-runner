@@ -104,7 +104,11 @@ class MetadataView(MethodView):
 
 @OPTIMIZER_BLP.route("/ui-setup/")
 class OptimizerSetupMicroFrontend(MethodView):
-    """Micro frontend for the objective-function and dataset selection in the optimizer plugin."""
+    """Micro frontend for selection of:
+    1. objective-function plugin
+    2. dataset
+    3. minimizer plugin
+    4. target variable"""
 
     example_inputs = {}
 
