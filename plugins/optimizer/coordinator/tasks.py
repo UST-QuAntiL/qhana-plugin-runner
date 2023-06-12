@@ -28,7 +28,19 @@ from . import Optimizer
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def poll_task(url):
+def poll_task(url: str) -> str:
+    """
+    Periodically send GET request to the specified URL and return the response if successful.
+
+    Args:
+        url: The URL to send requests to.
+
+    Returns:
+        The response log if the request is successful.
+
+    Raises:
+        An exception if an HTTP error or a Request error occurs, or a general error.
+    """
     while True:
         try:
             response = requests.get(url)
@@ -118,7 +130,19 @@ def get_features_and_target(
 
 
 @CELERY.task(name=f"{Optimizer.instance.identifier}.optimize", bind=True)
-def optimize_task(self, db_id: int):
+def optimize_task(self, db_id: int) -> str:
+    """
+    Start an optimization task for the specified database id.
+
+    Args:
+        db_id: The database id of the task.
+
+    Returns:
+        A success message if the loss function is minimized successfully.
+
+    Raises:
+        A KeyError if task data with the specified id cannot be loaded to read parameters.
+    """
     TASK_LOGGER.info(f"Starting the optimization task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 

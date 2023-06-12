@@ -23,7 +23,17 @@ from ..coordinator.shared_schemas import (
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def loss_(loss_calc_endpoint_url):
+def loss_(loss_calc_endpoint_url: str):
+    """
+    Function generator to calculate loss. This returns a function that calculates loss 
+    for given input data and hyperparameters.
+
+    Args:
+        loss_calc_endpoint_url: The URL to which the loss calculation request will be sent.
+
+    Returns:
+        A function that calculates the loss.
+    """
     def loss(x, y, x0, hyperparameters):
         request_schema = CalcLossInputDataSchema()
         request_data = request_schema.dump(
@@ -40,6 +50,18 @@ def loss_(loss_calc_endpoint_url):
 
 @CELERY.task(name=f"{Minimizer.instance.identifier}.minimize", bind=True)
 def minimize_task(self, db_id: int) -> str:
+    """
+    Start a minimization task for the specified database id.
+
+    Args:
+        db_id: The database id of the task.
+
+    Returns:
+        A string representation of the weights obtained from the minimization process.
+
+    Raises:
+        A KeyError if task data with the specified id cannot be loaded to read parameters.
+    """
     TASK_LOGGER.info(f"Starting the optimization task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
