@@ -23,8 +23,6 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from plugins.optimizer.coordinator.shared_schemas import (
-    CallbackURLData,
-    CallbackURLSchema,
     MinimizerCallbackData,
     MinimizerCallbackSchema,
     MinimizerInputData,
@@ -38,6 +36,8 @@ from plugins.optimizer.minimizer.schemas import (
     MinimizerTaskResponseSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
+    CallbackURLData,
+    CallbackURLSchema,
     DataMetadata,
     EntryPoint,
     PluginMetadata,

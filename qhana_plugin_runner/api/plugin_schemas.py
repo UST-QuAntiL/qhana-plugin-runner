@@ -355,3 +355,16 @@ class PluginMetadataSchema(MaBaseSchema):
     def make_plugin_metadata(self, data: Dict[str, Any], **kwargs):
         """Create a PluginMetadata object from the deserialized data."""
         return PluginMetadata(**data)
+
+
+@dataclass
+class CallbackURLData:
+    callback_url: str
+
+
+class CallbackURLSchema(MaBaseSchema):
+    callback_url = ma.fields.URL(required=True, allow_none=False, data_key="callbackUrl")
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return CallbackURLData(**data)
