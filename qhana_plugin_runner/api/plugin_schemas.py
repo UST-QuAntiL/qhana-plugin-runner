@@ -280,9 +280,9 @@ class EntryPointSchema(MaBaseSchema):
     def unquote_url(self, data: Dict[str, Any], **kwargs):
         """Unquote the url."""
         url_fieds = ("href", "ui_href")
-        for field in url_fieds:
-            if field in data:
-                data[field] = unquote(data[field])
+        for f in url_fieds:
+            if f in data:
+                data[f] = unquote(data[f])
         return data
 
     @ma.post_load()
