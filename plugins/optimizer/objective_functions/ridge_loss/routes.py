@@ -140,17 +140,18 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = HyperparamterInputSchema()
+        callback_schema = CallbackURLSchema()
 
         if not data:
             data = {"alpha": 0.1}
         process_url = url_for(
             f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
-            callbackUrl=callback.callback_url,
+            **callback_schema.dump(callback),
         )
         example_values_url = url_for(
             f"{RIDGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
-            callbackUrl=callback.callback_url,
             **self.example_inputs,
+            **callback_schema.dump(callback),
         )
 
         help_text = r"""Alpha is the regularization strength. Larger values specify stronger regularization.

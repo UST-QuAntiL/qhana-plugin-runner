@@ -136,17 +136,18 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = HyperparamterInputSchema()
+        callback_schema = CallbackURLSchema()
 
         if not data:
             data = {"c": 1.0}
         process_url = url_for(
             f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
-            callbackUrl=callback.callback_url,
+            **callback_schema.dump(callback),
         )
         example_values_url = url_for(
             f"{HINGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
-            callbackUrl=callback.callback_url,
             **self.example_inputs,
+            **callback_schema.dump(callback),
         )
 
         return Response(

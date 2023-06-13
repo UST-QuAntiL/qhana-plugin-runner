@@ -142,19 +142,20 @@ class MinimizerSetupMicroFrontend(MethodView):
 
     def render(self, data: Mapping, errors: dict, callback: CallbackURLData):
         schema = MinimizerSetupTaskInputSchema()
+        callback_schema = CallbackURLSchema()
 
         if not data:
             data = self.example_inputs
 
         process_url = url_for(
             f"{MINIMIZER_BLP.name}.{MinimizerSetupProcessStep.__name__}",
-            callbackUrl=callback.callback_url,
+            **callback_schema.dump(callback),
         )
 
         example_url = url_for(
             f"{MINIMIZER_BLP.name}.{MinimizerSetupMicroFrontend.__name__}",
             **self.example_inputs,
-            callbackUrl=callback.callback_url,
+            **callback_schema.dump(callback),
         )
         return Response(
             render_template(
