@@ -26,13 +26,13 @@ from marshmallow import EXCLUDE
 from plugins.optimizer.coordinator.shared_schemas import (
     CalcLossInputData,
     CalcLossInputDataSchema,
-    CallbackURLData,
-    CallbackURLSchema,
     LossResponseSchema,
     ObjectiveFunctionCallbackData,
     ObjectiveFunctionCallbackSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
+    CallbackURLData,
+    CallbackURLSchema,
     DataMetadata,
     EntryPoint,
     PluginMetadata,
@@ -41,7 +41,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import make_callback
-from qhana_plugin_runner.tasks import save_task_error
 
 from . import RIDGELOSS_BLP, RidgeLoss
 from .schemas import (

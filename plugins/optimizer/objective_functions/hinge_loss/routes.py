@@ -23,13 +23,13 @@ from marshmallow import EXCLUDE
 from plugins.optimizer.coordinator.shared_schemas import (
     CalcLossInputData,
     CalcLossInputDataSchema,
-    CallbackURLData,
-    CallbackURLSchema,
     LossResponseSchema,
     ObjectiveFunctionCallbackData,
     ObjectiveFunctionCallbackSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
+    CallbackURLData,
+    CallbackURLSchema,
     DataMetadata,
     EntryPoint,
     PluginMetadata,
