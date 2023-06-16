@@ -48,16 +48,13 @@ class CalcLossInputData:
     x: np.ndarray
     y: np.ndarray
     x0: np.ndarray
-    hyperparameters: dict
 
 
 class CalcLossInputDataSchema(MaBaseSchema):
     x: NumpyArray = NumpyArray(required=True, allow_none=False)
     y: NumpyArray = NumpyArray(required=True, allow_none=False)
     x0: NumpyArray = NumpyArray(required=True, allow_none=False)
-    hyperparameters = ma.fields.Dict(
-        keys=ma.fields.String(), values=ma.fields.Float(), required=False, allow_none=True
-    )
+
 
     @ma.post_load
     def make_object(self, data, **kwargs):
@@ -100,16 +97,12 @@ class MinimizerCallbackSchema(MaBaseSchema):
 class MinimizerInputData:
     x: np.ndarray
     y: np.ndarray
-    hyperparameters: dict
     calc_loss_endpoint_url: str
 
 
 class MinimizerInputSchema(MaBaseSchema):
     x = NumpyArray(required=True, allow_none=False)
     y = NumpyArray(required=True, allow_none=False)
-    hyperparameters = ma.fields.Dict(
-        keys=ma.fields.String(), values=ma.fields.Float(), required=True, allow_none=False
-    )
     calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
 
     @ma.post_load

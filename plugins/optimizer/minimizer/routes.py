@@ -229,7 +229,6 @@ class MinimizationEndpoint(MethodView):
         serialized_input_data = schema.dump(input_data)
         db_task.data["x"] = serialized_input_data["x"]
         db_task.data["y"] = serialized_input_data["y"]
-        db_task.data["hyperparameters"] = serialized_input_data["hyperparameters"]
         db_task.data["calc_loss_endpoint_url"] = serialized_input_data[
             "calcLossEndpointUrl"
         ]
