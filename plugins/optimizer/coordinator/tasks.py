@@ -171,7 +171,6 @@ def optimize_task(self, db_id: int) -> str:
     input_file_url: str = task_data.data.get("input_file_url")
     target_variable_name: str = task_data.data.get("target_variable")
     calc_loss_endpoint_url = task_data.data.get("calc_loss_endpoint_url")
-    hyperparameters = task_data.data.get("hyperparameters")
     minimize_endpoint_url = task_data.data.get("minimize_endpoint_url")
 
     X, y = get_features_and_target(input_file_url, target_variable_name)
@@ -180,7 +179,6 @@ def optimize_task(self, db_id: int) -> str:
         MinimizerInputData(
             x=X,
             y=y,
-            hyperparameters=hyperparameters,
             calc_loss_endpoint_url=calc_loss_endpoint_url,
         )
     )
