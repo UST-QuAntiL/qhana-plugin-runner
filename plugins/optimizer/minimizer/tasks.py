@@ -51,9 +51,7 @@ def loss_(loss_calc_endpoint_url: str):
 
     def loss(x0, x, y):
         request_schema = CalcLossInputDataSchema()
-        request_data = request_schema.dump(
-            CalcLossInputData(x0=x0, x=x, y=y)
-        )
+        request_data = request_schema.dump(CalcLossInputData(x0=x0, x=x, y=y))
 
         response = requests.post(loss_calc_endpoint_url, json=request_data)
         response_schema = LossResponseSchema()
