@@ -91,22 +91,18 @@ class TaskData:
 
 
 class TaskStatusSchema(MaBaseSchema):
-    status = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    log = ma.fields.String(required=False, allow_none=True, dump_only=True)
-    progress = ma.fields.Nested(
-        ProgressMetadataSchema, required=False, allow_none=True, dump_only=True
-    )
+    status = ma.fields.String(required=True, allow_none=False)
+    log = ma.fields.String(required=False, allow_none=True)
+    progress = ma.fields.Nested(ProgressMetadataSchema, required=False, allow_none=True)
     steps = ma.fields.List(
         ma.fields.Nested(StepMetadataSchema),
         required=False,
         allow_none=True,
-        dump_only=True,
     )
     outputs = ma.fields.List(
         ma.fields.Nested(OutputDataMetadataSchema()),
         required=False,
         allow_none=True,
-        dump_only=True,
     )
 
     @ma.post_dump()
@@ -120,6 +116,10 @@ class TaskStatusSchema(MaBaseSchema):
         if data["progress"] == None:
             del data["progress"]
         return data
+
+    @ma.post_load()
+    def make_task_data(self, data: Dict[str, Any], **kwargs):
+        return TaskData(**data)
 
 
 @TASKS_API.route("/<int:task_id>/")
