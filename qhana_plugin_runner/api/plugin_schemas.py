@@ -209,10 +209,30 @@ class StepMetadataSchema(MaBaseSchema):
     )
 
 
+class InteractionEndpointType(Enum):
+    """Type of the interaction endpoint.
+
+    - ``optimization-step``: type for optimization steps
+    - ``objective-function``: type for objective functions
+    """
+
+    minimization_step = "minimization-step"
+    objective_function = "objective-function"
+
+
+@dataclass
+class InteractionEndpoint:
+    type: InteractionEndpointType
+    href: str
+
+
 @dataclass
 class EntryPoint:
     href: str
     ui_href: str
+    interaction_endpoints: Optional[List[InteractionEndpoint]] = field(
+        default_factory=list
+    )
     data_input: List[InputDataMetadata] = field(default_factory=list)
     data_output: List[Union[OutputDataMetadata, DataMetadata]] = field(
         default_factory=list
@@ -236,6 +256,29 @@ class StepMetadata:
     cleared: bool = False
 
 
+class InteractionEndpointSchema(MaBaseSchema):
+    type = EnumField(
+        InteractionEndpointType,
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "Type of the endpoint. All endpoints of the same type must be compatible with each other."
+        },
+    )
+    href = ma.fields.Url(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "The URL of a REST endpoint that is usable by other plugins."
+        },
+    )
+
+    @ma.post_load()
+    def make_interaction_endpoint(self, data: Dict[str, Any], **kwargs):
+        """Create a InteractionEndpoint object from the deserialized data."""
+        return InteractionEndpoint(**data)
+
+
 class EntryPointSchema(MaBaseSchema):
     href = ma.fields.Url(
         required=True,
@@ -250,6 +293,14 @@ class EntryPointSchema(MaBaseSchema):
         metadata={
             "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
+    )
+    interaction_endpoints = ma.fields.List(
+        ma.fields.Nested(
+            InteractionEndpointSchema,
+            required=False,
+            allow_none=False,
+            metadata={"description": "A list of possible interaction endpoints."},
+        )
     )
     plugin_dependencies = ma.fields.List(
         ma.fields.Nested(
