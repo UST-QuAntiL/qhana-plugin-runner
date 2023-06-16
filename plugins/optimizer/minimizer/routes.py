@@ -194,8 +194,6 @@ class MinimizerSetupProcessStep(MethodView):
         db_task.data["method"] = arguments.method.value
         db_task.save(commit=True)
 
-        callback_url = callback.callback_url
-
         minimize_endpoint = url_for(
             f"{MINIMIZER_BLP.name}.{MinimizationEndpoint.__name__}",
             db_id=db_task.id,
@@ -206,10 +204,9 @@ class MinimizerSetupProcessStep(MethodView):
         callback_data = callback_schema.dump(
             MinimizerCallbackData(
                 minimize_endpoint_url=minimize_endpoint,
-                method=arguments.method.value,
             )
         )
-        make_callback(callback_url, callback_data)
+        make_callback(callback.callback_url, callback_data)
 
 
 @MINIMIZER_BLP.route("<int:db_id>/minimize/")
