@@ -49,11 +49,9 @@ def loss_(loss_calc_endpoint_url: str):
         A function that calculates the loss.
     """
 
-    def loss(x0, x, y, hyperparameters):
+    def loss(x0, x, y):
         request_schema = CalcLossInputDataSchema()
-        request_data = request_schema.dump(
-            CalcLossInputData(x0=x0, x=x, y=y, hyperparameters=hyperparameters)
-        )
+        request_data = request_schema.dump(CalcLossInputData(x0=x0, x=x, y=y))
 
         response = requests.post(loss_calc_endpoint_url, json=request_data)
         response_schema = LossResponseSchema()
@@ -89,7 +87,6 @@ def minimize_task(self, db_id: int) -> str:
     input_data = {
         "x": task_data.data.get("x"),
         "y": task_data.data.get("y"),
-        "hyperparameters": task_data.data.get("hyperparameters"),
         "calcLossEndpointUrl": task_data.data.get("calc_loss_endpoint_url"),
     }
     schema = MinimizerInputSchema()
@@ -103,7 +100,6 @@ def minimize_task(self, db_id: int) -> str:
         args=(
             minimizer_input_data.x,
             minimizer_input_data.y,
-            minimizer_input_data.hyperparameters,
         ),
         method=method,
     )
