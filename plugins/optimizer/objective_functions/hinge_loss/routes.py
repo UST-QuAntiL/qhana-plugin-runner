@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from typing import Mapping
+from typing import Mapping, Optional
 
 from celery.utils.log import get_task_logger
 from flask import Response, abort, render_template, request, url_for
@@ -179,16 +179,17 @@ class OptimizerCallbackProcess(MethodView):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
-            task_name="ridge-loss",
+            task_name="hinge-loss",
         )
         db_task.data["c"] = arguments.c
+        db_task.save(commit=True)
         callback_url = callback.callback_url
         hyperparameters = {"c": arguments.c}
         calc_endpoint_url = url_for(
             f"{HINGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
+            db_id=db_task.id,
             _external=True,
         )
-        db_task.save(commit=True)
 
         callback_schema = ObjectiveFunctionCallbackSchema()
         callback_data = callback_schema.dump(
@@ -200,7 +201,7 @@ class OptimizerCallbackProcess(MethodView):
         make_callback(callback_url, callback_data)
 
 
-@HINGELOSS_BLP.route("/calc-callback-endpoint/")
+@HINGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
 class CalcCallbackEndpoint(MethodView):
     """Endpoint for the calculation callback."""
 
@@ -209,13 +210,19 @@ class CalcCallbackEndpoint(MethodView):
         CalcLossInputDataSchema(unknown=EXCLUDE), location="json", required=True
     )
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossInputData) -> dict:
+    def post(self, input_data: CalcLossInputData, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
 
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+        
         loss = hinge_loss(
             X=input_data.x,
             y=input_data.y,
             w=input_data.x0,
-            C=input_data.hyperparameters["c"],
+            C=db_task.data["c"],
         )
         return {"loss": loss}

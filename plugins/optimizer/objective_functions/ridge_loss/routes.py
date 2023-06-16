@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from typing import Mapping
+from typing import Mapping, Optional
 
 from celery.utils.log import get_task_logger
 from flask import Response, abort
@@ -189,14 +189,14 @@ class OptimizerCallbackProcess(MethodView):
             task_name="ridge-loss",
         )
         db_task.data["alpha"] = arguments.alpha
+        db_task.save(commit=True)
         callback_url = callback.callback_url
         hyperparameters = {"alpha": arguments.alpha}
         calc_endpoint_url = url_for(
             f"{RIDGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
+            db_id=db_task.id,
             _external=True,
         )
-        db_task.save(commit=True)
-
         callback_schema = ObjectiveFunctionCallbackSchema()
         callback_data = callback_schema.dump(
             ObjectiveFunctionCallbackData(
@@ -207,7 +207,7 @@ class OptimizerCallbackProcess(MethodView):
         make_callback(callback_url, callback_data)
 
 
-@RIDGELOSS_BLP.route("/calc-callback-endpoint/")
+@RIDGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
 class CalcCallbackEndpoint(MethodView):
     """Endpoint for the calculation callback."""
 
@@ -216,13 +216,18 @@ class CalcCallbackEndpoint(MethodView):
         CalcLossInputDataSchema(unknown=EXCLUDE), location="json", required=True
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossInputData) -> dict:
+    def post(self, input_data: CalcLossInputData, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
 
         loss = ridge_loss(
             X=input_data.x,
             y=input_data.y,
             w=input_data.x0,
-            alpha=input_data.hyperparameters["alpha"],
+            alpha=db_task.data["alpha"],
         )
         return {"loss": loss}
