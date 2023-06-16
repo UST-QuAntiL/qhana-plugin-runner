@@ -46,7 +46,7 @@ class Optimizer(QHAnaPluginBase):
         return OPTIMIZER_BLP
 
     def get_requirements(self) -> str:
-        return "numpy==1.23.2"
+        return ""
 
 
 try:

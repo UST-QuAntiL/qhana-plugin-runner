@@ -46,7 +46,7 @@ class Minimizer(QHAnaPluginBase):
         return MINIMIZER_BLP
 
     def get_requirements(self) -> str:
-        return "numpy==1.23.2\nscipy==1.10.1"
+        return "scipy~=1.10.1"
 
 
 try:
