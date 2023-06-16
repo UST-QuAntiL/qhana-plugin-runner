@@ -191,7 +191,6 @@ class OptimizerCallbackProcess(MethodView):
         db_task.data["alpha"] = arguments.alpha
         db_task.save(commit=True)
         callback_url = callback.callback_url
-        hyperparameters = {"alpha": arguments.alpha}
         calc_endpoint_url = url_for(
             f"{RIDGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
             db_id=db_task.id,
@@ -199,9 +198,7 @@ class OptimizerCallbackProcess(MethodView):
         )
         callback_schema = ObjectiveFunctionCallbackSchema()
         callback_data = callback_schema.dump(
-            ObjectiveFunctionCallbackData(
-                hyperparameters=hyperparameters, calc_loss_endpoint_url=calc_endpoint_url
-            )
+            ObjectiveFunctionCallbackData(calc_loss_endpoint_url=calc_endpoint_url)
         )
 
         make_callback(callback_url, callback_data)
