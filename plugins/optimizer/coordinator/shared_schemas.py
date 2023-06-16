@@ -55,7 +55,6 @@ class CalcLossInputDataSchema(MaBaseSchema):
     y: NumpyArray = NumpyArray(required=True, allow_none=False)
     x0: NumpyArray = NumpyArray(required=True, allow_none=False)
 
-
     @ma.post_load
     def make_object(self, data, **kwargs):
         return CalcLossInputData(**data)
@@ -63,14 +62,10 @@ class CalcLossInputDataSchema(MaBaseSchema):
 
 @dataclass
 class ObjectiveFunctionCallbackData:
-    hyperparameters: dict
     calc_loss_endpoint_url: str
 
 
 class ObjectiveFunctionCallbackSchema(MaBaseSchema):
-    hyperparameters = ma.fields.Dict(
-        keys=ma.fields.String(), values=ma.fields.Float(), required=False, allow_none=True
-    )
     calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
 
     @ma.post_load

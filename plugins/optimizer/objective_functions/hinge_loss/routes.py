@@ -184,7 +184,6 @@ class OptimizerCallbackProcess(MethodView):
         db_task.data["c"] = arguments.c
         db_task.save(commit=True)
         callback_url = callback.callback_url
-        hyperparameters = {"c": arguments.c}
         calc_endpoint_url = url_for(
             f"{HINGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
             db_id=db_task.id,
@@ -193,9 +192,7 @@ class OptimizerCallbackProcess(MethodView):
 
         callback_schema = ObjectiveFunctionCallbackSchema()
         callback_data = callback_schema.dump(
-            ObjectiveFunctionCallbackData(
-                hyperparameters=hyperparameters, calc_loss_endpoint_url=calc_endpoint_url
-            )
+            ObjectiveFunctionCallbackData(calc_loss_endpoint_url=calc_endpoint_url)
         )
 
         make_callback(callback_url, callback_data)
@@ -218,7 +215,7 @@ class CalcCallbackEndpoint(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
-        
+
         loss = hinge_loss(
             X=input_data.x,
             y=input_data.y,

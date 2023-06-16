@@ -271,9 +271,6 @@ class ObjectiveFunctionCallback(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        if arguments.hyperparameters is not None:
-            db_task.data["hyperparameters"] = arguments.hyperparameters
-
         db_task.data["calc_loss_endpoint_url"] = arguments.calc_loss_endpoint_url
 
         db_task.clear_previous_step()
