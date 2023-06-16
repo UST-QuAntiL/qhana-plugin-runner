@@ -75,12 +75,10 @@ class ObjectiveFunctionCallbackSchema(MaBaseSchema):
 
 @dataclass
 class MinimizerCallbackData:
-    method: str
     minimize_endpoint_url: str
 
 
 class MinimizerCallbackSchema(MaBaseSchema):
-    method = ma.fields.String(required=False, allow_none=True)
     minimize_endpoint_url = ma.fields.Url(required=True, allow_none=False)
 
     @ma.post_load
