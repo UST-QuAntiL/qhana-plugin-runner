@@ -27,6 +27,7 @@ from plugins.optimizer.coordinator.shared_schemas import (
     MinimizerResult,
     MinimizerResultSchema,
 )
+from qhana_plugin_runner.api.tasks_api import TaskData, TaskStatusSchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
@@ -60,12 +61,13 @@ def poll_task(url: str) -> str:
             response = requests.get(url)
             response.raise_for_status()
 
-            response_data = response.json()
+            response_schema = TaskStatusSchema()
+            response_data: TaskData = response_schema.load(response.json())
 
-            if response_data["status"] == "SUCCESS":
-                return response_data["log"]
-            if response_data["status"] == "FAILURE":
-                raise Exception(response_data["log"])
+            if response_data.status == "SUCCESS":
+                return response_data.log
+            if response_data.status == "FAILURE":
+                raise Exception(response_data.log)
 
             sleep(1)
         except requests.HTTPError as http_err:
