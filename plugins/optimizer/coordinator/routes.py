@@ -238,7 +238,7 @@ class OptimizerSetupProcessStep(MethodView):
 
         task = invoke_task.s(
             db_id=db_task.id,
-            step_id="of_setup",
+            step_id="objective function plugin setup",
             href=of_href,
             ui_href=of_ui_href,
             callback_url=of_callback_url,
@@ -282,7 +282,7 @@ class ObjectiveFunctionCallback(MethodView):
 
         task = invoke_task.s(
             db_id=db_task.id,
-            step_id="min_setup",
+            step_id="minimization plugin setup",
             href=min_href,
             ui_href=min_ui_href,
             callback_url=min_callback_url,
