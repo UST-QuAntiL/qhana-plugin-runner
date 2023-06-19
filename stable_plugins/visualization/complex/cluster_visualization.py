@@ -46,8 +46,8 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "visualization"
-__version__ = "v0.2.0"
+_plugin_name = "cluster-visualization"
+__version__ = "v0.3.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -106,11 +106,11 @@ class PluginsView(MethodView):
     def get(self):
         """Visualization endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Visualization",
+            title="Cluster Visualization",
             description=VIS.instance.description,
             name=VIS.instance.name,
             version=VIS.instance.version,
-            type=PluginType.processing,
+            type=PluginType.visualization,
             entry_point=EntryPoint(
                 href=url_for(f"{VIS_BLP.name}.CalcView"),
                 ui_href=url_for(f"{VIS_BLP.name}.MicroFrontend"),
