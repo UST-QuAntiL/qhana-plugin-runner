@@ -242,7 +242,7 @@ class OptimizerSetupProcessStep(MethodView):
             href=of_href,
             ui_href=of_ui_href,
             callback_url=of_callback_url,
-            prog_value=20,
+            prog_value=25,
             task_log="hyperparameter selection started",
         )
 
@@ -286,7 +286,7 @@ class ObjectiveFunctionCallback(MethodView):
             href=min_href,
             ui_href=min_ui_href,
             callback_url=min_callback_url,
-            prog_value=40,
+            prog_value=50,
             task_log="minimizer setup started",
         )
 
@@ -313,7 +313,7 @@ class MinimizeCallback(MethodView):
             raise KeyError(msg)
 
         db_task.data["minimize_endpoint_url"] = arguments.minimize_endpoint_url
-        db_task.progress_value = 60
+        db_task.progress_value = 75
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
