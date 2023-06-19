@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ast
 from tempfile import SpooledTemporaryFile
 from time import sleep
 from typing import Iterator, Optional
@@ -24,8 +23,6 @@ from celery.utils.log import get_task_logger
 from plugins.optimizer.coordinator.shared_schemas import (
     MinimizerInputData,
     MinimizerInputSchema,
-    MinimizerResult,
-    MinimizerResultSchema,
 )
 from qhana_plugin_runner.api.tasks_api import TaskData, TaskStatusSchema
 from qhana_plugin_runner.celery import CELERY
@@ -33,7 +30,6 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
-    save_entities,
 )
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
@@ -65,7 +61,7 @@ def poll_task(url: str) -> str:
             response_data: TaskData = response_schema.load(response.json())
 
             if response_data.status == "SUCCESS":
-                return response_data.log
+                return response_data.outputs
             if response_data.status == "FAILURE":
                 raise Exception(response_data.log)
 
@@ -188,22 +184,18 @@ def optimize_task(self, db_id: int) -> str:
     response = requests.post(minimize_endpoint_url, json=min_input_data)
 
     result = poll_task(response.url)
-    result = ast.literal_eval(result)
 
-    schema = MinimizerResultSchema()
-    result: MinimizerResult = schema.load(result)
-
-    csv_attributes = [f"x_{i}" for i in range(len(result.weights))]
-
-    entities = [dict(zip(csv_attributes, result.weights.tolist()))]
+    # repuplish the result
+    result_file_url = result[-1]["href"]
+    result_file = requests.get(result_file_url)
 
     with SpooledTemporaryFile(mode="w") as output:
-        save_entities(entities, output, "text/csv", attributes=csv_attributes)
+        output.write(result_file.text)
         STORE.persist_task_result(
             db_id,
             output,
             "weights.csv",
-            "entity/vector",
+            "optimization-result",
             "text/csv",
         )
     return "successfully minimized the loss function"

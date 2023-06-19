@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from tempfile import SpooledTemporaryFile
 from typing import Optional
 
 import numpy as np
@@ -21,6 +22,8 @@ from scipy.optimize import minimize as scipy_minimize
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+from qhana_plugin_runner.storage import STORE
 
 from . import Minimizer
 from ..coordinator.shared_schemas import (
@@ -30,8 +33,6 @@ from ..coordinator.shared_schemas import (
     LossResponseSchema,
     MinimizerInputData,
     MinimizerInputSchema,
-    MinimizerResult,
-    MinimizerResultSchema,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -105,7 +106,18 @@ def minimize_task(self, db_id: int) -> str:
     )
 
     TASK_LOGGER.info(f"Optimization result: {result}")
-    schema = MinimizerResultSchema()
-    weights = MinimizerResult(weights=result.x)
-    weights = schema.dump(weights)
-    return str(weights)
+
+    csv_attributes = [f"x_{i}" for i in range(len(result.x))]
+
+    entities = [dict(zip(csv_attributes, result.x.tolist()))]
+
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(entities, output, "text/csv", attributes=csv_attributes)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "minimization-results.csv",
+            "entity/vector",
+            "text/csv",
+        )
+    return "Success"
