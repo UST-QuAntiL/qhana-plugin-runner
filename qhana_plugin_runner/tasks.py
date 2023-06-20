@@ -1,13 +1,12 @@
-from typing import Optional
 import urllib.parse
 from datetime import datetime
+from blinker import Namespace
 
-import requests
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
-from sqlalchemy.sql.expression import select
+from flask import url_for
+import requests
 
-from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from .celery import CELERY
@@ -15,6 +14,30 @@ from .celery import CELERY
 _name = "qhana-plugin-runner"
 
 TASK_LOGGER = get_task_logger(_name)
+
+TASK_SIGNALS = Namespace()
+
+
+def task_status_changed_handler(sender, db_id: int):
+    """Emit signal to all registered callback urls that the status of a task has changed.
+    Attributes:
+        sender: The sender of the signal.
+        db_id (int): The database id of the task.
+    """
+    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
+    if task_data is None:
+        raise KeyError(
+            f"Could not find db entry for id {db_id}, failed to emit signal on status change!"
+        )
+
+    callback_urls = task_data.data.get("status_changed_callback_urls", [])
+    task_url = task_data.data.get("task_view", None)
+    for callback_url in callback_urls:
+        requests.post(callback_url, json={"url": task_url, "status": task_data.status})
+
+
+TASK_STATUS_CHANGED = TASK_SIGNALS.signal("task-status-changed")
+TASK_STATUS_CHANGED.connect(task_status_changed_handler)
 
 
 # TODO add periodic cleanup task to remove old results from the database!
@@ -98,6 +121,8 @@ def save_task_result(self, task_log: str, db_id: int):
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
 
+    TASK_STATUS_CHANGED.send(self, db_id=db_id)
+
     # TODO: clean TaskData entries
 
     AsyncResult(self.request.parent_id, app=CELERY).forget()
@@ -127,6 +152,8 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     task_data.add_task_log_entry(f"{exc!r}\n\n{traceback}")
 
     task_data.save(commit=True)
+
+    TASK_STATUS_CHANGED.send(self, db_id=db_id)
 
     # TODO: maybe clean TaskData entries
 
