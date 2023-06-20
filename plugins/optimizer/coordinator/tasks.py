@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tempfile import SpooledTemporaryFile
 from time import sleep
 from typing import Iterator, Optional
 
@@ -183,19 +182,20 @@ def optimize_task(self, db_id: int) -> str:
 
     response = requests.post(minimize_endpoint_url, json=min_input_data)
 
-    result = poll_task(response.url)
+    data_outputs = poll_task(response.url)
 
-    # repuplish the result
-    result_file_url = result[-1]["href"]
-    result_file = requests.get(result_file_url)
+    TASK_LOGGER.info(f"data_outputs: {data_outputs}")
 
-    with SpooledTemporaryFile(mode="w") as output:
-        output.write(result_file.text)
+    for output in data_outputs:
+        TASK_LOGGER.info(f"output: {output}")
         STORE.persist_task_result(
-            db_id,
-            output,
-            "weights.csv",
-            "optimization-result",
-            "text/csv",
+            task_db_id=db_id,
+            file_=output["href"],
+            file_type=output["data_type"],
+            mimetype=output["content_type"],
+            file_name=output["name"],
+            storage_provider="url_file_store",
+            commit=True,
         )
+
     return "successfully minimized the loss function"
