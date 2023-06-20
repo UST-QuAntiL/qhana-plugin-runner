@@ -221,14 +221,17 @@ class MinimizationEndpoint(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
-
+        if input_data.callback_url:
+            db_task.data["status_changed_callback_urls"] = [input_data.callback_url]
+        db_task.data["calc_loss_endpoint_url"] = input_data.calc_loss_endpoint_url
         schema = MinimizerInputSchema()
         serialized_input_data = schema.dump(input_data)
         db_task.data["x"] = serialized_input_data["x"]
         db_task.data["y"] = serialized_input_data["y"]
-        db_task.data["calc_loss_endpoint_url"] = serialized_input_data[
-            "calcLossEndpointUrl"
-        ]
+        db_task.data["task_view"] = url_for(
+            "tasks-api.TaskView", task_id=db_task.id, _external=True
+        )
+
         db_task.save(commit=True)
         task = minimize_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
 

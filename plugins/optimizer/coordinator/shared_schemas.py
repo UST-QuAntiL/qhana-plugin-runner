@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from typing import Optional
 
 import marshmallow as ma
 import numpy as np
@@ -41,6 +42,21 @@ class LossResponseSchema(MaBaseSchema):
     @ma.post_load
     def make_object(self, data, **kwargs):
         return LossResponseData(**data)
+
+
+@dataclass
+class TaskStatusChanged:
+    url: str
+    status: str
+
+
+class TaskStatusChangedSchema(MaBaseSchema):
+    url = ma.fields.Url(required=True, allow_none=True)
+    status = ma.fields.String(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return TaskStatusChanged(**data)
 
 
 @dataclass
@@ -91,12 +107,14 @@ class MinimizerInputData:
     x: np.ndarray
     y: np.ndarray
     calc_loss_endpoint_url: str
+    callback_url: Optional[str] = None
 
 
 class MinimizerInputSchema(MaBaseSchema):
     x = NumpyArray(required=True, allow_none=False)
     y = NumpyArray(required=True, allow_none=False)
     calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
+    callback_url = ma.fields.Url(required=False, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
