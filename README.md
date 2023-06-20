@@ -79,7 +79,7 @@ There is a default launch configuration for vscode that should work on all platf
 To use the configuration copy `default-launch.json` to `.vscode/launch.json`.
 The `all` configuration starts the API and the worker process.
 For code changes both debugging sessions must be restarted as they do not autoreload code!
-
+To debug plugins that need concurrent celery workers, like the optimizer plugin, use the `default-concurrent-launch.json` configuration.
 
 ### Trying out the Plugin-Runner
 
