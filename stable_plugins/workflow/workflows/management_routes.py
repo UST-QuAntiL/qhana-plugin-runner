@@ -6,7 +6,7 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Union, cast
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import redirect, render_template
-from flask.globals import request
+from flask.globals import request, current_app
 from flask.helpers import url_for
 from flask.views import MethodView
 from flask.wrappers import Response
@@ -22,7 +22,12 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
+from qhana_plugin_runner.db.models.virtual_plugins import (
+    PluginState,
+    VirtualPlugin,
+    VIRTUAL_PLUGIN_CREATED,
+    VIRTUAL_PLUGIN_REMOVED,
+)
 from qhana_plugin_runner.tasks import save_task_error
 
 from .clients.camunda_client import CamundaClient, CamundaManagementClient
@@ -204,6 +209,11 @@ class WorkflowView(MethodView):
 
         DB.session.add(plugin)
         DB.session.commit()
+
+        VIRTUAL_PLUGIN_CREATED.send(
+            current_app._get_current_object(), plugin_url=plugin_url
+        )
+
         return self.get(process_definition_id)
 
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
@@ -238,6 +248,10 @@ class UndeployPluginView(MethodView):
         PluginState.delete_value(WorkflowManagement.instance.identifier, plugin_url)
 
         DB.session.commit()
+
+        VIRTUAL_PLUGIN_REMOVED.send(
+            current_app._get_current_object(), plugin_url=plugin_url
+        )
 
         return Response(status=HTTPStatus.NO_CONTENT)
 

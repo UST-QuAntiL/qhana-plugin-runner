@@ -35,6 +35,7 @@ from tomlkit.api import parse as parse_toml
 from . import api, babel, celery, db, requests
 from .api import jwt_helper
 from .licenses import register_licenses
+from .listeners import register_signal_listeners
 from .markdown import register_markdown_filter
 from .plugins_cli import register_plugin_cli_blueprint
 from .registry_client import register_plugin_registry_client
@@ -214,6 +215,9 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
     register_additional_schemas(requests.REQUEST_SESSION)
     # register the plugin registry client
     register_plugin_registry_client(app)
+
+    # register signal listeners
+    register_signal_listeners(app)
 
     # register plugins, AFTER registering the API!
     register_plugins(app)

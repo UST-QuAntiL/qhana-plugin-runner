@@ -2,12 +2,17 @@ import json
 from typing import Mapping, Optional
 
 from celery.utils.log import get_task_logger
+from flask import current_app
 from requests.exceptions import ConnectionError, HTTPError
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
+from qhana_plugin_runner.db.models.virtual_plugins import (
+    VIRTUAL_PLUGIN_CREATED,
+    PluginState,
+    VirtualPlugin,
+)
 
 from . import DeployWorkflow
 from .clients.camunda_client import CamundaClient, CamundaManagementClient
@@ -58,6 +63,8 @@ def deploy_virtual_plugin(plugin_url: str, process_definition_id: str):
 
     DB.session.add(plugin)
     DB.session.commit()
+
+    VIRTUAL_PLUGIN_CREATED.send(current_app._get_current_object(), plugin_url=plugin_url)
 
     return plugin_url
 
