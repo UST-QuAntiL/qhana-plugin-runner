@@ -16,9 +16,9 @@ from http import HTTPStatus
 from logging import Logger
 from typing import Mapping, Optional
 from urllib.parse import urljoin
+from celery import chain
 
 import requests
-from celery import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
 from flask.globals import request
@@ -27,7 +27,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.tasks import optimize_task
+from plugins.optimizer.coordinator.tasks import echo_results, get_features_and_target
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -35,7 +35,9 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
+from qhana_plugin_runner.api.tasks_api import TaskData, TaskStatusSchema
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import invoke_task, save_task_error, save_task_result
 
 from . import OPTIMIZER_BLP, Optimizer
@@ -43,8 +45,12 @@ from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
 from .shared_schemas import (
     MinimizerCallbackData,
     MinimizerCallbackSchema,
+    MinimizerInputData,
+    MinimizerInputSchema,
     ObjectiveFunctionCallbackData,
     ObjectiveFunctionCallbackSchema,
+    TaskStatusChanged,
+    TaskStatusChangedSchema,
 )
 
 
@@ -189,7 +195,7 @@ class OptimizerSetupProcessStep(MethodView):
         db_task.save(commit=True)
 
         min_callback_url = url_for(
-            f"{OPTIMIZER_BLP.name}.{MinimizeCallback.__name__}",
+            f"{OPTIMIZER_BLP.name}.{MinimizerSetupCallback.__name__}",
             db_id=db_task.id,
             _external=True,
         )
@@ -215,7 +221,7 @@ class OptimizerSetupProcessStep(MethodView):
         db_task.save(commit=True)
 
         of_callback_url = url_for(
-            f"{OPTIMIZER_BLP.name}.{ObjectiveFunctionCallback.__name__}",
+            f"{OPTIMIZER_BLP.name}.{ObjectiveFunctionSetupCallback.__name__}",
             db_id=db_task.id,
             _external=True,
         )
@@ -255,8 +261,8 @@ class OptimizerSetupProcessStep(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/objective-function-callback/")
-class ObjectiveFunctionCallback(MethodView):
+@OPTIMIZER_BLP.route("/<int:db_id>/objective-function-setup-callback/")
+class ObjectiveFunctionSetupCallback(MethodView):
     """Callback function for the objective-function plugin."""
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
@@ -299,8 +305,8 @@ class ObjectiveFunctionCallback(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/minimizer-callback/")
-class MinimizeCallback(MethodView):
+@OPTIMIZER_BLP.route("/<int:db_id>/minimizer-setup-callback/")
+class MinimizerSetupCallback(MethodView):
     """Callback function for the minimizer plugin."""
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
@@ -312,19 +318,60 @@ class MinimizeCallback(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.data["minimize_endpoint_url"] = arguments.minimize_endpoint_url
         db_task.progress_value = 75
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        task: chain = optimize_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
+        input_file_url: str = db_task.data.get("input_file_url")
+        target_variable_name: str = db_task.data.get("target_variable")
+        calc_loss_endpoint_url: str = db_task.data.get("calc_loss_endpoint_url")
+
+        X, y = get_features_and_target(input_file_url, target_variable_name)
+
+        min_input_data = MinimizerInputSchema().dump(
+            MinimizerInputData(
+                x=X,
+                y=y,
+                calc_loss_endpoint_url=calc_loss_endpoint_url,
+                callback_url=url_for(
+                    f"{OPTIMIZER_BLP.name}.{MinimizerResultCallback.__name__}",
+                    db_id=db_task.id,
+                    _external=True,
+                ),
+            )
         )
 
-        task.link_error(save_task_error.s(db_id=db_task.id))
+        response = requests.post(arguments.minimize_endpoint_url, json=min_input_data)
 
+        response.raise_for_status()
+
+
+@OPTIMIZER_BLP.route("/<int:db_id>/minimizer-result-callback/")
+class MinimizerResultCallback(MethodView):
+    """Callback endpoint for the minimizer plugin after minimization."""
+
+    @OPTIMIZER_BLP.response(HTTPStatus.OK)
+    @OPTIMIZER_BLP.arguments(TaskStatusChangedSchema(unknown=EXCLUDE), location="json")
+    def post(self, arguments: TaskStatusChanged, db_id: int):
+        """Callback endpoint for the minimizer plugin after minimization."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        if arguments.status != "SUCCESS" or arguments.url is None:
+            db_task.status = "FAILURE"
+            db_task.save(commit=True)
+            return
+
+        db_task.data["minimizer_result_url"] = arguments.url
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        task: chain = echo_results.s(db_id=db_id) | save_task_result.s(db_id=db_id)
+        task.link_error(save_task_error.s(db_id=db_id))
         task.apply_async()
-
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
