@@ -1,6 +1,6 @@
 This folder contains plugins that use Qiskit for machine learning.
 
-The following dependencies can be used by these plugins:
+The following dependencies are used by these plugins:
 - qiskit~=0.43
 - qiskit-machine-learning~=0.4.0
 - scikit-learn~=1.1

@@ -1,6 +1,6 @@
 This folder contains plugins that implement machine learning algorithms with pennylane and qiskit.
 
-The following dependencies can be used by these plugins:
+The following dependencies are used by these plugins:
 - matplotlib~=3.5.1
 - qiskit~=0.43
 - pennylane~=0.30
