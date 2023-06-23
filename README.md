@@ -57,6 +57,21 @@ poetry run invoke start-broker
 poetry run invoke worker  # use strg+c to stop worker
 ```
 
+### Plugin folders
+The environment variable `PLUGIN_FOLDERS` defines in which folders the plugin runner will search for plugins.
+It will only search at the top-level of the specified folders for plugin files and plugin packages, but it will not search recursively.
+Multiple folders need to be separated by a `:` e.g. `./plugins:./other-plugins`
+For information on where the default values are specified and how to overwrite them see [here](#development).
+
+Plugins that are under active development should be placed in the `./plugins` folder.
+Plugins that are finished should be placed in a subfolder of `./stable_plugins`.
+The subfolders of `./stable_plugins` group the plugins by theme and also by dependencies.
+Inside a subfolder all dependencies of all plugins must be compatible with each other.
+If you add a new subfolder with new plugins, and the dependencies are compatible with every plugin that is loaded by default, add this subfolder to the `PLUGIN_FOLDERS` environemnt variable in `.flaskenv`.
+If you add a dependency or change the version of a dependency inside a specific subfolder, you need to test every plugin in this subfolder to make sure that there are no dependency conflicts and everything still works.
+
+When many plugins are in use, many different dependencies will be installed which can lead to conflicts.
+Then it is necessary to only load a subset of the plugins via the `PLUGIN_FOLDERS` environment variable.
 
 ### Debugging with VSCode
 

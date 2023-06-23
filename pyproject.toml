@@ -14,7 +14,7 @@ Flask-Cors = "^3.0.10"
 Flask-SQLAlchemy = "^3.0"
 Flask-Migrate = "^4.0.0"
 flask-babel = "^3.0.0"
-flask-smorest = "^0.40.0"
+flask-smorest = "^0.42"
 tomlkit = "^0.11.6"
 packaging = "^23.0"
 celery = "^5.2.2"
@@ -29,6 +29,7 @@ psycopg2 = { version = "^2.9.3", optional = true }
 PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
+urllib3 = "^1.26"  # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
 
 [tool.poetry.dev-dependencies]
 black = ">=23.1.0"
