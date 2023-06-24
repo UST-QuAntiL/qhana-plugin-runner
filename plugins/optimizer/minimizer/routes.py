@@ -28,6 +28,8 @@ from plugins.optimizer.coordinator.shared_schemas import (
     MinimizerInputData,
     MinimizerInputSchema,
 )
+from plugins.optimizer.interaction_utils.schemas import CallbackURLData, CallbackURLSchema
+from plugins.optimizer.interaction_utils.tasks import make_callback
 from plugins.optimizer.minimizer import MINIMIZER_BLP, Minimizer
 from plugins.optimizer.minimizer.schemas import (
     MinimizerEnum,
@@ -36,8 +38,6 @@ from plugins.optimizer.minimizer.schemas import (
     MinimizerTaskResponseSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
-    CallbackURLData,
-    CallbackURLSchema,
     DataMetadata,
     EntryPoint,
     PluginMetadata,
@@ -45,7 +45,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.requests import make_callback
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .tasks import minimize_task
