@@ -23,9 +23,7 @@ from flask import Flask
 from flask.globals import current_app
 from pyrfc6266 import requests_response_to_filename, secure_filename
 from requests import Session
-import requests
 from requests.models import Response
-import urllib.parse
 
 REQUEST_SESSION = Session()
 
@@ -93,11 +91,3 @@ def open_url_as_file_like(
         yield filename, response.raw, content_type
     finally:
         response.close()
-
-
-def make_callback(callback_url: str, callback_data) -> Response:
-    """Make a callback to the given callback_url with the given callback_data."""
-    callback_url = urllib.parse.unquote(callback_url)
-
-    response = requests.post(callback_url, json=callback_data)
-    return response
