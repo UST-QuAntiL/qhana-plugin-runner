@@ -46,9 +46,9 @@ def get_href(db_host: str, db_port: Optional[int], db_database: str):
     return result + db_database
 
 
-def prep_first_inputs(input_params: FirstInputParameters) -> \
-    Tuple[DBEnum, Optional[str], Optional[int], Optional[str], Optional[str], str]:
-
+def prep_first_inputs(
+    input_params: FirstInputParameters,
+) -> Tuple[DBEnum, Optional[str], Optional[int], Optional[str], Optional[str], str]:
     db_enum = input_params.db_enum
     db_host = None if input_params.db_host == "" else input_params.db_host
     db_port = None if input_params.db_port == -1 else input_params.db_port
@@ -71,9 +71,13 @@ def first_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: FirstInputParameters = FirstInputParametersSchema().loads(task_data.parameters)
+    input_params: FirstInputParameters = FirstInputParametersSchema().loads(
+        task_data.parameters
+    )
 
-    db_enum, db_host, db_port, db_user, db_password, db_database = prep_first_inputs(input_params)
+    db_enum, db_host, db_port, db_user, db_password, db_database = prep_first_inputs(
+        input_params
+    )
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
@@ -83,10 +87,16 @@ def first_task(self, db_id: int) -> str:
         db_host, db_port, db_user, db_password, db_database
     )
 
-    task_data.data.update(dict(
-        db_type=db_type, db_host=db_host, db_port=db_port, db_user=db_user, db_password=db_password,
-        db_database=db_database
-    ))
+    task_data.data.update(
+        dict(
+            db_type=db_type,
+            db_host=db_host,
+            db_port=db_port,
+            db_user=db_user,
+            db_password=db_password,
+            db_database=db_database,
+        )
+    )
 
     task_data.save(commit=True)
 
@@ -108,14 +118,18 @@ def second_task(self, db_id: int) -> str:
     # Previous parameters
     previous_input = FirstInputParameters(
         db_enum=DBEnum[task_data.data["db_type"]],
-        **{key: value for key, value in task_data.data.items() if key != "db_type"}
+        **{key: value for key, value in task_data.data.items() if key != "db_type"},
     )
 
-    db_enum, db_host, db_port, db_user, db_password, db_database = prep_first_inputs(previous_input)
+    db_enum, db_host, db_port, db_user, db_password, db_database = prep_first_inputs(
+        previous_input
+    )
 
     TASK_LOGGER.info(f"Loaded input from previous step from db: {task_data.data}")
 
-    input_params: SecondInputParameters = SecondInputParametersSchema().loads(task_data.parameters)
+    input_params: SecondInputParameters = SecondInputParametersSchema().loads(
+        task_data.parameters
+    )
 
     db_query = input_params.db_query
     save_table = input_params.save_table

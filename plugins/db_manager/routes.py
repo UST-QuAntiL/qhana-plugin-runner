@@ -29,7 +29,11 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import DBManager_BLP, DBManagerPlugin
-from .schemas import FirstInputParametersSchema, SecondInputParametersSchema, TaskResponseSchema
+from .schemas import (
+    FirstInputParametersSchema,
+    SecondInputParametersSchema,
+    TaskResponseSchema,
+)
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -155,7 +159,9 @@ class FirstMicroFrontend(MethodView):
 
 @DBManager_BLP.route("/ui/first_frontend_js/")
 def get_first_frontend_js():
-    return send_file(Path(__file__).parent / "first_frontend.js", mimetype="text/javascript")
+    return send_file(
+        Path(__file__).parent / "first_frontend.js", mimetype="text/javascript"
+    )
 
 
 @DBManager_BLP.route("/process/")
@@ -176,10 +182,16 @@ class FirstProcessView(MethodView):
         # next step
         step_id = "2.0"
         href = url_for(
-            f"{DBManager_BLP.name}.SecondProcessView", db_id=db_task.id, step_id=step_id, _external=True
+            f"{DBManager_BLP.name}.SecondProcessView",
+            db_id=db_task.id,
+            step_id=step_id,
+            _external=True,
         )
         ui_href = url_for(
-            f"{DBManager_BLP.name}.SecondMicroFrontend", db_id=db_task.id, step_id=step_id, _external=True
+            f"{DBManager_BLP.name}.SecondMicroFrontend",
+            db_id=db_task.id,
+            step_id=step_id,
+            _external=True,
         )
 
         # all tasks need to know about db id to load the db entry
@@ -248,7 +260,11 @@ class SecondMicroFrontend(MethodView):
                 schema=schema,
                 values=data_dict,
                 errors=errors,
-                process=url_for(f"{DBManager_BLP.name}.SecondProcessView", db_id=db_id, step_id=step_id),
+                process=url_for(
+                    f"{DBManager_BLP.name}.SecondProcessView",
+                    db_id=db_id,
+                    step_id=step_id,
+                ),
                 frontendjs=url_for(f"{DBManager_BLP.name}.get_first_frontend_js"),
             )
         )
@@ -256,14 +272,18 @@ class SecondMicroFrontend(MethodView):
 
 @DBManager_BLP.route("/ui/first_frontend_js/")
 def get_first_frontend_js():
-    return send_file(Path(__file__).parent / "first_frontend.js", mimetype="text/javascript")
+    return send_file(
+        Path(__file__).parent / "first_frontend.js", mimetype="text/javascript"
+    )
 
 
 @DBManager_BLP.route("/<int:db_id>/<float:step_id>-process/")
 class SecondProcessView(MethodView):
     """Start a long running processing task."""
 
-    @DBManager_BLP.arguments(SecondInputParametersSchema(unknown=EXCLUDE), location="form")
+    @DBManager_BLP.arguments(
+        SecondInputParametersSchema(unknown=EXCLUDE), location="form"
+    )
     @DBManager_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @DBManager_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int, step_id: float):
