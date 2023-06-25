@@ -17,6 +17,109 @@ class NumpyArray(ma.fields.Field):
 
 
 @dataclass
+class LossResponseData:
+    loss: float
+
+
+class LossResponseSchema(MaBaseSchema):
+    loss = ma.fields.Float(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return LossResponseData(**data)
+
+
+@dataclass
+class TaskStatusChanged:
+    url: str
+    status: str
+
+
+class TaskStatusChangedSchema(MaBaseSchema):
+    url = ma.fields.Url(required=True, allow_none=True)
+    status = ma.fields.String(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return TaskStatusChanged(**data)
+
+
+@dataclass
+class CalcLossInputData:
+    x: np.ndarray
+    y: np.ndarray
+    x0: np.ndarray
+
+
+class CalcLossInputDataSchema(MaBaseSchema):
+    x: NumpyArray = NumpyArray(required=True, allow_none=False)
+    y: NumpyArray = NumpyArray(required=True, allow_none=False)
+    x0: NumpyArray = NumpyArray(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return CalcLossInputData(**data)
+
+
+@dataclass
+class ObjectiveFunctionCallbackData:
+    calc_loss_endpoint_url: str
+
+
+class ObjectiveFunctionCallbackSchema(MaBaseSchema):
+    calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return ObjectiveFunctionCallbackData(**data)
+
+
+@dataclass
+class MinimizerCallbackData:
+    minimize_endpoint_url: str
+
+
+class MinimizerCallbackSchema(MaBaseSchema):
+    minimize_endpoint_url = ma.fields.Url(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return MinimizerCallbackData(**data)
+
+
+@dataclass
+class MinimizerInputData:
+    x: np.ndarray
+    y: np.ndarray
+    calc_loss_endpoint_url: str
+    callback_url: Optional[str] = None
+
+
+class MinimizerInputSchema(MaBaseSchema):
+    x = NumpyArray(required=True, allow_none=False)
+    y = NumpyArray(required=True, allow_none=False)
+    calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
+    callback_url = ma.fields.Url(required=False, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return MinimizerInputData(**data)
+
+
+@dataclass
+class MinimizerResult:
+    weights: np.ndarray
+
+
+class MinimizerResultSchema(MaBaseSchema):
+    weights = NumpyArray(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return MinimizerResult(**data)
+
+
+@dataclass
 class MinimizationInteractionEndpointInputData:
     fun = str
     x0 = Optional[np.ndarray]

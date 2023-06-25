@@ -22,12 +22,6 @@ from flask import Response, redirect, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.shared_schemas import (
-    MinimizerCallbackData,
-    MinimizerCallbackSchema,
-    MinimizerInputData,
-    MinimizerInputSchema,
-)
 from plugins.optimizer.interaction_utils.schemas import CallbackURLData, CallbackURLSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
 from plugins.optimizer.minimizer import MINIMIZER_BLP, Minimizer
@@ -36,6 +30,12 @@ from plugins.optimizer.minimizer.schemas import (
     MinimizerSetupTaskInputData,
     MinimizerSetupTaskInputSchema,
     MinimizerTaskResponseSchema,
+)
+from plugins.optimizer.shared.schemas import (
+    MinimizerCallbackData,
+    MinimizerCallbackSchema,
+    MinimizerInputData,
+    MinimizerInputSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
