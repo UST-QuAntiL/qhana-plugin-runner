@@ -265,15 +265,15 @@ class SecondMicroFrontend(MethodView):
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                frontendjs=url_for(f"{DBManager_BLP.name}.get_first_frontend_js"),
+                frontendjs=url_for(f"{DBManager_BLP.name}.get_second_frontend_js"),
             )
         )
 
 
-@DBManager_BLP.route("/ui/first_frontend_js/")
-def get_first_frontend_js():
+@DBManager_BLP.route("/ui/second_frontend_js/")
+def get_second_frontend_js():
     return send_file(
-        Path(__file__).parent / "first_frontend.js", mimetype="text/javascript"
+        Path(__file__).parent / "second_frontend.js", mimetype="text/javascript"
     )
 
 

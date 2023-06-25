@@ -13,13 +13,11 @@
 // limitations under the License.
 
 var db_enum_value = document.getElementById("db_enum");
-var save_table_value = document.getElementById("save_table");
 
 var db_host_vis = document.getElementById("db_host").parentNode.parentNode;
 var db_port_vis = document.getElementById("db_port").parentNode.parentNode;
 var db_user_vis = document.getElementById("db_user").parentNode.parentNode;
 var db_password_vis = document.getElementById("db_password").parentNode.parentNode;
-var attribute_to_id_vis = document.getElementById("id_attribute").parentNode.parentNode;
 
 function db_enum_change() {
     db_host_vis.style.display = "none";
@@ -40,15 +38,6 @@ function db_enum_change() {
 }
 
 
-function save_table_change() {
-    attribute_to_id_vis.style.display = "none";
-    if (save_table_value.checked === true){
-        attribute_to_id_vis.style.display = "block"
-    }
-}
-
 db_enum_change();
-save_table_change();
 
 db_enum_value.addEventListener("change", db_enum_change);
-save_table_value.addEventListener("change", save_table_change);
