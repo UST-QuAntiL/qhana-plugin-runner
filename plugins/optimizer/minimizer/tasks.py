@@ -19,14 +19,7 @@ import numpy as np
 import requests
 from celery.utils.log import get_task_logger
 from scipy.optimize import minimize as scipy_minimize
-
-from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
-from qhana_plugin_runner.storage import STORE
-
-from . import Minimizer
-from ..coordinator.shared_schemas import (
+from plugins.optimizer.shared.schemas import (
     CalcLossInputData,
     CalcLossInputDataSchema,
     LossResponseData,
@@ -34,6 +27,13 @@ from ..coordinator.shared_schemas import (
     MinimizerInputData,
     MinimizerInputSchema,
 )
+
+from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
+from qhana_plugin_runner.storage import STORE
+
+from . import Minimizer
 
 TASK_LOGGER = get_task_logger(__name__)
 
