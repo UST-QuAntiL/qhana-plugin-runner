@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from typing import Mapping
+from typing import Mapping, Optional
 
 from pathlib import Path
 
 from celery.canvas import chain
+from celery.utils.log import get_task_logger
 from flask import send_file
 from flask import Response
 from flask import redirect
@@ -28,7 +29,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import DBManager_BLP, DBManagerPlugin
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import FirstInputParametersSchema, SecondInputParametersSchema, TaskResponseSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -38,9 +39,14 @@ from qhana_plugin_runner.api.plugin_schemas import (
     InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .tasks import calculation_task
+from colorama import Fore
+
+from .tasks import first_task, second_task
+
+
+TASK_LOGGER = get_task_logger(__name__)
 
 
 @DBManager_BLP.route("/")
@@ -59,8 +65,8 @@ class PluginsView(MethodView):
             version=DBManagerPlugin.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{DBManager_BLP.name}.ProcessView"),
-                ui_href=url_for(f"{DBManager_BLP.name}.MicroFrontend"),
+                href=url_for(f"{DBManager_BLP.name}.FirstProcessView"),
+                ui_href=url_for(f"{DBManager_BLP.name}.FirstMicroFrontend"),
                 data_input=[
                     InputDataMetadata(
                         "entity/vectors",
@@ -84,14 +90,14 @@ class PluginsView(MethodView):
 
 
 @DBManager_BLP.route("/ui/")
-class MicroFrontend(MethodView):
+class FirstMicroFrontend(MethodView):
     """Micro frontend for the db manager plugin."""
 
     @DBManager_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the db manager plugin."
     )
     @DBManager_BLP.arguments(
-        InputParametersSchema(
+        FirstInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -106,7 +112,7 @@ class MicroFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of the db manager plugin."
     )
     @DBManager_BLP.arguments(
-        InputParametersSchema(
+        FirstInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -118,14 +124,15 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        schema = InputParametersSchema()
+        schema = FirstInputParametersSchema()
 
         data_dict = dict(data)
         fields = schema.fields
         # define default values
         default_values = {
-            schema.fields["db_host"].data_key: "localhost",
-            schema.fields["db_port"].data_key: -1,
+            fields["db_host"].data_key: "localhost",
+            fields["db_port"].data_key: -1,
+            fields["db_port"].data_key: -1,
         }
 
         # overwrite default values with other values if possible
@@ -140,41 +147,145 @@ class MicroFrontend(MethodView):
                 schema=schema,
                 values=data_dict,
                 errors=errors,
-                process=url_for(f"{DBManager_BLP.name}.ProcessView"),
-                frontendjs=url_for(f"{DBManager_BLP.name}.get_frontend_js"),
+                process=url_for(f"{DBManager_BLP.name}.FirstProcessView"),
+                frontendjs=url_for(f"{DBManager_BLP.name}.get_first_frontend_js"),
             )
         )
 
 
-@DBManager_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
+@DBManager_BLP.route("/ui/first_frontend_js/")
+def get_first_frontend_js():
+    return send_file(Path(__file__).parent / "first_frontend.js", mimetype="text/javascript")
 
 
 @DBManager_BLP.route("/process/")
-class ProcessView(MethodView):
+class FirstProcessView(MethodView):
     """Start a long running processing task."""
 
-    @DBManager_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
+    @DBManager_BLP.arguments(FirstInputParametersSchema(unknown=EXCLUDE), location="form")
     @DBManager_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @DBManager_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
         db_task = ProcessingTask(
-            task_name=calculation_task.name,
-            parameters=InputParametersSchema().dumps(arguments),
+            task_name=first_task.name,
+            parameters=FirstInputParametersSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 
+        # next step
+        step_id = "2.0"
+        href = url_for(
+            f"{DBManager_BLP.name}.SecondProcessView", db_id=db_task.id, step_id=step_id, _external=True
+        )
+        ui_href = url_for(
+            f"{DBManager_BLP.name}.SecondMicroFrontend", db_id=db_task.id, step_id=step_id, _external=True
+        )
+
         # all tasks need to know about db id to load the db entry
-        task: chain = calculation_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
+        task: chain = first_task.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@DBManager_BLP.route("/<int:db_id>/<float:step_id>/ui/")
+class SecondMicroFrontend(MethodView):
+    """Micro frontend for the db manager plugin."""
+
+    @DBManager_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+    )
+    @DBManager_BLP.arguments(
+        SecondInputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @DBManager_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int, step_id: float):
+        """Return the micro frontend."""
+        return self.render(request.form, db_id, step_id, errors)
+
+    @DBManager_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+    )
+    @DBManager_BLP.arguments(
+        SecondInputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @DBManager_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int, step_id: float):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, db_id, step_id, errors)
+
+    def render(self, data: Mapping, db_id: int, step_id: float, errors: dict):
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        schema = SecondInputParametersSchema()
+
+        data_dict = dict(data)
+
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=DBManagerPlugin.instance.name,
+                version=DBManagerPlugin.instance.version,
+                schema=schema,
+                values=data_dict,
+                errors=errors,
+                process=url_for(f"{DBManager_BLP.name}.SecondProcessView", db_id=db_id, step_id=step_id),
+                frontendjs=url_for(f"{DBManager_BLP.name}.get_first_frontend_js"),
+            )
+        )
+
+
+@DBManager_BLP.route("/ui/first_frontend_js/")
+def get_first_frontend_js():
+    return send_file(Path(__file__).parent / "first_frontend.js", mimetype="text/javascript")
+
+
+@DBManager_BLP.route("/<int:db_id>/<float:step_id>-process/")
+class SecondProcessView(MethodView):
+    """Start a long running processing task."""
+
+    @DBManager_BLP.arguments(SecondInputParametersSchema(unknown=EXCLUDE), location="form")
+    @DBManager_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @DBManager_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments, db_id: int, step_id: float):
+        """Start the calculation task."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.parameters = SecondInputParametersSchema().dumps(arguments)
+
+        db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = second_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER

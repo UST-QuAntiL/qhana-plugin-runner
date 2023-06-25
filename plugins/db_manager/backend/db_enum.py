@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from enum import Enum
 from collections import OrderedDict
 from sqlalchemy import URL
@@ -57,16 +59,16 @@ class DBEnum(Enum):
 
     def get_connected_db_manager(
         self, host: str, port: int, user: str, password: str, database: str
-    ) -> DBManager:
+    ) -> Tuple[DBManager, str]:
         if self == DBEnum.auto:
             return self._guess_db_manager(host, port, user, password, database)
         manager = DBManager(self._get_db_url(host, port, user, password, database))
         manager.connect()
-        return manager
+        return manager, str(self.name)
 
     def _guess_db_manager(
         self, host: str, port: int, user: str, password: str, database: str
-    ) -> DBManager:
+    ) -> Tuple[DBManager, str]:
         for manager_name, dialect_driver in DBEnum._get_db_dialect_drivers().items():
             try:
                 manager = DBManager(
@@ -74,7 +76,7 @@ class DBEnum(Enum):
                 )
                 manager.connect()
                 TASK_LOGGER.info(f"Connected using {manager_name}")
-                return manager
+                return manager, manager_name
             except:
                 continue
         raise NotImplementedError(

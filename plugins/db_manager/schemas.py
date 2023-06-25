@@ -24,6 +24,8 @@ from .backend.db_enum import DBEnum
 
 from dataclasses import dataclass
 
+from colorama import Fore
+
 
 class TaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
@@ -32,13 +34,23 @@ class TaskResponseSchema(MaBaseSchema):
 
 
 @dataclass(repr=False)
-class InputParameters:
+class FirstInputParameters:
     db_enum: DBEnum
     db_host: str
     db_port: int
     db_user: str
     db_password: str
     db_database: str
+
+    def __str__(self):
+        variables = self.__dict__.copy()
+        variables["db_password"] = ""
+        return str(variables)
+
+
+
+@dataclass(repr=False)
+class SecondInputParameters:
     db_query: str = ""
     save_table: bool = False
     id_attribute: str = ""
@@ -49,7 +61,7 @@ class InputParameters:
         return str(variables)
 
 
-class InputParametersSchema(FrontendFormBaseSchema):
+class FirstInputParametersSchema(FrontendFormBaseSchema):
     db_enum = EnumField(
         DBEnum,
         required=True,
@@ -57,10 +69,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Database type",
             "description": "Determines the type of database, e.g. MySQL, SQLite, etc.<br>"
-            "If ``auto`` is selected, then the plugin tries to resolve this itself. In the case of "
-            "``auto``, not every field needs to be filled out, depending on the database. Thus, you "
-            "should always try to submit, even if you are uncertain, if the provided information is "
-            "sufficient.",
+                           "If ``auto`` is selected, then the plugin tries to resolve this itself. In the case of "
+                           "``auto``, not every field needs to be filled out, depending on the database. Thus, you "
+                           "should always try to submit, even if you are uncertain, if the provided information is "
+                           "sufficient.",
             "input_type": "select",
         },
     )
@@ -107,10 +119,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "DB database",
             "description": "Name of the database. "
-            "In the case of SQLite, this parameter should be the path to the database file.",
+                           "In the case of SQLite, this parameter should be the path to the database file.",
             "input_type": "text",
         },
     )
+
+    @post_load
+    def make_input_params(self, data, **kwargs) -> FirstInputParameters:
+        return FirstInputParameters(**data)
+
+
+class SecondInputParametersSchema(FrontendFormBaseSchema):
     db_query = ma.fields.String(
         required=True,
         allow_none=False,
@@ -135,12 +154,12 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "ID attribute",
             "description": "This determines the attribute that should be used as the ID foreach entity. "
-            "If the attribute is not unique for each entry in the queried table, then the index will "
-            "be used as the entity's id.",
+                           "If the attribute is not unique for each entry in the queried table, then the index will "
+                           "be used as the entity's id.",
             "input_type": "text",
         },
     )
 
     @post_load
-    def make_input_params(self, data, **kwargs) -> InputParameters:
-        return InputParameters(**data)
+    def make_input_params(self, data, **kwargs) -> SecondInputParameters:
+        return SecondInputParameters(**data)
