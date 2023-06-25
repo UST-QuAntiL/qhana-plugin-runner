@@ -28,7 +28,6 @@ from .schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 
 from qhana_plugin_runner.storage import STORE
 

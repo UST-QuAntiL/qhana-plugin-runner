@@ -24,8 +24,6 @@ from .backend.db_enum import DBEnum
 
 from dataclasses import dataclass
 
-from colorama import Fore
-
 
 class TaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
