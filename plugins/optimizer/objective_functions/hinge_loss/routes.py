@@ -20,15 +20,15 @@ from flask import Response, abort, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.shared_schemas import (
+from plugins.optimizer.interaction_utils.schemas import CallbackURLData, CallbackURLSchema
+from plugins.optimizer.interaction_utils.tasks import make_callback
+from plugins.optimizer.shared.schemas import (
     CalcLossInputData,
     CalcLossInputDataSchema,
     LossResponseSchema,
     ObjectiveFunctionCallbackData,
     ObjectiveFunctionCallbackSchema,
 )
-from plugins.optimizer.interaction_utils.schemas import CallbackURLData, CallbackURLSchema
-from plugins.optimizer.interaction_utils.tasks import make_callback
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,

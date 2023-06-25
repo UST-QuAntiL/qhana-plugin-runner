@@ -29,6 +29,16 @@ from marshmallow import EXCLUDE
 
 from plugins.optimizer.coordinator.tasks import echo_results, get_features_and_target
 from plugins.optimizer.interaction_utils.tasks import invoke_task
+from plugins.optimizer.shared.schemas import (
+    MinimizerCallbackData,
+    MinimizerCallbackSchema,
+    MinimizerInputData,
+    MinimizerInputSchema,
+    ObjectiveFunctionCallbackData,
+    ObjectiveFunctionCallbackSchema,
+    TaskStatusChanged,
+    TaskStatusChangedSchema,
+)
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -41,16 +51,6 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
-from .shared_schemas import (
-    MinimizerCallbackData,
-    MinimizerCallbackSchema,
-    MinimizerInputData,
-    MinimizerInputSchema,
-    ObjectiveFunctionCallbackData,
-    ObjectiveFunctionCallbackSchema,
-    TaskStatusChanged,
-    TaskStatusChangedSchema,
-)
 
 
 def get_plugin_metadata(plugin_url) -> PluginMetadata:
