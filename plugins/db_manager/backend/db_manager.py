@@ -3,7 +3,7 @@ from sqlalchemy import URL, create_engine, text, MetaData
 import pandas as pd
 
 
-class DBManager():
+class DBManager:
     def __init__(self, db_url: URL):
         self.connected = False
         self.connection = None
@@ -30,7 +30,10 @@ class DBManager():
         if self.metadata is None:
             self._reflect()
         print(self.metadata.tables)
-        return {table_name: [column.name for column in table.columns] for table_name, table in self.metadata.tables.items()}
+        return {
+            table_name: [column.name for column in table.columns]
+            for table_name, table in self.metadata.tables.items()
+        }
 
     def get_query_as_dataframe(self, query: str) -> pd.DataFrame:
         df = None

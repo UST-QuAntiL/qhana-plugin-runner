@@ -118,7 +118,11 @@ def second_task(self, db_id: int) -> str:
     # Previous parameters
     previous_input = FirstInputParameters(
         db_enum=DBEnum[task_data.data["db_type"]],
-        **{key: value for key, value in task_data.data.items() if key != "db_type" and key != "db_tables_and_columns"},
+        **{
+            key: value
+            for key, value in task_data.data.items()
+            if key != "db_type" and key != "db_tables_and_columns"
+        },
     )
 
     db_enum, db_host, db_port, db_user, db_password, db_database = prep_first_inputs(

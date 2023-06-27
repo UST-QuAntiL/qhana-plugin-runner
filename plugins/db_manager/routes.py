@@ -253,7 +253,7 @@ class SecondMicroFrontend(MethodView):
         fields = schema.fields
         # define default values
         default_values = {
-            #fields["str_list"].data_key: ["localhost", "localhost", "peter"],
+            # fields["str_list"].data_key: ["localhost", "localhost", "peter"],
         }
 
         # overwrite default values with other values if possible
