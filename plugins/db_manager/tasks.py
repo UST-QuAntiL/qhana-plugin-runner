@@ -100,7 +100,7 @@ def first_task(self, db_id: int) -> str:
 
     task_data.save(commit=True)
 
-    return "Result stored in file"
+    return "First step: checked database"
 
 
 @CELERY.task(name=f"{DBManagerPlugin.instance.identifier}.second_task", bind=True)
@@ -134,6 +134,10 @@ def second_task(self, db_id: int) -> str:
     db_query = input_params.db_query
     save_table = input_params.save_table
     id_attribute = input_params.id_attribute
+    table_name = input_params.table_name
+    columns_list = input_params.columns_list.replace(",", ", ")
+
+    print(f"columns_list: {columns_list}")
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
@@ -143,8 +147,16 @@ def second_task(self, db_id: int) -> str:
         db_host, db_port, db_user, db_password, db_database
     )
     df = None
-    if save_table:
-        df = db_manager.get_query_as_dataframe(db_query)
+    table_query = ""
+    if db_query.lower().startswith("select"):
+        table_query = db_query
+    elif len(columns_list) != 0:
+        table_query = f"SELECT {columns_list} FROM {table_name}"
+
+    print(f"table_query: {table_query}")
+
+    if table_query != "":
+        df = db_manager.get_query_as_dataframe(table_query)
 
         # Check if given attribute can be used as a unique identifier
         # If so, use attribute
@@ -158,15 +170,16 @@ def second_task(self, db_id: int) -> str:
         db_manager.execute_query(db_query)
 
     # Output data
-    if df is not None:
-        with SpooledTemporaryFile(mode="w") as output:
-            df.to_csv(output, index=False)
-            STORE.persist_task_result(
-                db_id,
-                output,
-                "entities.csv",
-                "entity",
-                "text/csv",
-            )
+    if save_table:
+        if df is not None:
+            with SpooledTemporaryFile(mode="w") as output:
+                df.to_csv(output, index=False)
+                STORE.persist_task_result(
+                    db_id,
+                    output,
+                    "entities.csv",
+                    "entity",
+                    "text/csv",
+                )
 
-    return "Result stored in file"
+    return "Second step: result stored in file"

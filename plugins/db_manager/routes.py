@@ -14,6 +14,7 @@
 
 from http import HTTPStatus
 from typing import Mapping, Optional
+from json import dumps
 
 from pathlib import Path
 
@@ -249,10 +250,19 @@ class SecondMicroFrontend(MethodView):
         schema = SecondInputParametersSchema()
 
         data_dict = dict(data)
+        fields = schema.fields
+        # define default values
+        default_values = {
+            #fields["str_list"].data_key: ["localhost", "localhost", "peter"],
+        }
+
+        # overwrite default values with other values if possible
+        default_values.update(data_dict)
+        data_dict = default_values
 
         return Response(
             render_template(
-                "simple_template.html",
+                "additional_info_template.html",
                 name=DBManagerPlugin.instance.name,
                 version=DBManagerPlugin.instance.version,
                 schema=schema,
@@ -264,6 +274,7 @@ class SecondMicroFrontend(MethodView):
                     step_id=step_id,
                 ),
                 frontendjs=url_for(f"{DBManager_BLP.name}.get_second_frontend_js"),
+                additional_info=dumps(db_task.data["db_tables_and_columns"]),
             )
         )
 

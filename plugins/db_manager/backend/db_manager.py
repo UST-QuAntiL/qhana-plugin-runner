@@ -29,7 +29,7 @@ class DBManager():
     def get_tables_and_columns(self):
         if self.metadata is None:
             self._reflect()
-        print([column.name for column in self.metadata.tables["users"].columns])
+        print(self.metadata.tables)
         return {table_name: [column.name for column in table.columns] for table_name, table in self.metadata.tables.items()}
 
     def get_query_as_dataframe(self, query: str) -> pd.DataFrame:
