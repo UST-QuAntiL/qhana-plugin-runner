@@ -135,7 +135,6 @@ class FirstMicroFrontend(MethodView):
         default_values = {
             fields["db_host"].data_key: "localhost",
             fields["db_port"].data_key: -1,
-            fields["db_port"].data_key: -1,
         }
 
         # overwrite default values with other values if possible
@@ -144,7 +143,7 @@ class FirstMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "template.html",
                 name=DBManagerPlugin.instance.name,
                 version=DBManagerPlugin.instance.version,
                 schema=schema,
@@ -262,7 +261,7 @@ class SecondMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "additional_info_template.html",
+                "template.html",
                 name=DBManagerPlugin.instance.name,
                 version=DBManagerPlugin.instance.version,
                 schema=schema,

@@ -29,6 +29,7 @@ DBManager_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="DB Manager plugin API",
+    template_folder="",
 )
 
 
