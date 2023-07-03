@@ -218,7 +218,8 @@ class InteractionEndpointType(Enum):
     """
 
     minimization_step = "minimization-step"
-    objective_function = "objective-function"
+    objective_function_calc = "objective-function_calc"
+    of_additional_info = "of-additional-info"
 
 
 @dataclass
