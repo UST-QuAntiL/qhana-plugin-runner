@@ -75,6 +75,19 @@ class ObjectiveFunctionCallbackSchema(MaBaseSchema):
 
 
 @dataclass
+class ObjectiveFunctionInvocationCallback:
+    db_id: int
+
+
+class ObjectiveFunctionInvocationCallbackSchema(MaBaseSchema):
+    db_id = ma.fields.Integer(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return ObjectiveFunctionInvocationCallback(**data)
+
+
+@dataclass
 class MinimizerCallbackData:
     minimize_endpoint_url: str
 
@@ -117,6 +130,36 @@ class MinimizerResultSchema(MaBaseSchema):
     @ma.post_load
     def make_object(self, data, **kwargs):
         return MinimizerResult(**data)
+
+
+@dataclass
+class ObjectiveFunctionPassData:
+    x: np.ndarray
+    y: np.ndarray
+    callback_url: str
+
+
+class ObjectiveFunctionPassDataSchema(MaBaseSchema):
+    x = NumpyArray(required=True, allow_none=False)
+    y = NumpyArray(required=True, allow_none=False)
+    callback_url = ma.fields.Url(required=False, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return ObjectiveFunctionPassData(**data)
+
+
+@dataclass
+class ObjectiveFunctionPassDataResponse:
+    number_weights: int
+
+
+class ObjectiveFunctionPassDataResponseSchema(MaBaseSchema):
+    number_weights = ma.fields.Integer(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return ObjectiveFunctionPassDataResponse(**data)
 
 
 @dataclass
