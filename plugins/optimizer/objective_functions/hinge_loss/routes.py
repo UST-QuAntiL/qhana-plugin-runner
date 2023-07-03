@@ -26,12 +26,20 @@ from plugins.optimizer.shared.schemas import (
     CalcLossInputData,
     CalcLossInputDataSchema,
     LossResponseSchema,
+    ObjectiveFunctionPassData,
+    ObjectiveFunctionPassDataSchema,
     ObjectiveFunctionCallbackData,
     ObjectiveFunctionCallbackSchema,
+    ObjectiveFunctionInvocationCallback,
+    ObjectiveFunctionInvocationCallbackSchema,
+    ObjectiveFunctionPassDataResponse,
+    ObjectiveFunctionPassDataResponseSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
+    InteractionEndpoint,
+    InteractionEndpointType,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -65,6 +73,24 @@ class PluginsView(MethodView):
             type=PluginType.processing,
             tags=HingeLoss.instance.tags,
             entry_point=EntryPoint(
+                interaction_endpoints=[
+                    InteractionEndpoint(
+                        type=InteractionEndpointType.of_additional_info,
+                        href=url_for(
+                            f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
+                            _external=True,
+                        )
+                        + "<int:db_id>/pass-data/",
+                    ),
+                    InteractionEndpoint(
+                        type=InteractionEndpointType.objective_function_calc,
+                        href=url_for(
+                            f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
+                            _external=True,
+                        )
+                        + "<int:db_id>/calc-callback-endpoint/",
+                    ),
+                ],
                 href=url_for(f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
                 ui_href=url_for(
                     f"{HINGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
@@ -172,7 +198,7 @@ class OptimizerCallbackProcess(MethodView):
     @HINGELOSS_BLP.arguments(
         CallbackURLSchema(unknown=EXCLUDE), location="query", required=True
     )
-    @HINGELOSS_BLP.response(HTTPStatus.OK, HingeLossTaskResponseSchema())
+    @HINGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionInvocationCallbackSchema())
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: HyperparamterInputData, callback: CallbackURLData):
         """Start the invoked task."""
@@ -182,19 +208,45 @@ class OptimizerCallbackProcess(MethodView):
         )
         db_task.data["c"] = arguments.c
         db_task.save(commit=True)
-        callback_url = callback.callback_url
-        calc_endpoint_url = url_for(
-            f"{HINGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
-            db_id=db_task.id,
-            _external=True,
+
+        callback_data = ObjectiveFunctionInvocationCallbackSchema().dump(
+            **ObjectiveFunctionInvocationCallback(db_id=db_task.id)
         )
 
-        callback_schema = ObjectiveFunctionCallbackSchema()
-        callback_data = callback_schema.dump(
-            ObjectiveFunctionCallbackData(calc_loss_endpoint_url=calc_endpoint_url)
+        make_callback(callback.callback_url, callback_data)
+
+
+@HINGELOSS_BLP.route("/<int:db_id>/pass-data/")
+class PassDataEndpoint(MethodView):
+    """Endpoint to add additional info to the db task."""
+
+    @HINGELOSS_BLP.arguments(
+        ObjectiveFunctionPassDataSchema(unknown=EXCLUDE),
+        location="json",
+        required=True,
+    )
+    @HINGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionPassDataResponseSchema())
+    @HINGELOSS_BLP.require_jwt("jwt", optional=True)
+    def post(self, input_data: ObjectiveFunctionPassData, db_id: int) -> dict:
+        """Endpoint to add additional info to the db task."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        serialized_data = ObjectiveFunctionPassDataSchema().dump(input_data)
+
+        db_task.data["x"] = serialized_data["x"]
+        db_task.data["y"] = serialized_data["y"]
+
+        db_task.save(commit=True)
+
+        callback_data = ObjectiveFunctionPassDataResponseSchema().dump(
+            **ObjectiveFunctionPassDataResponse(number_weights=input_data.x.shape[1])
         )
 
-        make_callback(callback_url, callback_data)
+        make_callback(input_data.callback_url, callback_data)
 
 
 @HINGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
