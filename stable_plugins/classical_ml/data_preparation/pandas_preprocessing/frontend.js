@@ -1,3 +1,4 @@
+const font_size = 13. + 1./3.
 
 const preprocessing_steps_value = document.getElementById("preprocessing_steps");
 preprocessing_steps_value.style.display = "none";
@@ -6,8 +7,12 @@ const preprocessing_steps_list = document.createElement("div");
 preprocessing_steps_list.style.cssText = "overflow: auto; max-width: 25em; margin: 0em; padding-top: 0.3em; padding-bottom: 0.3em; flex-grow: 1;";
 preprocessing_steps_list.setAttribute("id", "preprocessing_steps_list");
 preprocessing_steps_parent.appendChild(preprocessing_steps_list);
-let add_step_element;
-// preprocessing_steps_parent.appendChild(add_step_element);
+let add_step_element = document.createElement("a");
+add_step_element.setAttribute("class", "btn");
+add_step_element.innerText = "add step";
+add_step_element.addEventListener("click", add_preprocessing_step);
+preprocessing_steps_parent.parentNode.insertBefore(add_step_element, preprocessing_steps_parent.parentNode.children[2]);
+
 
 let options_and_parameters = {
     "drop na":
@@ -147,6 +152,8 @@ function get_selectable(select_options, id=null){
     selectable.addEventListener("change", function (event) {
         set_input_parameters(event.target);
     });
+    selectable.style.marginLeft = "2px";
+    selectable.style.marginRight = "2px";
     // selectable.setAttribute("select", "this.size=1; this.blur();")
     // selectable.setAttribute("onselect", "this.size=1; this.blur();")
 
@@ -158,33 +165,42 @@ function get_selectable(select_options, id=null){
         selectable.appendChild(option);
     });
 
+    let collapse_button = document.createElement("a");
+    collapse_button.setAttribute("class", "btn");
+    collapse_button.setAttribute("padding", "3px");
+    collapse_button.innerText = "collapse";
+
+
+    let remove_button = document.createElement("a");
+    remove_button.setAttribute("class", "btn");
+    remove_button.setAttribute("padding", "3px");
+    remove_button.innerText = "remove";
+    remove_button.addEventListener("click", function(event) {
+        event.target.parentNode.parentNode.remove();
+    })
+
+
     let div_wrap = document.createElement("li");
+    div_wrap.appendChild(collapse_button)
+    div_wrap.appendChild(remove_button);
     div_wrap.appendChild(selectable);
 
     return div_wrap;
 }
 
-function collapse_toggle(event){
-    console.log("collapse toggle!");
-    // collapsable.toggle("active");
-    console.log(event.target.parentNode.children);
-    let children = event.target.parentNode.children;
-    for (let i = children.length - 1; i >= 0; i--) {
-        let child = children[i];
-        if (child.name === "values") {
-            console.log("make invisible " + child.toString());
-            if (child.style.display === "block") {
-                child.style.display = "none";
-            } else {
-                child.style.display = "block";
-            }
-            break;
-        }
+function collapse_toggle(button, element){
+    if (element.style.display === "block") {
+        element.style.display = "none";
+    }
+    else {
+        element.style.display = "block";
     }
 }
 
-function make_collapsable(element) {
-    element.addEventListener("click", collapse_toggle);
+function make_collapsable(button, element) {
+    button.addEventListener("click", function (event) {
+        collapse_toggle(event.target, element);
+    });
 }
 
 
@@ -196,7 +212,7 @@ function add_preprocessing_step(param_dict={}){
     /*preprocessing_step.className = "qhana-form-input";*/
     preprocessing_step.className = "ul";
     // border: 1px solid #8f8f9d;
-    preprocessing_step.style.cssText = "max-width: 25em; list-style-type: none; margin: 0em; padding: 0.0em; flex-grow: 1; overflow-x: hidden;";
+    preprocessing_step.style.cssText = "max-width: 25em; list-style-type: none; margin: 0em; padding: 0.3em; flex-grow: 1; overflow-x: hidden;";
 
     // let collaps_button = document.createElement("div");
     // collaps_button.style.cssText = "float: left; width: 2vw; height: 2vw; max-width: 15px; max-height: 15px; background-color: #8f8f9d; border: 1px solid #8f8f9d; margin: 0em; padding: 0.0em; flex-grow: 1;";
@@ -205,14 +221,17 @@ function add_preprocessing_step(param_dict={}){
 
     let preprocessing_type = get_selectable(Object.keys(options_and_parameters));
     if (param_dict["option_type"] !== undefined) {
-        preprocessing_type.children[0].value = param_dict["option_type"];
+        preprocessing_type.children[2].value = param_dict["option_type"];
     }
     preprocessing_step.appendChild(preprocessing_type);
 
     let values = document.createElement("li");
     values.setAttribute("name", "values");
     values.style.cssText = "display: block; padding-left: 2em; padding-top: 0.3em; padding-bottom: 0.3em;";
+    values.style.display = get_value_from_dict(param_dict, "collapsed", "block");
     // values.style.display = "block";
+
+    make_collapsable(preprocessing_type.children[0], values);
     preprocessing_step.appendChild(values);
     // preprocessing_steps_list.appendChild(preprocessing_step);
 
@@ -220,7 +239,7 @@ function add_preprocessing_step(param_dict={}){
 
     preprocessing_steps_list.appendChild(preprocessing_step);
 
-    set_input_parameters(preprocessing_type.children[0], param_dict);
+    set_input_parameters(preprocessing_type.children[2], get_value_from_dict(param_dict, "input_params", {}));
 }
 
 
@@ -228,11 +247,11 @@ function compile_preprocessing_list() {
     let children = preprocessing_steps_list.children
     let compiled_list = [];
     for (let i = 0; i < children.length; i++) {
-        let selected_option = children[i].children[0].children[0].value;
-        console.log(children[i].children[0].children[0]);
-        console.log(selected_option);
+        let selected_option = children[i].children[0].children[2].value;
         let input_parameters_html = children[i].children[1].children;
-        let input_parameters = {"option_type": selected_option};
+        let step_dict = {"option_type": selected_option};
+        step_dict["collapsed"] = children[i].children[1].style.display;
+        let input_parameters = {}
         for (let j = 0; j < input_parameters_html.length; j++) {
             let input = input_parameters_html[j].children[1].children[0];
             let v = input.value;
@@ -242,7 +261,8 @@ function compile_preprocessing_list() {
             input_parameters[input.name] = v;
         }
 
-        compiled_list.push(input_parameters);
+        step_dict["input_params"] = input_parameters;
+        compiled_list.push(step_dict);
     }
 
     compiled_list = JSON.stringify(compiled_list);
@@ -274,7 +294,6 @@ function init_preprocessing_list() {
 
 init_preprocessing_list();
 
-// compile_preprocessing_list();
 
 let buttons = document.getElementsByClassName("qhana-form-buttons");
 buttons[0].addEventListener("click", compile_preprocessing_list, false);

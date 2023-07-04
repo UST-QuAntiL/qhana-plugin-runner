@@ -12,10 +12,9 @@ def all_preprocess_df(df: DataFrame, preprocessing_step_list: List[dict]):
 
 
 def preprocess_df(df: DataFrame, preprocessing_step: dict):
+    # Remove entries with value == None
     params = {
-        k: v
-        for k, v in preprocessing_step.items()
-        if v is not None and k != "option_type"
+        k: v for k, v in preprocessing_step["input_params"].items() if v is not None
     }
     processing_function = None
     if preprocessing_step["option_type"] == "drop na":
