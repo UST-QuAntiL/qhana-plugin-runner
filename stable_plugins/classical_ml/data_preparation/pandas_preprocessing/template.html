@@ -1,0 +1,29 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+    {{ super() }}
+
+    <style rel="stylesheet">
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown::before {
+            position: relative;
+            content: " \2193";
+            top: 0px;
+            right: 0px;
+            height: 20px;
+            width: 20px;
+        }
+    </style>
+{% endblock head %}
+
+{% block content %}
+    {{ super() }}
+{% endblock content %}
+
+{% block script %}
+    {{ super() }}
+
+{% endblock script %}
