@@ -45,20 +45,20 @@ class TaskStatusChangedSchema(MaBaseSchema):
 
 
 @dataclass
-class CalcLossInputData:
-    x: np.ndarray
-    y: np.ndarray
+class CalcLossInput:
+    x: Optional[np.ndarray] = None
+    y: Optional[np.ndarray] = None
     x0: np.ndarray
 
 
-class CalcLossInputDataSchema(MaBaseSchema):
-    x: NumpyArray = NumpyArray(required=True, allow_none=False)
-    y: NumpyArray = NumpyArray(required=True, allow_none=False)
+class CalcLossInputSchema(MaBaseSchema):
+    x: NumpyArray = NumpyArray(required=False, allow_none=True)
+    y: NumpyArray = NumpyArray(required=False, allow_none=True)
     x0: NumpyArray = NumpyArray(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
-        return CalcLossInputData(**data)
+        return CalcLossInput(**data)
 
 
 @dataclass

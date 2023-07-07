@@ -212,14 +212,14 @@ class StepMetadataSchema(MaBaseSchema):
 
 class InteractionEndpointType(Enum):
     """Type of the interaction endpoint.
-
     - ``optimization-step``: type for optimization steps
-    - ``objective-function``: type for objective functions
+    - ``objective_function_calc``: type for objective function calculations
+    - ``of-pass-data``: type for passing additional data to the objective function
     """
 
     minimization_step = "minimization-step"
     objective_function_calc = "objective-function_calc"
-    of_additional_info = "of-additional-info"
+    of_pass_data = "of-pass-data"
 
 
 @dataclass
