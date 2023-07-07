@@ -20,8 +20,8 @@ import requests
 from celery.utils.log import get_task_logger
 from scipy.optimize import minimize as scipy_minimize
 from plugins.optimizer.shared.schemas import (
-    CalcLossInputData,
-    CalcLossInputDataSchema,
+    CalcLossInput,
+    CalcLossInputSchema,
     LossResponseData,
     LossResponseSchema,
     MinimizerInputData,
@@ -51,8 +51,8 @@ def loss_(loss_calc_endpoint_url: str):
     """
 
     def loss(x0, x, y):
-        request_schema = CalcLossInputDataSchema()
-        request_data = request_schema.dump(CalcLossInputData(x0=x0, x=x, y=y))
+        request_schema = CalcLossInputSchema()
+        request_data = request_schema.dump(CalcLossInput(x0=x0, x=x, y=y))
 
         response = requests.post(loss_calc_endpoint_url, json=request_data)
         response_schema = LossResponseSchema()

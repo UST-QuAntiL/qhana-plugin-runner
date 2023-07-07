@@ -20,16 +20,15 @@ from flask import Response, abort, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.interaction_utils.schemas import CallbackURLData, CallbackURLSchema
+from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
 from plugins.optimizer.shared.schemas import (
-    CalcLossInputData,
-    CalcLossInputDataSchema,
+    CalcLossInput,
+    CalcLossInputSchema,
     LossResponseSchema,
+    NumpyArray,
     ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataSchema,
-    ObjectiveFunctionCallbackData,
-    ObjectiveFunctionCallbackSchema,
     ObjectiveFunctionInvocationCallback,
     ObjectiveFunctionInvocationCallbackSchema,
     ObjectiveFunctionPassDataResponse,
@@ -48,7 +47,6 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from . import HINGELOSS_BLP, HingeLoss
 from .schemas import (
-    HingeLossTaskResponseSchema,
     HyperparamterInputData,
     HyperparamterInputSchema,
 )
@@ -75,7 +73,7 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 interaction_endpoints=[
                     InteractionEndpoint(
-                        type=InteractionEndpointType.of_additional_info,
+                        type=InteractionEndpointType.of_pass_data,
                         href=url_for(
                             f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -127,12 +125,12 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @HINGELOSS_BLP.arguments(
-        CallbackURLSchema(),
+        CallbackUrlSchema(),
         location="query",
         required=False,
     )
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback: CallbackURLData):
+    def get(self, errors, callback: CallbackUrl):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -147,21 +145,21 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @HINGELOSS_BLP.arguments(
-        CallbackURLSchema(unknown=EXCLUDE),
+        CallbackUrlSchema(unknown=EXCLUDE),
         location="query",
         required=False,
     )
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback: CallbackURLData):
+    def post(self, errors, callback: CallbackUrl):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback: CallbackURLData):
+    def render(self, data: Mapping, errors: dict, callback: CallbackUrl):
         plugin = HingeLoss.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = HyperparamterInputSchema()
-        callback_schema = CallbackURLSchema()
+        callback_schema = CallbackUrlSchema()
 
         if not data:
             data = {"c": 1.0}
@@ -192,15 +190,15 @@ class HyperparameterSelectionMicroFrontend(MethodView):
 
 @HINGELOSS_BLP.route("/optimizer-callback/")
 class OptimizerCallbackProcess(MethodView):
-    """Make a callback to the optimizer plugin after selection the hyperparameter."""
+    """Save the hyperparameters to the database and make a callback to the optimizer."""
 
     @HINGELOSS_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @HINGELOSS_BLP.arguments(
-        CallbackURLSchema(unknown=EXCLUDE), location="query", required=True
+        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
     )
     @HINGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionInvocationCallbackSchema())
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: HyperparamterInputData, callback: CallbackURLData):
+    def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
@@ -218,7 +216,7 @@ class OptimizerCallbackProcess(MethodView):
 
 @HINGELOSS_BLP.route("/<int:db_id>/pass-data/")
 class PassDataEndpoint(MethodView):
-    """Endpoint to add additional info to the db task."""
+    """Endpoint to add additional data to the db task."""
 
     @HINGELOSS_BLP.arguments(
         ObjectiveFunctionPassDataSchema(unknown=EXCLUDE),
@@ -255,10 +253,10 @@ class CalcCallbackEndpoint(MethodView):
 
     @HINGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @HINGELOSS_BLP.arguments(
-        CalcLossInputDataSchema(unknown=EXCLUDE), location="json", required=True
+        CalcLossInputSchema(unknown=EXCLUDE), location="json", required=True
     )
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossInputData, db_id: int) -> dict:
+    def post(self, input_data: CalcLossInput, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
 
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -266,6 +264,11 @@ class CalcCallbackEndpoint(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
+
+        if input_data.x is None:
+            input_data.x = NumpyArray.deserialize(db_task.data["x"])
+        if input_data.y is None:
+            input_data.y = NumpyArray.deserialize(db_task.data["y"])
 
         loss = hinge_loss(
             X=input_data.x,
