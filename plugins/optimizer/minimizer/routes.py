@@ -22,7 +22,7 @@ from flask import Response, redirect, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.interaction_utils.schemas import CallbackURLData, CallbackURLSchema
+from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
 from plugins.optimizer.minimizer import MINIMIZER_BLP, Minimizer
 from plugins.optimizer.minimizer.schemas import (
@@ -109,12 +109,12 @@ class MinimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @MINIMIZER_BLP.arguments(
-        CallbackURLSchema(unknown=EXCLUDE),
+        CallbackUrlSchema(unknown=EXCLUDE),
         location="query",
         required=False,
     )
     @MINIMIZER_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback: CallbackURLData):
+    def get(self, errors, callback: CallbackUrl):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -130,18 +130,18 @@ class MinimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @MINIMIZER_BLP.arguments(
-        CallbackURLSchema(unknown=EXCLUDE),
+        CallbackUrlSchema(unknown=EXCLUDE),
         location="query",
         required=False,
     )
     @MINIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback: CallbackURLData):
+    def post(self, errors, callback: CallbackUrl):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback: CallbackURLData):
+    def render(self, data: Mapping, errors: dict, callback: CallbackUrl):
         schema = MinimizerSetupTaskInputSchema()
-        callback_schema = CallbackURLSchema()
+        callback_schema = CallbackUrlSchema()
 
         if not data:
             data = self.example_inputs
@@ -181,11 +181,11 @@ class MinimizerSetupProcessStep(MethodView):
         MinimizerSetupTaskInputSchema(unknown=EXCLUDE), location="form"
     )
     @MINIMIZER_BLP.arguments(
-        CallbackURLSchema(unknown=EXCLUDE), location="query", required=True
+        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
     )
     @MINIMIZER_BLP.response(HTTPStatus.OK, MinimizerTaskResponseSchema())
     @MINIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: MinimizerSetupTaskInputData, callback: CallbackURLData):
+    def post(self, arguments: MinimizerSetupTaskInputData, callback: CallbackUrl):
         """Start the demo task."""
         db_task = ProcessingTask(
             task_name="minimizer_task",

@@ -23,11 +23,11 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.interaction_utils.schemas import CallbackURLData, CallbackURLSchema
+from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
 from plugins.optimizer.shared.schemas import (
-    CalcLossInputData,
-    CalcLossInputDataSchema,
+    CalcLossInput,
+    CalcLossInputSchema,
     LossResponseSchema,
     ObjectiveFunctionCallbackData,
     ObjectiveFunctionCallbackSchema,
@@ -104,12 +104,12 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @RIDGELOSS_BLP.arguments(
-        CallbackURLSchema(),
+        CallbackUrlSchema(),
         location="query",
         required=False,
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback: CallbackURLData):
+    def get(self, errors, callback: CallbackUrl):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -124,21 +124,21 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @RIDGELOSS_BLP.arguments(
-        CallbackURLSchema(unknown=EXCLUDE),
+        CallbackUrlSchema(unknown=EXCLUDE),
         location="query",
         required=False,
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback: CallbackURLData):
+    def post(self, errors, callback: CallbackUrl):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback: CallbackURLData):
+    def render(self, data: Mapping, errors: dict, callback: CallbackUrl):
         plugin = RidgeLoss.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = HyperparamterInputSchema()
-        callback_schema = CallbackURLSchema()
+        callback_schema = CallbackUrlSchema()
 
         if not data:
             data = {"alpha": 0.1}
@@ -177,11 +177,11 @@ class OptimizerCallbackProcess(MethodView):
 
     @RIDGELOSS_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @RIDGELOSS_BLP.arguments(
-        CallbackURLSchema(unknown=EXCLUDE), location="query", required=True
+        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
     )
     @RIDGELOSS_BLP.response(HTTPStatus.OK, RidgeLossTaskResponseSchema())
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: HyperparamterInputData, callback: CallbackURLData):
+    def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
@@ -209,10 +209,10 @@ class CalcCallbackEndpoint(MethodView):
 
     @RIDGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @RIDGELOSS_BLP.arguments(
-        CalcLossInputDataSchema(unknown=EXCLUDE), location="json", required=True
+        CalcLossInputSchema(unknown=EXCLUDE), location="json", required=True
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossInputData, db_id: int) -> dict:
+    def post(self, input_data: CalcLossInput, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:

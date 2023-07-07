@@ -5,13 +5,13 @@ import marshmallow as ma
 
 
 @dataclass
-class CallbackURLData:
+class CallbackUrl:
     callback_url: str
 
 
-class CallbackURLSchema(MaBaseSchema):
+class CallbackUrlSchema(MaBaseSchema):
     callback_url = ma.fields.URL(required=True, allow_none=False, data_key="callbackUrl")
 
     @ma.post_load
     def make_object(self, data, **kwargs):
-        return CallbackURLData(**data)
+        return CallbackUrl(**data)
