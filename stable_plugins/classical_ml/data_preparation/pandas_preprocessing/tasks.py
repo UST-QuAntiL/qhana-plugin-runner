@@ -65,11 +65,8 @@ def calculation_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     preprocessing_steps = json_load(preprocessing_steps)
-    print(f"preprocessing_steps: {preprocessing_steps}")
     df = read_csv(file_url)
-    print(df)
     df = all_preprocess_df(df, preprocessing_steps)
-    print(df)
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:

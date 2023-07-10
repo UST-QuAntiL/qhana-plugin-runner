@@ -28,8 +28,38 @@ let options_and_parameters = {
     "drop duplicates":
         [
             {"type": "string", "name": "subset", "label": "Subset", "description": "Only consider certain columns for identifying duplicates, by default use all of the columns."},
-            {"type": "select", "name": "keep", "label": "Keep", "options": ["first", "last", "all"], "description": "Determines which duplicates (if any) to keep.\n- first: Drop duplicates except for the first occurrence.\n- last: Drop duplicates except for the last occurrence.\n- all : Drop all duplicates."},
-        ]
+            {"type": "select", "name": "keep", "label": "Keep", "options": ["first", "last", "none"], "description": "Determines which duplicates (if any) to keep.\n- first: Drop duplicates except for the first occurrence.\n- last: Drop duplicates except for the last occurrence.\n- none: Drop all duplicates."},
+            {"type": "bool", "name": "ignore_index", "label": "Ignore index", "description": "If unchecked, each element keeps its current row index. If checked, the resulting axis will be relabeled 0, 1, …, n - 1."}
+        ],
+    "sort values":
+        [
+            {"type": "string", "name": "by", "label": "Column", "description": "Column to sort by."},
+            {"type": "bool", "name": "ascending", "label": "Sorting order", "description": "Sorts by ascending order, if checked and descending order, otherwise."},
+        ],
+    "strip entries":
+        [
+            {"type": "select", "name": "position", "label": "Position", "options": ["front", "end", "both"], "description": "Determines where to strip an entry of the given characters.\n- front: Strips the given characters from the beginning of the entry.\n- end: Strips the given characters from the end of the entry.\n- both: Strips the given characters from both the beginning and the end of the entry."},
+            {"type": "string", "name": "characters", "label": "Characters", "description": "Each character entered will be stripped from an entry."},
+            {"type": "string", "name": "subset", "label": "Subset", "description": "Only strip entries in certain columns, by default use all of the columns."},
+        ],
+    "split column":
+        [
+            {"type": "string", "name": "column", "label": "Column", "description": "Column that will be split."},
+            {"type": "string", "name": "by", "label": "Split-String", "description": "String that splits the column, e.g. the entry 'John, Doe' and the Split-String ', ' result in the two entries 'John' and 'Doe'."},
+            {"type": "string", "name": "new_columns", "label": "New columns", "description": "Names for the new columns separated by a comma."},
+            {"type": "bool", "name": "remove_column", "label": "Remove old column", "description": "If checked, the old column will be removed."},
+        ],
+    "replace":
+        [
+            {"type": "string", "name": "substring", "label": "Substring", "description": "This is the substring that will be replaced by a new string in each entry."},
+            {"type": "string", "name": "new_str", "label": "New string", "description": "This is the string that the substring will be replaced with."},
+            {"type": "string", "name": "subset", "label": "Subset", "description": "Only replace substrings of entries in certain columns, by default use all of the columns."},
+        ],
+    "string case":
+        [
+            {"type": "select", "name": "case", "label": "Case", "options": ["upper", "lower", "title"], "description": "Determines the case that will be applied to each entry. Possible cases are:\n- upper: sTrIng becomes STRING\n- lower: sTrIng becomes string\n- title: sTrIng becomes String"},
+            {"type": "string", "name": "subset", "label": "Subset", "description": "Only replace substrings of entries in certain columns, by default use all of the columns."},
+        ],
 }
 
 
@@ -45,8 +75,6 @@ function get_value_from_dict(dict, key, default_value) {
 
 
 function get_parameter(param_dict, value= "") {
-    console.log("get_parameter: ");
-    console.log(value);
     let parameter = undefined;
     if (param_dict["type"] === "string") {
         parameter = document.createElement("input");
@@ -71,12 +99,23 @@ function get_parameter(param_dict, value= "") {
             parameter.appendChild(option);
         });
     }
+    else if (param_dict["type"] === "bool") {
+        parameter = document.createElement("input");
+        parameter.setAttribute("type", "checkbox");
+    }
 
     let form_field = undefined;
     if (parameter !== undefined) {
         parameter.setAttribute("class", "qhana-form-input");
         parameter.setAttribute("name", param_dict["name"]);
-        parameter.setAttribute("value", value);
+        if (param_dict["type"] === "bool") {
+            if (value === true) {
+                parameter.setAttribute("checked", value);
+            }
+        }
+        else {
+            parameter.setAttribute("value", value);
+        }
 
         form_field = document.createElement("div");
         form_field.setAttribute("class", "qhana-form-field");
@@ -107,7 +146,6 @@ function get_parameter(param_dict, value= "") {
 
 
 function get_input_parameters(option, value_dict= {}){
-    console.log(option);
     let parameters = [];
     let parameter_dicts = get_value_from_dict(options_and_parameters, option, []);
 
@@ -123,8 +161,6 @@ function get_input_parameters(option, value_dict= {}){
 
 
 function set_input_parameters(selectable, param_dict={}) {
-    console.log("set_input_parameters");
-    console.log(selectable);
     let parameters = get_input_parameters(selectable.value, param_dict);
     let input_parameter_list = selectable.parentNode.parentNode.children[1];
     for (let i = input_parameter_list.children.length - 1; i >= 0; i--){
@@ -133,7 +169,6 @@ function set_input_parameters(selectable, param_dict={}) {
     parameters.forEach(function(param) {
         input_parameter_list.append(param);
     });
-    console.log(parameters);
 }
 
 
@@ -206,8 +241,6 @@ function make_collapsable(button, element) {
 
 // Processing step. Children: [preprocessing_step=drop down menu, values=list with input values]
 function add_preprocessing_step(param_dict={}){
-    console.log("add_preprocessing_step: ");
-    console.log(param_dict);
     let preprocessing_step = document.createElement("div");
     /*preprocessing_step.className = "qhana-form-input";*/
     preprocessing_step.className = "ul";
@@ -254,9 +287,15 @@ function compile_preprocessing_list() {
         let input_parameters = {}
         for (let j = 0; j < input_parameters_html.length; j++) {
             let input = input_parameters_html[j].children[1].children[0];
-            let v = input.value;
-            if (input.type === "number") {
-                v = parseFloat(v);
+            let v;
+            if (input.type === "checkbox") {
+                v = input.checked;
+            }
+            else {
+                v = input.value;
+                if (input.type === "number") {
+                    v = parseFloat(v);
+                }
             }
             input_parameters[input.name] = v;
         }
@@ -272,27 +311,24 @@ function compile_preprocessing_list() {
 
 
 function init_preprocessing_list() {
-    console.log("start init_preprocessing_list");
-    console.log(preprocessing_steps_value.value);
     if (preprocessing_steps_value.value !== "") {
         let preprocessing_steps = JSON.parse(preprocessing_steps_value.value);
-        console.log(preprocessing_steps);
         if (preprocessing_steps.length === 0) {
             add_preprocessing_step();
         }
         for (let i = 0; i < preprocessing_steps.length; i++) {
-            console.log(preprocessing_steps[i]);
             add_preprocessing_step(preprocessing_steps[i]);
         }
     }
     else {
         add_preprocessing_step();
     }
-    console.log("stop init_preprocessing_list");
 }
 
 
 init_preprocessing_list();
+
+compile_preprocessing_list();
 
 
 let buttons = document.getElementsByClassName("qhana-form-buttons");
