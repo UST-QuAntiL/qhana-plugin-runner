@@ -57,7 +57,9 @@ def fill_missing_value(df: DataFrame, fill_value: str) -> DataFrame:
     return df
 
 
-def drop_duplicates(df: DataFrame, subset: str = None, keep: str = "first", ignore_index: bool = False) -> DataFrame:
+def drop_duplicates(
+    df: DataFrame, subset: str = None, keep: str = "first", ignore_index: bool = False
+) -> DataFrame:
     if subset is not None:
         subset = None if subset == "" else subset.split(",")
 
@@ -73,7 +75,9 @@ def sort_values(df: DataFrame, by: str, ascending: bool = False):
     return df
 
 
-def strip_characters(df: DataFrame, characters: List[str] = "", subset: str = None, position: str = "both") -> DataFrame:
+def strip_characters(
+    df: DataFrame, characters: List[str] = "", subset: str = None, position: str = "both"
+) -> DataFrame:
     if subset is not None:
         subset = df.keys() if subset == "" else subset.split(",")
     else:
@@ -95,14 +99,22 @@ def strip_characters(df: DataFrame, characters: List[str] = "", subset: str = No
     return df
 
 
-def split_column(df: DataFrame, column: str, by: str, new_columns: str = "", remove_column: bool = False) -> DataFrame:
+def split_column(
+    df: DataFrame,
+    column: str,
+    by: str,
+    new_columns: str = "",
+    remove_column: bool = False,
+) -> DataFrame:
     if column not in df.keys():
         raise ValueError(f"The dataframe has no column {column}.")
 
     new_columns = new_columns.split(",")
     for n_c in new_columns:
         if n_c in df.keys():
-            raise ValueError(f"Columns {new_columns} already exist in the given dataframe.")
+            raise ValueError(
+                f"Columns {new_columns} already exist in the given dataframe."
+            )
 
     df[new_columns] = df[column].str.split(by, expand=True)
     if remove_column:
