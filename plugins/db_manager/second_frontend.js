@@ -165,6 +165,9 @@ function init_table_name_value(){
         let table_option = document.createElement("option")
         table_option.setAttribute("value", key);
         table_option.innerText = key.toString();
+        if (key.toString() === table_name_value.value) {
+            table_option.setAttribute("selected", "selected");
+        }
         table_select.appendChild(table_option);
     });
 
