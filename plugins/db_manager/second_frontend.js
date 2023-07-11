@@ -18,6 +18,7 @@ const font_size = 13. + 1./3.
 let check_box_list;
 let table_select;
 
+const custom_query_value = document.getElementById("custom_query");
 const save_table_value = document.getElementById("save_table");
 const columns_list_value = document.getElementById("columns_list");
 const table_name_value = document.getElementById("table_name");
@@ -25,6 +26,21 @@ const tables_and_columns = JSON.parse(document.getElementById("additional_info")
 
 
 const attribute_to_id_vis = document.getElementById("id_attribute").parentNode.parentNode;
+const db_query_vis = document.getElementById("db_query").parentNode.parentNode;
+const columns_list_vis = columns_list_value.parentNode.parentNode;
+const table_name_vis = table_name_value.parentNode.parentNode;
+
+
+function change_custom_query() {
+    db_query_vis.style.display = "none";
+    columns_list_vis.style.display = "block";
+    table_name_vis.style.display = "block";
+    if (custom_query_value.checked === true) {
+        db_query_vis.style.display = "block";
+    columns_list_vis.style.display = "none";
+    table_name_vis.style.display = "none";
+    }
+}
 
 
 function create_checkbox(name, check_status=false){
@@ -159,6 +175,8 @@ function init_table_name_value(){
 
 function table_select_change(){
     table_name_value.value = table_select.value;
+    let check_all_box = document.getElementById("select all_box");
+    check_all_box.checked = false;
     create_check_box_list();
 }
 
@@ -176,9 +194,11 @@ table_select = init_table_name_value();
 save_table_change();
 init_check_all_box();
 table_select_change();
+change_custom_query();
 
 
 let buttons = document.getElementsByClassName("qhana-form-buttons");
 buttons[0].addEventListener("click", write_checkbox_content_to_str_list, false);
 save_table_value.addEventListener("change", save_table_change);
 table_select.addEventListener("change", table_select_change);
+custom_query_value.addEventListener("change", change_custom_query);

@@ -136,6 +136,7 @@ def second_task(self, db_id: int) -> str:
         task_data.parameters
     )
 
+    custom_query = input_params.custom_query
     db_query = input_params.db_query
     save_table = input_params.save_table
     id_attribute = input_params.id_attribute
@@ -152,10 +153,9 @@ def second_task(self, db_id: int) -> str:
         db_host, db_port, db_user, db_password, db_database
     )
     df = None
-    table_query = ""
-    if db_query.lower().startswith("select"):
+    if custom_query:
         table_query = db_query
-    elif len(columns_list) != 0:
+    else:
         table_query = f"SELECT {columns_list} FROM {table_name}"
 
     print(f"table_query: {table_query}")

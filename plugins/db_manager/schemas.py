@@ -48,11 +48,12 @@ class FirstInputParameters:
 
 @dataclass(repr=False)
 class SecondInputParameters:
+    custom_query: bool = False
     db_query: str = ""
-    save_table: bool = False
-    id_attribute: str = ""
     table_name: str = ""
     columns_list: str = ""
+    save_table: bool = False
+    id_attribute: str = ""
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -129,6 +130,15 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
 
 
 class SecondInputParametersSchema(FrontendFormBaseSchema):
+    custom_query = ma.fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Use custom query",
+            "description": "If checked, a custom database query can be used.",
+            "input_type": "checkbox",
+        }
+    )
     db_query = ma.fields.String(
         required=False,
         allow_none=False,
@@ -136,6 +146,24 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "label": "DB query",
             "description": "The query to be executed on the database.",
             "input_type": "text",
+        },
+    )
+    table_name = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Available tables",
+            "description": "Select the table you want to save.",
+            "input_type": "ul",
+        },
+    )
+    columns_list = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Available table columns",
+            "description": "Select the columns you want to keep.",
+            "input_type": "ul",
         },
     )
     save_table = ma.fields.Boolean(
@@ -156,24 +184,6 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "If the attribute is not unique for each entry in the queried table, then the index will "
             "be used as the entity's id.",
             "input_type": "text",
-        },
-    )
-    table_name = ma.fields.String(
-        required=False,
-        allow_none=True,
-        metadata={
-            "label": "Available tables",
-            "description": "Select the table you want to save.",
-            "input_type": "ul",
-        },
-    )
-    columns_list = ma.fields.String(
-        required=False,
-        allow_none=True,
-        metadata={
-            "label": "Available table columns",
-            "description": "Select the columns you want to keep.",
-            "input_type": "ul",
         },
     )
 
