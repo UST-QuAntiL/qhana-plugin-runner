@@ -152,7 +152,7 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=True,
         metadata={
-            "label": "Available tables",
+            "label": "Table",
             "description": "Select the table you want to save.",
             "input_type": "ul",
         },
@@ -161,7 +161,7 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=True,
         metadata={
-            "label": "Available table columns",
+            "label": "Columns",
             "description": "Select the columns you want to keep.",
             "input_type": "ul",
         },
