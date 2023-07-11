@@ -31,6 +31,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from qhana_plugin_runner.storage import STORE
 
+from json import loads as json_load
 from .backend.db_enum import DBEnum
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -139,7 +140,7 @@ def second_task(self, db_id: int) -> str:
     save_table = input_params.save_table
     id_attribute = input_params.id_attribute
     table_name = input_params.table_name
-    columns_list = input_params.columns_list.replace(",", ", ")
+    columns_list = ", ".join(json_load(input_params.columns_list))
 
     print(f"columns_list: {columns_list}")
 

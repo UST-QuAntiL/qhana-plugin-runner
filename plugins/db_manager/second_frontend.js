@@ -110,7 +110,10 @@ function create_check_box_list() {
     let current_table = table_select.value;
     let columns = tables_and_columns[current_table];
 
-    let check_status = columns_list_value.value.split(",");
+    let check_status = "";
+    if (columns_list_value.value !== "") {
+        check_status = JSON.parse(columns_list_value.value);
+    }
     for (let i = 0; i < columns.length; i++) {
         check_box_list.appendChild(create_checkbox_for_list(columns[i].toString(), check_status.includes(columns[i].toString())));
         // dummy_field_value.appendChild(create_checkbox_for_list(i.toString()));
@@ -121,7 +124,6 @@ function create_check_box_list() {
 
 
 function write_checkbox_content_to_str_list(){
-    console.log("on click duty!");
     // let check_box_list = document.getElementById("check_box_list");
     let result = [];
     //iterate through li elements
@@ -129,13 +131,11 @@ function write_checkbox_content_to_str_list(){
         // get checkbox element
         let checkbox_element = check_box_list.children[i].children[0].children[0];
 
-        console.log(checkbox_element.checked);
         if (checkbox_element.checked){
             result.push(checkbox_element.name);
         }
     }
-    console.log("result: [" + result + "]");
-    columns_list_value.value = result;
+    columns_list_value.value = JSON.stringify(result);
 }
 
 
