@@ -137,7 +137,7 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "label": "Use custom query",
             "description": "If checked, a custom database query can be used.",
             "input_type": "checkbox",
-        }
+        },
     )
     db_query = ma.fields.String(
         required=False,
