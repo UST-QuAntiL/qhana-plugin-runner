@@ -15,7 +15,6 @@
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 
-import numpy as np
 import requests
 from celery.utils.log import get_task_logger
 from scipy.optimize import minimize as scipy_minimize
@@ -50,9 +49,9 @@ def loss_(loss_calc_endpoint_url: str):
         A function that calculates the loss.
     """
 
-    def loss(x0, x, y):
+    def loss(x0):
         request_schema = CalcLossInputSchema()
-        request_data = request_schema.dump(CalcLossInput(x0=x0, x=x, y=y))
+        request_data = request_schema.dump(CalcLossInput(x0=x0))
 
         response = requests.post(loss_calc_endpoint_url, json=request_data)
         response_schema = LossResponseSchema()
@@ -86,22 +85,16 @@ def minimize_task(self, db_id: int) -> str:
 
     method: str = task_data.data.get("method")
     input_data = {
-        "x": task_data.data.get("x"),
-        "y": task_data.data.get("y"),
+        "x0": task_data.data.get("x0"),
         "calcLossEndpointUrl": task_data.data.get("calc_loss_endpoint_url"),
     }
     schema = MinimizerInputSchema()
     minimizer_input_data: MinimizerInputData = schema.load(input_data)
     loss_fun = loss_(minimizer_input_data.calc_loss_endpoint_url)
 
-    initial_weights = np.random.randn(minimizer_input_data.x.shape[1])
     result = scipy_minimize(
         fun=loss_fun,
-        x0=initial_weights,
-        args=(
-            minimizer_input_data.x,
-            minimizer_input_data.y,
-        ),
+        x0=minimizer_input_data.x0,
         method=method,
     )
 

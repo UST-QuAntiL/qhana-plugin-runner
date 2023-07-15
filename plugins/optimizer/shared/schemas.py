@@ -46,9 +46,9 @@ class TaskStatusChangedSchema(MaBaseSchema):
 
 @dataclass
 class CalcLossInput:
+    x0: np.ndarray
     x: Optional[np.ndarray] = None
     y: Optional[np.ndarray] = None
-    x0: np.ndarray
 
 
 class CalcLossInputSchema(MaBaseSchema):
@@ -75,16 +75,16 @@ class ObjectiveFunctionCallbackSchema(MaBaseSchema):
 
 
 @dataclass
-class ObjectiveFunctionInvocationCallback:
+class ObjectiveFunctionInvokationCallbackData:
     db_id: int
 
 
-class ObjectiveFunctionInvocationCallbackSchema(MaBaseSchema):
+class ObjectiveFunctionInvokationCallbackSchema(MaBaseSchema):
     db_id = ma.fields.Integer(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
-        return ObjectiveFunctionInvocationCallback(**data)
+        return ObjectiveFunctionInvokationCallbackData(**data)
 
 
 @dataclass
@@ -102,17 +102,15 @@ class MinimizerCallbackSchema(MaBaseSchema):
 
 @dataclass
 class MinimizerInputData:
-    x: np.ndarray
-    y: np.ndarray
+    x0: np.ndarray
     calc_loss_endpoint_url: str
     callback_url: Optional[str] = None
 
 
 class MinimizerInputSchema(MaBaseSchema):
-    x = NumpyArray(required=True, allow_none=False)
-    y = NumpyArray(required=True, allow_none=False)
+    x0 = NumpyArray(required=True, allow_none=False)
     calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
-    callback_url = ma.fields.Url(required=False, allow_none=False)
+    callback_url = ma.fields.Url(required=False, allow_none=True)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
@@ -136,13 +134,11 @@ class MinimizerResultSchema(MaBaseSchema):
 class ObjectiveFunctionPassData:
     x: np.ndarray
     y: np.ndarray
-    callback_url: str
 
 
 class ObjectiveFunctionPassDataSchema(MaBaseSchema):
     x = NumpyArray(required=True, allow_none=False)
     y = NumpyArray(required=True, allow_none=False)
-    callback_url = ma.fields.Url(required=False, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
@@ -155,45 +151,10 @@ class ObjectiveFunctionPassDataResponse:
 
 
 class ObjectiveFunctionPassDataResponseSchema(MaBaseSchema):
-    number_weights = ma.fields.Integer(required=True, allow_none=False)
+    number_weights = ma.fields.Integer(
+        required=True, allow_none=False, data_key="numberWeights"
+    )
 
     @ma.post_load
     def make_object(self, data, **kwargs):
         return ObjectiveFunctionPassDataResponse(**data)
-
-
-@dataclass
-class MinimizationInteractionEndpointInputData:
-    fun = str
-    x0 = Optional[np.ndarray]
-    x = np.ndarray
-    y = np.ndarray
-
-
-class MinimizationInteractionEndpointInputSchema(MaBaseSchema):
-    fun = ma.fields.URL(
-        required=True,
-        allow_none=False,
-        metadata={
-            "description": "The URL to the objecttive function interaction endpoint."
-        },
-    )
-    x0 = NumpyArray(
-        required=False,
-        allow_none=False,
-        metadata={
-            "description": "Initial guess. Array of real elements of size (n,), where n is the number of independent variables."
-        },
-    )
-
-    x = NumpyArray(
-        required=True,
-        allow_none=False,
-        metadata={"description": "Independent variables."},
-    )
-
-    y = NumpyArray(
-        required=True,
-        allow_none=False,
-        metadata={"description": "Dependent variables"},
-    )

@@ -17,6 +17,13 @@ from typing import Iterator, Optional
 import numpy as np
 import requests
 from plugins.optimizer.coordinator import Optimizer
+from plugins.optimizer.shared.schemas import (
+    ObjectiveFunctionPassData,
+    ObjectiveFunctionPassDataResponse,
+    ObjectiveFunctionPassDataResponseSchema,
+    ObjectiveFunctionPassDataSchema,
+)
+from qhana_plugin_runner.api.plugin_schemas import InteractionEndpointType
 from qhana_plugin_runner.api.tasks_api import TaskData, TaskStatusSchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -139,3 +146,42 @@ def echo_results(self, db_id: int) -> str:
         )
 
     return "Success"
+
+
+@CELERY.task(name=f"{Optimizer.instance.identifier}.of_pass_data", bind=True)
+def of_pass_data(self, db_id: int) -> str:
+    """"""
+    TASK_LOGGER.info(f"Starting passing data to of plugin with db id '{db_id}'")
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    of_db_id = task_data.data.get("of_db_id")
+    url = task_data.data.get(InteractionEndpointType.of_pass_data.value)
+    input_file_url = task_data.data.get("input_file_url")
+    target_variable = task_data.data.get("target_variable")
+
+    url = url.replace("<int:db_id>", str(of_db_id))
+
+    X, y = get_features_and_target(input_file_url, target_variable)
+
+    request_data = ObjectiveFunctionPassDataSchema().dump(
+        ObjectiveFunctionPassData(
+            x=X,
+            y=y,
+        )
+    )
+
+    response = requests.post(url, json=request_data)
+
+    response_data: ObjectiveFunctionPassDataResponse = (
+        ObjectiveFunctionPassDataResponseSchema().load(response.json())
+    )
+    task_data.data["number_weights"] = response_data.number_weights
+
+    task_data.save(commit=True)
+
+    return "Successfully passed data to of plugin"
