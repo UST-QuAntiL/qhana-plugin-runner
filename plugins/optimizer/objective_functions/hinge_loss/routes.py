@@ -29,9 +29,8 @@ from plugins.optimizer.shared.schemas import (
     NumpyArray,
     ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataSchema,
-    ObjectiveFunctionInvocationCallback,
-    ObjectiveFunctionInvocationCallbackSchema,
-    ObjectiveFunctionPassDataResponse,
+    ObjectiveFunctionInvokationCallbackData,
+    ObjectiveFunctionInvokationCallbackSchema,
     ObjectiveFunctionPassDataResponseSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -49,6 +48,7 @@ from . import HINGELOSS_BLP, HingeLoss
 from .schemas import (
     HyperparamterInputData,
     HyperparamterInputSchema,
+    SingleNumpyArraySchema,
 )
 from .tasks import hinge_loss
 
@@ -196,7 +196,7 @@ class OptimizerCallbackProcess(MethodView):
     @HINGELOSS_BLP.arguments(
         CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
     )
-    @HINGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionInvocationCallbackSchema())
+    @HINGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionInvokationCallbackSchema())
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
@@ -207,8 +207,8 @@ class OptimizerCallbackProcess(MethodView):
         db_task.data["c"] = arguments.c
         db_task.save(commit=True)
 
-        callback_data = ObjectiveFunctionInvocationCallbackSchema().dump(
-            **ObjectiveFunctionInvocationCallback(db_id=db_task.id)
+        callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
+            ObjectiveFunctionInvokationCallbackData(db_id=db_task.id)
         )
 
         make_callback(callback.callback_url, callback_data)
@@ -240,11 +240,7 @@ class PassDataEndpoint(MethodView):
 
         db_task.save(commit=True)
 
-        callback_data = ObjectiveFunctionPassDataResponseSchema().dump(
-            **ObjectiveFunctionPassDataResponse(number_weights=input_data.x.shape[1])
-        )
-
-        make_callback(input_data.callback_url, callback_data)
+        return {"number_weights": input_data.x.shape[1]}
 
 
 @HINGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
@@ -266,9 +262,13 @@ class CalcCallbackEndpoint(MethodView):
             raise KeyError(msg)
 
         if input_data.x is None:
-            input_data.x = NumpyArray.deserialize(db_task.data["x"])
+            input_data.x = (
+                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
+            )
         if input_data.y is None:
-            input_data.y = NumpyArray.deserialize(db_task.data["y"])
+            input_data.y = (
+                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
+            )
 
         loss = hinge_loss(
             X=input_data.x,
