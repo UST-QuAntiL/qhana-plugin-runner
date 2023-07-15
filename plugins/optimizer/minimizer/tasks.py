@@ -20,8 +20,10 @@ from celery.utils.log import get_task_logger
 from scipy.optimize import minimize as scipy_minimize
 
 from plugins.optimizer.shared.schemas import (
-    CalcLossInput,
-    CalcLossInputSchema,
+    CalcLossOrGradInput,
+    CalcLossOrGradInputSchema,
+    GradientResponseData,
+    GradientResponseSchema,
     LossResponseData,
     LossResponseSchema,
     MinimizerInputData,
@@ -37,7 +39,7 @@ from . import Minimizer
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def loss_(loss_calc_endpoint_url: str):
+def loss_(calc_loss_endpoint_url: str):
     """
     Function generator to calculate loss. This returns a function that calculates loss
     for given input data and hyperparameters.
@@ -50,15 +52,37 @@ def loss_(loss_calc_endpoint_url: str):
     """
 
     def loss(x0):
-        request_schema = CalcLossInputSchema()
-        request_data = request_schema.dump(CalcLossInput(x0=x0))
+        request_data = CalcLossOrGradInputSchema().dump(CalcLossOrGradInput(x0=x0))
 
-        response = requests.post(loss_calc_endpoint_url, json=request_data)
-        response_schema = LossResponseSchema()
-        response_data: LossResponseData = response_schema.load(response.json())
+        response = requests.post(calc_loss_endpoint_url, json=request_data)
+        response_data: LossResponseData = LossResponseSchema().load(response.json())
         return response_data.loss
 
     return loss
+
+
+def jac_(calc_gradient_endpoint_url: str):
+    """
+    Function generator to calculate the gradient. This returns a function that calculates the gradient
+    for given input data and hyperparameters.
+
+    Args:
+        calc_gradient_endpoint_url: The URL to which the gradient calculation request will be sent.
+
+    Returns:
+        A function that calculates the gradient.
+    """
+
+    def jac(x0):
+        request_data = CalcLossOrGradInputSchema().dump(CalcLossOrGradInput(x0=x0))
+
+        response = requests.post(calc_gradient_endpoint_url, json=request_data)
+        response_data: GradientResponseData = GradientResponseSchema().load(
+            response.json()
+        )
+        return response_data.gradient
+
+    return jac
 
 
 @CELERY.task(name=f"{Minimizer.instance.identifier}.minimize", bind=True)
@@ -87,16 +111,18 @@ def minimize_task(self, db_id: int) -> str:
     input_data = {
         "x0": task_data.data.get("x0"),
         "calcLossEndpointUrl": task_data.data.get("calc_loss_endpoint_url"),
+        "calcGradientEndpointUrl": task_data.data.get("calc_gradient_endpoint_url"),
     }
-    schema = MinimizerInputSchema()
-    minimizer_input_data: MinimizerInputData = schema.load(input_data)
+    minimizer_input_data: MinimizerInputData = MinimizerInputSchema().load(input_data)
     loss_fun = loss_(minimizer_input_data.calc_loss_endpoint_url)
 
-    result = scipy_minimize(
-        fun=loss_fun,
-        x0=minimizer_input_data.x0,
-        method=method,
-    )
+    minimize_params = {"fun": loss_fun, "x0": minimizer_input_data.x0, "method": method}
+
+    if minimizer_input_data.calc_gradient_endpoint_url:
+        jac = jac_(minimizer_input_data.calc_gradient_endpoint_url)
+        minimize_params["jac"] = jac
+
+    result = scipy_minimize(**minimize_params)
 
     TASK_LOGGER.info(f"Optimization result: {result}")
 

@@ -219,6 +219,7 @@ class InteractionEndpointType(Enum):
 
     minimization_step = "minimization-step"
     objective_function_calc = "objective-function_calc"
+    objective_function_gradient = "objective-function_gradient"
     of_pass_data = "of-pass-data"
 
 
