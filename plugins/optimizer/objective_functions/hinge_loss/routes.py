@@ -31,6 +31,7 @@ from plugins.optimizer.shared.schemas import (
     ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataResponseSchema,
     ObjectiveFunctionPassDataSchema,
+    SingleNumpyArraySchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -47,7 +48,6 @@ from . import HINGELOSS_BLP, HingeLoss
 from .schemas import (
     HyperparamterInputData,
     HyperparamterInputSchema,
-    SingleNumpyArraySchema,
 )
 from .tasks import hinge_loss
 

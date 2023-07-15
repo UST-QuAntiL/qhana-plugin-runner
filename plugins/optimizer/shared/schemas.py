@@ -159,3 +159,16 @@ class ObjectiveFunctionPassDataResponseSchema(MaBaseSchema):
     @ma.post_load
     def make_object(self, data, **kwargs):
         return ObjectiveFunctionPassDataResponse(**data)
+
+
+@dataclass
+class SingleNumpyArray:
+    array: np.ndarray
+
+
+class SingleNumpyArraySchema(MaBaseSchema):
+    array = NumpyArray(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return SingleNumpyArray(**data)
