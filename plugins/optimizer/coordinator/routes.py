@@ -56,14 +56,16 @@ from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
 
 
 def get_plugin_metadata(plugin_url) -> PluginMetadata:
-    """Get the metadata of a plugin.
+    """
+    Get the metadata of a plugin.
 
     Args:
-        plugin_name (str): The name of the plugin.
+        plugin_url (str): The URL of the plugin.
 
     Returns:
         PluginMetadata: The metadata of the plugin.
     """
+
     plugin_metadata = requests.get(plugin_url).json()
     schema = PluginMetadataSchema()
     metadata: PluginMetadata = schema.load(plugin_metadata)
@@ -72,12 +74,21 @@ def get_plugin_metadata(plugin_url) -> PluginMetadata:
 
 @OPTIMIZER_BLP.route("/")
 class MetadataView(MethodView):
-    """Plugins collection resource."""
+    """
+    Plugins collection resource.
+
+    A View that handles the plugins metadata.
+    """
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def get(self):
-        """Optimizer endpoint returning the plugin metadata."""
+    def get(self) -> PluginMetadata:
+        """
+        Optimizer endpoint returning the plugin metadata.
+
+        Returns:
+            PluginMetadata: The metadata of the optimizer plugin.
+        """
         return PluginMetadata(
             title="Optimizer plugin",
             description=Optimizer.instance.description,
@@ -111,11 +122,15 @@ class MetadataView(MethodView):
 
 @OPTIMIZER_BLP.route("/ui-setup/")
 class OptimizerSetupMicroFrontend(MethodView):
-    """Micro frontend for selection of:
+    """
+    Micro frontend for selection of:
     1. objective-function plugin
     2. dataset
     3. minimizer plugin
-    4. target variable"""
+    4. target variable
+
+    This class is responsible for the handling of the setup UI.
+    """
 
     example_inputs = {}
 
@@ -131,8 +146,17 @@ class OptimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors):
-        """Return the micro frontend."""
+    def get(self, errors) -> Response:
+        """
+        Return the micro frontend.
+
+        Args:
+            errors (dict): A dictionary containing possible errors.
+
+        Returns:
+            A rendered template of the micro frontend.
+        """
+
         return self.render(request.args, errors)
 
     @OPTIMIZER_BLP.html_response(
@@ -147,11 +171,30 @@ class OptimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors):
-        """Return the micro frontend with prerendered inputs."""
+    def post(self, errors) -> Response:
+        """
+        Return the micro frontend with prerendered inputs.
+
+        Args:
+            errors (dict): A dictionary containing possible errors.
+
+        Returns:
+            A rendered template of the micro frontend with prerendered inputs.
+        """
+
         return self.render(request.form, errors)
 
-    def render(self, data: Mapping, errors: dict):
+    def render(self, data: Mapping, errors: dict) -> Response:
+        """
+        Render the UI for the plugin setup.
+
+        Args:
+            data (Mapping): The input data for the setup.
+            errors (dict): A dictionary containing possible errors.
+
+        Returns:
+            A rendered template of the plugin setup UI.
+        """
         schema = OptimizerSetupTaskInputSchema()
         return Response(
             render_template(
@@ -177,15 +220,30 @@ TASK_LOGGER: Logger = get_task_logger(__name__)
 
 @OPTIMIZER_BLP.route("/process-setup/")
 class OptimizerSetupProcessStep(MethodView):
-    """Start the process step of the objective-function selection."""
+    """
+    UI input processing ressource.
+
+    A View that handles handles the processing of the UI input data.
+    """
 
     @OPTIMIZER_BLP.arguments(
         OptimizerSetupTaskInputSchema(unknown=EXCLUDE), location="form"
     )
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: OptimizerSetupTaskInputData):
-        """Start the demo task."""
+    def post(self, arguments: OptimizerSetupTaskInputData) -> Response:
+        """Handle POST requests for the setup UI.
+
+        This method handles the POST requests for the setup UI.
+        It saves the input data to the database, gets the metadata of the plugins and saves the endpoints to the database.
+        It also invokes the objective function plugin.
+
+        Args:
+            arguments (OptimizerSetupTaskInputData): The input data of the setup UI.
+
+        Returns:
+            Response: A redirect to the task view.
+        """
         db_task = ProcessingTask(
             task_name="optimizer_setup",
         )
@@ -283,14 +341,31 @@ class OptimizerSetupProcessStep(MethodView):
 
 @OPTIMIZER_BLP.route("/<int:db_id>/objective-function-invokation-callback/")
 class ObjectiveFunctionInvokationCallback(MethodView):
-    """Callback function for the objective-function plugin."""
+    """
+    Callback for the objective function.
+
+    This class handles the callbacks for the objective function invokation.
+    """
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
     @OPTIMIZER_BLP.arguments(
         ObjectiveFunctionInvokationCallbackSchema(unknown=EXCLUDE), location="json"
     )
     def post(self, arguments: ObjectiveFunctionInvokationCallbackData, db_id: int):
-        """starts the next step of the optimizer plugin"""
+        """
+        Handle POST requests for the objective function callback.
+
+        This method handles the POST requests for the objective function callback.
+        It saves the objective function result to the database,
+        passes x and y to the objective function plugin and invokes the minimizer plugin.
+
+        Args:
+            callback_data (ObjectiveFunctionInvokationCallbackData): The callback data from the objective function invokation.
+            task_id (str): The ID of the task.
+
+        Returns:
+            TaskStatusChanged: The changed status of the task.
+        """
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -326,11 +401,25 @@ class ObjectiveFunctionInvokationCallback(MethodView):
 
 @OPTIMIZER_BLP.route("/<int:db_id>/minimizer-setup-callback/")
 class MinimizerSetupCallback(MethodView):
-    """Callback function for the minimizer plugin."""
+    """
+    Callback for the minimizer.
+
+    This class handles the callbacks for the minimizer.
+    """
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
     @OPTIMIZER_BLP.arguments(MinimizerCallbackSchema(unknown=EXCLUDE), location="json")
     def post(self, arguments: MinimizerCallbackData, db_id: int):
+        """
+        Handle POST requests for the minimizer callback.
+
+        This method handles the POST requests for the minimizer callback.
+        It saves the minimizer result to the database and invokes the minization process of the minimizer plugin.
+
+        Args:
+            callback_data (MinimizerCallbackData): The callback data from the minimizer.
+            task_id (str): The ID of the task.
+        """
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -375,8 +464,19 @@ class MinimizerResultCallback(MethodView):
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
     @OPTIMIZER_BLP.arguments(TaskStatusChangedSchema(unknown=EXCLUDE), location="json")
-    def post(self, arguments: TaskStatusChanged, db_id: int):
-        """Callback endpoint for the minimizer plugin after minimization."""
+    def post(self, arguments: TaskStatusChanged, db_id: int) -> Response:
+        """
+        Handle POST requests for the minimizer result callback.
+
+        This method accepts callback data from the minimizer's operation and saves the result to a file.
+
+        Args:
+            callback_data (MinimizerResultCallbackData): The callback data from the minimizer result.
+            task_id (str): The ID of the task.
+
+        Returns:
+            A redirect to the task view.
+        """
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
