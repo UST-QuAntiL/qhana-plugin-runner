@@ -29,12 +29,18 @@ from plugins.optimizer.shared.schemas import (
     CalcLossInput,
     CalcLossInputSchema,
     LossResponseSchema,
-    ObjectiveFunctionCallbackData,
-    ObjectiveFunctionCallbackSchema,
+    ObjectiveFunctionInvokationCallbackData,
+    ObjectiveFunctionInvokationCallbackSchema,
+    ObjectiveFunctionPassData,
+    ObjectiveFunctionPassDataResponseSchema,
+    ObjectiveFunctionPassDataSchema,
+    SingleNumpyArraySchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
+    InteractionEndpoint,
+    InteractionEndpointType,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -45,7 +51,6 @@ from . import RIDGELOSS_BLP, RidgeLoss
 from .schemas import (
     HyperparamterInputData,
     HyperparamterInputSchema,
-    RidgeLossTaskResponseSchema,
 )
 from .tasks import ridge_loss
 
@@ -68,6 +73,24 @@ class PluginsView(MethodView):
             type=PluginType.processing,
             tags=RidgeLoss.instance.tags,
             entry_point=EntryPoint(
+                interaction_endpoints=[
+                    InteractionEndpoint(
+                        type=InteractionEndpointType.of_pass_data,
+                        href=url_for(
+                            f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
+                            _external=True,
+                        )
+                        + "<int:db_id>/pass-data/",
+                    ),
+                    InteractionEndpoint(
+                        type=InteractionEndpointType.objective_function_calc,
+                        href=url_for(
+                            f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
+                            _external=True,
+                        )
+                        + "<int:db_id>/calc-callback-endpoint/",
+                    ),
+                ],
                 href=url_for(f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
                 ui_href=url_for(
                     f"{RIDGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
@@ -179,7 +202,7 @@ class OptimizerCallbackProcess(MethodView):
     @RIDGELOSS_BLP.arguments(
         CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
     )
-    @RIDGELOSS_BLP.response(HTTPStatus.OK, RidgeLossTaskResponseSchema())
+    @RIDGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionInvokationCallbackSchema())
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
@@ -189,18 +212,40 @@ class OptimizerCallbackProcess(MethodView):
         )
         db_task.data["alpha"] = arguments.alpha
         db_task.save(commit=True)
-        callback_url = callback.callback_url
-        calc_endpoint_url = url_for(
-            f"{RIDGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
-        callback_schema = ObjectiveFunctionCallbackSchema()
-        callback_data = callback_schema.dump(
-            ObjectiveFunctionCallbackData(calc_loss_endpoint_url=calc_endpoint_url)
+        callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
+            ObjectiveFunctionInvokationCallbackData(db_id=db_task.id)
         )
 
-        make_callback(callback_url, callback_data)
+        make_callback(callback.callback_url, callback_data)
+
+
+@RIDGELOSS_BLP.route("/<int:db_id>/pass-data/")
+class PassDataEndpoint(MethodView):
+    """Endpoint to add additional data to the db task."""
+
+    @RIDGELOSS_BLP.arguments(
+        ObjectiveFunctionPassDataSchema(unknown=EXCLUDE),
+        location="json",
+        required=True,
+    )
+    @RIDGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionPassDataResponseSchema())
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def post(self, input_data: ObjectiveFunctionPassData, db_id: int) -> dict:
+        """Endpoint to add additional info to the db task."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        serialized_data = ObjectiveFunctionPassDataSchema().dump(input_data)
+
+        db_task.data["x"] = serialized_data["x"]
+        db_task.data["y"] = serialized_data["y"]
+
+        db_task.save(commit=True)
+
+        return {"number_weights": input_data.x.shape[1]}
 
 
 @RIDGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
@@ -219,6 +264,15 @@ class CalcCallbackEndpoint(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
+
+        if input_data.x is None:
+            input_data.x = (
+                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
+            )
+        if input_data.y is None:
+            input_data.y = (
+                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
+            )
 
         loss = ridge_loss(
             X=input_data.x,
