@@ -26,12 +26,11 @@ from plugins.optimizer.shared.schemas import (
     CalcLossInput,
     CalcLossInputSchema,
     LossResponseSchema,
-    NumpyArray,
-    ObjectiveFunctionPassData,
-    ObjectiveFunctionPassDataSchema,
     ObjectiveFunctionInvokationCallbackData,
     ObjectiveFunctionInvokationCallbackSchema,
+    ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataResponseSchema,
+    ObjectiveFunctionPassDataSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,

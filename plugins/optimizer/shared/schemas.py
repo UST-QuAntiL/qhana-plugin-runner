@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+
 import marshmallow as ma
 import numpy as np
 

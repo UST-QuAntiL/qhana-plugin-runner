@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+
 import marshmallow as ma
+
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     MaBaseSchema,
     PluginUrl,
-    FileUrl,
 )
 
 
