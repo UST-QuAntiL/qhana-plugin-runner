@@ -26,8 +26,8 @@ from marshmallow import EXCLUDE
 from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
 from plugins.optimizer.shared.schemas import (
-    CalcLossInput,
-    CalcLossInputSchema,
+    CalcLossOrGradInput,
+    CalcLossOrGradInputSchema,
     LossResponseSchema,
     ObjectiveFunctionInvokationCallbackData,
     ObjectiveFunctionInvokationCallbackSchema,
@@ -254,10 +254,10 @@ class CalcCallbackEndpoint(MethodView):
 
     @RIDGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @RIDGELOSS_BLP.arguments(
-        CalcLossInputSchema(unknown=EXCLUDE), location="json", required=True
+        CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossInput, db_id: int) -> dict:
+    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
