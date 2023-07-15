@@ -14,6 +14,8 @@
 
 from dataclasses import dataclass
 import marshmallow as ma
+import numpy as np
+from plugins.optimizer.shared.schemas import NumpyArray
 
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema
 
@@ -43,3 +45,16 @@ class HyperparamterInputSchema(FrontendFormBaseSchema):
     @ma.post_load
     def make_object(self, data, **kwargs):
         return HyperparamterInputData(**data)
+
+
+@dataclass
+class SingleNumpyArray:
+    array: np.ndarray
+
+
+class SingleNumpyArraySchema(MaBaseSchema):
+    array = NumpyArray(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return SingleNumpyArray(**data)

@@ -17,6 +17,7 @@ from logging import Logger
 from typing import Mapping, Optional
 from urllib.parse import urljoin
 from celery import chain
+import numpy as np
 
 import requests
 from celery.utils.log import get_task_logger
@@ -27,21 +28,25 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.tasks import echo_results, get_features_and_target
+from plugins.optimizer.coordinator.tasks import (
+    echo_results,
+    of_pass_data,
+)
 from plugins.optimizer.interaction_utils.tasks import invoke_task
 from plugins.optimizer.shared.schemas import (
     MinimizerCallbackData,
     MinimizerCallbackSchema,
     MinimizerInputData,
     MinimizerInputSchema,
-    ObjectiveFunctionCallbackData,
-    ObjectiveFunctionCallbackSchema,
+    ObjectiveFunctionInvokationCallbackData,
+    ObjectiveFunctionInvokationCallbackSchema,
     TaskStatusChanged,
     TaskStatusChangedSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
+    InteractionEndpointType,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -188,11 +193,13 @@ class OptimizerSetupProcessStep(MethodView):
             task_name="optimizer_setup",
         )
 
+        # save the input data to the database
         db_task.data["input_file_url"] = arguments.input_file_url
         db_task.data["target_variable"] = arguments.target_variable
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
+        # save the callback endpoint for the minimizer plugins to the database
         min_callback_url = url_for(
             f"{OPTIMIZER_BLP.name}.{MinimizerSetupCallback.__name__}",
             db_id=db_task.id,
@@ -200,36 +207,51 @@ class OptimizerSetupProcessStep(MethodView):
         )
         db_task.data["minimize_callback_url"] = min_callback_url
 
+        # get the minimizer plugin metadata and save the endpoints to the database
         min_plugin_metadata: PluginMetadata = get_plugin_metadata(
             arguments.minimizer_plugin_selector
         )
-
         min_href = urljoin(
             arguments.minimizer_plugin_selector, min_plugin_metadata.entry_point.href
         )
-
         db_task.data["min_href"] = min_href
-
         min_ui_href = urljoin(
             arguments.minimizer_plugin_selector,
             min_plugin_metadata.entry_point.ui_href,
         )
-
         db_task.data["min_ui_href"] = min_ui_href
 
-        db_task.save(commit=True)
-
+        # get the objective function plugin metadata and save the endpoints to the database
+        # also invoke the plugin
         of_callback_url = url_for(
-            f"{OPTIMIZER_BLP.name}.{ObjectiveFunctionSetupCallback.__name__}",
+            f"{OPTIMIZER_BLP.name}.{ObjectiveFunctionInvokationCallback.__name__}",
             db_id=db_task.id,
             _external=True,
         )
 
-        # invoke the selected objective function plugin for hyperparameter selection
-
         of_plugin_metadata: PluginMetadata = get_plugin_metadata(
             arguments.objective_function_plugin_selector
         )
+
+        of_calc_endpoint = [
+            element
+            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            if element.type == InteractionEndpointType.objective_function_calc
+        ]
+
+        db_task.data[
+            InteractionEndpointType.objective_function_calc.value
+        ] = of_calc_endpoint[0].href
+
+        of_pass_data_endpoint = [
+            element
+            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            if element.type == InteractionEndpointType.of_pass_data
+        ]
+
+        db_task.data[InteractionEndpointType.of_pass_data.value] = of_pass_data_endpoint[
+            0
+        ].href
 
         of_href = urljoin(
             arguments.objective_function_plugin_selector,
@@ -240,6 +262,8 @@ class OptimizerSetupProcessStep(MethodView):
             arguments.objective_function_plugin_selector,
             of_plugin_metadata.entry_point.ui_href,
         )
+
+        db_task.save(commit=True)
 
         task = invoke_task.s(
             db_id=db_task.id,
@@ -260,15 +284,15 @@ class OptimizerSetupProcessStep(MethodView):
         )
 
 
-@OPTIMIZER_BLP.route("/<int:db_id>/objective-function-setup-callback/")
-class ObjectiveFunctionSetupCallback(MethodView):
+@OPTIMIZER_BLP.route("/<int:db_id>/objective-function-invokation-callback/")
+class ObjectiveFunctionInvokationCallback(MethodView):
     """Callback function for the objective-function plugin."""
 
     @OPTIMIZER_BLP.response(HTTPStatus.OK)
     @OPTIMIZER_BLP.arguments(
-        ObjectiveFunctionCallbackSchema(unknown=EXCLUDE), location="json"
+        ObjectiveFunctionInvokationCallbackSchema(unknown=EXCLUDE), location="json"
     )
-    def post(self, arguments: ObjectiveFunctionCallbackData, db_id: int):
+    def post(self, arguments: ObjectiveFunctionInvokationCallbackData, db_id: int):
         """starts the next step of the optimizer plugin"""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -276,7 +300,7 @@ class ObjectiveFunctionSetupCallback(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.data["calc_loss_endpoint_url"] = arguments.calc_loss_endpoint_url
+        db_task.data["of_db_id"] = arguments.db_id
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
@@ -285,14 +309,13 @@ class ObjectiveFunctionSetupCallback(MethodView):
         min_ui_href = db_task.data["min_ui_href"]
         min_callback_url = db_task.data["minimize_callback_url"]
 
-        task = invoke_task.s(
+        task: chain = of_pass_data.s(db_id=db_task.id) | invoke_task.s(
             db_id=db_task.id,
             step_id="minimization plugin setup",
             href=min_href,
             ui_href=min_ui_href,
             callback_url=min_callback_url,
             prog_value=50,
-            task_log="minimizer setup started",
         )
 
         task.link_error(save_task_error.s(db_id=db_task.id))
@@ -321,17 +344,21 @@ class MinimizerSetupCallback(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        input_file_url: str = db_task.data.get("input_file_url")
-        target_variable_name: str = db_task.data.get("target_variable")
-        calc_loss_endpoint_url: str = db_task.data.get("calc_loss_endpoint_url")
+        calc_loss_endpoint_url: str = db_task.data.get(
+            InteractionEndpointType.objective_function_calc.value
+        )
+        of_db_id: str = db_task.data.get("of_db_id")
 
-        X, y = get_features_and_target(input_file_url, target_variable_name)
+        calc_loss_endpoint_url = calc_loss_endpoint_url.replace(
+            "<int:db_id>", str(of_db_id)
+        )
+        number_weights = db_task.data.get("number_weights")
+        x0 = np.random.randn(number_weights)
 
         min_input_data = MinimizerInputSchema().dump(
             MinimizerInputData(
-                x=X,
-                y=y,
                 calc_loss_endpoint_url=calc_loss_endpoint_url,
+                x0=x0,
                 callback_url=url_for(
                     f"{OPTIMIZER_BLP.name}.{MinimizerResultCallback.__name__}",
                     db_id=db_task.id,
