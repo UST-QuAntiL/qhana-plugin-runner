@@ -31,6 +31,19 @@ class LossResponseSchema(MaBaseSchema):
 
 
 @dataclass
+class GradientResponseData:
+    gradient: np.ndarray
+
+
+class GradientResponseSchema(MaBaseSchema):
+    gradient = NumpyArray(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return GradientResponseData(**data)
+
+
+@dataclass
 class TaskStatusChanged:
     url: str
     status: str
@@ -46,20 +59,20 @@ class TaskStatusChangedSchema(MaBaseSchema):
 
 
 @dataclass
-class CalcLossInput:
+class CalcLossOrGradInput:
     x0: np.ndarray
     x: Optional[np.ndarray] = None
     y: Optional[np.ndarray] = None
 
 
-class CalcLossInputSchema(MaBaseSchema):
+class CalcLossOrGradInputSchema(MaBaseSchema):
     x: NumpyArray = NumpyArray(required=False, allow_none=True)
     y: NumpyArray = NumpyArray(required=False, allow_none=True)
     x0: NumpyArray = NumpyArray(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
-        return CalcLossInput(**data)
+        return CalcLossOrGradInput(**data)
 
 
 @dataclass
@@ -105,12 +118,14 @@ class MinimizerCallbackSchema(MaBaseSchema):
 class MinimizerInputData:
     x0: np.ndarray
     calc_loss_endpoint_url: str
+    calc_gradient_endpoint_url: Optional[str] = None
     callback_url: Optional[str] = None
 
 
 class MinimizerInputSchema(MaBaseSchema):
     x0 = NumpyArray(required=True, allow_none=False)
     calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
+    calc_gradient_endpoint_url = ma.fields.Url(required=False, allow_none=True)
     callback_url = ma.fields.Url(required=False, allow_none=True)
 
     @ma.post_load

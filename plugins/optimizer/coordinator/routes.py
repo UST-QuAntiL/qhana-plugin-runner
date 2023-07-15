@@ -308,6 +308,17 @@ class OptimizerSetupProcessStep(MethodView):
             0
         ].href
 
+        of_gradient_endpoint = [
+            element
+            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            if element.type == InteractionEndpointType.objective_function_gradient
+        ]
+
+        if len(of_gradient_endpoint) > 0:
+            db_task.data[
+                InteractionEndpointType.objective_function_gradient.value
+            ] = of_gradient_endpoint[0].href
+
         of_href = urljoin(
             arguments.objective_function_plugin_selector,
             of_plugin_metadata.entry_point.href,
@@ -433,17 +444,28 @@ class MinimizerSetupCallback(MethodView):
         calc_loss_endpoint_url: str = db_task.data.get(
             InteractionEndpointType.objective_function_calc.value
         )
+
+        calc_gradient_endpoint_url: str = db_task.data.get(
+            InteractionEndpointType.objective_function_gradient.value
+        )
+
         of_db_id: str = db_task.data.get("of_db_id")
 
         calc_loss_endpoint_url = calc_loss_endpoint_url.replace(
             "<int:db_id>", str(of_db_id)
         )
+
+        if calc_gradient_endpoint_url:
+            calc_gradient_endpoint_url = calc_gradient_endpoint_url.replace(
+                "<int:db_id>", str(of_db_id)
+            )
         number_weights = db_task.data.get("number_weights")
         x0 = np.random.randn(number_weights)
 
         min_input_data = MinimizerInputSchema().dump(
             MinimizerInputData(
                 calc_loss_endpoint_url=calc_loss_endpoint_url,
+                calc_gradient_endpoint_url=calc_gradient_endpoint_url,
                 x0=x0,
                 callback_url=url_for(
                     f"{OPTIMIZER_BLP.name}.{MinimizerResultCallback.__name__}",
