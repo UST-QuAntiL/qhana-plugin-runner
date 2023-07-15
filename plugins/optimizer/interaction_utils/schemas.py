@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
-from qhana_plugin_runner.api.util import MaBaseSchema
 import marshmallow as ma
+
+from qhana_plugin_runner.api.util import MaBaseSchema
 
 
 @dataclass

@@ -16,10 +16,10 @@ from http import HTTPStatus
 from logging import Logger
 from typing import Mapping, Optional
 from urllib.parse import urljoin
-from celery import chain
-import numpy as np
 
+import numpy as np
 import requests
+from celery import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
 from flask.globals import request
@@ -28,10 +28,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.tasks import (
-    echo_results,
-    of_pass_data,
-)
+from plugins.optimizer.coordinator.tasks import echo_results, of_pass_data
 from plugins.optimizer.interaction_utils.tasks import invoke_task
 from plugins.optimizer.shared.schemas import (
     MinimizerCallbackData,

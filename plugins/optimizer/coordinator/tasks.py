@@ -16,6 +16,8 @@ from typing import Iterator, Optional
 
 import numpy as np
 import requests
+from celery.utils.log import get_task_logger
+
 from plugins.optimizer.coordinator import Optimizer
 from plugins.optimizer.shared.schemas import (
     ObjectiveFunctionPassData,
@@ -27,14 +29,11 @@ from qhana_plugin_runner.api.plugin_schemas import InteractionEndpointType
 from qhana_plugin_runner.api.tasks_api import TaskData, TaskStatusSchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
 )
 from qhana_plugin_runner.requests import open_url
-from celery.utils.log import get_task_logger
-
 from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
