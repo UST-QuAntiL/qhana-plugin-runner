@@ -1,9 +1,9 @@
 import urllib.parse
+
+from celery.utils.log import get_task_logger
 from requests import Response, post
 
 from qhana_plugin_runner.celery import CELERY
-from celery.utils.log import get_task_logger
-
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 _name = "qhana-plugin-runner-interactions"
