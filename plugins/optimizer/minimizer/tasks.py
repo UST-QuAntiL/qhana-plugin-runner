@@ -24,6 +24,8 @@ from plugins.optimizer.shared.schemas import (
     CalcLossOrGradInputSchema,
     GradientResponseData,
     GradientResponseSchema,
+    LossAndGradientResponseData,
+    LossAndGradientResponseSchema,
     LossResponseData,
     LossResponseSchema,
     MinimizerInputData,
@@ -85,6 +87,30 @@ def jac_(calc_gradient_endpoint_url: str):
     return jac
 
 
+def loss_and_jac_(calc_loss_and_gradient_endpoint_url: str):
+    """
+    Function generator to calculate the loss and gradient. This returns a function that calculates the loss
+    and gradient for given input data and hyperparameters.
+
+    Args:
+        calc_loss_and_gradient_endpoint_url: The URL to which the loss and gradient calculation request will be sent.
+
+    Returns:
+        A function that calculates the loss and gradient.
+    """
+
+    def loss_and_jac(x0):
+        request_data = CalcLossOrGradInputSchema().dump(CalcLossOrGradInput(x0=x0))
+
+        response = requests.post(calc_loss_and_gradient_endpoint_url, json=request_data)
+        response_data: LossAndGradientResponseData = LossAndGradientResponseSchema().load(
+            response.json()
+        )
+        return response_data.loss, response_data.gradient
+
+    return loss_and_jac
+
+
 @CELERY.task(name=f"{Minimizer.instance.identifier}.minimize", bind=True)
 def minimize_task(self, db_id: int) -> str:
     """
@@ -112,6 +138,9 @@ def minimize_task(self, db_id: int) -> str:
         "x0": task_data.data.get("x0"),
         "calcLossEndpointUrl": task_data.data.get("calc_loss_endpoint_url"),
         "calcGradientEndpointUrl": task_data.data.get("calc_gradient_endpoint_url"),
+        "calcLossAndGradientEndpointUrl": task_data.data.get(
+            "calc_loss_and_gradient_endpoint_url"
+        ),
     }
     minimizer_input_data: MinimizerInputData = MinimizerInputSchema().load(input_data)
     loss_fun = loss_(minimizer_input_data.calc_loss_endpoint_url)
@@ -121,6 +150,13 @@ def minimize_task(self, db_id: int) -> str:
     if minimizer_input_data.calc_gradient_endpoint_url:
         jac = jac_(minimizer_input_data.calc_gradient_endpoint_url)
         minimize_params["jac"] = jac
+
+    if minimizer_input_data.calc_loss_and_gradient_endpoint_url:
+        loss_and_jac = loss_and_jac_(
+            minimizer_input_data.calc_loss_and_gradient_endpoint_url
+        )
+        minimize_params["jac"] = True
+        minimize_params["fun"] = loss_and_jac
 
     result = scipy_minimize(**minimize_params)
 

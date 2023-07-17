@@ -36,6 +36,8 @@ from plugins.optimizer.shared.schemas import (
     CalcLossOrGradInput,
     CalcLossOrGradInputSchema,
     GradientResponseSchema,
+    LossAndGradientResponseData,
+    LossAndGradientResponseSchema,
     LossResponseSchema,
     ObjectiveFunctionInvokationCallbackData,
     ObjectiveFunctionInvokationCallbackSchema,
@@ -99,6 +101,14 @@ class PluginsView(MethodView):
                             _external=True,
                         )
                         + "<int:db_id>/calc-gradient-endpoint/",
+                    ),
+                    InteractionEndpoint(
+                        type=InteractionEndpointType.objective_function_gradient,
+                        href=url_for(
+                            f"{NN_BLP.name}.{PluginsView.__name__}",
+                            _external=True,
+                        )
+                        + "<int:db_id>/calc-loss-and-grad/",
                     ),
                 ],
                 href=url_for(f"{NN_BLP.name}.{OptimizerCallbackProcess.__name__}"),
@@ -335,3 +345,47 @@ class CalcGradientEndpoint(MethodView):
             torch.tensor(input_data.y, dtype=torch.float32),
         )
         return {"gradient": gradient}
+
+
+@NN_BLP.route("/<int:db_id>/calc-loss-and-grad/")
+class CalcLossandGradEndpoint(MethodView):
+    """Endpoint for the gradient calculation."""
+
+    @NN_BLP.response(HTTPStatus.OK, LossAndGradientResponseSchema())
+    @NN_BLP.arguments(
+        CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
+    )
+    @NN_BLP.require_jwt("jwt", optional=True)
+    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
+        """Endpoint for the calculation callback."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        if input_data.x is None:
+            input_data.x = (
+                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
+            )
+        if input_data.y is None:
+            input_data.y = (
+                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
+            )
+
+        number_of_neurons: int = db_task.data["number_of_neurons"]
+
+        nn = NN(input_data.x.shape[1], number_of_neurons)
+
+        nn.set_weights(input_data.x0)
+
+        loss, grad = nn.get_loss_and_gradient(
+            torch.tensor(input_data.x, dtype=torch.float32),
+            torch.tensor(input_data.y, dtype=torch.float32),
+        )
+
+        response = LossAndGradientResponseSchema().dump(
+            LossAndGradientResponseData(loss=loss, gradient=grad)
+        )
+
+        return response

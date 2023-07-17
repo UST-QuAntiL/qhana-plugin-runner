@@ -223,6 +223,9 @@ class MinimizationEndpoint(MethodView):
         if input_data.callback_url:
             db_task.data["status_changed_callback_urls"] = [input_data.callback_url]
         db_task.data["calc_loss_endpoint_url"] = input_data.calc_loss_endpoint_url
+        db_task.data[
+            "calc_loss_and_gradient_endpoint_url"
+        ] = input_data.calc_loss_and_gradient_endpoint_url
         if input_data.calc_gradient_endpoint_url:
             db_task.data[
                 "calc_gradient_endpoint_url"
