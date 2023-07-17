@@ -30,6 +30,7 @@ from marshmallow import EXCLUDE
 
 from plugins.optimizer.coordinator.tasks import echo_results, of_pass_data
 from plugins.optimizer.interaction_utils.tasks import invoke_task
+from plugins.optimizer.shared.enums import InteractionEndpointType
 from plugins.optimizer.shared.schemas import (
     MinimizerCallbackData,
     MinimizerCallbackSchema,
@@ -43,7 +44,6 @@ from plugins.optimizer.shared.schemas import (
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
-    InteractionEndpointType,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -291,7 +291,7 @@ class OptimizerSetupProcessStep(MethodView):
         of_calc_endpoint = [
             element
             for element in of_plugin_metadata.entry_point.interaction_endpoints
-            if element.type == InteractionEndpointType.objective_function_calc
+            if element.type == InteractionEndpointType.objective_function_calc.value
         ]
 
         db_task.data[
@@ -301,7 +301,7 @@ class OptimizerSetupProcessStep(MethodView):
         of_pass_data_endpoint = [
             element
             for element in of_plugin_metadata.entry_point.interaction_endpoints
-            if element.type == InteractionEndpointType.of_pass_data
+            if element.type == InteractionEndpointType.of_pass_data.value
         ]
 
         db_task.data[InteractionEndpointType.of_pass_data.value] = of_pass_data_endpoint[
@@ -311,7 +311,7 @@ class OptimizerSetupProcessStep(MethodView):
         of_gradient_endpoint = [
             element
             for element in of_plugin_metadata.entry_point.interaction_endpoints
-            if element.type == InteractionEndpointType.objective_function_gradient
+            if element.type == InteractionEndpointType.objective_function_gradient.value
         ]
 
         if len(of_gradient_endpoint) > 0:
@@ -322,7 +322,7 @@ class OptimizerSetupProcessStep(MethodView):
         of_loss_and_gradient_endpoint = [
             element
             for element in of_plugin_metadata.entry_point.interaction_endpoints
-            if element.type == InteractionEndpointType.of_loss_and_grad
+            if element.type == InteractionEndpointType.of_loss_and_grad.value
         ]
 
         if len(of_loss_and_gradient_endpoint) > 0:
