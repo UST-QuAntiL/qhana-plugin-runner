@@ -32,6 +32,7 @@ from plugins.optimizer.objective_functions.neural_network.schemas import (
     HyperparamterInputData,
     HyperparamterInputSchema,
 )
+from plugins.optimizer.shared.enums import InteractionEndpointType
 from plugins.optimizer.shared.schemas import (
     CalcLossOrGradInput,
     CalcLossOrGradInputSchema,
@@ -50,7 +51,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
     InteractionEndpoint,
-    InteractionEndpointType,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -79,7 +79,7 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 interaction_endpoints=[
                     InteractionEndpoint(
-                        type=InteractionEndpointType.of_pass_data,
+                        type=InteractionEndpointType.of_pass_data.value,
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -87,7 +87,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/pass-data/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_calc,
+                        type=InteractionEndpointType.objective_function_calc.value,
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -95,7 +95,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/calc-callback-endpoint/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_gradient,
+                        type=InteractionEndpointType.objective_function_gradient.value,
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -103,7 +103,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/calc-gradient-endpoint/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_gradient,
+                        type=InteractionEndpointType.objective_function_gradient.value,
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,

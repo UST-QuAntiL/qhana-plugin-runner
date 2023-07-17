@@ -22,6 +22,7 @@ from marshmallow import EXCLUDE
 
 from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
+from plugins.optimizer.shared.enums import InteractionEndpointType
 from plugins.optimizer.shared.schemas import (
     CalcLossOrGradInput,
     CalcLossOrGradInputSchema,
@@ -37,7 +38,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
     InteractionEndpoint,
-    InteractionEndpointType,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -72,7 +72,7 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 interaction_endpoints=[
                     InteractionEndpoint(
-                        type=InteractionEndpointType.of_pass_data,
+                        type=InteractionEndpointType.of_pass_data.value,
                         href=url_for(
                             f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -80,7 +80,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/pass-data/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_calc,
+                        type=InteractionEndpointType.objective_function_calc.value,
                         href=url_for(
                             f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
