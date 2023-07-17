@@ -44,6 +44,21 @@ class GradientResponseSchema(MaBaseSchema):
 
 
 @dataclass
+class LossAndGradientResponseData:
+    loss: float
+    gradient: np.ndarray
+
+
+class LossAndGradientResponseSchema(MaBaseSchema):
+    loss = ma.fields.Float(required=True, allow_none=False)
+    gradient = NumpyArray(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return LossAndGradientResponseData(**data)
+
+
+@dataclass
 class TaskStatusChanged:
     url: str
     status: str
@@ -119,6 +134,7 @@ class MinimizerInputData:
     x0: np.ndarray
     calc_loss_endpoint_url: str
     calc_gradient_endpoint_url: Optional[str] = None
+    calc_loss_and_gradient_endpoint_url: Optional[str] = None
     callback_url: Optional[str] = None
 
 
@@ -126,6 +142,7 @@ class MinimizerInputSchema(MaBaseSchema):
     x0 = NumpyArray(required=True, allow_none=False)
     calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
     calc_gradient_endpoint_url = ma.fields.Url(required=False, allow_none=True)
+    calc_loss_and_gradient_endpoint_url = ma.fields.Url(required=False, allow_none=True)
     callback_url = ma.fields.Url(required=False, allow_none=True)
 
     @ma.post_load

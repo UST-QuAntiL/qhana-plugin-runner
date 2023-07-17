@@ -319,6 +319,17 @@ class OptimizerSetupProcessStep(MethodView):
                 InteractionEndpointType.objective_function_gradient.value
             ] = of_gradient_endpoint[0].href
 
+        of_loss_and_gradient_endpoint = [
+            element
+            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            if element.type == InteractionEndpointType.of_loss_and_grad
+        ]
+
+        if len(of_loss_and_gradient_endpoint) > 0:
+            db_task.data[
+                InteractionEndpointType.of_loss_and_grad.value
+            ] = of_loss_and_gradient_endpoint[0].href
+
         of_href = urljoin(
             arguments.objective_function_plugin_selector,
             of_plugin_metadata.entry_point.href,
@@ -449,6 +460,10 @@ class MinimizerSetupCallback(MethodView):
             InteractionEndpointType.objective_function_gradient.value
         )
 
+        calc_loss_and_gradient_endpoint_url: str = db_task.data.get(
+            InteractionEndpointType.of_loss_and_grad.value
+        )
+
         of_db_id: str = db_task.data.get("of_db_id")
 
         calc_loss_endpoint_url = calc_loss_endpoint_url.replace(
@@ -458,6 +473,10 @@ class MinimizerSetupCallback(MethodView):
         if calc_gradient_endpoint_url:
             calc_gradient_endpoint_url = calc_gradient_endpoint_url.replace(
                 "<int:db_id>", str(of_db_id)
+            )
+        if calc_loss_and_gradient_endpoint_url:
+            calc_loss_and_gradient_endpoint_url = (
+                calc_loss_and_gradient_endpoint_url.replace("<int:db_id>", str(of_db_id))
             )
         number_weights = db_task.data.get("number_weights")
         x0 = np.random.randn(number_weights)

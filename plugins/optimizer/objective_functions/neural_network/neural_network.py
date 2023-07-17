@@ -61,3 +61,16 @@ class NN(nn.Module):
         )
 
         return grads
+
+    def get_loss_and_gradient(self, input_data: torch.Tensor, target_data: torch.Tensor):
+        # Zero the existing gradients
+        self.zero_grad()
+
+        output = self(input_data)
+        loss = torch.mean((output - target_data) * (output - target_data))
+        loss.backward()
+        grads = np.concatenate(
+            [p.grad.data.cpu().numpy().flatten() for p in self.parameters()]
+        )
+
+        return loss.item(), grads
