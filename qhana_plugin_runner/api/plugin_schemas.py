@@ -21,7 +21,6 @@ from urllib.parse import unquote
 
 import marshmallow as ma
 from marshmallow.validate import Regexp
-import numpy as np
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import MaBaseSchema
@@ -220,6 +219,7 @@ class InteractionEndpointType(Enum):
     minimization_step = "minimization-step"
     objective_function_calc = "objective-function_calc"
     objective_function_gradient = "objective-function_gradient"
+    of_loss_and_grad = "of-loss-and-grad"
     of_pass_data = "of-pass-data"
 
 
