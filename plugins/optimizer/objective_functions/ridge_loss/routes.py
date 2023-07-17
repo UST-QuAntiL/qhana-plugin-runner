@@ -80,7 +80,7 @@ class PluginsView(MethodView):
                             f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
                         )
-                        + "<int:db_id>/pass-data/",
+                        + "<int:task_id>/pass-data/",
                     ),
                     InteractionEndpoint(
                         type=InteractionEndpointType.objective_function_calc,
@@ -88,7 +88,7 @@ class PluginsView(MethodView):
                             f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
                         )
-                        + "<int:db_id>/calc-callback-endpoint/",
+                        + "<int:task_id>/calc-callback-endpoint/",
                     ),
                 ],
                 href=url_for(f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
@@ -213,7 +213,7 @@ class OptimizerCallbackProcess(MethodView):
         db_task.data["alpha"] = arguments.alpha
         db_task.save(commit=True)
         callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
-            ObjectiveFunctionInvokationCallbackData(db_id=db_task.id)
+            ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
         )
 
         make_callback(callback.callback_url, callback_data)

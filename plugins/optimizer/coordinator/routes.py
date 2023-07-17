@@ -394,7 +394,7 @@ class ObjectiveFunctionInvokationCallback(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.data["of_db_id"] = arguments.db_id
+        db_task.data["of_task_id"] = arguments.task_id
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
@@ -464,19 +464,21 @@ class MinimizerSetupCallback(MethodView):
             InteractionEndpointType.of_loss_and_grad.value
         )
 
-        of_db_id: str = db_task.data.get("of_db_id")
+        of_task_id: str = db_task.data.get("of_task_id")
 
         calc_loss_endpoint_url = calc_loss_endpoint_url.replace(
-            "<int:db_id>", str(of_db_id)
+            "<int:task_id>", str(of_task_id)
         )
 
         if calc_gradient_endpoint_url:
             calc_gradient_endpoint_url = calc_gradient_endpoint_url.replace(
-                "<int:db_id>", str(of_db_id)
+                "<int:task_id>", str(of_task_id)
             )
         if calc_loss_and_gradient_endpoint_url:
             calc_loss_and_gradient_endpoint_url = (
-                calc_loss_and_gradient_endpoint_url.replace("<int:db_id>", str(of_db_id))
+                calc_loss_and_gradient_endpoint_url.replace(
+                    "<int:task_id>", str(of_task_id)
+                )
             )
         number_weights = db_task.data.get("number_weights")
         x0 = np.random.randn(number_weights)

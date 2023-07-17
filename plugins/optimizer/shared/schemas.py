@@ -105,11 +105,11 @@ class ObjectiveFunctionCallbackSchema(MaBaseSchema):
 
 @dataclass
 class ObjectiveFunctionInvokationCallbackData:
-    db_id: int
+    task_id: int
 
 
 class ObjectiveFunctionInvokationCallbackSchema(MaBaseSchema):
-    db_id = ma.fields.Integer(required=True, allow_none=False)
+    task_id = ma.fields.Integer(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
