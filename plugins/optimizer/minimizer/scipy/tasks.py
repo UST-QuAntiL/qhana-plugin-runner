@@ -36,7 +36,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
 
-from . import Minimizer
+from .. import ScipyMinimizer
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -111,7 +111,7 @@ def loss_and_jac_(calc_loss_and_gradient_endpoint_url: str):
     return loss_and_jac
 
 
-@CELERY.task(name=f"{Minimizer.instance.identifier}.minimize", bind=True)
+@CELERY.task(name=f"{ScipyMinimizer.instance.identifier}.minimize", bind=True)
 def minimize_task(self, db_id: int) -> str:
     """
     Start a minimization task for the specified database id.
