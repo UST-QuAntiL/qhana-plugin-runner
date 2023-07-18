@@ -34,9 +34,7 @@ SCIPY_MINIMIZER_BLP = SecurityBlueprint(
 class ScipyMinimizer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = (
-        """This plugin provides an API to minimize a given objective function with scipy.optimize.minimize()."""
-    )
+    description = """This plugin provides an API to minimize a given objective function with scipy.optimize.minimize()."""
     tags = ["minimization"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -52,7 +50,7 @@ class ScipyMinimizer(QHAnaPluginBase):
 try:
     # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
     # accessed as soon as the routes are imported.
-    from .scipy import routes
+    from . import routes
 except ImportError:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.

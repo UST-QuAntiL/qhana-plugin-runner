@@ -36,7 +36,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
 
-from .. import ScipyMinimizer
+from . import ScipyMinimizer
 
 TASK_LOGGER = get_task_logger(__name__)
 
