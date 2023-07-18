@@ -24,8 +24,11 @@ from marshmallow import EXCLUDE
 
 from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
-from plugins.optimizer.minimizer import SCIPY_MINIMIZER_BLP, ScipyMinimizer
-from plugins.optimizer.minimizer.scipy.schemas import (
+from plugins.optimizer.minimizer.scipy_minimizer import (
+    SCIPY_MINIMIZER_BLP,
+    ScipyMinimizer,
+)
+from plugins.optimizer.minimizer.scipy_minimizer.schemas import (
     MinimizerEnum,
     MinimizerSetupTaskInputData,
     MinimizerSetupTaskInputSchema,
