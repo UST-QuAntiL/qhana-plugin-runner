@@ -24,8 +24,8 @@ from marshmallow import EXCLUDE
 
 from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
-from plugins.optimizer.minimizer import MINIMIZER_BLP, Minimizer
-from plugins.optimizer.minimizer.schemas import (
+from plugins.optimizer.minimizer import SCIPY_MINIMIZER_BLP, ScipyMinimizer
+from plugins.optimizer.minimizer.scipy.schemas import (
     MinimizerEnum,
     MinimizerSetupTaskInputData,
     MinimizerSetupTaskInputSchema,
@@ -50,27 +50,27 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from .tasks import minimize_task
 
 
-@MINIMIZER_BLP.route("/")
+@SCIPY_MINIMIZER_BLP.route("/")
 class MetadataView(MethodView):
     """Plugins collection resource."""
 
-    @MINIMIZER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
-    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
+    @SCIPY_MINIMIZER_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
+    @SCIPY_MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Optimizer endpoint returning the plugin metadata."""
         return PluginMetadata(
             title="Minimizer plugin",
-            description=Minimizer.instance.description,
-            name=Minimizer.instance.name,
-            version=Minimizer.instance.version,
+            description=ScipyMinimizer.instance.description,
+            name=ScipyMinimizer.instance.name,
+            version=ScipyMinimizer.instance.version,
             type=PluginType.processing,
-            tags=Minimizer.instance.tags,
+            tags=ScipyMinimizer.instance.tags,
             entry_point=EntryPoint(
                 href=url_for(
-                    f"{MINIMIZER_BLP.name}.{MinimizerSetupProcessStep.__name__}"
+                    f"{SCIPY_MINIMIZER_BLP.name}.{MinimizerSetupProcessStep.__name__}"
                 ),  # URL for the first process endpoint
                 ui_href=url_for(
-                    f"{MINIMIZER_BLP.name}.{MinimizerSetupMicroFrontend.__name__}"
+                    f"{SCIPY_MINIMIZER_BLP.name}.{MinimizerSetupMicroFrontend.__name__}"
                 ),  # URL for the first micro frontend endpoint
                 data_input=[],
                 data_output=[
@@ -89,7 +89,7 @@ class MetadataView(MethodView):
         )
 
 
-@MINIMIZER_BLP.route("/ui-setup/")
+@SCIPY_MINIMIZER_BLP.route("/ui-setup/")
 class MinimizerSetupMicroFrontend(MethodView):
     """Micro frontend for the minimization method selection."""
 
@@ -97,44 +97,44 @@ class MinimizerSetupMicroFrontend(MethodView):
         "method": MinimizerEnum.nelder_mead,
     }
 
-    @MINIMIZER_BLP.html_response(
+    @SCIPY_MINIMIZER_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the minimization method selection.",
     )
-    @MINIMIZER_BLP.arguments(
+    @SCIPY_MINIMIZER_BLP.arguments(
         MinimizerSetupTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @MINIMIZER_BLP.arguments(
+    @SCIPY_MINIMIZER_BLP.arguments(
         CallbackUrlSchema(unknown=EXCLUDE),
         location="query",
         required=False,
     )
-    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
+    @SCIPY_MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, callback: CallbackUrl):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
-    @MINIMIZER_BLP.html_response(
+    @SCIPY_MINIMIZER_BLP.html_response(
         HTTPStatus.OK,
         description="Micro frontend for the minimization method selection.",
     )
-    @MINIMIZER_BLP.arguments(
+    @SCIPY_MINIMIZER_BLP.arguments(
         MinimizerSetupTaskInputSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @MINIMIZER_BLP.arguments(
+    @SCIPY_MINIMIZER_BLP.arguments(
         CallbackUrlSchema(unknown=EXCLUDE),
         location="query",
         required=False,
     )
-    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
+    @SCIPY_MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, callback: CallbackUrl):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
@@ -147,20 +147,20 @@ class MinimizerSetupMicroFrontend(MethodView):
             data = self.example_inputs
 
         process_url = url_for(
-            f"{MINIMIZER_BLP.name}.{MinimizerSetupProcessStep.__name__}",
+            f"{SCIPY_MINIMIZER_BLP.name}.{MinimizerSetupProcessStep.__name__}",
             **callback_schema.dump(callback),
         )
 
         example_url = url_for(
-            f"{MINIMIZER_BLP.name}.{MinimizerSetupMicroFrontend.__name__}",
+            f"{SCIPY_MINIMIZER_BLP.name}.{MinimizerSetupMicroFrontend.__name__}",
             **self.example_inputs,
             **callback_schema.dump(callback),
         )
         return Response(
             render_template(
                 "simple_template.html",
-                name=Minimizer.instance.name,
-                version=Minimizer.instance.version,
+                name=ScipyMinimizer.instance.name,
+                version=ScipyMinimizer.instance.version,
                 schema=schema,
                 values=data,
                 errors=errors,
@@ -173,18 +173,18 @@ class MinimizerSetupMicroFrontend(MethodView):
 TASK_LOGGER: Logger = get_task_logger(__name__)
 
 
-@MINIMIZER_BLP.route("/process-setup/")
+@SCIPY_MINIMIZER_BLP.route("/process-setup/")
 class MinimizerSetupProcessStep(MethodView):
     """Callback to the coordinator."""
 
-    @MINIMIZER_BLP.arguments(
+    @SCIPY_MINIMIZER_BLP.arguments(
         MinimizerSetupTaskInputSchema(unknown=EXCLUDE), location="form"
     )
-    @MINIMIZER_BLP.arguments(
+    @SCIPY_MINIMIZER_BLP.arguments(
         CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
     )
-    @MINIMIZER_BLP.response(HTTPStatus.OK, MinimizerTaskResponseSchema())
-    @MINIMIZER_BLP.require_jwt("jwt", optional=True)
+    @SCIPY_MINIMIZER_BLP.response(HTTPStatus.OK, MinimizerTaskResponseSchema())
+    @SCIPY_MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: MinimizerSetupTaskInputData, callback: CallbackUrl):
         """Start the demo task."""
         db_task = ProcessingTask(
@@ -194,7 +194,7 @@ class MinimizerSetupProcessStep(MethodView):
         db_task.save(commit=True)
 
         minimize_endpoint = url_for(
-            f"{MINIMIZER_BLP.name}.{MinimizationEndpoint.__name__}",
+            f"{SCIPY_MINIMIZER_BLP.name}.{MinimizationEndpoint.__name__}",
             db_id=db_task.id,
             _external=True,
         )
@@ -208,11 +208,11 @@ class MinimizerSetupProcessStep(MethodView):
         make_callback(callback.callback_url, callback_data)
 
 
-@MINIMIZER_BLP.route("<int:db_id>/minimize/")
+@SCIPY_MINIMIZER_BLP.route("<int:db_id>/minimize/")
 class MinimizationEndpoint(MethodView):
     """Endpoint for the minimization."""
 
-    @MINIMIZER_BLP.arguments(MinimizerInputSchema(unknown=EXCLUDE), location="json")
+    @SCIPY_MINIMIZER_BLP.arguments(MinimizerInputSchema(unknown=EXCLUDE), location="json")
     def post(self, input_data: MinimizerInputData, db_id: int):
         """Minimize the objective function."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
