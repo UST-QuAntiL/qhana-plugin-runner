@@ -34,9 +34,7 @@ OPTIMIZER_BLP = SecurityBlueprint(
 class Optimizer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = """
-    This plugin provides an API to optimize data given an user selected objective-function and a minimization algorithm.
-    """
+    description = "This plugin provides an API to optimize data given an user selected objective-function and a minimization algorithm."
     tags = ["optimization"]
 
     def __init__(self, app: Optional[Flask]) -> None:

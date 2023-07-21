@@ -34,7 +34,7 @@ SCIPY_MINIMIZER_BLP = SecurityBlueprint(
 class ScipyMinimizer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = """This plugin provides an API to minimize a given objective function with scipy.optimize.minimize()."""
+    description = "This plugin provides an API to minimize a given objective function with scipy.optimize.minimize()."
     tags = ["minimization"]
 
     def __init__(self, app: Optional[Flask]) -> None:

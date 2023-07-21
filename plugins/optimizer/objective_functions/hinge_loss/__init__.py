@@ -34,9 +34,7 @@ HINGELOSS_BLP = SecurityBlueprint(
 class HingeLoss(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = """
-        Hinge Loss objective-function plugin.
-        """
+    description = "Hinge Loss objective-function plugin."
     tags = ["optimization", "invokable", "objective-function"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -46,7 +44,7 @@ class HingeLoss(QHAnaPluginBase):
         return HINGELOSS_BLP
 
     def get_requirements(self) -> str:
-        return "scipy~=1.10.1"
+        return ""
 
 
 try:
