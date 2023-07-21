@@ -34,7 +34,7 @@ NN_BLP = SecurityBlueprint(
 class NeuralNetwork(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = """Neural Network objective-function plugin."""
+    description = "Neural Network objective-function plugin."
     tags = ["optimization", "invokable", "objective-function", "gradient"]
 
     def __init__(self, app: Optional[Flask]) -> None:

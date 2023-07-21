@@ -34,9 +34,7 @@ RIDGELOSS_BLP = SecurityBlueprint(
 class RidgeLoss(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = """
-        Ridge Loss objective-function plugin.
-        """
+    description = "Ridge Loss objective-function plugin."
     tags = ["optimization", "invokable", "objective-function"]
 
     def __init__(self, app: Optional[Flask]) -> None:

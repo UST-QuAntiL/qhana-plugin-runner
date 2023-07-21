@@ -62,7 +62,7 @@ class MetadataView(MethodView):
     def get(self):
         """Optimizer endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Minimizer plugin",
+            title="Scipy Minimizer with Gradient Plugin",
             description=ScipyMinimizerGrad.instance.description,
             name=ScipyMinimizerGrad.instance.name,
             version=ScipyMinimizerGrad.instance.version,
@@ -97,7 +97,7 @@ class MinimizerSetupMicroFrontend(MethodView):
     """Micro frontend for the minimization method selection."""
 
     example_inputs = {
-        "method": MinimizerEnum.nelder_mead,
+        "method": MinimizerEnum.lbfgsb,
     }
 
     @SCIPY_MINIMIZER_GRAD_BLP.html_response(
