@@ -62,7 +62,7 @@ class MetadataView(MethodView):
     def get(self):
         """Optimizer endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Minimizer plugin",
+            title="Scipy Minimizer Plugin",
             description=ScipyMinimizer.instance.description,
             name=ScipyMinimizer.instance.name,
             version=ScipyMinimizer.instance.version,

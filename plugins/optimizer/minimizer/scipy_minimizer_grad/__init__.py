@@ -34,7 +34,7 @@ SCIPY_MINIMIZER_GRAD_BLP = SecurityBlueprint(
 class ScipyMinimizerGrad(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = """This plugin provides an API to minimize a given objective function with scipy.optimize.minimize() with gradient support."""
+    description = "This plugin provides an API to minimize a given objective function with scipy.optimize.minimize() with gradient support."
     tags = ["minimization", "gradient"]
 
     def __init__(self, app: Optional[Flask]) -> None:
