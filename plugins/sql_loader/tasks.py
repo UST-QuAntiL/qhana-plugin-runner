@@ -18,7 +18,7 @@ from typing import Optional, Tuple
 
 from celery.utils.log import get_task_logger
 
-from . import DBManagerPlugin
+from . import SQLLoaderPlugin
 
 from .schemas import (
     FirstInputParameters,
@@ -59,7 +59,7 @@ def prep_first_inputs(
     return db_enum, db_host, db_port, db_user, db_password, db_database
 
 
-@CELERY.task(name=f"{DBManagerPlugin.instance.identifier}.first_task", bind=True)
+@CELERY.task(name=f"{SQLLoaderPlugin.instance.identifier}.first_task", bind=True)
 def first_task(self, db_id: int) -> str:
     # get parameters
 
@@ -104,7 +104,7 @@ def first_task(self, db_id: int) -> str:
     return "First step: checked database"
 
 
-@CELERY.task(name=f"{DBManagerPlugin.instance.identifier}.second_task", bind=True)
+@CELERY.task(name=f"{SQLLoaderPlugin.instance.identifier}.second_task", bind=True)
 def second_task(self, db_id: int) -> str:
     # get parameters
 

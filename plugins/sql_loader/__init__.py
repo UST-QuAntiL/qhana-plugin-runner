@@ -20,20 +20,20 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
-_plugin_name = "db-manager"
+_plugin_name = "sql-loader"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-DBManager_BLP = SecurityBlueprint(
+SQLLoader_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="DB Manager plugin API",
+    description="SQL Loader plugin API",
     template_folder="",
 )
 
 
-class DBManagerPlugin(QHAnaPluginBase):
+class SQLLoaderPlugin(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Allows to manage sql databases and use them as a source."
@@ -44,7 +44,7 @@ class DBManagerPlugin(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return DBManager_BLP
+        return SQLLoader_BLP
 
     def get_requirements(self) -> str:
         return "pymysql\npsycopg2"

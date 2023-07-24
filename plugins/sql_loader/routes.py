@@ -29,7 +29,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import DBManager_BLP, DBManagerPlugin
+from . import SQLLoader_BLP, SQLLoaderPlugin
 from .schemas import (
     FirstInputParametersSchema,
     SecondInputParametersSchema,
@@ -52,24 +52,24 @@ from .tasks import first_task, second_task
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@DBManager_BLP.route("/")
+@SQLLoader_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @DBManager_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
-    @DBManager_BLP.require_jwt("jwt", optional=True)
+    @SQLLoader_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """db_manager endpoint returning the plugin metadata."""
 
         return PluginMetadata(
             title="DB Manager",
-            description=DBManagerPlugin.instance.description,
-            name=DBManagerPlugin.instance.identifier,
-            version=DBManagerPlugin.instance.version,
+            description=SQLLoaderPlugin.instance.description,
+            name=SQLLoaderPlugin.instance.identifier,
+            version=SQLLoaderPlugin.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{DBManager_BLP.name}.FirstProcessView"),
-                ui_href=url_for(f"{DBManager_BLP.name}.FirstMicroFrontend"),
+                href=url_for(f"{SQLLoader_BLP.name}.FirstProcessView"),
+                ui_href=url_for(f"{SQLLoader_BLP.name}.FirstMicroFrontend"),
                 data_input=[
                     InputDataMetadata(
                         "entity/vectors",
@@ -88,40 +88,40 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=DBManagerPlugin.instance.tags,
+            tags=SQLLoaderPlugin.instance.tags,
         )
 
 
-@DBManager_BLP.route("/ui/")
+@SQLLoader_BLP.route("/ui/")
 class FirstMicroFrontend(MethodView):
     """Micro frontend for the db manager plugin."""
 
-    @DBManager_BLP.html_response(
+    @SQLLoader_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the db manager plugin."
     )
-    @DBManager_BLP.arguments(
+    @SQLLoader_BLP.arguments(
         FirstInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @DBManager_BLP.require_jwt("jwt", optional=True)
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @DBManager_BLP.html_response(
+    @SQLLoader_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the db manager plugin."
     )
-    @DBManager_BLP.arguments(
+    @SQLLoader_BLP.arguments(
         FirstInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @DBManager_BLP.require_jwt("jwt", optional=True)
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors)
@@ -144,31 +144,31 @@ class FirstMicroFrontend(MethodView):
         return Response(
             render_template(
                 "template.html",
-                name=DBManagerPlugin.instance.name,
-                version=DBManagerPlugin.instance.version,
+                name=SQLLoaderPlugin.instance.name,
+                version=SQLLoaderPlugin.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
-                process=url_for(f"{DBManager_BLP.name}.FirstProcessView"),
-                frontendjs=url_for(f"{DBManager_BLP.name}.get_first_frontend_js"),
+                process=url_for(f"{SQLLoader_BLP.name}.FirstProcessView"),
+                frontendjs=url_for(f"{SQLLoader_BLP.name}.get_first_frontend_js"),
             )
         )
 
 
-@DBManager_BLP.route("/ui/first_frontend_js/")
+@SQLLoader_BLP.route("/ui/first_frontend_js/")
 def get_first_frontend_js():
     return send_file(
         Path(__file__).parent / "first_frontend.js", mimetype="text/javascript"
     )
 
 
-@DBManager_BLP.route("/process/")
+@SQLLoader_BLP.route("/process/")
 class FirstProcessView(MethodView):
     """Start a long running processing task."""
 
-    @DBManager_BLP.arguments(FirstInputParametersSchema(unknown=EXCLUDE), location="form")
-    @DBManager_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @DBManager_BLP.require_jwt("jwt", optional=True)
+    @SQLLoader_BLP.arguments(FirstInputParametersSchema(unknown=EXCLUDE), location="form")
+    @SQLLoader_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
         db_task = ProcessingTask(
@@ -180,13 +180,13 @@ class FirstProcessView(MethodView):
         # next step
         step_id = "2.0"
         href = url_for(
-            f"{DBManager_BLP.name}.SecondProcessView",
+            f"{SQLLoader_BLP.name}.SecondProcessView",
             db_id=db_task.id,
             step_id=step_id,
             _external=True,
         )
         ui_href = url_for(
-            f"{DBManager_BLP.name}.SecondMicroFrontend",
+            f"{SQLLoader_BLP.name}.SecondMicroFrontend",
             db_id=db_task.id,
             step_id=step_id,
             _external=True,
@@ -205,36 +205,36 @@ class FirstProcessView(MethodView):
         )
 
 
-@DBManager_BLP.route("/<int:db_id>/<float:step_id>/ui/")
+@SQLLoader_BLP.route("/<int:db_id>/<float:step_id>/ui/")
 class SecondMicroFrontend(MethodView):
     """Micro frontend for the db manager plugin."""
 
-    @DBManager_BLP.html_response(
+    @SQLLoader_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the db manager plugin."
     )
-    @DBManager_BLP.arguments(
+    @SQLLoader_BLP.arguments(
         SecondInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @DBManager_BLP.require_jwt("jwt", optional=True)
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int, step_id: float):
         """Return the micro frontend."""
         return self.render(request.form, db_id, step_id, errors)
 
-    @DBManager_BLP.html_response(
+    @SQLLoader_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the db manager plugin."
     )
-    @DBManager_BLP.arguments(
+    @SQLLoader_BLP.arguments(
         SecondInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @DBManager_BLP.require_jwt("jwt", optional=True)
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int, step_id: float):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, db_id, step_id, errors)
@@ -262,38 +262,38 @@ class SecondMicroFrontend(MethodView):
         return Response(
             render_template(
                 "template.html",
-                name=DBManagerPlugin.instance.name,
-                version=DBManagerPlugin.instance.version,
+                name=SQLLoaderPlugin.instance.name,
+                version=SQLLoaderPlugin.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(
-                    f"{DBManager_BLP.name}.SecondProcessView",
+                    f"{SQLLoader_BLP.name}.SecondProcessView",
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                frontendjs=url_for(f"{DBManager_BLP.name}.get_second_frontend_js"),
+                frontendjs=url_for(f"{SQLLoader_BLP.name}.get_second_frontend_js"),
                 additional_info=dumps(db_task.data["db_tables_and_columns"]),
             )
         )
 
 
-@DBManager_BLP.route("/ui/second_frontend_js/")
+@SQLLoader_BLP.route("/ui/second_frontend_js/")
 def get_second_frontend_js():
     return send_file(
         Path(__file__).parent / "second_frontend.js", mimetype="text/javascript"
     )
 
 
-@DBManager_BLP.route("/<int:db_id>/<float:step_id>-process/")
+@SQLLoader_BLP.route("/<int:db_id>/<float:step_id>-process/")
 class SecondProcessView(MethodView):
     """Start a long running processing task."""
 
-    @DBManager_BLP.arguments(
+    @SQLLoader_BLP.arguments(
         SecondInputParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @DBManager_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @DBManager_BLP.require_jwt("jwt", optional=True)
+    @SQLLoader_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int, step_id: float):
         """Start the calculation task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
