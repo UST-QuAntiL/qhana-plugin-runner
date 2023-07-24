@@ -143,23 +143,15 @@ class FirstMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "template.html",
+                "first_template.html",
                 name=SQLLoaderPlugin.instance.name,
                 version=SQLLoaderPlugin.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{SQLLoader_BLP.name}.FirstProcessView"),
-                frontendjs=url_for(f"{SQLLoader_BLP.name}.get_first_frontend_js"),
             )
         )
-
-
-@SQLLoader_BLP.route("/ui/first_frontend_js/")
-def get_first_frontend_js():
-    return send_file(
-        Path(__file__).parent / "first_frontend.js", mimetype="text/javascript"
-    )
 
 
 @SQLLoader_BLP.route("/process/")
@@ -261,7 +253,7 @@ class SecondMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "template.html",
+                "second_template.html",
                 name=SQLLoaderPlugin.instance.name,
                 version=SQLLoaderPlugin.instance.version,
                 schema=schema,
@@ -272,17 +264,9 @@ class SecondMicroFrontend(MethodView):
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                frontendjs=url_for(f"{SQLLoader_BLP.name}.get_second_frontend_js"),
                 additional_info=dumps(db_task.data["db_tables_and_columns"]),
             )
         )
-
-
-@SQLLoader_BLP.route("/ui/second_frontend_js/")
-def get_second_frontend_js():
-    return send_file(
-        Path(__file__).parent / "second_frontend.js", mimetype="text/javascript"
-    )
 
 
 @SQLLoader_BLP.route("/<int:db_id>/<float:step_id>-process/")
