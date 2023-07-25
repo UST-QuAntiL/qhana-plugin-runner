@@ -3,6 +3,7 @@
 {% block head %}
     {{ super() }}
     <p id="additional_info" hidden>{{additional_info}}</p>
+    <datalist id="id_attribute_list"></datalist>
 {% endblock head %}
 
 {% block script %}
@@ -16,10 +17,12 @@
         const save_table_value = document.getElementById("save_table");
         const columns_list_value = document.getElementById("columns_list");
         const table_name_value = document.getElementById("table_name");
+        const attribute_to_id_value = document.getElementById("id_attribute")
+        const id_attribute_list_value =document.getElementById("id_attribute_list");
         const tables_and_columns = JSON.parse(document.getElementById("additional_info").textContent);
 
 
-        const attribute_to_id_vis = document.getElementById("id_attribute").parentNode.parentNode;
+        const attribute_to_id_vis = attribute_to_id_value.parentNode.parentNode;
         const db_query_vis = document.getElementById("db_query").parentNode.parentNode;
         const columns_list_vis = columns_list_value.parentNode.parentNode;
         const table_name_vis = table_name_value.parentNode.parentNode;
@@ -170,11 +173,26 @@
         }
 
 
+        function update_id_attribute_list(){
+            let current_table = table_select.value;
+            let columns = tables_and_columns[current_table];
+
+            // replaceChildren with array of new children somehow didn't work
+            id_attribute_list_value.replaceChildren();
+            columns.forEach(col => {
+                let c = document.createElement("option");
+                c.value = col;
+                id_attribute_list_value.appendChild(c);
+            });
+        }
+
+
         function table_select_change(){
             table_name_value.value = table_select.value;
             let check_all_box = document.getElementById("select all_box");
             check_all_box.checked = false;
             create_check_box_list();
+            update_id_attribute_list();
         }
 
 
@@ -187,6 +205,7 @@
 
 
         columns_list_value.style.display = "none";
+        attribute_to_id_value.setAttribute("list", "id_attribute_list");
         table_select = init_table_name_value();
         save_table_change();
         init_check_all_box();

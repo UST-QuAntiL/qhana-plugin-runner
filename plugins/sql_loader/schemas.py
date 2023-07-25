@@ -183,7 +183,8 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "description": "This determines the attribute that should be used as the ID foreach entity. "
             "If the attribute is not unique for each entry in the queried table, then the index will "
             "be used as the entity's id.",
-            "input_type": "text",
+            "input_type": "search",
+            # "list": "id_attribute_list", Not working?
         },
     )
 
