@@ -295,9 +295,9 @@ class FinalProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = second_task.s(db_id=db_task.id, step_id=step_id) | save_task_result.s(
-            db_id=db_task.id
-        )
+        task: chain = second_task.s(
+            db_id=db_task.id, step_id=step_id
+        ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -346,7 +346,11 @@ class SecondProcessView(MethodView):
 
         # all tasks need to know about db id to load the db entry
         task: chain = second_task.s(db_id=db_task.id, step_id=step_id) | add_step.s(
-            db_id=db_task.id, step_id=next_step_id, href=href, ui_href=ui_href, prog_value=50
+            db_id=db_task.id,
+            step_id=next_step_id,
+            href=href,
+            ui_href=ui_href,
+            prog_value=50,
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))

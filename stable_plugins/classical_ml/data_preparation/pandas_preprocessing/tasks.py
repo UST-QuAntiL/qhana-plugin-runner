@@ -72,7 +72,7 @@ def first_task(self, db_id: int) -> str:
         )
         task_data.data["file_url"] = task_file.file_storage_data
         # task_data.data["pandas_html"] = df.to_html(max_rows=100)
-        task_data.data["pandas_html"] = build_table(df, 'grey_light')
+        task_data.data["pandas_html"] = build_table(df, "grey_light")
 
     task_data.save(commit=True)
 
@@ -121,7 +121,7 @@ def second_task(self, db_id: int, step_id: float) -> str:
         )
         task_data.data["file_url"] = task_file.file_storage_data
         # task_data.data["pandas_html"] = df.to_html(max_rows=100)
-        task_data.data["pandas_html"] = build_table(df, 'grey_light')
+        task_data.data["pandas_html"] = build_table(df, "grey_light")
 
     task_data.save(commit=True)
 
