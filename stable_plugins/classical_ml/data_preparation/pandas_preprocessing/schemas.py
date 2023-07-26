@@ -22,7 +22,13 @@ from qhana_plugin_runner.api.util import (
 from qhana_plugin_runner.api import EnumField
 
 from dataclasses import dataclass
-from .backend.pandas_preprocessing import PreprocessingEnum, AxisEnum, KeepEnum, PositionEnum, CaseEnum
+from .backend.pandas_preprocessing import (
+    PreprocessingEnum,
+    AxisEnum,
+    KeepEnum,
+    PositionEnum,
+    CaseEnum,
+)
 
 from celery.utils.log import get_task_logger
 
@@ -110,7 +116,7 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "description": "Requires that many non-NA values. Cannot be combined with how. If left empty, then all values may not be NA.",
             "input_type": "number",
         },
-        validate=validate.Range(min=0, min_inclusive=True)
+        validate=validate.Range(min=0, min_inclusive=True),
     )
     subset = ma.fields.String(
         required=False,

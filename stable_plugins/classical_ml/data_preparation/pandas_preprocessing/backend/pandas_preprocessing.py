@@ -35,9 +35,7 @@ class PreprocessingEnum(Enum):
         else:
             return df
 
-        params = {
-            k: v for k, v in preprocessing_params.items() if v is not None
-        }
+        params = {k: v for k, v in preprocessing_params.items() if v is not None}
         for k, v in params.items():
             if isinstance(v, Enum):
                 params[k] = v.get()
@@ -82,7 +80,11 @@ class CaseEnum(Enum):
 
 
 def drop_missing_value(
-    df: DataFrame, axis: int = 0, threshold: int = no_default, subset: str = None, **kwargs
+    df: DataFrame,
+    axis: int = 0,
+    threshold: int = no_default,
+    subset: str = None,
+    **kwargs,
 ) -> DataFrame:
     if subset is not None:
         subset = None if subset == "" else subset.split(",")
@@ -101,7 +103,11 @@ def fill_missing_value(df: DataFrame, fill_value: str, **kwargs) -> DataFrame:
 
 
 def drop_duplicates(
-    df: DataFrame, subset: str = None, keep: str = "first", ignore_index: bool = False, **kwargs
+    df: DataFrame,
+    subset: str = None,
+    keep: str = "first",
+    ignore_index: bool = False,
+    **kwargs,
 ) -> DataFrame:
     if subset is not None:
         subset = None if subset == "" else subset.split(",")
@@ -119,7 +125,11 @@ def sort_values(df: DataFrame, by: str, ascending: bool = False, **kwargs):
 
 
 def strip_characters(
-    df: DataFrame, characters: List[str] = "", subset: str = None, position: str = "both", **kwargs
+    df: DataFrame,
+    characters: List[str] = "",
+    subset: str = None,
+    position: str = "both",
+    **kwargs,
 ) -> DataFrame:
     if subset is not None:
         subset = df.keys() if subset == "" else subset.split(",")
@@ -148,7 +158,7 @@ def split_column(
     by: str,
     new_columns: str = "",
     remove_column: bool = False,
-    **kwargs
+    **kwargs,
 ) -> DataFrame:
     if column not in df.keys():
         raise ValueError(f"The dataframe has no column {column}.")
@@ -166,7 +176,9 @@ def split_column(
     return df
 
 
-def replace(df: DataFrame, sub_str: str, new_str: str, subset: str = "", **kwargs) -> DataFrame:
+def replace(
+    df: DataFrame, sub_str: str, new_str: str, subset: str = "", **kwargs
+) -> DataFrame:
     if subset is not None:
         subset = df.keys() if subset == "" else subset.split(",")
     else:

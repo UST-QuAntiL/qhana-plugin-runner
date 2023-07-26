@@ -57,7 +57,9 @@ def first_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: FirstInputParameters = FirstInputParametersSchema().loads(task_data.parameters)
+    input_params: FirstInputParameters = FirstInputParametersSchema().loads(
+        task_data.parameters
+    )
 
     file_url = input_params.file_url
 
@@ -97,7 +99,9 @@ def second_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: SecondInputParameters = SecondInputParametersSchema().loads(task_data.parameters)
+    input_params: SecondInputParameters = SecondInputParametersSchema().loads(
+        task_data.parameters
+    )
 
     file_url: str = task_data.data["file_url"]
     TASK_LOGGER.info(f"file_url: {file_url}")
@@ -107,8 +111,7 @@ def second_task(self, db_id: int) -> str:
 
     df = read_csv(file_url)
     df = preprocessing_enum.preprocess_df(
-        df,
-        {k: v for k, v in input_params.__dict__.items() if k != "preprocessing_enum"}
+        df, {k: v for k, v in input_params.__dict__.items() if k != "preprocessing_enum"}
     )
 
     # Output data

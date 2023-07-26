@@ -28,7 +28,11 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import PDPreprocessing_BLP, PDPreprocessing
-from .schemas import FirstInputParametersSchema, SecondInputParametersSchema, TaskResponseSchema
+from .schemas import (
+    FirstInputParametersSchema,
+    SecondInputParametersSchema,
+    TaskResponseSchema,
+)
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
