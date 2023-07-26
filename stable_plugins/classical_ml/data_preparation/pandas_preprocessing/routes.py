@@ -168,7 +168,7 @@ class FirstProcessView(MethodView):
         db_task.save(commit=True)
 
         # next step
-        step_id = "2.0"
+        step_id = "2"
         href = url_for(
             f"{PDPreprocessing_BLP.name}.SecondProcessView",
             db_id=db_task.id,
@@ -195,7 +195,7 @@ class FirstProcessView(MethodView):
         )
 
 
-@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>/ui/")
+@PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>/ui/")
 class SecondMicroFrontend(MethodView):
     """Micro frontend for the db manager plugin."""
 
@@ -210,7 +210,7 @@ class SecondMicroFrontend(MethodView):
         required=False,
     )
     @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, db_id: int, step_id: float):
+    def get(self, errors, db_id: int, step_id: int):
         """Return the micro frontend."""
         return self.render(request.form, db_id, step_id, errors)
 
@@ -225,11 +225,11 @@ class SecondMicroFrontend(MethodView):
         required=False,
     )
     @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, db_id: int, step_id: float):
+    def post(self, errors, db_id: int, step_id: int):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, db_id, step_id, errors)
 
-    def render(self, data: Mapping, db_id: int, step_id: float, errors: dict):
+    def render(self, data: Mapping, db_id: int, step_id: int, errors: dict):
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -272,7 +272,7 @@ class SecondMicroFrontend(MethodView):
         )
 
 
-@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>-process1/")
+@PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>-process1/")
 class FinalProcessView(MethodView):
     """Start a long running processing task."""
 
@@ -281,7 +281,7 @@ class FinalProcessView(MethodView):
     )
     @PDPreprocessing_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int, step_id: float):
+    def post(self, arguments, db_id: int, step_id: int):
         """Start the calculation task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -307,7 +307,7 @@ class FinalProcessView(MethodView):
         )
 
 
-@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>-process0/")
+@PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>-process0/")
 class SecondProcessView(MethodView):
     """Start a long running processing task."""
 
@@ -316,7 +316,7 @@ class SecondProcessView(MethodView):
     )
     @PDPreprocessing_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int, step_id: float):
+    def post(self, arguments, db_id: int, step_id: int):
         """Start the calculation task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -327,7 +327,7 @@ class SecondProcessView(MethodView):
         db_task.parameters = SecondInputParametersSchema().dumps(arguments)
 
         # next step
-        next_step_id = str(step_id + 0.1)
+        next_step_id = str(step_id + 1)
         href = url_for(
             f"{PDPreprocessing_BLP.name}.FinalProcessView",
             db_id=db_task.id,

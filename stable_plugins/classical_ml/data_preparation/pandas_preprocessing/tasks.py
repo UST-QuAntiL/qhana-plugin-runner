@@ -80,7 +80,7 @@ def first_task(self, db_id: int) -> str:
 
 
 @CELERY.task(name=f"{PDPreprocessing.instance.identifier}.second_task", bind=True)
-def second_task(self, db_id: int, step_id: float) -> str:
+def second_task(self, db_id: int, step_id: int) -> str:
     # get parameters
 
     TASK_LOGGER.info(
@@ -110,7 +110,7 @@ def second_task(self, db_id: int, step_id: float) -> str:
 
     # Output data
     if df is not None:
-        file_id = int(str(step_id).split(".")[1])
+        file_id = step_id
         with SpooledTemporaryFile(mode="w") as output:
             df.to_csv(output, index=False)
             task_file = STORE.persist_task_result(
