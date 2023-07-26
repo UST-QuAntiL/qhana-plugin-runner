@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from http import HTTPStatus
-from typing import Mapping
+from typing import Mapping, Optional
 
 from pathlib import Path
 
@@ -29,7 +28,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from . import PDPreprocessing_BLP, PDPreprocessing
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import FirstInputParametersSchema, SecondInputParametersSchema, TaskResponseSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -39,9 +38,13 @@ from qhana_plugin_runner.api.plugin_schemas import (
     InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .tasks import calculation_task
+from .tasks import first_task, second_task
+
+from celery.utils.log import get_task_logger
+
+TASK_LOGGER = get_task_logger(__name__)
 
 
 @PDPreprocessing_BLP.route("/")
@@ -58,10 +61,10 @@ class PluginsView(MethodView):
             description=PDPreprocessing.instance.description,
             name=PDPreprocessing.instance.identifier,
             version=PDPreprocessing.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{PDPreprocessing_BLP.name}.ProcessView"),
-                ui_href=url_for(f"{PDPreprocessing_BLP.name}.MicroFrontend"),
+                href=url_for(f"{PDPreprocessing_BLP.name}.SecondProcessView"),
+                ui_href=url_for(f"{PDPreprocessing_BLP.name}.SecondMicroFrontend"),
                 data_input=[],
                 data_output=[
                     DataMetadata(
@@ -78,14 +81,14 @@ class PluginsView(MethodView):
 
 
 @PDPreprocessing_BLP.route("/ui/")
-class MicroFrontend(MethodView):
+class FirstMicroFrontend(MethodView):
     """Micro frontend for the pandas preprocessing plugin."""
 
     @PDPreprocessing_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the pandas preprocessing plugin."
     )
     @PDPreprocessing_BLP.arguments(
-        InputParametersSchema(
+        FirstInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -100,7 +103,7 @@ class MicroFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of the pandas preprocessing plugin."
     )
     @PDPreprocessing_BLP.arguments(
-        InputParametersSchema(
+        FirstInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -112,7 +115,7 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors)
 
     def render(self, data: Mapping, errors: dict):
-        schema = InputParametersSchema()
+        schema = FirstInputParametersSchema()
 
         data_dict = dict(data)
         fields = schema.fields
@@ -131,8 +134,7 @@ class MicroFrontend(MethodView):
                 schema=schema,
                 values=data_dict,
                 errors=errors,
-                process=url_for(f"{PDPreprocessing_BLP.name}.ProcessView"),
-                frontendjs=url_for(f"{PDPreprocessing_BLP.name}.get_frontend_js"),
+                process=url_for(f"{PDPreprocessing_BLP.name}.FirstProcessView"),
             )
         )
 
@@ -143,31 +145,151 @@ def get_frontend_js():
 
 
 @PDPreprocessing_BLP.route("/process/")
-class ProcessView(MethodView):
+class FirstProcessView(MethodView):
     """Start a long running processing task."""
 
     @PDPreprocessing_BLP.arguments(
-        InputParametersSchema(unknown=EXCLUDE), location="form"
+        FirstInputParametersSchema(unknown=EXCLUDE), location="form"
     )
     @PDPreprocessing_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the calculation task."""
         db_task = ProcessingTask(
-            task_name=calculation_task.name,
-            parameters=InputParametersSchema().dumps(arguments),
+            task_name=first_task.name,
+            parameters=FirstInputParametersSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 
+        # next step
+        step_id = "2.0"
+        href = url_for(
+            f"{PDPreprocessing_BLP.name}.SecondProcessView",
+            db_id=db_task.id,
+            step_id=step_id,
+            _external=True,
+        )
+        ui_href = url_for(
+            f"{PDPreprocessing_BLP.name}.SecondMicroFrontend",
+            db_id=db_task.id,
+            step_id=step_id,
+            _external=True,
+        )
+
         # all tasks need to know about db id to load the db entry
-        task: chain = calculation_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
+        task: chain = first_task.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>/ui/")
+class SecondMicroFrontend(MethodView):
+    """Micro frontend for the db manager plugin."""
+
+    @PDPreprocessing_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+    )
+    @PDPreprocessing_BLP.arguments(
+        SecondInputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int, step_id: float):
+        """Return the micro frontend."""
+        return self.render(request.form, db_id, step_id, errors)
+
+    @PDPreprocessing_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+    )
+    @PDPreprocessing_BLP.arguments(
+        SecondInputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int, step_id: float):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, db_id, step_id, errors)
+
+    def render(self, data: Mapping, db_id: int, step_id: float, errors: dict):
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        schema = SecondInputParametersSchema()
+
+        data_dict = dict(data)
+        fields = schema.fields
+        # define default values
+        default_values = {
+            fields["threshold"].data_key: 0,
+        }
+
+        # overwrite default values with other values if possible
+        default_values.update(data_dict)
+        data_dict = default_values
+
+        return Response(
+            render_template(
+                "template.html",
+                name=PDPreprocessing.instance.name,
+                version=PDPreprocessing.instance.version,
+                schema=schema,
+                values=data_dict,
+                errors=errors,
+                process=url_for(
+                    f"{PDPreprocessing_BLP.name}.SecondProcessView",
+                    db_id=db_id,
+                    step_id=step_id,
+                ),
+                second_template=True,
+            )
+        )
+
+
+@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>-process/")
+class SecondProcessView(MethodView):
+    """Start a long running processing task."""
+
+    @PDPreprocessing_BLP.arguments(
+        SecondInputParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @PDPreprocessing_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments, db_id: int, step_id: float):
+        """Start the calculation task."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.parameters = SecondInputParametersSchema().dumps(arguments)
+
+        db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = second_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER

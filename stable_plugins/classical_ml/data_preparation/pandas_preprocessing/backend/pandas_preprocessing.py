@@ -2,44 +2,87 @@ from typing import List
 from pandas._libs.lib import no_default
 from pandas import DataFrame
 from .utils import get_number_if_possible
+from enum import Enum
 
 
-def all_preprocess_df(df: DataFrame, preprocessing_step_list: List[dict]):
-    for preprocessing_step in preprocessing_step_list:
-        df = preprocess_df(df, preprocessing_step)
-    return df
+class PreprocessingEnum(Enum):
+    drop_na = "drop na"
+    fill_na = "fill na"
+    drop_duplicates = "drop duplicates"
+    sort_values = "sort values"
+    strip_entries = "strip entries"
+    split_column = "split column"
+    replace = "replace"
+    string_case = "string case"
+
+    def preprocess_df(self, df: DataFrame, preprocessing_params):
+        if self == PreprocessingEnum.drop_na:
+            processing_function = drop_missing_value
+        elif self == PreprocessingEnum.fill_na:
+            processing_function = fill_missing_value
+        elif self == PreprocessingEnum.drop_duplicates:
+            processing_function = drop_duplicates
+        elif self == PreprocessingEnum.sort_values:
+            processing_function = sort_values
+        elif self == PreprocessingEnum.strip_entries:
+            processing_function = strip_characters
+        elif self == PreprocessingEnum.split_column:
+            processing_function = split_column
+        elif self == PreprocessingEnum.replace:
+            processing_function = replace
+        elif self == PreprocessingEnum.string_case:
+            processing_function = string_case
+        else:
+            return df
+
+        params = {
+            k: v for k, v in preprocessing_params.items() if v is not None
+        }
+        for k, v in params.items():
+            if isinstance(v, Enum):
+                params[k] = v.get()
+        return processing_function(df, **params)
 
 
-def preprocess_df(df: DataFrame, preprocessing_step: dict):
-    # Remove entries with value == None
-    params = {
-        k: v for k, v in preprocessing_step["input_params"].items() if v is not None
-    }
-    processing_function = None
-    option_type = preprocessing_step["option_type"]
-    if option_type == "drop na":
-        processing_function = drop_missing_value
-    elif option_type == "fill na":
-        processing_function = fill_missing_value
-    elif option_type == "drop duplicates":
-        processing_function = drop_duplicates
-    elif option_type == "sort values":
-        processing_function = sort_values
-    elif option_type == "strip entries":
-        processing_function = strip_characters
-    elif option_type == "split column":
-        processing_function = split_column
-    elif option_type == "replace":
-        processing_function = replace
-    elif option_type == "string case":
-        processing_function = string_case
-    if processing_function is None:
-        return df
-    return processing_function(df, **params)
+class AxisEnum(Enum):
+    rows = "Rows"
+    columns = "Columns"
+
+    def get(self):
+        if self == AxisEnum.rows:
+            return 0
+        return 1
+
+
+class KeepEnum(Enum):
+    first = "first"
+    last = "last"
+    none = "none"
+
+    def get(self):
+        return self.value
+
+
+class PositionEnum(Enum):
+    front = "front"
+    end = "end"
+    both = "both"
+
+    def get(self):
+        return self.value
+
+
+class CaseEnum(Enum):
+    upper = "upper"
+    lower = "lower"
+    title = "title"
+
+    def get(self):
+        return self.value
 
 
 def drop_missing_value(
-    df: DataFrame, axis: int = 0, threshold: int = no_default, subset: str = None
+    df: DataFrame, axis: int = 0, threshold: int = no_default, subset: str = None, **kwargs
 ) -> DataFrame:
     if subset is not None:
         subset = None if subset == "" else subset.split(",")
@@ -49,7 +92,7 @@ def drop_missing_value(
     return df
 
 
-def fill_missing_value(df: DataFrame, fill_value: str) -> DataFrame:
+def fill_missing_value(df: DataFrame, fill_value: str, **kwargs) -> DataFrame:
     fill_value = get_number_if_possible(fill_value)
 
     df.fillna(value=fill_value, inplace=True)
@@ -58,7 +101,7 @@ def fill_missing_value(df: DataFrame, fill_value: str) -> DataFrame:
 
 
 def drop_duplicates(
-    df: DataFrame, subset: str = None, keep: str = "first", ignore_index: bool = False
+    df: DataFrame, subset: str = None, keep: str = "first", ignore_index: bool = False, **kwargs
 ) -> DataFrame:
     if subset is not None:
         subset = None if subset == "" else subset.split(",")
@@ -70,13 +113,13 @@ def drop_duplicates(
     return df
 
 
-def sort_values(df: DataFrame, by: str, ascending: bool = False):
+def sort_values(df: DataFrame, by: str, ascending: bool = False, **kwargs):
     df.sort_values(by=by, ascending=ascending, inplace=True)
     return df
 
 
 def strip_characters(
-    df: DataFrame, characters: List[str] = "", subset: str = None, position: str = "both"
+    df: DataFrame, characters: List[str] = "", subset: str = None, position: str = "both", **kwargs
 ) -> DataFrame:
     if subset is not None:
         subset = df.keys() if subset == "" else subset.split(",")
@@ -105,6 +148,7 @@ def split_column(
     by: str,
     new_columns: str = "",
     remove_column: bool = False,
+    **kwargs
 ) -> DataFrame:
     if column not in df.keys():
         raise ValueError(f"The dataframe has no column {column}.")
@@ -122,7 +166,7 @@ def split_column(
     return df
 
 
-def replace(df: DataFrame, sub_str: str, new_str: str, subset: str = "") -> DataFrame:
+def replace(df: DataFrame, sub_str: str, new_str: str, subset: str = "", **kwargs) -> DataFrame:
     if subset is not None:
         subset = df.keys() if subset == "" else subset.split(",")
     else:
@@ -136,7 +180,7 @@ def replace(df: DataFrame, sub_str: str, new_str: str, subset: str = "") -> Data
     return df
 
 
-def string_case(df: DataFrame, case: str, subset: str = "") -> DataFrame:
+def string_case(df: DataFrame, case: str, subset: str = "", **kwargs) -> DataFrame:
     if subset is not None:
         subset = df.keys() if subset == "" else subset.split(",")
     else:

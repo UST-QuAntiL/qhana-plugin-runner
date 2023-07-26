@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from marshmallow import post_load
+from marshmallow import post_load, validate
 import marshmallow as ma
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
     FileUrl,
 )
+from qhana_plugin_runner.api import EnumField
+
+from dataclasses import dataclass
+from .backend.pandas_preprocessing import PreprocessingEnum, AxisEnum, KeepEnum, PositionEnum, CaseEnum
+
 from celery.utils.log import get_task_logger
 
 
@@ -28,22 +33,15 @@ class TaskResponseSchema(MaBaseSchema):
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
 
-class InputParameters:
-    def __init__(
-        self,
-        file_url: str,
-        preprocessing_steps: str,
-    ):
-        self.file_url = file_url
-        self.preprocessing_steps = preprocessing_steps
+@dataclass(repr=False)
+class FirstInputParameters:
+    file_url: str
 
     def __str__(self):
-        variables = self.__dict__.copy()
-        variables["ibmq_token"] = ""
-        return str(variables)
+        return str(self.__dict__)
 
 
-class InputParametersSchema(FrontendFormBaseSchema):
+class FirstInputParametersSchema(FrontendFormBaseSchema):
     file_url = FileUrl(
         required=True,
         allow_none=False,
@@ -53,16 +51,206 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    preprocessing_steps = ma.fields.String(
+
+    @post_load
+    def make_input_params(self, data, **kwargs) -> FirstInputParameters:
+        return FirstInputParameters(**data)
+
+
+@dataclass(repr=False)
+class SecondInputParameters:
+    preprocessing_enum: PreprocessingEnum
+    axis: AxisEnum
+    threshold: int
+    subset: str
+    fill_value: str
+    keep: KeepEnum
+    by: str
+    position: PositionEnum
+    characters: str
+    column: str
+    new_columns: str
+    substring: str
+    new_str: str
+    case: CaseEnum
+    ignore_index: bool = False
+    ascending: bool = False
+    remove_column: bool = False
+
+    def __str__(self):
+        return str(self.__dict__)
+
+
+class SecondInputParametersSchema(FrontendFormBaseSchema):
+    preprocessing_enum = EnumField(
+        PreprocessingEnum,
         required=True,
         allow_none=False,
         metadata={
-            "label": "Preprocessing Steps",
-            "description": "Steps to take to preprocesses the given file.",
+            "label": "Preprocessing Type",
+            "description": "Type of preprocessing the file will undergo.",
+            "input_type": "select",
+        },
+    )
+    axis = EnumField(
+        AxisEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Axis",
+            "description": "Determine if rows or columns which contain missing values are dropped.",
+            "input_type": "select",
+        },
+    )
+    threshold = ma.fields.Integer(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Threshold",
+            "description": "Requires that many non-NA values. Cannot be combined with how. If left empty, then all values may not be NA.",
+            "input_type": "number",
+        },
+        validate=validate.Range(min=0, min_inclusive=True)
+    )
+    subset = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Subset",
+            "description": "To be set by javascript.",
             "input_type": "text",
+        },
+    )
+    fill_value = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Value",
+            "description": "The value to fill every na with.",
+            "input_type": "text",
+        },
+    )
+    keep = EnumField(
+        KeepEnum,
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Keep",
+            "description": """Determines which duplicates (if any) to keep.\n
+            - first: Drop duplicates except for the first occurrence.\n
+            - last: Drop duplicates except for the last occurrence.\n
+            - none: Drop all duplicates.""",
+            "input_type": "select",
+        },
+    )
+    ignore_index = ma.fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Ignore index",
+            "description": "If unchecked, each element keeps its current row index. If checked, the resulting axis will be relabeled 0, 1, …, n - 1.",
+            "input_type": "checkbox",
+        },
+    )
+    by = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "To be set by javascript.",
+            "description": "To be set by javascript.",
+            "input_type": "text",
+        },
+    )
+    ascending = ma.fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Sorting order",
+            "description": "Sorts by ascending order, if checked and descending order, otherwise.",
+            "input_type": "checkbox",
+        },
+    )
+    position = EnumField(
+        PositionEnum,
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Position",
+            "description": """Determines where to strip an entry of the given characters.\n
+            - front: Strips the given characters from the beginning of the entry.\n
+            - end: Strips the given characters from the end of the entry.\n
+            - both: Strips the given characters from both the beginning and the end of the entry.""",
+            "input_type": "select",
+        },
+    )
+    characters = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Characters",
+            "description": "Each character entered will be stripped from an entry.",
+            "input_type": "text",
+        },
+    )
+    column = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Column",
+            "description": "Column that will be split.",
+            "input_type": "text",
+        },
+    )
+    new_columns = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "New columns",
+            "description": "Names for the new columns separated by a comma.",
+            "input_type": "text",
+        },
+    )
+    remove_column = ma.fields.Boolean(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Remove old column",
+            "description": "If checked, the old column will be removed.",
+            "input_type": "checkbox",
+        },
+    )
+    substring = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Substring",
+            "description": "This is the substring that will be replaced by a new string in each entry.",
+            "input_type": "text",
+        },
+    )
+    new_str = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "New string",
+            "description": "This is the string that the substring will be replaced with.",
+            "input_type": "text",
+        },
+    )
+    case = EnumField(
+        CaseEnum,
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Case",
+            "description": """Determines the case that will be applied to each entry. Possible cases are:\n
+            - upper: sTrIng becomes STRING\n
+            - lower: sTrIng becomes string\n
+            - title: sTrIng becomes String""",
+            "input_type": "select",
         },
     )
 
     @post_load
-    def make_input_params(self, data, **kwargs) -> InputParameters:
-        return InputParameters(**data)
+    def make_input_params(self, data, **kwargs) -> SecondInputParameters:
+        return SecondInputParameters(**data)

@@ -15,14 +15,17 @@
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional, List
+from json import loads
 
 from celery.utils.log import get_task_logger
 
 from . import PDPreprocessing
 
 from .schemas import (
-    InputParameters,
-    InputParametersSchema,
+    FirstInputParameters,
+    FirstInputParametersSchema,
+    SecondInputParameters,
+    SecondInputParametersSchema,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -37,14 +40,11 @@ from qhana_plugin_runner.storage import STORE
 from json import loads as json_load
 from pandas import read_csv
 
-from .backend.pandas_preprocessing import all_preprocess_df
-
-
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{PDPreprocessing.instance.identifier}.calculation_task", bind=True)
-def calculation_task(self, db_id: int) -> str:
+@CELERY.task(name=f"{PDPreprocessing.instance.identifier}.first_task", bind=True)
+def first_task(self, db_id: int) -> str:
     # get parameters
 
     TASK_LOGGER.info(
@@ -57,16 +57,59 @@ def calculation_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+    input_params: FirstInputParameters = FirstInputParametersSchema().loads(task_data.parameters)
 
     file_url = input_params.file_url
-    preprocessing_steps = input_params.preprocessing_steps
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
-    preprocessing_steps = json_load(preprocessing_steps)
     df = read_csv(file_url)
-    df = all_preprocess_df(df, preprocessing_steps)
+
+    # Output data
+    with SpooledTemporaryFile(mode="w") as output:
+        df.to_csv(output, index=False)
+        task_file = STORE.persist_task_result(
+            db_id,
+            output,
+            "file.csv",
+            "entity",
+            "text/csv",
+        )
+        print(f"task_file: {task_file}")
+        task_data.data["file_url"] = loads(task_file.task.parameters)["fileUrl"]
+
+    task_data.save(commit=True)
+
+    return "Saved original csv file"
+
+
+@CELERY.task(name=f"{PDPreprocessing.instance.identifier}.second_task", bind=True)
+def second_task(self, db_id: int) -> str:
+    # get parameters
+
+    TASK_LOGGER.info(
+        f"Starting new pandas preprocessing calculation task with db id '{db_id}'"
+    )
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    input_params: SecondInputParameters = SecondInputParametersSchema().loads(task_data.parameters)
+
+    file_url: str = task_data.data["file_url"]
+    TASK_LOGGER.info(f"file_url: {file_url}")
+    preprocessing_enum = input_params.preprocessing_enum
+
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
+
+    df = read_csv(file_url)
+    df = preprocessing_enum.preprocess_df(
+        df,
+        {k: v for k, v in input_params.__dict__.items() if k != "preprocessing_enum"}
+    )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:

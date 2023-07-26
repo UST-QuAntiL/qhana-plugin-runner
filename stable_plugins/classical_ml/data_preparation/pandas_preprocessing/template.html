@@ -2,23 +2,6 @@
 
 {% block head %}
     {{ super() }}
-
-    <style rel="stylesheet">
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-        .dropdown::before {
-            position: relative;
-            content: " \2193";
-            top: 0px;
-            right: 0px;
-            height: 20px;
-            width: 20px;
-        }
-        .btn {background-color:#e9e9ed;border-radius:5px;border: 1px solid #8f8f9d;padding-top:1px;padding-bottom:1px;padding-left:4px;padding-right:4px;margin-left:2px;margin-right:2px;user-select: none;font: calc(13px + 1px/3) DejaVu,Sans;color: black;}
-        .btn:hover {background-color: #d0d0d7;}
-    </style>
 {% endblock head %}
 
 {% block content %}
@@ -26,6 +9,107 @@
 {% endblock content %}
 
 {% block script %}
-    {{ super() }}
+    {% if second_template %}
+        <script>
+            preprocessing_enum_value = document.getElementById("preprocessing_enum");
 
+            axis_dis = document.getElementById("axis").parentNode.parentNode;
+            threshold_dis = document.getElementById("threshold").parentNode.parentNode;
+            subset_dis = document.getElementById("subset").parentNode.parentNode;
+            fill_value_dis = document.getElementById("fill_value").parentNode.parentNode;
+            keep_dis = document.getElementById("keep").parentNode.parentNode;
+            ignore_index_dis = document.getElementById("ignore_index").parentNode.parentNode;
+            by_dis = document.getElementById("by").parentNode.parentNode;
+            ascending_dis = document.getElementById("ascending").parentNode.parentNode;
+            position_dis = document.getElementById("position").parentNode.parentNode;
+            characters_dis = document.getElementById("characters").parentNode.parentNode;
+            column_dis = document.getElementById("column").parentNode.parentNode;
+            new_columns_dis = document.getElementById("new_columns").parentNode.parentNode;
+            remove_column_dis = document.getElementById("remove_column").parentNode.parentNode;
+            substring_dis = document.getElementById("substring").parentNode.parentNode;
+            new_str_dis = document.getElementById("new_str").parentNode.parentNode;
+            case_dis = document.getElementById("case").parentNode.parentNode;
+
+
+            function change_parameter(parameter, label, description) {
+                for (var i = 0; i < parameter.childNodes.length; i++) {
+                    if (parameter.childNodes[i].className === "qhana-form-label" && label !== null) {
+                        parameter.childNodes[i].innerText = label;
+                    }
+                    else if (parameter.childNodes[i].className === "qhana-input-description" && description !== null) {
+                        parameter.childNodes[i].childNodes[1].innerText = description;
+                    }
+                }
+            }
+
+
+            function preprocessing_enum_change() {
+                axis_dis.style.display = "none";
+                threshold_dis.style.display = "none";
+                subset_dis.style.display = "none";
+                fill_value_dis.style.display = "none";
+                keep_dis.style.display = "none";
+                ignore_index_dis.style.display = "none";
+                by_dis.style.display = "none";
+                ascending_dis.style.display = "none";
+                position_dis.style.display = "none";
+                characters_dis.style.display = "none";
+                column_dis.style.display = "none";
+                new_columns_dis.style.display = "none";
+                remove_column_dis.style.display = "none";
+                substring_dis.style.display = "none";
+                new_str_dis.style.display = "none";
+                case_dis.style.display = "none";
+
+                if (preprocessing_enum_value.value === "drop_na") {
+                    axis_dis.style.display = "block";
+                    threshold_dis.style.display = "block";
+                    subset_dis.style.display = "block";
+                    change_parameter(subset_dis, null, "Labels along other axis to consider, e.g. if you are dropping rows these would be a list of columns to include.");
+                }
+                else if (preprocessing_enum_value.value === "fill_na") {
+                    fill_value_dis.style.display = "block";
+                }
+                else if (preprocessing_enum_value.value === "drop_duplicates") {
+                    subset_dis.style.display = "block";
+                    change_parameter(subset_dis, null, "Only consider certain columns for identifying duplicates, by default use all of the columns.");
+                    keep_dis.style.display = "block";
+                    ignore_index_dis.style.display = "block";
+                }
+                else if (preprocessing_enum_value.value === "sort_values") {
+                    by_dis.style.display = "block";
+                    change_parameter(by_dis, "Column", "Column to sort by.");
+                    ascending_dis.style.display = "block";
+                }
+                else if (preprocessing_enum_value.value === "strip_entries") {
+                    position_dis.style.display = "block";
+                    characters_dis.style.display = "block";
+                    subset_dis.style.display = "block";
+                    change_parameter(subset_dis, null, "Only strip entries in certain columns, by default use all of the columns.");
+                }
+                else if (preprocessing_enum_value.value === "split_column") {
+                    column_dis.style.display = "block";
+                    by_dis.style.display = "block";
+                    change_parameter(by_dis, "Split-String", "String that splits the column, e.g. the entry 'John, Doe' and the Split-String ', ' result in the two entries 'John' and 'Doe'.");
+                    new_columns_dis.style.display = "block";
+                    remove_column_dis.style.display = "block";
+                }
+                else if (preprocessing_enum_value.value === "replace") {
+                    substring_dis.style.display = "block";
+                    new_str_dis.style.display = "block";
+                    subset_dis.style.display = "block";
+                    change_parameter(subset_dis, null, "Only replace substrings of entries in certain columns, by default use all of the columns.");
+                }
+                else if (preprocessing_enum_value.value === "string_case") {
+                    case_dis.style.display = "block";
+                    subset_dis.style.display = "block";
+                    change_parameter(subset_dis, null, "Only change the case of entries in certain columns, by default use all of the columns.");
+                }
+            }
+
+            preprocessing_enum_change();
+            preprocessing_enum_value.addEventListener("change", preprocessing_enum_change);
+        </script>
+    {% endif %}
+    {{ super() }}
 {% endblock script %}
