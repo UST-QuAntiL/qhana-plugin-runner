@@ -109,19 +109,20 @@ def second_task(self, db_id: int, step_id: float) -> str:
     )
 
     # Output data
-    file_id = int(str(step_id).split(".")[1])
-    with SpooledTemporaryFile(mode="w") as output:
-        df.to_csv(output, index=False)
-        task_file = STORE.persist_task_result(
-            db_id,
-            output,
-            f"preprocessed_file{file_id}.csv",
-            "entity",
-            "text/csv",
-        )
-        task_data.data["file_url"] = task_file.file_storage_data
-        # task_data.data["pandas_html"] = df.to_html(max_rows=100)
-        task_data.data["pandas_html"] = build_table(df, "grey_light")
+    if df is not None:
+        file_id = int(str(step_id).split(".")[1])
+        with SpooledTemporaryFile(mode="w") as output:
+            df.to_csv(output, index=False)
+            task_file = STORE.persist_task_result(
+                db_id,
+                output,
+                f"preprocessed_file{file_id}.csv",
+                "entity",
+                "text/csv",
+            )
+            task_data.data["file_url"] = task_file.file_storage_data
+            # task_data.data["pandas_html"] = df.to_html(max_rows=100)
+            task_data.data["pandas_html"] = build_table(df, "grey_light")
 
     task_data.save(commit=True)
 

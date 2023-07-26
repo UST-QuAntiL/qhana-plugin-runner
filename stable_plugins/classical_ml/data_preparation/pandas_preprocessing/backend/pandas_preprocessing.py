@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pandas._libs.lib import no_default
 from pandas import DataFrame
 from .utils import get_number_if_possible
@@ -6,6 +6,7 @@ from enum import Enum
 
 
 class PreprocessingEnum(Enum):
+    do_nothing = "do nothing"
     drop_na = "drop na"
     fill_na = "fill na"
     drop_duplicates = "drop duplicates"
@@ -15,7 +16,7 @@ class PreprocessingEnum(Enum):
     replace = "replace"
     string_case = "string case"
 
-    def preprocess_df(self, df: DataFrame, preprocessing_params):
+    def preprocess_df(self, df: DataFrame, preprocessing_params) -> Optional[DataFrame]:
         if self == PreprocessingEnum.drop_na:
             processing_function = drop_missing_value
         elif self == PreprocessingEnum.fill_na:
@@ -33,7 +34,7 @@ class PreprocessingEnum(Enum):
         elif self == PreprocessingEnum.string_case:
             processing_function = string_case
         else:
-            return df
+            return None
 
         params = {k: v for k, v in preprocessing_params.items() if v is not None}
         for k, v in params.items():
