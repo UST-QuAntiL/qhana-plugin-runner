@@ -47,7 +47,7 @@ class PDPreprocessing(QHAnaPluginBase):
         return PDPreprocessing_BLP
 
     def get_requirements(self) -> str:
-        return "pandas~=1.5.0"
+        return "pandas~=1.5.0\npretty-html-table~=0.9.16"
 
 
 try:

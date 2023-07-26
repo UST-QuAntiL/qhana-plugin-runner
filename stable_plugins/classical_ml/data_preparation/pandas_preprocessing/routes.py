@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from tempfile import NamedTemporaryFile
 from http import HTTPStatus
 from typing import Mapping, Optional
 
@@ -132,7 +134,7 @@ class FirstMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "template.html",
+                "simple_template.html",
                 name=PDPreprocessing.instance.name,
                 version=PDPreprocessing.instance.version,
                 schema=schema,
@@ -249,24 +251,29 @@ class SecondMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "template.html",
+                "second_template.html",
                 name=PDPreprocessing.instance.name,
                 version=PDPreprocessing.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(
+                    f"{PDPreprocessing_BLP.name}.FinalProcessView",
+                    db_id=db_id,
+                    step_id=step_id,
+                ),
+                add_step=url_for(
                     f"{PDPreprocessing_BLP.name}.SecondProcessView",
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                second_template=True,
+                pandas_html=db_task.data["pandas_html"],
             )
         )
 
 
-@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>-process/")
-class SecondProcessView(MethodView):
+@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>-process1/")
+class FinalProcessView(MethodView):
     """Start a long running processing task."""
 
     @PDPreprocessing_BLP.arguments(
@@ -288,8 +295,58 @@ class SecondProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = second_task.s(db_id=db_task.id) | save_task_result.s(
+        task: chain = second_task.s(db_id=db_task.id, step_id=step_id) | save_task_result.s(
             db_id=db_task.id
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@PDPreprocessing_BLP.route("/<int:db_id>/<float:step_id>-process0/")
+class SecondProcessView(MethodView):
+    """Start a long running processing task."""
+
+    @PDPreprocessing_BLP.arguments(
+        SecondInputParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @PDPreprocessing_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @PDPreprocessing_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments, db_id: int, step_id: float):
+        """Start the calculation task."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.parameters = SecondInputParametersSchema().dumps(arguments)
+
+        # next step
+        next_step_id = str(step_id + 0.1)
+        href = url_for(
+            f"{PDPreprocessing_BLP.name}.FinalProcessView",
+            db_id=db_task.id,
+            step_id=next_step_id,
+            _external=True,
+        )
+        ui_href = url_for(
+            f"{PDPreprocessing_BLP.name}.SecondMicroFrontend",
+            db_id=db_task.id,
+            step_id=next_step_id,
+            _external=True,
+        )
+
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = second_task.s(db_id=db_task.id, step_id=step_id) | add_step.s(
+            db_id=db_task.id, step_id=next_step_id, href=href, ui_href=ui_href, prog_value=50
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))

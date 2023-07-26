@@ -14,8 +14,7 @@
 
 from tempfile import SpooledTemporaryFile
 
-from typing import Optional, List
-from json import loads
+from typing import Optional
 
 from celery.utils.log import get_task_logger
 
@@ -29,16 +28,10 @@ from .schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-    load_entities,
-    ensure_dict,
-)
-from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
-from json import loads as json_load
 from pandas import read_csv
+from pretty_html_table import build_table
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -77,8 +70,9 @@ def first_task(self, db_id: int) -> str:
             "entity",
             "text/csv",
         )
-        print(f"task_file: {task_file}")
-        task_data.data["file_url"] = loads(task_file.task.parameters)["fileUrl"]
+        task_data.data["file_url"] = task_file.file_storage_data
+        # task_data.data["pandas_html"] = df.to_html(max_rows=100)
+        task_data.data["pandas_html"] = build_table(df, 'grey_light')
 
     task_data.save(commit=True)
 
@@ -86,11 +80,11 @@ def first_task(self, db_id: int) -> str:
 
 
 @CELERY.task(name=f"{PDPreprocessing.instance.identifier}.second_task", bind=True)
-def second_task(self, db_id: int) -> str:
+def second_task(self, db_id: int, step_id: float) -> str:
     # get parameters
 
     TASK_LOGGER.info(
-        f"Starting new pandas preprocessing calculation task with db id '{db_id}'"
+        f"Starting new pandas preprocessing calculation task with db id '{db_id}' and step id '{step_id}'."
     )
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -115,14 +109,20 @@ def second_task(self, db_id: int) -> str:
     )
 
     # Output data
+    file_id = int(str(step_id).split(".")[1])
     with SpooledTemporaryFile(mode="w") as output:
         df.to_csv(output, index=False)
-        STORE.persist_task_result(
+        task_file = STORE.persist_task_result(
             db_id,
             output,
-            "preprocessed_file.csv",
+            f"preprocessed_file{file_id}.csv",
             "entity",
             "text/csv",
         )
+        task_data.data["file_url"] = task_file.file_storage_data
+        # task_data.data["pandas_html"] = df.to_html(max_rows=100)
+        task_data.data["pandas_html"] = build_table(df, 'grey_light')
+
+    task_data.save(commit=True)
 
     return "Result stored in file"
