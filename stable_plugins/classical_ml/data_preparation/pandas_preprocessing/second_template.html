@@ -30,7 +30,6 @@
         <div class="qhana-form-buttons">
             {{ forms.submit("validate", target="microfrontend")}}
             {{ forms.submit("add step", action=add_step)}}
-            {{ forms.submit("cancel", action=cancel)}}
             {{ forms.submit("done", action=process)}}
             {% if done %}
             {{ forms.submit("done", action=done)}}
