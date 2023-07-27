@@ -5,7 +5,7 @@
 {% endblock head %}
 
 {% block content %}
-    <div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'>{{ pandas_html|safe }}</div>
+    <div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'>{{ pandas_html }}</div>
     <div class="qhana-microfrontend">
         {% block help %}
         {% if help_text or example_values %}

@@ -20,9 +20,7 @@ from typing import Mapping, Optional
 from pathlib import Path
 
 from celery.canvas import chain
-from flask import send_file
-from flask import Response
-from flask import redirect
+from flask import send_file, Response, redirect, Markup
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -267,7 +265,7 @@ class SecondMicroFrontend(MethodView):
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                pandas_html=db_task.data["pandas_html"],
+                pandas_html=Markup(db_task.data["pandas_html"]),
             )
         )
 
