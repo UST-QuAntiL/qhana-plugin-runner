@@ -2,7 +2,6 @@
 
 {% block head %}
     {{ super() }}
-    <p id="additional_info" hidden>{{additional_info}}</p>
     <datalist id="id_attribute_list"></datalist>
 {% endblock head %}
 
@@ -19,7 +18,7 @@
         const table_name_value = document.getElementById("table_name");
         const attribute_to_id_value = document.getElementById("id_attribute")
         const id_attribute_list_value =document.getElementById("id_attribute_list");
-        const tables_and_columns = JSON.parse(document.getElementById("additional_info").textContent);
+        const tables_and_columns = JSON.parse('{{ additional_info }}');
 
 
         const attribute_to_id_vis = attribute_to_id_value.parentNode.parentNode;

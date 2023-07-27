@@ -20,9 +20,7 @@ from pathlib import Path
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import send_file
-from flask import Response
-from flask import redirect
+from flask import Response, redirect, Markup
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -264,7 +262,7 @@ class SecondMicroFrontend(MethodView):
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                additional_info=dumps(db_task.data["db_tables_and_columns"]),
+                additional_info=Markup(dumps(db_task.data["db_tables_and_columns"])),
             )
         )
 
