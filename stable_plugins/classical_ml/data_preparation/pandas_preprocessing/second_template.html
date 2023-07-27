@@ -5,8 +5,7 @@
 {% endblock head %}
 
 {% block content %}
-    <p id="pandas_str" hidden>{{pandas_html}}</p>
-    <div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'></div>
+    <div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'>{{ pandas_html|safe }}</div>
     <div class="qhana-microfrontend">
         {% block help %}
         {% if help_text or example_values %}
@@ -46,8 +45,6 @@
 {% block script %}
     <script>
         preprocessing_enum_value = document.getElementById("preprocessing_enum");
-        pandas_str = document.getElementById("pandas_str");
-        pandas_html = document.getElementById("pandas_html");
 
         axis_dis = document.getElementById("axis").parentNode.parentNode;
         threshold_dis = document.getElementById("threshold").parentNode.parentNode;
@@ -143,8 +140,6 @@
             }
         }
 
-
-        pandas_html.innerHTML = pandas_str.innerText;
         preprocessing_enum_change();
         preprocessing_enum_value.addEventListener("change", preprocessing_enum_change);
     </script>
