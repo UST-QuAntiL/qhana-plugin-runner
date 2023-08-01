@@ -1,0 +1,35 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+    {{ super() }}
+
+    <style>
+    </style>
+{% endblock head %}
+
+{% block content %}
+
+    <h3>WIP REST Connectors:</h3>
+    
+    {% for name, continue_url, delete_url in ongoing %}
+    <p>
+        <span>{{name}}</span>
+        <a href="{{continue_url}}">continue</a>
+        <a href="{{delete_url}}">remove</a>
+    </p>
+    {% endfor %}
+
+    <h3>Start a new REST Connector:</h3>
+    
+    {{ super() }}
+
+    <p>TODO: show ongoing API integrations here.</p> 
+{% endblock content %}
+
+{% block script %}
+    {{ super() }}
+
+    <script>
+    </script>
+
+{% endblock script %}

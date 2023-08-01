@@ -1,0 +1,276 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+    {{ super() }}
+
+    <style>
+    </style>
+{% endblock head %}
+
+{% block content %}
+
+    <h3>{{name}} (WIP)</h3>
+
+    <details class="step" open>
+        <summary class="step-head">API Base URL</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="base-url" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">REST API URL</label>
+                <div class="qhana-input-wrapper">
+                    <input class="qhana-form-input" type="url" name="value" id="base_url" autocomplete="off" value="{{connector['baseUrl']}}">
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set API base URL</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">OpenAPI Spec URL</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="openapi-spec" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">OpenAPI spec URL</label>
+                <div class="qhana-input-wrapper">
+                    <input class="qhana-form-input" type="text" name="value" id="openapi_spec_url" autocomplete="off" value="{{connector['openapiSpecUrl']}}">
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set OpenAPI spec URL</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Endpoint URL</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-url" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Endpoint URL</label>
+                <div class="qhana-input-wrapper">
+                    <input class="qhana-form-input" type="text" name="value" id="endpoint_url" autocomplete="off" value="{{connector['endpointUrl']}}">
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint URL</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Variables</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="variables" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Variables</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" id="variables" autocomplete="off">{{connector['variables'] | tojson(indent="    ")}}</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set variables</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Request Headers</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="request-headers" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Request headers</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" id="request_headers" autocomplete="off">{{connector['requestHeaders']}}</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set request headers</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Request Body</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="request-body" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Request body</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" id="request_body" autocomplete="off">{{connector['requestBody']}}</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set request body</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Request Files</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="request-files" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Request files</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" id="request_files" autocomplete="off">{{connector['requestFiles'] | tojson(indent="    ")}}</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set request files</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Response Handling</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="response-handling" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Response handling strategy</label>
+                <div class="qhana-input-wrapper">
+                    <input class="qhana-form-input" type="text" name="value" id="response_handling" autocomplete="off" list="response-handling-types" value="{{connector['responseHandling']}}">
+                    <datalist id="response-handling-types">
+                        <option value="default"></option>
+                    </datalist>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint URL</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Response Mapping</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="response-mapping" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Response mapping</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" id="response_mapping" autocomplete="off">{{connector['responseMapping'] | tojson(indent="    ")}}</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set response mapping</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step" open>
+        <summary class="step-head">Response Mapping</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="manage-plugin" enctype="application/json">
+            <div class="qhana-form-buttons">
+                {%- if connector.get("isDeployed", False) %}
+                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="undeploy">undeploy plugin</button>
+                {%- else %}
+                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="deploy">deploy plugin</button>
+                {%- endif %}
+                {%- if connector.get("isLoading", False) %}
+                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="cancel">cancel background task</button>
+                {%- endif %}
+            </div>
+        </form>
+    </details>
+
+    <pre>{{connector | tojson(indent="    ")}}</pre>
+{% endblock content %}
+
+{% block script %}
+    {{ super() }}
+
+    <script>
+    const NEXT_STEP = {
+        "base-url": "openapi-spec",
+        "openapi-spec": "endpoint-url",
+        "endpoint-url": "request-body",
+        "request-headers": "request-body",
+    };
+
+    /**
+     * @param {SubmitEvent} event
+     */
+    function submitStepForm(event, dataInputs, privateInputs) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        let formKey = form.getAttribute("data-step");
+        const nextStep = NEXT_STEP[formKey];
+        const formValue = formData.get("value") ?? "";
+
+        if (formKey === "manage-plugin") {
+            formKey = event.submitter.getAttribute("value");
+            if (!formKey) {
+                return; // was not submitted by a button, ignore
+            }
+        }
+    
+        const submitData = {
+            key: formKey,
+            value: formValue,
+        };
+
+        if (nextStep) {
+            submitData.nextStep = nextStep;
+        }
+
+        sendMessage("ui-loading");
+
+        fetch(form.getAttribute("action"), {
+            body: JSON.stringify(submitData),
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+            },
+        }).then(response => {
+            if (response.status === 200) {
+                // everything is good, reload UI to get new data
+                window.location.reload();
+                return;
+            }
+            response.json().then((jsonBody) => {
+                sendMessage({
+                    type: "form-error",
+                    status: response.status,
+                    error: jsonBody,
+                }, (error) => {
+                    sendMessage({
+                        type: "form-error",
+                        status: response.status,
+                        error: "unknown error",
+                    });
+                });
+            });
+        }, err => {
+            sendMessage({
+                type: "form-error",
+                status: 500,
+                error: "unknown error",
+            });
+        });
+    }
+
+    if (!window._qhana_microfrontend_state) {
+        window._qhana_microfrontend_state = {};
+        instrumentForm();
+    }
+        window._qhana_microfrontend_state.formSubmitHandler = (event, dataInputs, privateInputs) => {
+            submitStepForm(event, dataInputs, privateInputs);
+            return true;
+        }
+    </script>
+
+{% endblock script %}
