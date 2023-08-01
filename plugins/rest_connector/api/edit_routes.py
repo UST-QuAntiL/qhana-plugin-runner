@@ -3,7 +3,7 @@ from http import HTTPStatus
 from typing import Any, Dict, Mapping, Optional, Sequence, Union, cast
 
 from flask import render_template
-from flask.globals import request
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.views import MethodView
 from flask.wrappers import Response
@@ -11,7 +11,12 @@ from flask_smorest import abort
 from marshmallow import EXCLUDE, RAISE
 
 from qhana_plugin_runner.db.db import DB
-from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
+from qhana_plugin_runner.db.models.virtual_plugins import (
+    VIRTUAL_PLUGIN_CREATED,
+    VIRTUAL_PLUGIN_REMOVED,
+    PluginState,
+    VirtualPlugin,
+)
 
 from .blueprint import REST_CONN_BLP
 from .schemas import (
@@ -236,6 +241,11 @@ class WipConnectorView(MethodView):
 
         DB.session.add(plugin)
         DB.session.commit()
+
+        VIRTUAL_PLUGIN_CREATED.send(
+            current_app._get_current_object(), plugin_url=plugin_url
+        )
+
         return connector
 
     def undeploy_plugin(self, connector: dict, connector_id: str, parent_id: str) -> dict:
@@ -251,4 +261,13 @@ class WipConnectorView(MethodView):
 
         del connector["is_deployed"]
         # TODO move connector from published connectors list to WIP connectors list
+
+        VIRTUAL_PLUGIN_REMOVED.send(
+            current_app._get_current_object(), plugin_url=plugin_url
+        )
+        return connector
+
+        VIRTUAL_PLUGIN_REMOVED.send(
+            current_app._get_current_object(), plugin_url=plugin_url
+        )
         return connector
