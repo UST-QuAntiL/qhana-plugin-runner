@@ -282,6 +282,12 @@ function instrumentForm(hasParent) {
 }
 
 function onFormSubmit(event, dataInputs, privateInputs) {
+    if (window._qhana_microfrontend_state.formSubmitHandler != null) {
+        const eventHandled = window._qhana_microfrontend_state.formSubmitHandler(event, dataInputs, privateInputs);
+        if (eventHandled) {
+            return;
+        }
+    }
     const form = event.target;
     const submitter = event.submitter;
     let submitTarget = submitter.getAttribute("data-target") || form.getAttribute("data-target");
@@ -401,6 +407,7 @@ if (window.top !== window.self) {
             lastHeight: 0,
             heightUnchangedCount: 0,
             preventSubmit: false,
+            formSubmitHandler: null,
         }
         instrumentForm(true);
         registerMessageListener();
