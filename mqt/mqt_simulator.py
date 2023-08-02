@@ -242,9 +242,7 @@ class MicroFrontend(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @MQT_BLP.arguments(
-        MqtSimulatorParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @MQT_BLP.arguments(MqtSimulatorParametersSchema(unknown=EXCLUDE), location="form")
     @MQT_BLP.response(HTTPStatus.FOUND)
     @MQT_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -282,11 +280,10 @@ class MqtSimulator(QHAnaPluginBase):
 
     def get_api_blueprint(self):
         return MQT_BLP
+
     def get_requirements(self) -> str:
         return """qiskit~=0.43
     mqt.ddsim==1.18.0"""
-
-
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -299,30 +296,21 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     import time
     from mqt import ddsim
 
-   # backend = StatevectorSimulator()  # TODO noise model?
+    # backend = StatevectorSimulator()  # TODO noise model?
 
-   
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 
     backend = ddsim.DDSIMProvider().get_backend("statevector_simulator")
 
-    #circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+    # circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 
-
-
-
-
- 
     start_time = time.time()
     result = execute(circuit, backend, shots=execution_options["shots"])
     end_time = time.time()
 
-    
-
     # TODO : Exceptions
-    
-    # extra_metadata = result.metadata
 
+    # extra_metadata = result.metadata
 
     metadata = {
         # trace ids (specific to IBM mqt jobs)
@@ -330,31 +318,29 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "qobjId": None,
         # QPU/Simulator information
         "qpuType": "simulator",
-        "qpuVendor": "TUM | IBM " ,
+        "qpuVendor": "TUM | IBM ",
         "qpuName": None,
         "qpuVersion": None,
         "seed": None,  # only for simulators
-        "shots": execution_options["shots"] ,
+        "shots": execution_options["shots"],
         # Time information
-       # "date": result.date,
+        # "date": result.date,
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
         "timeTaken": end_time - start_time,  # total job time
         "timeTakenIdle": 0,  # idle/waiting time
-       # "timeTakenQpu": time_taken,  # total qpu time
-       # "timeTakenQpuPrepare": time_taken - time_taken_execute,
-       # "timeTakenQpuExecute": time_taken_execute,
+        # "timeTakenQpu": time_taken,  # total qpu time
+        # "timeTakenQpuPrepare": time_taken - time_taken_execute,
+        # "timeTakenQpuExecute": time_taken_execute,
     }
 
     # counts = result.get_counts()
-   
+
     counts = result.result().get_counts(circuit)
 
     state_vector: Optional[Any] = None
-    
-    #state_vector = result.result.get_statevector()
-    state_vector = result.result().get_statevector(circuit)
 
-    
+    # state_vector = result.result.get_statevector()
+    state_vector = result.result().get_statevector(circuit)
 
     return metadata, counts, state_vector
 
