@@ -69,6 +69,7 @@ atomic = true
 
 [tool.sphinx]
 copyright-year = 2021
+theme = "sphinx_rtd_theme"
 enable-autodoc = true
 enable-napoleon = true
 enable-autosectionlabel = true

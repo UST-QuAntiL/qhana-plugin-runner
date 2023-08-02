@@ -74,6 +74,8 @@ copyright = f"{copyright_year}, {author}"
 version = str(package_config.get("version"))
 release = str(sphinx_config.get("release", version))
 
+config_theme = str(sphinx_config.get("theme"))
+
 if sphinx_config.get("html-baseurl", None):
     html_baseurl = sphinx_config.get("html-baseurl", None)
 
@@ -208,6 +210,9 @@ pygments_style = "sphinx"
 # a list of builtin themes.
 #
 html_theme = "alabaster"
+
+if config_theme:
+    html_theme = config_theme
 
 if ON_READTHEDOCS:
     html_theme = "sphinx_rtd_theme"
