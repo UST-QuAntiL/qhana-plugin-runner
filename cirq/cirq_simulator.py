@@ -173,6 +173,8 @@ class PluginsView(MethodView):
             ),
             tags=CirqSimulator.instance.tags,
         )
+
+
 ################
 
 
@@ -239,15 +241,11 @@ class MicroFrontend(MethodView):
         )
 
 
-
-
 @CIRQ_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @CIRQ_BLP.arguments(
-        CirqSimulatorParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @CIRQ_BLP.arguments(CirqSimulatorParametersSchema(unknown=EXCLUDE), location="form")
     @CIRQ_BLP.response(HTTPStatus.FOUND)
     @CIRQ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -288,13 +286,12 @@ class CirqSimulator(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         return "cirq~=1.1.0"
-    
+
+
 ##
 
 
-TASK_LOGGER = get_task_logger(__name__)   
-
-
+TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
@@ -308,42 +305,30 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     import numpy as np
 
-
-
-
-    circuit_qasm = circuit_qasm.replace('\r\n', '\n')
+    circuit_qasm = circuit_qasm.replace("\r\n", "\n")
     circuit = circuit_from_qasm(circuit_qasm)
 
     num_qubits = len(list(circuit.all_qubits()))
 
-    
     simulator = cirq.Simulator()
     result_state = simulator.simulate(circuit)
     state_vector = result_state.final_state_vector
-    
-    circuit.append(cirq.measure(*circuit.all_qubits(), key='result'))
 
+    circuit.append(cirq.measure(*circuit.all_qubits(), key="result"))
 
     start_time = time.time()
     result = simulator.run(circuit, repetitions=execution_options["shots"])
     end_time = time.time()
 
+    histogram = result.histogram(key="result")
 
-    
+    binary_histogram = {
+        format(outcome, f"0{num_qubits}b"): frequency
+        for outcome, frequency in histogram.items()
+    }
 
-    histogram = result.histogram(key='result')
-
-    binary_histogram = {format(outcome, f'0{num_qubits}b'): frequency for outcome, frequency in histogram.items()}
-
-    #measurements = result.measurements
-    #counts = {str(k): v.sum() for k, v in measurements.items()}
-
-
-
-
-
-
-
+    # measurements = result.measurements
+    # counts = {str(k): v.sum() for k, v in measurements.items()}
 
     metadata = {
         # trace ids (specific to IBM qiskit jobs)
@@ -364,36 +349,22 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "timeTakenQpuPrepare": 0,
         "timeTakenQpuExecute": end_time - start_time,
     }
- 
 
-    
-    #state_vector = None
+    # state_vector = None
 
-   # return metadata, counts, state_vector
-   
+    # return metadata, counts, state_vector
+
     return metadata, binary_histogram, state_vector
 
 
-
-#def complex_encoder(obj) 
+# def complex_encoder(obj)
 # The `def comp` method was written, but it was deleted because the function did not work.
-
-
-
-
-
-
-
-
-
-
-
 
 
 @CELERY.task(name=f"{CirqSimulator.instance.identifier}.demo_task", bind=True)
 def execute_circuit(self, db_id: int) -> str:
-    
     import numpy as np
+
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -403,7 +374,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     task_options: Dict[str, Union[str, int]] = loads(task_data.parameters or "{}")
     circuit_url: str = cast(str, task_options["circuit"])
-######
+    ######
     circuit_qasm: str
     with open_url(circuit_url) as quasm_response:
         circuit_qasm = quasm_response.text
@@ -411,7 +382,7 @@ def execute_circuit(self, db_id: int) -> str:
     execution_options_url = cast(
         Optional[str], task_options.get("executionOptions", None)
     )
-#####
+    #####
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
     }
@@ -438,14 +409,14 @@ def execute_circuit(self, db_id: int) -> str:
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
 
-
-
-######
-    metadata, binary_histogram , state_vector = simulate_circuit(circuit_qasm, execution_options)
+    ######
+    metadata, binary_histogram, state_vector = simulate_circuit(
+        circuit_qasm, execution_options
+    )
 
     #
     binary_histogram = {k: int(v) for k, v in binary_histogram.items()}
-#######
+    #######
 
     experiment_id = str(uuid4())
 
@@ -462,25 +433,20 @@ def execute_circuit(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
-##################################################
+    ##################################################
 
+    # In this part, various methods were added in the following ways, but they did not work as desired for example
+    # By adding the `state_vector` directly into a dictionary structure.
+    # - By adding  `state_vector` as a list to the dictionry (with using `tolist()`).
+    # - By separating the real and imaginary parts of the complex numbers in the `state_vector` into separate lists.
+    # but they did t work as desired
 
-#In this part, various methods were added in the following ways, but they did not work as desired for example
-# By adding the `state_vector` directly into a dictionary structure.
-#- By adding  `state_vector` as a list to the dictionry (with using `tolist()`).
-#- By separating the real and imaginary parts of the complex numbers in the `state_vector` into separate lists.
-# but they did t work as desired
+    ##################################
 
-##################################
+    # Finally, #if the conditions are ok, the `state_vector` is converted into a list,  and each element is transformed into a string, This can be used to convert complex numbers into the string format.
 
-
-
-
-#Finally, #if the conditions are ok, the `state_vector` is converted into a list,  and each element is transformed into a string, This can be used to convert complex numbers into the string format.
-
-    if state_vector is not None and np.any(state_vector): 
-
-        str_vector = [str(x) for x in state_vector.tolist()]      #### tolist here ok!
+    if state_vector is not None and np.any(state_vector):
+        str_vector = [str(x) for x in state_vector.tolist()]  #### tolist here ok!
         state_vector_ent = {"ID": experiment_id, "statevector": str_vector}
 
         with SpooledTemporaryFile(mode="w") as output:
@@ -493,12 +459,7 @@ def execute_circuit(self, db_id: int) -> str:
                 "application/json",
             )
 
-
-
-#################################################
-
-
-
+        #################################################
 
         with SpooledTemporaryFile(mode="w") as output:
             dump(state_vector_ent, output)
@@ -515,7 +476,6 @@ def execute_circuit(self, db_id: int) -> str:
         "executorPlugin": execution_options.get("executorPlugin", []) + [_identifier],
         "shots": metadata.get("shots", execution_options["shots"]),
         "simulator": metadata["qpuType"],
-
         # "simulator": metadata["simulator"],
         "qpuType": metadata["qpuType"],
         "qpuVendor": metadata["qpuVendor"],
@@ -536,4 +496,3 @@ def execute_circuit(self, db_id: int) -> str:
         )
 
     return "Finished simulating circuit."
-
