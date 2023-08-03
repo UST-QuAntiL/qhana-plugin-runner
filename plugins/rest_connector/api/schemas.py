@@ -18,7 +18,7 @@ from enum import Enum
 from typing import Dict, Iterable, Literal
 
 import marshmallow as ma
-from marshmallow import INCLUDE
+from marshmallow import INCLUDE, post_load
 from marshmallow.validate import OneOf
 from typing_extensions import Required, TypedDict
 
@@ -40,6 +40,7 @@ class ConnectorKey(Enum):
     BASE_URL = "base-url"
     OPENAPI_SPEC = "openapi-spec"
     ENDPOINT_URL = "endpoint-url"
+    ENDPOINT_METHOD = "endpoint-method"
     VARIABLES = "variables"
     REQUEST_HEADERS = "request-headers"
     REQUEST_BODY = "request-body"
@@ -137,6 +138,9 @@ class ConnectorSchema(MaBaseSchema):
     base_url = ma.fields.Url(dump_default="")
     openapi_spec_url = ma.fields.Url(dump_default="")
     endpoint_url = ma.fields.Url(dump_default="")
+    endpoint_method = ma.fields.Url(
+        dump_default="GET", validate=OneOf(["GET", "PUT", "POST", "DELETE", "PATCH"])
+    )
     variables = ma.fields.List(
         ma.fields.Nested(ConnectorVariableSchema), dump_default=tuple()
     )
@@ -157,12 +161,14 @@ class ConnectorVariablesInputSchema(FrontendFormBaseSchema):
             kwargs["unknown"] = INCLUDE
         super().__init__(**kwargs)
 
+        self._variables = tuple(variables)
+
         inputs: Dict = {}
 
         # TODO: Default values
         # TODO: selects
 
-        for var in variables:
+        for var in self._variables:
             type_ = var["type"]
             if type_ == "text" or type_ == "string":
                 inputs[var["name"]] = ma.fields.String(
@@ -209,3 +215,16 @@ class ConnectorVariablesInputSchema(FrontendFormBaseSchema):
                 )
 
         self.fields = OrderedDict(inputs)
+
+    @post_load
+    def after_load(self, data_in: dict, **kwargs):
+        for var in self._variables:
+            # force convert numbers from string to numeric types
+            if var["type"] == "integer":
+                value = data_in[var["name"]]
+                data_in[var["name"]] = int(value) if value else None
+            if var["type"] == "number":
+                value = data_in[var["name"]]
+                data_in[var["name"]] = float(value) if value else None
+
+        return data_in
