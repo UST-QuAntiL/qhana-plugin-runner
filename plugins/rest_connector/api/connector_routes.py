@@ -1,3 +1,4 @@
+import json
 from collections import ChainMap
 from http import HTTPStatus
 from typing import (
@@ -13,9 +14,11 @@ from typing import (
     cast,
 )
 
+from celery import chain
+from celery.canvas import Signature
 from flask import render_template
 from flask.globals import request
-from flask.helpers import url_for
+from flask.helpers import redirect, url_for
 from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
@@ -31,7 +34,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
+from qhana_plugin_runner.db.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .blueprint import REST_CONN_BLP
 from .schemas import (
@@ -46,6 +52,7 @@ from .schemas import (
     ResponseOutputSchema,
     VariableType,
 )
+from .tasks import perform_request
 from ..database import get_wip_connectors, save_wip_connectors, start_new_connector
 from ..plugin import RESTConnector
 
@@ -221,5 +228,23 @@ class ConnectorProcessView(MethodView):
 
         validated_data = schema.load(data)
 
-        # TODO
-        abort(HTTPStatus.NOT_IMPLEMENTED, message="TODO")
+        db_task = ProcessingTask(
+            task_name=perform_request.name,
+            parameters=json.dumps(validated_data),
+        )
+        db_task.save(commit=False)
+        DB.session.flush()  # flsuh to DB to get db_task id populated
+
+        db_task.save(commit=True)
+
+        task: Union[chain, Signature] = perform_request.s(
+            connector_id=connector_id, db_id=db_task.id
+        )  # TODO save task results in chain (and adjust type signature)
+        task.link_error(save_task_error.s(db_id=db_task.id))
+
+        task.apply_async()
+        db_task.save(commit=True)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
