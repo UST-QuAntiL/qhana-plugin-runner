@@ -45,7 +45,6 @@ from .util.jinja_helpers import register_helpers
 from .util.plugins import register_plugins
 from .util.request_helpers import register_additional_schemas
 from .util.reverse_proxy_fix import apply_reverse_proxy_fix
-from .util.templates import register_templates
 
 # change this to change tha flask app name and the config env var prefix
 # must not contain any spaces!
@@ -113,11 +112,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         if "PLUGIN_FOLDERS" in os.environ:
             config["PLUGIN_FOLDERS"] = [
                 folder for folder in os.environ["PLUGIN_FOLDERS"].split(":") if folder
-            ]
-
-        if "TEMPLATE_FOLDERS" in os.environ:
-            config["TEMPLATE_FOLDERS"] = [
-                folder for folder in os.environ["TEMPLATE_FOLDERS"].split(":") if folder
             ]
 
         # load database URI from env vars
@@ -222,9 +216,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
     # register plugins, AFTER registering the API!
     register_plugins(app)
     register_plugin_cli_blueprint(app)
-
-    # register templates
-    register_templates(app)
 
     # register file store after plugins to allow plugins to contribute file store implementations
     register_file_store(app)
