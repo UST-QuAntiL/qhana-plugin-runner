@@ -23,7 +23,6 @@ from ..utils import (
     int_to_bitlist,
     check_binary,
     ceil_log2,
-    check_for_duplicates,
 )
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
