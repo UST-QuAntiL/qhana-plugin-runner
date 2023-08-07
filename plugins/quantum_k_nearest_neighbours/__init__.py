@@ -28,6 +28,7 @@ QKNN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum k nearest neighbours plugin API.",
+    template_folder="",
 )
 
 
