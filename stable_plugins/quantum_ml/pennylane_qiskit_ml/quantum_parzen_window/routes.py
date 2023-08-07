@@ -171,7 +171,7 @@ class MicroFrontend(MethodView):
         default_values = {
             fields["window_size"].data_key: 1,
             fields["minimize_qubit_count"].data_key: False,
-            fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+            fields["backend"].data_key: QuantumBackends.pennylane_default.value,
             fields["shots"].data_key: 1024,
         }
 

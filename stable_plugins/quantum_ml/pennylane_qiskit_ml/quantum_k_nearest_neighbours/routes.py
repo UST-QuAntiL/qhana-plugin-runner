@@ -173,7 +173,7 @@ class MicroFrontend(MethodView):
             fields["minimize_qubit_count"].data_key: False,
             fields["exp_itr"].data_key: 10,
             fields["slack"].data_key: 0.05,
-            fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+            fields["backend"].data_key: QuantumBackends.pennylane_default.value,
             fields["shots"].data_key: 1024,
             fields["resolution"].data_key: 20,
         }
