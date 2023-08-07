@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import json
-import jsonschema
 import urllib
+from dataclasses import dataclass
 from functools import reduce
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional, Union, Any
+from typing import Any, ClassVar, Dict, List, Optional, Union
 
+import jsonschema
 from flask import Flask
 from flask.blueprints import Blueprint
 from flask.helpers import url_for
 from werkzeug.utils import cached_property
 
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 from qhana_plugin_runner.api.util import SecurityBlueprint
+from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 
 
 def create_identifier(name) -> str:
@@ -106,7 +106,7 @@ class QHanaTemplate:
         )
 
 
-def _load_template_schema() -> Dict[str, Any]:
+def _load_template_schema(app: Flask) -> Optional[Dict[str, Any]]:
     template_schema_file_path = Path("templates/schema/template_schema.json")
     template_schema_file_path = template_schema_file_path.resolve()
 
@@ -184,7 +184,7 @@ def register_templates(app: Flask) -> None:
 
     QHanaTemplate.__app__ = app
 
-    template_schema = _load_template_schema()
+    template_schema = _load_template_schema(app)
 
     template_folders = app.config.get("TEMPLATE_FOLDERS", ["templates"])
     for folder in template_folders:

@@ -22,6 +22,10 @@ from sqlalchemy.schema import MetaData
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy.orm.decl_api import registry
+from blinker import Namespace
+
+
+DB_SIGNALS = Namespace()
 
 
 DB: SQLAlchemy = SQLAlchemy(
