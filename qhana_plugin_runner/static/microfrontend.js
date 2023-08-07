@@ -288,7 +288,7 @@ function onFormSubmit(event, dataInputs, privateInputs) {
     if (submitTarget === "api") {
         event.preventDefault(); // cancel submit; need to do this manually...
         const formData = new FormData(form);
-        let formMethod = form.method;
+        let formMethod = form.getAttribute("method");
         let formAction = new URL(form.action);
         if (submitter != null) {
             formAction = new URL(submitter.formAction);
