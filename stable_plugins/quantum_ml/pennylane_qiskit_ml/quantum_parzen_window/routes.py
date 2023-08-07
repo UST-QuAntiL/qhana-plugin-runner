@@ -187,21 +187,15 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "template.html",
                 name=QParzenWindow.instance.name,
                 version=QParzenWindow.instance.version,
                 schema=InputParametersSchema(),
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QParzenWindow_BLP.name}.CalcView"),
-                frontendjs=url_for(f"{QParzenWindow_BLP.name}.get_frontend_js"),
             )
         )
-
-
-@QParzenWindow_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @QParzenWindow_BLP.route("/process/")

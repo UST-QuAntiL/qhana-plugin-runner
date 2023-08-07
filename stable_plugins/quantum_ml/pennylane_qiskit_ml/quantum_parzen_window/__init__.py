@@ -28,6 +28,7 @@ QParzenWindow_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum parzen window plugin API.",
+    template_folder="",
 )
 
 
