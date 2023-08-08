@@ -456,12 +456,12 @@ class QCNN4(QuantumCNN):
                 for i, d in enumerate(data[: self.n_qubits]):
                     qml.RY(torch.pi * d, wires=i)
 
-                for _ in range(2):
+                for entanglement_start in range(2):
                     for i, p in enumerate(layer_params):
                         qml.RX(p, wires=i)
                         qml.RZ(p, wires=i)
 
-                    for i in range(0, self.n_qubits - 1, 2):
+                    for i in range(entanglement_start, self.n_qubits - 1, 2):
                         qml.CRX(layer_params[i], wires=[i, i + 1])
 
             # Expectation values in the Z basis
