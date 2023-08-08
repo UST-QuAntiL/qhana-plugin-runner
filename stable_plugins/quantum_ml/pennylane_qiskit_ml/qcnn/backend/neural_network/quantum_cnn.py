@@ -668,8 +668,8 @@ class QCNN6(QuantumCNN):
 
                 for idx in range(self.n_qubits):
                     qml.Hadamard(wires=idx)
-                for i in range(self.n_qubits - 1, 0, -1):
-                    qml.CZ(wires=[i, i - 1])
+                for i in range(self.n_qubits-1):
+                    qml.CZ(wires=[i, i + 1])
                 for i, p in enumerate(layer_params):
                     qml.RX(p, wires=i)
 
