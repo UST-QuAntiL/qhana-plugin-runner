@@ -360,8 +360,8 @@ class QCNN3(QuantumCNN):
                     qml.CRX(
                         p,
                         wires=[
-                            self.n_qubits - 1 - i,
-                            (self.n_qubits - 2 - i) % self.n_qubits,
+                            (i - 1) % self.n_qubits,
+                            i,
                         ],
                     )
 
