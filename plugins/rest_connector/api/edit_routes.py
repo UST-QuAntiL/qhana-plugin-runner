@@ -55,6 +55,7 @@ class WipConnectorUiView(MethodView):
                 "rest_connector_edit.html",
                 name=name,
                 connector=ConnectorSchema().dump(connector),
+                http_methods=["GET", "PUT", "POST", "DELETE", "PATCH"],
                 process=url_for(
                     f"{REST_CONN_BLP.name}.{WipConnectorView.__name__}",
                     connector_id=connector_id,
@@ -123,6 +124,8 @@ class WipConnectorView(MethodView):
             connector = self.update_openapi_spec(connector, update_value)
         elif update_key == ConnectorKey.ENDPOINT_URL:
             connector = self.update_endpoint_url(connector, update_value)
+        elif update_key == ConnectorKey.ENDPOINT_METHOD:
+            connector = self.update_endpoint_method(connector, update_value)
         elif update_key == ConnectorKey.VARIABLES:
             connector = self.update_variables(connector, update_value)
         elif update_key == ConnectorKey.REQUEST_HEADERS:
@@ -173,6 +176,11 @@ class WipConnectorView(MethodView):
     def update_endpoint_url(self, connector: dict, new_endpoint_url: str) -> dict:
         connector["endpoint_url"] = new_endpoint_url
         # TODO: discover headers/body from openapi spec?
+        return connector
+
+    def update_endpoint_method(self, connector: dict, new_endpoint_method: str) -> dict:
+        connector["endpoint_method"] = new_endpoint_method
+        # TODO: discover method from openapi spec?
         return connector
 
     def update_variables(self, connector: dict, new_variables: str) -> dict:

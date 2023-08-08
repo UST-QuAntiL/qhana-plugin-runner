@@ -62,7 +62,28 @@
         </form>
     </details>
 
-    <!-- FIXME add endpoint method and support variables in endpoint -->
+    <!-- FIXME add support for variables in endpoint -->
+
+    <details class="step" open>
+        <summary class="step-head">Endpoint method</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-method" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="endpoint_method">Endpoint URL</label>
+                <div class="qhana-input-wrapper">
+                    <select class="qhana-form-input" name="value" id="endpoint_method">
+                        {% for method in http_methods %}
+                            <option value="{{ method }}" {% if connector['endpointMethod'] == method %} selected {% endif %}>{{ method }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint method</button>
+            </div>
+        </form>
+    </details>
 
     <details class="step" open>
         <summary class="step-head">Variables</summary>

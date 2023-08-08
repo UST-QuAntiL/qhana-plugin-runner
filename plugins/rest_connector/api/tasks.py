@@ -69,7 +69,7 @@ def perform_request(self, connector_id: str, db_id: int) -> None:
     parsed_headers = parse_headers(BytesIO(headers.encode()))
 
     response = request(
-        method="post",  # FIXME read from connector definition
+        method=connector["endpoint_method"],
         url=urljoin(
             connector["base_url"], connector["endpoint_url"]
         ),  # FIXME allow variables in endpoint
