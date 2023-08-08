@@ -55,7 +55,7 @@ class PluginsView(MethodView):
             description=QCNN.instance.description,
             name=QCNN.instance.identifier,
             version=QCNN.instance.version,
-            type=PluginType.simple,
+            type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{QCNN_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{QCNN_BLP.name}.MicroFrontend"),
