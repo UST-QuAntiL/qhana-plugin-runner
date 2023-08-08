@@ -566,7 +566,7 @@ class QCNN5(QuantumCNN):
                 for j in range(0, self.n_qubits - 1, 2):
                     qml.RY(layer_params[j][0], wires=j)
                     qml.RZ(layer_params[j][0], wires=j + 1)
-                for i in range(self.n_qubits - 1):
+                for i in range(0, self.n_qubits - 1, 2):
                     qml.CNOT(wires=[i, i + 1])
                 for j in range(0, self.n_qubits, 2):
                     qml.RY(layer_params[j][0], wires=j)
