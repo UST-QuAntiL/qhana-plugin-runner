@@ -160,9 +160,13 @@ class WelcomeView(MethodView):
             "name": name,
             "connector_id": connector_id,
             "href": url_for(
-                f"{REST_CONN_BLP.name}.WipConnectorView", connector_id=k, _external=True
+                f"{REST_CONN_BLP.name}.WipConnectorView",
+                connector_id=connector_id,
+                _external=True,
             ),
             "ui_href": url_for(
-                f"{REST_CONN_BLP.name}.WipConnectorUiView", connector_id=k, _external=True
+                f"{REST_CONN_BLP.name}.WipConnectorUiView",
+                connector_id=connector_id,
+                _external=True,
             ),
         }
