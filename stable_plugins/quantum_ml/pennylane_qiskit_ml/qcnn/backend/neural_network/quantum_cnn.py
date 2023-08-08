@@ -255,24 +255,8 @@ class QCNN2(QuantumCNN):
                 for j, d in enumerate(data[: self.n_qubits]):
                     qml.RX(torch.pi * d, wires=j)
 
-                for j, p in enumerate(layer_params):
-                    qml.Rot(p[0], p[1], p[2], wires=j)
-                    for j in range(self.n_qubits):
-                        if j == 0:
-                            for i in range(self.n_qubits - 1):
-                                qml.CZ(wires=[j, i + 1])
-                        elif j == 1:
-                            qml.CZ(wires=[j, j - 1])
-                            for i in range(self.n_qubits - 2):
-                                qml.CZ(wires=[j, i + 2])
-
-                        elif j == 2:
-                            qml.CZ(wires=[j, j + 1])
-                            for i in range(self.n_qubits - 1, 1, -1):
-                                qml.CZ(wires=[j, i - 2])
-                        elif j == 3:
-                            for i in range(self.n_qubits - 1, 0, -1):
-                                qml.CZ(wires=[j, i - 1])
+                for layer_idx, p in enumerate(layer_params):
+                    qml.Rot(p[0], p[1], p[2], wires=layer_idx)
 
             # Expectation values in the Z basis
             return [qml.expval(qml.PauliZ(wires=qubit)) for qubit in range(self.n_qubits)]
