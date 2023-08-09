@@ -298,11 +298,8 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from cirq import Circuit, Simulator
     from cirq.contrib.qasm_import import circuit_from_qasm
     import time
-    import time
     import matplotlib.pyplot as plt
     import cirq
-    from cirq.contrib.qasm_import import circuit_from_qasm
-
     import numpy as np
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
@@ -327,9 +324,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         for outcome, frequency in histogram.items()
     }
 
-    # measurements = result.measurements
-    # counts = {str(k): v.sum() for k, v in measurements.items()}
-
     metadata = {
         # trace ids (specific to IBM qiskit jobs)
         "jobId": None,
@@ -349,10 +343,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "timeTakenQpuPrepare": 0,
         "timeTakenQpuExecute": end_time - start_time,
     }
-
-    # state_vector = None
-
-    # return metadata, counts, state_vector
 
     return metadata, binary_histogram, state_vector
 
@@ -374,7 +364,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     task_options: Dict[str, Union[str, int]] = loads(task_data.parameters or "{}")
     circuit_url: str = cast(str, task_options["circuit"])
-    ######
+
     circuit_qasm: str
     with open_url(circuit_url) as quasm_response:
         circuit_qasm = quasm_response.text
@@ -382,7 +372,7 @@ def execute_circuit(self, db_id: int) -> str:
     execution_options_url = cast(
         Optional[str], task_options.get("executionOptions", None)
     )
-    #####
+
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
     }
@@ -458,10 +448,6 @@ def execute_circuit(self, db_id: int) -> str:
                 "entity/vector",
                 "application/json",
             )
-
-        #################################################
-
-
 
     extra_execution_options = {
         "ID": experiment_id,
