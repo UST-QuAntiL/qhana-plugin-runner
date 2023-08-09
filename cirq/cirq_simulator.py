@@ -461,15 +461,7 @@ def execute_circuit(self, db_id: int) -> str:
 
         #################################################
 
-        with SpooledTemporaryFile(mode="w") as output:
-            dump(state_vector_ent, output)
-            STORE.persist_task_result(
-                db_id,
-                output,
-                "result-statevector.json",
-                "entity/vector",
-                "application/json",
-            )
+
 
     extra_execution_options = {
         "ID": experiment_id,
