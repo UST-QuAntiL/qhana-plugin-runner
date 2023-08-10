@@ -239,6 +239,8 @@ class ConnectorProcessView(MethodView):
 
         task: Union[chain, Signature] = perform_request.s(
             connector_id=connector_id, db_id=db_task.id
+        ) | save_task_result.s(
+            db_id=db_task.id
         )  # TODO save task results in chain (and adjust type signature)
         task.link_error(save_task_error.s(db_id=db_task.id))
 

@@ -16,7 +16,8 @@
 import json
 from http.client import parse_headers
 from io import BytesIO
-from typing import Mapping, Optional
+from tempfile import SpooledTemporaryFile
+from typing import Mapping, Optional, Dict, Any
 from urllib.parse import urljoin
 
 from celery.utils.log import get_task_logger
@@ -28,6 +29,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
+from qhana_plugin_runner.storage import STORE
 
 from .jinja_utils import render_template_sandboxed
 from ..plugin import RESTConnector
@@ -36,7 +38,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 @CELERY.task(name=f"{RESTConnector.instance.identifier}.perform_request", bind=True)
-def perform_request(self, connector_id: str, db_id: int) -> None:
+def perform_request(self, connector_id: str, db_id: int) -> str:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -54,6 +56,7 @@ def perform_request(self, connector_id: str, db_id: int) -> None:
     request_header_template = connector["request_headers"]
     request_body_template = connector["request_body"]
     request_files = connector.get("request_files", [])
+    response_mapping = connector.get("response_mapping", [])
 
     assert isinstance(request_header_template, str)
     assert isinstance(request_body_template, str)
@@ -79,9 +82,27 @@ def perform_request(self, connector_id: str, db_id: int) -> None:
         timeout=20,  # TODO allow different timeouts?
     )
 
-    # FIXME response handling...
+    template_context: Dict[str, Any] = request_variables | {
+        "request": response.request,
+        "response": response.json(),
+    }
+
+    for response_map in response_mapping:
+        with SpooledTemporaryFile(mode="w") as output:
+            content = render_template_sandboxed(response_map["data"], template_context)
+
+            output.write(content)
+            STORE.persist_task_result(
+                task_db_id=db_id,
+                file_=output,
+                file_name=response_map["name"],
+                file_type=response_map["content_type"],
+                mimetype=response_map["data_type"],
+            )
 
     task_data.add_task_log_entry(
         f"Request:\n\n{response.request!r}\n{response.request.headers}\n{response.request.body}\n\nResponse:\n\n{response!r}\n{response.headers}\n{response.text}",
         commit=True,
     )
+
+    return "finished"
