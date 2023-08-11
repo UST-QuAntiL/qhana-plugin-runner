@@ -70,12 +70,20 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
     print(body)
 
     parsed_headers = parse_headers(BytesIO(headers.encode()))
+    headers_dict = {}
+
+    for k, v in parsed_headers.items():
+        if k in headers_dict:
+            headers_dict[k] += f", {v}"
+        else:
+            headers_dict[k] = v
+
     endpoint_url = render_template_sandboxed(connector["endpoint_url"], request_variables)
 
     response = request(
         method=connector["endpoint_method"],
         url=urljoin(connector["base_url"], endpoint_url),
-        headers={k: v for k, v in parsed_headers.items()},  # FIXME duplicate headers...
+        headers={k: v for k, v in parsed_headers.items()},
         data=body,
         files=[],  # FIXME allow uploading of files
         timeout=20,  # TODO allow different timeouts?
