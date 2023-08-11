@@ -70,12 +70,11 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
     print(body)
 
     parsed_headers = parse_headers(BytesIO(headers.encode()))
+    endpoint_url = render_template_sandboxed(connector["endpoint_url"], request_variables)
 
     response = request(
         method=connector["endpoint_method"],
-        url=urljoin(
-            connector["base_url"], connector["endpoint_url"]
-        ),  # FIXME allow variables in endpoint
+        url=urljoin(connector["base_url"], endpoint_url),
         headers={k: v for k, v in parsed_headers.items()},  # FIXME duplicate headers...
         data=body,
         files=[],  # FIXME allow uploading of files
