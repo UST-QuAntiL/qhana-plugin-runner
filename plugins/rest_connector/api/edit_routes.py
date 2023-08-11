@@ -274,8 +274,3 @@ class WipConnectorView(MethodView):
             current_app._get_current_object(), plugin_url=plugin_url
         )
         return connector
-
-        VIRTUAL_PLUGIN_REMOVED.send(
-            current_app._get_current_object(), plugin_url=plugin_url
-        )
-        return connector
