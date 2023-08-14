@@ -16,10 +16,11 @@
 import json
 from http.client import parse_headers
 from io import BytesIO
-from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, Dict, Any
+from tempfile import SpooledTemporaryFile, NamedTemporaryFile
+from typing import Optional, Dict, Any, List, Tuple
 from urllib.parse import urljoin
 
+import requests
 from celery.utils.log import get_task_logger
 from flask import current_app
 from requests import request
@@ -55,7 +56,7 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
 
     request_header_template = connector["request_headers"]
     request_body_template = connector["request_body"]
-    request_files = connector.get("request_files", [])
+    request_file_descriptors = connector.get("request_files", [])
     response_mapping = connector.get("response_mapping", [])
 
     assert isinstance(request_header_template, str)
@@ -80,14 +81,20 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
 
     endpoint_url = render_template_sandboxed(connector["endpoint_url"], request_variables)
 
+    request_files = _download_files(request_file_descriptors)
+
     response = request(
         method=connector["endpoint_method"],
         url=urljoin(connector["base_url"], endpoint_url),
         headers={k: v for k, v in parsed_headers.items()},
         data=body,
-        files=[],  # FIXME allow uploading of files
+        files=request_files,
         timeout=20,  # TODO allow different timeouts?
     )
+
+    # close request files
+    for file in request_files.values():
+        file[1].close()
 
     template_context: Dict[str, Any] = request_variables | {
         "request": response.request,
@@ -113,3 +120,24 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
     )
 
     return "finished"
+
+
+def _download_files(
+    request_file_descriptors: List[Dict],
+) -> Dict[str, Tuple[str, BytesIO, str]]:
+    # TODO: cache downloaded files for subsequent requests?
+    request_files = {}
+
+    for i, req_file in enumerate(request_file_descriptors):
+        file_url = req_file["source"]
+        response = requests.get(file_url)
+
+        file = NamedTemporaryFile(mode="w+b")
+        file.write(response.content)
+        request_files[req_file["form_field_name"]] = (
+            req_file["form_field_name"],
+            file,
+            req_file["content_type"],
+        )
+
+    return request_files
