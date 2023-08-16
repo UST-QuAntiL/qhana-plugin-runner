@@ -40,7 +40,7 @@ However, all these parameters must be optional so that the circuit executors can
 
 Some circuit executor plugins may require authentication credentials in order to access the actual quantum execution resource.
 Those plugins can expose the authentication form as part of the starting step as optional inputs.
-If the credentials are not provided in the first step, a the plugin should ask for the credentials again in a substep form.
+If the credentials are not provided in the first step, the plugin should ask for the credentials again in a substep form.
 
 :::{hint}
 The circuit executor plugin **must** execute the circuit **as is**, without adding or removing any measurements.
@@ -60,7 +60,7 @@ Circuit executor plugins can have two types of data (i.e. file based) inputs:
 
     The execution options **must** support `shots` as the number of shots to simulate/execute.
     Unknown execution options must be ignored.
-    Execution options that are specific to specific pligins should have unique names.
+    Execution options that are specific to specific plugins should have unique names.
 
     | Attribute | Description                                      |
     |:----------|:-------------------------------------------------|
