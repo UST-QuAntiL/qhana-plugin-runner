@@ -69,9 +69,11 @@ Circuit executor plugins can have two types of data (i.e. file based) inputs:
 
 Circuit executor plugins can have two types of direct parameter inputs:
 
- *  **Execution optiones**: circuit executor plugins can expose some of the execution options as parameters.
+ *  **Execution option overrides**: circuit executor plugins can expose some of the execution options (usually received through the `executionOptions` parameter) as additional parameters.
     These parameters **must** all be **optional** inputs.
-    If they are set, they override the values from the execution options.
+    If they are set, they override the values from the file based execution options.
+
+    For example, the number of shots can be exposed as an additional parameter so that users can directly set this option from the plugin ui without first constructing the execution options data.
  *  **Authentication details**: this can include username+password or API tokens.
     The authentication parameters **must** be **optional**.
 
