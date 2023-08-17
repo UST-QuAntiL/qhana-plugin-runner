@@ -180,8 +180,8 @@ Additional files and folders:
     Reserved for unit tests.
  *  `instance` (in .gitignore)\
     See <https://flask.palletsprojects.com/en/2.0.x/config/#instance-folders>
- *  `qhana_plugin_runner/static` (currently empty)\
-    Static files of the flask app
+ *  `qhana_plugin_runner/templates` and `qhana_plugin_runner/static` (currently empty)\
+    Templates and static files of the flask app
  *  `docs`\
     Folder containing a sphinx documentation
  *  `typings`\
