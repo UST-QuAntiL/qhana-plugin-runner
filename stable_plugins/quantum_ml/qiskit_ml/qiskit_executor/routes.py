@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from json import dumps
 import os
 from http import HTTPStatus
-from typing import Mapping
+from typing import Mapping, Optional
 
 from celery.canvas import chain
 from flask import Response
@@ -24,10 +25,11 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+from celery.utils.log import get_task_logger
 
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .backend.qiskit_backends import QiskitBackends
-from .schemas import InputParametersSchema
+from .schemas import BackendSelectionParameterSchema, InputParametersSchema
 from qhana_plugin_runner.api.plugin_schemas import (
     OutputDataMetadata,
     EntryPoint,
@@ -37,9 +39,11 @@ from qhana_plugin_runner.api.plugin_schemas import (
     InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .tasks import execution_task
+from .tasks import prepare_task, execution_task
+
+TASK_LOGGER = get_task_logger(__name__)
 
 
 @QISKIT_EXECUTOR_BLP.route("/")
@@ -158,7 +162,8 @@ class MicroFrontend(MethodView):
             default_values[fields["backend"].data_key] = os.environ["IBMQ_BACKEND"]
 
         if "IBMQ_TOKEN" in os.environ:
-            default_values[fields["ibmq_token"].data_key] = "****"
+            default_values[fields["ibmqToken"].data_key] = "****"
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
 
         # overwrite default values with other values if possible
         default_values.update(data_dict)
@@ -195,10 +200,31 @@ class CalcView(MethodView):
         )
         db_task.save(commit=True)
 
-        # all tasks need to know about db id to load the db entry
-        task: chain = execution_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
-        )
+        if arguments.ibmqToken:
+            # directly start the execution task
+            task: chain = execution_task.s(db_id=db_task.id) | save_task_result.s(
+                db_id=db_task.id
+            )
+        else:
+            # start the backend selection task (which then starts the execution task)
+            step_id = "backend-selection"
+            href = url_for(
+                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionStepView",
+                db_id=db_task.id,
+                _external=True,
+            )
+            ui_href = url_for(
+                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionStepFrontend",
+                db_id=db_task.id,
+                _external=True,
+            )
+            task: chain = prepare_task.s(db_id=db_task.id) | add_step.s(
+                db_id=db_task.id,
+                step_id=step_id,
+                href=href,
+                ui_href=ui_href,
+                prog_value=50,
+            )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -207,4 +233,108 @@ class CalcView(MethodView):
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@QISKIT_EXECUTOR_BLP.route("/<int:db_id>/backend-selection-ui/")
+class BackendSelectionStepFrontend(MethodView):
+    """Micro frontend for the backend selection step of the qiskit executor plugin."""
+
+    @QISKIT_EXECUTOR_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the backend selection step."
+    )
+    @QISKIT_EXECUTOR_BLP.arguments(
+        BackendSelectionParameterSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        """Return the micro frontend."""
+        return self.render(db_id, request.args, errors, False)
+
+    @QISKIT_EXECUTOR_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the backend selection step."
+    )
+    @QISKIT_EXECUTOR_BLP.arguments(
+        BackendSelectionParameterSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
+    def post(self, db_id, errors):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(db_id, request.form, errors, not errors)
+
+    def render(self, db_id, data: Mapping, errors: dict, valid: bool):
+        data_dict = dict(data)
+        fields = BackendSelectionParameterSchema().fields
+
+        # define default values
+        default_values = {
+            fields["backend"].data_key: QiskitBackends.aer_statevector_simulator.value,
+        }
+
+        if "IBMQ_BACKEND" in os.environ:
+            default_values[fields["backend"].data_key] = os.environ["IBMQ_BACKEND"]
+
+        if "IBMQ_TOKEN" in os.environ:
+            default_values[fields["ibmqToken"].data_key] = "****"
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
+
+        # overwrite default values with other values if possible
+        default_values.update(data_dict)
+        data_dict = default_values
+
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=QiskitExecutor.instance.name,
+                version=QiskitExecutor.instance.version,
+                schema=BackendSelectionParameterSchema(),
+                valid=valid,
+                values=data_dict,
+                errors=errors,
+                process=url_for(
+                    f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionStepView", db_id=db_id
+                ),
+            )
+        )
+
+
+@QISKIT_EXECUTOR_BLP.route("/<int:db_id>/backend-selection-process")
+class BackendSelectionStepView(MethodView):
+    """Start a long running processing task."""
+
+    @QISKIT_EXECUTOR_BLP.arguments(
+        BackendSelectionParameterSchema(unknown=EXCLUDE), location="form"
+    )
+    @QISKIT_EXECUTOR_BLP.response(HTTPStatus.SEE_OTHER)
+    @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments, db_id: int):
+        """Start the circuit execution task."""
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            raise KeyError(msg)
+
+        arguments["backend"] = arguments["backend"].value
+        db_task.parameters = dumps(arguments)
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = execution_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_id)
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
+
+        db_task.save(commit=True)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )

@@ -33,20 +33,51 @@ class InputParameters:
         executionOptions: str,
         shots: int,
         backend: QiskitBackends,
-        ibmq_token: str,
-        custom_backend: str,
+        ibmqToken: str,
+        customBackend: str,
     ):
         self.circuit = circuit
         self.executionOptions = executionOptions
         self.shots = shots
         self.backend = backend
-        self.ibmq_token = ibmq_token
-        self.custom_backend = custom_backend
+        self.ibmqToken = ibmqToken
+        self.customBackend = customBackend
 
     def __str__(self):
         variables = self.__dict__.copy()
-        variables["ibmq_token"] = ""
+        variables["ibmqToken"] = ""
         return str(variables)
+
+
+class BackendSelectionParameterSchema(FrontendFormBaseSchema):
+    backend = EnumField(
+        QiskitBackends,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Backend",
+            "description": "The quantum computer or simulator that will be used.",
+            "input_type": "select",
+        },
+    )
+    ibmqToken = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "text",
+        },
+    )
+    customBackend = ma.fields.String(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Custom backend",
+            "description": "Custom backend for IBMQ.",
+            "input_type": "text",
+        },
+    )
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -94,7 +125,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    ibmq_token = ma.fields.String(
+    ibmqToken = ma.fields.String(
         required=False,
         allow_none=False,
         metadata={
@@ -103,7 +134,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    custom_backend = ma.fields.String(
+    customBackend = ma.fields.String(
         required=False,
         allow_none=False,
         metadata={
@@ -115,5 +146,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
-        TASK_LOGGER.info(f"data: {data}")
+        log_data = data.copy()
+        if "ibmqToken" in log_data:
+            log_data["ibmqToken"] = "****"
+        TASK_LOGGER.info(f"data: {log_data}")
         return InputParameters(**data)

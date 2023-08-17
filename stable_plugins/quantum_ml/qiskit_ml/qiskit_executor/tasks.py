@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dump, dumps
+from json import dump, dumps, loads
 import mimetypes
 import os
 from tempfile import SpooledTemporaryFile
@@ -41,6 +41,45 @@ from qhana_plugin_runner.storage import STORE
 TASK_LOGGER = get_task_logger(__name__)
 
 
+@CELERY.task(name=f"{QiskitExecutor.instance.identifier}.prepare_task", bind=True)
+def prepare_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(
+        f"Starting new qiskit executor preparation task with db id '{db_id}'"
+    )
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
+
+    circuit_url = input_params.circuit
+    execution_options_url = input_params.executionOptions
+    shots = input_params.shots
+    backend_qiskit = input_params.backend
+    ibmq_token = input_params.ibmqToken
+    custom_backend = input_params.customBackend
+
+    # Save input data in internal data structure for further processing
+    task_data.data = dumps(
+        {
+            "circuit": circuit_url,
+            "executionOptions": execution_options_url,
+            "shots": shots,
+            "backend": backend_qiskit.value,
+            "ibmqToken": ibmq_token,
+            "customBackend": custom_backend,
+        }
+    )
+
+    task_data.save(commit=True)
+
+    return f"Saved input data in internal data structure for further processing: {repr(task_data.data)}"
+
+
 def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any]):
     from qiskit import QiskitError, QuantumCircuit, execute
     from qiskit.result.result import ExperimentResult, Result
@@ -50,7 +89,7 @@ def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any
     result: Result = execute(circuit, backend, shots=execution_options["shots"]).result()
     if not result.success:
         # TODO better error
-        raise ValueError("Circuit could not be simulated!", result)
+        raise ValueError("Circuit could not be executed!", result)
 
     experiment_result: ExperimentResult = result.results[0]
     extra_metadata = result.metadata
@@ -100,25 +139,30 @@ def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any
 def execution_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(
-        f"Starting new qiskit quantum kernel estimation calculation task with db id '{db_id}'"
-    )
-    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
+    db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
-    if task_data is None:
+    if db_task is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+    input_params: dict
+    if isinstance(db_task.data, str):
+        input_params = loads(db_task.data)
+    else:
+        input_params = db_task.data
+    backend_selection_params = loads(db_task.parameters)
+    input_params.update(backend_selection_params)
+    input_params: InputParameters = InputParametersSchema().load(input_params)
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     circuit_url = input_params.circuit
     execution_options_url = input_params.executionOptions
     shots = input_params.shots
     backend_qiskit = input_params.backend
-    ibmq_token = input_params.ibmq_token
-    custom_backend = input_params.custom_backend
+    ibmq_token = input_params.ibmqToken
+    custom_backend = input_params.customBackend
 
     circuit_qasm: str
     with open_url(circuit_url) as quasm_response:
@@ -142,7 +186,7 @@ def execution_task(self, db_id: int) -> str:
                 load_entities(execution_options_response, mimetype=mimetype)
             )
             options = next(entities, {})
-            task_data.add_task_log_entry(
+            db_task.add_task_log_entry(
                 "loaded execution options: " + dumps(options), commit=True
             )
             execution_options.update(options)
