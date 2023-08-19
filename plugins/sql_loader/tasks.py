@@ -16,6 +16,7 @@ from tempfile import SpooledTemporaryFile
 
 from typing import Optional, Tuple
 
+import pandas as pd
 from celery.utils.log import get_task_logger
 
 from . import SQLLoaderPlugin
@@ -104,12 +105,13 @@ def first_task(self, db_id: int) -> str:
     return "First step: checked database"
 
 
-@CELERY.task(name=f"{SQLLoaderPlugin.instance.identifier}.second_task", bind=True)
-def second_task(self, db_id: int) -> str:
-    # get parameters
-
-    TASK_LOGGER.info(f"Starting new db manager calculation task with db id '{db_id}'")
+def retrieve_params_for_second_task(db_id: int, dumped_schema=None, debug_file=None) -> dict:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if debug_file is not None:
+        with debug_file.open("a") as f:
+            f.write(f"\n\ntask:\ntask_data.parameters: {task_data.parameters}\ntask_data.data: {task_data.data}")
+            f.close()
 
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -129,23 +131,47 @@ def second_task(self, db_id: int) -> str:
     db_enum, db_host, db_port, db_user, db_password, db_database = prep_first_inputs(
         previous_input
     )
-
-    TASK_LOGGER.info(f"Loaded input from previous step from db: {task_data.data}")
-
-    input_params: SecondInputParameters = SecondInputParametersSchema().loads(
-        task_data.parameters
+    params = dict(
+        db_enum=db_enum,
+        db_host=db_host,
+        db_port=db_port,
+        db_user=db_user,
+        db_password=db_password,
+        db_database=db_database,
     )
 
-    custom_query = input_params.custom_query
-    db_query = input_params.db_query
-    save_table = input_params.save_table
-    id_attribute = input_params.id_attribute
-    table_name = input_params.table_name
-    columns_list = ", ".join(json_load(input_params.columns_list))
+    TASK_LOGGER.info(f"Loaded input from previous step from db: {task_data.data}")
+    print(f"Loaded input from previous step from db: {task_data.data}")
 
-    print(f"columns_list: {columns_list}")
+
+    input_params: SecondInputParameters = SecondInputParametersSchema().loads(
+        task_data.parameters if dumped_schema is None else dumped_schema
+    )
+
+    params.update(input_params.__dict__)
+    params["columns_list"] = ", ".join(json_load(input_params.columns_list))
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
+    print(f"Loaded input parameters from db: {str(input_params)}")
+
+    return params
+
+
+def second_task_execution(
+    db_enum: DBEnum,
+    db_host: str,
+    db_port: int,
+    db_user: str,
+    db_password: str,
+    db_database: str,
+    custom_query: bool,
+    db_query: str,
+    table_name: str,
+    columns_list: str,
+    id_attribute: str,
+    limit: Optional[int] = None,
+    **kwargs
+) -> pd.DataFrame:
 
     db_database = db_database.removeprefix("file://")
 
@@ -161,6 +187,8 @@ def second_task(self, db_id: int) -> str:
     print(f"table_query: {table_query}")
 
     if table_query != "":
+        if limit is not None:
+            table_query = f"SELECT {table_query} LIMIT {limit}"
         df = db_manager.get_query_as_dataframe(table_query)
 
         # Check if given attribute can be used as a unique identifier
@@ -174,8 +202,18 @@ def second_task(self, db_id: int) -> str:
     else:
         db_manager.execute_query(db_query)
 
+    return df
+
+
+@CELERY.task(name=f"{SQLLoaderPlugin.instance.identifier}.second_task", bind=True)
+def second_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting new db manager calculation task with db id '{db_id}'")
+
+    params = retrieve_params_for_second_task(db_id)
+    df = second_task_execution(**params)
+
     # Output data
-    if save_table:
+    if params["save_table"]:
         if df is not None:
             with SpooledTemporaryFile(mode="w") as output:
                 df.to_csv(output, index=False)
