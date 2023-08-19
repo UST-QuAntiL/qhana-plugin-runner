@@ -16,8 +16,6 @@ from http import HTTPStatus
 from typing import Mapping, Optional
 from json import dumps
 
-from pathlib import Path
-
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect, Markup
@@ -44,8 +42,12 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .tasks import first_task, second_task
+from .tasks import (
+    first_task,
+    second_task,
+)
 
+from pretty_html_table import build_table
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -262,9 +264,29 @@ class SecondMicroFrontend(MethodView):
                     db_id=db_id,
                     step_id=step_id,
                 ),
+                get_pd_html=url_for(
+                    f"{SQLLoader_BLP.name}.GetPDHTML",
+                    db_id=db_id,
+                    step_id=step_id,
+                ),
                 additional_info=Markup(dumps(db_task.data["db_tables_and_columns"])),
             )
         )
+
+
+@SQLLoader_BLP.route("/<int:db_id>/<float:step_id>/ui/pd_html")
+class GetPDHTML(MethodView):
+
+    @SQLLoader_BLP.html_response(
+        HTTPStatus.OK, description="Returns a query result in html form"
+    )
+    @SQLLoader_BLP.arguments(
+        SecondInputParametersSchema(unknown=EXCLUDE), location="query",
+    )
+    @SQLLoader_BLP.require_jwt("jwt", optional=True)
+    def get(self, arguments, db_id: int, step_id: float):
+        # params = parse.parse_qs(params)
+        return f"hello world!\n arguments: {arguments}"
 
 
 @SQLLoader_BLP.route("/<int:db_id>/<float:step_id>-process/")
