@@ -276,12 +276,12 @@ class SecondMicroFrontend(MethodView):
 
 @SQLLoader_BLP.route("/<int:db_id>/<float:step_id>/ui/pd_html")
 class GetPDHTML(MethodView):
-
     @SQLLoader_BLP.html_response(
         HTTPStatus.OK, description="Returns a query result in html form"
     )
     @SQLLoader_BLP.arguments(
-        SecondInputParametersSchema(unknown=EXCLUDE), location="query",
+        SecondInputParametersSchema(unknown=EXCLUDE),
+        location="query",
     )
     @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def get(self, arguments, db_id: int, step_id: float):

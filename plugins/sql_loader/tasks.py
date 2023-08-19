@@ -105,12 +105,16 @@ def first_task(self, db_id: int) -> str:
     return "First step: checked database"
 
 
-def retrieve_params_for_second_task(db_id: int, dumped_schema=None, debug_file=None) -> dict:
+def retrieve_params_for_second_task(
+    db_id: int, dumped_schema=None, debug_file=None
+) -> dict:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if debug_file is not None:
         with debug_file.open("a") as f:
-            f.write(f"\n\ntask:\ntask_data.parameters: {task_data.parameters}\ntask_data.data: {task_data.data}")
+            f.write(
+                f"\n\ntask:\ntask_data.parameters: {task_data.parameters}\ntask_data.data: {task_data.data}"
+            )
             f.close()
 
     if task_data is None:
@@ -143,7 +147,6 @@ def retrieve_params_for_second_task(db_id: int, dumped_schema=None, debug_file=N
     TASK_LOGGER.info(f"Loaded input from previous step from db: {task_data.data}")
     print(f"Loaded input from previous step from db: {task_data.data}")
 
-
     input_params: SecondInputParameters = SecondInputParametersSchema().loads(
         task_data.parameters if dumped_schema is None else dumped_schema
     )
@@ -170,9 +173,8 @@ def second_task_execution(
     columns_list: str,
     id_attribute: str,
     limit: Optional[int] = None,
-    **kwargs
+    **kwargs,
 ) -> pd.DataFrame:
-
     db_database = db_database.removeprefix("file://")
 
     db_manager, _ = db_enum.get_connected_db_manager(
