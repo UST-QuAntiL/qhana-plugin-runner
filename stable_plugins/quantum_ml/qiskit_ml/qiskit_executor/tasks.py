@@ -109,7 +109,7 @@ def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any
         "jobId": result.job_id,
         "qobjId": result.qobj_id,
         # QPU/Simulator information
-        "qpuType": "simulator",
+        "qpuType": "simulator" if "simulator" in result.backend_name else "qpu",
         "qpuVendor": "IBM",
         "qpuName": result.backend_name,
         "qpuVersion": result.backend_version,
