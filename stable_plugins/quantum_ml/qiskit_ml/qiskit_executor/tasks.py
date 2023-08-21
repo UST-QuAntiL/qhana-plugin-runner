@@ -81,7 +81,7 @@ def prepare_task(self, db_id: int) -> str:
 
 
 def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any]):
-    from qiskit import QiskitError, QuantumCircuit, execute
+    from qiskit import QuantumCircuit, execute
     from qiskit.result.result import ExperimentResult, Result
 
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
@@ -126,13 +126,7 @@ def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any
 
     counts = result.get_counts()
 
-    state_vector: Optional[Any] = None
-    try:
-        state_vector = result.get_statevector()
-    except QiskitError:
-        pass
-
-    return metadata, dict(counts), state_vector
+    return metadata, dict(counts)
 
 
 @CELERY.task(name=f"{QiskitExecutor.instance.identifier}.execution_task", bind=True)
@@ -203,9 +197,7 @@ def execution_task(self, db_id: int) -> str:
     backend = backend_qiskit.get_qiskit_backend(ibmq_token, custom_backend)
     backend.shots = shots
 
-    metadata, counts, state_vector = execute_circuit(
-        circuit_qasm, backend, execution_options
-    )
+    metadata, counts = execute_circuit(circuit_qasm, backend, execution_options)
 
     experiment_id = str(uuid4())
 
@@ -222,22 +214,6 @@ def execution_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
-
-    if state_vector:
-        state_vector_ent = {"ID": experiment_id}
-        dim = len(state_vector)
-        key_len = len(str(dim))
-        for i, v in enumerate(state_vector):
-            state_vector_ent[f"{i:0{key_len}}"] = repr(v)
-        with SpooledTemporaryFile(mode="w") as output:
-            dump(state_vector_ent, output)
-            STORE.persist_task_result(
-                db_id,
-                output,
-                "result-statevector.json",
-                "entity/vector",
-                "application/json",
-            )
 
     extra_execution_options = {
         "ID": experiment_id,

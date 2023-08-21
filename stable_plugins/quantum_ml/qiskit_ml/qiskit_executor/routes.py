@@ -89,12 +89,6 @@ class PluginsView(MethodView):
                         name="result-counts.json",
                     ),
                     OutputDataMetadata(
-                        data_type="entity/vector",
-                        content_type=["application/json"],
-                        required=False,
-                        name="result-statevector.json",
-                    ),
-                    OutputDataMetadata(
                         data_type="provenance/trace",
                         content_type=["application/json"],
                         required=True,
@@ -155,7 +149,7 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {
             fields["shots"].data_key: 1024,
-            fields["backend"].data_key: QiskitBackends.aer_statevector_simulator.value,
+            fields["backend"].data_key: QiskitBackends.ibmq_qasm_simulator.value,
         }
 
         if "IBMQ_BACKEND" in os.environ:
@@ -276,7 +270,7 @@ class BackendSelectionStepFrontend(MethodView):
 
         # define default values
         default_values = {
-            fields["backend"].data_key: QiskitBackends.aer_statevector_simulator.value,
+            fields["backend"].data_key: QiskitBackends.ibmq_qasm_simulator.value,
         }
 
         if "IBMQ_BACKEND" in os.environ:
