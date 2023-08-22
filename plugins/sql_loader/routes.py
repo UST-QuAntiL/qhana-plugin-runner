@@ -44,11 +44,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .tasks import (
-    first_task,
-    second_task,
-    get_second_task_html
-)
+from .tasks import first_task, second_task, get_second_task_html
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -288,7 +284,13 @@ class GetPDHTML(MethodView):
     @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def get(self, arguments, db_id: int, step_id: float):
         try:
-            return get_second_task_html.s(db_id=db_id, arguments=SecondInputParametersSchema().dumps(arguments)).apply_async().get(timeout=15)
+            return (
+                get_second_task_html.s(
+                    db_id=db_id, arguments=SecondInputParametersSchema().dumps(arguments)
+                )
+                .apply_async()
+                .get(timeout=15)
+            )
         except CeleryTimeoutError:
             return "Query timed out"
 
@@ -298,7 +300,8 @@ class SecondProcessView(MethodView):
     """Start a long running processing task."""
 
     @SQLLoader_BLP.arguments(
-        SecondInputParametersSchema(unknown=EXCLUDE), location="form",
+        SecondInputParametersSchema(unknown=EXCLUDE),
+        location="form",
     )
     @SQLLoader_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @SQLLoader_BLP.require_jwt("jwt", optional=True)

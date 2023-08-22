@@ -112,9 +112,7 @@ def first_task(self, db_id: int) -> str:
     return "First step: checked database"
 
 
-def retrieve_params_for_second_task(
-    db_id: int, dumped_schema=None
-) -> dict:
+def retrieve_params_for_second_task(db_id: int, dumped_schema=None) -> dict:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -128,7 +126,9 @@ def retrieve_params_for_second_task(
         **{
             key: value
             for key, value in task_data.data.items()
-            if key != "db_type" and key != "db_tables_and_columns" and key != "checkbox_list"
+            if key != "db_type"
+            and key != "db_tables_and_columns"
+            and key != "checkbox_list"
         },
     )
 
@@ -194,7 +194,9 @@ def second_task_execution(
 
             # Check if given attribute can be used as a unique identifier
             # If so, use attribute
-            if id_attribute in df and len(df[id_attribute].unique()) == len(df[id_attribute]):
+            if id_attribute in df and len(df[id_attribute].unique()) == len(
+                df[id_attribute]
+            ):
                 df["ID"] = df[id_attribute]
             # If not, use indices
             else:
@@ -231,7 +233,9 @@ def second_task(self, db_id: int) -> str:
     return "Second step: result stored in file"
 
 
-@CELERY.task(name=f"{SQLLoaderPlugin.instance.identifier}.get_second_task_html", bind=True)
+@CELERY.task(
+    name=f"{SQLLoaderPlugin.instance.identifier}.get_second_task_html", bind=True
+)
 def get_second_task_html(
     self,
     db_id: int,
