@@ -91,6 +91,7 @@ def first_task(self, db_id: int) -> str:
     )
 
     tables_and_columns = db_manager.get_tables_and_columns()
+    db_manager.disconnect()
     checkbox_list = get_checkbox_list_dict(tables_and_columns)
 
     task_data.data.update(
@@ -201,6 +202,8 @@ def second_task_execution(
             df["href"] = [get_href(db_host, db_port, db_database)] * df.shape[0]
     else:
         db_manager.execute_query(db_query)
+
+    db_manager.disconnect()
 
     return df
 
