@@ -18,6 +18,7 @@ from json import dumps
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
+from celery.exceptions import TimeoutError as CeleryTimeoutError
 from flask import Response, redirect, Markup
 from flask.globals import request
 from flask.helpers import url_for
@@ -40,14 +41,14 @@ from qhana_plugin_runner.api.plugin_schemas import (
     InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 from .tasks import (
     first_task,
     second_task,
+    get_second_task_html
 )
-
-from pretty_html_table import build_table
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -269,7 +270,8 @@ class SecondMicroFrontend(MethodView):
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                additional_info=Markup(dumps(db_task.data["db_tables_and_columns"])),
+                additional_info=Markup(db_task.data["db_tables_and_columns"]),
+                checkbox_list=Markup(db_task.data["checkbox_list"]),
             )
         )
 
@@ -285,8 +287,10 @@ class GetPDHTML(MethodView):
     )
     @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def get(self, arguments, db_id: int, step_id: float):
-        # params = parse.parse_qs(params)
-        return f"hello world!\n arguments: {arguments}"
+        try:
+            return get_second_task_html.s(db_id=db_id, arguments=SecondInputParametersSchema().dumps(arguments)).apply_async().get(timeout=15)
+        except CeleryTimeoutError:
+            return "Query timed out"
 
 
 @SQLLoader_BLP.route("/<int:db_id>/<float:step_id>-process/")
@@ -294,7 +298,7 @@ class SecondProcessView(MethodView):
     """Start a long running processing task."""
 
     @SQLLoader_BLP.arguments(
-        SecondInputParametersSchema(unknown=EXCLUDE), location="form"
+        SecondInputParametersSchema(unknown=EXCLUDE), location="form",
     )
     @SQLLoader_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @SQLLoader_BLP.require_jwt("jwt", optional=True)

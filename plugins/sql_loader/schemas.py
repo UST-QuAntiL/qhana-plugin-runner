@@ -190,5 +190,4 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
 
     @post_load
     def make_input_params(self, data, **kwargs) -> SecondInputParameters:
-        print(f"loading data: {data}")
         return SecondInputParameters(**data)

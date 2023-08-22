@@ -1,12 +1,44 @@
 {% extends "simple_template.html" %}
 
-{% block head %}
-{{ super() }}
-<datalist id="id_attribute_list"></datalist>
-{% endblock head %}
+<head>
+    {% block head %}
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .loader {
+          border: 16px solid #f3f3f3;
+          border-radius: 50%;
+          border-top: 16px solid #3498db;
+          width: 80px;
+          height: 80px;
+          -webkit-animation: spin 2s linear infinite; /* Safari */
+          animation: spin 2s linear infinite;
+        }
+
+        /* Safari */
+        @-webkit-keyframes spin {
+          0% { -webkit-transform: rotate(0deg); }
+          100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .html_table {
+            height: 200px;
+            overflow: auto;
+            width: fit-content
+        }
+    </style>
+    {% endblock head %}
+</head>
+
 
 {% block content %}
-<div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'>Placeholder</div>
+<datalist id="id_attribute_list"></datalist>
+<div id="pandas_html"></div>
 <div class="qhana-microfrontend">
     {% block help %}
     {% if help_text or example_values %}
@@ -28,11 +60,10 @@
     {% call forms.render_form(target="microfrontend") %}
     {{ forms.render_fields(schema, values=values, errors=errors) }}
     <div class="qhana-form-buttons">
-        <!--            {{ forms.submit("validate", target=validate)}}-->
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}
-        <button type="button" id="test_button">
-            test_button
+        <button type="button" id="preview_button">
+            preview
         </button>
         {% if not errors and valid %}
         <span class="qhana-input-description"> Validation successful!</span>
@@ -51,149 +82,152 @@
 {% endblock content %}
 
 {% block script %}
+
 <script>
-    const font_size = 13. + 1. / 3.;
+    const checkbox_list = {{ checkbox_list }};
 
-    let check_box_list;
-    let table_select;
-
-    const custom_query_value = document.getElementById("custom_query");
-    const save_table_value = document.getElementById("save_table");
     const columns_list_value = document.getElementById("columns_list");
-    const table_name_value = document.getElementById("table_name");
-    const attribute_to_id_value = document.getElementById("id_attribute")
-    const id_attribute_list_value = document.getElementById("id_attribute_list");
-    const tables_and_columns = JSON.parse('{{ additional_info }}');
-
-
-    const attribute_to_id_vis = attribute_to_id_value.parentNode.parentNode;
-    const db_query_vis = document.getElementById("db_query").parentNode.parentNode;
-    const columns_list_vis = columns_list_value.parentNode.parentNode;
-    const table_name_vis = table_name_value.parentNode.parentNode;
-
-
-    function change_custom_query() {
-        db_query_vis.style.display = "none";
-        columns_list_vis.style.display = "block";
-        table_name_vis.style.display = "block";
-        if (custom_query_value.checked === true) {
-            db_query_vis.style.display = "block";
-            columns_list_vis.style.display = "none";
-            table_name_vis.style.display = "none";
-        }
-    }
-
-
-    function create_checkbox(name, check_status = false) {
-        let label_element = document.createElement("label");
-        label_element.setAttribute("for", name);
-        label_element.style.cssText = "display: block; color: WindowText; background-color: Window; margin: 0; padding: 0; width: 100%;";
-
-        let input_element = document.createElement("input");
-        input_element.setAttribute("type", "checkbox");
-        input_element.setAttribute("name", name);
-        input_element.setAttribute("id", name + "_box");
-        input_element.checked = check_status;
-        // input_element.addEventListener("change", append_value_to_str_list, false);
-        label_element.appendChild(input_element);
-
-        let text = document.createTextNode(name);
-        label_element.appendChild(text);
-
-
-        label_element.style.font = font_size + "px DejaVu,Sans";
-
-        return label_element;
-    }
-
+    const wrapper = columns_list_value.parentNode;
+    columns_list_value.style.display = "none";
 
     function update_check_all_box_indeterminate(event) {
         let check_box = event.target;
-        let check_all_box = document.getElementById("select all_box");
+        let check_all_box = wrapper.children[1].children[0];
 
         if (!check_all_box.indeterminate) {
             check_all_box.indeterminate = (check_box.checked !== check_all_box.checked);
         }
     }
 
-
-    function create_checkbox_for_list(name, check_status = false) {
-        let list_element = document.createElement("li");
-        list_element.style.cssText = "margin: 0; padding: 0;";
-        let check_box = create_checkbox(name, check_status);
-        check_box.children[0].addEventListener("change", update_check_all_box_indeterminate);
-        list_element.appendChild(check_box);
-
-        return list_element;
-    }
-
-
-    function set_all_check_box_list(checked_values) {
-        let check_box_list = document.getElementById("check_box_list");
+    function check_all_box_change() {
+        let check_box_list = wrapper.children[2];
+        let checked_value = wrapper.children[1].children[0].checked;
         //iterate through li elements
-        for (let i = 0; i < check_box_list.children.length; i++) {
+        for (let box of check_box_list.children) {
             // Set checked status
-            check_box_list.children[i].children[0].children[0].checked = checked_values;
+            box.children[0].children[0].checked = checked_value;
         }
     }
 
+    function give_checkboxes_functionality() {
+        let check_box_list = wrapper.children[2];
+        check_box_list.querySelectorAll("input").forEach(box => {
+            box.addEventListener("change", update_check_all_box_indeterminate);
+        });
 
-    function check_all_box_change(event) {
-        set_all_check_box_list(event.target.checked);
+
+        let check_all_box = wrapper.children[1].children[0];
+        check_all_box.addEventListener("change", check_all_box_change);
     }
 
-
-    function init_check_all_box() {
-        if (document.getElementById("select all_id") === null) {
-            let check_all_box = create_checkbox("select all");
-            // check_all_box.children[0].indeterminate = true;
-            check_all_box.children[0].addEventListener("change", check_all_box_change);
-            check_all_box.outerHTML = "<br />";
-
-            columns_list_value.parentNode.appendChild(check_all_box);
+    function init_checkbox_list() {
+        if (wrapper.children.length > 1) {
+            wrapper.replaceChildren(wrapper.children[0]);
         }
+        wrapper.insertAdjacentHTML('beforeend', checkbox_list[table_name_value.value]);
+        give_checkboxes_functionality();
     }
 
-    function create_check_box_list() {
-        if (document.getElementById("check_box_list") !== null) {
-            document.getElementById("check_box_list").remove();
-        }
-        check_box_list = document.createElement("ul");
-        check_box_list.id = "check_box_list";
-        check_box_list.className = "qhana-form-input";
-        check_box_list.style.cssText = "height: 100px; overflow: auto; max-width: 25em; border: 1px solid #8f8f9d; list-style-type: none; margin: 0; padding: 0.3em; flex-grow: 1; overflow-x: hidden;";
-        // dummy_field_value.style.cssText = "height: 100px; overflow: auto; max-width: 25em; border: 1px solid #8f8f9d; list-style-type: none; margin: 0; padding: 0.3em; flex-grow: 1; overflow-x: hidden;";
-
-        let current_table = table_select.value;
-        let columns = tables_and_columns[current_table];
-
-        let check_status = "";
-        if (columns_list_value.value !== "") {
-            check_status = JSON.parse(columns_list_value.value);
-        }
-        for (let i = 0; i < columns.length; i++) {
-            check_box_list.appendChild(create_checkbox_for_list(columns[i].toString(), check_status.includes(columns[i].toString())));
-            // dummy_field_value.appendChild(create_checkbox_for_list(i.toString()));
-        }
-
-        columns_list_value.parentNode.appendChild(check_box_list);
+    function set_box_values() {
+        JSON.parse(columns_list_value.value).forEach(entry => {
+            console.log(entry);
+            document.getElementById(entry).checked = true;
+        });
     }
 
-
-    function write_checkbox_content_to_str_list() {
-        // let check_box_list = document.getElementById("check_box_list");
-        let result = [];
-        //iterate through li elements
-        for (let i = 0; i < check_box_list.children.length; i++) {
-            // get checkbox element
-            let checkbox_element = check_box_list.children[i].children[0].children[0];
-
-            if (checkbox_element.checked) {
-                result.push(checkbox_element.name);
+    function set_columns_list() {
+        let check_box_list = wrapper.children[2];
+        let columns_list_arr = [];
+        check_box_list.querySelectorAll("input").forEach(box => {
+            if (box.checked) {
+                columns_list_arr.push(box.name);
             }
-        }
-        columns_list_value.value = JSON.stringify(result);
+        });
+        columns_list_value.value = JSON.stringify(columns_list_arr);
     }
+
+    const qhana_buttons = document.getElementsByClassName("qhana-form-buttons")[0];
+    qhana_buttons.addEventListener("click", set_columns_list);
+</script>
+
+<script>
+    const test_button = document.getElementById("preview_button");
+    const qhana_form = document.getElementsByClassName("qhana-form")[0];
+    const pandas_html_value = document.getElementById("pandas_html");
+
+    function retrieve_parameters(form) {
+        let inputs = {};
+        form.querySelectorAll("input").forEach(item => {
+            if (!item.id.endsWith("box")) {
+                if (item.type === "checkbox") {
+                    inputs[item.name] = item.checked;
+                } else {
+                    inputs[item.name] = item.value;
+                }
+            }
+        });
+        return inputs
+    }
+
+    function test_button_click() {
+        set_columns_list();
+        pandas_html_value.innerHTML = "";
+        pandas_html_value.setAttribute("class", "loader");
+
+
+        let data = new URLSearchParams(retrieve_parameters(qhana_form));
+        let target_url = new URL("{{ get_pd_html }}", window.location.href);
+
+        data.forEach((value, key) => {
+            target_url.searchParams.append(key, value);
+        })
+
+        fetch(target_url.toString())
+            // fetch() returns a promise. When we have received a response from the server,
+            // the promise's `then()` handler is called with the response.
+            .then((response) => {
+                // Our handler throws an error if the request did not succeed.
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status}`);
+                }
+                // Otherwise (if the response succeeded), our handler fetches the response
+                // as text by calling response.text(), and immediately returns the promise
+                // returned by `response.text()`.
+                return response.text();
+            })
+            // When response.text() has succeeded, the `then()` handler is called with
+            // the text
+            .then((text) => {
+                pandas_html_value.innerHTML = text;
+                if (pandas_html_value.innerHTML !== "" && pandas_html_value.innerHTML !== "Query timed out") {
+                    pandas_html_value.setAttribute("class", "html_table");
+                } else {
+                    pandas_html_value.removeAttribute("class");
+                }
+            })
+            // Catch any errors that might happen
+            .catch((error) => {
+                console.log(`Could not fetch verse: ${error}`);
+                if (pandas_html_value.innerHTML !== "" && pandas_html_value.innerHTML !== "Query timed out") {
+                    pandas_html_value.setAttribute("class", "html_table");
+                } else {
+                    pandas_html_value.removeAttribute("class");
+                }
+            });
+    }
+
+    test_button.addEventListener("click", test_button_click);
+</script>
+
+<script>
+    const save_table_value = document.getElementById("save_table");
+    const table_name_value = document.getElementById("table_name");
+    const attribute_to_id_value = document.getElementById("id_attribute");
+    const id_attribute_list_value = document.getElementById("id_attribute_list");
+    const tables_and_columns = {{ additional_info }};
+
+    const attribute_to_id_vis = attribute_to_id_value.parentNode.parentNode;
+    const columns_list_vis = columns_list_value.parentNode.parentNode;
 
 
     function init_table_name_value() {
@@ -233,9 +267,7 @@
 
     function table_select_change() {
         table_name_value.value = table_select.value;
-        let check_all_box = document.getElementById("select all_box");
-        check_all_box.checked = false;
-        create_check_box_list();
+        init_checkbox_list();
         update_id_attribute_list();
     }
 
@@ -248,75 +280,36 @@
     }
 
 
-    columns_list_value.style.display = "none";
     attribute_to_id_value.setAttribute("list", "id_attribute_list");
     table_select = init_table_name_value();
     save_table_change();
-    init_check_all_box();
     table_select_change();
-    change_custom_query();
 
-
-    let buttons = document.getElementsByClassName("qhana-form-buttons");
-    buttons[0].addEventListener("click", write_checkbox_content_to_str_list, false);
     save_table_value.addEventListener("change", save_table_change);
     table_select.addEventListener("change", table_select_change);
-    custom_query_value.addEventListener("change", change_custom_query);
 </script>
 
 <script>
-    const test_button = document.getElementById("test_button");
-    const qhana_form = document.getElementsByClassName("qhana-form")[0];
+    const custom_query_value = document.getElementById("custom_query");
+    const db_query_vis = document.getElementById("db_query").parentNode.parentNode;
+    const table_name_vis = table_name_value.parentNode.parentNode;
 
-    function retrieve_parameters(form) {
-        let inputs = {};
-        form.querySelectorAll("input").forEach(item => {
-            if (!item.id.endsWith("box")) {
-                if (item.type === "checkbox") {
-                    inputs[item.id] = item.checked;
-                } else {
-                    inputs[item.id] = item.value;
-                }
-            }
-        });
-        return inputs
+    function change_custom_query() {
+        db_query_vis.style.display = "none";
+        columns_list_vis.style.display = "block";
+        table_name_vis.style.display = "block";
+        if (custom_query_value.checked === true) {
+            db_query_vis.style.display = "block";
+            columns_list_vis.style.display = "none";
+            table_name_vis.style.display = "none";
+        }
     }
 
-    function test_button_click() {
-        let data = new URLSearchParams(retrieve_parameters(qhana_form));
-        let target_url = new URL("{{ get_pd_html }}", window.location.href);
-        console.log(`target_url: ${target_url}`);
+    change_custom_query();
 
-        data.forEach((value, key) => {
-            console.log(`${key}: ${value}`);
-            target_url.searchParams.append(key, value);
-        })
+    custom_query_value.addEventListener("change", change_custom_query);
 
-        fetch(target_url.toString())
-            // fetch() returns a promise. When we have received a response from the server,
-            // the promise's `then()` handler is called with the response.
-            .then((response) => {
-                // Our handler throws an error if the request did not succeed.
-                if (!response.ok) {
-                    throw new Error(`HTTP error: ${response.status}`);
-                }
-                // Otherwise (if the response succeeded), our handler fetches the response
-                // as text by calling response.text(), and immediately returns the promise
-                // returned by `response.text()`.
-                return response.text();
-            })
-            // When response.text() has succeeded, the `then()` handler is called with
-            // the text
-            .then((text) => {
-                console.log(text);
-            })
-            // Catch any errors that might happen
-            .catch((error) => {
-                console.log(`Could not fetch verse: ${error}`);
-            });
-    }
-
-    test_button.addEventListener("click", test_button_click);
+    set_box_values();
 </script>
 
 <script src="{{url_for('static', filename='microfrontend.js')}}"></script>

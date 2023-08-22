@@ -34,6 +34,8 @@ from qhana_plugin_runner.storage import STORE
 
 from json import loads as json_load
 from .backend.db_enum import DBEnum
+from .backend.checkbox_list import get_checkbox_list_dict
+from pretty_html_table import build_table
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -88,9 +90,13 @@ def first_task(self, db_id: int) -> str:
         db_host, db_port, db_user, db_password, db_database
     )
 
+    tables_and_columns = db_manager.get_tables_and_columns()
+    checkbox_list = get_checkbox_list_dict(tables_and_columns)
+
     task_data.data.update(
         dict(
-            db_tables_and_columns=db_manager.get_tables_and_columns(),
+            db_tables_and_columns=tables_and_columns,
+            checkbox_list=checkbox_list,
             db_type=db_type,
             db_host=db_host,
             db_port=db_port,
@@ -106,16 +112,9 @@ def first_task(self, db_id: int) -> str:
 
 
 def retrieve_params_for_second_task(
-    db_id: int, dumped_schema=None, debug_file=None
+    db_id: int, dumped_schema=None
 ) -> dict:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-
-    if debug_file is not None:
-        with debug_file.open("a") as f:
-            f.write(
-                f"\n\ntask:\ntask_data.parameters: {task_data.parameters}\ntask_data.data: {task_data.data}"
-            )
-            f.close()
 
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -128,7 +127,7 @@ def retrieve_params_for_second_task(
         **{
             key: value
             for key, value in task_data.data.items()
-            if key != "db_type" and key != "db_tables_and_columns"
+            if key != "db_type" and key != "db_tables_and_columns" and key != "checkbox_list"
         },
     )
 
@@ -145,7 +144,6 @@ def retrieve_params_for_second_task(
     )
 
     TASK_LOGGER.info(f"Loaded input from previous step from db: {task_data.data}")
-    print(f"Loaded input from previous step from db: {task_data.data}")
 
     input_params: SecondInputParameters = SecondInputParametersSchema().loads(
         task_data.parameters if dumped_schema is None else dumped_schema
@@ -155,7 +153,6 @@ def retrieve_params_for_second_task(
     params["columns_list"] = ", ".join(json_load(input_params.columns_list))
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
-    print(f"Loaded input parameters from db: {str(input_params)}")
 
     return params
 
@@ -189,18 +186,19 @@ def second_task_execution(
     print(f"table_query: {table_query}")
 
     if table_query != "":
-        if limit is not None:
-            table_query = f"SELECT {table_query} LIMIT {limit}"
-        df = db_manager.get_query_as_dataframe(table_query)
+        if columns_list != "":
+            if limit is not None:
+                table_query = f"SELECT * FROM ({table_query}) AS temp LIMIT {limit}"
+            df = db_manager.get_query_as_dataframe(table_query)
 
-        # Check if given attribute can be used as a unique identifier
-        # If so, use attribute
-        if id_attribute in df and len(df[id_attribute].unique()) == len(df[id_attribute]):
-            df["ID"] = df[id_attribute]
-        # If not, use indices
-        else:
-            df["ID"] = list(range(df.shape[0]))
-        df["href"] = [get_href(db_host, db_port, db_database)] * df.shape[0]
+            # Check if given attribute can be used as a unique identifier
+            # If so, use attribute
+            if id_attribute in df and len(df[id_attribute].unique()) == len(df[id_attribute]):
+                df["ID"] = df[id_attribute]
+            # If not, use indices
+            else:
+                df["ID"] = list(range(df.shape[0]))
+            df["href"] = [get_href(db_host, db_port, db_database)] * df.shape[0]
     else:
         db_manager.execute_query(db_query)
 
@@ -228,3 +226,14 @@ def second_task(self, db_id: int) -> str:
                 )
 
     return "Second step: result stored in file"
+
+
+@CELERY.task(name=f"{SQLLoaderPlugin.instance.identifier}.get_second_task_html", bind=True)
+def get_second_task_html(
+    self,
+    db_id: int,
+    arguments: str,
+) -> str:
+    params = retrieve_params_for_second_task(db_id, dumped_schema=arguments)
+    df = second_task_execution(**params, limit=10)
+    return build_table(df, color="grey_light") if df is not None else ""
