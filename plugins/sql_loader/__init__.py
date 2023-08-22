@@ -29,7 +29,7 @@ SQLLoader_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="SQL Loader plugin API",
-    template_folder="",
+    template_folder="templates",
 )
 
 
