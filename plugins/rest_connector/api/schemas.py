@@ -42,6 +42,8 @@ class ConnectorKey(Enum):
     ENDPOINT_URL = "endpoint-url"
     ENDPOINT_METHOD = "endpoint-method"
     VARIABLES = "variables"
+    ENDPOINT_VARIABLES = "endpoint-variables"
+    ENDPOINT_QUERY_VARIABLES = "endpoint-query-variables"
     REQUEST_HEADERS = "request-headers"
     REQUEST_BODY = "request-body"
     REQUEST_FILES = "request-files"
@@ -135,11 +137,18 @@ class ConnectorSchema(MaBaseSchema):
     is_deployed = ma.fields.Boolean(dump_only=True, dump_default=False)
     is_loading = ma.fields.Boolean(dump_only=True, dump_default=False)
     next_step = ma.fields.String(dump_default="")
+    finished_steps = ma.fields.List(ma.fields.String(), dump_default=[])
     base_url = ma.fields.Url(dump_default="")
     openapi_spec_url = ma.fields.Url(dump_default="")
     endpoint_url = ma.fields.Url(dump_default="")
     endpoint_method = ma.fields.Url(
         dump_default="GET", validate=OneOf(["GET", "PUT", "POST", "DELETE", "PATCH"])
+    )
+    endpoint_variables = ma.fields.Mapping(
+        ma.fields.String, ma.fields.String, dump_default={}
+    )
+    endpoint_query_variables = ma.fields.Mapping(
+        ma.fields.String, ma.fields.String, dump_default={}
     )
     variables = ma.fields.List(
         ma.fields.Nested(ConnectorVariableSchema), dump_default=tuple()

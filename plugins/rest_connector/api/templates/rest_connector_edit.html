@@ -4,15 +4,75 @@
     {{ super() }}
 
     <style>
+        .content {
+            padding: 1rem;
+        }
+        .step {
+            --step-border-color: var(--border-color, black);
+            --step-color: var(--background, white);
+            --step-text-color: var(--text, black);
+        }
+        .step.done {
+            --step-border-color: var(--primary, gray);
+            --step-color: var(--primary, gray);
+            --step-text-color: var(--text-primary, white);
+        }
+        .step[open] {
+            --step-border-color: var(--primary, gray);
+            --step-color: var(--background, white);
+            --step-text-color: var(--text, black);
+        }
+        .step.done[open] {
+            --step-text-color: var(--primary-text, black);
+        }
+        .step .step-head {
+            cursor: pointer;
+        }
+        .step[open] > .step-head {
+            background-color: var(--primary, dark-gray);
+            color: var(--text-primary, black);
+            border-radius: 0.3rem;
+        }
+        .step > .step-head::marker, .step > .step-head::-webkit-details-marker {
+            display: none;
+            content: "";
+        }
+        .step > .step-head::before {
+            content: attr(data-stepnr);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            margin-inline-start: 0.3rem;
+            margin-inline-end: 1rem;
+            margin-block: 0.3rem;
+            background-color: var(--step-color, dark-gray);
+            color: var(--step-text-color, white);
+            border-radius: 100%;
+            border: 1px solid;
+            border-color: var(--step-border-color, black);
+        }
+        .step.done > .step-head::before {
+            content: "✓";
+        }
+        .step[open] > :not(.step-head) {
+            margin-block-start: 0.3rem;
+            margin-inline-start: calc(1.3rem - 1px);
+            padding-inline-start: calc(2rem - 1px);
+            border-left: 2px solid;
+            border-color: var(--step-border-color, dark-gray);
+        }
     </style>
 {% endblock head %}
 
 {% block content %}
 
+    <div class="content">
     <h3>{{name}} (WIP)</h3>
 
-    <details class="step" open>
-        <summary class="step-head">API Base URL</summary>
+    <details class="step {{'done' if 'base-url' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "base-url" or not connector["baseUrl"] else ""}}>
+        <summary class="step-head" data-stepnr="1">API Base URL</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="base-url" enctype="application/json">
             <div class="qhana-form-field">
@@ -28,8 +88,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">OpenAPI Spec URL</summary>
+    <details class="step {{'done' if 'openapi-spec' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "openapi-spec" else ""}}>
+        <summary class="step-head" data-stepnr="2">OpenAPI Spec URL</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="openapi-spec" enctype="application/json">
             <div class="qhana-form-field">
@@ -45,8 +105,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Endpoint URL</summary>
+    <details class="step {{'done' if 'endpoint-url' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-url" else ""}}>
+        <summary class="step-head" data-stepnr="3">Endpoint URL</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-url" enctype="application/json">
             <div class="qhana-form-field">
@@ -64,8 +124,8 @@
 
     <!-- FIXME add support for variables in endpoint -->
 
-    <details class="step" open>
-        <summary class="step-head">Endpoint method</summary>
+    <details class="step {{'done' if 'endpoint-method' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-method" else ""}}>
+        <summary class="step-head" data-stepnr="4">Endpoint method</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-method" enctype="application/json">
             <div class="qhana-form-field">
@@ -85,8 +145,42 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Variables</summary>
+    <details class="step {{'done' if 'endpoint-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-variables" else ""}}>
+        <summary class="step-head" data-stepnr="5">Endpoint Variables</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-variables" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Endpoint Variables</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off">{{connector['endpointVariables'] | tojson(indent="    ")}}</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint variables</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step {{'done' if 'endpoint-query-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-query-variables" else ""}}>
+        <summary class="step-head" data-stepnr="6">Endpoint Query Variables</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-query-variables" enctype="application/json">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Endpoint Query Variables</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off">{{connector['endpointQueryVariables'] | tojson(indent="    ")}}</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint query variables</button>
+            </div>
+        </form>
+    </details>
+
+    <details class="step {{'done' if 'variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "variables" else ""}}>
+        <summary class="step-head" data-stepnr="7">Variables</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="variables" enctype="application/json">
             <div class="qhana-form-field">
@@ -102,8 +196,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Request Headers</summary>
+    <details class="step {{'done' if 'request-headers' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-headers" else ""}}>
+        <summary class="step-head" data-stepnr="8">Request Headers</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="request-headers" enctype="application/json">
             <div class="qhana-form-field">
@@ -119,8 +213,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Request Body</summary>
+    <details class="step {{'done' if 'request-body' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-body" else ""}}>
+        <summary class="step-head" data-stepnr="9">Request Body</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="request-body" enctype="application/json">
             <div class="qhana-form-field">
@@ -136,8 +230,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Request Files</summary>
+    <details class="step {{'done' if 'request-files' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-files" else ""}}>
+        <summary class="step-head" data-stepnr="10">Request Files</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="request-files" enctype="application/json">
             <div class="qhana-form-field">
@@ -153,8 +247,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Response Handling</summary>
+    <details class="step {{'done' if 'response-handling' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "response-handling" else ""}}>
+        <summary class="step-head" data-stepnr="11">Response Handling</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="response-handling" enctype="application/json">
             <div class="qhana-form-field">
@@ -173,8 +267,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Response Mapping</summary>
+    <details class="step {{'done' if 'response-mapping' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "response-mapping" else ""}}>
+        <summary class="step-head" data-stepnr="12">Response Mapping</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="response-mapping" enctype="application/json">
             <div class="qhana-form-field">
@@ -190,8 +284,8 @@
         </form>
     </details>
 
-    <details class="step" open>
-        <summary class="step-head">Response Mapping</summary>
+    <details class="step" {{"open" if connector["nextStep"] == "manage-plugin" or connector.get("isDeployed", False) else ""}}>
+        <summary class="step-head" data-stepnr="⚐">Manage Plugin</summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="manage-plugin" enctype="application/json">
             <div class="qhana-form-buttons">
@@ -206,6 +300,7 @@
             </div>
         </form>
     </details>
+    </div>
 
     <pre>{{connector | tojson(indent="    ")}}</pre>
 {% endblock content %}
@@ -217,8 +312,17 @@
     const NEXT_STEP = {
         "base-url": "openapi-spec",
         "openapi-spec": "endpoint-url",
-        "endpoint-url": "request-body",
+        "endpoint-url": "endpoint-method",
+        "endpoint-method": "endpoint-variables",
+        "endpoint-variables": "endpoint-query-variables",
+        "endpoint-query-variables": "variables",
+        "variables": "request-headers",
         "request-headers": "request-body",
+        "request-body": "request-files",
+        "request-files": "response-handling",
+        "response-handling": "response-mapping",
+        "response-mapping": "manage-plugin",
+        "manage-plugin": "manage-plugin",
     };
 
     /**
