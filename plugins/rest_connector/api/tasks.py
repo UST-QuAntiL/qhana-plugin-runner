@@ -21,12 +21,12 @@ from io import BytesIO
 from re import Match
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
 from typing import Any, Dict, List, Mapping, Optional, Tuple, cast
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit, parse_qs
 
 import requests
 from celery.utils.log import get_task_logger
 from flask import current_app
-from requests import request, Request, Response
+from requests import request, PreparedRequest, Response
 from requests.exceptions import ConnectionError, HTTPError
 
 from qhana_plugin_runner.celery import CELERY
@@ -37,6 +37,7 @@ from qhana_plugin_runner.storage import STORE
 
 from ..plugin import RESTConnector
 from .jinja_utils import render_template_sandboxed
+from .response_handling import ResponseHandlingStrategy
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -93,25 +94,38 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
         for k, v in cast(dict, connector.get("endpoint_query_variables", {})).items()
     }
 
-    request_files = _download_files(request_file_descriptors)
-
-    response = request(
-        method=connector["endpoint_method"],
-        url=urljoin(connector["base_url"], endpoint_url),
-        params=query_variables,
-        headers=headers_dict,
-        data=body,
-        files=request_files,
-        timeout=20,  # TODO allow different timeouts?
+    response_strategy = ResponseHandlingStrategy.get(
+        connector.get("response_handling", "default")
     )
 
-    # close request files
-    for file in request_files.values():
-        file[1].close()
+    request_files = _download_files(request_file_descriptors)
+
+    try:
+        response = request(
+            method=connector["endpoint_method"],
+            url=urljoin(connector["base_url"], endpoint_url),
+            params=query_variables,
+            headers=headers_dict,
+            data=body,
+            files=request_files,
+            timeout=response_strategy.timeout,
+            allow_redirects=response_strategy.follow_redirects,
+            stream=response_strategy.stream_response,
+        )
+    finally:
+        # close request files
+        for file in request_files.values():
+            try:
+                file[1].close()
+            except:
+                pass  # ensure other files are tried too
+
+    original_request = response.request
+    response = response_strategy.handle_response(response, task_data, TASK_LOGGER)
 
     template_context: Mapping[str, Any] = ChainMap(
         {
-            "request": RequestProxy(response.request),
+            "request": RequestProxy(original_request),
             "response": ResponseProxy(response),
         },
         request_variables,
@@ -170,7 +184,7 @@ def _download_files(
 
 
 class RequestProxy:
-    def __init__(self, request: Request):
+    def __init__(self, request: PreparedRequest):
         self._request = request
 
     def __str__(self) -> str:
@@ -185,7 +199,12 @@ class RequestProxy:
 
     @property
     def params(self):
-        return self._request.params
+        query = urlsplit(self._request.url)[3]
+        if isinstance(query, bytes):
+            query = query.decode()
+        parsed = parse_qs(query, keep_blank_values=True)
+        self.__dict__["params"] = parsed
+        return parsed
 
     @property
     def headers(self):
@@ -193,13 +212,13 @@ class RequestProxy:
 
     @property
     def body(self):
-        return self._request.data
+        return self._request.body
 
     @property
     def json(self):
-        json = self._request.json
-        self.__dict__["json"] = json
-        return json
+        parsed = json.loads(self._request.body)
+        self.__dict__["json"] = parsed
+        return parsed
 
 
 class ResponseProxy:
