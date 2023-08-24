@@ -15,17 +15,18 @@
 
 import json
 import re
+from collections import ChainMap
 from http.client import parse_headers
 from io import BytesIO
 from re import Match
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Mapping, Optional, Tuple, cast
 from urllib.parse import urljoin
 
 import requests
 from celery.utils.log import get_task_logger
 from flask import current_app
-from requests import request
+from requests import request, Request, Response
 from requests.exceptions import ConnectionError, HTTPError
 
 from qhana_plugin_runner.celery import CELERY
@@ -34,8 +35,8 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
 from qhana_plugin_runner.storage import STORE
 
-from .jinja_utils import render_template_sandboxed
 from ..plugin import RESTConnector
+from .jinja_utils import render_template_sandboxed
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -108,10 +109,13 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
     for file in request_files.values():
         file[1].close()
 
-    template_context: Dict[str, Any] = request_variables | {
-        "request": response.request,
-        "response": response.json(),
-    }
+    template_context: Mapping[str, Any] = ChainMap(
+        {
+            "request": RequestProxy(response.request),
+            "response": ResponseProxy(response),
+        },
+        request_variables,
+    )
 
     for response_map in response_mapping:
         with SpooledTemporaryFile(mode="w") as output:
@@ -163,3 +167,77 @@ def _download_files(
         )
 
     return request_files
+
+
+class RequestProxy:
+    def __init__(self, request: Request):
+        self._request = request
+
+    def __str__(self) -> str:
+        return str(self._request)
+
+    def __repr__(self) -> str:
+        return repr(self._request)
+
+    @property
+    def url(self):
+        return self._request.url
+
+    @property
+    def params(self):
+        return self._request.params
+
+    @property
+    def headers(self):
+        return self._request.headers
+
+    @property
+    def body(self):
+        return self._request.data
+
+    @property
+    def json(self):
+        json = self._request.json
+        self.__dict__["json"] = json
+        return json
+
+
+class ResponseProxy:
+    def __init__(self, response: Response):
+        self._response = response
+
+    def __str__(self) -> str:
+        return str(self._response)
+
+    def __repr__(self) -> str:
+        return repr(self._response)
+
+    @property
+    def url(self):
+        return self._response.url
+
+    @property
+    def status_code(self):
+        return self._response.status_code
+
+    @property
+    def headers(self):
+        return self._response.headers
+
+    @property
+    def body(self):
+        content = self._response.text
+        self.__dict__["body"] = content
+        return content
+
+    @property
+    def body_raw(self):
+        content = self._response.content
+        self.__dict__["body_raw"] = content
+        return content
+
+    @property
+    def json(self):
+        json = self._response.json()
+        self.__dict__["json"] = json
+        return json
