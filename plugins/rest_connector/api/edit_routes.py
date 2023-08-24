@@ -18,6 +18,8 @@ from qhana_plugin_runner.db.models.virtual_plugins import (
     VirtualPlugin,
 )
 
+from ..database import get_wip_connectors, save_wip_connectors, start_new_connector
+from ..plugin import RESTConnector
 from .blueprint import REST_CONN_BLP
 from .schemas import (
     ConnectorKey,
@@ -27,8 +29,6 @@ from .schemas import (
     RequestFileDescriptorSchema,
     ResponseOutputSchema,
 )
-from ..database import get_wip_connectors, save_wip_connectors, start_new_connector
-from ..plugin import RESTConnector
 
 
 @REST_CONN_BLP.route("/wip-connectors-ui/<string:connector_id>/")
@@ -128,6 +128,10 @@ class WipConnectorView(MethodView):
             connector = self.update_endpoint_method(connector, update_value)
         elif update_key == ConnectorKey.VARIABLES:
             connector = self.update_variables(connector, update_value)
+        elif update_key == ConnectorKey.ENDPOINT_VARIABLES:
+            connector = self.update_endpoint_variables(connector, update_value)
+        elif update_key == ConnectorKey.ENDPOINT_QUERY_VARIABLES:
+            connector = self.update_endpoint_query_variables(connector, update_value)
         elif update_key == ConnectorKey.REQUEST_HEADERS:
             connector = self.update_request_headers(connector, update_value)
         elif update_key == ConnectorKey.REQUEST_BODY:
@@ -160,6 +164,7 @@ class WipConnectorView(MethodView):
 
     def update_base_url(self, connector: dict, new_base_url: str) -> dict:
         connector["base_url"] = new_base_url
+        connector["finished_steps"] = [ConnectorKey.BASE_URL.value]
         return connector
 
     def update_openapi_spec(self, connector: dict, api_spec_url: str) -> dict:
@@ -171,43 +176,161 @@ class WipConnectorView(MethodView):
             # TODO handle this case
             raise NotImplementedError()
         connector["openapi_spec_url"] = api_spec_url
+
+        finished = set(connector.get("finished_steps", []))
+        finished.add(ConnectorKey.OPENAPI_SPEC.value)
+        connector["finished_steps"] = list(
+            finished.intersection(
+                {ConnectorKey.BASE_URL.value, ConnectorKey.OPENAPI_SPEC.value}
+            )
+        )
         return connector
 
     def update_endpoint_url(self, connector: dict, new_endpoint_url: str) -> dict:
         connector["endpoint_url"] = new_endpoint_url
+
+        finished = set(connector.get("finished_steps", []))
+        finished.add(ConnectorKey.ENDPOINT_URL.value)
+        connector["finished_steps"] = list(
+            finished.intersection(
+                {
+                    ConnectorKey.BASE_URL.value,
+                    ConnectorKey.OPENAPI_SPEC.value,
+                    ConnectorKey.ENDPOINT_URL.value,
+                }
+            )
+        )
         # TODO: discover headers/body from openapi spec?
         return connector
 
     def update_endpoint_method(self, connector: dict, new_endpoint_method: str) -> dict:
         connector["endpoint_method"] = new_endpoint_method
+
+        finished = set(connector.get("finished_steps", []))
+        finished.add(ConnectorKey.ENDPOINT_METHOD.value)
+        connector["finished_steps"] = list(
+            finished.intersection(
+                {
+                    ConnectorKey.BASE_URL.value,
+                    ConnectorKey.OPENAPI_SPEC.value,
+                    ConnectorKey.ENDPOINT_URL.value,
+                    ConnectorKey.ENDPOINT_METHOD.value,
+                }
+            )
+        )
         # TODO: discover method from openapi spec?
         return connector
 
+    def update_endpoint_variables(
+        self, connector: dict, new_endpoint_variables: str
+    ) -> dict:
+        parsed = current_app.json.loads(new_endpoint_variables)
+        if not isinstance(parsed, dict):
+            raise TypeError(
+                "Endpoint variables must be a JSON object with string keys and values!"
+            )
+        bad_keys = {str(k) for k in parsed.keys() if not isinstance(k, str)}
+        bad_values = [
+            f"{v} [key: {k}]" for k, v in parsed.items() if not isinstance(v, str)
+        ]
+        if bad_keys or bad_values:
+            message = (
+                "Endpoint variables must be a JSON object with string keys and values! ("
+                + ", ".join(
+                    (
+                        "Bad Keys: " + ", ".join(bad_keys),
+                        "Bad Values:" + ", ".join(bad_values),
+                    )
+                )
+                + ")"
+            )
+            raise TypeError(message)
+
+        connector["endpoint_variables"] = parsed
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.ENDPOINT_VARIABLES.value)
+        connector["finished_steps"] = finished
+        # TODO: check variables against endpoint template?
+        return connector
+
+    def update_endpoint_query_variables(
+        self, connector: dict, new_query_variables: str
+    ) -> dict:
+        parsed = current_app.json.loads(new_query_variables)
+        if not isinstance(parsed, dict):
+            raise TypeError(
+                "Endpoint query variables must be a JSON object with string keys and values!"
+            )
+        bad_keys = {str(k) for k in parsed.keys() if not isinstance(k, str)}
+        bad_values = [
+            f"{v} [key: {k}]" for k, v in parsed.items() if not isinstance(v, str)
+        ]
+        if bad_keys or bad_values:
+            message = (
+                "Endpoint query variables must be a JSON object with string keys and values! ("
+                + ", ".join(
+                    (
+                        "Bad Keys: " + ", ".join(bad_keys),
+                        "Bad Values:" + ", ".join(bad_values),
+                    )
+                )
+                + ")"
+            )
+            raise TypeError(message)
+
+        connector["endpoint_query_variables"] = parsed
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.ENDPOINT_QUERY_VARIABLES.value)
+        connector["finished_steps"] = finished
+        # TODO: check variables against endpoint definition in openapi spec?
+        return connector
+
     def update_variables(self, connector: dict, new_variables: str) -> dict:
-        print(new_variables)
         parsed_variables = ConnectorVariableSchema(many=True).loads(new_variables)
         connector["variables"] = parsed_variables
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.VARIABLES.value)
+        connector["finished_steps"] = finished
         return connector
 
     def update_request_headers(self, connector: dict, new_headers: str) -> dict:
         # TODO validate headers?
         connector["request_headers"] = new_headers
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.REQUEST_HEADERS.value)
+        connector["finished_steps"] = finished
         return connector
 
     def update_request_body(self, connector: dict, new_body: str) -> dict:
         connector["request_body"] = new_body
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.REQUEST_BODY.value)
+        connector["finished_steps"] = finished
         return connector
 
     def update_request_files(self, connector: dict, new_files: str) -> dict:
         # TODO remove old file URLs if they are hosted on the plugin runner
         parsed_files = RequestFileDescriptorSchema(many=True).loads(new_files)
         connector["request_files"] = parsed_files
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.REQUEST_FILES.value)
+        connector["finished_steps"] = finished
         return connector
 
     def update_response_handling(
         self, connector: dict, new_response_handling: str
     ) -> dict:
         connector["response_handling"] = new_response_handling
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.RESPONSE_HANDLING.value)
+        connector["finished_steps"] = finished
         return connector
 
     def update_response_mapping(self, connector: dict, new_response_mapping: str) -> dict:
@@ -215,6 +338,10 @@ class WipConnectorView(MethodView):
             new_response_mapping
         )
         connector["response_mapping"] = parsed_response_mapping
+
+        finished = connector.get("finished_steps", [])
+        finished.append(ConnectorKey.RESPONSE_MAPPING.value)
+        connector["finished_steps"] = finished
         return connector
 
     def deploy_as_plugin(

@@ -14,10 +14,12 @@
 
 
 import json
+import re
 from http.client import parse_headers
 from io import BytesIO
-from tempfile import SpooledTemporaryFile, NamedTemporaryFile
-from typing import Optional, Dict, Any, List, Tuple
+from re import Match
+from tempfile import NamedTemporaryFile, SpooledTemporaryFile
+from typing import Any, Dict, List, Optional, Tuple, cast
 from urllib.parse import urljoin
 
 import requests
@@ -79,13 +81,23 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
         else:
             headers_dict[k] = v
 
-    endpoint_url = render_template_sandboxed(connector["endpoint_url"], request_variables)
+    endpoint_url = render_endpoint(
+        connector["endpoint_url"],
+        connector.get("endpoint_variables", {}),
+        request_variables,
+    )
+
+    query_variables = {
+        k: render_template_sandboxed(v, request_variables)
+        for k, v in cast(dict, connector.get("endpoint_query_variables", {})).items()
+    }
 
     request_files = _download_files(request_file_descriptors)
 
     response = request(
         method=connector["endpoint_method"],
         url=urljoin(connector["base_url"], endpoint_url),
+        params=query_variables,
         headers=headers_dict,
         data=body,
         files=request_files,
@@ -120,6 +132,16 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
     )
 
     return "finished"
+
+
+def render_endpoint(
+    endpoint_url: str, endpoint_variables: dict[str, str], variables: dict
+) -> str:
+    def get_variable(var: Match[str]) -> str:
+        var_template = endpoint_variables.get(var.group(0), "")
+        return render_template_sandboxed(var_template, variables)
+
+    return re.sub(r"\{([^}]+)\}", get_variable, endpoint_url)
 
 
 def _download_files(
