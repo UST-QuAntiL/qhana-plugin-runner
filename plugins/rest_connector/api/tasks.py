@@ -86,7 +86,7 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
     response = request(
         method=connector["endpoint_method"],
         url=urljoin(connector["base_url"], endpoint_url),
-        headers={k: v for k, v in parsed_headers.items()},
+        headers=headers_dict,
         data=body,
         files=request_files,
         timeout=20,  # TODO allow different timeouts?
