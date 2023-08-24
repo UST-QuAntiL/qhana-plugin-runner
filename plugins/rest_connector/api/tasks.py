@@ -110,8 +110,8 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
                 task_db_id=db_id,
                 file_=output,
                 file_name=response_map["name"],
-                file_type=response_map["content_type"],
-                mimetype=response_map["data_type"],
+                file_type=response_map["data_type"],
+                mimetype=response_map["content_type"],
             )
 
     task_data.add_task_log_entry(
