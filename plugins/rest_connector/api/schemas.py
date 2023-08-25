@@ -28,7 +28,7 @@ from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema, MaBase
 
 class ConnectorKey(Enum):
     # set data commands
-    NAME = "name" # TODO support tags
+    NAME = "name"  # TODO support tags
     DESCRIPTION = "description"
     BASE_URL = "base-url"
     OPENAPI_SPEC = "openapi-spec"
