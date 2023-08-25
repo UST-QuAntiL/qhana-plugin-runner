@@ -18,7 +18,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 
 from .blueprint import REST_CONN_BLP
 from .schemas import WelcomeParametersSchema
-from ..database import get_wip_connectors, start_new_connector
+from ..database import get_wip_connectors, get_deployed_connectors, start_new_connector
 from ..plugin import RESTConnector
 
 
@@ -86,7 +86,18 @@ class WelcomeFrontend(MethodView):
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
 
-        services = []  # FIXME
+        services = [
+            (
+                v,
+                url_for(
+                    f"{REST_CONN_BLP.name}.WipConnectorUiView",
+                    connector_id=k,
+                    _external=True,
+                ),
+            )
+            for k, v in get_deployed_connectors().items()
+        ]
+        print(services)
         ongoing = [
             (
                 v,
@@ -129,7 +140,23 @@ class WelcomeView(MethodView):
 
     @REST_CONN_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        services = []  # FIXME
+        services = [
+            {
+                "name": v,
+                "connector_id": k,
+                "href": url_for(
+                    f"{REST_CONN_BLP.name}.WipConnectorView",
+                    connector_id=k,
+                    _external=True,
+                ),
+                "ui_href": url_for(
+                    f"{REST_CONN_BLP.name}.WipConnectorUiView",
+                    connector_id=k,
+                    _external=True,
+                ),
+            }
+            for k, v in get_deployed_connectors().items()
+        ]
         ongoing = [
             {
                 "name": v,

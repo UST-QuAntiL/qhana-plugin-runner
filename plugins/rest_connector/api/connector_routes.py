@@ -1,15 +1,9 @@
 import json
-from collections import ChainMap
 from http import HTTPStatus
 from typing import (
-    Any,
-    Dict,
     Iterable,
     List,
-    Literal,
     Mapping,
-    Optional,
-    Sequence,
     Union,
     cast,
 )
@@ -22,8 +16,7 @@ from flask.helpers import redirect, url_for
 from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
-from marshmallow import EXCLUDE, INCLUDE, RAISE
-from typing_extensions import Required, TypedDict
+from marshmallow import INCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -39,22 +32,11 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
-from .blueprint import REST_CONN_BLP
-from .schemas import (
-    ConnectorKey,
-    ConnectorSchema,
-    ConnectorUpdateSchema,
-    ConnectorVariable,
-    ConnectorVariableSchema,
-    ConnectorVariablesInputSchema,
-    RequestFileDescriptorSchema,
-    ResponseOutput,
-    ResponseOutputSchema,
-    VariableType,
-)
-from .tasks import perform_request
-from ..database import get_wip_connectors, save_wip_connectors, start_new_connector
 from ..plugin import RESTConnector
+from ..database import get_deployed_connector
+from .blueprint import REST_CONN_BLP
+from .schemas import ConnectorVariable, ConnectorVariablesInputSchema, ResponseOutput
+from .tasks import perform_request
 
 
 @REST_CONN_BLP.route("/connectors/<string:connector_id>/")
@@ -80,6 +62,9 @@ class VirtualPluginView(MethodView):
             parent_plugin.identifier, connector_id, default={}
         )
         assert isinstance(connector, dict), "Type assertion"
+
+        title = get_deployed_connector(connector_id, plugin.name)
+        assert title is not None
 
         if not connector.get("is_deployed", False):
             abort(HTTPStatus.NOT_FOUND, message="Plugin does not exist.")
@@ -109,7 +94,7 @@ class VirtualPluginView(MethodView):
             data_outputs.append(data_out)
 
         return PluginMetadata(
-            title="title",  # TODO get name from published connectors list
+            title=title,
             description=plugin.description,
             name=plugin.name,
             version=plugin.version,
