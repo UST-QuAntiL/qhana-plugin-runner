@@ -23,19 +23,12 @@ from marshmallow.validate import OneOf
 from typing_extensions import Required, TypedDict
 
 from qhana_plugin_runner.api.extra_fields import EnumField
-from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata,
-    EntryPoint,
-    PluginMetadata,
-    PluginMetadataSchema,
-    PluginType,
-)
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema, MaBaseSchema
 
 
 class ConnectorKey(Enum):
     # set data commands
-    NAME = "name"
+    NAME = "name" # TODO support tags
     DESCRIPTION = "description"
     BASE_URL = "base-url"
     OPENAPI_SPEC = "openapi-spec"
@@ -109,7 +102,7 @@ class ConnectorVariable(TypedDict, total=False):
 
 
 class RequestFileDescriptorSchema(MaBaseSchema):
-    source = ma.fields.URL(required=True)
+    source = ma.fields.URL(required=True)  # TODO maybe use FileURL instead
     form_field_name = ma.fields.String(required=False, allow_none=True)
     content_type = ma.fields.String(required=False, allow_none=True)
 
@@ -133,12 +126,13 @@ class ResponseOutputSchema(MaBaseSchema):
 class ConnectorSchema(MaBaseSchema):
     name = ma.fields.String(dump_only=True)
     version = ma.fields.Integer(dump_only=True, dump_default=0)
+    tags = ma.fields.List(ma.fields.String(), dump_default=tuple())
     description = ma.fields.String(dump_default="")
     is_deployed = ma.fields.Boolean(dump_only=True, dump_default=False)
     is_loading = ma.fields.Boolean(dump_only=True, dump_default=False)
     next_step = ma.fields.String(dump_default="")
-    finished_steps = ma.fields.List(ma.fields.String(), dump_default=[])
-    base_url = ma.fields.Url(dump_default="")
+    finished_steps = ma.fields.List(ma.fields.String(), dump_default=tuple())
+    base_url = ma.fields.Url(dump_default="")  # FIXME allow service:// schema
     openapi_spec_url = ma.fields.Url(dump_default="")
     endpoint_url = ma.fields.Url(dump_default="")
     endpoint_method = ma.fields.Url(

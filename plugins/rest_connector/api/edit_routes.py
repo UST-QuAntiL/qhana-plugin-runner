@@ -18,7 +18,13 @@ from qhana_plugin_runner.db.models.virtual_plugins import (
     VirtualPlugin,
 )
 
-from ..database import get_wip_connectors, save_wip_connectors, start_new_connector
+from ..database import (
+    deploy_connector,
+    get_deployed_connector,
+    get_wip_connectors,
+    save_wip_connectors,
+    undeploy_connector,
+)
 from ..plugin import RESTConnector
 from .blueprint import REST_CONN_BLP
 from .schemas import (
@@ -42,10 +48,12 @@ class WipConnectorUiView(MethodView):
         try:
             name = wip_connectors[connector_id]
         except KeyError:
-            abort(
-                HTTPStatus.NOT_FOUND,
-                message=f"Found no connector with id '{connector_id}'.",
-            )
+            name = get_deployed_connector(connector_id)
+            if name is None:
+                abort(
+                    HTTPStatus.NOT_FOUND,
+                    message=f"Found no connector with id '{connector_id}'.",
+                )
 
         plugin = RESTConnector.instance
         connector = PluginState.get_value(plugin.identifier, connector_id, default={})
@@ -60,6 +68,7 @@ class WipConnectorUiView(MethodView):
                     f"{REST_CONN_BLP.name}.{WipConnectorView.__name__}",
                     connector_id=connector_id,
                 ),
+                back=url_for(f"{REST_CONN_BLP.name}.WelcomeFrontend"),
             )
         )
 
@@ -76,10 +85,12 @@ class WipConnectorView(MethodView):
         try:
             name = wip_connectors[connector_id]
         except KeyError:
-            abort(
-                HTTPStatus.NOT_FOUND,
-                message=f"Found no connector with id '{connector_id}'.",
-            )
+            name = get_deployed_connector(connector_id)
+            if name is None:
+                abort(
+                    HTTPStatus.NOT_FOUND,
+                    message=f"Found no connector with id '{connector_id}'.",
+                )
 
         plugin = RESTConnector.instance
         connector = PluginState.get_value(plugin.identifier, connector_id, default={})
@@ -94,10 +105,12 @@ class WipConnectorView(MethodView):
         try:
             name = wip_connectors[connector_id]
         except KeyError:
-            abort(
-                HTTPStatus.NOT_FOUND,
-                message=f"Found no connector with id '{connector_id}'.",
-            )
+            name = get_deployed_connector(connector_id)
+            if name is None:
+                abort(
+                    HTTPStatus.NOT_FOUND,
+                    message=f"Found no connector with id '{connector_id}'.",
+                )
 
         plugin = RESTConnector.instance
         connector = PluginState.get_value(plugin.identifier, connector_id, default={})
@@ -115,7 +128,7 @@ class WipConnectorView(MethodView):
                     message="Cannot edit a currently deployed REST Connector. Please undeploy the connector first.",
                 )
 
-        if update_key == ConnectorKey.NAME:
+        if update_key == ConnectorKey.NAME:  # TODO support tag updates
             wip_connectors[connector_id] = update_value
             save_wip_connectors(wip_connectors, commit=True)
         elif update_key == ConnectorKey.BASE_URL:
@@ -161,6 +174,8 @@ class WipConnectorView(MethodView):
             PluginState.set_value(plugin.identifier, connector_id, connector, commit=True)
 
         return ChainMap(connector, {"name": name})
+
+    # FIXME implement delete
 
     def update_base_url(self, connector: dict, new_base_url: str) -> dict:
         connector["base_url"] = new_base_url
@@ -354,7 +369,7 @@ class WipConnectorView(MethodView):
         connector["version"] = version
 
         connector["is_deployed"] = True
-        # TODO move connector from WIP connectors list to published connectors list
+        deploy_connector(connector_id)
 
         plugin_url = url_for(
             f"{REST_CONN_BLP.name}.VirtualPluginView",
@@ -395,7 +410,12 @@ class WipConnectorView(MethodView):
             DB.session.commit()
 
         del connector["is_deployed"]
-        # TODO move connector from published connectors list to WIP connectors list
+
+        try:
+            undeploy_connector(connector_id)
+        except KeyError:
+            # plugin is not in the deployed connectors list
+            pass
 
         VIRTUAL_PLUGIN_REMOVED.send(
             current_app._get_current_object(), plugin_url=plugin_url

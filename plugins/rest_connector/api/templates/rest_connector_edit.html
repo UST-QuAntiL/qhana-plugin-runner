@@ -5,7 +5,14 @@
 
     <style>
         .content {
+            max-width: 50rem;
+            margin-inline: auto;
             padding: 1rem;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .step {
             --step-border-color: var(--border-color, black);
@@ -69,7 +76,10 @@
 {% block content %}
 
     <div class="content">
+    <div class="header">
     <h3>{{name}} (WIP)</h3>
+    <a href="{{back}}">back</a>
+    </div>
 
     <details class="step {{'done' if 'base-url' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "base-url" or not connector["baseUrl"] else ""}}>
         <summary class="step-head" data-stepnr="1">API Base URL</summary>
@@ -302,7 +312,7 @@
     </details>
     </div>
 
-    <pre>{{connector | tojson(indent="    ")}}</pre>
+    <!--pre>{{connector | tojson(indent="    ")}}</pre-->
 {% endblock content %}
 
 {% block script %}
