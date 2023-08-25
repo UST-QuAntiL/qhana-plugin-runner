@@ -76,8 +76,6 @@ class PluginsView(MethodView):
 
         plugin_ids = {p.identifier for p in plugins} | {p.name for p in plugins}
 
-        VirtualPlugin.get_all(for_parents=plugin_ids)
-
         plugins_list = [
             PluginData(
                 p.name,
