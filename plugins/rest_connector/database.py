@@ -70,7 +70,9 @@ def get_deployed_connectors() -> Dict[str, str]:
     return dict(connectors)
 
 
-def get_deployed_connector(connector_id: str, default: Optional[str]=None) -> Optional[str]:
+def get_deployed_connector(
+    connector_id: str, default: Optional[str] = None
+) -> Optional[str]:
     return get_deployed_connectors().get(connector_id, default)
 
 
