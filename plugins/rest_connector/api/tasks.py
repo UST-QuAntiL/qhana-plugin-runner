@@ -175,7 +175,7 @@ def render_endpoint(
     endpoint_url: str, endpoint_variables: dict[str, str], variables: dict
 ) -> str:
     def get_variable(var: Match[str]) -> str:
-        var_template = endpoint_variables.get(var.group(0), "")
+        var_template = endpoint_variables.get(var.group(1), "")
         return render_template_sandboxed(var_template, variables)
 
     return re.sub(r"\{([^}]+)\}", get_variable, endpoint_url)
