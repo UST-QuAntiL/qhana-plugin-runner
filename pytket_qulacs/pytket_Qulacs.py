@@ -57,7 +57,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "pytket_qulacsBackend-simulator"
-__version__ = "v0.3.0"
+__version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -296,18 +296,19 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from pytket.qasm import circuit_from_qasm_str
     import time
 
-    c = circuit_from_qasm_str(circuit_qasm)
+    circ = circuit_from_qasm_str(circuit_qasm)
 
     backend = QulacsBackend()
-    compiled_circuit = backend.get_compiled_circuit(c)
+    # compiled
+    compiled_circuit = backend.get_compiled_circuit(circ)
 
     start_time = time.time()
-    handle = backend.process_circuit(
-        compiled_circuit, n_shots=execution_options["shots"]
-    )  
+    ##
+    handle = backend.process_circuit(compiled_circuit, n_shots=execution_options["shots"])
+    ##
     end_time = time.time()
 
-    counts = backend.get_result(handle).get_counts()
+    counts = backend.get_result(handle).get_counts()  # hier
     simulation_time = end_time - start_time
 
     statevector = backend.get_result(handle).get_state()
