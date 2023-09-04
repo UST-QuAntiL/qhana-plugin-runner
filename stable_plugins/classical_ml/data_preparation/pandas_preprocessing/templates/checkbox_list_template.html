@@ -1,0 +1,14 @@
+<label for="select_all_box" style="display: block; color: windowtext; background-color: window; margin: 0px; padding: 0px; width: 100%; font: 13.3333px DejaVu, Sans;">
+    <input type="checkbox" id="select_all_box">
+    select all
+</label>
+<ul name="check_box_list" class="qhana-form-input" style="height: 100px; overflow: hidden auto; max-width: 25em; border: 1px solid rgb(143, 143, 157); list-style-type: none; margin: 0px; padding: 0.3em; flex-grow: 1;">
+    {% for entry in list_content %}
+        <li>
+            <label for="{{ entry.id }}" style="display: block; color: windowtext; background-color: window; margin: 0px; padding: 0px; width: 100%; font: 13.3333px DejaVu, Sans;">
+                <input type="checkbox" {% if entry.name %} name="{{ entry.name }}" {% endif %} id="{{ entry.id }}">
+                {{ entry.label }}
+            </label>
+        </li>
+    {% endfor %}
+</ul>

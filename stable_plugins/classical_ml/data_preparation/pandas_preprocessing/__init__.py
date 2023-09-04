@@ -29,7 +29,7 @@ PDPreprocessing_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Pandas Preprocessing plugin API",
-    template_folder="",
+    template_folder="templates",
 )
 
 

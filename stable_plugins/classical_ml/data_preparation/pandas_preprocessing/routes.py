@@ -266,6 +266,7 @@ class SecondMicroFrontend(MethodView):
                     step_id=step_id,
                 ),
                 pandas_html=Markup(db_task.data["pandas_html"]),
+                columns_and_rows_html=Markup(db_task.data["columns_and_rows_html"]),
             )
         )
 

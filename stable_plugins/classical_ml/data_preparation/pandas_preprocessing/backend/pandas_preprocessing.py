@@ -3,6 +3,7 @@ from pandas._libs.lib import no_default
 from pandas import DataFrame
 from .utils import get_number_if_possible
 from enum import Enum
+from json import loads as json_loads
 
 
 class PreprocessingEnum(Enum):
@@ -80,6 +81,18 @@ class CaseEnum(Enum):
         return self.value
 
 
+def process_subset(subset: Optional[str]) -> List[str]:
+    if subset is not None:
+        result = None
+        if subset != "":
+            result = json_loads(subset)
+            if isinstance(subset, list):
+                result = None if len(result) == 0 else result
+            else:
+                result = None
+    return result
+
+
 def drop_missing_value(
     df: DataFrame,
     axis: int = 0,
@@ -87,8 +100,7 @@ def drop_missing_value(
     subset: str = None,
     **kwargs,
 ) -> DataFrame:
-    if subset is not None:
-        subset = None if subset == "" else subset.split(",")
+    subset = process_subset(subset)
 
     df.dropna(axis=axis, thresh=threshold, subset=subset, inplace=True)
 
@@ -110,8 +122,7 @@ def drop_duplicates(
     ignore_index: bool = False,
     **kwargs,
 ) -> DataFrame:
-    if subset is not None:
-        subset = None if subset == "" else subset.split(",")
+    subset = process_subset(subset)
 
     keep = False if keep == "none" else keep
 
@@ -132,9 +143,8 @@ def strip_characters(
     position: str = "both",
     **kwargs,
 ) -> DataFrame:
-    if subset is not None:
-        subset = df.keys() if subset == "" else subset.split(",")
-    else:
+    subset = process_subset(subset)
+    if subset is None:
         subset = df.keys()
 
     function = None
@@ -178,25 +188,23 @@ def split_column(
 
 
 def replace(
-    df: DataFrame, sub_str: str, new_str: str, subset: str = "", **kwargs
+    df: DataFrame, substring: str, new_str: str, subset: str = "", **kwargs
 ) -> DataFrame:
-    if subset is not None:
-        subset = df.keys() if subset == "" else subset.split(",")
-    else:
+    subset = process_subset(subset)
+    if subset is None:
         subset = df.keys()
 
     for k in subset:
         if k in df:
             if {type(el) for el in df[k]} == {str}:
-                df[k] = df[k].str.replace(sub_str, new_str)
+                df[k] = df[k].str.replace(substring, new_str)
 
     return df
 
 
 def string_case(df: DataFrame, case: str, subset: str = "", **kwargs) -> DataFrame:
-    if subset is not None:
-        subset = df.keys() if subset == "" else subset.split(",")
-    else:
+    subset = process_subset(subset)
+    if subset is None:
         subset = df.keys()
 
     function = None
