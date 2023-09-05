@@ -185,21 +185,15 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "svm_template.html",
                 name=SVM.instance.name,
                 version=SVM.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{SVM_BLP.name}.ProcessView"),
-                frontendjs=url_for(f"{SVM_BLP.name}.get_frontend_js"),
             )
         )
-
-
-@SVM_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @SVM_BLP.route("/process/")

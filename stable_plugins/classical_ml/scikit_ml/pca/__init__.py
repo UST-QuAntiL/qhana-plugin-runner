@@ -28,6 +28,7 @@ PCA_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="PCA plugin API",
+    template_folder="templates",
 )
 
 sklearn_version = "1.1"

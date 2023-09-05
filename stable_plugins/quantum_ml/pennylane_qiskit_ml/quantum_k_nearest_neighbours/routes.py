@@ -190,21 +190,15 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "qknn_template.html",
                 name=QKNN.instance.name,
                 version=QKNN.instance.version,
                 schema=InputParametersSchema(),
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{QKNN_BLP.name}.CalcView"),
-                frontendjs=url_for(f"{QKNN_BLP.name}.get_frontend_js"),
             )
         )
-
-
-@QKNN_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @QKNN_BLP.route("/process/")

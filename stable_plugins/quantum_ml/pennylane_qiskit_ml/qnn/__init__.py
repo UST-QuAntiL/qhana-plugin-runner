@@ -28,6 +28,7 @@ QNN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="QNN plugin API",
+    template_folder="templates",
 )
 
 
