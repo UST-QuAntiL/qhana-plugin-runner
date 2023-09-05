@@ -14,7 +14,6 @@
 
 from http import HTTPStatus
 from typing import Mapping, Optional
-from json import dumps
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
@@ -41,7 +40,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.db.models.virtual_plugins import PluginState, VirtualPlugin
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
 from .tasks import first_task, second_task, get_second_task_html
