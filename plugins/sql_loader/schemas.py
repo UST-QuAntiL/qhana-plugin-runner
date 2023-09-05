@@ -145,7 +145,7 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "DB query",
             "description": "The query to be executed on the database.",
-            "input_type": "text",
+            "input_type": "textarea",
         },
     )
     table_name = ma.fields.String(
