@@ -84,8 +84,6 @@ def first_task(self, db_id: int) -> str:
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
-    db_database = db_database.removeprefix("file://")
-
     db_manager, db_type = db_enum.get_connected_db_manager(
         db_host, db_port, db_user, db_password, db_database
     )

@@ -1,6 +1,8 @@
 from typing import Tuple
 
 from enum import Enum
+from pathlib import Path
+from urllib.request import urlopen
 from collections import OrderedDict
 from sqlalchemy import URL
 from .db_manager import DBManager
@@ -9,6 +11,21 @@ from celery.utils.log import get_task_logger
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def sqlite_db_exists(database):
+    database = database.removeprefix("file://")
+
+    db_is_url = True
+    try:
+        urlopen(database)
+    except ValueError:
+        db_is_url = False
+    except:
+        pass
+    if not db_is_url:
+        if not Path(database).exists():
+            raise ValueError("Database does not exist")
 
 
 class DBEnum(Enum):
@@ -60,8 +77,13 @@ class DBEnum(Enum):
     def get_connected_db_manager(
         self, host: str, port: int, user: str, password: str, database: str
     ) -> Tuple[DBManager, str]:
+        database = database.removeprefix("file://")
+
         if self == DBEnum.auto:
             return self._guess_db_manager(host, port, user, password, database)
+
+        if self == DBEnum.sqlite:
+            sqlite_db_exists(database)
         manager = DBManager(self._get_db_url(host, port, user, password, database))
         manager.connect()
         return manager, str(self.name)
@@ -71,6 +93,8 @@ class DBEnum(Enum):
     ) -> Tuple[DBManager, str]:
         for manager_name, dialect_driver in DBEnum._get_db_dialect_drivers().items():
             try:
+                if manager_name == "sqlite":
+                    sqlite_db_exists(database)
                 manager = DBManager(
                     self._get_db_url(host, port, user, password, database, dialect_driver)
                 )
