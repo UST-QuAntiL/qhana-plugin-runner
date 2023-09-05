@@ -81,13 +81,23 @@ class CaseEnum(Enum):
         return self.value
 
 
-def process_subset(subset: Optional[str]) -> List[str]:
+def process_subset(subset: Optional[str]) -> Optional[List[str]]:
+    """
+    Deserializes a json string, called subset in this method. If subset is a list of strings, then this list is
+    returned, else None is returned.
+    :param subset: Optional[str]
+    :return: List[str]
+    """
+    result = None
     if subset is not None:
-        result = None
         if subset != "":
             result = json_loads(subset)
-            if isinstance(subset, list):
-                result = None if len(result) == 0 else result
+            if isinstance(result, list):
+                contents_type = {isinstance(el, str) for el in result}
+                if False not in contents_type:
+                    result = None if len(result) == 0 else result
+                else:
+                    result = None
             else:
                 result = None
     return result
@@ -100,6 +110,16 @@ def drop_missing_value(
     subset: str = None,
     **kwargs,
 ) -> DataFrame:
+    """
+    First transforms subset from a string into a list of string and then continues with the dropna function of pandas'
+    dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.dropna.html) and
+    returns the new dataframe.
+    :param df: DataFrame
+    :param axis: int
+    :param threshold: int
+    :param subset: str containing the columns or rows separated by commas
+    :return: DataFrame
+    """
     subset = process_subset(subset)
 
     df.dropna(axis=axis, thresh=threshold, subset=subset, inplace=True)
@@ -108,6 +128,14 @@ def drop_missing_value(
 
 
 def fill_missing_value(df: DataFrame, fill_value: str, **kwargs) -> DataFrame:
+    """
+    First transforms fill_value into a number, if possible and then continues with the fillna function of pandas'
+    dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.fillna.html) and
+    returns the new dataframe.
+    :param df: DataFrame
+    :param fill_value: str
+    :return: DataFrame
+    """
     fill_value = get_number_if_possible(fill_value)
 
     df.fillna(value=fill_value, inplace=True)
@@ -122,6 +150,16 @@ def drop_duplicates(
     ignore_index: bool = False,
     **kwargs,
 ) -> DataFrame:
+    """
+    First transforms subset from a string into a list of strings and then continues with the drop_duplicates function of
+    pandas' dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.drop_duplicates.html),
+    with the key difference that keep == False is replaced by keep == 'none'. Afterwards, return the new dataframe.
+    :param df: DataFrame
+    :param subset: str containing the columns separated by commas
+    :param keep: str
+    :param ignore_index: bool
+    :return: DataFrame
+    """
     subset = process_subset(subset)
 
     keep = False if keep == "none" else keep
@@ -132,6 +170,14 @@ def drop_duplicates(
 
 
 def sort_values(df: DataFrame, by: str, ascending: bool = False, **kwargs):
+    """
+    Executes the sort_values function of pandas' dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.sort_values.html)
+     and returns the new dataframe.
+    :param df: DataFrame
+    :param by: str
+    :param ascending: str
+    :return: DataFrame
+    """
     df.sort_values(by=by, ascending=ascending, inplace=True)
     return df
 
@@ -143,6 +189,17 @@ def strip_characters(
     position: str = "both",
     **kwargs,
 ) -> DataFrame:
+    """
+    First transforms subset from a string into a list of strings and then continues to strip each entry in each given
+    column from the specified characters. If subset is empty, then all columns will be considered.
+    - position='front': A left strip will be used, to strip each entry.
+    - position='end': A right strip will be used, to strip each entry.
+    - position='both': Both left and right side of an entry will be striped.
+    :param df: DataFrame
+    :param subset: str containing the columns separated by commas
+    :param position: str
+    :return: DataFrame
+    """
     subset = process_subset(subset)
     if subset is None:
         subset = df.keys()
@@ -171,6 +228,15 @@ def split_column(
     remove_column: bool = False,
     **kwargs,
 ) -> DataFrame:
+    """
+    Splits a column into many columns, using the string `by` to split each entry.
+    :param df: DataFrame
+    :param column: str contains the name of the old column
+    :param by: str
+    :param new_columns: str contains the names of the new columns separated by commas
+    :param remove_column: bool
+    :return: DataFrame
+    """
     if column not in df.keys():
         raise ValueError(f"The dataframe has no column {column}.")
 
@@ -190,6 +256,15 @@ def split_column(
 def replace(
     df: DataFrame, substring: str, new_str: str, subset: str = "", **kwargs
 ) -> DataFrame:
+    """
+    First transforms subset from a string into a list of strings and then continues to replace each occurrence of
+    substring in each entry of the specified columns with new_str.
+    :param df: DataFrame
+    :param substring: str
+    :param new_str: str
+    :param subset: str containing the columns separated by commas
+    :return: DataFrame
+    """
     subset = process_subset(subset)
     if subset is None:
         subset = df.keys()
@@ -203,6 +278,17 @@ def replace(
 
 
 def string_case(df: DataFrame, case: str, subset: str = "", **kwargs) -> DataFrame:
+    """
+    First transforms subset from a string into a list of strings and then continues to transform each entry to comply
+    with the specified case.
+    - case='upper': Each entry will be written in upper case.
+    - case='lower': Each entry will be written in lower case.
+    - case='title': Each entry will be written in title case.
+    :param df: DataFrame
+    :param case: str
+    :param subset: str containing the columns separated by commas
+    :return: DataFrame
+    """
     subset = process_subset(subset)
     if subset is None:
         subset = df.keys()
