@@ -1,0 +1,94 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+    {{ super() }}
+
+    <style>
+        .content {
+            max-width: 50rem;
+            margin-inline: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        .delete-button {
+            margin-left: 0.8rem;
+            padding-inline: 1em;
+            background-color: var(--background, rgba(255, 255, 255, 0));
+            color: var(--warn-text, red);
+            cursor: pointer;
+            outline: none;
+            border: 2px solid;
+            border-color: var(--warn, red);
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 36px;
+            font-weight: 500;
+        }
+        .delete-button:hover, .delete-button:focus, .delete-button:active {
+            outline: none;
+            background-color: var(--warn, red);
+            color: var(--text-warn, white);
+        }
+        .delete-button:focus-visible {
+            outline: 4px solid var(--accent-darker, black);
+        }
+        .delete-button:active {
+            background-color: var(--warn-darker, red);
+            border-color: var(--warn-darker, red);
+        }
+    </style>
+{% endblock head %}
+
+{% block content %}
+    <div class="content">
+
+    <section>
+    <h3>WIP REST Connectors:</h3>
+    
+    <ul>
+        {% for name, continue_url, delete_url in ongoing %}
+        <li>
+            <a href="{{continue_url}}">{{name}}</a>
+            <button class="delete-button" formaction="{{delete_url}}" formmethod="delete">remove</button>
+        </li>
+        {% endfor %}
+    </ul>
+    </section>
+
+    <section>
+    <h3>Deployed REST Connectors:</h3>
+
+    <ul>
+        {% for name, continue_url in services %}
+        <li>
+            <a href="{{continue_url}}">{{name}}</a>
+        </li>
+        {% endfor %}
+    </ul>
+    </section>
+
+    <section>
+    <h3>Start a new REST Connector:</h3>
+    
+    {{ super() }}
+    </div>
+    </section>
+{% endblock content %}
+
+{% block script %}
+    {{ super() }}
+
+    <script>
+        document.querySelectorAll("button.delete-button").forEach(button => {
+            button.addEventListener("click", (event) => {
+                const target = button.getAttribute("formaction");
+                const method = button.getAttribute("formmethod");
+                sendMessage("ui-loading");
+                fetch(target, {method: method}).then(() => window.location.reload());
+            });
+        });
+    </script>
+
+{% endblock script %}

@@ -14,7 +14,7 @@ Flask-Cors = "^3.0.10"
 Flask-SQLAlchemy = "^3.0"
 Flask-Migrate = "^4.0.0"
 flask-babel = "^3.0.0"
-flask-smorest = "^0.40.0"
+flask-smorest = "^0.42"
 tomlkit = "^0.11.6"
 packaging = "^23.0"
 celery = "^5.2.2"
@@ -29,6 +29,7 @@ psycopg2 = { version = "^2.9.3", optional = true }
 PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
+urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
 
 [tool.poetry.dev-dependencies]
 black = ">=23.1.0"
@@ -36,11 +37,11 @@ flake8 = "^3.9.2"
 pytest = "^6.2.4"
 flake8-docstrings = "^1.6.0"
 flake8-bugbear = "^21.4.3"
-Sphinx = "^4.0.0"
+Sphinx = "^6.0.0"
 sphinxcontrib-redoc = "^1.6.0"
-sphinx-click = "^3.0.0"
-myst-parser = "^0.15.1"
-sphinx-rtd-theme = "^0.5.2"
+sphinx-click = "^4.4.0"
+myst-parser = "^2.0.0"
+sphinx-rtd-theme = "^1.2.2"
 hypothesis = "^6.14.3"
 pytest-cov = "^2.12.1"
 pip-licenses = "^3.5.3"
@@ -68,6 +69,7 @@ atomic = true
 
 [tool.sphinx]
 copyright-year = 2021
+theme = "sphinx_rtd_theme"
 enable-autodoc = true
 enable-napoleon = true
 enable-autosectionlabel = true

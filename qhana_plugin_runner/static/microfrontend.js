@@ -183,7 +183,7 @@ function notifyParentWindowOnLoad() {
 /**
  * Instrument embedded html forms to listen for submit events.
  */
-function instrumentForm() {
+function instrumentForm(hasParent) {
     const forms = document.querySelectorAll('form.qhana-form');
     forms.forEach(form => {
         const privateInputs = new Set(); // inputs that should be censored (e.g. password inputs)
@@ -205,7 +205,7 @@ function instrumentForm() {
             }
             var dataInputId = inputElement.getAttribute("id");
             var dataInputValue = inputElement.value;
-            if (dataInputId && dataInputValue) {
+            if (dataInputId && dataInputValue && hasParent) {
                 sendMessage({
                     type: "request-data-url-info",
                     inputKey: dataInputId,
@@ -216,7 +216,7 @@ function instrumentForm() {
         form.querySelectorAll('input[data-input-type=plugin]').forEach(inputElement => {
             var pluginInputId = inputElement.getAttribute("id");
             var pluginInputValue = inputElement.value;
-            if (pluginInputId && pluginInputValue) {
+            if (pluginInputId && pluginInputValue && hasParent) {
                 sendMessage({
                     type: "request-plugin-url-info",
                     inputKey: pluginInputId,
@@ -233,16 +233,18 @@ function instrumentForm() {
             } else {
                 contentTypes = contentTypes.split(/\s+/g);
             }
-            chooseButton.addEventListener("click", (event) => {
-                event.preventDefault();
-                sendMessage({
-                    type: "request-data-url",
-                    inputKey: inputId,
-                    acceptedInputType: dataType,
-                    acceptedContentTypes: contentTypes,
+            if (hasParent) {
+                chooseButton.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    sendMessage({
+                        type: "request-data-url",
+                        inputKey: inputId,
+                        acceptedInputType: dataType,
+                        acceptedContentTypes: contentTypes,
+                    });
                 });
-            });
-            chooseButton.removeAttribute("hidden");
+                chooseButton.removeAttribute("hidden");
+            }
         });
         form.querySelectorAll('button.qhana-choose-plugin-button').forEach(chooseButton => {
             var inputId = chooseButton.getAttribute("data-input-id");
@@ -265,11 +267,13 @@ function instrumentForm() {
             if (pluginVersion) {
                 requestMessage.pluginVersion = pluginVersion;
             }
-            chooseButton.addEventListener("click", (event) => {
-                event.preventDefault();
-                sendMessage(requestMessage);
-            });
-            chooseButton.removeAttribute("hidden");
+            if (hasParent) {
+                chooseButton.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    sendMessage(requestMessage);
+                });
+                chooseButton.removeAttribute("hidden");
+            }
         });
         form.addEventListener("submit", (event) => {
             onFormSubmit(event, dataInputs, privateInputs)
@@ -278,6 +282,12 @@ function instrumentForm() {
 }
 
 function onFormSubmit(event, dataInputs, privateInputs) {
+    if (window._qhana_microfrontend_state.formSubmitHandler != null) {
+        const eventHandled = window._qhana_microfrontend_state.formSubmitHandler(event, dataInputs, privateInputs);
+        if (eventHandled) {
+            return;
+        }
+    }
     const form = event.target;
     const submitter = event.submitter;
     let submitTarget = submitter.getAttribute("data-target") || form.getAttribute("data-target");
@@ -288,7 +298,7 @@ function onFormSubmit(event, dataInputs, privateInputs) {
     if (submitTarget === "api") {
         event.preventDefault(); // cancel submit; need to do this manually...
         const formData = new FormData(form);
-        let formMethod = form.method;
+        let formMethod = form.getAttribute("method");
         let formAction = new URL(form.action);
         if (submitter != null) {
             formAction = new URL(submitter.formAction);
@@ -397,8 +407,9 @@ if (window.top !== window.self) {
             lastHeight: 0,
             heightUnchangedCount: 0,
             preventSubmit: false,
+            formSubmitHandler: null,
         }
-        instrumentForm();
+        instrumentForm(true);
         registerMessageListener();
         notifyParentWindowOnLoad();
     }
