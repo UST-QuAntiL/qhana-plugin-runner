@@ -6,6 +6,9 @@
 
 {% block content %}
 <div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'>{{ pandas_html }}</div>
+<datalist id="columns_datalist">
+    {{ columns_as_optionlist }}
+</datalist>
 <div class="qhana-microfrontend">
     {% block help %}
     {% if help_text or example_values %}
@@ -55,6 +58,8 @@
         const preprocessing_enum_value = document.getElementById("preprocessing_enum");
         const axis_val = document.getElementById("axis");
         const subset_val = document.getElementById("subset");
+        const by_val = document.getElementById("by");
+        const column_val = document.getElementById("column");
 
         const axis_dis = axis_val.parentNode.parentNode;
         const threshold_dis = document.getElementById("threshold").parentNode.parentNode;
@@ -62,11 +67,11 @@
         const fill_value_dis = document.getElementById("fill_value").parentNode.parentNode;
         const keep_dis = document.getElementById("keep").parentNode.parentNode;
         const ignore_index_dis = document.getElementById("ignore_index").parentNode.parentNode;
-        const by_dis = document.getElementById("by").parentNode.parentNode;
+        const by_dis = by_val.parentNode.parentNode;
         const ascending_dis = document.getElementById("ascending").parentNode.parentNode;
         const position_dis = document.getElementById("position").parentNode.parentNode;
         const characters_dis = document.getElementById("characters").parentNode.parentNode;
-        const column_dis = document.getElementById("column").parentNode.parentNode;
+        const column_dis = column_val.parentNode.parentNode;
         const new_columns_dis = document.getElementById("new_columns").parentNode.parentNode;
         const remove_column_dis = document.getElementById("remove_column").parentNode.parentNode;
         const substring_dis = document.getElementById("substring").parentNode.parentNode;
@@ -76,7 +81,7 @@
         const qhana_buttons = document.getElementsByClassName("qhana-form-buttons")[0];
 
 
-        function change_parameter(parameter, label, description) {
+        function change_parameter(parameter, label, description, datalist) {
             for (var i = 0; i < parameter.childNodes.length; i++) {
                 if (parameter.childNodes[i].className === "qhana-form-label" && label !== null) {
                     parameter.childNodes[i].innerText = label;
@@ -205,6 +210,7 @@
                 ignore_index_dis.style.display = "block";
             } else if (preprocessing_enum_value.value === "sort_values") {
                 by_dis.style.display = "block";
+                by_val.setAttribute("list", "columns_datalist");
                 change_parameter(by_dis, "Column", "Column to sort by.");
                 ascending_dis.style.display = "block";
             } else if (preprocessing_enum_value.value === "strip_entries") {
@@ -216,6 +222,7 @@
             } else if (preprocessing_enum_value.value === "split_column") {
                 column_dis.style.display = "block";
                 by_dis.style.display = "block";
+                by_val.removeAttribute("list");
                 change_parameter(by_dis, "Split-String", "String that splits the column, e.g. the entry 'John, Doe' and the Split-String ', ' result in the two entries 'John' and 'Doe'.");
                 new_columns_dis.style.display = "block";
                 remove_column_dis.style.display = "block";
@@ -232,6 +239,8 @@
                 set_subset_checklist("columns");
             }
         }
+
+        column_val.setAttribute("list", "columns_datalist");
 
         preprocessing_enum_change();
         preprocessing_enum_value.addEventListener("change", preprocessing_enum_change);
