@@ -36,7 +36,7 @@ PDPreprocessing_BLP = SecurityBlueprint(
 class PDPreprocessing(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Uses pandas preprocessing methods, to preprocess files."
+    description = "Uses pandas preprocessing methods, to preprocess csv files."
 
     tags = []
 

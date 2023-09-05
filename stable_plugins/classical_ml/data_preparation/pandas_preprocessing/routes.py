@@ -72,7 +72,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="entity",
+                        data_type="",
                         content_type=[
                             "text/csv",
                         ],
