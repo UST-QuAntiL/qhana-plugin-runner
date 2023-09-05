@@ -94,7 +94,16 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Preprocessing Type",
-            "description": "Type of preprocessing the file will undergo.",
+            "description": """Type of preprocessing the file will undergo.\n
+- do nothing: Does nothing to the file, in case the user accidentally clicked the button `add step`, instead of `done`.\n
+- drop na: Removes rows or columns with a certain amount of missing values.\n
+- fill na: Fills in empty entries with a given value.\n
+- drop duplicates: Removes duplicate rows. May only consider certain columns, to determine if two rows are duplicates.\n
+- sort values: Sorts rows by their values in a certain column.\n
+- strip entries: Strips entries in the specified columns by the given characters. The beginning, the end or both of an entry may be stripped.\n
+- split column: Splits a column into, given a substring to split entries by.\n
+- replace: Replaces all occurrences of a string in all entries with another string.\n
+- string case: Transforms entries into upper, lower or title case.""",
             "input_type": "select",
         },
     )
