@@ -34,6 +34,7 @@ from qhana_plugin_runner.storage import STORE
 from .backend.load_utils import get_indices_and_point_arr
 from .backend.visualize import plot_data
 from sklearn.cluster import KMeans
+from qhana_plugin_runner.requests import open_url
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -83,13 +84,15 @@ def calculation_task(self, db_id: int) -> str:
             title=f"Classical {num_clusters}-Means Clusters",
         )
 
+    info_str = f"_clusters_{num_clusters}"
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -102,7 +105,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "cluster_plot.html",
+                f"cluster_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
