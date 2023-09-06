@@ -90,13 +90,15 @@ def calculation_task(self, db_id: int) -> str:
             title=f"Classical {num_clusters}-Medoids Clusters",
         )
 
+    info_str = f"_clusters_{num_clusters}_init_{init_enum.get_init()}_method_{method_enum.name}"
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -109,7 +111,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "cluster_plot.html",
+                f"cluster_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
