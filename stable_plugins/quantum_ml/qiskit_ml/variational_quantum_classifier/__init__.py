@@ -28,6 +28,7 @@ VQC_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="VQC plugin API",
+    template_folder="templates",
 )
 
 qiskit_ml_version = "0.4.0"

@@ -1,0 +1,50 @@
+{% extends "simple_template.html" %}
+
+{{ super() }}
+
+{% block script %}
+<script>
+    const backend_val = document.getElementById("backend");
+
+    const ibmq_token_dis = document.getElementById("ibmq_token").parentNode.parentNode;
+    const custom_backend_dis = document.getElementById("custom_backend").parentNode.parentNode;
+
+    function backend_change() {
+        ibmq_token_dis.style.display = "none";
+        custom_backend_dis.style.display = "none";
+        if ((backend_val.value.startsWith("ibmq")) || (backend_val.value === "aer_qasm_simulator")){
+            ibmq_token_dis.style.display = "block";
+        }
+        else if (backend_val.value === "custom_ibmq") {
+            ibmq_token_dis.style.display = "block";
+            custom_backend_dis.style.display = "block";
+        }
+    }
+
+
+    backend_change();
+    backend_val.addEventListener("change", backend_change);
+</script>
+<script>
+    const feature_map_val = document.getElementById("feature_map");
+
+    const paulis_dis = document.getElementById("paulis").parentNode.parentNode;
+    const entanglement_pattern_feature_map_dis = document.getElementById("entanglement_pattern_feature_map").parentNode.parentNode;
+
+    function feature_map_change() {
+        paulis_dis.style.display = "none";
+        entanglement_pattern_feature_map_dis.style.display = "none";
+        if (feature_map_val.value === "pauli_feature_map"){
+            paulis_dis.style.display = "block";
+            entanglement_pattern_feature_map_dis.style.display = "block";
+        }
+        else if (feature_map_val.value === "zz_feature_map") {
+            entanglement_pattern_feature_map_dis.style.display = "block";
+        }
+    }
+
+
+    feature_map_change();
+    feature_map_val.addEventListener("change", feature_map_change);
+</script>
+{% endblock script %}
