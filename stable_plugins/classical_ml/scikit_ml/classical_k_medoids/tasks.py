@@ -90,7 +90,9 @@ def calculation_task(self, db_id: int) -> str:
             title=f"Classical {num_clusters}-Medoids Clusters",
         )
 
-    info_str = f"_clusters_{num_clusters}_init_{init_enum.get_init()}_method_{method_enum.name}"
+    info_str = (
+        f"_clusters_{num_clusters}_init_{init_enum.get_init()}_method_{method_enum.name}"
+    )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
