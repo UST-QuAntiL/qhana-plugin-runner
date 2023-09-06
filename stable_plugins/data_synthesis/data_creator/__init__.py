@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 _plugin_name = "data-creator"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 

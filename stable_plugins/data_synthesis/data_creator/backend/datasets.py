@@ -28,7 +28,7 @@ class DataTypeEnum(Enum):
         """Returns specified dataset"""
         if self == DataTypeEnum.two_spirals:
             data, labels = twospirals(num_train_points + num_test_points, **kwargs)
-        if self == DataTypeEnum.checkerboard:
+        elif self == DataTypeEnum.checkerboard:
             data, labels = checkerboard(num_train_points + num_test_points, **kwargs)
         else:
             raise NotImplementedError
