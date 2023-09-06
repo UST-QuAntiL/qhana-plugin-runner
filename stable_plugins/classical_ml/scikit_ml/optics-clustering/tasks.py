@@ -111,9 +111,7 @@ def calculation_task(self, db_id: int) -> str:
             title=f"OPTICS Clusters",
         )
 
-    info_str = (
-        f"_method_{method_enum.value}_algorithm_{algorithm_enum.get_algorithm()}_metric_{metric_enum.get_metric()}"
-    )
+    info_str = f"_method_{method_enum.value}_algorithm_{algorithm_enum.get_algorithm()}_metric_{metric_enum.get_metric()}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
