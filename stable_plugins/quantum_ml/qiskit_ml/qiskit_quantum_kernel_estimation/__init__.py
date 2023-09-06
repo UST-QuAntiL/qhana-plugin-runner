@@ -28,6 +28,7 @@ QISKIT_QKE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Qiskit Quantum-Kernel-Estimation plugin API",
+    template_folder="templates",
 )
 
 
