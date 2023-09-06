@@ -54,6 +54,9 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
 
+from time import perf_counter
+from plugins.optimizer.interaction_utils.__init__ import BENCHMARK_LOGGER
+
 
 def get_plugin_metadata(plugin_url) -> PluginMetadata:
     """
@@ -244,6 +247,7 @@ class OptimizerSetupProcessStep(MethodView):
         Returns:
             Response: A redirect to the task view.
         """
+        bench_start_optpluginselection = perf_counter()
         db_task = ProcessingTask(
             task_name="optimizer_setup",
         )
@@ -353,6 +357,14 @@ class OptimizerSetupProcessStep(MethodView):
         task.link_error(save_task_error.s(db_id=db_task.id))
 
         task.apply_async()
+
+        bench_stop_optpluginselection = perf_counter()
+        bench_diff_optpluginselection = (
+            bench_stop_optpluginselection - bench_start_optpluginselection
+        )
+        BENCHMARK_LOGGER.info(
+            f"bench_diff_optpluginselection: {bench_diff_optpluginselection}"
+        )
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
@@ -493,7 +505,8 @@ class MinimizerSetupCallback(MethodView):
                 ),
             )
         )
-
+        bench_start_mincalctotal = perf_counter()
+        BENCHMARK_LOGGER.info(f"bench_start_mincalctotal: {bench_start_mincalctotal}")
         response = requests.post(arguments.minimize_endpoint_url, json=min_input_data)
 
         response.raise_for_status()
@@ -518,6 +531,8 @@ class MinimizerResultCallback(MethodView):
         Returns:
             A redirect to the task view.
         """
+        bench_stop_mincalctotal = perf_counter()
+        BENCHMARK_LOGGER.info(f"bench_stop_mincalctotal: {bench_stop_mincalctotal}")
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"

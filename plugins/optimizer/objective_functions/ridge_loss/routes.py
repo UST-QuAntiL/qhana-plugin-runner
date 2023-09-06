@@ -51,6 +51,8 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from . import RIDGELOSS_BLP, RidgeLoss
 from .schemas import HyperparamterInputData, HyperparamterInputSchema
 from .tasks import ridge_loss
+from time import perf_counter
+from plugins.optimizer.interaction_utils.__init__ import BENCHMARK_LOGGER
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -258,17 +260,25 @@ class CalcCallbackEndpoint(MethodView):
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
+
+        bench_start_ofcalc = perf_counter()
+        bench_start_ofcalcdb = perf_counter()
         x, y, hyperparameter = get_of_calc_data(db_id)
 
         if input_data.x is None:
             input_data.x = SingleNumpyArraySchema().load({"array": x}).array
         if input_data.y is None:
             input_data.y = SingleNumpyArraySchema().load({"array": y}).array
-
+        bench_stop_ofcalcdb = perf_counter()
         loss = ridge_loss(
             X=input_data.x,
             y=input_data.y,
             w=input_data.x0,
             alpha=hyperparameter["alpha"],
         )
+        bench_stop_ofcalc = perf_counter()
+        bench_diff_ofcalc = bench_stop_ofcalc - bench_start_ofcalc
+        bench_diff_ofcalcdb = bench_stop_ofcalcdb - bench_start_ofcalcdb
+        BENCHMARK_LOGGER.info(f"bench_diff_ofcalcdb: {bench_diff_ofcalcdb}")
+        BENCHMARK_LOGGER.info(f"bench_diff_ofcalc: {bench_diff_ofcalc}")
         return {"loss": loss}

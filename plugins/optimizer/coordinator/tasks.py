@@ -38,6 +38,26 @@ from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
 
+from time import perf_counter
+import logging
+
+# Create or get a logger
+BENCHMARK_LOGGER = logging.getLogger("benchmark")
+
+# Set log level
+BENCHMARK_LOGGER.setLevel(logging.INFO)
+
+# Create a file handler and set the level to log info
+file_handler = logging.FileHandler("benchmark.log")
+file_handler.setLevel(logging.INFO)
+
+# Create a formatter
+formatter = logging.Formatter("%(asctime)s - %(message)s")
+file_handler.setFormatter(formatter)
+
+# Add the handler to the logger
+BENCHMARK_LOGGER.addHandler(file_handler)
+
 
 def get_features(ent: dict, target_variable_name: str) -> np.ndarray:
     """
@@ -122,6 +142,8 @@ def echo_results(self, db_id: int) -> str:
     Raises:
         A KeyError if task data with the specified id cannot be loaded to read parameters.
     """
+    bench_start_optsavedata = perf_counter()
+
     TASK_LOGGER.info(f"Starting the optimization task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -143,7 +165,9 @@ def echo_results(self, db_id: int) -> str:
             storage_provider="url_file_store",
             commit=True,
         )
-
+    bench_stop_optsavedata = perf_counter()
+    bench_diff__optsavedata = bench_stop_optsavedata - bench_start_optsavedata
+    BENCHMARK_LOGGER.info(f"bench_diff__optsavedata: {bench_diff__optsavedata}")
     return "Success"
 
 

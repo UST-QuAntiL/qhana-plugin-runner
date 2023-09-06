@@ -56,6 +56,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from time import perf_counter
+from plugins.optimizer.interaction_utils.__init__ import BENCHMARK_LOGGER
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -358,6 +360,8 @@ class CalcLossandGradEndpoint(MethodView):
     @NN_BLP.require_jwt("jwt", optional=True)
     def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
+
+        bench_start_ofcalc = perf_counter()
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -387,5 +391,8 @@ class CalcLossandGradEndpoint(MethodView):
         response = LossAndGradientResponseSchema().dump(
             LossAndGradientResponseData(loss=loss, gradient=grad)
         )
+        bench_stop_ofcalc = perf_counter()
+        bench_diff_ofcalc = bench_stop_ofcalc - bench_start_ofcalc
+        BENCHMARK_LOGGER.info(f"bench_diff_of_calcnet: {bench_diff_ofcalc}")
 
         return response

@@ -277,7 +277,6 @@ def worker(
         str(concurrency),
         "--loglevel",
         log_level.upper(),
-        "-E",
     ]
 
     if periodic_scheduler:
