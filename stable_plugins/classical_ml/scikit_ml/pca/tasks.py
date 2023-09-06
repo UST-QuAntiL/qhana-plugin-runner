@@ -151,12 +151,12 @@ def get_pca(input_params: dict):
             svd_solver=input_params["solver"].value,
             tol=input_params["tol"],
             iterated_power=input_params["iterated_power"],
-        )
+        ), f"_type_normal_solver_{input_params['solver'].value}"
     elif pca_type == PCATypeEnum.incremental:
         return IncrementalPCA(
             n_components=input_params["dimensions"],
             batch_size=input_params["batch_size"],
-        )
+        ), f"_type_incremental_batch_size_{input_params['batch_size']}"
     elif pca_type == PCATypeEnum.sparse:
         return SparsePCA(
             n_components=input_params["dimensions"],
@@ -164,7 +164,7 @@ def get_pca(input_params: dict):
             ridge_alpha=input_params["ridge_alpha"],
             max_iter=input_params["max_itr"],
             tol=input_params["tol"],
-        )
+        ), "_type_sparse"
     elif pca_type == PCATypeEnum.kernel:
         eigen_solver = input_params["solver"].value
         if eigen_solver == "full":
@@ -179,7 +179,7 @@ def get_pca(input_params: dict):
             eigen_solver=eigen_solver,
             tol=input_params["tol"],
             iterated_power=input_params["iterated_power"],
-        )
+        ), f"_type_kernel_kernel_{input_params['kernel'].value}_solver_{eigen_solver}"
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
 
@@ -390,7 +390,7 @@ def plot_data(entity_points, dim_attributes, only_first_100):
 
 
 def save_outputs(
-    db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim_attributes
+    db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim_attributes, info_str
 ):
     """
     Saves the plugin's output into files. This includes a plot of the transformed data, the pca's parameters and
@@ -413,7 +413,7 @@ def save_outputs(
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                f"plot{info_str}.html",
                 "custom/plot",
                 "text/html",
             )
@@ -423,7 +423,7 @@ def save_outputs(
         STORE.persist_task_result(
             db_id,
             output,
-            "pca_metadata.json",
+            f"pca_metadata{info_str}.json",
             "custom/pca-metadata",
             "application/json",
         )
@@ -434,7 +434,7 @@ def save_outputs(
         STORE.persist_task_result(
             db_id,
             output,
-            "transformed_entity_points.csv",
+            f"transformed_entity_points{info_str}.csv",
             "entity/vector",
             "text/csv",
         )
@@ -488,7 +488,7 @@ def calculation_task(self, db_id: int) -> str:
     kernel_url = input_params["kernel_url"]
 
     # Compute pca
-    pca = get_pca(input_params)
+    pca, info_str = get_pca(input_params)
 
     # Since incremental pca uses batches, we want to load in the data in batches
     if input_params["pca_type"] == PCATypeEnum.incremental.value:
@@ -524,6 +524,7 @@ def calculation_task(self, db_id: int) -> str:
         attributes,
         entity_points_for_plot,
         dim_attributes,
+        info_str,
     )
 
     return "Result stored in file"
