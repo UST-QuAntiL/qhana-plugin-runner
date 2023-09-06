@@ -58,7 +58,7 @@ class NN(nn.Module):
         loss.backward()
         grads = np.concatenate(
             [p.grad.data.cpu().numpy().flatten() for p in self.parameters()]
-        )
+        ).astype(np.float64)
 
         return grads
 
@@ -71,6 +71,6 @@ class NN(nn.Module):
         loss.backward()
         grads = np.concatenate(
             [p.grad.data.cpu().numpy().flatten() for p in self.parameters()]
-        )
+        ).astype(np.float64)
 
         return loss.item(), grads
