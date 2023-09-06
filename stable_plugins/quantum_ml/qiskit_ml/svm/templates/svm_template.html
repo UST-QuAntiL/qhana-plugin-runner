@@ -25,6 +25,23 @@
 
     var kernel_enum_val = document.getElementById("kernel_enum");
 
+    const backend_val = document.getElementById("backend");
+
+
+
+
+    function backend_change() {
+        ibmq_token_dis.style.display = "none";
+        custom_backend_dis.style.display = "none";
+        if ((backend_val.value.startsWith("ibmq")) || (backend_val.value === "aer_qasm_simulator")){
+            ibmq_token_dis.style.display = "block";
+        }
+        else if (backend_val.value === "custom_ibmq") {
+            ibmq_token_dis.style.display = "block";
+            custom_backend_dis.style.display = "block";
+        }
+    }
+
 
     function kernel_change() {
         train_kernel_url_dis.style.display = 'none';
@@ -55,22 +72,42 @@
             || kernel_enum_val.value === "zz_kernel"
             || kernel_enum_val.value === "pauli_kernel"
         ) {
+            backend_change();
             data_maps_enum_dis.style.display = 'block';
             entanglement_pattern_dis.style.display = 'block';
             reps_dis.style.display = 'block';
             shots_dis.style.display = 'block';
             backend_dis.style.display = 'block';
-            ibmq_token_dis.style.display = 'block';
-            custom_backend_dis.style.display = 'block';
 
             if (kernel_enum_val.value === "pauli_kernel") {
                 paulis_dis.style.display = 'block';
+            }
+            else if (kernel_enum_val.value === "z_kernel") {
+                entanglement_pattern_dis.style.display = 'none';
             }
         }
     }
 
     kernel_change();
+    backend_change();
 
     kernel_enum_val.addEventListener("change", kernel_change);
+    backend_val.addEventListener("change", backend_change);
+</script>
+<script>
+    const visualize_val = document.getElementById("visualize");
+
+    const resolution_dis = document.getElementById("resolution").parentNode.parentNode;
+
+
+    function visualize_change() {
+        resolution_dis.style.display = "none";
+        if (visualize_val.checked) {
+            resolution_dis.style.display = "block";
+        }
+    }
+
+    visualize_change();
+    visualize_val.addEventListener("change", visualize_change);
 </script>
 {% endblock script %}
