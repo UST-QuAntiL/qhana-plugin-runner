@@ -285,7 +285,7 @@ class CirqSimulator(QHAnaPluginBase):
         return CIRQ_BLP
 
     def get_requirements(self) -> str:
-        return "cirq~=1.1.0"
+        return "cirq~=1.3.0.dev20230804185427"
 
 
 ##
