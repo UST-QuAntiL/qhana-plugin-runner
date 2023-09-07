@@ -285,7 +285,7 @@ class PennylaneSimulator(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
 
-        return """pennylane~=0.31.0"""
+        return """pennylane~=0.31"""
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -321,7 +321,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         my_circuit(wires=range(num_wires))
         return qml.counts()
 
-    @qml.qnode(circ)
+    @qml.qnode(circ_statevector)
     def state_vector_circuit():
         my_circuit(wires=range(num_wires))
         return qml.state()
