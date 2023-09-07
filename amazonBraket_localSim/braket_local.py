@@ -306,7 +306,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     device = LocalSimulator()
 
-    # ##
+    #
     result = device.run(braket_circuit, shots=execution_options["shots"]).result()
     counts = result.measurement_counts
 
