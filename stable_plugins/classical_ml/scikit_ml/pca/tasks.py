@@ -153,7 +153,7 @@ def get_pca(input_params: dict):
                 tol=input_params["tol"],
                 iterated_power=input_params["iterated_power"],
             ),
-            f"_type_normal_solver_{input_params['solver'].value}",
+            f"_type_normal_dim_{input_params['dimensions']}_solver_{input_params['solver'].value}",
         )
     elif pca_type == PCATypeEnum.incremental:
         return (
@@ -161,7 +161,7 @@ def get_pca(input_params: dict):
                 n_components=input_params["dimensions"],
                 batch_size=input_params["batch_size"],
             ),
-            f"_type_incremental_batch_size_{input_params['batch_size']}",
+            f"_type_incremental_dim_{input_params['dimensions']}_batch_size_{input_params['batch_size']}",
         )
     elif pca_type == PCATypeEnum.sparse:
         return (
@@ -172,7 +172,7 @@ def get_pca(input_params: dict):
                 max_iter=input_params["max_itr"],
                 tol=input_params["tol"],
             ),
-            "_type_sparse",
+            "_type_sparse_dim_{input_params['dimensions']}",
         )
     elif pca_type == PCATypeEnum.kernel:
         eigen_solver = input_params["solver"].value
@@ -190,7 +190,7 @@ def get_pca(input_params: dict):
                 tol=input_params["tol"],
                 iterated_power=input_params["iterated_power"],
             ),
-            f"_type_kernel_kernel_{input_params['kernel'].value}_solver_{eigen_solver}",
+            f"_type_kernel_dim_{input_params['dimensions']}_kernel_{input_params['kernel'].value}_solver_{eigen_solver}",
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
