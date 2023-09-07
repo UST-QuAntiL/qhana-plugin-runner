@@ -289,7 +289,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-
     from braket.circuits import Circuit
     from braket.devices import LocalSimulator
     from qbraid.transpiler.cirq_qasm import from_qasm
@@ -306,7 +305,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     device = LocalSimulator()
 
-    #
+    # ##
     result = device.run(braket_circuit, shots=execution_options["shots"]).result()
     counts = result.measurement_counts
 
@@ -409,7 +408,8 @@ def execute_circuit(self, db_id: int) -> str:
         "qpuType": metadata["qpuType"],
         "qpuVendor": metadata["qpuVendor"],
         "qpuName": metadata["qpuName"],
-        "qpuVersion": metadata["qpuVersion"],
+        # "qpuVersion": metadata["qpuVersion"],
+        "qpuVersion": metadata.get("qpuVersion", "default_value"),
     }
 
     if "seed" in metadata:
