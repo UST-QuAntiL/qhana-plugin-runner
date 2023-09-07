@@ -229,13 +229,15 @@ def calculation_task(self, db_id: int) -> str:
         # Create confusion matrix plot
         conf_matrix = plot_confusion_matrix(test_labels, predictions, int_to_label)
 
+    info_str = f"_network_{network_enum.name}_optimizer_{optimizer.name}_epochs_{epochs}"
+
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -263,7 +265,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "classification_plot.html",
+                f"classification_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -276,7 +278,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "confusion_matrix.html",
+                f"confusion_matrix{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -294,7 +296,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "qnn-weights.json",
+            f"qnn-weights{info_str}.json",
             "qnn-weights",
             "application/json",
         )
@@ -307,7 +309,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "representative-circuit.qasm",
+                f"representative-circuit{info_str}.qasm",
                 "representative-circuit",
                 "application/qasm",
             )
