@@ -284,7 +284,6 @@ class PennylaneSimulator(QHAnaPluginBase):
         return PENNYLANE_BLP
 
     def get_requirements(self) -> str:
-
         return """pennylane~=0.31"""
 
 
@@ -303,7 +302,6 @@ def extract_total_qubits(qasm_code):
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-
     import pennylane as qml
     import time
 
