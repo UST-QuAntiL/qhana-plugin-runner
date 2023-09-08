@@ -283,13 +283,15 @@ def calculation_task(self, db_id: int) -> str:
         label_to_int=label_to_int,
     )
 
+    info_str = f"_feature_map_{str(feature_map_enum.name).replace('_feature_map', '')}_feature_entanglement_{entanglement_pattern_feature_map}_ansatz_{vqc_ansatz_enum.name}_ansatz_entanglement_{entanglement_pattern_ansatz}"
+
     # Output
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "test_labels.json",
+            f"test_labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -302,7 +304,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "classification_plot.html",
+                f"classification_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -315,7 +317,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "confusion_matrix.html",
+                f"confusion_matrix{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -325,7 +327,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
+            f"representative_circuit{info_str}.qasm",
             "representative-circuit",
             "application/qasm",
         )
@@ -335,7 +337,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "vqc_metadata.json",
+            f"vqc_metadata{info_str}.json",
             "vqc-metadata",
             "application/json",
         )
