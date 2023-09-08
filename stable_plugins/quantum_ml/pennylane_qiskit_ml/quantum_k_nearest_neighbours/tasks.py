@@ -38,6 +38,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 
 from .backend.visualize import plot_data, plot_confusion_matrix
+from .backend.qknns.qknn import QkNNEnum
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -253,13 +254,16 @@ def calculation_task(self, db_id: int) -> str:
         label_to_int=label_to_int,
     )
 
+    neighbourhood_size = "all" if variant == QkNNEnum.schuld_qknn else str(k)
+    info_str = f"_variant_{variant.name}_neighbours_{neighbourhood_size}"
+
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -272,7 +276,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "classification_plot.html",
+                f"classification_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -285,7 +289,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "confusion_matrix.html",
+                f"confusion_matrix{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -295,7 +299,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
+            f"representative_circuit{info_str}.qasm",
             "representative-circuit",
             "application/qasm",
         )
