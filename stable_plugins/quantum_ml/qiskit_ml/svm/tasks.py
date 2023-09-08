@@ -191,7 +191,7 @@ def calculation_task(self, db_id: int) -> str:
         for idx in svc.support_
     ]
 
-    info_str = f""
+    info_str = f"_kernel_{str(kernel_enum.name).replace('kernel', '').strip('_')}_regularization_{regularization_C}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
@@ -199,7 +199,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -212,7 +212,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                f"plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -225,7 +225,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "confusion_matrix.html",
+                f"confusion_matrix{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -235,7 +235,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "support-vectors.json",
+            f"support-vectors{info_str}.json",
             "support-vectors",
             "application/json",
         )
