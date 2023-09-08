@@ -162,12 +162,14 @@ def calculation_task(self, db_id: int) -> str:
                 }
             )
 
+    info_str = f"_kernel_{str(kernel_enum.name).replace('_feature_map', '')}_entanglement_{entanglement_pattern}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(kernel_json, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "kernel.json",
+            f"kernel{info_str}.json",
             "custom/kernel-matrix",
             "application/json",
         )
