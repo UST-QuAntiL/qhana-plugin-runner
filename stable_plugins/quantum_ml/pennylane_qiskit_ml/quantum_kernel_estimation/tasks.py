@@ -163,12 +163,14 @@ def calculation_task(self, db_id: int) -> str:
                 }
             )
 
+    info_str = f"_kernel_{str(kernel_enum.name).replace('kernel', '').strip('_')}_entanglement_{entanglement_pattern.name}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(kernel_json, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "kernel.json",
+            f"kernel{info_str}.json",
             "custom/kernel-matrix",
             "application/json",
         )
@@ -178,7 +180,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
+            f"representative_circuit{info_str}.qasm",
             "representative-circuit",
             "application/qasm",
         )
