@@ -154,12 +154,14 @@ def calculation_task(self, db_id: int) -> str:
     for ent_id, idx in id_to_idx.items():
         entity_clusters.append({"ID": ent_id, "href": "", "cluster": int(clusters[idx])})
 
+    info_str = f"_variant_{variant.name}_clusters_{clusters_cnt}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_clusters, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "clusters.json",
+            f"clusters{info_str}.json",
             "custom/clusters",
             "application/json",
         )
@@ -175,7 +177,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                f"plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -185,7 +187,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
+            f"representative_circuit{info_str}.qasm",
             "representative-circuit",
             "text/x-qasm",
         )
