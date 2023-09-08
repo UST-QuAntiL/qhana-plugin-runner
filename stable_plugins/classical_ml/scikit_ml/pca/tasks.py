@@ -172,7 +172,7 @@ def get_pca(input_params: dict):
                 max_iter=input_params["max_itr"],
                 tol=input_params["tol"],
             ),
-            "_type_sparse_dim_{input_params['dimensions']}",
+            f"_type_sparse_dim_{input_params['dimensions']}",
         )
     elif pca_type == PCATypeEnum.kernel:
         eigen_solver = input_params["solver"].value

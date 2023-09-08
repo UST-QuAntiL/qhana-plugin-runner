@@ -191,6 +191,8 @@ def calculation_task(self, db_id: int) -> str:
         for idx in svc.support_
     ]
 
+    info_str = f""
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
