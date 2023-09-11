@@ -87,7 +87,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/pass-data/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_calc.value,
+                        type=InteractionEndpointType.calc_loss.value,
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -95,7 +95,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/calc-callback-endpoint/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_gradient.value,
+                        type=InteractionEndpointType.calc_grad.value,
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -103,7 +103,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/calc-gradient-endpoint/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_gradient.value,
+                        type=InteractionEndpointType.calc_grad.value,
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,

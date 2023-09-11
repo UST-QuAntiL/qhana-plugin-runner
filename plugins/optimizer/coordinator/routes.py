@@ -291,12 +291,10 @@ class OptimizerSetupProcessStep(MethodView):
         of_calc_endpoint = [
             element
             for element in of_plugin_metadata.entry_point.interaction_endpoints
-            if element.type == InteractionEndpointType.objective_function_calc.value
+            if element.type == InteractionEndpointType.calc_loss.value
         ]
 
-        db_task.data[
-            InteractionEndpointType.objective_function_calc.value
-        ] = of_calc_endpoint[0].href
+        db_task.data[InteractionEndpointType.calc_loss.value] = of_calc_endpoint[0].href
 
         of_pass_data_endpoint = [
             element
@@ -311,23 +309,23 @@ class OptimizerSetupProcessStep(MethodView):
         of_gradient_endpoint = [
             element
             for element in of_plugin_metadata.entry_point.interaction_endpoints
-            if element.type == InteractionEndpointType.objective_function_gradient.value
+            if element.type == InteractionEndpointType.calc_grad.value
         ]
 
         if len(of_gradient_endpoint) > 0:
-            db_task.data[
-                InteractionEndpointType.objective_function_gradient.value
-            ] = of_gradient_endpoint[0].href
+            db_task.data[InteractionEndpointType.calc_grad.value] = of_gradient_endpoint[
+                0
+            ].href
 
         of_loss_and_gradient_endpoint = [
             element
             for element in of_plugin_metadata.entry_point.interaction_endpoints
-            if element.type == InteractionEndpointType.of_loss_and_grad.value
+            if element.type == InteractionEndpointType.calc_loss_and_grad.value
         ]
 
         if len(of_loss_and_gradient_endpoint) > 0:
             db_task.data[
-                InteractionEndpointType.of_loss_and_grad.value
+                InteractionEndpointType.calc_loss_and_grad.value
             ] = of_loss_and_gradient_endpoint[0].href
 
         of_href = urljoin(
@@ -453,15 +451,15 @@ class MinimizerSetupCallback(MethodView):
         db_task.save(commit=True)
 
         calc_loss_endpoint_url: str = db_task.data.get(
-            InteractionEndpointType.objective_function_calc.value
+            InteractionEndpointType.calc_loss.value
         )
 
         calc_gradient_endpoint_url: str = db_task.data.get(
-            InteractionEndpointType.objective_function_gradient.value
+            InteractionEndpointType.calc_grad.value
         )
 
         calc_loss_and_gradient_endpoint_url: str = db_task.data.get(
-            InteractionEndpointType.of_loss_and_grad.value
+            InteractionEndpointType.calc_loss_and_grad.value
         )
 
         of_task_id: str = db_task.data.get("of_task_id")
