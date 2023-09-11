@@ -83,7 +83,7 @@ class PluginsView(MethodView):
                         + "<int:task_id>/pass-data/",
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.objective_function_calc.value,
+                        type=InteractionEndpointType.calc_loss.value,
                         href=url_for(
                             f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
