@@ -28,7 +28,11 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.tasks import echo_results, of_pass_data
+from plugins.optimizer.coordinator.tasks import (
+    echo_results,
+    get_features_and_target,
+    of_pass_data,
+)
 from plugins.optimizer.interaction_utils.tasks import invoke_task
 from plugins.optimizer.shared.enums import InteractionEndpointType
 from plugins.optimizer.shared.schemas import (
@@ -340,6 +344,7 @@ class OptimizerSetupProcessStep(MethodView):
 
         db_task.save(commit=True)
 
+        # invoke the objective function plugin ui
         task = invoke_task.s(
             db_id=db_task.id,
             step_id="objective function plugin setup",
@@ -392,11 +397,13 @@ class ObjectiveFunctionInvokationCallback(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        db_task.data["of_task_id"] = arguments.task_id
+        # save the of plugin hyperparameters to the database
+        db_task.data["of_hyperparameters"] = arguments.hyperparameters
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
+        # load minimizer plugin ui endpoints from the database and invoke the ui
         min_href = db_task.data["min_href"]
         min_ui_href = db_task.data["min_ui_href"]
         min_callback_url = db_task.data["minimize_callback_url"]
@@ -450,6 +457,7 @@ class MinimizerSetupCallback(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
+        # load the of pluign calc endpoints and its hyperparameters from the database
         calc_loss_endpoint_url: str = db_task.data.get(
             InteractionEndpointType.calc_loss.value
         )
@@ -462,30 +470,26 @@ class MinimizerSetupCallback(MethodView):
             InteractionEndpointType.calc_loss_and_grad.value
         )
 
-        of_task_id: str = db_task.data.get("of_task_id")
+        of_hyperparameters = db_task.data.get("of_hyperparameters")
 
-        calc_loss_endpoint_url = calc_loss_endpoint_url.replace(
-            "<int:task_id>", str(of_task_id)
-        )
-
-        if calc_gradient_endpoint_url:
-            calc_gradient_endpoint_url = calc_gradient_endpoint_url.replace(
-                "<int:task_id>", str(of_task_id)
-            )
-        if calc_loss_and_gradient_endpoint_url:
-            calc_loss_and_gradient_endpoint_url = (
-                calc_loss_and_gradient_endpoint_url.replace(
-                    "<int:task_id>", str(of_task_id)
-                )
-            )
+        # load the data from the database
+        input_file_url = db_task.data.get("input_file_url")
+        target_variable = db_task.data.get("target_variable")
         number_weights = db_task.data.get("number_weights")
         x0 = np.random.randn(number_weights)
 
+        X, y = get_features_and_target(input_file_url, target_variable)
+
+        # create the input data for the minimizer plugin
         min_input_data = MinimizerInputSchema().dump(
             MinimizerInputData(
                 calc_loss_endpoint_url=calc_loss_endpoint_url,
                 calc_gradient_endpoint_url=calc_gradient_endpoint_url,
+                calc_loss_and_gradient_endpoint_url=calc_loss_and_gradient_endpoint_url,
                 x0=x0,
+                x=X,
+                y=y,
+                hyperparameters=of_hyperparameters,
                 callback_url=url_for(
                     f"{OPTIMIZER_BLP.name}.{MinimizerResultCallback.__name__}",
                     db_id=db_task.id,
@@ -494,6 +498,7 @@ class MinimizerSetupCallback(MethodView):
             )
         )
 
+        # invoke the minimizer plugin
         response = requests.post(arguments.minimize_endpoint_url, json=min_input_data)
 
         response.raise_for_status()

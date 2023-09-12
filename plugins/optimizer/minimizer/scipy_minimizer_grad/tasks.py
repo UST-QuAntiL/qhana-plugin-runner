@@ -53,8 +53,10 @@ def loss_(calc_loss_endpoint_url: str):
         A function that calculates the loss.
     """
 
-    def loss(x0):
-        request_data = CalcLossOrGradInputSchema().dump(CalcLossOrGradInput(x0=x0))
+    def loss(x0, X, y, hyperparameters):
+        request_data = CalcLossOrGradInputSchema().dump(
+            CalcLossOrGradInput(x0=x0, x=X, y=y, hyperparameters=hyperparameters)
+        )
 
         response = requests.post(calc_loss_endpoint_url, json=request_data)
         response_data: LossResponseData = LossResponseSchema().load(response.json())
@@ -75,8 +77,10 @@ def jac_(calc_gradient_endpoint_url: str):
         A function that calculates the gradient.
     """
 
-    def jac(x0):
-        request_data = CalcLossOrGradInputSchema().dump(CalcLossOrGradInput(x0=x0))
+    def jac(x0, X, y, hyperparameters):
+        request_data = CalcLossOrGradInputSchema().dump(
+            CalcLossOrGradInput(x0=x0, x=X, y=y, hyperparameters=hyperparameters)
+        )
 
         response = requests.post(calc_gradient_endpoint_url, json=request_data)
         response_data: GradientResponseData = GradientResponseSchema().load(
@@ -99,8 +103,10 @@ def loss_and_jac_(calc_loss_and_gradient_endpoint_url: str):
         A function that calculates the loss and gradient.
     """
 
-    def loss_and_jac(x0):
-        request_data = CalcLossOrGradInputSchema().dump(CalcLossOrGradInput(x0=x0))
+    def loss_and_jac(x0, X, y, hyperparameters):
+        request_data = CalcLossOrGradInputSchema().dump(
+            CalcLossOrGradInput(x0=x0, x=X, y=y, hyperparameters=hyperparameters)
+        )
 
         response = requests.post(calc_loss_and_gradient_endpoint_url, json=request_data)
         response_data: LossAndGradientResponseData = LossAndGradientResponseSchema().load(
@@ -134,8 +140,13 @@ def minimize_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     method: str = task_data.data.get("method")
+
+    # create a field so that we can easier access the data
     input_data = {
         "x0": task_data.data.get("x0"),
+        "x": task_data.data.get("x"),
+        "y": task_data.data.get("y"),
+        "hyperparameters": task_data.data.get("hyperparameters"),
         "calcLossEndpointUrl": task_data.data.get("calc_loss_endpoint_url"),
         "calcGradientEndpointUrl": task_data.data.get("calc_gradient_endpoint_url"),
         "calcLossAndGradientEndpointUrl": task_data.data.get(
@@ -143,14 +154,26 @@ def minimize_task(self, db_id: int) -> str:
         ),
     }
     minimizer_input_data: MinimizerInputData = MinimizerInputSchema().load(input_data)
+
     loss_fun = loss_(minimizer_input_data.calc_loss_endpoint_url)
 
-    minimize_params = {"fun": loss_fun, "x0": minimizer_input_data.x0, "method": method}
+    minimize_params = {
+        "fun": loss_fun,
+        "x0": minimizer_input_data.x0,
+        "method": method,
+        "args": (
+            minimizer_input_data.x,
+            minimizer_input_data.y,
+            minimizer_input_data.hyperparameters,
+        ),
+    }
 
+    # in case we have a gradient function, we need to set the jac parameter
     if minimizer_input_data.calc_gradient_endpoint_url:
         jac = jac_(minimizer_input_data.calc_gradient_endpoint_url)
         minimize_params["jac"] = jac
 
+    # in case we have a loss and gradient function, we need to set the jac parameter and use it as the fun function
     if minimizer_input_data.calc_loss_and_gradient_endpoint_url:
         loss_and_jac = loss_and_jac_(
             minimizer_input_data.calc_loss_and_gradient_endpoint_url
@@ -158,6 +181,7 @@ def minimize_task(self, db_id: int) -> str:
         minimize_params["jac"] = True
         minimize_params["fun"] = loss_and_jac
 
+    # now we can start the minimization
     result = scipy_minimize(**minimize_params)
 
     TASK_LOGGER.info(f"Optimization result: {result}")

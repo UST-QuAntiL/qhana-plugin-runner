@@ -158,12 +158,10 @@ def of_pass_data(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    of_task_id = task_data.data.get("of_task_id")
     url = task_data.data.get(InteractionEndpointType.of_pass_data.value)
     input_file_url = task_data.data.get("input_file_url")
     target_variable = task_data.data.get("target_variable")
-
-    url = url.replace("<int:task_id>", str(of_task_id))
+    hyperparameters = task_data.data.get("of_hyperparameters")
 
     X, y = get_features_and_target(input_file_url, target_variable)
 
@@ -171,6 +169,7 @@ def of_pass_data(self, db_id: int) -> str:
         ObjectiveFunctionPassData(
             x=X,
             y=y,
+            hyperparameters=hyperparameters,
         )
     )
 
