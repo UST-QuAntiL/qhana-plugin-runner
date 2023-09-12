@@ -225,8 +225,12 @@ class MinimizationEndpoint(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
+
+        # save the callback url to the database to be able to send the result later to the coordinator
         if input_data.callback_url:
             db_task.data["status_changed_callback_urls"] = [input_data.callback_url]
+
+        # save the of calc loss endoints to the database for the minimzation task
         db_task.data["calc_loss_endpoint_url"] = input_data.calc_loss_endpoint_url
         db_task.data[
             "calc_loss_and_gradient_endpoint_url"
@@ -235,14 +239,22 @@ class MinimizationEndpoint(MethodView):
             db_task.data[
                 "calc_gradient_endpoint_url"
             ] = input_data.calc_gradient_endpoint_url
-        schema = MinimizerInputSchema()
-        serialized_input_data = schema.dump(input_data)
+
+        # save the input data to the database
+        serialized_input_data = MinimizerInputSchema().dump(input_data)
         db_task.data["x0"] = serialized_input_data["x0"]
+        db_task.data["x"] = serialized_input_data["x"]
+        db_task.data["y"] = serialized_input_data["y"]
+        db_task.data["hyperparameters"] = serialized_input_data["hyperparameters"]
+
+        # save the task view url to the database to be able to send the result later to the coordinator
         db_task.data["task_view"] = url_for(
             "tasks-api.TaskView", task_id=db_task.id, _external=True
         )
 
         db_task.save(commit=True)
+
+        # create the minimize task
         task = minimize_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
 
         # save errors to db

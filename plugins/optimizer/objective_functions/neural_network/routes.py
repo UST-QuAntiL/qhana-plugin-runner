@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from typing import Mapping, Optional
+from typing import Mapping
 
 from celery.utils.log import get_task_logger
 from flask import Response, abort
@@ -45,7 +45,6 @@ from plugins.optimizer.shared.schemas import (
     ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataResponseSchema,
     ObjectiveFunctionPassDataSchema,
-    SingleNumpyArraySchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -55,7 +54,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -81,34 +79,30 @@ class PluginsView(MethodView):
                     InteractionEndpoint(
                         type=InteractionEndpointType.of_pass_data.value,
                         href=url_for(
-                            f"{NN_BLP.name}.{PluginsView.__name__}",
+                            f"{NN_BLP.name}.{PassDataEndpoint.__name__}",
                             _external=True,
-                        )
-                        + "<int:task_id>/pass-data/",
+                        ),
                     ),
                     InteractionEndpoint(
                         type=InteractionEndpointType.calc_loss.value,
                         href=url_for(
-                            f"{NN_BLP.name}.{PluginsView.__name__}",
+                            f"{NN_BLP.name}.{CalcLossEndpoint.__name__}",
                             _external=True,
-                        )
-                        + "<int:task_id>/calc-callback-endpoint/",
+                        ),
                     ),
                     InteractionEndpoint(
                         type=InteractionEndpointType.calc_grad.value,
                         href=url_for(
-                            f"{NN_BLP.name}.{PluginsView.__name__}",
+                            f"{NN_BLP.name}.{CalcGradientEndpoint.__name__}",
                             _external=True,
-                        )
-                        + "<int:task_id>/calc-gradient-endpoint/",
+                        ),
                     ),
                     InteractionEndpoint(
-                        type=InteractionEndpointType.calc_grad.value,
+                        type=InteractionEndpointType.calc_loss_and_grad.value,
                         href=url_for(
-                            f"{NN_BLP.name}.{PluginsView.__name__}",
+                            f"{NN_BLP.name}.{CalcLossAndGradEndpoint.__name__}",
                             _external=True,
-                        )
-                        + "<int:task_id>/calc-loss-and-grad/",
+                        ),
                     ),
                 ],
                 href=url_for(f"{NN_BLP.name}.{OptimizerCallbackProcess.__name__}"),
@@ -128,7 +122,7 @@ class PluginsView(MethodView):
         )
 
 
-@NN_BLP.route("/ui-hyperparameter/")
+@NN_BLP.route("/ui/")
 class HyperparameterSelectionMicroFrontend(MethodView):
     """Micro frontend for the hyperparameter selection."""
 
@@ -212,7 +206,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         )
 
 
-@NN_BLP.route("/optimizer-callback/")
+@NN_BLP.route("/process/")
 class OptimizerCallbackProcess(MethodView):
     """Make a callback to the optimizer plugin after selection the hyperparameter."""
 
@@ -222,20 +216,17 @@ class OptimizerCallbackProcess(MethodView):
     @NN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
-        # create new db_task
-        db_task = ProcessingTask(
-            task_name="neural-network",
-        )
-        db_task.data["number_of_neurons"] = arguments.number_of_neurons
-        db_task.save(commit=True)
+        hyperparameters = {
+            "number_of_neurons": arguments.number_of_neurons,
+        }
         callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
-            ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
+            ObjectiveFunctionInvokationCallbackData(hyperparameters=hyperparameters)
         )
 
         make_callback(callback.callback_url, callback_data)
 
 
-@NN_BLP.route("/<int:db_id>/pass-data/")
+@NN_BLP.route("/pass-data/")
 class PassDataEndpoint(MethodView):
     """Endpoint to add additional data to the db task."""
 
@@ -246,32 +237,22 @@ class PassDataEndpoint(MethodView):
     )
     @NN_BLP.response(HTTPStatus.OK, ObjectiveFunctionPassDataResponseSchema())
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: ObjectiveFunctionPassData, db_id: int) -> dict:
+    def post(self, input_data: ObjectiveFunctionPassData) -> dict:
         """Endpoint to add additional info to the db task."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
 
-        serialized_data = ObjectiveFunctionPassDataSchema().dump(input_data)
-
-        db_task.data["x"] = serialized_data["x"]
-        db_task.data["y"] = serialized_data["y"]
-        number_of_neurons: int = db_task.data["number_of_neurons"]
+        number_of_neurons = input_data.hyperparameters["number_of_neurons"]
         number_weights = (
             input_data.x.shape[1] * number_of_neurons
             + number_of_neurons * 1
             + number_of_neurons
             + 1
         )
-        db_task.save(commit=True)
 
         return {"number_weights": number_weights}
 
 
-@NN_BLP.route("/<int:db_id>/calc-callback-endpoint/")
-class CalcCallbackEndpoint(MethodView):
+@NN_BLP.route("/calc-loss/")
+class CalcLossEndpoint(MethodView):
     """Endpoint for the calculation callback."""
 
     @NN_BLP.response(HTTPStatus.OK, LossResponseSchema())
@@ -279,24 +260,10 @@ class CalcCallbackEndpoint(MethodView):
         CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
+    def post(self, input_data: CalcLossOrGradInput) -> dict:
         """Endpoint for the calculation callback."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
 
-        if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
-        if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
-        number_of_neurons: int = db_task.data["number_of_neurons"]
-
+        number_of_neurons = input_data.hyperparameters["number_of_neurons"]
         nn = NN(input_data.x.shape[1], number_of_neurons)
 
         nn.set_weights(input_data.x0)
@@ -308,7 +275,7 @@ class CalcCallbackEndpoint(MethodView):
         return {"loss": loss}
 
 
-@NN_BLP.route("/<int:db_id>/calc-gradient-endpoint/")
+@NN_BLP.route("/calc-grad/")
 class CalcGradientEndpoint(MethodView):
     """Endpoint for the gradient calculation."""
 
@@ -317,24 +284,9 @@ class CalcGradientEndpoint(MethodView):
         CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
+    def post(self, input_data: CalcLossOrGradInput) -> dict:
         """Endpoint for the calculation callback."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
-        if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
-
-        number_of_neurons: int = db_task.data["number_of_neurons"]
+        number_of_neurons = input_data.hyperparameters["number_of_neurons"]
 
         nn = NN(input_data.x.shape[1], number_of_neurons)
 
@@ -347,8 +299,8 @@ class CalcGradientEndpoint(MethodView):
         return {"gradient": gradient}
 
 
-@NN_BLP.route("/<int:db_id>/calc-loss-and-grad/")
-class CalcLossandGradEndpoint(MethodView):
+@NN_BLP.route("/calc-loss-and-grad/")
+class CalcLossAndGradEndpoint(MethodView):
     """Endpoint for the gradient calculation."""
 
     @NN_BLP.response(HTTPStatus.OK, LossAndGradientResponseSchema())
@@ -356,24 +308,9 @@ class CalcLossandGradEndpoint(MethodView):
         CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
+    def post(self, input_data: CalcLossOrGradInput) -> dict:
         """Endpoint for the calculation callback."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
-        if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
-
-        number_of_neurons: int = db_task.data["number_of_neurons"]
+        number_of_neurons = input_data.hyperparameters["number_of_neurons"]
 
         nn = NN(input_data.x.shape[1], number_of_neurons)
 

@@ -76,14 +76,16 @@ class TaskStatusChangedSchema(MaBaseSchema):
 @dataclass
 class CalcLossOrGradInput:
     x0: np.ndarray
-    x: Optional[np.ndarray] = None
-    y: Optional[np.ndarray] = None
+    x: np.ndarray
+    y: np.ndarray
+    hyperparameters: dict
 
 
 class CalcLossOrGradInputSchema(MaBaseSchema):
-    x: NumpyArray = NumpyArray(required=False, allow_none=True)
-    y: NumpyArray = NumpyArray(required=False, allow_none=True)
+    x: NumpyArray = NumpyArray(required=True, allow_none=False)
+    y: NumpyArray = NumpyArray(required=True, allow_none=False)
     x0: NumpyArray = NumpyArray(required=True, allow_none=False)
+    hyperparameters: dict = ma.fields.Dict(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
@@ -105,11 +107,11 @@ class ObjectiveFunctionCallbackSchema(MaBaseSchema):
 
 @dataclass
 class ObjectiveFunctionInvokationCallbackData:
-    task_id: int
+    hyperparameters: dict
 
 
 class ObjectiveFunctionInvokationCallbackSchema(MaBaseSchema):
-    task_id = ma.fields.Integer(required=True, allow_none=False)
+    hyperparameters = ma.fields.Dict(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
@@ -132,6 +134,9 @@ class MinimizerCallbackSchema(MaBaseSchema):
 @dataclass
 class MinimizerInputData:
     x0: np.ndarray
+    x: np.ndarray
+    y: np.ndarray
+    hyperparameters: dict
     calc_loss_endpoint_url: str
     calc_gradient_endpoint_url: Optional[str] = None
     calc_loss_and_gradient_endpoint_url: Optional[str] = None
@@ -140,6 +145,9 @@ class MinimizerInputData:
 
 class MinimizerInputSchema(MaBaseSchema):
     x0 = NumpyArray(required=True, allow_none=False)
+    x = NumpyArray(required=True, allow_none=False)
+    y = NumpyArray(required=True, allow_none=False)
+    hyperparameters = ma.fields.Dict(required=True, allow_none=False)
     calc_loss_endpoint_url = ma.fields.Url(required=True, allow_none=False)
     calc_gradient_endpoint_url = ma.fields.Url(required=False, allow_none=True)
     calc_loss_and_gradient_endpoint_url = ma.fields.Url(required=False, allow_none=True)
@@ -167,11 +175,13 @@ class MinimizerResultSchema(MaBaseSchema):
 class ObjectiveFunctionPassData:
     x: np.ndarray
     y: np.ndarray
+    hyperparameters: dict
 
 
 class ObjectiveFunctionPassDataSchema(MaBaseSchema):
     x = NumpyArray(required=True, allow_none=False)
     y = NumpyArray(required=True, allow_none=False)
+    hyperparameters = ma.fields.Dict(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):

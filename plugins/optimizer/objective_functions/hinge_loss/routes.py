@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from typing import Mapping, Optional
+from typing import Mapping
 
 from celery.utils.log import get_task_logger
 from flask import Response, abort, render_template, request, url_for
@@ -32,7 +32,6 @@ from plugins.optimizer.shared.schemas import (
     ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataResponseSchema,
     ObjectiveFunctionPassDataSchema,
-    SingleNumpyArraySchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -42,13 +41,9 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from . import HINGELOSS_BLP, HingeLoss
-from .schemas import (
-    HyperparamterInputData,
-    HyperparamterInputSchema,
-)
+from .schemas import HyperparamterInputData, HyperparamterInputSchema
 from .tasks import hinge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -74,18 +69,16 @@ class PluginsView(MethodView):
                     InteractionEndpoint(
                         type=InteractionEndpointType.of_pass_data.value,
                         href=url_for(
-                            f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
+                            f"{HINGELOSS_BLP.name}.{PassDataEndpoint.__name__}",
                             _external=True,
-                        )
-                        + "<int:task_id>/pass-data/",
+                        ),
                     ),
                     InteractionEndpoint(
                         type=InteractionEndpointType.calc_loss.value,
                         href=url_for(
-                            f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
+                            f"{HINGELOSS_BLP.name}.{CalcCallbackEndpoint.__name__}",
                             _external=True,
-                        )
-                        + "<int:task_id>/calc-callback-endpoint/",
+                        ),
                     ),
                 ],
                 href=url_for(f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
@@ -105,7 +98,7 @@ class PluginsView(MethodView):
         )
 
 
-@HINGELOSS_BLP.route("/ui-hyperparameter/")
+@HINGELOSS_BLP.route("/ui/")
 class HyperparameterSelectionMicroFrontend(MethodView):
     """Micro frontend for the hyperparameter selection."""
 
@@ -187,7 +180,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         )
 
 
-@HINGELOSS_BLP.route("/optimizer-callback/")
+@HINGELOSS_BLP.route("/process/")
 class OptimizerCallbackProcess(MethodView):
     """Save the hyperparameters to the database and make a callback to the optimizer."""
 
@@ -199,21 +192,18 @@ class OptimizerCallbackProcess(MethodView):
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
-        # create new db_task
-        db_task = ProcessingTask(
-            task_name="hinge-loss",
-        )
-        db_task.data["c"] = arguments.c
-        db_task.save(commit=True)
 
+        hyperparameters = {
+            "c": arguments.c,
+        }
         callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
-            ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
+            ObjectiveFunctionInvokationCallbackData(hyperparameters=hyperparameters)
         )
 
         make_callback(callback.callback_url, callback_data)
 
 
-@HINGELOSS_BLP.route("/<int:db_id>/pass-data/")
+@HINGELOSS_BLP.route("/pass-data/")
 class PassDataEndpoint(MethodView):
     """Endpoint to add additional data to the db task."""
 
@@ -224,25 +214,13 @@ class PassDataEndpoint(MethodView):
     )
     @HINGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionPassDataResponseSchema())
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: ObjectiveFunctionPassData, db_id: int) -> dict:
+    def post(self, input_data: ObjectiveFunctionPassData) -> dict:
         """Endpoint to add additional info to the db task."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        serialized_data = ObjectiveFunctionPassDataSchema().dump(input_data)
-
-        db_task.data["x"] = serialized_data["x"]
-        db_task.data["y"] = serialized_data["y"]
-
-        db_task.save(commit=True)
 
         return {"number_weights": input_data.x.shape[1]}
 
 
-@HINGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
+@HINGELOSS_BLP.route("/calc-loss/")
 class CalcCallbackEndpoint(MethodView):
     """Endpoint for the calculation callback."""
 
@@ -251,28 +229,13 @@ class CalcCallbackEndpoint(MethodView):
         CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
     )
     @HINGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
+    def post(self, input_data: CalcLossOrGradInput) -> dict:
         """Endpoint for the calculation callback."""
-
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-
-        if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
-        if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
 
         loss = hinge_loss(
             X=input_data.x,
             y=input_data.y,
             w=input_data.x0,
-            C=db_task.data["c"],
+            C=input_data.hyperparameters["c"],
         )
         return {"loss": loss}
