@@ -25,3 +25,6 @@ class RESTConnector(QHAnaPluginBase):
             self._blueprint = REST_CONN_BLP
             return REST_CONN_BLP
         return self._blueprint
+
+    def get_requirements(self) -> str:
+        return "prance~=23.6\nopenapi-spec-validator"
