@@ -87,7 +87,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title=plugin.name,
             description=plugin.description,
-            name=plugin.identifier,
+            name=plugin.name,
             version=plugin.version,
             type=PluginType.visualization,
             entry_point=EntryPoint(

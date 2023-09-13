@@ -57,7 +57,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Principle Component Analysis (PCA)",
             description=PCA.instance.description,
-            name=PCA.instance.identifier,
+            name=PCA.instance.name,
             version=PCA.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
