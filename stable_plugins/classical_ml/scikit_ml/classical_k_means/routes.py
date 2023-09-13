@@ -52,7 +52,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Classical k Means",
             description=ClassicalKMeans.instance.description,
-            name=ClassicalKMeans.instance.identifier,
+            name=ClassicalKMeans.instance.name,
             version=ClassicalKMeans.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(

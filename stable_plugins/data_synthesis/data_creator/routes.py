@@ -54,7 +54,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Data Creation",
             description=DataCreator.instance.description,
-            name=DataCreator.instance.identifier,
+            name=DataCreator.instance.name,
             version=DataCreator.instance.version,
             type=PluginType.dataloader,
             entry_point=EntryPoint(
