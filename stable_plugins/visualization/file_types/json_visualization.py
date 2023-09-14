@@ -169,7 +169,7 @@ class MicroFrontend(MethodView):
 
 
 @JSON_BLP.route("/process/")
-class ProcessView(MethodView):
+class ProcessView(MethodView):  # FIXME decide on a somewhat useful implementation for this (or remove completely!)
     """Start a long running processing task."""
 
     @JSON_BLP.arguments(JsonInputParametersSchema(unknown=EXCLUDE), location="form")
