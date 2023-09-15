@@ -25,8 +25,9 @@ from celery.utils.log import get_task_logger
 from . import QiskitExecutor
 
 from .schemas import (
-    InputParameters,
-    InputParametersSchema,
+    CircuitSelectionInputParameters,
+    CircuitSelectionParameterSchema,
+    get_get_backend_selection_parameter_schema,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -53,15 +54,15 @@ def prepare_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+    input_params: CircuitSelectionInputParameters = (
+        CircuitSelectionParameterSchema().loads(task_data.parameters)
+    )
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     circuit_url = input_params.circuit
     execution_options_url = input_params.executionOptions
     shots = input_params.shots
-    backend_qiskit = input_params.backend
     ibmq_token = input_params.ibmqToken
-    custom_backend = input_params.customBackend
 
     # Save input data in internal data structure for further processing
     task_data.data = dumps(
@@ -69,15 +70,13 @@ def prepare_task(self, db_id: int) -> str:
             "circuit": circuit_url,
             "executionOptions": execution_options_url,
             "shots": shots,
-            "backend": backend_qiskit.value,
             "ibmqToken": ibmq_token,
-            "customBackend": custom_backend,
         }
     )
 
     task_data.save(commit=True)
 
-    return f"Saved input data in internal data structure for further processing: {repr(task_data.data)}"
+    return f"Saved input data in internal data structure for further processing: {str(input_params)}"
 
 
 def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any]):
@@ -141,22 +140,23 @@ def execution_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    input_params: dict
-    if isinstance(db_task.data, str):
-        input_params = loads(db_task.data)
-    else:
-        input_params = db_task.data
-    backend_selection_params = loads(db_task.parameters)
-    input_params.update(backend_selection_params)
-    input_params: InputParameters = InputParametersSchema().load(input_params)
-    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
+    circuit_params: CircuitSelectionInputParameters = (
+        CircuitSelectionParameterSchema().loads(db_task.data)
+    )
+    circuit_url = circuit_params.circuit
+    execution_options_url = circuit_params.executionOptions
+    shots = circuit_params.shots
+    ibmq_token = circuit_params.ibmqToken
 
-    circuit_url = input_params.circuit
-    execution_options_url = input_params.executionOptions
-    shots = input_params.shots
-    backend_qiskit = input_params.backend
-    ibmq_token = input_params.ibmqToken
-    custom_backend = input_params.customBackend
+    backend_parameter_schema = get_get_backend_selection_parameter_schema(ibmq_token)()
+    backend_params = backend_parameter_schema.loads(db_task.parameters)
+
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: {str(circuit_params)}, {backend_params}"
+    )
+
+    backend_qiskit = backend_params.backend
+    custom_backend = backend_params.customBackend
 
     circuit_qasm: str
     with open_url(circuit_url) as quasm_response:
