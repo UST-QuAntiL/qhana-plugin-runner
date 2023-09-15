@@ -38,6 +38,26 @@ from qhana_plugin_runner.storage import STORE
 
 from . import ScipyMinimizerGrad
 
+from time import perf_counter
+import logging
+
+# Create or get a logger
+BENCHMARK_LOGGER = logging.getLogger("benchmark")
+
+# Set log level
+BENCHMARK_LOGGER.setLevel(logging.INFO)
+
+# Create a file handler and set the level to log info
+file_handler = logging.FileHandler("benchmark_min_50.log")
+file_handler.setLevel(logging.INFO)
+
+# Create a formatter
+formatter = logging.Formatter("%(asctime)s - %(message)s")
+file_handler.setFormatter(formatter)
+
+# Add the handler to the logger
+BENCHMARK_LOGGER.addHandler(file_handler)
+
 TASK_LOGGER = get_task_logger(__name__)
 
 
@@ -54,12 +74,16 @@ def loss_(calc_loss_endpoint_url: str):
     """
 
     def loss(x0, X, y, hyperparameters):
+        bench_start_ofcalctotal = perf_counter()
         request_data = CalcLossOrGradInputSchema().dump(
             CalcLossOrGradInput(x0=x0, x=X, y=y, hyperparameters=hyperparameters)
         )
 
         response = requests.post(calc_loss_endpoint_url, json=request_data)
         response_data: LossResponseData = LossResponseSchema().load(response.json())
+        bench_stop_ofcalctotal = perf_counter()
+        bench_diff_ofcalctotal = bench_stop_ofcalctotal - bench_start_ofcalctotal
+        BENCHMARK_LOGGER.info(f"bench_diff_ofcalctotal: {bench_diff_ofcalctotal}")
         return response_data.loss
 
     return loss
@@ -131,6 +155,8 @@ def minimize_task(self, db_id: int) -> str:
     Raises:
         A KeyError if task data with the specified id cannot be loaded to read parameters.
     """
+    bench_start_mincalc = perf_counter()
+
     TASK_LOGGER.info(f"Starting the optimization task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -189,6 +215,8 @@ def minimize_task(self, db_id: int) -> str:
     csv_attributes = [f"x_{i}" for i in range(len(result.x))]
 
     entities = [dict(zip(csv_attributes, result.x.tolist()))]
+    bench_end_mincalc = perf_counter()
+    bench_start_minsavedata = perf_counter()
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entities, output, "text/csv", attributes=csv_attributes)
@@ -199,4 +227,10 @@ def minimize_task(self, db_id: int) -> str:
             "entity/vector",
             "text/csv",
         )
+    bench_end_minsavedata = perf_counter()
+    bench_diff_minsavedata = bench_end_minsavedata - bench_start_minsavedata
+    bench_diff_mincalc = bench_end_mincalc - bench_start_mincalc
+    BENCHMARK_LOGGER.info(f"bench_diff_mincalc: {bench_diff_mincalc}")
+    BENCHMARK_LOGGER.info(f"bench_diff_minsavedata: {bench_diff_minsavedata}")
+    BENCHMARK_LOGGER.info(f"nfev: {result.nfev}")
     return "Success"

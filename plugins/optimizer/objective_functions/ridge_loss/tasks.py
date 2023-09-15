@@ -14,6 +14,8 @@
 
 import numpy as np
 from celery.utils.log import get_task_logger
+from time import perf_counter
+from plugins.optimizer.interaction_utils.__init__ import BENCHMARK_LOGGER
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -31,7 +33,12 @@ def ridge_loss(w: np.ndarray, X: np.ndarray, y: np.ndarray, alpha: float) -> flo
     Returns:
         The calculated ridge loss.
     """
+    bench_start_ofcalc = perf_counter()
     y_pred = np.dot(X, w)
     mse = np.mean((y - y_pred) ** 2)
     ridge_penalty = alpha * np.sum(w**2)
-    return mse + ridge_penalty
+    res = mse + ridge_penalty
+    bench_stop_ofcalc = perf_counter()
+    bench_diff_ofcalc = bench_stop_ofcalc - bench_start_ofcalc
+    BENCHMARK_LOGGER.info(f"bench_diff_ofcalc: {bench_diff_ofcalc}")
+    return res

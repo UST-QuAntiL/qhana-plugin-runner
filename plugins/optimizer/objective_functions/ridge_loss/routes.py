@@ -237,11 +237,11 @@ class CalcCallbackEndpoint(MethodView):
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, input_data: CalcLossOrGradInput) -> dict:
         """Endpoint for the calculation callback."""
-
         loss = ridge_loss(
             X=input_data.x,
             y=input_data.y,
             w=input_data.x0,
             alpha=input_data.hyperparameters["alpha"],
         )
+
         return {"loss": loss}
