@@ -512,7 +512,7 @@
         }
       },
       "autofillResponse": {
-        "summary": "The response to a previously received autofillRequest message from the plugin. This message may also be sent without a request from the plugin (e.g., if the user triggers an autofill in the application).\nThe value contains the encoded autofill data. The encoding attribute contains the used encodeing, i.e., mimetype, used to encode the value.",
+        "summary": "The response to a previously received autofillRequest message from the plugin. This message may also be sent without a request from the plugin (e.g. if the user triggers an autofill in the application).\nThe value contains the encoded autofill data. The encoding attribute contains the used encoding, i.e., mime-type, used to encode the value.",
         "payload": {
           "type": "object",
           "properties": {
