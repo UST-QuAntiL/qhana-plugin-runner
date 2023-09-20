@@ -81,19 +81,32 @@
     <a href="{{back}}">back</a>
     </div>
 
+
+    {%- if connector['isLoading'] -%}
+    <details class="step" open>
+        <summary class="step-head" data-stepnr="⏳">Performing Background Work</summary>
+
+        <form action="{{process}}" method="post" class="qhana-form" data-step="manage-plugin" enctype="application/json">
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="cancel">cancel background task</button>
+            </div>
+        </form>
+    </details>
+    {%- endif -%}
+
     <details class="step {{'done' if 'base-url' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "base-url" or not connector["baseUrl"] else ""}}>
         <summary class="step-head" data-stepnr="1">API Base URL</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="base-url" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="base-url" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">REST API URL</label>
                 <div class="qhana-input-wrapper">
-                    <input class="qhana-form-input" type="url" name="value" id="base_url" autocomplete="off" value="{{connector['baseUrl']}}">
+                    <input class="qhana-form-input" type="url" name="value" id="base_url" autocomplete="off" value="{{connector['baseUrl']}}" {{'disabled' if connector['isLoading']}}>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set API base URL</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set API base URL</button>
             </div>
         </form>
     </details>
@@ -101,16 +114,16 @@
     <details class="step {{'done' if 'openapi-spec' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "openapi-spec" else ""}}>
         <summary class="step-head" data-stepnr="2">OpenAPI Spec URL</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="openapi-spec" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="openapi-spec" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">OpenAPI spec URL</label>
                 <div class="qhana-input-wrapper">
-                    <input class="qhana-form-input" type="text" name="value" id="openapi_spec_url" autocomplete="off" value="{{connector['openapiSpecUrl']}}">
+                    <input class="qhana-form-input" type="text" name="value" id="openapi_spec_url" autocomplete="off" value="{{connector['openapiSpecUrl']}}" {{'disabled' if connector['isLoading']}}>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set OpenAPI spec URL</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set OpenAPI spec URL</button>
             </div>
         </form>
     </details>
@@ -118,16 +131,21 @@
     <details class="step {{'done' if 'endpoint-url' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-url" else ""}}>
         <summary class="step-head" data-stepnr="3">Endpoint URL</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-url" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-url" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Endpoint URL</label>
                 <div class="qhana-input-wrapper">
-                    <input class="qhana-form-input" type="text" name="value" id="endpoint_url" autocomplete="off" value="{{connector['endpointUrl']}}">
+                    <input class="qhana-form-input" type="text" name="value" id="endpoint_url" list="endpoint_url_list" autocomplete="off" value="{{connector['endpointUrl']}}" {{'disabled' if connector['isLoading']}}>
+                    <datalist id="endpoint_url_list">
+                        {%- for path in autocomplete_paths -%}
+                        <option value="{{path}}"></option>
+                        {%- endfor -%}
+                    </datalist>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint URL</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint URL</button>
             </div>
         </form>
     </details>
@@ -137,11 +155,11 @@
     <details class="step {{'done' if 'endpoint-method' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-method" else ""}}>
         <summary class="step-head" data-stepnr="4">Endpoint method</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-method" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-method" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="endpoint_method">Endpoint URL</label>
                 <div class="qhana-input-wrapper">
-                    <select class="qhana-form-input" name="value" id="endpoint_method">
+                    <select class="qhana-form-input" name="value" id="endpoint_method" {{'disabled' if connector['isLoading']}}>
                         {% for method in http_methods %}
                             <option value="{{ method }}" {% if connector['endpointMethod'] == method %} selected {% endif %}>{{ method }}</option>
                         {% endfor %}
@@ -150,7 +168,7 @@
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint method</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint method</button>
             </div>
         </form>
     </details>
@@ -158,16 +176,16 @@
     <details class="step {{'done' if 'endpoint-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-variables" else ""}}>
         <summary class="step-head" data-stepnr="5">Endpoint Variables</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-variables" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-variables" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Endpoint Variables</label>
                 <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off">{{connector['endpointVariables'] | tojson(indent="    ")}}</textarea>
+                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['endpointVariables'] | tojson(indent="    ")}}</textarea>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint variables</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint variables</button>
             </div>
         </form>
     </details>
@@ -175,16 +193,16 @@
     <details class="step {{'done' if 'endpoint-query-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-query-variables" else ""}}>
         <summary class="step-head" data-stepnr="6">Endpoint Query Variables</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-query-variables" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-query-variables" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Endpoint Query Variables</label>
                 <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off">{{connector['endpointQueryVariables'] | tojson(indent="    ")}}</textarea>
+                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['endpointQueryVariables'] | tojson(indent="    ")}}</textarea>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint query variables</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint query variables</button>
             </div>
         </form>
     </details>
@@ -192,16 +210,16 @@
     <details class="step {{'done' if 'variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "variables" else ""}}>
         <summary class="step-head" data-stepnr="7">Variables</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="variables" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="variables" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Variables</label>
                 <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="variables" autocomplete="off">{{connector['variables'] | tojson(indent="    ")}}</textarea>
+                    <textarea class="qhana-form-input" name="value" id="variables" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['variables'] | tojson(indent="    ")}}</textarea>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set variables</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set variables</button>
             </div>
         </form>
     </details>
@@ -209,16 +227,16 @@
     <details class="step {{'done' if 'request-headers' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-headers" else ""}}>
         <summary class="step-head" data-stepnr="8">Request Headers</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="request-headers" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="request-headers" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Request headers</label>
                 <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="request_headers" autocomplete="off">{{connector['requestHeaders']}}</textarea>
+                    <textarea class="qhana-form-input" name="value" id="request_headers" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['requestHeaders']}}</textarea>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set request headers</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set request headers</button>
             </div>
         </form>
     </details>
@@ -226,16 +244,16 @@
     <details class="step {{'done' if 'request-body' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-body" else ""}}>
         <summary class="step-head" data-stepnr="9">Request Body</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="request-body" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="request-body" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Request body</label>
                 <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="request_body" autocomplete="off">{{connector['requestBody']}}</textarea>
+                    <textarea class="qhana-form-input" name="value" id="request_body" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['requestBody']}}</textarea>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set request body</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set request body</button>
             </div>
         </form>
     </details>
@@ -243,16 +261,16 @@
     <details class="step {{'done' if 'request-files' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-files" else ""}}>
         <summary class="step-head" data-stepnr="10">Request Files</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="request-files" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="request-files" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Request files</label>
                 <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="request_files" autocomplete="off">{{connector['requestFiles'] | tojson(indent="    ")}}</textarea>
+                    <textarea class="qhana-form-input" name="value" id="request_files" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['requestFiles'] | tojson(indent="    ")}}</textarea>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set request files</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set request files</button>
             </div>
         </form>
     </details>
@@ -260,11 +278,11 @@
     <details class="step {{'done' if 'response-handling' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "response-handling" else ""}}>
         <summary class="step-head" data-stepnr="11">Response Handling</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="response-handling" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="response-handling" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Response handling strategy</label>
                 <div class="qhana-input-wrapper">
-                    <input class="qhana-form-input" type="text" name="value" id="response_handling" autocomplete="off" list="response-handling-types" value="{{connector['responseHandling']}}">
+                    <input class="qhana-form-input" type="text" name="value" id="response_handling" autocomplete="off" list="response-handling-types" value="{{connector['responseHandling']}}" {{'disabled' if connector['isLoading']}}>
                     <datalist id="response-handling-types">
                         <option value="default"></option>
                     </datalist>
@@ -272,7 +290,7 @@
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set endpoint URL</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint URL</button>
             </div>
         </form>
     </details>
@@ -280,16 +298,16 @@
     <details class="step {{'done' if 'response-mapping' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "response-mapping" else ""}}>
         <summary class="step-head" data-stepnr="12">Response Mapping</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="response-mapping" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="response-mapping" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="value">Response mapping</label>
                 <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="response_mapping" autocomplete="off">{{connector['responseMapping'] | tojson(indent="    ")}}</textarea>
+                    <textarea class="qhana-form-input" name="value" id="response_mapping" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['responseMapping'] | tojson(indent="    ")}}</textarea>
                 </div>
             </div>
 
             <div class="qhana-form-buttons">
-                <button class="qhana-form-submit" type="submit" data-target="api" >set response mapping</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set response mapping</button>
             </div>
         </form>
     </details>
@@ -297,12 +315,12 @@
     <details class="step" {{"open" if connector["nextStep"] == "manage-plugin" or connector.get("isDeployed", False) else ""}}>
         <summary class="step-head" data-stepnr="⚐">Manage Plugin</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="manage-plugin" enctype="application/json">
+        <form action="{{process}}" method="post" class="qhana-form" data-step="manage-plugin" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-buttons">
                 {%- if connector.get("isDeployed", False) %}
-                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="undeploy">undeploy plugin</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="undeploy" {{'disabled' if connector['isLoading']}}>undeploy plugin</button>
                 {%- else %}
-                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="deploy">deploy plugin</button>
+                <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="deploy" {{'disabled' if connector['isLoading']}}>deploy plugin</button>
                 {%- endif %}
                 {%- if connector.get("isLoading", False) %}
                 <button class="qhana-form-submit" type="submit" data-target="api" name="command" value="cancel">cancel background task</button>
@@ -319,94 +337,118 @@
     {{ super() }}
 
     <script>
-    const NEXT_STEP = {
-        "base-url": "openapi-spec",
-        "openapi-spec": "endpoint-url",
-        "endpoint-url": "endpoint-method",
-        "endpoint-method": "endpoint-variables",
-        "endpoint-variables": "endpoint-query-variables",
-        "endpoint-query-variables": "variables",
-        "variables": "request-headers",
-        "request-headers": "request-body",
-        "request-body": "request-files",
-        "request-files": "response-handling",
-        "response-handling": "response-mapping",
-        "response-mapping": "manage-plugin",
-        "manage-plugin": "manage-plugin",
-    };
-
-    /**
-     * @param {SubmitEvent} event
-     */
-    function submitStepForm(event, dataInputs, privateInputs) {
-        event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-
-        let formKey = form.getAttribute("data-step");
-        const nextStep = NEXT_STEP[formKey];
-        const formValue = formData.get("value") ?? "";
-
-        if (formKey === "manage-plugin") {
-            formKey = event.submitter.getAttribute("value");
-            if (!formKey) {
-                return; // was not submitted by a button, ignore
-            }
-        }
-    
-        const submitData = {
-            key: formKey,
-            value: formValue,
+        const NEXT_STEP = {
+            "base-url": "openapi-spec",
+            "openapi-spec": "endpoint-url",
+            "endpoint-url": "endpoint-method",
+            "endpoint-method": "endpoint-variables",
+            "endpoint-variables": "endpoint-query-variables",
+            "endpoint-query-variables": "variables",
+            "variables": "request-headers",
+            "request-headers": "request-body",
+            "request-body": "request-files",
+            "request-files": "response-handling",
+            "response-handling": "response-mapping",
+            "response-mapping": "manage-plugin",
+            "manage-plugin": "manage-plugin",
         };
 
-        if (nextStep) {
-            submitData.nextStep = nextStep;
-        }
+        const isLoading = {{'true' if connector['isLoading'] else 'false'}};
 
-        sendMessage("ui-loading");
+        /**
+        * @param {SubmitEvent} event
+        */
+        function submitStepForm(event, dataInputs, privateInputs) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
 
-        fetch(form.getAttribute("action"), {
-            body: JSON.stringify(submitData),
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "accept": "application/json",
-            },
-        }).then(response => {
-            if (response.status === 200) {
-                // everything is good, reload UI to get new data
-                window.location.reload();
-                return;
+            let formKey = form.getAttribute("data-step");
+            const nextStep = NEXT_STEP[formKey];
+            const formValue = formData.get("value") ?? "";
+
+            if (formKey === "manage-plugin") {
+                formKey = event.submitter.getAttribute("value");
+                if (!formKey) {
+                    return; // was not submitted by a button, ignore
+                }
             }
-            response.json().then((jsonBody) => {
-                sendMessage({
-                    type: "form-error",
-                    status: response.status,
-                    error: jsonBody,
-                }, (error) => {
+        
+            const submitData = {
+                key: formKey,
+                value: formValue,
+            };
+
+            if (nextStep) {
+                submitData.nextStep = nextStep;
+            }
+
+            sendMessage("ui-loading");
+
+            fetch(form.getAttribute("action"), {
+                body: JSON.stringify(submitData),
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "accept": "application/json",
+                },
+            }).then(response => {
+                if (response.status === 200) {
+                    // everything is good, reload UI to get new data
+                    window.location.reload();
+                    return;
+                }
+                response.json().then((jsonBody) => {
                     sendMessage({
                         type: "form-error",
                         status: response.status,
-                        error: "unknown error",
+                        error: jsonBody,
+                    }, (error) => {
+                        sendMessage({
+                            type: "form-error",
+                            status: response.status,
+                            error: "unknown error",
+                        });
                     });
                 });
+            }, err => {
+                sendMessage({
+                    type: "form-error",
+                    status: 500,
+                    error: "unknown error",
+                });
             });
-        }, err => {
-            sendMessage({
-                type: "form-error",
-                status: 500,
-                error: "unknown error",
-            });
-        });
-    }
+        }
 
-    if (!window._qhana_microfrontend_state) {
-        window._qhana_microfrontend_state = {};
-        instrumentForm();
-    }
+        function testLoadingStatus() {
+            fetch("{{process}}", {
+                headers: {
+                    "Content-Type": "application/json",
+                    "accept": "application/json",
+                },
+            }).then(response => {
+                if (response.status === 200) {
+                    response.json().then((jsonBody) => {
+                        if (!jsonBody.isLoading) {
+                            // background task finished, reload UI to get new data
+                            window.location.reload();
+                        }
+                    });
+                    return;
+                }
+            });
+        }
+
+        if (!window._qhana_microfrontend_state) {
+            window._qhana_microfrontend_state = {};
+            instrumentForm();
+        }
         window._qhana_microfrontend_state.formSubmitHandler = (event, dataInputs, privateInputs) => {
             submitStepForm(event, dataInputs, privateInputs);
             return true;
+        }
+        if (isLoading) {
+            window.setInterval(testLoadingStatus, 2000);
         }
     </script>
 
