@@ -20,9 +20,8 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.requests import open_url
 
-from .database import get_wip_connectors
-from .openapi import get_endpoint_paths
-from .plugin import RESTConnector
+from ..openapi import get_endpoint_paths
+from ..plugin import RESTConnector
 
 TASK_LOGGER = get_task_logger(__name__)
 

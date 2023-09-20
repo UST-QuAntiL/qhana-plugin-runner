@@ -39,7 +39,7 @@ from ..database import (
     undeploy_connector,
 )
 from ..plugin import RESTConnector
-from ..tasks import prefill_values, unlock_connector
+from .prefill_tasks import prefill_values, unlock_connector
 
 
 @REST_CONN_BLP.route("/wip-connectors-ui/<string:connector_id>/")
