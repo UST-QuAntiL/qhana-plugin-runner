@@ -65,6 +65,34 @@ def get_endpoint_methods(spec: OpenapiSpec, path: str) -> Sequence[str]:
     return []
 
 
+def _get_endpoint_method_summary_2(
+    specification: dict, path: str, method: str
+) -> str | None:
+    return specification["paths"].get(path, {}).get(method, {}).get("summary", None)
+
+
+def _get_endpoint_method_summary_3(
+    specification: dict, path: str, method: str
+) -> str | None:
+    return specification["paths"].get(path, {}).get(method, {}).get("summary", None)
+
+
+def get_endpoint_method_summary(spec: OpenapiSpec, path: str, method: str) -> str | None:
+    parser = parse_spec(spec)
+
+    specification = parser.specification
+    assert isinstance(specification, dict), "type assertion"
+
+    match parser.version_parsed:
+        case (2, _) | (2, _, _):
+            return _get_endpoint_method_summary_2(specification, path, method)
+        case (3, 0 | 1) | (3, 0 | 1, _):
+            return _get_endpoint_method_summary_3(specification, path, method)
+        case version:
+            print(f"unsupported version {version}")  # FIXME throw error?
+    return None
+
+
 def _resolve_json_ref(specification: dict, ref: str) -> Optional[dict]:
     if not ref.startswith("#/"):
         return None  # TODO support outside refs?
@@ -277,5 +305,7 @@ if __name__ == "__main__":
     print(endpoints)
     methods = get_endpoint_methods(spec, "/pet")
     print(methods)
+    summary = get_endpoint_method_summary(spec, "/pet", "post")
+    print(summary)
     body = get_example_body(spec, "/pet", "put")
     print(body)
