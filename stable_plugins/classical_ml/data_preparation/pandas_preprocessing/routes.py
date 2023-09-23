@@ -140,12 +140,7 @@ class FirstMicroFrontend(MethodView):
                 errors=errors,
                 process=url_for(f"{PDPreprocessing_BLP.name}.FirstProcessView"),
             )
-        )
-g
-
-@PDPreprocessing_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
+        )g
 
 
 @PDPreprocessing_BLP.route("/process/")
