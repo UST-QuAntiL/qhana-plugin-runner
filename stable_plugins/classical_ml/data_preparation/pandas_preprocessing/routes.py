@@ -140,7 +140,7 @@ class FirstMicroFrontend(MethodView):
                 errors=errors,
                 process=url_for(f"{PDPreprocessing_BLP.name}.FirstProcessView"),
             )
-        )g
+        )
 
 
 @PDPreprocessing_BLP.route("/process/")
