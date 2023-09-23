@@ -190,10 +190,10 @@ class FirstProcessView(MethodView):
 
 @PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>/ui/")
 class SecondMicroFrontend(MethodView):
-    """Micro frontend for the db manager plugin."""
+    """Micro frontend for the pandas preprocessing plugin."""
 
     @PDPreprocessing_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+        HTTPStatus.OK, description="Micro frontend for the pandas preprocessing plugin."
     )
     @PDPreprocessing_BLP.arguments(
         SecondInputParametersSchema(
@@ -208,7 +208,7 @@ class SecondMicroFrontend(MethodView):
         return self.render(request.form, db_id, step_id, errors)
 
     @PDPreprocessing_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+        HTTPStatus.OK, description="Micro frontend for the pandas preprocessing plugin."
     )
     @PDPreprocessing_BLP.arguments(
         SecondInputParametersSchema(
