@@ -67,8 +67,8 @@ class PluginsView(MethodView):
             version=PDPreprocessing.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{PDPreprocessing_BLP.name}.SecondProcessView"),
-                ui_href=url_for(f"{PDPreprocessing_BLP.name}.SecondMicroFrontend"),
+                href=url_for(f"{PDPreprocessing_BLP.name}.FirstProcessView"),
+                ui_href=url_for(f"{PDPreprocessing_BLP.name}.FirstMicroFrontend"),
                 data_input=[],
                 data_output=[
                     DataMetadata(
@@ -141,7 +141,7 @@ class FirstMicroFrontend(MethodView):
                 process=url_for(f"{PDPreprocessing_BLP.name}.FirstProcessView"),
             )
         )
-
+g
 
 @PDPreprocessing_BLP.route("/ui/frontend_js/")
 def get_frontend_js():
