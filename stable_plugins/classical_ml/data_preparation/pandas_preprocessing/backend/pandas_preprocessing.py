@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from pandas._libs.lib import no_default
 from pandas import DataFrame
 from .utils import get_number_if_possible
@@ -195,6 +195,7 @@ def strip_characters(
     - position='end': A right strip will be used, to strip each entry.
     - position='both': Both left and right side of an entry will be striped.
     :param df: DataFrame
+    :param characters: Sequence[str] contains the characters that will be striped
     :param subset: str containing the columns separated by commas
     :param position: str
     :return: DataFrame
