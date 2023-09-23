@@ -63,7 +63,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Pandas Preprocessing",
             description=PDPreprocessing.instance.description,
-            name=PDPreprocessing.instance.identifier,
+            name=PDPreprocessing.instance.name,
             version=PDPreprocessing.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
