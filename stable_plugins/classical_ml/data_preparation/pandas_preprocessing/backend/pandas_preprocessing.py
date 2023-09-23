@@ -183,7 +183,7 @@ def sort_values(df: DataFrame, by: str, ascending: bool = False, **kwargs):
 
 def strip_characters(
     df: DataFrame,
-    characters: List[str] = "",
+    characters: Sequence[str] = "",
     subset: str = None,
     position: str = "both",
     **kwargs,
