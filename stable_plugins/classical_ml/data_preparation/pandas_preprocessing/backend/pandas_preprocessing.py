@@ -8,8 +8,8 @@ from json import loads as json_loads
 
 class PreprocessingEnum(Enum):
     do_nothing = "do nothing"
-    drop_na = "drop na"
-    fill_na = "fill na"
+    drop_na = "drop entries with missing values"
+    fill_na = "fill missing values"
     drop_duplicates = "drop duplicates"
     sort_values = "sort values"
     strip_entries = "strip entries"
