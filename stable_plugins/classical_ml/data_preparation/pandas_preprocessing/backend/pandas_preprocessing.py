@@ -213,7 +213,7 @@ def strip_characters(
 
     for k in subset:
         if k in df:
-            if {type(el) for el in df[k]} == {str}:
+            if all(isinstance(el, str) for el in df[k]):
                 df[k] = function(df[k].str, characters)
 
     return df
@@ -270,7 +270,7 @@ def replace(
 
     for k in subset:
         if k in df:
-            if {type(el) for el in df[k]} == {str}:
+            if all(isinstance(el, str) for el in df[k]):
                 df[k] = df[k].str.replace(substring, new_str)
 
     return df
@@ -302,7 +302,7 @@ def string_case(df: DataFrame, case: str, subset: str = "", **kwargs) -> DataFra
 
     for k in subset:
         if k in df:
-            if {type(el) for el in df[k]} == {str}:
+            if all(isinstance(el, str) for el in df[k]):
                 df[k] = function(df[k].str)
 
     return df
