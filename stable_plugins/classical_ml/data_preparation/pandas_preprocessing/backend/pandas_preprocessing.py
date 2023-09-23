@@ -89,17 +89,16 @@ def process_subset(subset: Optional[str]) -> Optional[List[str]]:
     :return: List[str]
     """
     result = None
-    if subset is not None:
-        if subset != "":
-            result = json_loads(subset)
-            if isinstance(result, list):
-                contents_type = {isinstance(el, str) for el in result}
-                if False not in contents_type:
-                    result = None if len(result) == 0 else result
-                else:
-                    result = None
+    if subset:
+        result = json_loads(subset)
+        if isinstance(result, list):
+            contents_type = {isinstance(el, str) for el in result}
+            if False not in contents_type:
+                result = None if len(result) == 0 else result
             else:
                 result = None
+        else:
+            result = None
     return result
 
 
@@ -201,7 +200,7 @@ def strip_characters(
     :return: DataFrame
     """
     subset = process_subset(subset)
-    if subset is None:
+    if not subset:
         subset = df.keys()
 
     function = None
@@ -266,7 +265,7 @@ def replace(
     :return: DataFrame
     """
     subset = process_subset(subset)
-    if subset is None:
+    if not subset:
         subset = df.keys()
 
     for k in subset:
@@ -290,7 +289,7 @@ def string_case(df: DataFrame, case: str, subset: str = "", **kwargs) -> DataFra
     :return: DataFrame
     """
     subset = process_subset(subset)
-    if subset is None:
+    if not subset:
         subset = df.keys()
 
     function = None
