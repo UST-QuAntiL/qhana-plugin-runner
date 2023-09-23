@@ -110,7 +110,7 @@ def drop_missing_value(
     **kwargs,
 ) -> DataFrame:
     """
-    First transforms subset from a string into a list of string and then continues with the dropna function of pandas'
+    First transforms subset from JSON encoded list into a list of strings and then continues with the dropna function of pandas'
     dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.dropna.html) and
     returns the new dataframe.
     :param df: DataFrame
