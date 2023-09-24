@@ -53,7 +53,7 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "File URL",
-            "description": "A url to the file.",
+            "description": "The file must be a csv file.",
             "input_type": "text",
         },
     )
@@ -94,15 +94,15 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Preprocessing Type",
-            "description": """Type of preprocessing the file will undergo.\n
-- do nothing: Does nothing to the file, in case the user accidentally clicked the button `add step`, instead of `done`.\n
-- drop na: Removes rows or columns with a certain amount of missing values.\n
-- fill na: Fills in empty entries with a given value.\n
-- drop duplicates: Removes duplicate rows. May only consider certain columns, to determine if two rows are duplicates.\n
-- sort values: Sorts rows by their values in a certain column.\n
-- strip entries: Strips entries in the specified columns by the given characters. The beginning, the end or both of an entry may be stripped.\n
-- split column: Splits a column into, given a substring to split entries by.\n
-- replace: Replaces all occurrences of a string in all entries with another string.\n
+            "description": """Type of preprocessing the file will undergo.
+- do nothing: Does nothing to the file, in case the user accidentally clicked the button `add step`, instead of `done`.
+- drop na: Removes rows or columns with a certain amount of missing values.
+- fill na: Fills in empty entries with a given value.
+- drop duplicates: Removes duplicate rows. May only consider certain columns, to determine if two rows are duplicates.
+- sort values: Sorts rows by their values in a certain column.
+- strip entries: Strips entries in the specified columns by the given characters. The beginning, the end or both of an entry may be stripped.
+- split column: Splits a column into, given a substring to split entries by.
+- replace: Replaces all occurrences of a string in all entries with another string.
 - string case: Transforms entries into upper, lower or title case.""",
             "input_type": "select",
         },
@@ -151,10 +151,10 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Keep",
-            "description": """Determines which duplicates (if any) to keep.\n
-            - first: Drop duplicates except for the first occurrence.\n
-            - last: Drop duplicates except for the last occurrence.\n
-            - none: Drop all duplicates.""",
+            "description": """Determines which duplicates (if any) to keep.
+- first: Drop duplicates except for the first occurrence.
+- last: Drop duplicates except for the last occurrence.
+- none: Drop all duplicates.""",
             "input_type": "select",
         },
     )
@@ -191,10 +191,10 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Position",
-            "description": """Determines where to strip an entry of the given characters.\n
-            - front: Strips the given characters from the beginning of the entry.\n
-            - end: Strips the given characters from the end of the entry.\n
-            - both: Strips the given characters from both the beginning and the end of the entry.""",
+            "description": """Determines where to strip an entry of the given characters.
+- front: Strips the given characters from the beginning of the entry.
+- end: Strips the given characters from the end of the entry.
+- both: Strips the given characters from both the beginning and the end of the entry.""",
             "input_type": "select",
         },
     )
@@ -258,10 +258,10 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Case",
-            "description": """Determines the case that will be applied to each entry. Possible cases are:\n
-            - upper: sTrIng becomes STRING\n
-            - lower: sTrIng becomes string\n
-            - title: sTrIng becomes String""",
+            "description": """Determines the case that will be applied to each entry. Possible cases are:
+- upper: sTrIng becomes STRING
+- lower: sTrIng becomes string
+- title: sTrIng becomes String""",
             "input_type": "select",
         },
     )
