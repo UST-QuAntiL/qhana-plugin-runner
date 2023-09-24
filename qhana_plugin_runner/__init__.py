@@ -29,6 +29,7 @@ from flask.app import Flask
 from flask.cli import FlaskGroup
 from flask.config import Config
 from flask.logging import default_handler
+from flask_caching import Cache
 from flask_cors import CORS
 from tomlkit.api import parse as parse_toml
 
@@ -68,6 +69,11 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         instance_relative_config=True,
         instance_path=environ.get(instance_folder_env_var, None),
     )
+
+    # Initialize and configure caching
+    cache = Cache()
+    app.config["CACHE_TYPE"] = "simple"
+    cache.init_app(app)
 
     # Start Loading config #################
 
