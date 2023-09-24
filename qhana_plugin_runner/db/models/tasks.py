@@ -15,6 +15,7 @@
 from datetime import datetime
 from typing import List, Optional, Sequence, Union
 
+from flask_caching import cache
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import sqltypes as sql
@@ -151,6 +152,9 @@ class ProcessingTask:
         except:
             pass
 
+        # Invalidate the cache for this specific id
+        cache.delete_memoized(self.__class__.get_by_id, self.id)
+
     def add_next_step(self, href: str, ui_href: str, step_id: str, commit: bool = False):
         """Adds new step for multi-step plugin.
 
@@ -185,6 +189,9 @@ class ProcessingTask:
         if commit:
             DB.session.commit()
 
+        # Invalidate the cache for this specific id_
+        cache.delete_memoized(self.__class__.get_by_id, self.id)
+
     def add_task_log_entry(self, task_log: str, commit: bool = False):
         """Appends ``task_log`` separated by a new line.
 
@@ -206,7 +213,11 @@ class ProcessingTask:
         if commit:
             DB.session.commit()
 
+        # Invalidate the cache for this specific id
+        cache.delete_memoized(self.__class__.get_by_id, self.id)
+
     @classmethod
+    @cache.memoize(timeout=300)  # Cache the result for 5 minutes
     def get_by_id(cls, id_: int) -> Optional["ProcessingTask"]:
         """Get the object instance by the object id from the database. (None if not found)"""
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
