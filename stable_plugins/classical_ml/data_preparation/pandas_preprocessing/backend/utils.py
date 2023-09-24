@@ -7,5 +7,5 @@ def get_number_if_possible(s: str):
         return temp
     except ValueError:
         pass
-        
+
     return s
