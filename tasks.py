@@ -247,7 +247,12 @@ def start_containers(c):
 
 @task
 def worker(
-    c, pool="solo", concurrency=1, dev=False, log_level="INFO", periodic_scheduler=False
+    c,
+    pool="threads",
+    concurrency=2,
+    dev=False,
+    log_level="INFO",
+    periodic_scheduler=False,
 ):
     """Run the celery worker, optionally starting the redis broker.
 
@@ -420,7 +425,7 @@ def start_gunicorn(c, workers=1, log_level="info", docker=False):
         log_level (str, optional): the log level to output in console. Defaults to "info".
         docker (bool, optional): set this to True if running inside of docker. Defaults to false.
     """
-    server_port: str = environ.get("SERVER_PORT", "8080")
+    server_port: str = environ.get("SERVER_PORT", "5005")
     assert match(
         r"[1-9][0-9]*", server_port
     ), f"The given server port '{server_port}' does not have the right format! (must be a valid port number)"
