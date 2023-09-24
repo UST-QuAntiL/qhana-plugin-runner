@@ -267,7 +267,7 @@ class SecondMicroFrontend(MethodView):
         )
 
 
-@PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>-process1/")
+@PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>/process/final/")
 class FinalProcessView(MethodView):
     """Start a long running processing task."""
 
@@ -302,7 +302,7 @@ class FinalProcessView(MethodView):
         )
 
 
-@PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>-process0/")
+@PDPreprocessing_BLP.route("/<int:db_id>/<int:step_id>/process/second/")
 class SecondProcessView(MethodView):
     """Start a long running processing task."""
 
