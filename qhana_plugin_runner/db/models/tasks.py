@@ -23,6 +23,7 @@ from sqlalchemy.sql.schema import ForeignKey
 
 from .mutable_json import JSON_LIKE, MutableJSON
 from ..db import DB, REGISTRY
+from ...cache_config import cache
 
 
 @REGISTRY.mapped_as_dataclass
