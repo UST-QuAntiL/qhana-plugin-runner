@@ -69,7 +69,7 @@ def first_task(self, db_id: int) -> str:
             db_id,
             output,
             "file.csv",
-            "entity",   # TODO keep original data type
+            "entity",  # TODO keep original data type
             "text/csv",
         )
         task_data.data["file_url"] = task_file.file_storage_data
@@ -127,7 +127,7 @@ def second_task(self, db_id: int, step_id: int) -> str:
                 db_id,
                 output,
                 f"preprocessed_file{file_id}.csv",
-                "entity",   # TODO keep original data type
+                "entity",  # TODO keep original data type
                 "text/csv",
             )
             task_data.data["file_url"] = task_file.file_storage_data
