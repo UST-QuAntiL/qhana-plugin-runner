@@ -23,6 +23,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
+from plugins.optimizer.interaction_utils.db_task_cache import get_of_calc_data
 from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from plugins.optimizer.interaction_utils.tasks import make_callback
 from plugins.optimizer.shared.enums import InteractionEndpointType
@@ -48,10 +49,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from . import RIDGELOSS_BLP, RidgeLoss
-from .schemas import (
-    HyperparamterInputData,
-    HyperparamterInputSchema,
-)
+from .schemas import HyperparamterInputData, HyperparamterInputSchema
 from .tasks import ridge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -210,7 +208,8 @@ class OptimizerCallbackProcess(MethodView):
         db_task = ProcessingTask(
             task_name="ridge-loss",
         )
-        db_task.data["alpha"] = arguments.alpha
+        hyperparameter = {"alpha": arguments.alpha}
+        db_task.data["hyperparameter"] = hyperparameter
         db_task.save(commit=True)
         callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
             ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
@@ -259,25 +258,17 @@ class CalcCallbackEndpoint(MethodView):
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+        x, y, hyperparameter = get_of_calc_data(db_id)
 
         if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
+            input_data.x = SingleNumpyArraySchema().load({"array": x}).array
         if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
+            input_data.y = SingleNumpyArraySchema().load({"array": y}).array
 
         loss = ridge_loss(
             X=input_data.x,
             y=input_data.y,
             w=input_data.x0,
-            alpha=db_task.data["alpha"],
+            alpha=hyperparameter["alpha"],
         )
         return {"loss": loss}
