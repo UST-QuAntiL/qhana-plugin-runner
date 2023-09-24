@@ -345,7 +345,7 @@ class SecondProcessView(MethodView):
             step_id=next_step_id,
             href=href,
             ui_href=ui_href,
-            prog_value=50,
+            prog_value=(step_id / (step_id+1))*100,
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
