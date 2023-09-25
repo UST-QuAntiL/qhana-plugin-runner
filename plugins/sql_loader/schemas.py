@@ -68,11 +68,8 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Database type",
-            "description": "Determines the type of database, e.g. MySQL, SQLite, etc.<br>"
-            "If ``auto`` is selected, then the plugin tries to resolve this itself. In the case of "
-            "``auto``, not every field needs to be filled out, depending on the database. Thus, you "
-            "should always try to submit, even if you are uncertain, if the provided information is "
-            "sufficient.",
+            "description": """Determines the type of database, e.g. MySQL, SQLite, etc. 
+Selecting a specific database type is recommended, as the automatic selection may fail.""",
             "input_type": "select",
         },
     )
@@ -93,14 +90,13 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
             "description": "Port of the database.",
             "input_type": "number",
         },
-        validate=ma.validate.Range(min=-1, min_inclusive=True),
+        validate=ma.validate.Range(min=-1, max=65535, min_inclusive=True),
     )
     db_user = ma.fields.String(
         required=False,
         allow_none=False,
         metadata={
-            "label": "DB user name",
-            "description": "The user name for the database.",
+            "label": "Username for the Database",
             "input_type": "text",
         },
     )
@@ -117,8 +113,8 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
         required=False,
         allow_none=True,
         metadata={
-            "label": "DB database",
-            "description": "Name of the database. "
+            "label": "Database",
+            "description": "Name of the database."
             "In the case of SQLite, this parameter should be the path to the database file.",
             "input_type": "text",
         },
@@ -153,8 +149,8 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Table",
-            "description": "Select the table you want to save.",
-            "input_type": "ul",
+            "description": "Select the table you want to use.",
+            "input_type": "text",
         },
     )
     columns_list = ma.fields.String(
@@ -163,7 +159,7 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Columns",
             "description": "Select the columns you want to keep.",
-            "input_type": "ul",
+            "input_type": "text",
         },
     )
     save_table = ma.fields.Boolean(
@@ -184,7 +180,6 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "If the attribute is not unique for each entry in the queried table, then the index will "
             "be used as the entity's id.",
             "input_type": "search",
-            # "list": "id_attribute_list", Not working?
         },
     )
 
