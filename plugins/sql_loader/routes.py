@@ -59,7 +59,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="DB Manager",
             description=SQLLoaderPlugin.instance.description,
-            name=SQLLoaderPlugin.instance.identifier,
+            name=SQLLoaderPlugin.instance.name,
             version=SQLLoaderPlugin.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
