@@ -65,17 +65,10 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{SQLLoader_BLP.name}.FirstProcessView"),
                 ui_href=url_for(f"{SQLLoader_BLP.name}.FirstMicroFrontend"),
-                data_input=[
-                    InputDataMetadata(
-                        "entity/vectors",
-                        content_type=["application/json"],
-                        required=False,
-                        parameter="dbHost",
-                    )
-                ],
+                data_input=[],
                 data_output=[
                     DataMetadata(
-                        data_type="entity/label",
+                        data_type="entity/list",
                         content_type=[
                             "application/json",
                         ],
