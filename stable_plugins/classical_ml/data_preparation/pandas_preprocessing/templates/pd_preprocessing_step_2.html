@@ -23,7 +23,9 @@
 {% block content %}
 <div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'>{{ pandas_html }}</div>
 <datalist id="columns_datalist">
-    {{ columns_as_optionlist }}
+    {% for column in columns_list %}
+        <option value="{{ column }}"></option>
+    {% endfor %}
 </datalist>
 <div class="qhana-microfrontend">
     {% block help %}

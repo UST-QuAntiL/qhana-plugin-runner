@@ -262,7 +262,7 @@ class SecondMicroFrontend(MethodView):
                 ),
                 pandas_html=Markup(db_task.data["pandas_html"]),
                 columns_and_rows_html=Markup(db_task.data["columns_and_rows_html"]),
-                columns_as_optionlist=Markup(db_task.data["columns_as_optionlist"]),
+                columns_list=db_task.data["columns_list"],
             )
         )
 

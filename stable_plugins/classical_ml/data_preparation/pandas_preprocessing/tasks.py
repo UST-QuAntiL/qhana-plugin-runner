@@ -33,7 +33,6 @@ from qhana_plugin_runner.storage import STORE
 from pandas import read_csv
 from pretty_html_table import build_table
 from .backend.checkbox_list import get_checkbox_list_dict
-from .backend.optionlist import get_optionlist
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -81,8 +80,7 @@ def first_task(self, db_id: int) -> str:
                 "rows": [str(el) for el in df.index.tolist()],
             }
         )
-        task_data.data["columns_as_optionlist"] = get_optionlist(df.columns.tolist())
-        TASK_LOGGER.info(f"Optionlist: {get_optionlist(df.columns.tolist())}")
+        task_data.data["columns_list"] = df.columns.tolist()
 
     task_data.save(commit=True)
 
@@ -139,7 +137,7 @@ def second_task(self, db_id: int, step_id: int) -> str:
                     "rows": [str(el) for el in df.index.tolist()],
                 }
             )
-            task_data.data["columns_as_optionlist"] = get_optionlist(df.columns.tolist())
+            task_data.data["columns_list"] = df.columns.tolist()
 
     task_data.save(commit=True)
 
