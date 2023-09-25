@@ -244,7 +244,7 @@ class SecondMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "second_template.html",
+                "pd_preprocessing_step_2.html",
                 name=PDPreprocessing.instance.name,
                 version=PDPreprocessing.instance.version,
                 schema=schema,
