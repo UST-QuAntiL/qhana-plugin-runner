@@ -2,8 +2,6 @@ from typing import Tuple
 
 from enum import Enum
 from pathlib import Path
-from urllib.request import urlopen
-from collections import OrderedDict
 from sqlalchemy import URL
 from .db_manager import DBManager
 
@@ -31,12 +29,10 @@ class DBEnum(Enum):
     def _get_db_dialect_drivers() -> dict:
         # Keep SQLite as the last entry, since it likes to connect to every database during the guessing phase
         # and throwing an error later!
-        return OrderedDict(
-            [
-                ("mysql", "mysql+pymysql"),
-                ("postgresql", "postgresql+psycopg2"),
-                ("sqlite", "sqlite"),
-            ]
+        return dict(
+            mysql="mysql+pymysql",
+            postgresql="postgresql+psycopg2",
+            sqlite="sqlite",
         )
 
     def _get_db_url(
