@@ -182,8 +182,6 @@ def second_task_execution(
     else:
         table_query = f"SELECT {columns_list} FROM {table_name}"
 
-    print(f"table_query: {table_query}")
-
     if table_query != "":
         if columns_list != "":
             if limit is not None:

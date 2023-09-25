@@ -29,7 +29,6 @@ class DBManager:
     def get_tables_and_columns(self):
         if self.metadata is None:
             self._reflect()
-        print(self.metadata.tables)
         return {
             table_name: [column.name for column in table.columns]
             for table_name, table in self.metadata.tables.items()
