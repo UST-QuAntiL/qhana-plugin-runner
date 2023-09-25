@@ -8,6 +8,7 @@ from sqlalchemy import URL
 from .db_manager import DBManager
 
 from celery.utils.log import get_task_logger
+from validators import url as is_url
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -16,13 +17,8 @@ TASK_LOGGER = get_task_logger(__name__)
 def sqlite_db_exists(database):
     database = database.removeprefix("file://")
 
-    try:
-        urlopen(database)
-    except ValueError:
-        if not Path(database).exists():
-            raise ValueError("Database does not exist")
-    except:
-        pass
+    if not is_url(database) and not Path(database).exists():
+        raise ValueError("Database does not exist")
 
 
 class DBEnum(Enum):
