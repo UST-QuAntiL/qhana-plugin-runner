@@ -1,7 +1,22 @@
 {% extends "simple_template.html" %}
 
 {% block head %}
-    {{ super() }}
+    <style>
+        ul.qhana-form-input {
+            height: 150px;
+            color: var(--text);
+            background-color: var(--background);
+            border: 2px solid var(--border-color, currentColor);
+            border-radius: 5px;
+            max-width: initial;
+            box-sizing: border-box;
+            padding-inline: 0.5rem;
+            padding-block: 1.3ex;
+            overflow: hidden auto;
+            list-style-type: none;
+            margin: 8px;
+        }
+    </style>
 {% endblock head %}
 
 {% block content %}
