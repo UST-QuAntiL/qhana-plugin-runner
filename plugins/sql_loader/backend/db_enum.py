@@ -16,16 +16,13 @@ TASK_LOGGER = get_task_logger(__name__)
 def sqlite_db_exists(database):
     database = database.removeprefix("file://")
 
-    db_is_url = True
     try:
         urlopen(database)
     except ValueError:
-        db_is_url = False
-    except:
-        pass
-    if not db_is_url:
         if not Path(database).exists():
             raise ValueError("Database does not exist")
+    except:
+        pass
 
 
 class DBEnum(Enum):
