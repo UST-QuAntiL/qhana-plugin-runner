@@ -157,7 +157,7 @@ class FirstProcessView(MethodView):
         db_task.save(commit=True)
 
         # next step
-        step_id = "2.0"
+        step_id = "2"
         href = url_for(
             f"{SQLLoader_BLP.name}.SecondProcessView",
             db_id=db_task.id,
@@ -184,7 +184,7 @@ class FirstProcessView(MethodView):
         )
 
 
-@SQLLoader_BLP.route("/<int:db_id>/<float:step_id>/ui/")
+@SQLLoader_BLP.route("/<int:db_id>/<int:step_id>/ui/")
 class SecondMicroFrontend(MethodView):
     """Micro frontend for the db manager plugin."""
 
@@ -262,7 +262,7 @@ class SecondMicroFrontend(MethodView):
         )
 
 
-@SQLLoader_BLP.route("/<int:db_id>/<float:step_id>/ui/pd_html")
+@SQLLoader_BLP.route("/<int:db_id>/<int:step_id>/ui/pd_html")
 class GetPDHTML(MethodView):
     @SQLLoader_BLP.html_response(
         HTTPStatus.OK, description="Returns a query result in html form"
@@ -285,7 +285,7 @@ class GetPDHTML(MethodView):
             return "Query timed out"
 
 
-@SQLLoader_BLP.route("/<int:db_id>/<float:step_id>-process/")
+@SQLLoader_BLP.route("/<int:db_id>/<int:step_id>/process/")
 class SecondProcessView(MethodView):
     """Start a long running processing task."""
 
@@ -295,7 +295,7 @@ class SecondProcessView(MethodView):
     )
     @SQLLoader_BLP.response(HTTPStatus.OK, TaskResponseSchema())
     @SQLLoader_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments, db_id: int, step_id: float):
+    def post(self, arguments, db_id: int, step_id: int):
         """Start the calculation task."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
