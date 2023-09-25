@@ -91,7 +91,7 @@ class DBEnum(Enum):
                 TASK_LOGGER.info(f"Connected using {manager_name}")
                 return manager, manager_name
             except:
-                continue
+                continue    # TODO treat errors hinting to a successful connection, but bad authentication (i.e. wrong password) differently
         raise NotImplementedError(
             "The database type (e.g. MySQL, SQLite, ...) could not be identified or is not implemented or "
             "the given information contains an error/is incomplete!"
