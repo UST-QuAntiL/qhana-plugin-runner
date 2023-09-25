@@ -38,7 +38,7 @@ class SQLLoaderPlugin(QHAnaPluginBase):
     version = __version__
     description = "Allows to manage sql databases and use them as a source."
 
-    tags = []
+    tags = ["sql", "mysql", "mariadb", "postgresql"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
