@@ -119,27 +119,13 @@ def retrieve_params_for_second_task(db_id: int, dumped_schema=None) -> dict:
         raise KeyError(msg)
 
     # Previous parameters
-    previous_input = FirstInputParameters(
-        db_enum=DBEnum[task_data.data["db_type"]],
-        **{
-            key: value
-            for key, value in task_data.data.items()
-            if key != "db_type"
-            and key != "db_tables_and_columns"
-            and key != "checkbox_list"
-        },
-    )
-
-    db_enum, db_host, db_port, db_user, db_password, db_database = prep_first_inputs(
-        previous_input
-    )
     params = dict(
-        db_enum=db_enum,
-        db_host=db_host,
-        db_port=db_port,
-        db_user=db_user,
-        db_password=db_password,
-        db_database=db_database,
+        db_enum=DBEnum[task_data.data["db_type"]],
+        db_host=task_data.data["db_host"],
+        db_port=task_data.data["db_port"],
+        db_user=task_data.data["db_user"],
+        db_password=task_data.data["db_password"],
+        db_database=task_data.data["db_database"],
     )
 
     TASK_LOGGER.info(f"Loaded input from previous step from db: {task_data.data}")
@@ -149,7 +135,9 @@ def retrieve_params_for_second_task(db_id: int, dumped_schema=None) -> dict:
     )
 
     params.update(input_params.__dict__)
-    params["columns_list"] = ", ".join(json_load(input_params.columns_list))
+    params["columns_list"] = (
+        ", ".join(json_load(input_params.columns_list)) if params["columns_list"] else []
+    )
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
@@ -169,6 +157,7 @@ def second_task_execution(
     columns_list: str,
     id_attribute: str,
     limit: Optional[int] = None,
+    retrieval_only: bool = False,
     **kwargs,
 ) -> pd.DataFrame:
     db_database = db_database.removeprefix("file://")
@@ -178,7 +167,7 @@ def second_task_execution(
     )
     df = None
     if custom_query:
-        table_query = db_query
+        table_query = db_query if db_query.startswith("SELECT") else ""
     else:
         table_query = f"SELECT {columns_list} FROM {table_name}"
 
@@ -198,7 +187,7 @@ def second_task_execution(
             else:
                 df["ID"] = list(range(df.shape[0]))
             df["href"] = [get_href(db_host, db_port, db_database)] * df.shape[0]
-    else:
+    elif not retrieval_only:
         db_manager.execute_query(db_query)
 
     db_manager.disconnect()
@@ -238,5 +227,5 @@ def get_second_task_html(
     arguments: str,
 ) -> str:
     params = retrieve_params_for_second_task(db_id, dumped_schema=arguments)
-    df = second_task_execution(**params, limit=10)
+    df = second_task_execution(**params, limit=10, retrieval_only=True)
     return build_table(df, color="grey_light") if df is not None else ""
