@@ -128,8 +128,6 @@ def retrieve_params_for_second_task(db_id: int, dumped_schema=None) -> dict:
         db_database=task_data.data["db_database"],
     )
 
-    TASK_LOGGER.info(f"Loaded input from previous step from db: {task_data.data}")
-
     input_params: SecondInputParameters = SecondInputParametersSchema().loads(
         task_data.parameters if dumped_schema is None else dumped_schema
     )
