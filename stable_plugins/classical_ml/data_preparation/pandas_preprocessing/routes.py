@@ -335,7 +335,9 @@ class SecondProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = preprocessing_task.s(db_id=db_task.id, step_id=step_id) | add_step.s(
+        task: chain = preprocessing_task.s(
+            db_id=db_task.id, step_id=step_id
+        ) | add_step.s(
             db_id=db_task.id,
             step_id=next_step_id,
             href=href,
