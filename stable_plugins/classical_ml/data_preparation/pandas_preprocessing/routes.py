@@ -12,15 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from tempfile import NamedTemporaryFile
 from http import HTTPStatus
 from typing import Mapping, Optional
 
-from pathlib import Path
-
 from celery.canvas import chain
-from flask import send_file, Response, redirect, Markup
+from flask import Response, redirect, Markup
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -39,12 +35,11 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .tasks import first_task, second_task
+from .tasks import first_task, preprocessing_task
 
 from celery.utils.log import get_task_logger
 
@@ -290,7 +285,7 @@ class FinalProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = second_task.s(
+        task: chain = preprocessing_task.s(
             db_id=db_task.id, step_id=step_id
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
@@ -340,7 +335,7 @@ class SecondProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = second_task.s(db_id=db_task.id, step_id=step_id) | add_step.s(
+        task: chain = preprocessing_task.s(db_id=db_task.id, step_id=step_id) | add_step.s(
             db_id=db_task.id,
             step_id=next_step_id,
             href=href,

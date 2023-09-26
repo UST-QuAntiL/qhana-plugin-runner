@@ -88,7 +88,7 @@ def first_task(self, db_id: int) -> str:
 
 
 @CELERY.task(name=f"{PDPreprocessing.instance.identifier}.second_task", bind=True)
-def second_task(self, db_id: int, step_id: int) -> str:
+def preprocessing_task(self, db_id: int, step_id: int) -> str:
     # get parameters
 
     TASK_LOGGER.info(
