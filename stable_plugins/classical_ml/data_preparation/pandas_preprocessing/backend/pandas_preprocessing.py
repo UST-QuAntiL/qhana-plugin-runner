@@ -12,7 +12,7 @@ class PreprocessingEnum(Enum):
     fill_na = "fill missing values"
     drop_duplicates = "drop duplicates"
     sort_values = "sort values"
-    strip_entries = "strip entries"
+    strip_entries = "strip surrounding characters"
     split_column = "split column"
     replace = "replace"
     string_case = "string case"
