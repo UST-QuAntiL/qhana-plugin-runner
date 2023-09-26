@@ -41,12 +41,11 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_href(db_host: str, db_port: Optional[int], db_database: str):
-    result = db_host
-    if db_port is not None:
-        result += f":{db_port}"
-    if db_port is not None or db_host != "":
-        result += "/"
-    return result + db_database
+    if db_port is not None and db_host:
+        return f"{db_host}:{db_port}/{db_database}"
+    if db_host:
+        return f"{db_host}/{db_database}"
+    return db_database
 
 
 def prep_first_inputs(
