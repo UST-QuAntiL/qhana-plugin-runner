@@ -30,6 +30,15 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
       <option value="{{ name }}" {% if name==values.get(form_key) %}selected{% endif %}>{{ value }}</option>
       {% endfor %}
     </select>
+    {% elif input_type == 'text_with_datalist' %}
+    <input class="{{form_input_class}}" type="text" name="{{form_key}}" id="{{key}}" autocomplete="off"
+      aria-describedby="{{key}}-description" {{required if field.required else '' }} {{ get_validation_attrs(field) }}
+      list="{{key}}-datalist" {{ field_value(input_type, values.get(form_key)) }}>
+    <datalist id="{{key}}-datalist">
+      {% for value in field.metadata.get("datalist", []) %}
+      <option value="{{ value }}">
+        {% endfor %}
+    </datalist>
     {% elif input_type %}
     <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
       aria-describedby="{{key}}-description" {{ 'data-input-type=data' if field.metadata.get('data_input_type') or

@@ -31,6 +31,7 @@ from .schemas import (
     CircuitSelectionParameterSchema,
     BackendSelectionParameterSchema,
 )
+from .backend.qiskit_backends import get_backends
 from qhana_plugin_runner.api.plugin_schemas import (
     OutputDataMetadata,
     EntryPoint,
@@ -272,7 +273,11 @@ class BackendSelectionStepFrontend(MethodView):
 
         ibmq_token = CircuitSelectionParameterSchema().loads(db_task.data).ibmqToken
         data_dict = dict(data)
-        fields = BackendSelectionParameterSchema().fields
+        backend_parameter_schema = BackendSelectionParameterSchema()
+        backend_parameter_schema.fields["backend"].metadata["datalist"] = [
+            backend.name() for backend in get_backends(ibmq_token)
+        ]
+        fields = backend_parameter_schema.fields
 
         # define default values
         default_values = {}
@@ -290,7 +295,7 @@ class BackendSelectionStepFrontend(MethodView):
                 "simple_template.html",
                 name=QiskitExecutor.instance.name,
                 version=QiskitExecutor.instance.version,
-                schema=BackendSelectionParameterSchema(),
+                schema=backend_parameter_schema,
                 valid=valid,
                 values=data_dict,
                 errors=errors,

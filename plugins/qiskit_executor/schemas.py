@@ -64,7 +64,7 @@ class BackendSelectionParameterSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Backend",
             "description": "The quantum computer or simulator that will be used (e.g. ibmq_qasm_simulator).",
-            "input_type": "text",
+            "input_type": "text_with_datalist",
         },
     )
 
@@ -123,7 +123,7 @@ class CircuitSelectionParameterSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Backend",
-            "description": "The quantum computer or simulator that will be used.",
+            "description": "The quantum computer or simulator that will be used. Leave field empty to select in the next step.",
             "input_type": "text",
         },
     )

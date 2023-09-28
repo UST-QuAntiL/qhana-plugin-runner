@@ -15,13 +15,15 @@
 from celery.utils.log import get_task_logger
 from qiskit import IBMQ
 
+from qiskit.providers.exceptions import QiskitBackendNotFoundError
 from qiskit.providers.ibmq.exceptions import IBMQAccountError
-
+from qiskit.providers.ibmq.accountprovider import AccountProvider
+from qiskit.providers.ibmq.ibmqbackend import IBMQBackend, IBMQSimulator
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_qiskit_backend(backend: str, ibmq_token: str):
+def get_provider(ibmq_token: str) -> AccountProvider:
     try:
         provider = IBMQ.enable_account(ibmq_token)
     except IBMQAccountError as e:
@@ -31,9 +33,17 @@ def get_qiskit_backend(backend: str, ibmq_token: str):
         if not provider:
             TASK_LOGGER.error("No IBMQ provider found!")
             raise e
+    return provider
 
-    if backend.startswith("ibmq"):
-        # Use IBMQ backend
+
+def get_backends(ibmq_token: str) -> list[IBMQBackend | IBMQSimulator]:
+    provider = get_provider(ibmq_token)
+    return provider.backends()
+
+
+def get_qiskit_backend(backend: str, ibmq_token: str) -> IBMQBackend | IBMQSimulator:
+    provider = get_provider(ibmq_token)
+    try:
         return provider.get_backend(backend)
-    else:
-        TASK_LOGGER.error("Unknown qiskit backend specified!")
+    except QiskitBackendNotFoundError:
+        TASK_LOGGER.error(f"Unknown qiskit backend specified: {backend}")

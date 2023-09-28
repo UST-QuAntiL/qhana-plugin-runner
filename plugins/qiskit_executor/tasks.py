@@ -174,6 +174,10 @@ def execution_task(self, db_id: int) -> str:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
     backend = get_qiskit_backend(circuit_params.backend, circuit_params.ibmqToken)
+    if backend is None:
+        msg = f"Could not load backend {circuit_params.backend}!"
+        TASK_LOGGER.error(msg)
+        raise ValueError(msg)
     backend.shots = circuit_params.shots
 
     metadata, counts = execute_circuit(circuit_qasm, backend, execution_options)
