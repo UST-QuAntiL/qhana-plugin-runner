@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dump, dumps, loads
+from json import dump, dumps
 import mimetypes
 import os
 from tempfile import SpooledTemporaryFile
@@ -22,12 +22,14 @@ from uuid import uuid4
 
 from celery.utils.log import get_task_logger
 
+from .backend.qiskit_backends import get_qiskit_backend
+
 from . import QiskitExecutor
 
 from .schemas import (
     CircuitSelectionInputParameters,
     CircuitSelectionParameterSchema,
-    get_get_backend_selection_parameter_schema,
+    BackendSelectionParameterSchema,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -59,20 +61,8 @@ def prepare_task(self, db_id: int) -> str:
     )
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
-    circuit_url = input_params.circuit
-    execution_options_url = input_params.executionOptions
-    shots = input_params.shots
-    ibmq_token = input_params.ibmqToken
-
     # Save input data in internal data structure for further processing
-    task_data.data = dumps(
-        {
-            "circuit": circuit_url,
-            "executionOptions": execution_options_url,
-            "shots": shots,
-            "ibmqToken": ibmq_token,
-        }
-    )
+    task_data.data = CircuitSelectionParameterSchema().dumps(input_params)
 
     task_data.save(commit=True)
 
@@ -140,38 +130,33 @@ def execution_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
+    task_params = db_task.data if db_task.data else db_task.parameters
     circuit_params: CircuitSelectionInputParameters = (
-        CircuitSelectionParameterSchema().loads(db_task.data)
+        CircuitSelectionParameterSchema().loads(task_params)
     )
-    circuit_url = circuit_params.circuit
-    execution_options_url = circuit_params.executionOptions
-    shots = circuit_params.shots
-    ibmq_token = circuit_params.ibmqToken
+    if db_task.data:
+        circuit_params.backend = (
+            BackendSelectionParameterSchema().loads(db_task.parameters).backend
+        )
 
-    backend_parameter_schema = get_get_backend_selection_parameter_schema(ibmq_token)()
-    backend_params = backend_parameter_schema.loads(db_task.parameters)
-
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: {str(circuit_params)}, {backend_params}"
-    )
-
-    backend_qiskit = backend_params.backend
-    custom_backend = backend_params.customBackend
+    TASK_LOGGER.info(f"Loaded input parameters from db: {str(circuit_params)}")
 
     circuit_qasm: str
-    with open_url(circuit_url) as quasm_response:
+    with open_url(circuit_params.circuit) as quasm_response:
         circuit_qasm = quasm_response.text
 
     execution_options: Dict[str, Any] = {
-        "shots": shots,
+        "shots": circuit_params.shots,
     }
 
-    if execution_options_url:
-        with open_url(execution_options_url) as execution_options_response:
+    if circuit_params.executionOptions:
+        with open_url(circuit_params.executionOptions) as execution_options_response:
             try:
                 mimetype = execution_options_response.headers["Content-Type"]
             except KeyError:
-                mimetype = mimetypes.MimeTypes().guess_type(url=execution_options_url)[0]
+                mimetype = mimetypes.MimeTypes().guess_type(
+                    url=circuit_params.executionOptions
+                )[0]
             if mimetype is None:
                 msg = "Could not guess execution options mime type!"
                 TASK_LOGGER.error(msg)
@@ -185,17 +170,17 @@ def execution_task(self, db_id: int) -> str:
             )
             execution_options.update(options)
 
-    if ibmq_token == "****":
+    if circuit_params.ibmqToken == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
 
         if "IBMQ_TOKEN" in os.environ:
-            ibmq_token = os.environ["IBMQ_TOKEN"]
+            circuit_params.ibmqToken = os.environ["IBMQ_TOKEN"]
             TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
         else:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
-    backend = backend_qiskit.get_qiskit_backend(ibmq_token, custom_backend)
-    backend.shots = shots
+    backend = get_qiskit_backend(circuit_params.backend, circuit_params.ibmqToken)
+    backend.shots = circuit_params.shots
 
     metadata, counts = execute_circuit(circuit_qasm, backend, execution_options)
 

@@ -12,15 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 import marshmallow as ma
-from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     FileUrl,
 )
 from celery.utils.log import get_task_logger
-from .backend.qiskit_backends import get_qiskit_backend_enum
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -33,11 +30,13 @@ class CircuitSelectionInputParameters:
         executionOptions: str,
         shots: int,
         ibmqToken: str,
+        backend: str,
     ):
         self.circuit = circuit
         self.executionOptions = executionOptions
         self.shots = shots
         self.ibmqToken = ibmqToken
+        self.backend = backend
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -45,43 +44,34 @@ class CircuitSelectionInputParameters:
         return str(variables)
 
 
-def get_get_backend_selection_parameter_schema(ibmq_token: Optional[str] = None):
-    class BackendSelectionInputParameters:
-        def __init__(
-            self,
-            backend: get_qiskit_backend_enum(ibmq_token),
-            customBackend: str,
-        ):
-            self.backend = backend
-            self.customBackend = customBackend
+class BackendSelectionInputParameters:
+    def __init__(
+        self,
+        backend: str,
+    ):
+        self.backend = backend
 
-    class BackendSelectionParameterSchema(FrontendFormBaseSchema):
-        backend = EnumField(
-            get_qiskit_backend_enum(ibmq_token),
-            required=True,
-            allow_none=False,
-            metadata={
-                "label": "Backend",
-                "description": "The quantum computer or simulator that will be used.",
-                "input_type": "select",
-            },
-        )
-        customBackend = ma.fields.String(
-            required=False,
-            allow_none=False,
-            metadata={
-                "label": "Custom backend",
-                "description": "Custom backend for IBMQ.",
-                "input_type": "text",
-            },
-        )
+    def __str__(self):
+        variables = self.__dict__.copy()
+        variables["ibmqToken"] = ""
+        return str(variables)
 
-        @ma.post_load
-        def make_input_params(self, data, **kwargs) -> BackendSelectionInputParameters:
-            TASK_LOGGER.info(f"data: {data}")
-            return BackendSelectionInputParameters(**data)
 
-    return BackendSelectionParameterSchema
+class BackendSelectionParameterSchema(FrontendFormBaseSchema):
+    backend = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Backend",
+            "description": "The quantum computer or simulator that will be used (e.g. ibmq_qasm_simulator).",
+            "input_type": "text",
+        },
+    )
+
+    @ma.post_load
+    def make_input_params(self, data, **kwargs) -> BackendSelectionInputParameters:
+        TASK_LOGGER.info(f"data: {data}")
+        return BackendSelectionInputParameters(**data)
 
 
 class CircuitSelectionParameterSchema(FrontendFormBaseSchema):
@@ -125,6 +115,15 @@ class CircuitSelectionParameterSchema(FrontendFormBaseSchema):
         metadata={
             "label": "IBMQ Token",
             "description": "Token for IBMQ.",
+            "input_type": "password",
+        },
+    )
+    backend = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Backend",
+            "description": "The quantum computer or simulator that will be used.",
             "input_type": "text",
         },
     )

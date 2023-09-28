@@ -30,7 +30,7 @@ from celery.utils.log import get_task_logger
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .schemas import (
     CircuitSelectionParameterSchema,
-    get_get_backend_selection_parameter_schema,
+    BackendSelectionParameterSchema,
 )
 from qhana_plugin_runner.api.plugin_schemas import (
     OutputDataMetadata,
@@ -195,25 +195,31 @@ class CalcView(MethodView):
         )
         db_task.save(commit=True)
 
-        # start the backend selection task (which then starts the execution task)
-        step_id = "backend-selection"
-        href = url_for(
-            f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionStepView",
-            db_id=db_task.id,
-            _external=True,
-        )
-        ui_href = url_for(
-            f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionStepFrontend",
-            db_id=db_task.id,
-            _external=True,
-        )
-        task: chain = prepare_task.s(db_id=db_task.id) | add_step.s(
-            db_id=db_task.id,
-            step_id=step_id,
-            href=href,
-            ui_href=ui_href,
-            prog_value=50,
-        )
+        if arguments.backend != "":
+            # start the execution task directly
+            task: chain = execution_task.s(db_id=db_task.id) | save_task_result.s(
+                db_id=db_task.id
+            )
+        else:
+            # start the backend selection task (which then starts the execution task)
+            step_id = "backend-selection"
+            href = url_for(
+                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionStepView",
+                db_id=db_task.id,
+                _external=True,
+            )
+            ui_href = url_for(
+                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionStepFrontend",
+                db_id=db_task.id,
+                _external=True,
+            )
+            task: chain = prepare_task.s(db_id=db_task.id) | add_step.s(
+                db_id=db_task.id,
+                step_id=step_id,
+                href=href,
+                ui_href=ui_href,
+                prog_value=50,
+            )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -233,7 +239,7 @@ class BackendSelectionStepFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of the backend selection step."
     )
     @QISKIT_EXECUTOR_BLP.arguments(
-        get_get_backend_selection_parameter_schema()(
+        BackendSelectionParameterSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -248,11 +254,11 @@ class BackendSelectionStepFrontend(MethodView):
         HTTPStatus.OK, description="Micro frontend of the backend selection step."
     )
     @QISKIT_EXECUTOR_BLP.arguments(
-        get_get_backend_selection_parameter_schema()(
+        BackendSelectionParameterSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
-        required=False,
+        required=True,
     )
     @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
     def post(self, db_id, errors):
@@ -267,10 +273,7 @@ class BackendSelectionStepFrontend(MethodView):
 
         ibmq_token = CircuitSelectionParameterSchema().loads(db_task.data).ibmqToken
         data_dict = dict(data)
-        backend_selection_schema = get_get_backend_selection_parameter_schema(
-            ibmq_token
-        )()
-        fields = backend_selection_schema.fields
+        fields = BackendSelectionParameterSchema().fields
 
         # define default values
         default_values = {}
@@ -288,7 +291,7 @@ class BackendSelectionStepFrontend(MethodView):
                 "simple_template.html",
                 name=QiskitExecutor.instance.name,
                 version=QiskitExecutor.instance.version,
-                schema=backend_selection_schema,
+                schema=BackendSelectionParameterSchema(),
                 valid=valid,
                 values=data_dict,
                 errors=errors,
@@ -304,7 +307,7 @@ class BackendSelectionStepView(MethodView):
     """Start a long running processing task."""
 
     @QISKIT_EXECUTOR_BLP.arguments(
-        get_get_backend_selection_parameter_schema()(unknown=EXCLUDE), location="form"
+        BackendSelectionParameterSchema(unknown=EXCLUDE), location="form"
     )
     @QISKIT_EXECUTOR_BLP.response(HTTPStatus.SEE_OTHER)
     @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
@@ -315,11 +318,9 @@ class BackendSelectionStepView(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        arguments.backend = arguments.backend.value
         db_task.parameters = dumps(
             {
                 "backend": arguments.backend,
-                "customBackend": arguments.customBackend,
             }
         )
         db_task.clear_previous_step()
@@ -330,8 +331,6 @@ class BackendSelectionStepView(MethodView):
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
-
-        db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
