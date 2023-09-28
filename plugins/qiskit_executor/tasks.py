@@ -57,7 +57,7 @@ def prepare_task(self, db_id: int) -> str:
         raise KeyError(msg)
 
     input_params: CircuitSelectionInputParameters = (
-        CircuitSelectionParameterSchema().loads(task_data.parameters)
+        CircuitSelectionParameterSchema().loads(task_data.data)
     )
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
@@ -121,7 +121,6 @@ def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any
 @CELERY.task(name=f"{QiskitExecutor.instance.identifier}.execution_task", bind=True)
 def execution_task(self, db_id: int) -> str:
     # get parameters
-
     TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -130,14 +129,9 @@ def execution_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    task_params = db_task.data if db_task.data else db_task.parameters
     circuit_params: CircuitSelectionInputParameters = (
-        CircuitSelectionParameterSchema().loads(task_params)
+        CircuitSelectionParameterSchema().loads(db_task.data)
     )
-    if db_task.data:
-        circuit_params.backend = (
-            BackendSelectionParameterSchema().loads(db_task.parameters).backend
-        )
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(circuit_params)}")
 

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dumps
 import os
 from http import HTTPStatus
 from typing import Mapping, Optional
@@ -191,7 +190,7 @@ class CalcView(MethodView):
         """Start the circuit execution task."""
         db_task = ProcessingTask(
             task_name=execution_task.name,
-            parameters=CircuitSelectionParameterSchema().dumps(arguments),
+            data=CircuitSelectionParameterSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 
@@ -318,11 +317,10 @@ class BackendSelectionStepView(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        db_task.parameters = dumps(
-            {
-                "backend": arguments.backend,
-            }
-        )
+        task_data = CircuitSelectionParameterSchema().loads(db_task.data)
+        task_data.backend = arguments.backend
+        db_task.data = CircuitSelectionParameterSchema().dumps(task_data)
+
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
