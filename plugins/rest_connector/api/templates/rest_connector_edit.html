@@ -176,13 +176,18 @@
     <details class="step {{'done' if 'endpoint-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-variables" else ""}}>
         <summary class="step-head" data-stepnr="5">Endpoint Variables</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-variables" enctype="application/json" {{'inert' if connector['isLoading']}}>
-            <div class="qhana-form-field">
-                <label class="qhana-form-label" for="value">Endpoint Variables</label>
-                <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['endpointVariables'] | tojson(indent="    ")}}</textarea>
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-variables" data-value="json-object" enctype="application/json" {{'inert' if connector['isLoading']}}>
+            <fieldset id="endpoint_variables" {{'disabled' if connector['isLoading']}}>
+                <legend>Endpoint Variables</legend>
+                {%- for var, value in connector['endpointVariables'].items() -%}
+                <div class="qhana-form-field">
+                    <label class="qhana-form-label" for="json__{{var}}">{{var}}</label>
+                    <div class="qhana-input-wrapper">
+                        <textarea class="qhana-form-input" name="json__{{var}}" autocomplete="off" >{{value}}</textarea>
+                    </div>
                 </div>
-            </div>
+                {%- endfor -%}
+            </fieldset>
 
             <div class="qhana-form-buttons">
                 <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint variables</button>
@@ -193,13 +198,36 @@
     <details class="step {{'done' if 'endpoint-query-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-query-variables" else ""}}>
         <summary class="step-head" data-stepnr="6">Endpoint Query Variables</summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-query-variables" enctype="application/json" {{'inert' if connector['isLoading']}}>
-            <div class="qhana-form-field">
-                <label class="qhana-form-label" for="value">Endpoint Query Variables</label>
-                <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="endpoint_variables" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['endpointQueryVariables'] | tojson(indent="    ")}}</textarea>
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-query-variables" data-value="json-object" enctype="application/json" {{'inert' if connector['isLoading']}}>
+            <fieldset id="endpoint_query_variables" {{'disabled' if connector['isLoading']}}>
+                <legend>Endpoint Query Variables</legend>
+                {%- for var, value in connector['endpointQueryVariables'].items() -%}
+                <div class="qhana-form-field">
+                    <label class="qhana-form-label" for="json__{{var}}">{{var}}</label>
+                    <div class="qhana-input-wrapper">
+                        <textarea class="qhana-form-input" name="json__{{var}}" autocomplete="off">{{value}}</textarea>
+                        <button class="remove-object-key">remove query variable</button>
+                    </div>
                 </div>
-            </div>
+                {%- endfor -%}
+                <template id="new_endpoint_query_variable">
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__"></label>
+                        <div class="qhana-input-wrapper">
+                            <textarea class="qhana-form-input" name="json__" autocomplete="off"></textarea>
+                            <button class="remove-object-key">remove query variable</button>
+                        </div>
+                    </div>
+                </template>
+                <div class="qhana-form-field">
+                    <label class="qhana-form-label" for="new_key">Variable Name</label>
+                    <div class="qhana-input-wrapper">
+                        <input class="qhana-form-input" name="new_key" autocomplete="off">
+                        <button class="add-object-key" name="add_new_key" data-template="new_endpoint_query_variable">add query variable</button>
+                    </div>
+                </div>
+
+            </fieldset>
 
             <div class="qhana-form-buttons">
                 <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint query variables</button>
@@ -365,7 +393,17 @@
 
             let formKey = form.getAttribute("data-step");
             const nextStep = NEXT_STEP[formKey];
-            const formValue = formData.get("value") ?? "";
+            let formValue = formData.get("value") ?? "";
+
+            if (form.getAttribute("data-value") === "json-object") {
+                const jsonData = {};
+                formData.forEach((value, key) => {
+                    if (key.startsWith("json__")) {
+                        jsonData[key.substring(6)] = value;
+                    }
+                });
+                formValue = JSON.stringify(jsonData);
+            }
 
             if (formKey === "manage-plugin") {
                 formKey = event.submitter.getAttribute("value");
@@ -438,6 +476,52 @@
                 }
             });
         }
+
+        function addObjectKey(event) {
+            event.preventDefault();
+            const button = event.target;
+            const form = button.form;
+            const formData = new FormData(form);
+
+            const templateId = button.getAttribute("data-template");
+            const template = form.querySelector(`#${templateId}`);
+            const objectKey = formData.get("new_key");
+            if (!template || !objectKey) {
+                return;
+            }
+            if (form.querySelector(`[name=json__${objectKey}]`) != null) {
+                return; // key already exists
+            }
+            const cloned = template.content.cloneNode(true);
+            cloned.querySelectorAll("[name=json__]").forEach(element => element.setAttribute("name", `json__${objectKey}`));
+            cloned.querySelectorAll("[for=json__]").forEach(element => {
+                element.setAttribute("for", `json__${objectKey}`);
+                element.textContent = objectKey;
+            });
+            cloned.querySelectorAll("button.remove-object-key").forEach(button=>{
+                button.addEventListener("click", removeObjectKey);
+            });
+
+            template.parentNode.insertBefore(cloned, template);
+        }
+
+        function removeObjectKey(event) {
+            event.preventDefault();
+            let target = event.target;
+            while (target != null && !target.classList.contains("qhana-form-field")) {
+                target = target.parentNode;
+            }
+            if (target != null) {
+                target.remove();
+            }
+        }
+
+        document.querySelectorAll("button.add-object-key").forEach(button=>{
+            button.addEventListener("click", addObjectKey);
+        });
+        document.querySelectorAll("button.remove-object-key").forEach(button=>{
+            button.addEventListener("click", removeObjectKey);
+        });
 
         if (!window._qhana_microfrontend_state) {
             window._qhana_microfrontend_state = {};
