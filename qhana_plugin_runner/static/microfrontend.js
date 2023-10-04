@@ -148,10 +148,14 @@ function onAutoFillResponse(data) {
         }
         if (input.nodeName === "TEXTAREA") {
             input.textContent = value;
+            input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
             return;
         }
         if (input.nodeName === "SELECT") {
             input.value = value;
+            input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
             return;
         }
         if (input.type === "checkbox") {
@@ -160,9 +164,13 @@ function onAutoFillResponse(data) {
             } else {
                 input.checked = false;
             }
+            input.dispatchEvent(new InputEvent("input", { data: input.checked, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: input.checked, cancelable: false }));
             return;
         }
         input.value = value;
+        input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+        input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
         if (input.getAttribute("data-input-type") === "data") {
             const dataInputId = input.getAttribute("id");
             if (dataInputId && value) {
