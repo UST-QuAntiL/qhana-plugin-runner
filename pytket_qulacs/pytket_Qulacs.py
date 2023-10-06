@@ -296,37 +296,37 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from pytket.qasm import circuit_from_qasm_str
     import time
 
+    startime = time.time()
     circ = circuit_from_qasm_str(circuit_qasm)
 
     backend = QulacsBackend()
     # compiled
     compiled_circuit = backend.get_compiled_circuit(circ)
 
-    start_time = time.time()
-    ##
-    handle = backend.process_circuit(compiled_circuit, n_shots=execution_options["shots"])
-    ##
-    end_time = time.time()
-
-    counts = backend.get_result(handle).get_counts()  # hier
-    simulation_time = end_time - start_time
+    startime_counts = time.perf_counter_ns()
+    handle = backend.process_circuit(
+        compiled_circuit, n_shots=execution_options["shots"]
+    )  # count simulation with time
+    counts = backend.get_result(handle).get_counts()
+    endtime_counts = time.perf_counter_ns()
 
     statevector = backend.get_result(handle).get_state()
 
-    ## if not counts:
-    ###   counts = {" ": execution_options["shots"]}
+    endtime = time.time()
+
+    simulation_time = endtime - startime
 
     metadata = {
         "qpuType": "simulator",
-        "qpuVendor": "Qulacs",
+        "qpuVendor": "Quantinuum",
         "qpuName": "QulacsBackend",
-        "qpuVersion": "Unknown",
+        "qpuVersion": None,
         "shots": execution_options["shots"],
         "timeTaken": simulation_time,
         "timeTakenIdle": 0,
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenQpu": simulation_time,
-        "timeTakenQpuPrepare": 0,
-        "timeTakenQpuExecute": simulation_time,
+        "timeTakenCounts_nanosecond": endtime_counts - startime_counts,
     }
 
     return metadata, dict(counts), statevector
