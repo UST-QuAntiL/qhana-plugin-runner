@@ -288,16 +288,27 @@ class Braket_LocalSimulator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def find_total_classicalbits(qasm_code):
+    import re
+
+    cleanedcomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
+    matches = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)\];", cleanedcomment_qasm)
+    return sum(map(int, matches))
+
+
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from braket.circuits import Circuit
+    from braket.circuits import Circuit, ResultType
     from braket.devices import LocalSimulator
     from qbraid.transpiler.cirq_qasm import from_qasm
     from qbraid.transpiler.cirq_braket import to_braket
+    import time
+
+    num_classical_bits = find_total_classicalbits(circuit_qasm)
 
     # QASM to Cirq
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
-    # circuit = from_qasm(circuit_qasmrep)
+
     cirq_circuit = from_qasm(circuit_qasm)
 
     # Cirq to Braket
@@ -305,20 +316,36 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     device = LocalSimulator()
 
-    # ##
-    result = device.run(braket_circuit, shots=execution_options["shots"]).result()
-    counts = result.measurement_counts
+    start_time_sv = time.perf_counter_ns()
+    state_vector_circuit = braket_circuit.copy()
+    state_vector_circuit.add_result_type(ResultType.StateVector())  # State vector
+    state_vector_result = device.run(state_vector_circuit, shots=0).result()
+    end_time_sv = time.perf_counter_ns()
+    statevector = [state_vector_result.values[0]]
+
+    start_time_counts = time.perf_counter_ns()
+    result_meas = device.run(braket_circuit, shots=execution_options["shots"]).result()
+    end_time_counts = time.perf_counter_ns()
+
+    shots = execution_options["shots"]
+
+    if num_classical_bits == 0:
+        result_counts = {"": shots}
+
+    else:
+        result_counts = result_meas.measurement_counts
 
     metadata = {
-        "jobId": "unknown",  # Assuming
+        "jobId": "unknown",
         "qpuType": "simulator",
         "qpuVendor": "Amazon",
         "qpuName": "LocalSimulator",
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "timeTakenCounts_nanosecond": end_time_counts - start_time_counts,
+        "timeTakenCounts_nanosecond": end_time_sv - start_time_sv,
     }
-    ####
-    statevector = None  # Assuming
-    ####
-    return metadata, dict(counts), statevector
+
+    return metadata, dict(result_counts), statevector
 
 
 @CELERY.task(name=f"{Braket_LocalSimulator.instance.identifier}.demo_task", bind=True)
