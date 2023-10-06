@@ -290,14 +290,24 @@ class PennylaneSimulator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def extract_total_qubits(qasm_code):
-    # regex
+def find_total_qubits(qasm_code):
+    import re
+
+    # regex to find total number of qubits
+    cleancomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
+
+    matches = re.findall(r"qreg [a-zA-Z0-9_]+\[(\d+)\];", cleancomment_qasm)
+    if not matches:
+        raise ValueError("No valid qreg definitions in the QASM code.")
+
+    return sum(map(int, matches))
+
+
+def find_total_classicalbits(qasm_code):
     import re
 
     cleaned_qasm = re.sub(r"//.*\n?", "", qasm_code)
-
-    matches = re.findall(r"qreg [a-zA-Z0-9_]+\[(\d+)\];", cleaned_qasm)
-
+    matches = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)\];", cleaned_qasm)
     return sum(map(int, matches))
 
 
@@ -305,9 +315,8 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     import pennylane as qml
     import time
 
-    ### num_wires = int(circuit_qasm.split('qreg q[')[1].split(']')[0])
-
-    num_wires = extract_total_qubits(circuit_qasm)
+    num_wires = find_total_qubits(circuit_qasm)
+    num_classicalbits = find_total_classicalbits(circuit_qasm)
 
     circ = qml.device("default.qubit", wires=num_wires, shots=execution_options["shots"])
     circ_statevector = qml.device("default.qubit", wires=num_wires, shots=None)
@@ -319,31 +328,36 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         my_circuit(wires=range(num_wires))
         return qml.counts()
 
+    startime_counts = time.perf_counter_ns()
+    result_counts = circuit()
+    endtime_counts = time.perf_counter_ns()
+
     @qml.qnode(circ_statevector)
     def state_vector_circuit():
         my_circuit(wires=range(num_wires))
         return qml.state()
 
-    start_time = time.time()
-    result = circuit()
-    end_time = time.time()
-
-    simulation_time = end_time - start_time
+    startime_state = time.perf_counter_ns()
+    result_state = state_vector_circuit()
+    endtime_state = time.perf_counter_ns()
 
     metadata = {
         "qpuType": "simulator",
         "qpuVendor": "Xanadu Inc",
         "shots": execution_options["shots"],
-        "timeTaken": simulation_time,
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "timeTakenCounts_nanosecond": endtime_counts - startime_counts,
+        "timeTakenCounts_nanosecond": endtime_state - startime_state,
     }
 
-    counts = dict(result)
+    shots = execution_options["shots"]
 
-    # state_vector: Optional[Any] = None
+    if num_classicalbits == 0:
+        counts = {"": shots}
 
-    state_vector = state_vector_circuit()
+    counts = dict(result_counts)
 
-    return metadata, dict(counts), state_vector
+    return metadata, counts, result_state
 
 
 @CELERY.task(name=f"{PennylaneSimulator.instance.identifier}.demo_task", bind=True)
