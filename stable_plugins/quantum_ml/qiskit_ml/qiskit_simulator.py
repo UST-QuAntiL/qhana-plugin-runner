@@ -294,12 +294,17 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from qiskit import QiskitError, QuantumCircuit, execute
     from qiskit.result.result import ExperimentResult, Result
     from qiskit_aer import StatevectorSimulator
+    import time
 
     backend = StatevectorSimulator()  # TODO noise model?
 
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 
+    # execution time for the simulation in ns
+    startime_counts = time.perf_counter_ns()
     result: Result = execute(circuit, backend, shots=execution_options["shots"]).result()
+    endtime_counts = time.perf_counter_ns()
+
     if not result.success:
         # TODO better error
         raise ValueError("Circuit could not be simulated!", result)
@@ -331,13 +336,18 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         # Time information
         "date": result.date,
         "timeTaken": time_taken,  # total job time
+        "timeTakenCounts_nanosecond": endtime_counts - startime_counts,
         "timeTakenIdle": 0,  # idle/waiting time
         "timeTakenQpu": time_taken,  # total qpu time
         "timeTakenQpuPrepare": time_taken - time_taken_execute,
         "timeTakenQpuExecute": time_taken_execute,
     }
 
-    counts = result.get_counts()
+    # If no measurements set shots to an empty key
+    if result.results[0].metadata["num_clbits"] == 0:
+        counts = {"": experiment_result.shots}
+    else:
+        counts = result.get_counts()
 
     state_vector: Optional[Any] = None
     try:
