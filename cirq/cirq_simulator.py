@@ -288,39 +288,70 @@ class CirqSimulator(QHAnaPluginBase):
         return "cirq~=1.3.0.dev20230804185427"
 
 
-##
-
-
 TASK_LOGGER = get_task_logger(__name__)
+
+
+# regex to find total number of classicalbits
+def find_total_classicalbits(qasm_code):
+    import re
+
+    cleancomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
+    matches = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)\];", cleancomment_qasm)
+    if not matches:
+        return 0
+    return sum(map(int, matches))
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from cirq import Circuit, Simulator
     from cirq.contrib.qasm_import import circuit_from_qasm
     import time
-    import matplotlib.pyplot as plt
     import cirq
     import numpy as np
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
     circuit = circuit_from_qasm(circuit_qasm)
+    startime_count = 0
+    endtime_count = 0
+    circuit_copy = circuit.copy()
 
-    num_qubits = len(list(circuit.all_qubits()))
+    number_qubits = len(list(circuit.all_qubits()))
+
+    num_classicalbits = find_total_classicalbits(circuit_qasm)
+    has_measurem = any(
+        isinstance(op.gate, cirq.MeasurementGate) for op in circuit.all_operations()
+    )  # Check if the circuit includes any measurement Gates
 
     simulator = cirq.Simulator()
-    result_state = simulator.simulate(circuit)
-    state_vector = result_state.final_state_vector
 
-    circuit.append(cirq.measure(*circuit.all_qubits(), key="result"))
+    startime_state = time.perf_counter_ns()
+    state_vector = simulator.simulate(
+        circuit
+    ).final_state_vector  # simulation (statevector)
+    endtime_state = time.perf_counter_ns()
 
-    start_time = time.time()
-    result = simulator.run(circuit, repetitions=execution_options["shots"])
-    end_time = time.time()
+    histogram = {}
+    if (
+        has_measurem or num_classicalbits > 0
+    ):  # If the circuit (qasm code) has measurements  measure all qubits
+        circuit_copy.append(cirq.measure(*circuit.all_qubits(), key="result"))
 
-    histogram = result.histogram(key="result")
+        startime_count = time.perf_counter_ns()
+        result_count = simulator.run(
+            circuit_copy, repetitions=execution_options["shots"]
+        )  # simulation (counts)
+        endtime_count = time.perf_counter_ns()
 
+        histogram = result_count.histogram(key="result")
+    else:  # If there are no measurements
+        shots = execution_options["shots"]
+        histogram = {"": shots}
+
+    # Convert the outcomes to binary format
     binary_histogram = {
-        format(outcome, f"0{num_qubits}b"): frequency
+        format(outcome, f"0{number_qubits}b")
+        if outcome and isinstance(outcome, int)
+        else outcome: frequency
         for outcome, frequency in histogram.items()
     }
 
@@ -336,19 +367,13 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "seed": None,  # only for simulators
         "shots": execution_options["shots"],
         # Time information
-        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
-        "timeTaken": end_time - start_time,  # total job time
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenIdle": 0,  # idle/waiting time
-        "timeTakenQpu": end_time - start_time,  # total qpu time
-        "timeTakenQpuPrepare": 0,
-        "timeTakenQpuExecute": end_time - start_time,
+        "timeTakenCounts_nanosecond": endtime_count - startime_count,
+        "timeTakenState_nanosecond": endtime_state - startime_state,
     }
 
     return metadata, binary_histogram, state_vector
-
-
-# def complex_encoder(obj)
-# The `def comp` method was written, but it was deleted because the function did not work.
 
 
 @CELERY.task(name=f"{CirqSimulator.instance.identifier}.demo_task", bind=True)
@@ -399,14 +424,11 @@ def execute_circuit(self, db_id: int) -> str:
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
 
-    ######
     metadata, binary_histogram, state_vector = simulate_circuit(
         circuit_qasm, execution_options
     )
 
-    #
     binary_histogram = {k: int(v) for k, v in binary_histogram.items()}
-    #######
 
     experiment_id = str(uuid4())
 
@@ -423,15 +445,6 @@ def execute_circuit(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
-    ##################################################
-
-    # In this part, various methods were added in the following ways, but they did not work as desired for example
-    # By adding the `state_vector` directly into a dictionary structure.
-    # - By adding  `state_vector` as a list to the dictionry (with using `tolist()`).
-    # - By separating the real and imaginary parts of the complex numbers in the `state_vector` into separate lists.
-    # but they did t work as desired
-
-    ##################################
 
     # Finally, #if the conditions are ok, the `state_vector` is converted into a list,  and each element is transformed into a string, This can be used to convert complex numbers into the string format.
 
@@ -454,7 +467,6 @@ def execute_circuit(self, db_id: int) -> str:
         "executorPlugin": execution_options.get("executorPlugin", []) + [_identifier],
         "shots": metadata.get("shots", execution_options["shots"]),
         "simulator": metadata["qpuType"],
-        # "simulator": metadata["simulator"],
         "qpuType": metadata["qpuType"],
         "qpuVendor": metadata["qpuVendor"],
         "qpuName": metadata["qpuName"],
