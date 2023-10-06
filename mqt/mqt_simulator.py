@@ -283,37 +283,47 @@ class MqtSimulator(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         return """qiskit~=0.43
-    mqt.ddsim==1.18.0"""
+    mqt.ddsim~=1.18"""
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QiskitError, QuantumCircuit, execute
-    from qiskit.result.result import ExperimentResult, Result
-    from qiskit_aer import StatevectorSimulator
+    from qiskit import QuantumCircuit, execute
     import time
     from mqt import ddsim
 
-    # backend = StatevectorSimulator()  # TODO noise model?
+    startime_qasm = 0
+    endtime_qasm = 0
 
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+    backend_Qasm = ddsim.DDSIMProvider().get_backend("qasm_simulator")
+    backend_state = ddsim.DDSIMProvider().get_backend("statevector_simulator")
 
-    backend = ddsim.DDSIMProvider().get_backend("statevector_simulator")
+    # If no measurements set shots to an empty string
 
-    # circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+    if not circuit.clbits:
+        shots = execution_options["shots"]
+        counts = {"": shots}
 
-    start_time = time.time()
-    result = execute(circuit, backend, shots=execution_options["shots"])
-    end_time = time.time()
+    else:
+        # QASM simulation with time
+        startime_qasm = time.perf_counter_ns()
+        result_qasm = execute(
+            circuit, backend_Qasm, shots=execution_options["shots"]
+        ).result()  # qasm simulation
+        endtime_qasm = time.perf_counter_ns()
+        counts = result_qasm.get_counts(circuit)
 
-    # TODO : Exceptions
-
-    # extra_metadata = result.metadata
+    # statevector simulation with time
+    startime_state = time.perf_counter_ns()
+    result_state = execute(
+        circuit, backend_state
+    ).result()  # statevector simulation without shots
+    endtime_state = time.perf_counter_ns()
 
     metadata = {
-        # trace ids (specific to IBM mqt jobs)
         "jobId": None,
         "qobjId": None,
         # QPU/Simulator information
@@ -321,26 +331,17 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "qpuVendor": "TUM | IBM ",
         "qpuName": None,
         "qpuVersion": None,
-        "seed": None,  # only for simulators
         "shots": execution_options["shots"],
         # Time information
-        # "date": result.date,
-        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
-        "timeTaken": end_time - start_time,  # total job time
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "timeTakenCounts_nanosecond": endtime_qasm - startime_qasm,
+        "timeTakenState_nanosecond": endtime_state - startime_state,
         "timeTakenIdle": 0,  # idle/waiting time
-        # "timeTakenQpu": time_taken,  # total qpu time
-        # "timeTakenQpuPrepare": time_taken - time_taken_execute,
-        # "timeTakenQpuExecute": time_taken_execute,
     }
-
-    # counts = result.get_counts()
-
-    counts = result.result().get_counts(circuit)
 
     state_vector: Optional[Any] = None
 
-    # state_vector = result.result.get_statevector()
-    state_vector = result.result().get_statevector(circuit)
+    state_vector = result_state.get_statevector(circuit)
 
     return metadata, counts, state_vector
 
