@@ -12,24 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dump, dumps
+from json import dump, dumps, loads
+import codecs
 import mimetypes
 import os
+import pickle
 from tempfile import SpooledTemporaryFile
-
 from typing import Any, Dict, Optional
 from uuid import uuid4
-
+from qiskit.providers.ibmq.job import IBMQJob
+from qiskit.result.result import ExperimentResult, Result
+from qiskit import QuantumCircuit, execute
 from celery.utils.log import get_task_logger
 
 from .backend.qiskit_backends import get_qiskit_backend
-
 from . import QiskitExecutor
-
 from .schemas import (
     CircuitSelectionInputParameters,
     CircuitSelectionParameterSchema,
-    BackendSelectionParameterSchema,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -69,57 +69,8 @@ def prepare_task(self, db_id: int) -> str:
     return f"Saved input data in internal data structure for further processing: {str(input_params)}"
 
 
-def execute_circuit(circuit_qasm: str, backend, execution_options: Dict[str, Any]):
-    from qiskit import QuantumCircuit, execute
-    from qiskit.result.result import ExperimentResult, Result
-
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
-
-    result: Result = execute(circuit, backend, shots=execution_options["shots"]).result()
-    if not result.success:
-        # TODO better error
-        raise ValueError("Circuit could not be executed!", result)
-
-    experiment_result: ExperimentResult = result.results[0]
-    extra_metadata = result.metadata
-
-    time_taken = result.time_taken
-    time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
-    shots = experiment_result.shots
-    if isinstance(shots, tuple):
-        assert (
-            len(shots) == 2
-        ), "If untrue, check with qiskit documentation what has changed!"
-        shots = abs(shots[-1] - shots[0])
-    seed = experiment_result.seed_simulator
-
-    metadata = {
-        # trace ids (specific to IBM qiskit jobs)
-        "jobId": result.job_id,
-        "qobjId": result.qobj_id,
-        # QPU/Simulator information
-        "qpuType": "simulator" if "simulator" in result.backend_name else "qpu",
-        "qpuVendor": "IBM",
-        "qpuName": result.backend_name,
-        "qpuVersion": result.backend_version,
-        "seed": seed,  # only for simulators
-        "shots": shots,
-        # Time information
-        "date": str(result.date),
-        "timeTaken": time_taken,  # total job time
-        "timeTakenIdle": 0,  # idle/waiting time
-        "timeTakenQpu": time_taken,  # total qpu time
-        "timeTakenQpuPrepare": time_taken - time_taken_execute,
-        "timeTakenQpuExecute": time_taken_execute,
-    }
-
-    counts = result.get_counts()
-
-    return metadata, dict(counts)
-
-
-@CELERY.task(name=f"{QiskitExecutor.instance.identifier}.execution_task", bind=True)
-def execution_task(self, db_id: int) -> str:
+@CELERY.task(name=f"{QiskitExecutor.instance.identifier}.start_execution", bind=True)
+def start_execution(self, db_id: int) -> str:
     # get parameters
     TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -180,7 +131,90 @@ def execution_task(self, db_id: int) -> str:
         raise ValueError(msg)
     backend.shots = circuit_params.shots
 
-    metadata, counts = execute_circuit(circuit_qasm, backend, execution_options)
+    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+
+    job: IBMQJob = execute(circuit, backend, shots=execution_options["shots"])
+
+    db_task.data = dumps(
+        {
+            "job": codecs.encode(pickle.dumps(job), "base64").decode(),
+            "execution_options": execution_options,
+        }
+    )
+    db_task.clear_previous_step()
+    db_task.save(commit=True)
+
+    return "Started executing job"
+
+
+class JobNotFinished(Exception):
+    pass
+
+
+@CELERY.task(
+    name=f"{QiskitExecutor.instance.identifier}.result_watcher",
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(JobNotFinished,),
+    retry_backoff=True,
+    max_retries=None,
+)
+def result_watcher(self, db_id: int) -> str:
+    # get parameters
+    TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
+    db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if db_task is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    data = loads(db_task.data)
+
+    job = pickle.loads(codecs.decode(data["job"].encode(), "base64"))
+
+    if not job.in_final_state():
+        raise JobNotFinished("Job not finished yet!")
+
+    result: Result = job.result()
+    if not result.success:
+        # TODO better error
+        raise ValueError("Circuit could not be executed!", result)
+
+    experiment_result: ExperimentResult = result.results[0]
+    extra_metadata = result.metadata
+
+    time_taken = result.time_taken
+    time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
+    shots = experiment_result.shots
+    if isinstance(shots, tuple):
+        assert (
+            len(shots) == 2
+        ), "If untrue, check with qiskit documentation what has changed!"
+        shots = abs(shots[-1] - shots[0])
+    seed = experiment_result.seed_simulator
+
+    metadata = {
+        # trace ids (specific to IBM qiskit jobs)
+        "jobId": result.job_id,
+        "qobjId": result.qobj_id,
+        # QPU/Simulator information
+        "qpuType": "simulator" if "simulator" in result.backend_name else "qpu",
+        "qpuVendor": "IBM",
+        "qpuName": result.backend_name,
+        "qpuVersion": result.backend_version,
+        "seed": seed,  # only for simulators
+        "shots": shots,
+        # Time information
+        "date": str(result.date),
+        "timeTaken": time_taken,  # total job time
+        "timeTakenIdle": 0,  # idle/waiting time
+        "timeTakenQpu": time_taken,  # total qpu time
+        "timeTakenQpuPrepare": time_taken - time_taken_execute,
+        "timeTakenQpuExecute": time_taken_execute,
+    }
+
+    counts = result.get_counts()
 
     experiment_id = str(uuid4())
 
@@ -198,6 +232,7 @@ def execution_task(self, db_id: int) -> str:
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
 
+    execution_options = data["execution_options"]
     extra_execution_options = {
         "ID": experiment_id,
         "executorPlugin": execution_options.get("executorPlugin", [])

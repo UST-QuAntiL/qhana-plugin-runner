@@ -43,7 +43,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
 
-from .tasks import prepare_task, execution_task
+from .tasks import prepare_task, result_watcher, start_execution
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -190,15 +190,17 @@ class CalcView(MethodView):
     def post(self, arguments):
         """Start the circuit execution task."""
         db_task = ProcessingTask(
-            task_name=execution_task.name,
+            task_name=start_execution.name,
             data=CircuitSelectionParameterSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 
         if arguments.backend != "":
             # start the execution task directly
-            task: chain = execution_task.s(db_id=db_task.id) | save_task_result.s(
-                db_id=db_task.id
+            task: chain = (
+                start_execution.s(db_id=db_task.id)
+                | result_watcher.si(db_id=db_task.id)
+                | save_task_result.s(db_id=db_task.id)
             )
         else:
             # start the backend selection task (which then starts the execution task)
@@ -330,7 +332,11 @@ class BackendSelectionStepView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = execution_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_id)
+        task: chain = (
+            start_execution.s(db_id=db_task.id)
+            | result_watcher.si(db_id=db_task.id)
+            | save_task_result.s(db_id=db_task.id)
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
