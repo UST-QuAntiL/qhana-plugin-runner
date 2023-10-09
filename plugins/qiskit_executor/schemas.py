@@ -130,8 +130,4 @@ class CircuitSelectionParameterSchema(FrontendFormBaseSchema):
 
     @ma.post_load
     def make_input_params(self, data, **kwargs) -> CircuitSelectionInputParameters:
-        log_data = data.copy()
-        if "ibmqToken" in log_data:
-            log_data["ibmqToken"] = "****"
-        TASK_LOGGER.info(f"data: {log_data}")
         return CircuitSelectionInputParameters(**data)
