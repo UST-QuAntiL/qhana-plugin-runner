@@ -10,11 +10,8 @@ WORKDIR /app
 
 RUN useradd gunicorn
 
-
 ENV FLASK_APP=qhana_plugin_runner
 ENV PLUGIN_FOLDERS=/app/plugins:/app/extra-plugins:/app/git-plugins
-ENV TEMPLATE_FOLDERS=/app/templates
-
 
 # can be server or worker
 ENV CONTAINER_MODE=server

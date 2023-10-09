@@ -131,7 +131,7 @@ class HybridAutoencoderPennylaneRequestSchema(FrontendFormBaseSchema):
         metadata={
             "label": "IBMQ Token",
             "description": "Token for IBMQ.",
-            "input_type": "text",
+            "input_type": "password",
         },
     )
     custom_backend = ma.fields.String(

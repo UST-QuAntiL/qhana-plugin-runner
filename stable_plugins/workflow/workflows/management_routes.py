@@ -6,7 +6,7 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Union, cast
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import redirect, render_template
-from flask.globals import request, current_app
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.views import MethodView
 from flask.wrappers import Response
@@ -23,10 +23,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import (
-    PluginState,
-    VirtualPlugin,
     VIRTUAL_PLUGIN_CREATED,
     VIRTUAL_PLUGIN_REMOVED,
+    PluginState,
+    VirtualPlugin,
 )
 from qhana_plugin_runner.tasks import save_task_error
 
@@ -109,8 +109,13 @@ class MicroFrontend(MethodView):
     @WORKFLOW_MGMNT_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Return the micro frontend."""
-        camunda = CamundaManagementClient(config)
-        process_definitions = camunda.get_process_definitions()
+        try:
+            camunda = CamundaManagementClient(config)
+            process_definitions = camunda.get_process_definitions()
+            camunda_online = True
+        except RequestException:
+            process_definitions = []
+            camunda_online = False
 
         add_deployed_info(process_definitions)
 
@@ -129,6 +134,7 @@ class MicroFrontend(MethodView):
                 pluginUiEndpoint=f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginUi.__name__}",
                 plugins_wo_workflow=plugins_wo_workflow,
                 undeployEndpoint=f"{WORKFLOW_MGMNT_BLP.name}.{UndeployPluginView.__name__}",
+                camunda_online=camunda_online,  # TODO use this information in the template
             )
         )
 
@@ -286,10 +292,16 @@ class VirtualPluginView(MethodView):
             process_definition_id=process_definition_id,
             _external=True,
         )
-        camunda = CamundaManagementClient(config)
-        process_definition = camunda.get_process_definition(
-            definition_id=process_definition_id
-        )
+        try:
+            camunda = CamundaManagementClient(config)
+            process_definition = camunda.get_process_definition(
+                definition_id=process_definition_id
+            )
+        except RequestException:
+            abort(
+                HTTPStatus.NOT_FOUND,
+                message="The BPMN process this plugin depends on was not found. Please check if Camunda is online!",
+            )
         plugin = VirtualPlugin.get_by_href(
             plugin_url, WorkflowManagement.instance.identifier
         )
