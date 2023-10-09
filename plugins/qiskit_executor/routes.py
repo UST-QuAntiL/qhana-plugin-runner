@@ -28,6 +28,7 @@ from celery.utils.log import get_task_logger
 
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .schemas import (
+    CircuitSelectionInputParameters,
     CircuitSelectionParameterSchema,
     BackendSelectionParameterSchema,
 )
@@ -195,7 +196,7 @@ class CalcView(MethodView):
         )
         db_task.save(commit=True)
 
-        if arguments.backend != "":
+        if arguments.ibmqToken != "" and arguments.backend != "":
             # start the execution task directly
             task: chain = (
                 start_execution.s(db_id=db_task.id)
@@ -276,13 +277,14 @@ class BackendSelectionStepFrontend(MethodView):
         ibmq_token = CircuitSelectionParameterSchema().loads(db_task.data).ibmqToken
         data_dict = dict(data)
         backend_parameter_schema = BackendSelectionParameterSchema()
-        backend_parameter_schema.fields["backend"].metadata["datalist"] = [
-            backend.name() for backend in get_backends(ibmq_token)
-        ]
+        if ibmq_token != "":
+            backend_parameter_schema.fields["backend"].metadata["datalist"] = [
+                backend.name() for backend in get_backends(ibmq_token)
+            ]
         fields = backend_parameter_schema.fields
 
         # define default values
-        default_values = {}
+        default_values = {"ibmqToken": ibmq_token}
 
         if "IBMQ_TOKEN" in os.environ:
             default_values[fields["ibmqToken"].data_key] = "****"
@@ -324,7 +326,10 @@ class BackendSelectionStepView(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        task_data = CircuitSelectionParameterSchema().loads(db_task.data)
+        task_data: CircuitSelectionInputParameters = (
+            CircuitSelectionParameterSchema().loads(db_task.data)
+        )
+        task_data.ibmqToken = arguments.ibmqToken
         task_data.backend = arguments.backend
         db_task.data = CircuitSelectionParameterSchema().dumps(task_data)
 

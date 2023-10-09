@@ -47,8 +47,10 @@ class CircuitSelectionInputParameters:
 class BackendSelectionInputParameters:
     def __init__(
         self,
+        ibmqToken: str,
         backend: str,
     ):
+        self.ibmqToken = ibmqToken
         self.backend = backend
 
     def __str__(self):
@@ -58,6 +60,15 @@ class BackendSelectionInputParameters:
 
 
 class BackendSelectionParameterSchema(FrontendFormBaseSchema):
+    ibmqToken = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "password",
+        },
+    )
     backend = ma.fields.String(
         required=True,
         allow_none=False,
@@ -110,8 +121,8 @@ class CircuitSelectionParameterSchema(FrontendFormBaseSchema):
         validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     ibmqToken = ma.fields.String(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={
             "label": "IBMQ Token",
             "description": "Token for IBMQ.",
