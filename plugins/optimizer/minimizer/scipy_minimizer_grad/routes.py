@@ -21,25 +21,15 @@ from celery.utils.log import get_task_logger
 from flask import Response, redirect, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-
-from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from plugins.optimizer.interaction_utils.tasks import make_callback
-from plugins.optimizer.minimizer.scipy_minimizer_grad import (
-    SCIPY_MINIMIZER_GRAD_BLP,
-    ScipyMinimizerGrad,
-)
-from plugins.optimizer.minimizer.scipy_minimizer_grad.schemas import (
-    MinimizerEnum,
-    MinimizerSetupTaskInputData,
-    MinimizerSetupTaskInputSchema,
-    MinimizerTaskResponseSchema,
-)
-from plugins.optimizer.shared.schemas import (
+from optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
+from optimizer.interaction_utils.tasks import make_callback
+from optimizer.shared.schemas import (
     MinimizerCallbackData,
     MinimizerCallbackSchema,
     MinimizerInputData,
     MinimizerInputSchema,
 )
+
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -50,6 +40,13 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
+from . import SCIPY_MINIMIZER_GRAD_BLP, ScipyMinimizerGrad
+from .schemas import (
+    MinimizerEnum,
+    MinimizerSetupTaskInputData,
+    MinimizerSetupTaskInputSchema,
+    MinimizerTaskResponseSchema,
+)
 from .tasks import minimize_task
 
 
