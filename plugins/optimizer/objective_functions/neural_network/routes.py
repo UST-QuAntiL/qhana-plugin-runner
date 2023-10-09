@@ -80,6 +80,7 @@ class PluginsView(MethodView):
                 interaction_endpoints=[
                     InteractionEndpoint(
                         type=InteractionEndpointType.of_pass_data.value,
+                        # since the url has the task id as parameter, we need to add it here
                         href=url_for(
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -92,7 +93,7 @@ class PluginsView(MethodView):
                             f"{NN_BLP.name}.{PluginsView.__name__}",
                             _external=True,
                         )
-                        + "<int:task_id>/calc-callback-endpoint/",
+                        + "<int:task_id>/calc-loss-endpoint/",
                     ),
                     InteractionEndpoint(
                         type=InteractionEndpointType.calc_grad.value,
@@ -183,8 +184,9 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         schema = HyperparamterInputSchema()
         callback_schema = CallbackUrlSchema()
 
+        # set default value
         if not data:
-            data = {"number_of_neurons": 0.1}
+            data = {"number_of_neurons": 5}
         process_url = url_for(
             f"{NN_BLP.name}.{OptimizerCallbackProcess.__name__}",
             **callback_schema.dump(callback),
@@ -195,7 +197,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
             **callback_schema.dump(callback),
         )
 
-        help_text = ""
+        help_text = "The number of neurons in the hidden layer."
 
         return Response(
             render_template(
@@ -226,6 +228,7 @@ class OptimizerCallbackProcess(MethodView):
         db_task = ProcessingTask(
             task_name="neural-network",
         )
+        # save the data in the db
         db_task.data["number_of_neurons"] = arguments.number_of_neurons
         db_task.save(commit=True)
         callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
@@ -259,6 +262,7 @@ class PassDataEndpoint(MethodView):
         db_task.data["x"] = serialized_data["x"]
         db_task.data["y"] = serialized_data["y"]
         number_of_neurons: int = db_task.data["number_of_neurons"]
+        # the number of weights a neural network with a single hidden layer has is:
         number_weights = (
             input_data.x.shape[1] * number_of_neurons
             + number_of_neurons * 1
@@ -270,9 +274,9 @@ class PassDataEndpoint(MethodView):
         return {"number_weights": number_weights}
 
 
-@NN_BLP.route("/<int:db_id>/calc-callback-endpoint/")
-class CalcCallbackEndpoint(MethodView):
-    """Endpoint for the calculation callback."""
+@NN_BLP.route("/<int:db_id>/calc-loss-endpoint/")
+class CalcLossEndpoint(MethodView):
+    """Endpoint for the loss calculation."""
 
     @NN_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @NN_BLP.arguments(
@@ -297,8 +301,9 @@ class CalcCallbackEndpoint(MethodView):
             )
         number_of_neurons: int = db_task.data["number_of_neurons"]
 
+        # create the neural network
         nn = NN(input_data.x.shape[1], number_of_neurons)
-
+        # set the weights
         nn.set_weights(input_data.x0)
 
         loss = nn.get_loss(
@@ -349,7 +354,7 @@ class CalcGradientEndpoint(MethodView):
 
 @NN_BLP.route("/<int:db_id>/calc-loss-and-grad/")
 class CalcLossandGradEndpoint(MethodView):
-    """Endpoint for the gradient calculation."""
+    """Endpoint for the loss and gradient calculation."""
 
     @NN_BLP.response(HTTPStatus.OK, LossAndGradientResponseSchema())
     @NN_BLP.arguments(
