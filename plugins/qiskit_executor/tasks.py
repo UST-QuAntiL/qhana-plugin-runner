@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dump, dumps, loads
+from json import dump, dumps
 import mimetypes
 import os
 from tempfile import SpooledTemporaryFile
@@ -134,13 +134,11 @@ def start_execution(self, db_id: int) -> str:
 
     job: IBMQJob = execute(circuit, backend, shots=execution_options["shots"])
 
-    db_task.data = dumps(
-        {
-            "job_id": job.job_id(),
-            "parameters": CircuitSelectionParameterSchema().dumps(circuit_params),
-            "execution_options": execution_options,
-        }
-    )
+    db_task.data = {
+        "job_id": job.job_id(),
+        "parameters": CircuitSelectionParameterSchema().dumps(circuit_params),
+        "execution_options": execution_options,
+    }
     db_task.clear_previous_step()
     db_task.save(commit=True)
 
@@ -169,12 +167,11 @@ def result_watcher(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    data = loads(db_task.data)
-    job_id = data["job_id"]
+    job_id = db_task.data["job_id"]
     params: CircuitSelectionInputParameters = CircuitSelectionParameterSchema().loads(
-        data["parameters"]
+        db_task.data["parameters"]
     )
-    execution_options = data["execution_options"]
+    execution_options = db_task.data["execution_options"]
 
     service = QiskitRuntimeService(token=params.ibmqToken, channel="ibm_quantum")
     job = service.job(job_id)
@@ -252,10 +249,10 @@ def result_watcher(self, db_id: int) -> str:
     if "seed" in metadata:
         extra_execution_options["seed"] = metadata["seed"]
 
-    execution_options.update(extra_execution_options)
+    extra_execution_options.update(execution_options)
 
     with SpooledTemporaryFile(mode="w") as output:
-        dump(execution_options, output)
+        dump(extra_execution_options, output)
         STORE.persist_task_result(
             db_id,
             output,
