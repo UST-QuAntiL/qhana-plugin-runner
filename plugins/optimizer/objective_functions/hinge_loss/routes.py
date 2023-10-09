@@ -19,11 +19,10 @@ from celery.utils.log import get_task_logger
 from flask import Response, abort, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-
-from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from plugins.optimizer.interaction_utils.tasks import make_callback
-from plugins.optimizer.shared.enums import InteractionEndpointType
-from plugins.optimizer.shared.schemas import (
+from optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
+from optimizer.interaction_utils.tasks import make_callback
+from optimizer.shared.enums import InteractionEndpointType
+from optimizer.shared.schemas import (
     CalcLossOrGradInput,
     CalcLossOrGradInputSchema,
     LossResponseSchema,
@@ -34,6 +33,7 @@ from plugins.optimizer.shared.schemas import (
     ObjectiveFunctionPassDataSchema,
     SingleNumpyArraySchema,
 )
+
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -45,10 +45,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from . import HINGELOSS_BLP, HingeLoss
-from .schemas import (
-    HyperparamterInputData,
-    HyperparamterInputSchema,
-)
+from .schemas import HyperparamterInputData, HyperparamterInputSchema
 from .tasks import hinge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
