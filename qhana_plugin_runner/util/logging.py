@@ -22,3 +22,18 @@ def get_logger(app: Flask, name: str) -> Logger:
     """Utitlity method to get a specific logger that is a child logger of the app.logger."""
     logger_name = f"{app.import_name}.{name}"
     return getLogger(logger_name)
+
+
+def make_log_data(data: dict, private_fields: tuple = ("ibmq_token", "db_password")):
+    """Returns a copy of the data without confidential/private information.
+
+    Args:
+        data: The data to be copied.
+    Returns:
+        A copy of the data without confidential/private information.
+    """
+    log_data = data.copy()
+    for field in private_fields:
+        if field in log_data:
+            log_data[field] = "****"
+    return log_data
