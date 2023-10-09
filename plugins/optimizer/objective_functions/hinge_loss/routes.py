@@ -73,6 +73,7 @@ class PluginsView(MethodView):
                 interaction_endpoints=[
                     InteractionEndpoint(
                         type=InteractionEndpointType.of_pass_data.value,
+                        # Since the endpoint has the task id in the url, we need to add a placeholder
                         href=url_for(
                             f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -85,7 +86,7 @@ class PluginsView(MethodView):
                             f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
                         )
-                        + "<int:task_id>/calc-callback-endpoint/",
+                        + "<int:task_id>/calc-loss-endpoint/",
                     ),
                 ],
                 href=url_for(f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
@@ -160,10 +161,12 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         schema = HyperparamterInputSchema()
         callback_schema = CallbackUrlSchema()
 
+        # set default values if not present
         if not data:
             data = {"c": 1.0}
         process_url = url_for(
             f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
+            # forward the callback url to the processing step
             **callback_schema.dump(callback),
         )
         example_values_url = url_for(
@@ -189,7 +192,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
 
 @HINGELOSS_BLP.route("/optimizer-callback/")
 class OptimizerCallbackProcess(MethodView):
-    """Save the hyperparameters to the database and make a callback to the optimizer."""
+    """Save the hyperparameters to the database and make a callback to the coordinator."""
 
     @HINGELOSS_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @HINGELOSS_BLP.arguments(
@@ -206,6 +209,7 @@ class OptimizerCallbackProcess(MethodView):
         db_task.data["c"] = arguments.c
         db_task.save(commit=True)
 
+        # include the database id in the callback data
         callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
             ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
         )
@@ -239,12 +243,13 @@ class PassDataEndpoint(MethodView):
 
         db_task.save(commit=True)
 
+        # the number of weights is the number of features
         return {"number_weights": input_data.x.shape[1]}
 
 
-@HINGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
-class CalcCallbackEndpoint(MethodView):
-    """Endpoint for the calculation callback."""
+@HINGELOSS_BLP.route("/<int:db_id>/calc-loss-endpoint/")
+class CalcLossEndpoint(MethodView):
+    """Endpoint for the loss calculation."""
 
     @HINGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @HINGELOSS_BLP.arguments(
@@ -260,6 +265,7 @@ class CalcCallbackEndpoint(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
+        # if x and y are not provided, use the ones from the db task
         if input_data.x is None:
             input_data.x = (
                 SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
