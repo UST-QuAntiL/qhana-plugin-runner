@@ -29,7 +29,7 @@ psycopg2 = { version = "^2.9.3", optional = true }
 PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
-urllib3 = "^1.26"  # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
+urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
 numpy = "^1.25.0"
 flask-caching = "^2.0.2"
 

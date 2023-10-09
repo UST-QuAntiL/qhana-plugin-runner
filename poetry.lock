@@ -1208,8 +1208,8 @@ files = [
 
 [[package]]
 name = "myst-parser"
-version = "0.15.2"
-description = "An extended commonmark compliant parser, with bridges to docutils & sphinx."
+version = "2.0.0"
+description = "An extended [CommonMark](https://spec.commonmark.org/) compliant parser,"
 category = "dev"
 optional = false
 python-versions = ">=3.8"
