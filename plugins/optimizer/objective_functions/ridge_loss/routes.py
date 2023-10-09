@@ -22,12 +22,11 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-
-from plugins.optimizer.interaction_utils.db_task_cache import get_of_calc_data
-from plugins.optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from plugins.optimizer.interaction_utils.tasks import make_callback
-from plugins.optimizer.shared.enums import InteractionEndpointType
-from plugins.optimizer.shared.schemas import (
+from optimizer.interaction_utils.db_task_cache import get_of_calc_data
+from optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
+from optimizer.interaction_utils.tasks import make_callback
+from optimizer.shared.enums import InteractionEndpointType
+from optimizer.shared.schemas import (
     CalcLossOrGradInput,
     CalcLossOrGradInputSchema,
     LossResponseSchema,
@@ -38,6 +37,7 @@ from plugins.optimizer.shared.schemas import (
     ObjectiveFunctionPassDataSchema,
     SingleNumpyArraySchema,
 )
+
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
