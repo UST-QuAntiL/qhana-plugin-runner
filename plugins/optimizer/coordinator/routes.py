@@ -28,19 +28,6 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from plugins.optimizer.coordinator.tasks import echo_results, of_pass_data
-from plugins.optimizer.interaction_utils.tasks import invoke_task
-from plugins.optimizer.shared.enums import InteractionEndpointType
-from plugins.optimizer.shared.schemas import (
-    MinimizerCallbackData,
-    MinimizerCallbackSchema,
-    MinimizerInputData,
-    MinimizerInputSchema,
-    ObjectiveFunctionInvokationCallbackData,
-    ObjectiveFunctionInvokationCallbackSchema,
-    TaskStatusChanged,
-    TaskStatusChangedSchema,
-)
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
@@ -53,6 +40,19 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
+from .tasks import echo_results, of_pass_data
+from ..interaction_utils.tasks import invoke_task
+from ..shared.enums import InteractionEndpointType
+from ..shared.schemas import (
+    MinimizerCallbackData,
+    MinimizerCallbackSchema,
+    MinimizerInputData,
+    MinimizerInputSchema,
+    ObjectiveFunctionInvokationCallbackData,
+    ObjectiveFunctionInvokationCallbackSchema,
+    TaskStatusChanged,
+    TaskStatusChangedSchema,
+)
 
 
 def get_plugin_metadata(plugin_url) -> PluginMetadata:

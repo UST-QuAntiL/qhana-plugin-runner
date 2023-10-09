@@ -17,15 +17,15 @@ from typing import Iterator, Optional
 import numpy as np
 import requests
 from celery.utils.log import get_task_logger
-
-from plugins.optimizer.coordinator import Optimizer
-from plugins.optimizer.shared.enums import InteractionEndpointType
-from plugins.optimizer.shared.schemas import (
+from optimizer.coordinator import Optimizer
+from optimizer.shared.enums import InteractionEndpointType
+from optimizer.shared.schemas import (
     ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataResponse,
     ObjectiveFunctionPassDataResponseSchema,
     ObjectiveFunctionPassDataSchema,
 )
+
 from qhana_plugin_runner.api.tasks_api import TaskData, TaskStatusSchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
