@@ -13,16 +13,15 @@
 # limitations under the License.
 
 from json import dump, dumps, loads
-import codecs
 import mimetypes
 import os
-import pickle
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict, Optional
 from uuid import uuid4
 from qiskit.providers.ibmq.job import IBMQJob
 from qiskit.result.result import ExperimentResult, Result
 from qiskit import QuantumCircuit, execute
+from qiskit_ibm_runtime import QiskitRuntimeService
 from celery.utils.log import get_task_logger
 
 from .backend.qiskit_backends import get_qiskit_backend
@@ -137,7 +136,8 @@ def start_execution(self, db_id: int) -> str:
 
     db_task.data = dumps(
         {
-            "job": codecs.encode(pickle.dumps(job), "base64").decode(),
+            "job_id": job.job_id(),
+            "parameters": CircuitSelectionParameterSchema().dumps(circuit_params),
             "execution_options": execution_options,
         }
     )
@@ -170,8 +170,14 @@ def result_watcher(self, db_id: int) -> str:
         raise KeyError(msg)
 
     data = loads(db_task.data)
+    job_id = data["job_id"]
+    params: CircuitSelectionInputParameters = CircuitSelectionParameterSchema().loads(
+        data["parameters"]
+    )
+    execution_options = data["execution_options"]
 
-    job = pickle.loads(codecs.decode(data["job"].encode(), "base64"))
+    service = QiskitRuntimeService(token=params.ibmqToken, channel="ibm_quantum")
+    job = service.job(job_id)
 
     if not job.in_final_state():
         raise JobNotFinished("Job not finished yet!")
@@ -232,7 +238,6 @@ def result_watcher(self, db_id: int) -> str:
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
 
-    execution_options = data["execution_options"]
     extra_execution_options = {
         "ID": experiment_id,
         "executorPlugin": execution_options.get("executorPlugin", [])
