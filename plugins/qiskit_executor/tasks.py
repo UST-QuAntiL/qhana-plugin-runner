@@ -177,7 +177,7 @@ def result_watcher(self, db_id: int) -> str:
     job = service.job(job_id)
 
     if not job.in_final_state():
-        raise JobNotFinished("Job not finished yet!")
+        raise JobNotFinished("Job not finished yet!")  # auto-retry task on this exception
 
     result: Result = job.result()
     if not result.success:
