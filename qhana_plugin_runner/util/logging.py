@@ -24,7 +24,7 @@ def get_logger(app: Flask, name: str) -> Logger:
     return getLogger(logger_name)
 
 
-def make_log_data(data: dict, private_fields: tuple = ("ibmq_token", "db_password")):
+def redact_log_data(data: dict, private_fields: tuple = ("ibmq_token", "db_password")):
     """Returns a copy of the data without confidential/private information.
 
     Args:

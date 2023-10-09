@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     FileUrl,
 )
-from qhana_plugin_runner.util.logging import make_log_data
+from qhana_plugin_runner.util.logging import redact_log_data
 from .backend.qiskit_backends import QiskitBackends
 from .backend.kernel import KernelEnum, EntanglementPatternEnum
 
@@ -199,5 +199,5 @@ class InputParametersSchema(FrontendFormBaseSchema):
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
-        TASK_LOGGER.info(f"data: {make_log_data(data)}")
+        TASK_LOGGER.info(f"data: {redact_log_data(data)}")
         return InputParameters(**data)
