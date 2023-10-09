@@ -14,11 +14,12 @@
 
 from typing import Optional
 import marshmallow as ma
+from celery.utils.log import get_task_logger
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     FileUrl,
 )
-from celery.utils.log import get_task_logger
+from qhana_plugin_runner.util.logging import redact_log_data
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -40,9 +41,7 @@ class CircuitSelectionInputParameters:
         self.backend = backend
 
     def __str__(self):
-        variables = self.__dict__.copy()
-        variables["ibmqToken"] = ""
-        return str(variables)
+        return str(redact_log_data(self.__dict__))
 
 
 class BackendSelectionInputParameters:
@@ -55,9 +54,7 @@ class BackendSelectionInputParameters:
         self.backend = backend
 
     def __str__(self):
-        variables = self.__dict__.copy()
-        variables["ibmqToken"] = ""
-        return str(variables)
+        return str(redact_log_data(self.__dict__))
 
 
 class BackendSelectionParameterSchema(FrontendFormBaseSchema):
@@ -82,7 +79,6 @@ class BackendSelectionParameterSchema(FrontendFormBaseSchema):
 
     @ma.post_load
     def make_input_params(self, data, **kwargs) -> BackendSelectionInputParameters:
-        TASK_LOGGER.info(f"data: {data}")
         return BackendSelectionInputParameters(**data)
 
 
