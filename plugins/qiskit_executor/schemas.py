@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
 import marshmallow as ma
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
@@ -27,10 +28,10 @@ class CircuitSelectionInputParameters:
     def __init__(
         self,
         circuit: str,
-        executionOptions: str,
+        executionOptions: Optional[str],
         shots: int,
-        ibmqToken: str,
-        backend: str,
+        ibmqToken: Optional[str],
+        backend: Optional[str],
     ):
         self.circuit = circuit
         self.executionOptions = executionOptions
