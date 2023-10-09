@@ -74,6 +74,7 @@ class PluginsView(MethodView):
                 interaction_endpoints=[
                     InteractionEndpoint(
                         type=InteractionEndpointType.of_pass_data.value,
+                        # since the endpoint has the task id as parameter, we need to add it here
                         href=url_for(
                             f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
@@ -86,7 +87,7 @@ class PluginsView(MethodView):
                             f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
                             _external=True,
                         )
-                        + "<int:task_id>/calc-callback-endpoint/",
+                        + "<int:task_id>/calc-loss-endpoint/",
                     ),
                 ],
                 href=url_for(f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
@@ -161,10 +162,12 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         schema = HyperparamterInputSchema()
         callback_schema = CallbackUrlSchema()
 
+        # set default values
         if not data:
             data = {"alpha": 0.1}
         process_url = url_for(
             f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
+            # forward the callback url to the processing endpoint
             **callback_schema.dump(callback),
         )
         example_values_url = url_for(
@@ -194,7 +197,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
 
 @RIDGELOSS_BLP.route("/optimizer-callback/")
 class OptimizerCallbackProcess(MethodView):
-    """Make a callback to the optimizer plugin after selection the hyperparameter."""
+    """Make a callback to the coordinator plugin after selection the hyperparameter."""
 
     @RIDGELOSS_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @RIDGELOSS_BLP.arguments(
@@ -208,13 +211,14 @@ class OptimizerCallbackProcess(MethodView):
         db_task = ProcessingTask(
             task_name="ridge-loss",
         )
+        # save the hyperparameter in the db
         hyperparameter = {"alpha": arguments.alpha}
         db_task.data["hyperparameter"] = hyperparameter
         db_task.save(commit=True)
         callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
             ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
         )
-
+        # make callback to coordinator plugin with the task id as parameter
         make_callback(callback.callback_url, callback_data)
 
 
@@ -244,11 +248,12 @@ class PassDataEndpoint(MethodView):
 
         db_task.save(commit=True)
 
+        # return the number of weights which is the number of data points in the x array
         return {"number_weights": input_data.x.shape[1]}
 
 
-@RIDGELOSS_BLP.route("/<int:db_id>/calc-callback-endpoint/")
-class CalcCallbackEndpoint(MethodView):
+@RIDGELOSS_BLP.route("/<int:db_id>/calc-loss-endpoint/")
+class CalcLossEndpoint(MethodView):
     """Endpoint for the calculation callback."""
 
     @RIDGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
@@ -258,6 +263,7 @@ class CalcCallbackEndpoint(MethodView):
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
+        # get the data from the cache
         x, y, hyperparameter = get_of_calc_data(db_id)
 
         if input_data.x is None:
