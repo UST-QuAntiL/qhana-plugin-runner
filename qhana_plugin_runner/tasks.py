@@ -64,7 +64,9 @@ def add_step(
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
 
-    AsyncResult(self.request.parent_id, app=CELERY).forget()
+    AsyncResult(
+        self.request.parent_id if self.request.parent_id else self.request.id, app=CELERY
+    ).forget()
 
 
 @CELERY.task(name=f"{_name}.save-result", bind=True, ignore_result=True)

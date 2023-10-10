@@ -25,7 +25,7 @@ from qhana_plugin_runner.util.logging import redact_log_data
 TASK_LOGGER = get_task_logger(__name__)
 
 
-class CircuitSelectionInputParameters:
+class CircuitParameters:
     def __init__(
         self,
         circuit: str,
@@ -44,7 +44,7 @@ class CircuitSelectionInputParameters:
         return str(redact_log_data(self.__dict__))
 
 
-class BackendSelectionInputParameters:
+class AuthenticationParameters:
     def __init__(
         self,
         ibmqToken: str,
@@ -57,32 +57,18 @@ class BackendSelectionInputParameters:
         return str(redact_log_data(self.__dict__))
 
 
-class BackendSelectionParameterSchema(FrontendFormBaseSchema):
-    ibmqToken = ma.fields.String(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "IBMQ Token",
-            "description": "Token for IBMQ.",
-            "input_type": "password",
-        },
-    )
-    backend = ma.fields.String(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Backend",
-            "description": "The quantum computer or simulator that will be used (e.g. ibmq_qasm_simulator).",
-            "input_type": "text_with_datalist",
-        },
-    )
+class BackendParameters:
+    def __init__(
+        self,
+        backend: str,
+    ):
+        self.backend = backend
 
-    @ma.post_load
-    def make_input_params(self, data, **kwargs) -> BackendSelectionInputParameters:
-        return BackendSelectionInputParameters(**data)
+    def __str__(self):
+        return str(redact_log_data(self.__dict__))
 
 
-class CircuitSelectionParameterSchema(FrontendFormBaseSchema):
+class CircuitParameterSchema(FrontendFormBaseSchema):
     circuit = FileUrl(
         required=True,
         allow_none=False,
@@ -137,5 +123,46 @@ class CircuitSelectionParameterSchema(FrontendFormBaseSchema):
     )
 
     @ma.post_load
-    def make_input_params(self, data, **kwargs) -> CircuitSelectionInputParameters:
-        return CircuitSelectionInputParameters(**data)
+    def make_input_params(self, data, **kwargs) -> CircuitParameters:
+        return CircuitParameters(**data)
+
+
+class AuthenticationParameterSchema(FrontendFormBaseSchema):
+    ibmqToken = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "IBMQ Token",
+            "description": "Token for IBMQ.",
+            "input_type": "password",
+        },
+    )
+    backend = ma.fields.String(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Backend",
+            "description": "The quantum computer or simulator that will be used (e.g. ibmq_qasm_simulator).",
+            "input_type": "text",
+        },
+    )
+
+    @ma.post_load
+    def make_input_params(self, data, **kwargs) -> AuthenticationParameters:
+        return AuthenticationParameters(**data)
+
+
+class BackendParameterSchema(FrontendFormBaseSchema):
+    backend = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Backend",
+            "description": "The quantum computer or simulator that will be used (e.g. ibmq_qasm_simulator).",
+            "input_type": "text_with_datalist",
+        },
+    )
+
+    @ma.post_load
+    def make_input_params(self, data, **kwargs) -> BackendParameters:
+        return BackendParameters(**data)

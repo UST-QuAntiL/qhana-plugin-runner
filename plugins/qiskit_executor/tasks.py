@@ -27,8 +27,8 @@ from celery.utils.log import get_task_logger
 from .backend.qiskit_backends import get_qiskit_backend
 from . import QiskitExecutor
 from .schemas import (
-    CircuitSelectionInputParameters,
-    CircuitSelectionParameterSchema,
+    CircuitParameters,
+    CircuitParameterSchema,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -43,31 +43,6 @@ from qhana_plugin_runner.storage import STORE
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{QiskitExecutor.instance.identifier}.prepare_task", bind=True)
-def prepare_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(
-        f"Starting new qiskit executor preparation task with db id '{db_id}'"
-    )
-    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-
-    if task_data is None:
-        msg = f"Could not load task data with id {db_id} to read parameters!"
-        TASK_LOGGER.error(msg)
-        raise KeyError(msg)
-
-    input_params: CircuitSelectionInputParameters = (
-        CircuitSelectionParameterSchema().loads(task_data.data)
-    )
-    TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
-
-    # Save input data in internal data structure for further processing
-    task_data.data = CircuitSelectionParameterSchema().dumps(input_params)
-
-    task_data.save(commit=True)
-
-    return f"Saved input data in internal data structure for further processing: {str(input_params)}"
-
-
 @CELERY.task(name=f"{QiskitExecutor.instance.identifier}.start_execution", bind=True)
 def start_execution(self, db_id: int) -> str:
     # get parameters
@@ -79,9 +54,7 @@ def start_execution(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    circuit_params: CircuitSelectionInputParameters = (
-        CircuitSelectionParameterSchema().loads(db_task.data)
-    )
+    circuit_params: CircuitParameters = CircuitParameterSchema().loads(db_task.data)
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(circuit_params)}")
 
@@ -136,7 +109,7 @@ def start_execution(self, db_id: int) -> str:
 
     db_task.data = {
         "job_id": job.job_id(),
-        "parameters": CircuitSelectionParameterSchema().dumps(circuit_params),
+        "parameters": CircuitParameterSchema().dumps(circuit_params),
         "execution_options": execution_options,
     }
     db_task.clear_previous_step()
@@ -168,9 +141,7 @@ def result_watcher(self, db_id: int) -> str:
         raise KeyError(msg)
 
     job_id = db_task.data["job_id"]
-    params: CircuitSelectionInputParameters = CircuitSelectionParameterSchema().loads(
-        db_task.data["parameters"]
-    )
+    params: CircuitParameters = CircuitParameterSchema().loads(db_task.data["parameters"])
     execution_options = db_task.data["execution_options"]
 
     service = QiskitRuntimeService(token=params.ibmqToken, channel="ibm_quantum")
