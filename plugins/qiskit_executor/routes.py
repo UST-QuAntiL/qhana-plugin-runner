@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import mimetypes
 import os
 from http import HTTPStatus
 from typing import Mapping, Optional
@@ -25,6 +26,10 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
+from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict, load_entities
+
+from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.util.logging import redact_log_data
 
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .schemas import (
@@ -150,9 +155,7 @@ class MicroFrontend(MethodView):
         fields = CircuitParameterSchema().fields
 
         # define default values
-        default_values = {
-            fields["shots"].data_key: 1024,
-        }
+        default_values = {}
 
         if "IBMQ_BACKEND" in os.environ:
             default_values[fields["backend"].data_key] = os.environ["IBMQ_BACKEND"]
@@ -188,11 +191,40 @@ class CalcView(MethodView):
     )
     @QISKIT_EXECUTOR_BLP.response(HTTPStatus.SEE_OTHER)
     @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments):
+    def post(self, arguments: CircuitParameters):
         """Start the circuit execution task."""
+        options = {}
+        if arguments.executionOptions:
+            with open_url(arguments.executionOptions) as execution_options_response:
+                try:
+                    mimetype = execution_options_response.headers["Content-Type"]
+                except KeyError:
+                    mimetype = mimetypes.MimeTypes().guess_type(
+                        url=arguments.executionOptions
+                    )[0]
+                if mimetype is None:
+                    msg = "Could not guess execution options mime type!"
+                    TASK_LOGGER.error(msg)
+                    raise ValueError(msg)  # TODO better error
+                entities = ensure_dict(
+                    load_entities(execution_options_response, mimetype=mimetype)
+                )
+                options = next(entities, {})
+                TASK_LOGGER.info(f"Loaded execution options: {redact_log_data(options)}")
+
+        if not arguments.shots:
+            arguments.shots = options.get("shots", 1024)
+        if not arguments.ibmqToken:
+            arguments.ibmqToken = options.get("ibmqToken", "")
+        if not arguments.backend:
+            arguments.backend = options.get("backend", "")
+
         db_task = ProcessingTask(
             task_name=start_execution.name,
-            data=CircuitParameterSchema().dumps(arguments),
+            data={
+                "parameters": CircuitParameterSchema().dumps(arguments),
+                "options": options,
+            },
         )
         db_task.save(commit=True)
 
@@ -300,7 +332,7 @@ class AuthenticationFrontend(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params = CircuitParameterSchema().loads(db_task.data)
+        params = CircuitParameterSchema().loads(db_task.data["parameters"])
         fields = AuthenticationParameterSchema().fields
 
         # define default values
@@ -342,16 +374,18 @@ class AuthenticationView(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        task_data: CircuitParameters = CircuitParameterSchema().loads(db_task.data)
-        task_data.ibmqToken = arguments.ibmqToken
-        if task_data.backend == "" and arguments.backend != "":
-            task_data.backend = arguments.backend
-        db_task.data = CircuitParameterSchema().dumps(task_data)
+        params: CircuitParameters = CircuitParameterSchema().loads(
+            db_task.data["parameters"]
+        )
+        params.ibmqToken = arguments.ibmqToken
+        if params.backend == "" and arguments.backend != "":
+            params.backend = arguments.backend
+        db_task.data["parameters"] = CircuitParameterSchema().dumps(params)
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        if task_data.backend == "":
+        if params.backend == "":
             # start the backend selection task
             step_id = "backend-selection"
             href = url_for(
@@ -430,11 +464,10 @@ class BackendSelectionFrontend(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params: CircuitParameters = CircuitParameterSchema().loads(db_task.data)
+        params: CircuitParameters = CircuitParameterSchema().loads(
+            db_task.data["parameters"]
+        )
         backend_parameter_schema = BackendParameterSchema()
-        # backend_selection_schema.fields["backend"].choices = [
-        #     (backend.name(), backend.name()) for backend in get_backends(db_task.data["ibmqToken"])
-        # ]
         backend_parameter_schema.fields["backend"].metadata["datalist"] = [
             backend.name() for backend in get_backends(params.ibmqToken)
         ]
@@ -471,9 +504,11 @@ class BackendSelectionView(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        task_data: CircuitParameters = CircuitParameterSchema().loads(db_task.data)
-        task_data.backend = arguments.backend
-        db_task.data = CircuitParameterSchema().dumps(task_data)
+        params: CircuitParameters = CircuitParameterSchema().loads(
+            db_task.data["parameters"]
+        )
+        params.backend = arguments.backend
+        db_task.data["parameters"] = CircuitParameterSchema().dumps(params)
 
         db_task.clear_previous_step()
         db_task.save(commit=True)

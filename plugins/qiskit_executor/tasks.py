@@ -54,38 +54,15 @@ def start_execution(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    circuit_params: CircuitParameters = CircuitParameterSchema().loads(db_task.data)
+    circuit_params: CircuitParameters = CircuitParameterSchema().loads(
+        db_task.data["parameters"]
+    )
 
-    TASK_LOGGER.info(f"Loaded input parameters from db: {str(circuit_params)}")
+    TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")
 
     circuit_qasm: str
     with open_url(circuit_params.circuit) as quasm_response:
         circuit_qasm = quasm_response.text
-
-    execution_options: Dict[str, Any] = {
-        "shots": circuit_params.shots,
-    }
-
-    if circuit_params.executionOptions:
-        with open_url(circuit_params.executionOptions) as execution_options_response:
-            try:
-                mimetype = execution_options_response.headers["Content-Type"]
-            except KeyError:
-                mimetype = mimetypes.MimeTypes().guess_type(
-                    url=circuit_params.executionOptions
-                )[0]
-            if mimetype is None:
-                msg = "Could not guess execution options mime type!"
-                TASK_LOGGER.error(msg)
-                raise ValueError(msg)  # TODO better error
-            entities = ensure_dict(
-                load_entities(execution_options_response, mimetype=mimetype)
-            )
-            options = next(entities, {})
-            db_task.add_task_log_entry(
-                "loaded execution options: " + dumps(options), commit=True
-            )
-            execution_options.update(options)
 
     if circuit_params.ibmqToken == "****":
         TASK_LOGGER.info("Loading IBMQ token from environment variable")
@@ -105,13 +82,9 @@ def start_execution(self, db_id: int) -> str:
 
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 
-    job: IBMQJob = execute(circuit, backend, shots=execution_options["shots"])
+    job: IBMQJob = execute(circuit, backend, shots=circuit_params.shots)
 
-    db_task.data = {
-        "job_id": job.job_id(),
-        "parameters": CircuitParameterSchema().dumps(circuit_params),
-        "execution_options": execution_options,
-    }
+    db_task.data["job_id"] = job.job_id()
     db_task.clear_previous_step()
     db_task.save(commit=True)
 
@@ -142,7 +115,7 @@ def result_watcher(self, db_id: int) -> str:
 
     job_id = db_task.data["job_id"]
     params: CircuitParameters = CircuitParameterSchema().loads(db_task.data["parameters"])
-    execution_options = db_task.data["execution_options"]
+    execution_options = db_task.data["options"]
 
     service = QiskitRuntimeService(token=params.ibmqToken, channel="ibm_quantum")
     job = service.job(job_id)
@@ -210,11 +183,12 @@ def result_watcher(self, db_id: int) -> str:
         "ID": experiment_id,
         "executorPlugin": execution_options.get("executorPlugin", [])
         + [QiskitExecutor.instance.identifier],
-        "shots": metadata.get("shots", execution_options["shots"]),
+        "shots": metadata.get("shots", params.shots),
         "qpuType": metadata["qpuType"],
         "qpuVendor": metadata["qpuVendor"],
         "qpuName": metadata["qpuName"],
         "qpuVersion": metadata["qpuVersion"],
+        "backend": params.backend,
     }
 
     if "seed" in metadata:

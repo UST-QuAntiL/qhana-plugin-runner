@@ -30,7 +30,7 @@ class CircuitParameters:
         self,
         circuit: str,
         executionOptions: Optional[str],
-        shots: int,
+        shots: Optional[int],
         ibmqToken: Optional[str],
         backend: Optional[str],
     ):
@@ -68,6 +68,20 @@ class BackendParameters:
         return str(redact_log_data(self.__dict__))
 
 
+class NoneOrInteger(ma.fields.Integer):
+    """A integer field that deserializes to None if the value is an empty string. Only values >= 1 are valid."""
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        if value == "":
+            return None
+        return super()._deserialize(value, attr, data, **kwargs)
+
+    def _validate(self, value):
+        if value is None:
+            return None
+        return ma.validate.Range(min=1, min_inclusive=True)(value)
+
+
 class CircuitParameterSchema(FrontendFormBaseSchema):
     circuit = FileUrl(
         required=True,
@@ -92,16 +106,15 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    shots = ma.fields.Integer(
-        required=True,
-        allow_none=False,
+    shots = NoneOrInteger(
+        required=False,
+        allow_none=True,
         metadata={
             "label": "Number of Shots",
             "description": """The number of times the quantum circuit gets executed. The higher, the more accurate our 
                             results get.""",
             "input_type": "number",
         },
-        validate=ma.validate.Range(min=1, min_inclusive=True),
     )
     ibmqToken = ma.fields.String(
         required=False,
