@@ -1,4 +1,15 @@
-from typing import Any, Optional, Sequence, TypeAlias, Union, cast
+from typing import (
+    Any,
+    Optional,
+    Sequence,
+    TypeAlias,
+    Union,
+    cast,
+    Dict,
+    List,
+    TypedDict,
+    Literal,
+)
 from json import dumps
 from functools import reduce
 
@@ -91,6 +102,66 @@ def get_endpoint_method_summary(spec: OpenapiSpec, path: str, method: str) -> st
         case version:
             print(f"unsupported version {version}")  # FIXME throw error?
     return None
+
+
+EndpointParameter = TypedDict(
+    "EndpointParameter",
+    {
+        "name": str,
+        "in": Literal["query", "header", "path", "cookie"],
+        "description": str,
+        "required": bool,
+        "deprecated": bool,
+        "allowEmptyValue": bool,
+        "style": str,
+        "explode": bool,
+        "allowReserved": bool,
+        "schema": Dict,
+        "example": Any,
+        "examples": Dict[str, Any],
+        "content": Dict[str, Any],
+    },
+    total=False,
+)
+
+
+def _get_endpoint_parameters_3(
+    specification: dict, path: str, method: str
+) -> List[EndpointParameter]:
+    parameters: List = (
+        specification["paths"].get(path, {}).get(method, {}).get("parameters", {})
+    )
+    resolved_params = []
+
+    for param in parameters:
+        match param:
+            case {"name": _, "in": _}:
+                resolved_params.append(param)
+            case {"$ref": ref}:
+                resolved_params.append(_resolve_json_ref(specification, ref))
+            case _:
+                raise ValueError
+
+    return resolved_params
+
+
+def get_endpoint_parameters(
+    spec: OpenapiSpec, path: str, method: str
+) -> List[EndpointParameter]:
+    parser = parse_spec(spec)
+
+    specification = parser.specification
+    assert isinstance(specification, dict), "type assertion"
+
+    match parser.version_parsed:
+        case (2, _) | (2, _, _):
+            # TODO: Implement parameter parsing for 2.0. Parameters were quite different in 2.0.
+            raise NotImplementedError
+        case (3, 0 | 1) | (3, 0 | 1, _):
+            return _get_endpoint_parameters_3(specification, path, method)
+        case version:
+            print(f"unsupported version {version}")  # FIXME throw error?
+    return []
 
 
 def _resolve_json_ref(specification: dict, ref: str) -> Optional[dict]:
@@ -309,3 +380,5 @@ if __name__ == "__main__":
     print(summary)
     body = get_example_body(spec, "/pet", "put")
     print(body)
+    params = get_endpoint_parameters(spec, "/pet/{petId}", "post")
+    print(params)
