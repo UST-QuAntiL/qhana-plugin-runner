@@ -404,7 +404,7 @@ function onFormSubmit(event, dataInputs, privateInputs) {
             }
             if (entry instanceof File) {
                 // add filename instead of file object
-                processedFormData.append(key, entry.name);
+                processedFormData.append(key, `Uploaded file: ${entry.name}`);
                 return;
             }
             // add all other values unchanged
