@@ -68,7 +68,7 @@ class BackendParameters:
         return str(redact_log_data(self.__dict__))
 
 
-class NoneOrInteger(ma.fields.Integer):
+class NoneOrPositiveInteger(ma.fields.Integer):
     """A integer field that deserializes to None if the value is an empty string. Only values >= 1 are valid."""
 
     def _deserialize(self, value, attr, data, **kwargs):
@@ -106,7 +106,7 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    shots = NoneOrInteger(
+    shots = NoneOrPositiveInteger(
         required=False,
         allow_none=True,
         metadata={
