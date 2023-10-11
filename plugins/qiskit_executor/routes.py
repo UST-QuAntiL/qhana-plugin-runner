@@ -228,7 +228,7 @@ class CalcView(MethodView):
         )
         db_task.save(commit=True)
 
-        if arguments.ibmqToken == "":
+        if not arguments.ibmqToken:
             # start the authentication task
             step_id = "authentication"
             href = url_for(
@@ -251,7 +251,7 @@ class CalcView(MethodView):
                 prog_unit="steps",
                 task_log="Starting authentication step",
             )
-        elif arguments.backend == "":
+        elif not arguments.backend:
             # start the backend selection task
             step_id = "backend-selection"
             href = url_for(
@@ -378,14 +378,14 @@ class AuthenticationView(MethodView):
             db_task.data["parameters"]
         )
         params.ibmqToken = arguments.ibmqToken
-        if params.backend == "" and arguments.backend != "":
+        if (not params.backend) and arguments.backend:
             params.backend = arguments.backend
         db_task.data["parameters"] = CircuitParameterSchema().dumps(params)
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        if params.backend == "":
+        if not params.backend:
             # start the backend selection task
             step_id = "backend-selection"
             href = url_for(
