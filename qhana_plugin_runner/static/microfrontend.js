@@ -402,6 +402,11 @@ function onFormSubmit(event, dataInputs, privateInputs) {
                 processedFormData.append(key, '***');
                 return;
             }
+            if (entry instanceof File) {
+                // add filename instead of file object
+                processedFormData.append(key, entry.name);
+                return;
+            }
             // add all other values unchanged
             processedFormData.append(key, entry);
             // add data inputs to extra list
