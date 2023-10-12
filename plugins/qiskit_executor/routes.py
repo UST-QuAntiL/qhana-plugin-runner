@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mimetypes
 import os
 from http import HTTPStatus
 from typing import Mapping, Optional
-
 from celery.canvas import chain
 from flask import Response
 from flask import redirect
@@ -26,10 +24,8 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
-from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict, load_entities
-
-from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.util.logging import redact_log_data
+from qhana_plugin_runner.util.plugins import get_execution_options
 
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .schemas import (
@@ -195,29 +191,15 @@ class CalcView(MethodView):
         """Start the circuit execution task."""
         options = {}
         if arguments.executionOptions:
-            with open_url(arguments.executionOptions) as execution_options_response:
-                try:
-                    mimetype = execution_options_response.headers["Content-Type"]
-                except KeyError:
-                    mimetype = mimetypes.MimeTypes().guess_type(
-                        url=arguments.executionOptions
-                    )[0]
-                if mimetype is None:
-                    msg = "Could not guess execution options mime type!"
-                    TASK_LOGGER.error(msg)
-                    raise ValueError(msg)  # TODO better error
-                entities = ensure_dict(
-                    load_entities(execution_options_response, mimetype=mimetype)
-                )
-                options = next(entities, {})
-                TASK_LOGGER.info(f"Loaded execution options: {redact_log_data(options)}")
+            options = get_execution_options(arguments.executionOptions)
+            TASK_LOGGER.info(f"Loaded execution options: {redact_log_data(options)}")
 
         if not arguments.shots:
             arguments.shots = options.get("shots", 1024)
         if not arguments.ibmqToken:
-            arguments.ibmqToken = options.get("ibmqToken", "")
+            arguments.ibmqToken = options.get("ibmqToken", None)
         if not arguments.backend:
-            arguments.backend = options.get("backend", "")
+            arguments.backend = options.get("backend", None)
 
         db_task = ProcessingTask(
             task_name=start_execution.name,
