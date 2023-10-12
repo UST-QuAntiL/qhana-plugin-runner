@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from typing import Optional
 import marshmallow as ma
 from celery.utils.log import get_task_logger
@@ -25,44 +26,30 @@ from qhana_plugin_runner.util.logging import redact_log_data
 TASK_LOGGER = get_task_logger(__name__)
 
 
+@dataclass(repr=False)
 class CircuitParameters:
-    def __init__(
-        self,
-        circuit: str,
-        executionOptions: Optional[str],
-        shots: Optional[int],
-        ibmqToken: Optional[str],
-        backend: Optional[str],
-    ):
-        self.circuit = circuit
-        self.executionOptions = executionOptions
-        self.shots = shots
-        self.ibmqToken = ibmqToken
-        self.backend = backend
+    circuit: str
+    executionOptions: Optional[str]
+    shots: Optional[int]
+    ibmqToken: Optional[str]
+    backend: Optional[str]
 
     def __str__(self):
         return str(redact_log_data(self.__dict__))
 
 
+@dataclass(repr=False)
 class AuthenticationParameters:
-    def __init__(
-        self,
-        ibmqToken: str,
-        backend: str,
-    ):
-        self.ibmqToken = ibmqToken
-        self.backend = backend
+    ibmqToken: str
+    backend: Optional[str]
 
     def __str__(self):
         return str(redact_log_data(self.__dict__))
 
 
+@dataclass(repr=False)
 class BackendParameters:
-    def __init__(
-        self,
-        backend: str,
-    ):
-        self.backend = backend
+    backend: str
 
     def __str__(self):
         return str(redact_log_data(self.__dict__))
