@@ -207,12 +207,14 @@ class CalcView(MethodView):
                 "parameters": CircuitParameterSchema().dumps(arguments),
                 "options": options,
             },
+            progress_value=1,
+            progress_target=1,
+            progress_unit="steps",
         )
         db_task.save(commit=True)
 
         if not arguments.ibmqToken:
             # start the authentication task
-            step_id = "authentication"
             href = url_for(
                 f"{QISKIT_EXECUTOR_BLP.name}.AuthenticationView",
                 db_id=db_task.id,
@@ -223,19 +225,11 @@ class CalcView(MethodView):
                 db_id=db_task.id,
                 _external=True,
             )
-            task = add_step.s(
-                db_id=db_task.id,
-                step_id=step_id,
-                href=href,
-                ui_href=ui_href,
-                prog_value=1,
-                prog_target=2,
-                prog_unit="steps",
-                task_log="Starting authentication step",
-            )
+            db_task.progress_target = 2
+            db_task.add_next_step(href=href, ui_href=ui_href, step_id="authentication")
+            db_task.add_task_log_entry("Starting authentication step")
         elif not arguments.backend:
             # start the backend selection task
-            step_id = "backend-selection"
             href = url_for(
                 f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionView",
                 db_id=db_task.id,
@@ -246,16 +240,9 @@ class CalcView(MethodView):
                 db_id=db_task.id,
                 _external=True,
             )
-            task = add_step.s(
-                db_id=db_task.id,
-                step_id=step_id,
-                href=href,
-                ui_href=ui_href,
-                prog_value=1,
-                prog_target=2,
-                prog_unit="steps",
-                task_log="Starting backend selection step",
-            )
+            db_task.progress_target = 2
+            db_task.add_next_step(href=href, ui_href=ui_href, step_id="backend-selection")
+            db_task.add_task_log_entry("Starting backend selection step")
         else:
             # start the execution task
             task: chain = (
@@ -263,9 +250,9 @@ class CalcView(MethodView):
                 | result_watcher.si(db_id=db_task.id)
                 | save_task_result.s(db_id=db_task.id)
             )
-        # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async()
+            # save errors to db
+            task.link_error(save_task_error.s(db_id=db_task.id))
+            task.apply_async()
 
         db_task.save(commit=True)
 
