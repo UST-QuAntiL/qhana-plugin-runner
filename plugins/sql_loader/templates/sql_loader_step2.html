@@ -1,54 +1,52 @@
 {% extends "simple_template.html" %}
 
-<head>
-    {% block head %}
-        {{ super() }}
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-            .loader {
-              border: 16px solid #f3f3f3;
-              border-radius: 50%;
-              border-top: 16px solid #3498db;
-              width: 80px;
-              height: 80px;
-              -webkit-animation: spin 2s linear infinite; /* Safari */
-              animation: spin 2s linear infinite;
-            }
+{% block head %}
+    {{ super() }}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .loader {
+          border: 16px solid #f3f3f3;
+          border-radius: 50%;
+          border-top: 16px solid #3498db;
+          width: 80px;
+          height: 80px;
+          -webkit-animation: spin 2s linear infinite; /* Safari */
+          animation: spin 2s linear infinite;
+        }
 
-            /* Safari */
-            @-webkit-keyframes spin {
-              0% { -webkit-transform: rotate(0deg); }
-              100% { -webkit-transform: rotate(360deg); }
-            }
+        /* Safari */
+        @-webkit-keyframes spin {
+          0% { -webkit-transform: rotate(0deg); }
+          100% { -webkit-transform: rotate(360deg); }
+        }
 
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
 
-            .html_table {
-                height: 200px;
-                overflow: auto;
-                width: fit-content
-            }
+        .html_table {
+            height: 200px;
+            overflow: auto;
+            width: fit-content
+        }
 
-            ul.qhana-form-input {
-                max-height: 150px;
-                color: var(--text);
-                background-color: var(--background);
-                border: 2px solid var(--border-color, currentColor);
-                border-radius: 5px;
-                max-width: initial;
-                box-sizing: border-box;
-                padding-inline: 0.5rem;
-                padding-block: 1.3ex;
-                overflow: hidden auto;
-                list-style-type: none;
-                margin: 8px;
-            }
-        </style>
-    {% endblock head %}
-</head>
+        ul.qhana-form-input {
+            max-height: 150px;
+            color: var(--text);
+            background-color: var(--background);
+            border: 2px solid var(--border-color, currentColor);
+            border-radius: 5px;
+            max-width: initial;
+            box-sizing: border-box;
+            padding-inline: 0.5rem;
+            padding-block: 1.3ex;
+            overflow: hidden auto;
+            list-style-type: none;
+            margin: 8px;
+        }
+    </style>
+{% endblock head %}
 
 
 {% block content %}
