@@ -199,6 +199,16 @@ def second_task(self, db_id: int) -> str:
     params = retrieve_params_for_second_task(db_id)
     df = second_task_execution(**params)
 
+    # Delete password
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+    del task_data.data["db_password"]
+    del params["db_password"]
+    task_data.save(commit=True)
+
     # Output data
     if params["save_table"]:
         if df is not None:
