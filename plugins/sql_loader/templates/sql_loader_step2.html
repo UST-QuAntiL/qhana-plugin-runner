@@ -142,10 +142,12 @@
     }
 
     function set_box_values() {
-        JSON.parse(columns_list_value.value).forEach(entry => {
-            console.log(entry);
-            document.getElementById(entry).checked = true;
-        });
+        if (columns_list_value.value) {
+            JSON.parse(columns_list_value.value).forEach(entry => {
+                console.log(entry);
+                document.getElementById(entry).checked = true;
+            });
+        }
     }
 
     function set_columns_list() {
