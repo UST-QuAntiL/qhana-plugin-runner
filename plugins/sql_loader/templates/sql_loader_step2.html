@@ -246,7 +246,7 @@
         table_name_value.style.display = "none";
         let table_select = document.createElement("select");
         table_select.setAttribute("id", "table_select");
-        table_select.setAttribute("class", "qhana-form-input");
+        table_select.classList.add("qhana-form-input");
 
         Object.keys(tables_and_columns).forEach(function (key) {
             let table_option = document.createElement("option")
