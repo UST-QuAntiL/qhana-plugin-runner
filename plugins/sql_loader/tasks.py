@@ -199,14 +199,15 @@ def second_task(self, db_id: int) -> str:
     params = retrieve_params_for_second_task(db_id)
     df = second_task_execution(**params)
 
-    # Delete password
+    # Delete password and credentials
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
-    del task_data.data["db_password"]
-    del params["db_password"]
+    for entry in ["db_password", "db_user"]:
+        del task_data.data[entry]
+        del params[entry]
     task_data.save(commit=True)
 
     # Output data
