@@ -130,7 +130,7 @@ class FirstMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "first_template.html",
+                "sql_loader_step1.html",
                 name=SQLLoaderPlugin.instance.name,
                 version=SQLLoaderPlugin.instance.version,
                 schema=schema,
@@ -240,7 +240,7 @@ class SecondMicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "second_template.html",
+                "sql_loader_step2.html",
                 name=SQLLoaderPlugin.instance.name,
                 version=SQLLoaderPlugin.instance.version,
                 schema=schema,
