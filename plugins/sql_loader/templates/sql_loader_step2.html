@@ -185,7 +185,8 @@
     function test_button_click() {
         set_columns_list();
         pandas_html_value.innerHTML = "";
-        pandas_html_value.setAttribute("class", "loader");
+        pandas_html_value.classList.remove("html_table");
+        pandas_html_value.classList.add("loader");
 
 
         let data = new URLSearchParams(retrieve_parameters(qhana_form));
@@ -213,19 +214,17 @@
             .then((text) => {
                 pandas_html_value.innerHTML = text;
                 if (pandas_html_value.innerHTML !== "" && pandas_html_value.innerHTML !== "Query timed out") {
-                    pandas_html_value.setAttribute("class", "html_table");
-                } else {
-                    pandas_html_value.removeAttribute("class");
+                    pandas_html_value.classList.add("html_table");
                 }
+                pandas_html_value.classList.remove("loader");
             })
             // Catch any errors that might happen
             .catch((error) => {
                 console.log(`Could not fetch verse: ${error}`);
                 if (pandas_html_value.innerHTML !== "" && pandas_html_value.innerHTML !== "Query timed out") {
-                    pandas_html_value.setAttribute("class", "html_table");
-                } else {
-                    pandas_html_value.removeAttribute("class");
+                    pandas_html_value.classList.add("html_table");
                 }
+                pandas_html_value.classList.remove("loader");
             });
     }
 
