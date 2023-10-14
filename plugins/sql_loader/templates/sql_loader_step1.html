@@ -3,6 +3,7 @@
 {{ super() }}
 
 {% block script %}
+    {{ super() }}
     <script>
         var db_enum_value = document.getElementById("db_enum");
 
@@ -34,6 +35,4 @@
 
         db_enum_value.addEventListener("change", db_enum_change);
     </script>
-
-    <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
 {% endblock script %}
