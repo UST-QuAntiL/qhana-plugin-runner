@@ -18,7 +18,7 @@ from typing import Mapping, Optional
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from celery.exceptions import TimeoutError as CeleryTimeoutError
-from flask import Response, redirect, Markup
+from flask import Response, redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -256,8 +256,8 @@ class SecondMicroFrontend(MethodView):
                     db_id=db_id,
                     step_id=step_id,
                 ),
-                additional_info=Markup(db_task.data["db_tables_and_columns"]),
-                checkbox_list=Markup(db_task.data["checkbox_list"]),
+                additional_info=db_task.data["db_tables_and_columns"],
+                checkbox_list=db_task.data["checkbox_list"],
             )
         )
 

@@ -97,7 +97,7 @@
 {% block script %}
 
 <script>
-    const checkbox_list = {{ checkbox_list }};
+    const checkbox_list = {{ checkbox_list | tojson }};
 
     const columns_list_value = document.getElementById("columns_list");
     const wrapper = columns_list_value.parentNode;
@@ -238,7 +238,7 @@
     const table_name_value = document.getElementById("table_name");
     const attribute_to_id_value = document.getElementById("id_attribute");
     const id_attribute_list_value = document.getElementById("id_attribute_list");
-    const tables_and_columns = {{ additional_info }};
+    const tables_and_columns = {{ additional_info | tojson }};
 
     const attribute_to_id_vis = attribute_to_id_value.parentNode.parentNode;
     const columns_list_vis = columns_list_value.parentNode.parentNode;
