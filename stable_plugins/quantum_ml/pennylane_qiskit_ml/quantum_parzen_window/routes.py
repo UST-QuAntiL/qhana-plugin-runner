@@ -16,7 +16,10 @@ import os
 from http import HTTPStatus
 from typing import Mapping
 
+from pathlib import Path
+
 from celery.canvas import chain
+from flask import send_file
 from flask import Response
 from flask import redirect
 from flask.globals import request
@@ -168,7 +171,7 @@ class MicroFrontend(MethodView):
         default_values = {
             fields["window_size"].data_key: 1,
             fields["minimize_qubit_count"].data_key: False,
-            fields["backend"].data_key: QuantumBackends.aer_statevector_simulator.value,
+            fields["backend"].data_key: QuantumBackends.pennylane_default.value,
             fields["shots"].data_key: 1024,
         }
 
@@ -184,7 +187,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "template.html",
                 name=QParzenWindow.instance.name,
                 version=QParzenWindow.instance.version,
                 schema=InputParametersSchema(),

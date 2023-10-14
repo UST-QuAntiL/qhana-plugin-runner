@@ -49,6 +49,7 @@ class InputParameters:
     custom_backend: str
     resolution: int
     minimize_qubit_count: bool = False
+    visualize: bool = False
 
     def __str__(self):
         variables = self.__dict__.copy()
@@ -199,6 +200,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Custom backend",
             "description": "Custom backend for IBMQ.",
             "input_type": "text",
+        },
+    )
+    visualize = ma.fields.Boolean(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Visualize",
+            "description": "Plot the decision boundary for the trained classifier.",
+            "input_type": "checkbox",
         },
     )
     resolution = ma.fields.Integer(

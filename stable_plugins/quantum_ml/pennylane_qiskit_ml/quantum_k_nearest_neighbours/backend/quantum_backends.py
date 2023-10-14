@@ -25,7 +25,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 class QuantumBackends(enum.Enum):
-    custom_ibmq = "custom_ibmq"
+    pennylane_default = "pennylane_default"
     aer_statevector_simulator = "aer_statevector_simulator"
     aer_qasm_simulator = "aer_qasm_simulator"
     ibmq_qasm_simulator = "ibmq_qasm_simulator"
@@ -36,7 +36,7 @@ class QuantumBackends(enum.Enum):
     ibmq_belem = "ibmq_belem"
     ibmq_lima = "ibmq_lima"
     ibmq_armonk = "ibmq_armonk"
-    pennylane_default = "pennylane_default"
+    custom_ibmq = "custom_ibmq"
 
     def get_max_num_qbits(
         self,

@@ -81,10 +81,17 @@ class QParzenWindowEnum(Enum):
                 train_labels=train_labels,
             )
             if use_access_wires:
-                wires[2] = wires[2] + access_wires
+                wires[3] = wires[3] + access_wires
 
             return RuanParzenWindow(
-                train_data, train_labels, window_size, wires[0], wires[1], wires[2], None
+                train_data,
+                train_labels,
+                window_size,
+                wires[0],
+                wires[1],
+                wires[2],
+                wires[3],
+                None,
             ), count_wires(wires)
 
     def check_and_get_qubits(
