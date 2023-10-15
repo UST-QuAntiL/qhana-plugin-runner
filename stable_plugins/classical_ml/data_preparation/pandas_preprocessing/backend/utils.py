@@ -4,7 +4,7 @@ def get_number_if_possible(s: str):
 
     try:
         temp = float(s)
-        return temp
+        return float(s)
     except ValueError:
         pass
 
