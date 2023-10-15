@@ -144,7 +144,6 @@
     function set_box_values() {
         if (columns_list_value.value) {
             JSON.parse(columns_list_value.value).forEach(entry => {
-                console.log(entry);
                 document.getElementById(entry).checked = true;
             });
         }
@@ -166,13 +165,13 @@
 </script>
 
 <script>
-    const test_button = document.getElementById("preview_button");
+    const preview_button = document.getElementById("preview_button");
     const qhana_form = document.getElementsByClassName("qhana-form")[0];
     const pandas_html_value = document.getElementById("pandas_html");
 
     function retrieve_parameters(form) {
         let inputs = {};
-        form.querySelectorAll("input").forEach(item => {
+        form.querySelectorAll("input, textarea").forEach(item => {
             if (!item.id.endsWith("box")) {
                 if (item.type === "checkbox") {
                     inputs[item.name] = item.checked;
@@ -184,7 +183,7 @@
         return inputs
     }
 
-    function test_button_click() {
+    function preview_button_click() {
         set_columns_list();
         pandas_html_value.innerHTML = "";
         pandas_html_value.classList.remove("html_table");
@@ -230,7 +229,7 @@
             });
     }
 
-    test_button.addEventListener("click", test_button_click);
+    preview_button.addEventListener("click", preview_button_click);
 </script>
 
 <script>
