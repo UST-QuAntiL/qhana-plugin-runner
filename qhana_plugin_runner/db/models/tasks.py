@@ -15,13 +15,13 @@
 from datetime import datetime
 from typing import List, Optional, Sequence, Union
 
-from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import select
 from sqlalchemy.sql.schema import ForeignKey
 
-from .mutable_json import MutableJSON
+from .mutable_json import JSON_LIKE, MutableJSON
 from ..db import DB, REGISTRY
 
 
@@ -57,7 +57,7 @@ class ProcessingTask:
         started_at (datetime, optional): the moment the task was scheduled. (default :py:func:`~datetime.datetime.utcnow`)
         finished_at (Optional[datetime], optional): the moment the task finished successfully or with an error.
         parameters (str): the parameters for the task. Task parameters should already be prepared and error checked before starting the task.
-        data (Union[dict, list, str, float, int, bool, None]): mutable JSON-like store for additional lightweight task data. Default value is empty dict.
+        data (JSON_LIKE): mutable JSON-like store for additional lightweight task data. Default value is empty dict.
         steps (OrderingList[Step]): ordered list of steps of type :class:`Step`. Index ``number`` automatically increases when new elements are appended. Note: only use :meth:`add_next_step` to add a new step. Steps must not be deleted.
         current_step (int): index of last added step.
         progress_value (float): current progress value. ``None`` by default.
@@ -83,9 +83,7 @@ class ProcessingTask:
 
     parameters: Mapped[str] = mapped_column(sql.Text(), default="")
 
-    data: Mapped[Union[dict, list, str, float, int, bool, None]] = mapped_column(
-        MutableJSON, default_factory=dict
-    )
+    data: Mapped[JSON_LIKE] = mapped_column(MutableJSON, default_factory=dict)
 
     multi_step: Mapped[bool] = mapped_column(sql.Boolean(), default=False)
 

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from http import HTTPStatus
 from logging import Logger
 from time import time
-from typing import Dict, Optional, Sequence, Union
+from typing import Any, Dict, Literal, Optional, Sequence, Union
 
 from flask import Flask
 from flask.globals import current_app
@@ -42,6 +43,10 @@ class PluginRegistryClient:
         self._plugin_registry_url = app.config.get("PLUGIN_REGISTRY_URL", None)
 
     @property
+    def ready(self) -> bool:
+        return bool(self.plugin_registry_url)
+
+    @property
     def plugin_registry_url(self) -> Optional[str]:
         return current_app.config.get("PLUGIN_REGISTRY_URL", self._plugin_registry_url)
 
@@ -58,7 +63,14 @@ class PluginRegistryClient:
             )
             self._cache[self_link["href"]] = cachable_response
 
-    def _fetch_by_url(self, url: str, query_params: Optional[dict] = None) -> ApiResponse:
+    def _fetch_by_url(
+        self,
+        url: str,
+        query_params: Optional[dict] = None,
+        body: Optional[bytes] = None,
+        json: Optional[Any] = None,
+        method: Literal["get", "put", "post", "delete"] = "get",
+    ) -> ApiResponse:
         """Fetch a response by url.
 
         This method is not intended to be called directly!
@@ -66,6 +78,9 @@ class PluginRegistryClient:
         Args:
             url (str): the url to fetch
             query_params (Optional[dict], optional): additional query params to use. Defaults to None.
+            body (Optional[bytes]): a body to use for put or post requests. Defaults to None.
+            json (Optional[Any]): a json serializable object to use as a body for put or post requests. Defaults to None.
+            method (Literal["get", "put", "post", "delete"]): the http method to use for the request. Defaults to "get".
 
         Raises:
             ValueError: if the response does not appear to be an ApiResponse
@@ -85,7 +100,13 @@ class PluginRegistryClient:
             get_logger(current_app, _REGISTRY_CLIENT_LOGGER).debug(
                 f"Requesting URL '{url}' with query params {query_params}"
             )
-        response = request("get", url, params=query_params)
+        response = request(method, url, params=query_params, data=body, json=json)
+
+        if response.status_code == HTTPStatus.NO_CONTENT:
+            return ApiResponse(
+                data={"self": {"href": url, "rel": [], "resourceType": "accepted"}},
+                links=[],
+            )
 
         response_data = response.json()
         if response_data.keys() < _API_RESPONSE_MIN_KEYS:
@@ -114,23 +135,41 @@ class PluginRegistryClient:
         return api_response
 
     def fetch_by_api_link(
-        self, link: ApiLink, query_params: Optional[dict] = None
+        self,
+        link: ApiLink,
+        query_params: Optional[dict] = None,
+        body: Optional[bytes] = None,
+        json: Optional[Any] = None,
     ) -> ApiResponse:
         """Fetch a response for a specific api link.
 
         Args:
             link (ApiLink): the link to the resource
             query_params (Optional[dict], optional): additional query params to use. Defaults to None.
+            body (Optional[bytes]): a body to use for put or post requests. Defaults to None.
+            json (Optional[Any]): a json serializable object to use as a body for put or post requests. Defaults to None.
 
         Returns:
             ApiResponse: the api response
         """
-        return self._fetch_by_url(link["href"], query_params=query_params)
+        rels = link.get("rel", ())
+        method = "get"
+        if "post" in rels:
+            method = "post"
+        elif "put" in rels:
+            method = "put"
+        elif "delete" in rels:
+            method = "delete"
+        return self._fetch_by_url(
+            link["href"], query_params=query_params, body=body, json=json, method=method
+        )
 
     def search_by_rel(
         self,
         rel: Union[str, Sequence[str]],
         query_params: Optional[dict] = None,
+        body: Optional[bytes] = None,
+        json: Optional[Any] = None,
         allow_collection_resource: bool = True,
         base: Optional[ApiResponse] = None,
         ignore_base_match: bool = False,
@@ -142,6 +181,8 @@ class PluginRegistryClient:
         Args:
             rel (Union[str, Sequence[str]]): the rel (or rels) to search for
             query_params (Optional[dict], optional): additional query params to use (will be used for every request during the search). Defaults to None.
+            body (Optional[bytes]): a body to use for put or post requests. Defaults to None.
+            json (Optional[Any]): a json serializable object to use as a body for put or post requests. Defaults to None.
             allow_collection_resource (bool, optional): if False this method will not return a collection resource as its final result. Defaults to True.
             base (Optional[ApiResponse], optional): the starting point of the search (in form of a resource). Defaults to None.
             ignore_base_match (bool, optional): if True ignore a match of the given base resource (use this if you pass a base and do not want it back immediately). Defaults to False.
@@ -174,23 +215,35 @@ class PluginRegistryClient:
                 if allow_collection_resource or not result.is_collection_resource():
                     return result
                 final_result = self.search_by_rel(
-                    rel, query_params, allow_collection_resource, base=result
+                    rel,
+                    query_params,
+                    body=body,
+                    json=json,
+                    allow_collection_resource=allow_collection_resource,
+                    base=result,
                 )
                 if final_result is not None:
                     return final_result
-            result = self._fetch_by_url(link["href"], query_params=query_params)
+            result = self.fetch_by_api_link(
+                link, query_params=query_params, body=body, json=json
+            )
             if result.matches_rel(rel):
                 if allow_collection_resource or not result.is_collection_resource():
                     return result
                 final_result = self.search_by_rel(
-                    rel, query_params, allow_collection_resource, base=result
+                    rel,
+                    query_params,
+                    body=body,
+                    json=json,
+                    allow_collection_resource=allow_collection_resource,
+                    base=result,
                 )
                 if final_result is not None:
                     return final_result
 
         # expand search to include api links
         for api_link in base.get_links_by_rel("api"):
-            new_base = self._fetch_by_url(api_link["href"], query_params=query_params)
+            new_base = self.fetch_by_api_link(api_link, query_params=query_params)
             final_result = self.search_by_rel(
                 rel, query_params, allow_collection_resource, base=new_base
             )
@@ -203,6 +256,8 @@ class PluginRegistryClient:
         self,
         rels: Sequence[Union[str, Sequence[str]]],
         query_params: Optional[dict] = None,
+        body: Optional[bytes] = None,
+        json: Optional[Any] = None,
         allow_collection_resource: bool = True,
         base: Optional[ApiResponse] = None,
     ) -> Optional[ApiResponse]:
@@ -215,6 +270,8 @@ class PluginRegistryClient:
         Args:
             rels (Sequence[Union[str, Sequence[str]]]): the path of rels to follow
             query_params (Optional[dict], optional): additional query params to use (will be used for every request during the search). Defaults to None.
+            body (Optional[bytes]): a body to use for put or post requests. Defaults to None.
+            json (Optional[Any]): a json serializable object to use as a body for put or post requests. Defaults to None.
             allow_collection_resource (bool, optional): if False this method will not return a collection resource as its final result. Defaults to True.
             base (Optional[ApiResponse], optional): a base resource to start the search from. Defaults to None.
 
@@ -224,9 +281,25 @@ class PluginRegistryClient:
         response = base
         for index, rel in enumerate(rels):
             is_last = index == len(rels) - 1
+            if is_last:
+                if rel in ("put", "post", "delete") or not set(rel).isdisjoint(
+                    {"put", "post", "delete"}
+                ):
+                    for link in response.links:
+                        if match_api_link(
+                            link, rel=set([rel]) if isinstance(rel, str) else set(rel)
+                        ):
+                            self.fetch_by_api_link(
+                                link,
+                                query_params=query_params,
+                                body=body,
+                                json=json,
+                            )
             response = self.search_by_rel(
                 rel=rel,
                 query_params=query_params,
+                body=body,
+                json=json,
                 base=response,
                 allow_collection_resource=(not is_last or allow_collection_resource),
                 ignore_base_match=True,

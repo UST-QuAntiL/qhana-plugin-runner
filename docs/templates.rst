@@ -1,5 +1,7 @@
-Writing Templates
-=================
+Writing Templates (deprecated)
+==============================
+
+.. warning:: This feature is going to be part of the plugin registry and will be removed from the plugin runner once successfully ported over!
 
 A QHAna template is a way to display and organize plugins that are related somehow.
 For example you can write a template that displays the plugins needed for a specific task.

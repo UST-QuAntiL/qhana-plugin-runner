@@ -6,6 +6,7 @@ tests/
 test_data/
 plugins/
 git-plugins/
+stable_plugins/
 
 .flaskenv
 
