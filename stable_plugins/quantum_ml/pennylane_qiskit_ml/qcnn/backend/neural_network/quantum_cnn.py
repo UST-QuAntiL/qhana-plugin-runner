@@ -358,13 +358,7 @@ class QCNN3(QuantumCNN):
                     qml.RX(p, wires=i)
                     qml.RZ(p, wires=i)
                 for i, p in enumerate(layer_params[1]):
-                    qml.CRX(
-                        p,
-                        wires=[
-                            (i - 1) % self.n_qubits,
-                            i,
-                        ],
-                    )
+                    qml.CRX(p, wires=[(i - 1) % self.n_qubits, i])
 
             # Expectation values in the Z basis
             return [qml.expval(qml.PauliZ(wires=qubit)) for qubit in range(self.n_qubits)]
