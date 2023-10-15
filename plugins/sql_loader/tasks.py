@@ -173,7 +173,7 @@ def second_task_execution(
         retrieval_only = True
 
     if table_query != "":
-        if limit is not None and isinstance(limit, int):
+        if limit is not None and isinstance(limit, int) and limit > 0:
             table_query = table_query.rstrip(";")
             table_query = f"SELECT * FROM ({table_query}) AS temp LIMIT {limit}"
         df = db_manager.get_query_as_dataframe(table_query)
