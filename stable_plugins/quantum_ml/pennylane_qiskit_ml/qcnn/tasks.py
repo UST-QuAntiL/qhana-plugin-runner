@@ -162,6 +162,7 @@ def calculation_task(self, db_id: int) -> str:
     train(model, train_dataloader, loss_fn, opt, epochs, weights_to_wiggle)
 
     model.to("cpu")
+
     # test network
     def predictor(data: torch.Tensor) -> torch.Tensor:
         if not isinstance(data, torch.Tensor):
