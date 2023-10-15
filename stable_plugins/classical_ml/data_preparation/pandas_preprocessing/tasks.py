@@ -87,7 +87,7 @@ def first_task(self, db_id: int) -> str:
     return "Saved original csv file"
 
 
-@CELERY.task(name=f"{PDPreprocessing.instance.identifier}.second_task", bind=True)
+@CELERY.task(name=f"{PDPreprocessing.instance.identifier}.preprocessing_task", bind=True)
 def preprocessing_task(self, db_id: int, step_id: int) -> str:
     # get parameters
 
