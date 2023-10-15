@@ -92,8 +92,7 @@ def process_subset(subset: Optional[str]) -> Optional[List[str]]:
     if subset:
         result = json_loads(subset)
         if isinstance(result, list):
-            contents_type = {isinstance(el, str) for el in result}
-            if False not in contents_type:
+            if all(isinstance(el, str) for el in result):
                 result = None if len(result) == 0 else result
             else:
                 result = None
