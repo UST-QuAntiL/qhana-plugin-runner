@@ -104,13 +104,7 @@ def add_background(
 
     # Give markers a slightly thicker border, since their background will most likely have the same color.
     # Note, background is due to the heatmap
-    scatter.update_traces(
-        marker=dict(
-            line=dict(
-                width=2.5,
-            )
-        ),
-    )
+    scatter.update_traces(marker=dict(line=dict(width=2.5)))
     # Correct colors of different labels. 0 gets the first color, 1 the second and so on
     # Thus the color match with the heatmap colors
     for sca_plt in scatter.data:
@@ -119,11 +113,7 @@ def add_background(
             if label_to_int is None
             else label_to_int[", ".join(sca_plt.legendgroup.split(", ")[:-1])]
         )
-        sca_plt.update(
-            marker=dict(
-                color=px.colors.qualitative.D3[label],
-            )
-        )
+        sca_plt.update(marker=dict(color=px.colors.qualitative.D3[label]))
 
     # Combine both heatmap and scatter plot
     # layout=fig.layout keeps the description of the legend
@@ -211,23 +201,11 @@ def plot_data(
             df, x="x", y="y", hover_name="ID", size="size", color="label", symbol="type"
         )
 
-    fig.update_layout(
-        dict(
-            font=dict(
-                size=15,
-            ),
-        )
-    )
+    fig.update_layout(dict(font=dict(size=15)))
     fig.update_layout(
         dict(
             title=dict(
-                text=title,
-                x=0.5,
-                xanchor="center",
-                yanchor="top",
-                font=dict(
-                    size=30,
-                ),
+                text=title, x=0.5, xanchor="center", yanchor="top", font=dict(size=30)
             )
         )
     )
@@ -252,17 +230,9 @@ def plot_confusion_matrix(y_true: list, y_pred: list, labels: list) -> go.Figure
     df.columns = pd.Index(labels, name="Predicted label")
 
     fig = px.imshow(
-        df,
-        text_auto=True,
-        color_continuous_scale=px.colors.sequential.Aggrnyl,
+        df, text_auto=True, color_continuous_scale=px.colors.sequential.Aggrnyl
     )
-    fig.update_layout(
-        dict(
-            font=dict(
-                size=18,
-            ),
-        )
-    )
+    fig.update_layout(dict(font=dict(size=18)))
     fig.update_layout(
         dict(
             title=dict(
@@ -270,9 +240,7 @@ def plot_confusion_matrix(y_true: list, y_pred: list, labels: list) -> go.Figure
                 x=0.5,
                 xanchor="center",
                 yanchor="top",
-                font=dict(
-                    size=30,
-                ),
+                font=dict(size=30),
             )
         )
     )

@@ -24,9 +24,9 @@ def digits2position(vec_of_digits: Tensor, n_positions: int):
 class OneHotDataset(Dataset):
     """Dataset that converts the labels into one-hot encoded labels"""
 
-    def __init__(self, data: Tensor, labels: Tensor, n_classes: int):
-        self.data = data
-        self.labels = digits2position(labels, n_classes)
+    def __init__(self, data: Tensor, labels: Tensor, n_classes: int, device="cpu"):
+        self.data = data.to(device=device)
+        self.labels = digits2position(labels, n_classes).to(device=device)
 
     def __len__(self):
         return len(self.data)

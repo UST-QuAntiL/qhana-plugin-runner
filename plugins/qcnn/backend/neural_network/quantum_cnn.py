@@ -29,9 +29,7 @@ from . import WeightInitEnum
 
 from typing import List, Iterator
 
-from abc import ABCMeta, abstractmethod
-
-from .utils import grouper
+from abc import ABCMeta
 
 
 class DiffMethodEnum(Enum):
@@ -58,7 +56,10 @@ class QuantumCNN(nn.Module, metaclass=ABCMeta):
 
     def quanv(self, image: Tensor) -> Tensor:
         """Convolves the input image with many applications of the same quantum circuit."""
-        out = torch.empty((image.shape[0] // 2, image.shape[1] // 2, image.shape[2] * 4))
+        out = torch.empty(
+            (image.shape[0] // 2, image.shape[1] // 2, image.shape[2] * 4),
+            device=image.device,
+        )
         for j in range(0, image.shape[0], 2):
             for k in range(0, image.shape[1], 2):
                 q_results = torch.empty((4 * image.shape[2]))
@@ -67,10 +68,9 @@ class QuantumCNN(nn.Module, metaclass=ABCMeta):
                     q_results[4 * channel + 1] = image[j, k + 1, channel]
                     q_results[4 * channel + 2] = image[j + 1, k, channel]
                     q_results[4 * channel + 3] = image[j + 1, k + 1, channel]
-                q_results = self.circuit(q_results)()
+                q_results = torch.tensor(self.circuit(q_results)(), device=image.device)
 
                 out[j // 2, k // 2] = q_results
-
         return out
 
     def get_representative_circuit(self, image) -> str:
@@ -180,7 +180,8 @@ class QCNN1(QuantumCNN):
                 images.shape[1] // 2,
                 images.shape[2] // 2,
                 images.shape[3] * 4,
-            )
+            ),
+            device=images.device,
         )
         for idx, image in enumerate(images):
             out_tensor[idx] = self.quanv(image)
@@ -765,11 +766,9 @@ class QCNN7(QuantumCNN):
                 for layer_params in params
             ]
             for layer_idx, layer_params in enumerate(self.params):
-                for i, p in enumerate(layer_params):
-                    for j, u_params in enumerate(layer_params):
-                        self.register_parameter(
-                            f"params({layer_idx}, {i}, {j})", u_params
-                        )
+                for i, u_params in enumerate(layer_params):
+                    for j, p in enumerate(u_params):
+                        self.register_parameter(f"params({layer_idx}, {i}, {j})", p)
         else:
             self.params = nn.Parameter(params, requires_grad=True)
 
@@ -786,8 +785,8 @@ class QCNN7(QuantumCNN):
                 for i, d in enumerate(data[: self.n_qubits]):
                     qml.RY(torch.pi * d, wires=i)
 
-                for i in range(self.n_qubits):
-                    qml.U1(layer_params[i], wires=i)
+                for i, p in enumerate(layer_params):
+                    qml.U1(p[0], wires=i)
 
                 for i in range(self.n_qubits - 1, -1, -1):
                     qml.CNOT(wires=[(i + 1) % self.n_qubits, i])

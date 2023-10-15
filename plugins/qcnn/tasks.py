@@ -21,15 +21,10 @@ from celery.utils.log import get_task_logger
 
 from . import QCNN
 
-from .schemas import (
-    InputParameters,
-    InputParametersSchema,
-)
+from .schemas import InputParameters, InputParametersSchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-)
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
 
 import time
@@ -112,20 +107,20 @@ def calculation_task(self, db_id: int) -> str:
     #          new qnn
     # ------------------------------
     start_time = time.time()  # Start the computation timer
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = "cpu"
 
-    train_data = torch.tensor(train_data, dtype=torch.float32)
+    train_data = torch.tensor(train_data, dtype=torch.float32, device=device)
     train_labels = torch.from_numpy(train_labels)
-    test_data = torch.tensor(test_data, dtype=torch.float32)
+    test_data = torch.tensor(test_data, dtype=torch.float32, device="cpu")
 
     # Prep data
     n_classes = len(label_to_int)
     train_dataloader = DataLoader(
-        OneHotDataset(train_data, train_labels, n_classes),
+        OneHotDataset(train_data, train_labels, n_classes, device=device),
         batch_size=batch_size,
         shuffle=randomly_shuffle,
     )
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     n_qubits = qcnn_enum.get_qubit_need(train_data[0])
 
@@ -148,9 +143,12 @@ def calculation_task(self, db_id: int) -> str:
     )
     model.add_module("flatten1", nn.Flatten())
     model.add_module("linear1", nn.LazyLinear(64))
+    # in_features = model(test_data[:1]).shape[1]
+    # model.add_module("linear1", nn.Linear(in_features, 64))
+    # model.add_module("linear1", nn.Linear(64, device=device))
     model.add_module("act_func1", nn.ReLU())
     model.add_module("dropout1", nn.Dropout(0.4))
-    model.add_module("output", nn.LazyLinear(n_classes))
+    model.add_module("output", nn.Linear(64, n_classes))
 
     model = model.to(device)
 
@@ -163,6 +161,7 @@ def calculation_task(self, db_id: int) -> str:
     # train network
     train(model, train_dataloader, loss_fn, opt, epochs, weights_to_wiggle)
 
+    model.to("cpu")
     # test network
     def predictor(data: torch.Tensor) -> torch.Tensor:
         if not isinstance(data, torch.Tensor):
@@ -199,31 +198,19 @@ def calculation_task(self, db_id: int) -> str:
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
-            db_id,
-            output,
-            "labels.json",
-            "entity/label",
-            "application/json",
+            db_id, output, "labels.json", "entity/label", "application/json"
         )
 
     with SpooledTemporaryFile(mode="w") as output:
         output.write(conf_matrix.to_html())
         STORE.persist_task_result(
-            db_id,
-            output,
-            "confusion_matrix.html",
-            "plot",
-            "text/html",
+            db_id, output, "confusion_matrix.html", "plot", "text/html"
         )
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities([weights_dict], output, "application/json")
         STORE.persist_task_result(
-            db_id,
-            output,
-            "qnn-weights.json",
-            "qnn-weights",
-            "application/json",
+            db_id, output, "qnn-weights.json", "qnn-weights", "application/json"
         )
 
     # save quantum circuit as qasm file

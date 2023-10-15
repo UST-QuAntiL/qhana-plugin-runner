@@ -32,11 +32,7 @@ class QuantumBackends(Enum):
     custom_ibmq = "custom_ibmq"
 
     def get_pennylane_backend(
-        self,
-        ibmq_token: str,
-        custom_backend_name: str,
-        qubit_cnt: int,
-        shots: int,
+        self, ibmq_token: str, custom_backend_name: str, qubit_cnt: int, shots: int
     ) -> qml.Device:
         if self.name.startswith("aer"):
             # Use local AER backend

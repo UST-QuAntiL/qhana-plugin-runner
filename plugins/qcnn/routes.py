@@ -62,37 +62,25 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/shaped_vector",
-                        content_type=[
-                            "application/json",
-                            "text/csv",
-                        ],
+                        content_type=["application/json", "text/csv"],
                         required=True,
                         parameter="trainDataUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/label",
-                        content_type=[
-                            "application/json",
-                            "text/csv",
-                        ],
+                        content_type=["application/json", "text/csv"],
                         required=True,
                         parameter="trainLabelUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/shaped_vector",
-                        content_type=[
-                            "application/json",
-                            "text/csv",
-                        ],
+                        content_type=["application/json", "text/csv"],
                         required=True,
                         parameter="testDataUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/label",
-                        content_type=[
-                            "application/json",
-                            "text/csv",
-                        ],
+                        content_type=["application/json", "text/csv"],
                         required=False,
                         parameter="testLabelUrl",
                     ),
@@ -100,30 +88,18 @@ class PluginsView(MethodView):
                 data_output=[
                     DataMetadata(
                         data_type="entity/label",
-                        content_type=[
-                            "application/json",
-                        ],
+                        content_type=["application/json"],
                         required=True,
                     ),
                     DataMetadata(
-                        data_type="plot",
-                        content_type=[
-                            "text/html",
-                        ],
-                        required=True,
+                        data_type="plot", content_type=["text/html"], required=True
                     ),
                     DataMetadata(
-                        data_type="plot",
-                        content_type=[
-                            "text/html",
-                        ],
-                        required=True,
+                        data_type="plot", content_type=["text/html"], required=True
                     ),
                     DataMetadata(
                         data_type="qnn-weights",
-                        content_type=[
-                            "application/json",
-                        ],
+                        content_type=["application/json"],
                         required=True,
                     ),
                 ],

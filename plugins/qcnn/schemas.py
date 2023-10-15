@@ -15,11 +15,7 @@
 from marshmallow import post_load, validate
 import marshmallow as ma
 from qhana_plugin_runner.api import EnumField
-from qhana_plugin_runner.api.util import (
-    FrontendFormBaseSchema,
-    MaBaseSchema,
-    FileUrl,
-)
+from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema, FileUrl
 from .backend.optimizer import OptimizerEnum
 from .backend.quantum_backends import QuantumBackends
 from .backend.neural_network import WeightInitEnum, QCNNEnum
