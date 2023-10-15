@@ -46,7 +46,7 @@ class QCNN(QHAnaPluginBase):
         return QCNN_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "qiskit~=0.27\npennylane~=0.16\npennylane-qiskit~=0.16\nscikit-learn~=1.1\ntorch~=1.13.1"
 
 
 try:
