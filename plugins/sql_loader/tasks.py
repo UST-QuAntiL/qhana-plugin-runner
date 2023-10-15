@@ -164,26 +164,28 @@ def second_task_execution(
     )
     df = None
     if custom_query:
+        db_query = db_query.strip()
         table_query = db_query if db_query.startswith("SELECT") else ""
     else:
-        table_query = f"SELECT {columns_list} FROM {table_name}"
+        table_query = (
+            f"SELECT {columns_list} FROM {table_name}" if columns_list != "" else ""
+        )
+        retrieval_only = True
 
     if table_query != "":
-        if columns_list != "":
-            if limit is not None:
-                table_query = f"SELECT * FROM ({table_query}) AS temp LIMIT {limit}"
-            df = db_manager.get_query_as_dataframe(table_query)
+        if limit is not None and isinstance(limit, int):
+            table_query = table_query.rstrip(";")
+            table_query = f"SELECT * FROM ({table_query}) AS temp LIMIT {limit}"
+        df = db_manager.get_query_as_dataframe(table_query)
 
-            # Check if given attribute can be used as a unique identifier
-            # If so, use attribute
-            if id_attribute in df and len(df[id_attribute].unique()) == len(
-                df[id_attribute]
-            ):
-                df["ID"] = df[id_attribute]
-            # If not, use indices
-            else:
-                df["ID"] = list(range(df.shape[0]))
-            df["href"] = [get_href(db_host, db_port, db_database)] * df.shape[0]
+        # Check if given attribute can be used as a unique identifier
+        # If so, use attribute
+        if id_attribute in df and len(df[id_attribute].unique()) == len(df[id_attribute]):
+            df["ID"] = df[id_attribute]
+        # If not, use indices
+        else:
+            df["ID"] = list(range(df.shape[0]))
+        df["href"] = [get_href(db_host, db_port, db_database)] * df.shape[0]
     elif not retrieval_only:
         db_manager.execute_query(db_query)
 
@@ -236,4 +238,5 @@ def get_second_task_html(
 ) -> str:
     params = retrieve_params_for_second_task(db_id, dumped_schema=arguments)
     df = second_task_execution(**params, limit=10, retrieval_only=True)
+    print(f"df: {df}")
     return build_table(df, color="grey_light") if df is not None else ""
