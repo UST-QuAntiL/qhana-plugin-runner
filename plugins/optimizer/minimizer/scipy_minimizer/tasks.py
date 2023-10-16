@@ -160,8 +160,6 @@ def minimize_task(self, db_id: int) -> str:
 
     result = scipy_minimize(**minimize_params)
 
-    TASK_LOGGER.info(f"Optimization result: {result}")
-
     csv_attributes = [f"x_{i}" for i in range(len(result.x))]
 
     entities = [dict(zip(csv_attributes, result.x.tolist()))]
