@@ -1,8 +1,6 @@
 {% extends "simple_template.html" %}
 
-{% block head %}
-    {{ super() }}
-{% endblock head %}
+{{ super() }}
 
 {% block script %}
     <script>
@@ -30,5 +28,5 @@
 
         backend_value.addEventListener("change", backend_change);
     </script>
-    {{ super() }}
+{{ super() }}
 {% endblock script %}

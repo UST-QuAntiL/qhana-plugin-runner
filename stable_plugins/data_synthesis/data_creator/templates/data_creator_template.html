@@ -1,8 +1,6 @@
 {% extends "simple_template.html" %}
 
-{% block content %}
-    {{ super() }}
-{% endblock content %}
+{{ super() }}
 
 {% block script %}
 <script>
@@ -22,4 +20,5 @@
 
     dataset_type.addEventListener("change", dataset_type_change);
 </script>
+{{ super() }}
 {% endblock script %}
