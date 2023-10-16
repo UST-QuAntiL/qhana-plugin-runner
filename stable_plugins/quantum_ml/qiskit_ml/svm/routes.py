@@ -55,7 +55,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="SVM",
             description=SVM.instance.description,
-            name=SVM.instance.identifier,
+            name=SVM.instance.name,
             version=SVM.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(

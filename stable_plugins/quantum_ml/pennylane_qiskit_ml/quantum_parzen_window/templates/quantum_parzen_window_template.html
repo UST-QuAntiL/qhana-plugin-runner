@@ -1,28 +1,34 @@
 {% extends "simple_template.html" %}
 
-{{ super() }}
+{% block head %}
+    {{ super() }}
+{% endblock head %}
 
 {% block script %}
-<script>
-    const backend_val = document.getElementById("backend");
+    <script>
+        // If a variable ends with _value, it's the element itself and the value can be retrieved or set
+        var backend_value = document.getElementById("backend");
 
-    const ibmq_token_dis = document.getElementById("ibmq_token").parentNode.parentNode;
-    const custom_backend_dis = document.getElementById("custom_backend").parentNode.parentNode;
+        // If a vairable ends with _vis, it's the parentNode's parentNode and we can set the visibility
+        var ibmq_token_vis = document.getElementById("ibmq_token").parentNode.parentNode;
+        var custom_backend_vis = document.getElementById("custom_backend").parentNode.parentNode;
 
-    function backend_change() {
-        ibmq_token_dis.style.display = "none";
-        custom_backend_dis.style.display = "none";
-        if ((backend_val.value.startsWith("ibmq")) || (backend_val.value === "aer_qasm_simulator")){
-            ibmq_token_dis.style.display = "block";
+
+        function backend_change() {
+            ibmq_token_vis.style.display = 'none';
+            custom_backend_vis.style.display = 'none';
+            if (backend_value.value.startsWith("ibmq") || backend_value.value === "aer_qasm_simulator") {
+                ibmq_token_vis.style.display = 'block';
+                custom_backend_vis.style.display = 'none';
+            } else if (backend_value.value === "custom_ibmq") {
+                ibmq_token_vis.style.display = 'block';
+                custom_backend_vis.style.display = 'block';
+            }
         }
-        else if (backend_val.value === "custom_ibmq") {
-            ibmq_token_dis.style.display = "block";
-            custom_backend_dis.style.display = "block";
-        }
-    }
 
+        backend_change();
 
-    backend_change();
-    backend_val.addEventListener("change", backend_change);
-</script>
+        backend_value.addEventListener("change", backend_change);
+    </script>
+    {{ super() }}
 {% endblock script %}

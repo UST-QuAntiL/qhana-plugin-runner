@@ -56,7 +56,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Max Cut",
             description=MaxCut.instance.description,
-            name=MaxCut.instance.identifier,
+            name=MaxCut.instance.name,
             version=MaxCut.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(

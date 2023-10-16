@@ -42,6 +42,9 @@ function registerMessageListener() {
             if (data != null && data.type === "plugin-url-response") {
                 onPluginUrlResponseMessage(data, window._qhana_microfrontend_state);
             }
+            if (data != null && data.type === "autofill-response") {
+                onAutoFillResponse(data, window._qhana_microfrontend_state);
+            }
         }
     });
 }
@@ -93,7 +96,6 @@ function onDataUrlResponseMessage(data) {
  * Handle a plugin-url-response message containing a plugin URL for a specific form input.
  *
  * @param {{type: 'plugin-url-response', inputKey: string, pluginUrl: string, pluginName?: string, pluginVersion?: string}} data 
- * @param {{lastHeight: number, heightUnchangedCount: number}} state 
  */
 function onPluginUrlResponseMessage(data) {
     var input = document.querySelector(`input#${data.inputKey}`);
@@ -111,6 +113,90 @@ function onPluginUrlResponseMessage(data) {
             }
         }
     }
+}
+
+/**
+ * Handle a autofill-response message containing encoded autofill data and the encoding used.
+ *
+ * @param {{type: 'autofill-response', value: string, encoding: string}} data 
+ */
+function onAutoFillResponse(data) {
+    let formData = {};
+    if (data.encoding === "application/json") {
+        formData = JSON.parse(data.value);
+    } else if (data.encoding === "application/x-www-form-urlencoded") {
+        const params = new URLSearchParams(data.value);
+        params.forEach((value, key) => {
+            if (formData[key] != null) {
+                const existing = formData[key]
+                if (Array.isArray(existing)) {
+                    existing.push(value);
+                } else {
+                    formData[key] = [existing, value];
+                }
+            } else {
+                formData[key] = value;
+            }
+        });
+    }
+    Object.keys(formData).forEach(key => {
+        const value = formData[key];
+        const input = document.querySelector(`input[name=${key}]:not([data-private],[type=password],[type=file]),textarea[name=${key}]:not([data-private]),select[name=${key}]`);
+        if (input == null) {
+            console.log(key, value);
+            return;
+        }
+        if (input.nodeName === "TEXTAREA") {
+            input.textContent = value;
+            input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
+            return;
+        }
+        if (input.nodeName === "SELECT") {
+            input.value = value;
+            input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
+            return;
+        }
+        if (input.type === "checkbox") {
+            if (value === "on" || value === "true" || value === true) {
+                input.checked = true;
+            } else {
+                input.checked = false;
+            }
+            input.dispatchEvent(new InputEvent("input", { data: input.checked, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: input.checked, cancelable: false }));
+            return;
+        }
+        input.value = value;
+        input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+        input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
+        if (input.getAttribute("data-input-type") === "data") {
+            const dataInputId = input.getAttribute("id");
+            if (dataInputId && value) {
+                window.requestIdleCallback(() =>
+                    sendMessage({
+                        type: "request-data-url-info",
+                        inputKey: dataInputId,
+                        dataUrl: value,
+                    })
+                );
+            }
+        };
+        if (input.getAttribute("data-input-type") === "plugin") {
+            const pluginInputId = input.getAttribute("id");
+            if (pluginInputId && value) {
+                window.requestIdleCallback(() =>
+                    sendMessage({
+                        type: "request-plugin-url-info",
+                        inputKey: pluginInputId,
+                        pluginUrl: value,
+                    })
+                );
+            }
+        }
+        // TODO update file metadata
+    })
 }
 
 /**
@@ -314,6 +400,11 @@ function onFormSubmit(event, dataInputs, privateInputs) {
             if (privateInputs.has(key)) {
                 // censor private values
                 processedFormData.append(key, '***');
+                return;
+            }
+            if (entry instanceof File) {
+                // add filename instead of file object
+                processedFormData.append(key, `Uploaded file: ${entry.name}`);
                 return;
             }
             // add all other values unchanged

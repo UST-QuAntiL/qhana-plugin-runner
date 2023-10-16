@@ -171,7 +171,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "IBMQ Token",
             "description": "IBMQ Token",
-            "input_type": "text",
+            "input_type": "password",
         },
     )
     visualize = ma.fields.Boolean(
