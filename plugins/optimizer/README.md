@@ -117,6 +117,7 @@ return PluginMetadata(
 ```
 
 In case the interaction endpoint has a `task_id` as part of the URL, the `task_id` has to be represented as a string placeholder in the URL.
+To do so use the `url_for_ie` function from the `interaction_utils.ie_utils` module.
 
 ```python
 return PluginMetadata(
@@ -125,7 +126,7 @@ return PluginMetadata(
         interaction_endpoints=[
             InteractionEndpoint(
                 type=type1,
-                href="base_url/<int:task_id>/endpoint"
+                href=url_for_ie("endpoint")
             ),
         ],
         ...
@@ -147,7 +148,8 @@ interaction_endpoint_url = [
 ```
 
 In case the interaction endpoint has a `task_id` as part of the URL, the `task_id` has to be replaced with the actual `task_id`.
+To do so use the `ie_replace_task_id` function from the `interaction_utils.ie_utils` module.
 
 ```python
-interaction_endpoint_url = interaction_endpoint_url.replace("<int:task_id>", str(task_id))
+interaction_endpoint_url = ie_replace_task_id(interaction_endpoint_url, task_id)
 ```

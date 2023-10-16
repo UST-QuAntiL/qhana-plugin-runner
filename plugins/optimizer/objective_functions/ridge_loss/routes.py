@@ -23,6 +23,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from optimizer.interaction_utils.db_task_cache import get_of_calc_data
+from optimizer.interaction_utils.ie_utils import url_for_ie
 from optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from optimizer.interaction_utils.tasks import make_callback
 from optimizer.shared.enums import InteractionEndpointType
@@ -75,19 +76,15 @@ class PluginsView(MethodView):
                     InteractionEndpoint(
                         type=InteractionEndpointType.of_pass_data.value,
                         # since the endpoint has the task id as parameter, we need to add it here
-                        href=url_for(
-                            f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
-                            _external=True,
-                        )
-                        + "<int:task_id>/pass-data/",
+                        href=url_for_ie(
+                            f"{RIDGELOSS_BLP.name}.{PassDataEndpoint.__name__}"
+                        ),
                     ),
                     InteractionEndpoint(
                         type=InteractionEndpointType.calc_loss.value,
-                        href=url_for(
-                            f"{RIDGELOSS_BLP.name}.{PluginsView.__name__}",
-                            _external=True,
-                        )
-                        + "<int:task_id>/calc-loss-endpoint/",
+                        href=url_for_ie(
+                            f"{RIDGELOSS_BLP.name}.{CalcLossEndpoint.__name__}"
+                        ),
                     ),
                 ],
                 href=url_for(f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),

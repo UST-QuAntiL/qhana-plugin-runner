@@ -19,6 +19,7 @@ from celery.utils.log import get_task_logger
 from flask import Response, abort, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+from optimizer.interaction_utils.ie_utils import url_for_ie
 from optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from optimizer.interaction_utils.tasks import make_callback
 from optimizer.shared.enums import InteractionEndpointType
@@ -71,19 +72,15 @@ class PluginsView(MethodView):
                     InteractionEndpoint(
                         type=InteractionEndpointType.of_pass_data.value,
                         # Since the endpoint has the task id in the url, we need to add a placeholder
-                        href=url_for(
-                            f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
-                            _external=True,
-                        )
-                        + "<int:task_id>/pass-data/",
+                        href=url_for_ie(
+                            f"{HINGELOSS_BLP.name}.{PassDataEndpoint.__name__}"
+                        ),
                     ),
                     InteractionEndpoint(
                         type=InteractionEndpointType.calc_loss.value,
-                        href=url_for(
-                            f"{HINGELOSS_BLP.name}.{PluginsView.__name__}",
-                            _external=True,
-                        )
-                        + "<int:task_id>/calc-loss-endpoint/",
+                        href=url_for_ie(
+                            f"{HINGELOSS_BLP.name}.{CalcLossEndpoint.__name__}"
+                        ),
                     ),
                 ],
                 href=url_for(f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),

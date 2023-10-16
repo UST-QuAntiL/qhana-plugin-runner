@@ -41,6 +41,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from . import OPTIMIZER_BLP, Optimizer
 from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
 from .tasks import echo_results, of_pass_data
+from ..interaction_utils.ie_utils import ie_replace_task_id
 from ..interaction_utils.tasks import invoke_task
 from ..shared.enums import InteractionEndpointType
 from ..shared.schemas import (
@@ -464,19 +465,15 @@ class MinimizerSetupCallback(MethodView):
 
         of_task_id: str = db_task.data.get("of_task_id")
 
-        calc_loss_endpoint_url = calc_loss_endpoint_url.replace(
-            "<int:task_id>", str(of_task_id)
-        )
+        calc_loss_endpoint_url = ie_replace_task_id(calc_loss_endpoint_url, of_task_id)
 
         if calc_gradient_endpoint_url:
-            calc_gradient_endpoint_url = calc_gradient_endpoint_url.replace(
-                "<int:task_id>", str(of_task_id)
+            calc_gradient_endpoint_url = ie_replace_task_id(
+                calc_gradient_endpoint_url, of_task_id
             )
         if calc_loss_and_gradient_endpoint_url:
-            calc_loss_and_gradient_endpoint_url = (
-                calc_loss_and_gradient_endpoint_url.replace(
-                    "<int:task_id>", str(of_task_id)
-                )
+            calc_loss_and_gradient_endpoint_url = ie_replace_task_id(
+                calc_loss_and_gradient_endpoint_url, of_task_id
             )
         number_weights = db_task.data.get("number_weights")
         x0 = np.random.randn(number_weights)

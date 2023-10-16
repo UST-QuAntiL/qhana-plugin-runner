@@ -18,6 +18,7 @@ import numpy as np
 import requests
 from celery.utils.log import get_task_logger
 from optimizer.coordinator import Optimizer
+from optimizer.interaction_utils.ie_utils import ie_replace_task_id
 from optimizer.shared.enums import InteractionEndpointType
 from optimizer.shared.schemas import (
     ObjectiveFunctionPassData,
@@ -163,7 +164,7 @@ def of_pass_data(self, db_id: int) -> str:
     input_file_url = task_data.data.get("input_file_url")
     target_variable = task_data.data.get("target_variable")
 
-    url = url.replace("<int:task_id>", str(of_task_id))
+    url = ie_replace_task_id(url, of_task_id)
 
     X, y = get_features_and_target(input_file_url, target_variable)
 
