@@ -12,19 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from json import dump, dumps
-import mimetypes
+from json import dump
 import os
 from tempfile import SpooledTemporaryFile
-from typing import Any, Dict, Optional
+from typing import Optional
 from uuid import uuid4
+from celery import chain
 from qiskit.providers.ibmq.job import IBMQJob
 from qiskit.result.result import ExperimentResult, Result
 from qiskit import QuantumCircuit, execute
 from qiskit_ibm_runtime import QiskitRuntimeService
 from celery.utils.log import get_task_logger
 
-from .backend.qiskit_backends import get_qiskit_backend
+from qhana_plugin_runner.db.models.virtual_plugins import PluginState
+from qhana_plugin_runner.tasks import add_step, save_task_result
+
+from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
 from . import QiskitExecutor
 from .schemas import (
     CircuitParameters,
@@ -32,10 +35,6 @@ from .schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    load_entities,
-    ensure_dict,
-)
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
@@ -58,7 +57,73 @@ def start_execution(self, db_id: int) -> str:
         db_task.data["parameters"]
     )
 
-    TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")
+    backend_list = None
+    if (
+        not circuit_params.ibmqToken
+        or (backend_list := get_backend_names(circuit_params.ibmqToken)) is None
+    ):
+        # start the authentication task
+        href = PluginState.get_value(
+            QiskitExecutor.instance.identifier, f"authentication_href_{db_task.id}"
+        )
+        ui_href = PluginState.get_value(
+            QiskitExecutor.instance.identifier, f"authentication_ui_href_{db_task.id}"
+        )
+        msg = "Started authentication task"
+        if circuit_params.ibmqToken:
+            msg += " (invalid IBMQ token)"
+        self.replace(
+            add_step.s(
+                task_log=msg,
+                db_id=db_task.id,
+                step_id="authentication",
+                href=href,
+                ui_href=ui_href,
+                prog_value=1,
+                prog_target=2,
+            )
+        )
+        return msg
+
+    PluginState.set_value(
+        QiskitExecutor.instance.identifier,
+        f"backend_list_{db_task.id}",
+        backend_list,
+        commit=True,
+    )
+
+    backend = None
+    if (
+        not circuit_params.backend
+        or (
+            backend := get_qiskit_backend(
+                circuit_params.backend, circuit_params.ibmqToken
+            )
+        )
+        is None
+    ):
+        # start the backend selection task
+        href = PluginState.get_value(
+            QiskitExecutor.instance.identifier, f"backend_selection_href_{db_task.id}"
+        )
+        ui_href = PluginState.get_value(
+            QiskitExecutor.instance.identifier, f"backend_selection_ui_href_{db_task.id}"
+        )
+        msg = "Started backend selection task"
+        if circuit_params.backend:
+            msg += " (invalid backend)"
+        self.replace(
+            add_step.s(
+                task_log=msg,
+                db_id=db_task.id,
+                step_id="backend-selection",
+                href=href,
+                ui_href=ui_href,
+                prog_value=1,
+                prog_target=2,
+            )
+        )
+        return msg
 
     circuit_qasm: str
     with open_url(circuit_params.circuit) as quasm_response:
@@ -73,20 +138,23 @@ def start_execution(self, db_id: int) -> str:
         else:
             TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
 
-    backend = get_qiskit_backend(circuit_params.backend, circuit_params.ibmqToken)
-    if backend is None:
-        msg = f"Could not load backend {circuit_params.backend}!"
-        TASK_LOGGER.error(msg)
-        raise ValueError(msg)
     backend.shots = circuit_params.shots
-
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+
+    TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")
 
     job: IBMQJob = execute(circuit, backend, shots=circuit_params.shots)
 
     db_task.data["job_id"] = job.job_id()
     db_task.clear_previous_step()
     db_task.save(commit=True)
+
+    # start the result watcher task
+    task: chain = result_watcher.si(db_id=db_task.id) | save_task_result.s(
+        db_id=db_task.id
+    )
+    task.link_error(save_task_result.s(db_id=db_task.id))
+    task.apply_async()
 
     return "Started executing job"
 
@@ -205,5 +273,22 @@ def result_watcher(self, db_id: int) -> str:
             "provenance/execution-options",
             "application/json",
         )
+
+    # delete all plugin state values
+    PluginState.delete_value(
+        QiskitExecutor.instance.identifier, f"authentication_href_{db_task.id}"
+    )
+    PluginState.delete_value(
+        QiskitExecutor.instance.identifier, f"authentication_ui_href_{db_task.id}"
+    )
+    PluginState.delete_value(
+        QiskitExecutor.instance.identifier, f"backend_selection_href_{db_task.id}"
+    )
+    PluginState.delete_value(
+        QiskitExecutor.instance.identifier, f"backend_selection_ui_href_{db_task.id}"
+    )
+    PluginState.delete_value(
+        QiskitExecutor.instance.identifier, f"backend_list_{db_task.id}", commit=True
+    )
 
     return "Finished executing circuit"

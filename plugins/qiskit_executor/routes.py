@@ -15,7 +15,6 @@
 import os
 from http import HTTPStatus
 from typing import Mapping, Optional
-from celery.canvas import chain
 from flask import Response
 from flask import redirect
 from flask.globals import request
@@ -24,6 +23,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
+from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.util.logging import redact_log_data
 from qhana_plugin_runner.util.plugins import get_execution_options
 
@@ -34,7 +34,6 @@ from .schemas import (
     CircuitParameterSchema,
     AuthenticationParameterSchema,
 )
-from .backend.qiskit_backends import get_backends
 from qhana_plugin_runner.api.plugin_schemas import (
     OutputDataMetadata,
     EntryPoint,
@@ -44,8 +43,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
-from .tasks import result_watcher, start_execution
+from .tasks import start_execution
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -213,48 +211,49 @@ class CalcView(MethodView):
         )
         db_task.save(commit=True)
 
-        if not arguments.ibmqToken:
-            # start the authentication task
-            href = url_for(
-                f"{QISKIT_EXECUTOR_BLP.name}.AuthenticationView",
-                db_id=db_task.id,
-                _external=True,
-            )
-            ui_href = url_for(
-                f"{QISKIT_EXECUTOR_BLP.name}.AuthenticationFrontend",
-                db_id=db_task.id,
-                _external=True,
-            )
-            db_task.progress_target = 2
-            db_task.add_next_step(href=href, ui_href=ui_href, step_id="authentication")
-            db_task.add_task_log_entry("Starting authentication step")
-        elif not arguments.backend:
-            # start the backend selection task
-            href = url_for(
-                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionView",
-                db_id=db_task.id,
-                _external=True,
-            )
-            ui_href = url_for(
-                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionFrontend",
-                db_id=db_task.id,
-                _external=True,
-            )
-            db_task.progress_target = 2
-            db_task.add_next_step(href=href, ui_href=ui_href, step_id="backend-selection")
-            db_task.add_task_log_entry("Starting backend selection step")
-        else:
-            # start the execution task
-            task: chain = (
-                start_execution.s(db_id=db_task.id)
-                | result_watcher.si(db_id=db_task.id)
-                | save_task_result.s(db_id=db_task.id)
-            )
-            # save errors to db
-            task.link_error(save_task_error.s(db_id=db_task.id))
-            task.apply_async()
-
-        db_task.save(commit=True)
+        # store urls for celery task
+        auth_href = url_for(
+            f"{QISKIT_EXECUTOR_BLP.name}.AuthenticationView",
+            db_id=db_task.id,
+            _external=True,
+        )
+        auth_ui_href = url_for(
+            f"{QISKIT_EXECUTOR_BLP.name}.AuthenticationFrontend",
+            db_id=db_task.id,
+            _external=True,
+        )
+        backend_href = url_for(
+            f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionView",
+            db_id=db_task.id,
+            _external=True,
+        )
+        backend_ui_href = url_for(
+            f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionFrontend",
+            db_id=db_task.id,
+            _external=True,
+        )
+        PluginState.set_value(
+            QiskitExecutor.instance.identifier,
+            f"authentication_href_{db_task.id}",
+            auth_href,
+        )
+        PluginState.set_value(
+            QiskitExecutor.instance.identifier,
+            f"authentication_ui_href_{db_task.id}",
+            auth_ui_href,
+        )
+        PluginState.set_value(
+            QiskitExecutor.instance.identifier,
+            f"backend_selection_href_{db_task.id}",
+            backend_href,
+        )
+        PluginState.set_value(
+            QiskitExecutor.instance.identifier,
+            f"backend_selection_ui_href_{db_task.id}",
+            backend_ui_href,
+            commit=True,
+        )
+        start_execution.s(db_id=db_task.id).apply_async()
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
@@ -301,11 +300,16 @@ class AuthenticationFrontend(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params = CircuitParameterSchema().loads(db_task.data["parameters"])
+        params: CircuitParameters = CircuitParameterSchema().loads(
+            db_task.data["parameters"]
+        )
         fields = AuthenticationParameterSchema().fields
 
         # define default values
-        default_values = {"backend": params.backend}
+        default_values = {}
+
+        if params.backend:
+            default_values[fields["backend"].data_key] = params.backend
 
         if "IBMQ_TOKEN" in os.environ:
             default_values[fields["ibmqToken"].data_key] = "****"
@@ -354,39 +358,7 @@ class AuthenticationView(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        if not params.backend:
-            # start the backend selection task
-            step_id = "backend-selection"
-            href = url_for(
-                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionView",
-                db_id=db_task.id,
-                _external=True,
-            )
-            ui_href = url_for(
-                f"{QISKIT_EXECUTOR_BLP.name}.BackendSelectionFrontend",
-                db_id=db_task.id,
-                _external=True,
-            )
-            task = add_step.s(
-                db_id=db_task.id,
-                step_id=step_id,
-                href=href,
-                ui_href=ui_href,
-                prog_value=2,
-                prog_target=3,
-                prog_unit="steps",
-                task_log="Starting backend selection step",
-            )
-        else:
-            # start the execution task
-            task: chain = (
-                start_execution.s(db_id=db_task.id)
-                | result_watcher.si(db_id=db_task.id)
-                | save_task_result.s(db_id=db_task.id)
-            )
-        # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async()
+        start_execution.s(db_id=db_task.id).apply_async()
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
@@ -433,13 +405,12 @@ class BackendSelectionFrontend(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params: CircuitParameters = CircuitParameterSchema().loads(
-            db_task.data["parameters"]
-        )
         backend_parameter_schema = BackendParameterSchema()
-        backend_parameter_schema.fields["backend"].metadata["datalist"] = [
-            backend.name() for backend in get_backends(params.ibmqToken)
-        ]
+        backend_parameter_schema.fields["backend"].metadata[
+            "datalist"
+        ] = PluginState.get_value(
+            QiskitExecutor.instance.identifier, f"backend_list_{db_task.id}", default=[]
+        )
 
         return Response(
             render_template(
@@ -482,15 +453,7 @@ class BackendSelectionView(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
-        # all tasks need to know about db id to load the db entry
-        task: chain = (
-            start_execution.s(db_id=db_task.id)
-            | result_watcher.si(db_id=db_task.id)
-            | save_task_result.s(db_id=db_task.id)
-        )
-        # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async()
+        start_execution.s(db_id=db_task.id).apply_async()
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
