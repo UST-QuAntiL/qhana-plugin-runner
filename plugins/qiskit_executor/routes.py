@@ -24,8 +24,8 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
+from qhana_plugin_runner.plugin_utils.metadata_utils import parse_execution_options
 from qhana_plugin_runner.util.logging import redact_log_data
-from qhana_plugin_runner.util.plugins import get_execution_options
 
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .schemas import (
@@ -189,7 +189,7 @@ class CalcView(MethodView):
         """Start the circuit execution task."""
         options = {}
         if arguments.executionOptions:
-            options = get_execution_options(arguments.executionOptions)
+            options = parse_execution_options(arguments.executionOptions)
             TASK_LOGGER.info(f"Loaded execution options: {redact_log_data(options)}")
 
         if not arguments.shots:

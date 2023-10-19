@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import mimetypes
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -23,8 +22,6 @@ from flask.blueprints import Blueprint
 from packaging.version import Version, InvalidVersion
 from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
-from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict, load_entities
-from qhana_plugin_runner.requests import open_url
 
 
 def plugin_identifier(name: str, version: str):
@@ -273,21 +270,3 @@ def register_plugins(app: Flask):
                 plugin_blueprint,
                 url_prefix=f"{url_prefix}/plugins/{plugin.identifier}/",
             )
-
-
-def get_execution_options(url: str) -> dict:
-    """Load execution options from url."""
-    with open_url(url) as execution_options_response:
-        try:
-            mimetype = execution_options_response.headers["Content-Type"]
-        except KeyError:
-            mimetype = mimetypes.MimeTypes().guess_type(url=url)[0]
-        if mimetype is None:
-            msg = "Could not guess execution options mime type!"
-            QHAnaPluginBase.__app__.logger.error(msg)
-            raise ValueError(msg)  # TODO better error
-        entities = ensure_dict(
-            load_entities(execution_options_response, mimetype=mimetype)
-        )
-    options = next(entities, {})
-    return options
