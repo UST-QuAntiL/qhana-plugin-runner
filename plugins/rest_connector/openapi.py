@@ -164,6 +164,80 @@ def get_endpoint_parameters(
     return []
 
 
+SecuritySchema = TypedDict(
+    "SecuritySchema",
+    {
+        "type": Literal["apiKey", "http", "mututalTLS", "oauth2", "openIdConnect"],
+        "description": str,
+        "name": str,
+        "in": Literal["query", "header", "cookie"],
+        "scheme": str,
+        "bearerFormat": str,
+        "flows": Any,
+        "openIdConnectUrl": str,
+    },
+    total=False,
+)
+
+
+def _get_security_schemes_3(specification: Dict) -> Dict[str, SecuritySchema]:
+    security_schemes = specification.get("components", {}).get("securitySchemes", {})
+
+    return security_schemes
+
+
+def get_security_schemes(spec: OpenapiSpec) -> Dict:
+    parser = parse_spec(spec)
+
+    specification = parser.specification
+    assert isinstance(specification, dict), "type assertion"
+
+    match parser.version_parsed:
+        case (2, _) | (2, _, _):
+            raise NotImplementedError
+        case (3, 0 | 1) | (3, 0 | 1, _):
+            return _get_security_schemes_3(specification)
+        case version:
+            print(f"unsupported version {version}")  # FIXME throw error?
+    return {}
+
+
+def _get_endpoint_security_requirements_3(
+    specification: Dict, path: str, method: str
+) -> Optional[List[Dict[str, str]]]:
+    # Get globally defined ones ("security" field of "OpenAPI Object")
+    # overwrite them if the "security" field of the "Operation Object" is specified
+    security_requirements: Optional[List[Dict[str, str]]] = specification.get(
+        "components", {}
+    ).get("security", None)
+    local_security_requirements: Optional[List[Dict[str, str]]] = (
+        specification["paths"].get(path, {}).get(method, {}).get("security", None)
+    )
+
+    if local_security_requirements is not None:
+        security_requirements = local_security_requirements
+
+    return security_requirements
+
+
+def get_endpoint_security_requirements(
+    spec: OpenapiSpec, path: str, method: str
+) -> Optional[List[Dict[str, str]]]:
+    parser = parse_spec(spec)
+
+    specification = parser.specification
+    assert isinstance(specification, dict), "type assertion"
+
+    match parser.version_parsed:
+        case (2, _) | (2, _, _):
+            raise NotImplementedError
+        case (3, 0 | 1) | (3, 0 | 1, _):
+            return _get_endpoint_security_requirements_3(specification, path, method)
+        case version:
+            print(f"unsupported version {version}")  # FIXME throw error?
+    return None
+
+
 def _resolve_json_ref(specification: dict, ref: str) -> Optional[dict]:
     if not ref.startswith("#/"):
         return None  # TODO support outside refs?
@@ -382,3 +456,7 @@ if __name__ == "__main__":
     print(body)
     params = get_endpoint_parameters(spec, "/pet/{petId}", "post")
     print(params)
+    security_schemes = get_security_schemes(spec)
+    print(security_schemes)
+    security_requirements = get_endpoint_security_requirements(spec, "/pet", "post")
+    print(security_requirements)
