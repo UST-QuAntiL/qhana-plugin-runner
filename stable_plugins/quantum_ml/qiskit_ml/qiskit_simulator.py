@@ -291,28 +291,33 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QiskitError, QuantumCircuit, execute
+    from qiskit import QiskitError, QuantumCircuit, execute, Aer
     from qiskit.result.result import ExperimentResult, Result
     from qiskit_aer import StatevectorSimulator
     import time
 
-    backend = StatevectorSimulator()  # TODO noise model?
-
+    # backend = StatevectorSimulator()  # TODO noise model?
+    backend_counts = Aer.get_backend("qasm_simulator")
+    backend_statevector = Aer.get_backend("statevector_simulator")
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 
-    # execution time for the simulation in ns
+    # execution time for the count simulation in ns
     startime_counts = time.perf_counter_ns()
-    result: Result = execute(circuit, backend, shots=execution_options["shots"]).result()
+    result_count: Result = execute(
+        circuit, backend_counts, shots=execution_options["shots"]
+    ).result()
     endtime_counts = time.perf_counter_ns()
 
-    if not result.success:
+    result_state: Result = execute(circuit, backend_statevector).result()
+
+    if not result_count.success:
         # TODO better error
-        raise ValueError("Circuit could not be simulated!", result)
+        raise ValueError("Circuit could not be simulated!", result_count)
 
-    experiment_result: ExperimentResult = result.results[0]
-    extra_metadata = result.metadata
+    experiment_result: ExperimentResult = result_count.results[0]
+    extra_metadata = result_count.metadata
 
-    time_taken = result.time_taken
+    time_taken = result_count.time_taken
     time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
     shots = experiment_result.shots
     if isinstance(shots, tuple):
@@ -324,19 +329,19 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     metadata = {
         # trace ids (specific to IBM qiskit jobs)
-        "jobId": result.job_id,
-        "qobjId": result.qobj_id,
+        "jobId": result_count.job_id,
+        "qobjId": result_count.qobj_id,
         # QPU/Simulator information
         "qpuType": "simulator",
         "qpuVendor": "IBM",
-        "qpuName": result.backend_name,
-        "qpuVersion": result.backend_version,
+        "qpuName": result_count.backend_name,
+        "qpuVersion": result_count.backend_version,
         "seed": seed,  # only for simulators
         "shots": shots,
         # Time information
-        "date": result.date,
+        "date": result_count.date,
         "timeTaken": time_taken,  # total job time
-        "timeTakenCounts_nanosecond": endtime_counts - startime_counts,
+        "timeTaken_Counts_nanosecond": endtime_counts - startime_counts,
         "timeTakenIdle": 0,  # idle/waiting time
         "timeTakenQpu": time_taken,  # total qpu time
         "timeTakenQpuPrepare": time_taken - time_taken_execute,
@@ -344,14 +349,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     }
 
     # If no measurements set shots to an empty key
-    if result.results[0].metadata["num_clbits"] == 0:
+    if result_count.results[0].metadata["num_clbits"] == 0:
         counts = {"": experiment_result.shots}
     else:
-        counts = result.get_counts()
+        counts = result_count.get_counts()
 
     state_vector: Optional[Any] = None
     try:
-        state_vector = result.get_statevector()
+        state_vector = result_state.get_statevector()
     except QiskitError:
         pass
 
