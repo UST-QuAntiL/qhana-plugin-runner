@@ -204,7 +204,7 @@ class CalcView(MethodView):
         db_task = ProcessingTask(
             task_name=start_execution.name,
             data={
-                "parameters": CircuitParameterSchema().dumps(arguments),
+                "parameters": CircuitParameterSchema().dump(arguments),
                 "options": options,
             },
             progress_value=0,
@@ -291,7 +291,7 @@ class AuthenticationFrontend(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params: CircuitParameters = CircuitParameterSchema().loads(
+        params: CircuitParameters = CircuitParameterSchema().load(
             db_task.data["parameters"]
         )
         fields = AuthenticationParameterSchema().fields
@@ -338,13 +338,13 @@ class AuthenticationView(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params: CircuitParameters = CircuitParameterSchema().loads(
+        params: CircuitParameters = CircuitParameterSchema().load(
             db_task.data["parameters"]
         )
         params.ibmqToken = arguments.ibmqToken
         if (not params.backend) and arguments.backend:
             params.backend = arguments.backend
-        db_task.data["parameters"] = CircuitParameterSchema().dumps(params)
+        db_task.data["parameters"] = CircuitParameterSchema().dump(params)
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
@@ -433,11 +433,11 @@ class BackendSelectionView(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params: CircuitParameters = CircuitParameterSchema().loads(
+        params: CircuitParameters = CircuitParameterSchema().load(
             db_task.data["parameters"]
         )
         params.backend = arguments.backend
-        db_task.data["parameters"] = CircuitParameterSchema().dumps(params)
+        db_task.data["parameters"] = CircuitParameterSchema().dump(params)
 
         db_task.clear_previous_step()
         db_task.save(commit=True)

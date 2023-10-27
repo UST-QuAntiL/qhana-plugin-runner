@@ -51,7 +51,7 @@ def start_execution(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    circuit_params: CircuitParameters = CircuitParameterSchema().loads(
+    circuit_params: CircuitParameters = CircuitParameterSchema().load(
         db_task.data["parameters"]
     )
 
@@ -173,7 +173,7 @@ def result_watcher(self, db_id: int) -> str:
         raise KeyError(msg)
 
     job_id = db_task.data["job_id"]
-    params: CircuitParameters = CircuitParameterSchema().loads(db_task.data["parameters"])
+    params: CircuitParameters = CircuitParameterSchema().load(db_task.data["parameters"])
     execution_options = db_task.data["options"]
 
     service = QiskitRuntimeService(token=params.ibmqToken, channel="ibm_quantum")
