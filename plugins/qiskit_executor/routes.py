@@ -200,9 +200,6 @@ class CalcView(MethodView):
             arguments.ibmqToken = options.get("ibmqToken", None)
         if not arguments.backend:
             arguments.backend = options.get("backend", None)
-        progress_target = 2
-        if arguments.backend and arguments.ibmqToken:
-            progress_target = 1
 
         db_task = ProcessingTask(
             task_name=start_execution.name,
@@ -211,7 +208,7 @@ class CalcView(MethodView):
                 "options": options,
             },
             progress_value=0,
-            progress_target=progress_target,
+            progress_target=3,
             progress_unit="steps",
         )
         db_task.save(commit=True)
