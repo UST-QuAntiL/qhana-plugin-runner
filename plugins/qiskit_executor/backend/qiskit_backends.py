@@ -67,6 +67,8 @@ def get_qiskit_backend(
 ) -> Optional[IBMQBackend | IBMQSimulator]:
     """Get the backend with the given name from the IBMQ provider. If no provider is found (e.g. invalid token), return None."""
     provider = get_provider(ibmq_token)
+    if provider is None:
+        return None
     try:
         return provider.get_backend(backend)
     except QiskitBackendNotFoundError:
