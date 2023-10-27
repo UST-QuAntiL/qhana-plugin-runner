@@ -120,15 +120,6 @@ def start_execution(self, db_id: int) -> str:
     with open_url(circuit_params.circuit) as quasm_response:
         circuit_qasm = quasm_response.text
 
-    if circuit_params.ibmqToken == "****":
-        TASK_LOGGER.info("Loading IBMQ token from environment variable")
-
-        if "IBMQ_TOKEN" in os.environ:
-            circuit_params.ibmqToken = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
-        else:
-            TASK_LOGGER.info("IBMQ_TOKEN environment variable not set")
-
     backend.shots = circuit_params.shots
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 

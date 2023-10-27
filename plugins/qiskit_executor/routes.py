@@ -193,6 +193,9 @@ class CalcView(MethodView):
 
         if not arguments.shots:
             arguments.shots = options.get("shots", 1024)
+        if arguments.ibmqToken == "****" and "IBMQ_TOKEN" in os.environ:
+            arguments.ibmqToken = os.environ["IBMQ_TOKEN"]
+            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable.")
         if not arguments.ibmqToken:
             arguments.ibmqToken = options.get("ibmqToken", None)
         if not arguments.backend:
@@ -302,10 +305,6 @@ class AuthenticationFrontend(MethodView):
         if params.backend:
             default_values[fields["backend"].data_key] = params.backend
 
-        if "IBMQ_TOKEN" in os.environ:
-            default_values[fields["ibmqToken"].data_key] = "****"
-            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
-
         return Response(
             render_template(
                 "simple_template.html",
@@ -342,8 +341,7 @@ class AuthenticationView(MethodView):
             db_task.data["parameters"]
         )
         params.ibmqToken = arguments.ibmqToken
-        if (not params.backend) and arguments.backend:
-            params.backend = arguments.backend
+        params.backend = arguments.backend
         db_task.data["parameters"] = CircuitParameterSchema().dump(params)
 
         db_task.clear_previous_step()

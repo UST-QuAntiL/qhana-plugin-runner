@@ -108,7 +108,7 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "IBMQ Token",
-            "description": "Token for IBMQ.",
+            "description": "Token for IBMQ (**** indicates that a default IBMQ token is available).",
             "input_type": "password",
         },
     )
