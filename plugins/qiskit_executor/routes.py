@@ -23,7 +23,6 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
-from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.plugin_utils.metadata_utils import parse_execution_options
 from qhana_plugin_runner.util.logging import redact_log_data
 
@@ -211,7 +210,7 @@ class CalcView(MethodView):
         )
         db_task.save(commit=True)
 
-        # store urls for celery task
+        # generate urls for celery task
         auth_href = url_for(
             f"{QISKIT_EXECUTOR_BLP.name}.AuthenticationView",
             db_id=db_task.id,
@@ -232,27 +231,16 @@ class CalcView(MethodView):
             db_id=db_task.id,
             _external=True,
         )
-        PluginState.set_value(
-            QiskitExecutor.instance.identifier,
-            f"authentication_href_{db_task.id}",
-            auth_href,
-        )
-        PluginState.set_value(
-            QiskitExecutor.instance.identifier,
-            f"authentication_ui_href_{db_task.id}",
-            auth_ui_href,
-        )
-        PluginState.set_value(
-            QiskitExecutor.instance.identifier,
-            f"backend_selection_href_{db_task.id}",
-            backend_href,
-        )
-        PluginState.set_value(
-            QiskitExecutor.instance.identifier,
-            f"backend_selection_ui_href_{db_task.id}",
-            backend_ui_href,
-            commit=True,
-        )
+
+        db_task.data["urls"] = {
+            "authentication": auth_href,
+            "authentication_ui": auth_ui_href,
+            "backend_selection": backend_href,
+            "backend_selection_ui": backend_ui_href,
+        }
+
+        db_task.save(commit=True)
+
         start_execution.s(db_id=db_task.id).apply_async()
 
         return redirect(
@@ -406,11 +394,9 @@ class BackendSelectionFrontend(MethodView):
             raise KeyError(msg)
 
         backend_parameter_schema = BackendParameterSchema()
-        backend_parameter_schema.fields["backend"].metadata[
-            "datalist"
-        ] = PluginState.get_value(
-            QiskitExecutor.instance.identifier, f"backend_list_{db_task.id}", default=[]
-        )
+        backend_parameter_schema.fields["backend"].metadata["datalist"] = db_task.data[
+            "backend_names"
+        ]
 
         return Response(
             render_template(

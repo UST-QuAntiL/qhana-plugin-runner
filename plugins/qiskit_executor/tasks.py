@@ -24,7 +24,6 @@ from qiskit import QuantumCircuit, execute
 from qiskit_ibm_runtime import QiskitRuntimeService
 from celery.utils.log import get_task_logger
 
-from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.tasks import add_step, save_task_result
 
 from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
@@ -63,12 +62,8 @@ def start_execution(self, db_id: int) -> str:
         or (backend_list := get_backend_names(circuit_params.ibmqToken)) is None
     ):
         # start the authentication task
-        href = PluginState.get_value(
-            QiskitExecutor.instance.identifier, f"authentication_href_{db_task.id}"
-        )
-        ui_href = PluginState.get_value(
-            QiskitExecutor.instance.identifier, f"authentication_ui_href_{db_task.id}"
-        )
+        href = db_task.data["urls"]["authentication"]
+        ui_href = db_task.data["urls"]["authentication_ui"]
         msg = "Started authentication task"
         if circuit_params.ibmqToken:
             msg += " (invalid IBMQ token)"
@@ -85,12 +80,8 @@ def start_execution(self, db_id: int) -> str:
         )
         return msg
 
-    PluginState.set_value(
-        QiskitExecutor.instance.identifier,
-        f"backend_list_{db_task.id}",
-        backend_list,
-        commit=True,
-    )
+    db_task.data["backend_names"] = backend_list
+    db_task.save(commit=True)
 
     backend = None
     if (
@@ -103,12 +94,8 @@ def start_execution(self, db_id: int) -> str:
         is None
     ):
         # start the backend selection task
-        href = PluginState.get_value(
-            QiskitExecutor.instance.identifier, f"backend_selection_href_{db_task.id}"
-        )
-        ui_href = PluginState.get_value(
-            QiskitExecutor.instance.identifier, f"backend_selection_ui_href_{db_task.id}"
-        )
+        href = db_task.data["urls"]["backend_selection"]
+        ui_href = db_task.data["urls"]["backend_selection_ui"]
         msg = "Started backend selection task"
         if circuit_params.backend:
             msg += " (invalid backend)"
@@ -273,22 +260,5 @@ def result_watcher(self, db_id: int) -> str:
             "provenance/execution-options",
             "application/json",
         )
-
-    # delete all plugin state values
-    PluginState.delete_value(
-        QiskitExecutor.instance.identifier, f"authentication_href_{db_task.id}"
-    )
-    PluginState.delete_value(
-        QiskitExecutor.instance.identifier, f"authentication_ui_href_{db_task.id}"
-    )
-    PluginState.delete_value(
-        QiskitExecutor.instance.identifier, f"backend_selection_href_{db_task.id}"
-    )
-    PluginState.delete_value(
-        QiskitExecutor.instance.identifier, f"backend_selection_ui_href_{db_task.id}"
-    )
-    PluginState.delete_value(
-        QiskitExecutor.instance.identifier, f"backend_list_{db_task.id}", commit=True
-    )
 
     return "Finished executing circuit"
