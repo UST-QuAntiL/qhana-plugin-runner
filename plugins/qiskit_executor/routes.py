@@ -24,7 +24,7 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
 
-from qhana_plugin_runner.plugin_utils.metadata_utils import parse_execution_options
+from qhana_plugin_runner.plugin_utils.execution_utils import parse_execution_options
 from qhana_plugin_runner.util.logging import redact_log_data
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .schemas import (
