@@ -23,9 +23,9 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
+
 from qhana_plugin_runner.plugin_utils.metadata_utils import parse_execution_options
 from qhana_plugin_runner.util.logging import redact_log_data
-
 from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
 from .schemas import (
     BackendParameterSchema,
@@ -197,6 +197,9 @@ class CalcView(MethodView):
             arguments.ibmqToken = options.get("ibmqToken", None)
         if not arguments.backend:
             arguments.backend = options.get("backend", None)
+        progress_target = 2
+        if arguments.backend and arguments.ibmqToken:
+            progress_target = 1
 
         db_task = ProcessingTask(
             task_name=start_execution.name,
@@ -204,8 +207,8 @@ class CalcView(MethodView):
                 "parameters": CircuitParameterSchema().dumps(arguments),
                 "options": options,
             },
-            progress_value=1,
-            progress_target=1,
+            progress_value=0,
+            progress_target=progress_target,
             progress_unit="steps",
         )
         db_task.save(commit=True)

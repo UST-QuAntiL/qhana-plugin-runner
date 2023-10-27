@@ -72,4 +72,4 @@ def get_qiskit_backend(
     try:
         return provider.get_backend(backend)
     except QiskitBackendNotFoundError:
-        TASK_LOGGER.error(f"Unknown qiskit backend specified: {backend}")
+        TASK_LOGGER.info(f"Unknown qiskit backend specified: {backend}")

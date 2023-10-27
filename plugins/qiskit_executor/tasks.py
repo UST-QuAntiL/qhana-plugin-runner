@@ -25,7 +25,6 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.tasks import add_step, save_task_result
-
 from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
 from . import QiskitExecutor
 from .schemas import (
@@ -76,6 +75,7 @@ def start_execution(self, db_id: int) -> str:
                 ui_href=ui_href,
                 prog_value=1,
                 prog_target=2,
+                prog_unit="steps",
             )
         )
         return msg
@@ -99,6 +99,9 @@ def start_execution(self, db_id: int) -> str:
         msg = "Started backend selection task"
         if circuit_params.backend:
             msg += " (invalid backend)"
+        prog_value = 1
+        if "authentication" in db_task.task_log:
+            prog_value = 2
         self.replace(
             add_step.s(
                 task_log=msg,
@@ -106,8 +109,9 @@ def start_execution(self, db_id: int) -> str:
                 step_id="backend-selection",
                 href=href,
                 ui_href=ui_href,
-                prog_value=1,
-                prog_target=2,
+                prog_value=prog_value,
+                prog_target=prog_value + 1,
+                prog_unit="steps",
             )
         )
         return msg
