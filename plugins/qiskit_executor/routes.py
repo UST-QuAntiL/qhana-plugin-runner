@@ -391,18 +391,16 @@ class BackendSelectionFrontend(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        backend_parameter_schema = BackendParameterSchema()
-        backend_parameter_schema.fields["backend"].metadata["datalist"] = db_task.data[
-            "backend_names"
-        ]
+        # provide backend names to template
+        datalists = {"backend-datalist": db_task.data["backend_names"]}
 
         return Response(
             render_template(
                 "simple_template.html",
                 name=QiskitExecutor.instance.name,
                 version=QiskitExecutor.instance.version,
-                schema=backend_parameter_schema,
-                values=dict(data),
+                schema=BackendParameterSchema(),
+                values=datalists,
                 valid=valid,
                 errors=errors,
                 process=url_for(

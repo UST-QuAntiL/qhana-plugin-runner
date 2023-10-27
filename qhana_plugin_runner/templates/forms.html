@@ -35,7 +35,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
       aria-describedby="{{key}}-description" {{required if field.required else '' }} {{ get_validation_attrs(field) }}
       list="{{key}}-datalist" {{ field_value(input_type, values.get(form_key)) }}>
     <datalist id="{{key}}-datalist">
-      {% for value in field.metadata.get("datalist", []) %}
+      {% for value in values.get(key + "-datalist", []) %}
       <option value="{{ value }}">
         {% endfor %}
     </datalist>
