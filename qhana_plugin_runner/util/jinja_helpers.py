@@ -99,7 +99,7 @@ def get_datalist_from_schema(schema: FrontendFormBaseSchema, key: str) -> Option
     if datalist:
         return datalist
     if hasattr(schema, "datalists") and isinstance(schema.datalists, dict):
-        return schema.datalists.get(f"{key}-datalist", None)
+        return schema.datalists.get(key, None)
     return None
 
 

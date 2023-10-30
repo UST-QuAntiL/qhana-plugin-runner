@@ -393,7 +393,7 @@ class BackendSelectionFrontend(MethodView):
 
         # provide backend names to template
         parameter_schema = BackendParameterSchema()
-        parameter_schema.datalists = {"backend-datalist": db_task.data["backend_names"]}
+        parameter_schema.datalists = {"backend": db_task.data["backend_names"]}
 
         return Response(
             render_template(
