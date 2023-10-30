@@ -392,15 +392,16 @@ class BackendSelectionFrontend(MethodView):
             raise KeyError(msg)
 
         # provide backend names to template
-        datalists = {"backend-datalist": db_task.data["backend_names"]}
+        parameter_schema = BackendParameterSchema()
+        parameter_schema.datalists = {"backend-datalist": db_task.data["backend_names"]}
 
         return Response(
             render_template(
                 "simple_template.html",
                 name=QiskitExecutor.instance.name,
                 version=QiskitExecutor.instance.version,
-                schema=BackendParameterSchema(),
-                values=datalists,
+                schema=parameter_schema,
+                values=data,
                 valid=valid,
                 errors=errors,
                 process=url_for(

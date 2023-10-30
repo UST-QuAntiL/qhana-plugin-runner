@@ -162,6 +162,7 @@ class BackendParameterSchema(FrontendFormBaseSchema):
             "input_type": "text_with_datalist",
         },
     )
+    datalists: Optional[dict] = None
 
     @ma.post_load
     def make_input_params(self, data, **kwargs) -> BackendParameters:
