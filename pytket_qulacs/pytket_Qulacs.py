@@ -310,7 +310,9 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     counts = backend.get_result(handle).get_counts()
     endtime_counts = time.perf_counter_ns()
 
+    startime_state = time.perf_counter_ns()
     statevector = backend.get_result(handle).get_state()
+    endtime_state = time.perf_counter_ns()
 
     endtime = time.time()
 
@@ -318,7 +320,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     metadata = {
         "qpuType": "simulator",
-        "qpuVendor": "Quantinuum",
+        "qpuVendor": "Quantinuum & Qulacs Team",
         "qpuName": "QulacsBackend",
         "qpuVersion": None,
         "shots": execution_options["shots"],
@@ -326,7 +328,8 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "timeTakenIdle": 0,
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenQpu": simulation_time,
-        "timeTakenCounts_nanosecond": endtime_counts - startime_counts,
+        "timeTaken_Counts_nanosecond": endtime_counts - startime_counts,
+        "timeTaken_Statevector_nanosecond": endtime_state - startime_state,
     }
 
     return metadata, dict(counts), statevector
