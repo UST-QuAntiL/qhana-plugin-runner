@@ -56,7 +56,7 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "braket-simulator"
+_plugin_name = "AmazonBraket_LocalSimulator"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
@@ -338,7 +338,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     metadata = {
         "jobId": "unknown",
         "qpuType": "simulator",
-        "qpuVendor": "Amazon",
+        "qpuVendor": "Amazon Web Services",
         "qpuName": "LocalSimulator",
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenCounts_nanosecond": end_time_counts - start_time_counts,
