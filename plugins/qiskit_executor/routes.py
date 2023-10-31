@@ -193,9 +193,15 @@ class CalcView(MethodView):
 
         if not arguments.shots:
             arguments.shots = options.get("shots", 1024)
-        if arguments.ibmqToken == "****" and "IBMQ_TOKEN" in os.environ:
-            arguments.ibmqToken = os.environ["IBMQ_TOKEN"]
-            TASK_LOGGER.info("IBMQ token successfully loaded from environment variable.")
+        if arguments.ibmqToken == "****":
+            if "IBMQ_TOKEN" in os.environ:
+                arguments.ibmqToken = os.environ["IBMQ_TOKEN"]
+                TASK_LOGGER.info(
+                    "IBMQ token successfully loaded from environment variable."
+                )
+            else:
+                arguments.ibmqToken = None
+                TASK_LOGGER.info("No IBMQ token found in environment variable.")
         if not arguments.ibmqToken:
             arguments.ibmqToken = options.get("ibmqToken", None)
         if not arguments.backend:
