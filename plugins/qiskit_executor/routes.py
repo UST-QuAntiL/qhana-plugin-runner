@@ -23,6 +23,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 from celery.utils.log import get_task_logger
+from qhana_plugin_runner.db.db import DB
 
 from qhana_plugin_runner.plugin_utils.execution_utils import parse_execution_options
 from qhana_plugin_runner.util.logging import redact_log_data
@@ -217,7 +218,8 @@ class CalcView(MethodView):
             progress_target=3,
             progress_unit="steps",
         )
-        db_task.save(commit=True)
+        db_task.save()
+        DB.session.flush()
 
         # generate urls for celery task
         auth_href = url_for(
