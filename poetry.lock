@@ -1416,6 +1416,17 @@ docs = ["sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface"]
 tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
+name = "pylatexenc"
+version = "2.10"
+description = "Simple LaTeX parser providing latex-to-unicode and unicode-to-latex conversion"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pylatexenc-2.10.tar.gz", hash = "sha256:3dd8fd84eb46dc30bee1e23eaab8d8fb5a7f507347b23e5f38ad9675c84f40d3"},
+]
+
+[[package]]
 name = "pymysql"
 version = "1.0.3"
 description = "Pure Python MySQL Driver"
@@ -2171,4 +2182,4 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "aeef4dcb28bfd1c01280fa9f5eab86613873e221cc55528ef032dddef9563d28"
+content-hash = "b122e578876f4f93f88ca81a29b66f70e5a2fce2f707446b50c96df118950dbf"
