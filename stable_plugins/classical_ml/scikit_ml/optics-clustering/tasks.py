@@ -45,7 +45,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def retrieve_filename_from_url(url) -> str:
     response = open_url(url)
-    fname = ''
+    fname = ""
     if "Content-Disposition" in response.headers.keys():
         fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
     else:

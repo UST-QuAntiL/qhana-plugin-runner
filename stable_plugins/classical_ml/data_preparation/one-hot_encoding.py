@@ -448,7 +448,7 @@ def prepare_stream_output(
 
 
 def retrieve_filename_from_url_request(response, url) -> str:
-    fname = ''
+    fname = ""
     if "Content-Disposition" in response.headers.keys():
         fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
     else:
