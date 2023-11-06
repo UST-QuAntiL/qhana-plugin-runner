@@ -55,6 +55,7 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 import json
 from itertools import count, chain
 import numpy as np
+import re
 
 
 """ 
@@ -446,6 +447,19 @@ def prepare_stream_output(
         yield get_entity_dict(id, one_hot_encodings)
 
 
+def retrieve_filename_from_url_request(response, url) -> str:
+    fname = ''
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+
+    # Remove .json and .csv
+    fname = fname.removesuffix(".json")
+    fname = fname.removesuffix(".csv")
+    return fname
+
+
 @CELERY.task(name=f"{OneHot.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -480,7 +494,9 @@ def calculation_task(self, db_id: int) -> str:
     # load taxonomies
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
-    entities = open_url(entities_url).json()
+    opened_url = open_url(entities_url)
+    entities_name = retrieve_filename_from_url_request(opened_url, entities_url)
+    entities = opened_url.json()
     (
         taxonomies_ancestors_list,
         attr_to_idx_dict_list,
@@ -498,7 +514,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "one-hot-encoded_points.csv",
+            f"one-hot-encoded_points_from_{entities_name}.csv",
             "entity/vector",
             "text/csv",
         )
