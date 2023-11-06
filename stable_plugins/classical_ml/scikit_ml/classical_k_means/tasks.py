@@ -35,9 +35,25 @@ from .backend.load_utils import get_indices_and_point_arr
 from .backend.visualize import plot_data
 from sklearn.cluster import KMeans
 from qhana_plugin_runner.requests import open_url
+import re
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def retrieve_filename_from_url(url) -> str:
+    response = open_url(url)
+    fname = ''
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove .json and .csv
+    fname = fname.removesuffix(".json")
+    fname = fname.removesuffix(".csv")
+    return fname
 
 
 @CELERY.task(name=f"{ClassicalKMeans.instance.identifier}.calculation_task", bind=True)
@@ -84,7 +100,8 @@ def calculation_task(self, db_id: int) -> str:
             title=f"Classical {num_clusters}-Means Clusters",
         )
 
-    info_str = f"_clusters_{num_clusters}"
+    file_name = retrieve_filename_from_url(entity_points_url)
+    info_str = f"_clusters_{num_clusters}_from_{file_name}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:

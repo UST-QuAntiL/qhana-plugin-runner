@@ -36,9 +36,26 @@ import numpy as np
 
 from .backend.load_utils import get_indices_and_point_arr
 from .backend.visualize import plot_data
+from qhana_plugin_runner.requests import open_url
+import re
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def retrieve_filename_from_url(url) -> str:
+    response = open_url(url)
+    fname = ''
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove .json and .csv
+    fname = fname.removesuffix(".json")
+    fname = fname.removesuffix(".csv")
+    return fname
 
 
 @CELERY.task(name=f"{Optics.instance.identifier}.calculation_task", bind=True)
@@ -111,7 +128,8 @@ def calculation_task(self, db_id: int) -> str:
             title=f"OPTICS Clusters",
         )
 
-    info_str = f"_method_{method_enum.value}_algorithm_{algorithm_enum.get_algorithm()}_metric_{metric_enum.get_metric()}"
+    file_name = retrieve_filename_from_url(entity_points_url)
+    info_str = f"_method_{method_enum.value}_algorithm_{algorithm_enum.get_algorithm()}_metric_{metric_enum.get_metric()}_from_{file_name}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
