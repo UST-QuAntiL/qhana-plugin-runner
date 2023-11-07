@@ -43,6 +43,11 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
     response = open_url(url)
     fname = ""
     if "Content-Disposition" in response.headers.keys():

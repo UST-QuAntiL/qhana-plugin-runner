@@ -448,6 +448,12 @@ def prepare_stream_output(
 
 
 def retrieve_filename_from_url_request(response, url) -> str:
+    """
+    Given an url response and the original url to a file, it returns the name of the file
+    :param response: Response
+    :param url: str
+    :return: str
+    """
     fname = ""
     if "Content-Disposition" in response.headers.keys():
         fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]

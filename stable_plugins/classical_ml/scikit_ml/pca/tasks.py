@@ -16,7 +16,6 @@ from tempfile import SpooledTemporaryFile
 
 from typing import Optional, List
 
-from json import loads
 from celery.utils.log import get_task_logger
 
 from . import PCA
@@ -35,6 +34,7 @@ from .pca_output import pca_to_output, get_output_dimensionality
 
 import numpy as np
 from itertools import islice
+import re
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -132,6 +132,26 @@ def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
     return id_to_idx_X, id_to_idx_Y, kernel_matrix
 
 
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove .json and .csv
+    fname = fname.removesuffix(".json")
+    fname = fname.removesuffix(".csv")
+    return fname
+
+
 def get_pca(input_params: dict):
     """
     Returns the correct pca model, given by the frontend's input paramters.
@@ -144,6 +164,7 @@ def get_pca(input_params: dict):
     # Result can't have dim <= 0. If this is entered, set to None.
     # If set to None all PCA types will compute as many components as possible
     # Exception for normal PCA we set n_components to 'mle', which automatically will choose the number of dimensions.
+    entities_file_name = retrieve_filename_from_url(input_params["entity_points_url"])
 
     if pca_type == PCATypeEnum.normal:
         return (
@@ -153,7 +174,7 @@ def get_pca(input_params: dict):
                 tol=input_params["tol"],
                 iterated_power=input_params["iterated_power"],
             ),
-            f"_type_normal_dim_{input_params['dimensions']}_solver_{input_params['solver'].value}",
+            f"_type_normal_dim_{input_params['dimensions']}_solver_{input_params['solver'].value}_from_{entities_file_name}",
         )
     elif pca_type == PCATypeEnum.incremental:
         return (
@@ -161,7 +182,7 @@ def get_pca(input_params: dict):
                 n_components=input_params["dimensions"],
                 batch_size=input_params["batch_size"],
             ),
-            f"_type_incremental_dim_{input_params['dimensions']}_batch_size_{input_params['batch_size']}",
+            f"_type_incremental_dim_{input_params['dimensions']}_batch_size_{input_params['batch_size']}_from_{entities_file_name}",
         )
     elif pca_type == PCATypeEnum.sparse:
         return (
@@ -172,12 +193,14 @@ def get_pca(input_params: dict):
                 max_iter=input_params["max_itr"],
                 tol=input_params["tol"],
             ),
-            f"_type_sparse_dim_{input_params['dimensions']}",
+            f"_type_sparse_dim_{input_params['dimensions']}_from_{entities_file_name}",
         )
     elif pca_type == PCATypeEnum.kernel:
         eigen_solver = input_params["solver"].value
         if eigen_solver == "full":
             eigen_solver = "dense"
+
+        kernel_file = f"_{retrieve_filename_from_url(input_params['kernel_url'])}" if input_params['kernel'].value == "precomputed" else ""
 
         return (
             KernelPCA(
@@ -190,7 +213,7 @@ def get_pca(input_params: dict):
                 tol=input_params["tol"],
                 iterated_power=input_params["iterated_power"],
             ),
-            f"_type_kernel_dim_{input_params['dimensions']}_kernel_{input_params['kernel'].value}_solver_{eigen_solver}",
+            f"_type_kernel_dim_{input_params['dimensions']}_kernel_{input_params['kernel'].value}{kernel_file}_solver_{eigen_solver}_from_{entities_file_name}",
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
