@@ -101,6 +101,21 @@
     <a href="{{back}}">back</a>
     </div>
 
+    <!-- TODO expand list -->
+    <datalist id="dataTypeList">
+        <option value="entity/list"></option>
+        <option value="executable/circuit"></option>
+        <option value="custom/"></option>
+    </datalist>
+
+    <!-- TODO expand list -->
+    <datalist id="contentTypeList">
+        <option value="text/plain"></option>
+        <option value="text/x-qasm"></option>
+        <option value="application/json"></option>
+        <option value="application/xml"></option>
+    </datalist>
+
 
     {%- if connector['isLoading'] -%}
     <details class="step" open>
@@ -323,13 +338,13 @@
                     <div class="qhana-form-field">
                         <label class="qhana-form-label" for="json__{{loop.index}}_dataType">Data type</label>
                         <div class="qhana-input-wrapper">
-                            <input class="qhana-form-input" name="json__{{loop.index}}_dataType" autocomplete="off" value="{{variable['dataType']}}">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_dataType" list="dataTypeList" autocomplete="off" value="{{variable['dataType']}}">
                         </div>
                     </div>
                     <div class="qhana-form-field">
                         <label class="qhana-form-label" for="json__{{loop.index}}_contentType">Content type</label>
                         <div class="qhana-input-wrapper">
-                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" autocomplete="off" value="{{variable['contentType']}}">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" list="contentTypeList" autocomplete="off" value="{{variable['contentType']}}">
                         </div>
                     </div>
                     <div class="qhana-form-field">
@@ -397,13 +412,13 @@
                         <div class="qhana-form-field">
                             <label class="qhana-form-label" for="json__SLUG_dataType">Data type</label>
                             <div class="qhana-input-wrapper">
-                                <input class="qhana-form-input" name="json__SLUG_dataType" autocomplete="off">
+                                <input class="qhana-form-input" name="json__SLUG_dataType" list="dataTypeList" autocomplete="off">
                             </div>
                         </div>
                         <div class="qhana-form-field">
                             <label class="qhana-form-label" for="json__SLUG_contentType">Content type</label>
                             <div class="qhana-input-wrapper">
-                                <input class="qhana-form-input" name="json__SLUG_contentType" autocomplete="off">
+                                <input class="qhana-form-input" name="json__SLUG_contentType" list="contentTypeList" autocomplete="off">
                             </div>
                         </div>
                         <div class="qhana-form-field">
@@ -492,7 +507,7 @@
                     <div class="qhana-form-field">
                         <label class="qhana-form-label" for="json__{{loop.index}}_contentType">Content type</label>
                         <div class="qhana-input-wrapper">
-                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" autocomplete="off" value="{{file['contentType']}}">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" list="contentTypeList" autocomplete="off" value="{{file['contentType']}}">
                         </div>
                     </div>
                 </div>
@@ -523,7 +538,7 @@
                         <div class="qhana-form-field">
                             <label class="qhana-form-label" for="json__SLUG_contentType">Content type</label>
                             <div class="qhana-input-wrapper">
-                                <input class="qhana-form-input" name="json__SLUG_contentType" autocomplete="off">
+                                <input class="qhana-form-input" name="json__SLUG_contentType" list="contentTypeList" autocomplete="off">
                             </div>
                         </div>
                     </div>
@@ -584,13 +599,13 @@
                     <div class="qhana-form-field">
                         <label class="qhana-form-label" for="json__{{loop.index}}_dataType">Data type</label>
                         <div class="qhana-input-wrapper">
-                            <input class="qhana-form-input" name="json__{{loop.index}}_dataType" autocomplete="off" required value="{{map['dataType']}}">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_dataType" list="dataTypeList" autocomplete="off" required value="{{map['dataType']}}">
                         </div>
                     </div>
                     <div class="qhana-form-field">
                         <label class="qhana-form-label" for="json__{{loop.index}}_contentType">Content type</label>
                         <div class="qhana-input-wrapper">
-                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" autocomplete="off" required value="{{map['contentType']}}">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" list="contentTypeList" autocomplete="off" required value="{{map['contentType']}}">
                         </div>
                     </div>
                     <div class="qhana-form-field">
@@ -627,13 +642,13 @@
                         <div class="qhana-form-field">
                             <label class="qhana-form-label" for="json__SLUG_dataType">Data type</label>
                             <div class="qhana-input-wrapper">
-                                <input class="qhana-form-input" name="json__SLUG_dataType" autocomplete="off" required>
+                                <input class="qhana-form-input" name="json__SLUG_dataType" list="dataTypeList" autocomplete="off" required>
                             </div>
                         </div>
                         <div class="qhana-form-field">
                             <label class="qhana-form-label" for="json__SLUG_contentType">Content type</label>
                             <div class="qhana-input-wrapper">
-                                <input class="qhana-form-input" name="json__SLUG_contentType" autocomplete="off" required>
+                                <input class="qhana-form-input" name="json__SLUG_contentType" list="contentTypeList" autocomplete="off" required>
                             </div>
                         </div>
                         <div class="qhana-form-field">
