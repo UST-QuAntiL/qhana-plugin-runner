@@ -34,6 +34,22 @@
         }
         .step .step-head {
             cursor: pointer;
+            display: inline-flex;
+            align-items: baseline;
+            text-wrap: nowrap;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .step .step-head > * {
+            flex-shrink: 0;
+        }
+        .step-content-preview {
+            flex-shrink: 1;
+            opacity: 0.8;
+            display: inline-block;
+            margin-left: 1.5rem;
+            text-overflow: ellipsis;
         }
         .step[open] > .step-head {
             background-color: var(--primary, dark-gray);
@@ -47,6 +63,7 @@
         .step > .step-head::before {
             content: attr(data-stepnr);
             display: inline-flex;
+            flex-shrink: 0;
             align-items: center;
             justify-content: center;
             width: 2rem;
@@ -95,7 +112,9 @@
     {%- endif -%}
 
     <details class="step {{'done' if 'base-url' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "base-url" or not connector["baseUrl"] else ""}}>
-        <summary class="step-head" data-stepnr="1">API Base URL</summary>
+        <summary class="step-head" data-stepnr="1">
+            API Base URL <span class="step-content-preview">{{connector["baseUrl"]}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="base-url" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
@@ -112,7 +131,9 @@
     </details>
 
     <details class="step {{'done' if 'openapi-spec' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "openapi-spec" else ""}}>
-        <summary class="step-head" data-stepnr="2">OpenAPI Spec URL</summary>
+        <summary class="step-head" data-stepnr="2">
+            OpenAPI Spec URL <span class="step-content-preview">{{connector["openapiSpecUrl"]}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="openapi-spec" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
@@ -129,7 +150,9 @@
     </details>
 
     <details class="step {{'done' if 'endpoint-url' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-url" else ""}}>
-        <summary class="step-head" data-stepnr="3">Endpoint URL</summary>
+        <summary class="step-head" data-stepnr="3">
+            Endpoint URL <span class="step-content-preview">{{connector["endpointUrl"]}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-url" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
@@ -153,7 +176,9 @@
     <!-- FIXME add support for variables in endpoint -->
 
     <details class="step {{'done' if 'endpoint-method' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-method" else ""}}>
-        <summary class="step-head" data-stepnr="4">Endpoint method</summary>
+        <summary class="step-head" data-stepnr="4">
+            Endpoint method <span class="step-content-preview">{{connector["endpointMethod"]}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-method" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
@@ -174,7 +199,9 @@
     </details>
 
     <details class="step {{'done' if 'endpoint-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-variables" else ""}}>
-        <summary class="step-head" data-stepnr="5">Endpoint Variables</summary>
+        <summary class="step-head" data-stepnr="5">
+            Endpoint Variables <span class="step-content-preview" {{"hidden" if not connector["endpointVariables"]}}>[{{connector["endpointVariables"] | join(", ")}}]</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-variables" data-value="json-object" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <fieldset id="endpoint_variables" {{'disabled' if connector['isLoading']}}>
@@ -196,7 +223,9 @@
     </details>
 
     <details class="step {{'done' if 'endpoint-query-variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-query-variables" else ""}}>
-        <summary class="step-head" data-stepnr="6">Endpoint Query Variables</summary>
+        <summary class="step-head" data-stepnr="6">
+            Endpoint Query Variables <span class="step-content-preview" {{"hidden" if not connector["endpointQueryVariables"]}}>[{{connector["endpointQueryVariables"] | join(", ")}}]</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-query-variables" data-value="json-object" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <fieldset id="endpoint_query_variables" {{'disabled' if connector['isLoading']}}>
@@ -236,15 +265,160 @@
     </details>
 
     <details class="step {{'done' if 'variables' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "variables" else ""}}>
-        <summary class="step-head" data-stepnr="7">Variables</summary>
+        <summary class="step-head" data-stepnr="7">
+            Variables <span class="step-content-preview" {{"hidden" if not connector["variables"]}}>[{{connector["variables"] | join(", ", attribute="name")}}]</span>
+        </summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="variables" enctype="application/json" {{'inert' if connector['isLoading']}}>
-            <div class="qhana-form-field">
-                <label class="qhana-form-label" for="value">Variables</label>
-                <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="variables" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['variables'] | tojson(indent="    ")}}</textarea>
+        <form action="{{process}}" method="post" class="qhana-form" data-step="variables" data-value="json-array" enctype="application/json" {{'inert' if connector['isLoading']}}>
+            {%- for variable in connector['variables'] -%}
+            <fieldset class="object-container" id="{{loop.index}}__variables" {{'disabled' if connector['isLoading']}}>
+                <legend>Variable</legend>
+                <div class="object-fields">
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_name">Name</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_name" autocomplete="off" required value="{{variable['name']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_type">Type</label>
+                        <div class="qhana-input-wrapper">
+                            <select class="qhana-form-input" name="json__{{loop.index}}_type" required>
+                                <option value="string" {{ "selected" if variable["type"] == "string" }}>String</option>
+                                <option value="text" {{ "selected" if variable["type"] == "text" }}>Multiline text</option>
+                                <option value="number" {{ "selected" if variable["type"] == "number" }}>Number</option>
+                                <option value="integer" {{ "selected" if variable["type"] == "integer" }}>Integer</option>
+                                <option value="data" {{ "selected" if variable["type"] == "data" }}>Data</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_defaultValue">Default value</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_defaultValue" autocomplete="off" value="{{variable['defaultValue']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_title">Title</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_title" autocomplete="off" value="{{variable['title']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_description">Description</label>
+                        <div class="qhana-input-wrapper">
+                            <textarea class="qhana-form-input" name="json__{{loop.index}}_description" autocomplete="off">{{variable['description']}}</textarea>
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_required">Required</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" type="checkbox" name="json__{{loop.index}}_required" {{'checked' if variable['required']}}>
+                        </div>
+                    </div>
+                    <p>Fields for "data" variables:</p>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_dataType">Data type</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_dataType" autocomplete="off" value="{{variable['dataType']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_content_type">Content type</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_content_type" autocomplete="off" value="{{variable['contentType']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_load_content">Load data content into variable</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" type="checkbox" name="json__{{loop.index}}_loadContent" {{'checked' if variable['loadContent']}}>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="object-controls">
+                    <button class="move-array-item-up">up</button>
+                    <button class="remove-array-item">remove object</button>
+                    <button class="move-array-item-down">down</button>
+                </div>
+            </fieldset>
+            {%- endfor -%}
+            <template id="new_variable">
+                <fieldset class="object-container" id="SLUG__variables" {{'disabled' if connector['isLoading']}}>
+                    <legend>Variable</legend>
+                    <div class="object-fields">
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_name">Name</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_name" autocomplete="off" required>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_type">Type</label>
+                            <div class="qhana-input-wrapper">
+                                <select class="qhana-form-input" name="json__SLUG_type" required>
+                                    <option value="string">String</option>
+                                    <option value="text">Multiline text</option>
+                                    <option value="number">Number</option>
+                                    <option value="integer">Integer</option>
+                                    <option value="data">Data</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_defaultValue">Default value</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_defaultValue" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_title">Title</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_title" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_description">Description</label>
+                            <div class="qhana-input-wrapper">
+                                <textarea class="qhana-form-input" name="json__SLUG_description" autocomplete="off"></textarea>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_required">Required</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" type="checkbox" name="json__SLUG_required">
+                            </div>
+                        </div>
+                        <p>Fields for "data" variables:</p>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_dataType">Data type</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_dataType" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_contentType">Content type</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_contentType" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_loadContent">Load data content into variable</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" type="checkbox" name="json__SLUG_loadContent">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="object-controls">
+                        <button class="move-array-item-up">up</button>
+                        <button class="remove-array-item">remove object</button>
+                        <button class="move-array-item-down">down</button>
+                    </div>
+                </fieldset>
+            </template>
+            <button class="add-array-item" name="add_new_object" data-template="new_variable">add variable</button>
 
             <div class="qhana-form-buttons">
                 <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set variables</button>
@@ -405,6 +579,38 @@
                 formValue = JSON.stringify(jsonData);
             }
 
+            if (form.getAttribute("data-value") === "json-array") {
+                const objects = form.querySelectorAll(".object-container");
+                const jsonData = [];
+                objects.forEach(container => {
+                    const containerId = container.getAttribute("id")?.split("_", 1)?.[0] ?? "";
+                    const objectKeyPrefix = `json__${containerId}_`;
+                    const jsonObject = {};
+                    formData.forEach((value, key) => {
+                        if (!key.startsWith(objectKeyPrefix) || value === "") {
+                            return;
+                        }
+                        const objectKey = key.replace(objectKeyPrefix, "");
+
+                        if (Number.isFinite(Number(value))) {
+                            value = Number(value);
+                        } else if (value.startsWith('"') && value.endsWith('"') && Number.isFinite(Number(value.substring(1, value.length-1)))) {
+                            // allow numbers escaped by "" to be normal strings
+                            value = substring(1,-1);
+                        }
+
+                        const checkbox = form.querySelector(`input[type="checkbox"][name="${key}"]`);
+                        if (checkbox) {
+                            jsonObject[objectKey] = checkbox.checked;
+                        } else {
+                            jsonObject[objectKey] = value;
+                        }
+                    });
+                    jsonData.push(jsonObject);
+                });
+                formValue = JSON.stringify(jsonData);
+            }
+
             if (formKey === "manage-plugin") {
                 formKey = event.submitter.getAttribute("value");
                 if (!formKey) {
@@ -516,11 +722,88 @@
             }
         }
 
+        function addArrayItem(event) {
+            event.preventDefault();
+            const button = event.target;
+            const form = button.form;
+
+            const templateId = button.getAttribute("data-template");
+            const template = form.querySelector(`#${templateId}`);
+            if (!template) {
+                return;
+            }
+            const slug = ("00000000" + Math.random().toString(36)).slice(-8);
+            const cloned = template.content.cloneNode(true);
+            cloned.querySelectorAll(".object-container[id]").forEach(element => {
+                const attr = element.getAttribute("id");
+                if (attr.startsWith("SLUG__")) {
+                    element.setAttribute("id", `${slug}__${attr.substring(6)}`);
+                }
+            });
+            cloned.querySelectorAll("[name]").forEach(element => {
+                const attr = element.getAttribute("name");
+                if (attr.startsWith("json__SLUG")) {
+                    element.setAttribute("name", `json__${slug}${attr.substring(10)}`);
+                }
+            });
+            cloned.querySelectorAll("[for]").forEach(element => {
+                const attr = element.getAttribute("for");
+                if (attr.startsWith("json__SLUG")) {
+                    element.setAttribute("for", `json__${slug}${attr.substring(10)}`);
+                }
+            });
+            cloned.querySelectorAll("button.remove-array-item").forEach(button=>{
+                button.addEventListener("click", removeArrayItem);
+            });
+            cloned.querySelectorAll("button.move-array-item-up, button.move-array-item-down").forEach(button=>{
+                button.addEventListener("click", moveArrayItem);
+            });
+
+            template.parentNode.insertBefore(cloned, template);
+        }
+
+        function removeArrayItem(event) {
+            event.preventDefault();
+            let target = event.target;
+            while (target != null && !target.classList.contains("object-container")) {
+                target = target.parentNode;
+            }
+            if (target != null) {
+                target.remove();
+            }
+        }
+
+        function moveArrayItem(event) {
+            event.preventDefault();
+            let target = event.target;
+            const moveUp = target.classList.contains("move-array-item-up");
+            const moveDown = target.classList.contains("move-array-item-down");
+            while (target != null && !target.classList.contains("object-container")) {
+                target = target.parentNode;
+            }
+            if (target != null) {
+                if (moveUp && !(target.parentNode.children[0] === target)) {
+                    target.previousElementSibling.before(target);
+                } else if (moveDown && target.nextElementSibling.classList.contains("object-container")) {
+                    target.nextElementSibling.after(target);
+                }
+            }
+        }
+
         document.querySelectorAll("button.add-object-key").forEach(button=>{
             button.addEventListener("click", addObjectKey);
         });
         document.querySelectorAll("button.remove-object-key").forEach(button=>{
             button.addEventListener("click", removeObjectKey);
+        });
+        document.querySelectorAll("button.add-array-item").forEach(button=>{
+            button.addEventListener("click", addArrayItem);
+        });
+        document.querySelectorAll("button.remove-array-item").forEach(button=>{
+            button.addEventListener("click", removeArrayItem);
+        });
+        document.querySelectorAll("button.move-array-item-up, button.move-array-item-down").forEach(button=>{
+            button.addEventListener("click", moveArrayItem);
         });
 
         if (!window._qhana_microfrontend_state) {
