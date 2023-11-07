@@ -4,6 +4,9 @@
     {{ super() }}
 
     <style>
+        [hidden] {
+            display: none !important;
+        }
         .content {
             max-width: 50rem;
             margin-inline: auto;
@@ -324,13 +327,13 @@
                         </div>
                     </div>
                     <div class="qhana-form-field">
-                        <label class="qhana-form-label" for="json__{{loop.index}}_content_type">Content type</label>
+                        <label class="qhana-form-label" for="json__{{loop.index}}_contentType">Content type</label>
                         <div class="qhana-input-wrapper">
-                            <input class="qhana-form-input" name="json__{{loop.index}}_content_type" autocomplete="off" value="{{variable['contentType']}}">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" autocomplete="off" value="{{variable['contentType']}}">
                         </div>
                     </div>
                     <div class="qhana-form-field">
-                        <label class="qhana-form-label" for="json__{{loop.index}}_load_content">Load data content into variable</label>
+                        <label class="qhana-form-label" for="json__{{loop.index}}_loadContent">Load data content into variable</label>
                         <div class="qhana-input-wrapper">
                             <input class="qhana-form-input" type="checkbox" name="json__{{loop.index}}_loadContent" {{'checked' if variable['loadContent']}}>
                         </div>
@@ -427,7 +430,9 @@
     </details>
 
     <details class="step {{'done' if 'request-headers' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-headers" else ""}}>
-        <summary class="step-head" data-stepnr="8">Request Headers</summary>
+        <summary class="step-head" data-stepnr="8">
+            Request Headers <span class="step-content-preview" {{"hidden" if not connector["requestHeaders"]}}>{{connector["requestHeaders"].splitlines()[:5] | join(" | ")}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="request-headers" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
@@ -444,7 +449,9 @@
     </details>
 
     <details class="step {{'done' if 'request-body' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-body" else ""}}>
-        <summary class="step-head" data-stepnr="9">Request Body</summary>
+        <summary class="step-head" data-stepnr="9">
+            Request Body <span class="step-content-preview">{{connector["requestBody"].splitlines()[:10] | join(" ")}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="request-body" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
@@ -461,15 +468,74 @@
     </details>
 
     <details class="step {{'done' if 'request-files' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "request-files" else ""}}>
-        <summary class="step-head" data-stepnr="10">Request Files</summary>
+        <summary class="step-head" data-stepnr="10">
+            Request Files <span class="step-content-preview" {{"hidden" if not connector["requestFiles"]}}>{{connector["requestFiles"]|length}} input file(s)</span>
+        </summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="request-files" enctype="application/json" {{'inert' if connector['isLoading']}}>
-            <div class="qhana-form-field">
-                <label class="qhana-form-label" for="value">Request files</label>
-                <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="request_files" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['requestFiles'] | tojson(indent="    ")}}</textarea>
+        <form action="{{process}}" method="post" class="qhana-form" data-step="request-files" data-value="json-array" enctype="application/json" {{'inert' if connector['isLoading']}}>
+            {%- for file in connector['requestFiles'] -%}
+            <fieldset class="object-container" id="{{loop.index}}__request_files" {{'disabled' if connector['isLoading']}}>
+                <legend>Request files</legend>
+                <div class="object-fields">
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_source">Source</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" type="url" name="json__{{loop.index}}_source" autocomplete="off" required value="{{file['source']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_formFieldName">Form field name</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_formFieldName" autocomplete="off" value="{{file['formFieldName']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_contentType">Content type</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" autocomplete="off" value="{{file['contentType']}}">
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="object-controls">
+                    <button class="move-array-item-up">up</button>
+                    <button class="remove-array-item">remove object</button>
+                    <button class="move-array-item-down">down</button>
+                </div>
+            </fieldset>
+            {%- endfor -%}
+            <template id="new_request_file">
+                <fieldset class="object-container" id="SLUG__request_files" {{'disabled' if connector['isLoading']}}>
+                    <legend>Request files</legend>
+                    <div class="object-fields">
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_source">Source</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" type="url" name="json__SLUG_source" autocomplete="off" required>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_formFieldName">Form field name</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_formFieldName" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_contentType">Content type</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_contentType" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="object-controls">
+                        <button class="move-array-item-up">up</button>
+                        <button class="remove-array-item">remove object</button>
+                        <button class="move-array-item-down">down</button>
+                    </div>
+                </fieldset>
+            </template>
+            <button class="add-array-item" name="add_new_object" data-template="new_request_file">add request file</button>
 
             <div class="qhana-form-buttons">
                 <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set request files</button>
@@ -478,7 +544,9 @@
     </details>
 
     <details class="step {{'done' if 'response-handling' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "response-handling" else ""}}>
-        <summary class="step-head" data-stepnr="11">Response Handling</summary>
+        <summary class="step-head" data-stepnr="11">
+            Response Handling <span class="step-content-preview">{{connector["responseHandling"]}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="response-handling" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-field">
@@ -498,15 +566,98 @@
     </details>
 
     <details class="step {{'done' if 'response-mapping' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "response-mapping" else ""}}>
-        <summary class="step-head" data-stepnr="12">Response Mapping</summary>
+        <summary class="step-head" data-stepnr="12">
+            Response Mapping <span class="step-content-preview" {{"hidden" if not connector["responseMapping"]}}>[{{connector["responseMapping"] | join(", ", attribute="name")}}]</span>
+        </summary>
 
-        <form action="{{process}}" method="post" class="qhana-form" data-step="response-mapping" enctype="application/json" {{'inert' if connector['isLoading']}}>
-            <div class="qhana-form-field">
-                <label class="qhana-form-label" for="value">Response mapping</label>
-                <div class="qhana-input-wrapper">
-                    <textarea class="qhana-form-input" name="value" id="response_mapping" autocomplete="off" {{'disabled' if connector['isLoading']}}>{{connector['responseMapping'] | tojson(indent="    ")}}</textarea>
+        <form action="{{process}}" method="post" class="qhana-form" data-step="response-mapping" data-value="json-array" enctype="application/json" {{'inert' if connector['isLoading']}}>
+            {%- for map in connector['responseMapping'] -%}
+            <fieldset class="object-container" id="{{loop.index}}__response_map" {{'disabled' if connector['isLoading']}}>
+                <legend>Response Map</legend>
+                <div class="object-fields">
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_name">Name</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_name" autocomplete="off" required value="{{map['name']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_dataType">Data type</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_dataType" autocomplete="off" required value="{{map['dataType']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_contentType">Content type</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" name="json__{{loop.index}}_contentType" autocomplete="off" required value="{{map['contentType']}}">
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_data">Data</label>
+                        <div class="qhana-input-wrapper">
+                            <textarea class="qhana-form-input" name="json__{{loop.index}}_data" autocomplete="off" required>{{map['data']}}</textarea>
+                        </div>
+                    </div>
+                    <div class="qhana-form-field">
+                        <label class="qhana-form-label" for="json__{{loop.index}}_dereferenceUrl">Dereference URL in data</label>
+                        <div class="qhana-input-wrapper">
+                            <input class="qhana-form-input" type="checkbox" name="json__{{loop.index}}_dereferenceUrl" {{'checked' if map['dereferenceUrl']}}>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="object-controls">
+                    <button class="move-array-item-up">up</button>
+                    <button class="remove-array-item">remove object</button>
+                    <button class="move-array-item-down">down</button>
+                </div>
+            </fieldset>
+            {%- endfor -%}
+            <template id="new_response_mapping">
+                <fieldset class="object-container" id="SLUG__response_map" {{'disabled' if connector['isLoading']}}>
+                    <legend>Response Map</legend>
+                    <div class="object-fields">
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_name">Name</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_name" autocomplete="off" required>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_dataType">Data type</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_dataType" autocomplete="off" required>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_contentType">Content type</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" name="json__SLUG_contentType" autocomplete="off" required>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_data">Data</label>
+                            <div class="qhana-input-wrapper">
+                                <textarea class="qhana-form-input" name="json__SLUG_data" autocomplete="off" required></textarea>
+                            </div>
+                        </div>
+                        <div class="qhana-form-field">
+                            <label class="qhana-form-label" for="json__SLUG_dereferenceUrl">Dereference URL in data</label>
+                            <div class="qhana-input-wrapper">
+                                <input class="qhana-form-input" type="checkbox" name="json__SLUG_dereferenceUrl">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="object-controls">
+                        <button class="move-array-item-up">up</button>
+                        <button class="remove-array-item">remove object</button>
+                        <button class="move-array-item-down">down</button>
+                    </div>
+                </fieldset>
+            </template>
+            <button class="add-array-item" name="add_new_object" data-template="new_response_mapping">add response mapping</button>
 
             <div class="qhana-form-buttons">
                 <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set response mapping</button>
@@ -515,7 +666,9 @@
     </details>
 
     <details class="step" {{"open" if connector["nextStep"] == "manage-plugin" or connector.get("isDeployed", False) else ""}}>
-        <summary class="step-head" data-stepnr="⚐">Manage Plugin</summary>
+        <summary class="step-head" data-stepnr="⚐">
+            Manage Plugin <span class="step-content-preview" {{"hidden" if not (connector.get("isDeployed") or connector.get("isLoading"))}}>{{'loading' if connector['isLoading']}}{{'deployed' if connector['isDeployed']}}</span>
+        </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="manage-plugin" enctype="application/json" {{'inert' if connector['isLoading']}}>
             <div class="qhana-form-buttons">
