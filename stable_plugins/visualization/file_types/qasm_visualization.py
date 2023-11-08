@@ -171,8 +171,17 @@ class MicroFrontend(MethodView):
 
 
 @QASM_BLP.route("/circuits/")
-def get_circuit_image():
-    circuit_url = request.args.get("circuit-url", None)
+@QASM_BLP.response(HTTPStatus.OK, description="Circuit image.")
+@QASM_BLP.arguments(
+    QasmInputParametersSchema(
+        partial=True, unknown=EXCLUDE, validate_errors_as_result=False
+    ),
+    location="query",
+    required=True,
+)
+@QASM_BLP.require_jwt("jwt", optional=True)
+def get_circuit_image(data):
+    circuit_url = data.get("data", None)
     if circuit_url is None:
         abort(HTTPStatus.NOT_FOUND)
     filename = hashlib.md5(circuit_url.encode("utf-8")).hexdigest() + ".png"

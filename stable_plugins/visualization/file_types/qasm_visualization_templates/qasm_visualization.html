@@ -72,7 +72,7 @@
             if (currentUrl !== circuitUrl) {
                 document.querySelector('#spinner').style.display = '';
                 const preview = document.querySelector('#circuit-image');
-                const url = "{{ url_for(request.endpoint)[:-3] }}circuits?circuit-url=" + circuitUrl;
+                const url = "{{ url_for(request.endpoint)[:-3] }}circuits?data=" + circuitUrl;
                 preview.setAttribute("src", url);
             }
         }
