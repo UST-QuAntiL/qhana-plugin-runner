@@ -7,6 +7,7 @@ from typing import (
     cast,
     Dict,
     List,
+    Tuple,
     TypedDict,
     Literal,
 )
@@ -53,11 +54,15 @@ def get_endpoint_paths(spec: OpenapiSpec) -> Sequence[str]:
 
 
 def _get_endpoint_methods_2(specification: dict, path: str) -> Sequence[str]:
-    return tuple(method.lower() for method in specification["paths"].get(path, {}).keys())
+    return tuple(
+        method.lower() for method in specification["paths"].get(path, {}).keys()
+    )
 
 
 def _get_endpoint_methods_3(specification: dict, path: str) -> Sequence[str]:
-    return tuple(method.lower() for method in specification["paths"].get(path, {}).keys())
+    return tuple(
+        method.lower() for method in specification["paths"].get(path, {}).keys()
+    )
 
 
 def get_endpoint_methods(spec: OpenapiSpec, path: str) -> Sequence[str]:
@@ -79,16 +84,28 @@ def get_endpoint_methods(spec: OpenapiSpec, path: str) -> Sequence[str]:
 def _get_endpoint_method_summary_2(
     specification: dict, path: str, method: str
 ) -> str | None:
-    return specification["paths"].get(path, {}).get(method, {}).get("summary", None)
+    return (
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("summary", None)
+    )
 
 
 def _get_endpoint_method_summary_3(
     specification: dict, path: str, method: str
 ) -> str | None:
-    return specification["paths"].get(path, {}).get(method, {}).get("summary", None)
+    return (
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("summary", None)
+    )
 
 
-def get_endpoint_method_summary(spec: OpenapiSpec, path: str, method: str) -> str | None:
+def get_endpoint_method_summary(
+    spec: OpenapiSpec, path: str, method: str
+) -> str | None:
     parser = parse_spec(spec)
 
     specification = parser.specification
@@ -129,7 +146,10 @@ def _get_endpoint_parameters_3(
     specification: dict, path: str, method: str
 ) -> List[EndpointParameter]:
     parameters: List = (
-        specification["paths"].get(path, {}).get(method, {}).get("parameters", {})
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("parameters", {})
     )
     resolved_params = []
 
@@ -162,6 +182,29 @@ def get_endpoint_parameters(
         case version:
             print(f"unsupported version {version}")  # FIXME throw error?
     return []
+
+
+def get_query_variables(
+    spec: OpenapiSpec, path: str, method: str
+) -> List[Tuple[str, str]]:
+    parsed = parse_spec(spec)
+    params = get_endpoint_parameters(parsed, path, method)
+
+    variables: List[Tuple[str, str]] = []
+
+    for param in params:
+        if param.get("in") != "query":
+            continue
+        name = param.get("name")
+        if not name:
+            continue
+        value: str = ""
+        schema = param.get("schema")
+        if schema:
+            value = _get_json_example_from_schema(parsed.specification, schema)
+        variables.append((name, value))
+
+    return variables
 
 
 SecuritySchema = TypedDict(
@@ -211,7 +254,10 @@ def _get_endpoint_security_requirements_3(
         "components", {}
     ).get("security", None)
     local_security_requirements: Optional[List[Dict[str, str]]] = (
-        specification["paths"].get(path, {}).get(method, {}).get("security", None)
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("security", None)
     )
 
     if local_security_requirements is not None:
@@ -357,7 +403,7 @@ def _extract_example(
 def _get_example_body_2(specification: dict, path: str, method: str) -> str:
     if method in ("delete", "get"):
         return ""
-    data = specification["paths"].get(path, {}).get(method, None)
+    data = specification["paths"].get(path, {}).get(method.lower(), None)
     if data is None:
         return ""
     content = data.get("requestBody", {}).get("content", {})
@@ -387,7 +433,7 @@ def _get_example_body_2(specification: dict, path: str, method: str) -> str:
 def _get_example_body_3(specification: dict, path: str, method: str) -> str:
     if method in ("delete", "get"):
         return ""
-    data = specification["paths"].get(path, {}).get(method, None)
+    data = specification["paths"].get(path, {}).get(method.lower(), None)
     if data is None:
         return ""
     content = data.get("requestBody", {}).get("content", {})
@@ -456,6 +502,8 @@ if __name__ == "__main__":
     print(body)
     params = get_endpoint_parameters(spec, "/pet/{petId}", "post")
     print(params)
+    variables = get_query_variables(spec, "/pet/{petId}", "post")
+    print(variables)
     security_schemes = get_security_schemes(spec)
     print(security_schemes)
     security_requirements = get_endpoint_security_requirements(spec, "/pet", "post")

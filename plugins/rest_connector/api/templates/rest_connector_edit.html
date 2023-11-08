@@ -203,7 +203,7 @@
                 <label class="qhana-form-label" for="endpoint_method">Endpoint URL</label>
                 <div class="qhana-input-wrapper">
                     <select class="qhana-form-input" name="value" id="endpoint_method" {{'disabled' if connector['isLoading']}}>
-                        {% for method in http_methods %}
+                        {% for method in http_methods if not autocomplete_methods or (method.lower() in autocomplete_methods) %}
                             <option value="{{ method }}" {% if connector['endpointMethod'] == method %} selected {% endif %}>{{ method }}</option>
                         {% endfor %}
                     </select>
