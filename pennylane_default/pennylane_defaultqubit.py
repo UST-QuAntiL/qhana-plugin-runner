@@ -355,7 +355,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     if num_classicalbits == 0:
         counts = {"": shots}
     else:
-
         counts = dict(result_counts)
 
     return metadata, counts, result_state
