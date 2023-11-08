@@ -184,7 +184,7 @@ def get_circuit_image(data):
     circuit_url = data.get("data", None)
     if circuit_url is None:
         abort(HTTPStatus.NOT_FOUND)
-    filename = hashlib.md5(circuit_url.encode("utf-8")).hexdigest() + ".png"
+    filename = hashlib.sha256(circuit_url.encode("utf-8")).hexdigest() + ".png"
     path = pathlib.Path(__file__).parent.absolute() / "img" / filename
     if os.path.exists(path):
         return send_file(path, mimetype="image/png")
