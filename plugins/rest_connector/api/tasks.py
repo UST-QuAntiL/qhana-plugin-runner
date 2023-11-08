@@ -50,9 +50,7 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
         raise ValueError(f"Task {db_id} was not found!")
 
     parent_plugin = RESTConnector.instance
-    connector = PluginState.get_value(
-        parent_plugin.identifier, connector_id, default={}
-    )
+    connector = PluginState.get_value(parent_plugin.identifier, connector_id, default={})
     assert isinstance(connector, dict), "Type assertion"
 
     request_variables = json.loads(task_data.parameters)  # FIXME
