@@ -102,7 +102,8 @@ class ConnectorVariable(TypedDict, total=False):
 
 
 class RequestFileDescriptorSchema(MaBaseSchema):
-    source = ma.fields.URL(required=True)  # TODO maybe use FileURL instead
+    data = ma.fields.String(required=True)
+    dereference_url = ma.fields.Boolean(required=False)
     form_field_name = ma.fields.String(required=False, allow_none=True)
     content_type = ma.fields.String(required=False, allow_none=True)
 
