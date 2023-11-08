@@ -30,7 +30,6 @@ PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
 urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
-pylatexenc = "^2.10"
 
 [tool.poetry.dev-dependencies]
 black = ">=23.1.0"
