@@ -37,9 +37,32 @@ from qhana_plugin_runner.storage import STORE
 import numpy as np
 
 from .backend.visualize import plot_data
+import muid
+from qhana_plugin_runner.requests import open_url
+import re
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove .json and .csv
+    fname = fname.removesuffix(".json")
+    fname = fname.removesuffix(".csv")
+    return fname
 
 
 def get_point(ent):
@@ -154,7 +177,9 @@ def calculation_task(self, db_id: int) -> str:
     for ent_id, idx in id_to_idx.items():
         entity_clusters.append({"ID": ent_id, "href": "", "cluster": int(clusters[idx])})
 
-    info_str = f"_variant_{variant.name}_clusters_{clusters_cnt}"
+    filename = retrieve_filename_from_url(entity_points_url)
+
+    info_str = f"_variant_{variant.name}_clusters_{clusters_cnt}_from_{filename}"
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_clusters, output, "application/json")
