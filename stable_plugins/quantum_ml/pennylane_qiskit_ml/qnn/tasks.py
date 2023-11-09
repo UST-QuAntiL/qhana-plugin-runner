@@ -66,7 +66,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode('utf-8')), k1=6, k2=5).replace(" ", "-")
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def retrieve_filename_from_url(url) -> str:
