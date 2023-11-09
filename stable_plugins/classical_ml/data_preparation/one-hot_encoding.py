@@ -185,7 +185,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="One-Hot Encoding",
             description=OneHot.instance.description,
-            name=OneHot.instance.identifier,
+            name=OneHot.instance.name,
             version=OneHot.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(

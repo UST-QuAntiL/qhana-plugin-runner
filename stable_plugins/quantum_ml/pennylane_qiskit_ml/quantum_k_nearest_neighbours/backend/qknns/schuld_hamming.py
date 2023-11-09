@@ -23,7 +23,6 @@ from ..utils import (
     int_to_bitlist,
     check_binary,
     ceil_log2,
-    check_for_duplicates,
 )
 from ..check_wires import check_wires_uniqueness, check_num_wires
 
@@ -33,6 +32,7 @@ class SchuldQkNN(QkNN):
         self,
         train_data: np.ndarray,
         train_labels: np.ndarray,
+        idx_wires: List[int],
         train_wires: List[int],
         label_wires: List[int],
         qam_ancilla_wires: List[int],
@@ -48,21 +48,20 @@ class SchuldQkNN(QkNN):
             "All the data needs to be binary, when dealing with the hamming distance",
         )
 
-        check_for_duplicates(
-            self.train_data, "The training data may not contain duplicates."
-        )
-
         self.train_data = np.array(train_data, dtype=int)
 
         self.label_indices = self.init_labels(train_labels)
 
         self.unclean_wires = [] if unclean_wires is None else unclean_wires
 
+        self.idx_wires = idx_wires
         self.train_wires = train_wires
         self.qam_ancilla_wires = qam_ancilla_wires
         self.label_wires = label_wires
-        wire_types = ["train", "label", "qam_ancilla", "unclean"]
+        wire_types = ["idx", "train", "label", "qam_ancilla", "unclean"]
+        num_idx_wires = int(np.ceil(np.log2(self.train_data.shape[0])))
         num_wires = [
+            num_idx_wires,
             self.train_data.shape[1],
             self.label_indices.shape[1],
             max(self.train_data.shape[1], 2),
@@ -76,11 +75,16 @@ class SchuldQkNN(QkNN):
         check_num_wires(self, wire_types[:-1], num_wires, error_msgs)
 
         self.qam = QAM(
-            self.train_data,
-            self.train_wires,
+            np.array(
+                [
+                    int_to_bitlist(i, num_idx_wires)
+                    for i in range(self.train_data.shape[0])
+                ]
+            ),  # The indices
+            self.idx_wires,
             self.qam_ancilla_wires,
-            additional_bits=self.label_indices,
-            additional_wires=self.label_wires,
+            additional_bits=np.concatenate((self.train_data, self.label_indices), axis=1),
+            additional_wires=self.train_wires + self.label_wires,
             unclean_wires=unclean_wires,
         )
 
@@ -105,10 +109,13 @@ class SchuldQkNN(QkNN):
         is equal to |0>.
         """
         label_probs = np.zeros(len(self.unique_labels))
+        counts = np.zeros(len(self.unique_labels))
         for sample in samples:
             label = bitlist_to_int(sample[1:])
             if sample[0] == 0 and label < len(label_probs):
                 label_probs[label] += 1
+            if label < len(label_probs):
+                counts[label] += 1
         return self.unique_labels[label_probs.argmax()]
 
     def get_quantum_circuit(self, x: np.ndarray) -> Callable[[], None]:
@@ -128,7 +135,7 @@ class SchuldQkNN(QkNN):
         def circuit():
             self.qam.circuit()
             for x_, train_wire in zip(x, self.train_wires):
-                if x_ == 0:
+                if x_ == 1:
                     qml.PauliX((train_wire,))
             for train_wire in self.train_wires:
                 # QAM ancilla wires are 0 after QAM -> use one of those wires
@@ -147,8 +154,9 @@ class SchuldQkNN(QkNN):
     @staticmethod
     def get_necessary_wires(
         train_data: np.ndarray, train_labels: np.ndarray
-    ) -> Tuple[int, int, int]:
+    ) -> Tuple[int, int, int, int]:
         return (
+            int(np.ceil(np.log2(train_data.shape[0]))),
             len(train_data[0]),
             ceil_log2(len(set(train_labels))),
             max(len(train_data[0]), 2),

@@ -52,7 +52,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Classical k Medoids",
             description=ClassicalKMedoids.instance.description,
-            name=ClassicalKMedoids.instance.identifier,
+            name=ClassicalKMedoids.instance.name,
             version=ClassicalKMedoids.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(

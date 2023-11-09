@@ -4,6 +4,17 @@
     <head>
         <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/rainbow.min.css">
+        <style>
+            .qhana-data-preview {
+                text-rendering: optimizeSpeed;
+                display: flex;
+                flex-direction: row; 
+                flex-wrap: wrap;
+                max-height: 750px; 
+                overflow: auto; 
+                background: transparent;
+            }
+        </style>
     </head>
 
     <body>
@@ -13,8 +24,7 @@
                 {% call forms.render_form(target="microfrontend") %}
                     {{ forms.render_fields(schema, values=values, errors=errors) }}
                     <div class="qhana-form-buttons">
-                    {{ forms.submit("validate", target="microfrontend")}}
-                    {{ forms.submit("submit", action=process)}}
+                    {{ forms.submit("validate", target="microfrontend") }}
                     </div>
                 {% endcall %}
             </details>
@@ -22,38 +32,59 @@
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
 
-        <pre>
-            <code id="json-preview" class="qhana-data-preview" style="flex-direction: row; flex-wrap: wrap;
-            max-height: 750px; overflow: auto; background: transparent" hidden>
-            </code>
-        </pre>
+        <button class="qhana-form-submit" id="colorizePreview" hidden>highlight syntax</button>
+
+        <pre><code id="json-preview" class="qhana-data-preview" hidden></code></pre>
 
         <script>
+        let currentJsonPreviewUrl = null;
+
         function checkUrl(newUrl) {
             const dataPreview = document.querySelector('#json-preview');
             const options = document.querySelector('#visualization-options');
             if (newUrl == null || newUrl === "") {
+                currentJsonPreviewUrl = null;
                 dataPreview.setAttribute("hidden", "hidden");
                 options.setAttribute("open", "open");
                 return false;
             }
+            
+            const urlHasChanged = currentJsonPreviewUrl !== newUrl;
+            currentJsonPreviewUrl = newUrl;
 
-            console.log(newUrl)
+            return urlHasChanged;
+        }
 
-            return true;
+        function highlightJson(code_block) {
+            if (code_block == null) {
+                code_block = document.querySelector('#json-preview');
+            }
+            hljs.highlightElement(code_block);
         }
 
         function addJsonToPreview(json_str) {
             const dataPreview = document.querySelector('#json-preview');
+            const colorizeButton = document.querySelector('#colorizePreview');
             const options = document.querySelector('#visualization-options');
+
+            colorizeButton.setAttribute("hidden", "");
+            
             const prettified_json_str = JSON.stringify(JSON.parse(json_str), null, 4);
 
             dataPreview.innerHTML = prettified_json_str;
 
-            hljs.highlightElement(dataPreview);
+            if (json_str.length > 5000) {
+                // allow colorization on demand when preview is too large
+                colorizeButton.removeAttribute("hidden");
+            } else {
+                highlightJson(dataPreview);
+            }
 
             dataPreview.removeAttribute("hidden");
             options.removeAttribute("open");
+            if (window._qhana_microfrontend_state != null) {
+                monitorHeightChanges(window._qhana_microfrontend_state);
+            }
         }
 
         function getUrl() {
@@ -75,6 +106,13 @@
         const dataInput = document.querySelector('input[name=data]');
         dataInput.addEventListener("input", (event) => updatePreview());
 
+        document.querySelector('#colorizePreview').addEventListener('click', (event) => {
+            event.target.setAttribute("hidden", "");
+            highlightJson();
+            if (window._qhana_microfrontend_state != null) {
+                monitorHeightChanges(window._qhana_microfrontend_state);
+            }
+        });
         </script>
 
         <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
