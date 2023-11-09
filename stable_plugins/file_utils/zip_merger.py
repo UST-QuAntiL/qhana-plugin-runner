@@ -221,7 +221,7 @@ class ZipMerger(QHAnaPluginBase):
         return ZIP_MERGER_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "muid~=0.5.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
