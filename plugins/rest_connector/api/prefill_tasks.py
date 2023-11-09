@@ -21,15 +21,16 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.requests import open_url
 
-from .schemas import ConnectorKey
 from ..openapi import (
     get_endpoint_methods,
     get_endpoint_paths,
     get_example_body,
     get_query_variables,
+    get_upload_files,
     parse_spec,
 )
 from ..plugin import RESTConnector
+from .schemas import ConnectorKey
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -117,6 +118,18 @@ def prefill_values(connector_id: str, last_step: str):
                 finished = connector.get("finished_steps", [])
                 finished.append(ConnectorKey.REQUEST_BODY.value)
                 connector["finished_steps"] = finished
+
+            # TODO prefill request files?
+            files = get_upload_files(parsed_spec, path, method)
+            if files:
+                new_data["request_files"] = [
+                    {
+                        "data": "",
+                        "dereference_url": False,
+                        "content_type": f,
+                    }
+                    for f in files
+                ]
 
             changed = True
 

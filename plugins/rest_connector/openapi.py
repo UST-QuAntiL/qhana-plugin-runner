@@ -1,18 +1,18 @@
+from functools import reduce
+from json import dumps
 from typing import (
     Any,
-    Optional,
-    Sequence,
-    TypeAlias,
-    Union,
-    cast,
     Dict,
     List,
-    Tuple,
-    TypedDict,
     Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeAlias,
+    TypedDict,
+    Union,
+    cast,
 )
-from json import dumps
-from functools import reduce
 
 from prance import BaseParser, ResolvingParser
 
@@ -54,11 +54,15 @@ def get_endpoint_paths(spec: OpenapiSpec) -> Sequence[str]:
 
 
 def _get_endpoint_methods_2(specification: dict, path: str) -> Sequence[str]:
-    return tuple(method.lower() for method in specification["paths"].get(path, {}).keys())
+    return tuple(
+        method.lower() for method in specification["paths"].get(path, {}).keys()
+    )
 
 
 def _get_endpoint_methods_3(specification: dict, path: str) -> Sequence[str]:
-    return tuple(method.lower() for method in specification["paths"].get(path, {}).keys())
+    return tuple(
+        method.lower() for method in specification["paths"].get(path, {}).keys()
+    )
 
 
 def get_endpoint_methods(spec: OpenapiSpec, path: str) -> Sequence[str]:
@@ -81,7 +85,10 @@ def _get_endpoint_method_summary_2(
     specification: dict, path: str, method: str
 ) -> str | None:
     return (
-        specification["paths"].get(path, {}).get(method.lower(), {}).get("summary", None)
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("summary", None)
     )
 
 
@@ -89,11 +96,16 @@ def _get_endpoint_method_summary_3(
     specification: dict, path: str, method: str
 ) -> str | None:
     return (
-        specification["paths"].get(path, {}).get(method.lower(), {}).get("summary", None)
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("summary", None)
     )
 
 
-def get_endpoint_method_summary(spec: OpenapiSpec, path: str, method: str) -> str | None:
+def get_endpoint_method_summary(
+    spec: OpenapiSpec, path: str, method: str
+) -> str | None:
     parser = parse_spec(spec)
 
     specification = parser.specification
@@ -134,7 +146,10 @@ def _get_endpoint_parameters_3(
     specification: dict, path: str, method: str
 ) -> List[EndpointParameter]:
     parameters: List = (
-        specification["paths"].get(path, {}).get(method.lower(), {}).get("parameters", {})
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("parameters", {})
     )
     resolved_params = []
 
@@ -239,7 +254,10 @@ def _get_endpoint_security_requirements_3(
         "components", {}
     ).get("security", None)
     local_security_requirements: Optional[List[Dict[str, str]]] = (
-        specification["paths"].get(path, {}).get(method.lower(), {}).get("security", None)
+        specification["paths"]
+        .get(path, {})
+        .get(method.lower(), {})
+        .get("security", None)
     )
 
     if local_security_requirements is not None:
@@ -469,6 +487,44 @@ def get_example_body(spec: OpenapiSpec, path: str, method: str) -> str:
     return body
 
 
+def _get_example_files_3(specification: dict, path: str, method: str) -> Sequence[str]:
+    if method in ("delete", "get"):
+        return []
+    data = specification["paths"].get(path, {}).get(method.lower(), None)
+    if data is None:
+        return []
+
+    content_types = set(data.get("requestBody", {}).get("content", {}).keys())
+
+    content_types -= {
+        "application/json",
+        "application/xml",
+        "application/html",
+        "application/x-www-form-urlencoded",
+    }
+
+    return list(content_types)
+
+
+def get_upload_files(spec: OpenapiSpec, path: str, method: str) -> Sequence[str]:
+    parser = parse_spec(spec)
+
+    specification = parser.specification
+    assert isinstance(specification, dict), "type assertion"
+
+    files = []
+
+    match parser.version_parsed:
+        case (2, _) | (2, _, _):
+            pass  # TODO maybe implement
+        case (3, 0 | 1) | (3, 0 | 1, _):
+            files = _get_example_files_3(specification, path, method)
+        case version:
+            print(f"unsupported version {version}")  # FIXME throw error?
+
+    return files
+
+
 if __name__ == "__main__":
     # FIXME remove later
     spec = parse_spec(
@@ -482,6 +538,8 @@ if __name__ == "__main__":
     print(summary)
     body = get_example_body(spec, "/pet", "put")
     print(body)
+    files = get_upload_files(spec, "/pet/{petId}/uploadImage", "post")
+    print(files)
     params = get_endpoint_parameters(spec, "/pet/{petId}", "post")
     print(params)
     variables = get_query_variables(spec, "/pet/{petId}", "post")
