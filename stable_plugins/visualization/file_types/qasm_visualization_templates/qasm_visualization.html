@@ -1,102 +1,98 @@
-{% import 'forms.html' as forms %}
+{% extends "simple_template.html" %}
 
-<html>
+{% block head %}
+{{ super() }}
+<style>
+    .qhana-data-preview {
+        text-rendering: optimizeSpeed;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        max-width: 100%;
+        max-height: 750px;
+        overflow: auto;
+        background: transparent;
+    }
 
-<head>
-    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
-    <style>
-        .qhana-data-preview {
-            text-rendering: optimizeSpeed;
-            display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
-            max-width: 100%;
-            max-height: 750px;
-            overflow: auto;
-            background: transparent;
+    #spinner {
+        display: inline-block;
+        width: 100px;
+        height: 100px;
+        border: 6px solid rgba(0, 0, 0, 0);
+        border-radius: 50%;
+        border-top-color: #673ab7;
+        animation: spin 1s linear infinite;
+        -webkit-animation: spin 1s linear infinite;
+    }
+
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+
+    @keyframes spin {
+        to {
+            -webkit-transform: rotate(360deg);
         }
+    }
+</style>
+{% endblock head %}
 
-        #spinner {
-            display: inline-block;
-            width: 100px;
-            height: 100px;
-            border: 6px solid rgba(0, 0, 0, 0);
-            border-radius: 50%;
-            border-top-color: #673ab7;
-            animation: spin 1s linear infinite;
-            -webkit-animation: spin 1s linear infinite;
+{% block content %}
+<div class="qhana-microfrontend">
+    <details id="visualization-options" open>
+        <summary>Visualization Options</summary>
+        {% call forms.render_form(target="microfrontend") %}
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend") }}
+        </div>
+        {% endcall %}
+    </details>
+</div>
+
+<img id="circuit-image" class="qhana-data-preview" onload="onCircuitImageLoad()" onerror="onCircuitImageError()">
+<div class="container">
+    <div id="spinner"></div>
+</div>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+<script>
+    let currentUrl = null;
+
+    function getUrl() {
+        return document.querySelector('input[name=data]').value;
+    }
+
+    function updatePreview() {
+        const circuitUrl = getUrl()
+        if (currentUrl !== circuitUrl) {
+            document.querySelector('#spinner').style.display = '';
+            const preview = document.querySelector('#circuit-image');
+            const url = "{{ url_for(request.endpoint)[:-3] }}circuits?data=" + circuitUrl;
+            preview.setAttribute("src", url);
         }
+    }
 
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-        }
+    function onCircuitImageLoad() {
+        document.querySelector('#circuit-image').style.display = '';
+        document.querySelector('#spinner').style.display = 'none';
+        document.querySelector('#visualization-options').removeAttribute('open');
+    }
 
-        @keyframes spin {
-            to {
-                -webkit-transform: rotate(360deg);
-            }
-        }
-    </style>
-</head>
+    function onCircuitImageError() {
+        document.querySelector('#circuit-image').style.display = 'none';
+        document.querySelector('#spinner').style.display = 'none';
+        document.querySelector('#visualization-options').setAttribute('open', 'open');
+    }
 
-<body>
-    <div class="qhana-microfrontend">
-        <details id="visualization-options" open>
-            <summary>Visualization Options</summary>
-            {% call forms.render_form(target="microfrontend") %}
-            {{ forms.render_fields(schema, values=values, errors=errors) }}
-            <div class="qhana-form-buttons">
-                {{ forms.submit("validate", target="microfrontend") }}
-            </div>
-            {% endcall %}
-        </details>
-    </div>
+    updatePreview();
 
-    <img id="circuit-image" class="qhana-data-preview" onload="onCircuitImageLoad()" onerror="onCircuitImageError()">
-    <div class="container">
-        <div id="spinner"></div>
-    </div>
-
-    <script>
-        let currentUrl = null;
-
-        function getUrl() {
-            return document.querySelector('input[name=data]').value;
-        }
-
-        function updatePreview() {
-            const circuitUrl = getUrl()
-            if (currentUrl !== circuitUrl) {
-                document.querySelector('#spinner').style.display = '';
-                const preview = document.querySelector('#circuit-image');
-                const url = "{{ url_for(request.endpoint)[:-3] }}circuits?data=" + circuitUrl;
-                preview.setAttribute("src", url);
-            }
-        }
-
-        function onCircuitImageLoad() {
-            document.querySelector('#circuit-image').style.display = '';
-            document.querySelector('#spinner').style.display = 'none';
-            document.querySelector('#visualization-options').removeAttribute('open');
-        }
-
-        function onCircuitImageError() {
-            document.querySelector('#circuit-image').style.display = 'none';
-            document.querySelector('#spinner').style.display = 'none';
-            document.querySelector('#visualization-options').setAttribute('open', 'open');
-        }
-
-        updatePreview();
-
-        const dataInput = document.querySelector('input[name=data]');
-        dataInput.addEventListener("input", (event) => updatePreview());
-    </script>
-
-    <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
-
-</body>
-
-</html>
+    const dataInput = document.querySelector('input[name=data]');
+    dataInput.addEventListener("input", (event) => updatePreview());
+</script>
+{% endblock script %}
