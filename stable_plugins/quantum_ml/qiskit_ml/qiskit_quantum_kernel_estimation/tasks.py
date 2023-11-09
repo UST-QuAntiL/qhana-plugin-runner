@@ -36,9 +36,35 @@ from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
 import numpy as np
+import muid
+import re
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
+
+
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove .json and .csv
+    fname = fname.removesuffix(".json")
+    fname = fname.removesuffix(".csv")
+    return fname
 
 
 def get_point(ent):
@@ -162,7 +188,10 @@ def calculation_task(self, db_id: int) -> str:
                 }
             )
 
-    info_str = f"_kernel_{str(kernel_enum.name).replace('_feature_map', '')}_entanglement_{entanglement_pattern}"
+    concat_filenames = retrieve_filename_from_url(entity_points_url1)
+    concat_filenames += retrieve_filename_from_url(entity_points_url2)
+    filename_hash = get_readable_hash(concat_filenames)
+    info_str = f"_kernel_{str(kernel_enum.name).replace('_feature_map', '')}_entanglement_{entanglement_pattern}_from_{filename_hash}"
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(kernel_json, output, "application/json")
