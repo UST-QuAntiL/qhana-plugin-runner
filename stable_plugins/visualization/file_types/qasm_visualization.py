@@ -30,6 +30,7 @@ from flask.wrappers import Response
 from marshmallow import EXCLUDE
 from qiskit import QuantumCircuit
 from requests.exceptions import HTTPError
+from io import BytesIO
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -49,6 +50,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from qhana_plugin_runner.db.models.virtual_plugins import DataBlob
 
 _plugin_name = "qasm-visualization"
 __version__ = "v0.2.0"
@@ -180,14 +182,14 @@ class MicroFrontend(MethodView):
     required=True,
 )
 @QASM_BLP.require_jwt("jwt", optional=True)
-def get_circuit_image(data):
+def get_circuit_image(data: Mapping):
     circuit_url = data.get("data", None)
     if circuit_url is None:
         abort(HTTPStatus.NOT_FOUND)
-    filename = hashlib.sha256(circuit_url.encode("utf-8")).hexdigest() + ".png"
-    path = pathlib.Path(__file__).parent.absolute() / "img" / filename
-    if os.path.exists(path):
-        return send_file(path, mimetype="image/png")
+    url_hash = hashlib.sha256(circuit_url.encode("utf-8")).hexdigest()
+    image = DataBlob.get_value(QasmVisualization.instance.identifier, url_hash, None)
+    if image is not None:
+        return send_file(BytesIO(image), mimetype="image/png")
     try:
         with open_url(circuit_url) as quasm_response:
             circuit_qasm = quasm_response.text
@@ -196,8 +198,14 @@ def get_circuit_image(data):
         abort(HTTPStatus.NOT_FOUND)
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
     fig = circuit.draw(output="mpl")
-    fig.savefig(path)
-    return send_file(path, mimetype="image/png")
+    figfile = BytesIO()
+    fig.savefig(figfile, format="png")
+    figfile.seek(0)
+    DataBlob.set_value(
+        QasmVisualization.instance.identifier, url_hash, figfile.getvalue(), commit=True
+    )
+
+    return send_file(figfile, mimetype="image/png")
 
 
 @QASM_BLP.route("/process/")
