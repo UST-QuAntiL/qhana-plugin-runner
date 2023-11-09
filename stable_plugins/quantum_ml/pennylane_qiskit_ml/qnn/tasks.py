@@ -57,8 +57,36 @@ from .backend.datasets import OneHotDataset
 from .backend.train_and_test import train
 from .backend.visualize import plot_data, plot_confusion_matrix
 
+import muid
+import re
+from qhana_plugin_runner.requests import open_url
+
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode('utf-8')), k1=6, k2=5).replace(" ", "-")
+
+
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove .json and .csv
+    fname = fname.removesuffix(".json")
+    fname = fname.removesuffix(".csv")
+    return fname
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
@@ -229,7 +257,13 @@ def calculation_task(self, db_id: int) -> str:
         # Create confusion matrix plot
         conf_matrix = plot_confusion_matrix(test_labels, predictions, int_to_label)
 
-    info_str = f"_network_{network_enum.name}_optimizer_{optimizer.name}_epochs_{epochs}"
+    # Retrieve a has from the names of the input files
+    concat_filenames = retrieve_filename_from_url(train_points_url)
+    concat_filenames += retrieve_filename_from_url(train_label_points_url)
+    concat_filenames += retrieve_filename_from_url(test_points_url)
+    concat_filenames += retrieve_filename_from_url(test_label_points_url)
+    filename_hash = get_readable_hash(concat_filenames)
+    info_str = f"_network_{network_enum.name}_optimizer_{optimizer.name}_epochs_{epochs}_from_{filename_hash}"
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:

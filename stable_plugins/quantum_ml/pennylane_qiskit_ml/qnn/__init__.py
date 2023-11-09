@@ -45,7 +45,7 @@ class QNN(QHAnaPluginBase):
         return QNN_BLP
 
     def get_requirements(self) -> str:
-        return "matplotlib~=3.5.1\nqiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\ntorch~=2.0.1"
+        return "matplotlib~=3.5.1\nqiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\ntorch~=2.0.1\nmuid~=0.5.3"
 
 
 try:
