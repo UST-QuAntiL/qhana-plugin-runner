@@ -311,8 +311,10 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
     circuit = circuit_from_qasm(circuit_qasm)
+    # Zero time indicates no measurements (in qasm code)
     startime_count = 0
     endtime_count = 0
+    # Make a copy of the circuit to keep original, unchanged before adding any measuremnts.
     circuit_copy = circuit.copy()
 
     number_qubits = len(list(circuit.all_qubits()))
@@ -343,7 +345,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         endtime_count = time.perf_counter_ns()
 
         histogram = result_count.histogram(key="result")
-    else:  # If there are no measurements
+    else:  # If there are no measurements in qasm code
         shots = execution_options["shots"]
         histogram = {"": shots}
 
