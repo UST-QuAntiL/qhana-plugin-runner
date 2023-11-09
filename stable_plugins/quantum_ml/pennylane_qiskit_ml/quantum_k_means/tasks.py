@@ -31,13 +31,11 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
-from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 
 import numpy as np
 
 from .backend.visualize import plot_data
-import muid
 from qhana_plugin_runner.requests import open_url
 import re
 
