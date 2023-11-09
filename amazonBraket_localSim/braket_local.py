@@ -288,6 +288,7 @@ class Braket_LocalSimulator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+# regex to find total number of classicalbits
 def find_total_classicalbits(qasm_code):
     import re
 
@@ -305,17 +306,18 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     num_classical_bits = find_total_classicalbits(circuit_qasm)
 
-    # QASM to Cirq
+    # # Convert QASM code to a Cirq circuit
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
 
     cirq_circuit = from_qasm(circuit_qasm)
 
-    # Cirq to Braket
+    # Convert the Cirq circuit to a Braket circuit
     braket_circuit = to_braket(cirq_circuit)
 
     device = LocalSimulator()
 
+    # Start the simulation for the state vectr
     start_time_sv = time.perf_counter_ns()
     state_vector_circuit = braket_circuit.copy()
     state_vector_circuit.add_result_type(ResultType.StateVector())  # State vector
@@ -323,12 +325,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     end_time_sv = time.perf_counter_ns()
     statevector = [state_vector_result.values[0]]
 
+    # Start the simulation for counts with time nanosecond
     start_time_counts = time.perf_counter_ns()
     result_meas = device.run(braket_circuit, shots=execution_options["shots"]).result()
     end_time_counts = time.perf_counter_ns()
 
     shots = execution_options["shots"]
 
+    # If no classical bits return empty strng
     if num_classical_bits == 0:
         result_counts = {"": shots}
 
