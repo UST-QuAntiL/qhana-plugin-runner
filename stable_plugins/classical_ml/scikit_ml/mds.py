@@ -15,6 +15,7 @@ from enum import Enum
 from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
+import re
 
 import flask
 import marshmallow as ma
@@ -292,6 +293,28 @@ class MDS(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
+
+
 @CELERY.task(name=f"{MDS.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     import numpy as np
@@ -366,12 +389,14 @@ def calculation_task(self, db_id: int) -> str:
 
         entity_points.append(new_entity_point)
 
+    info_str = f"_dim_{dimensions}_metric_{str(metric.name).removesuffix('_mds')}_from_{retrieve_filename_from_url(entity_distances_url)}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "entity_points.json",
+            f"entity_points{info_str}.json",
             "entity/vector",
             "application/json",
         )

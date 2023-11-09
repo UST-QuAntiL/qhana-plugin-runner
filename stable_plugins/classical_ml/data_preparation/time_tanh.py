@@ -19,6 +19,7 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List
 from zipfile import ZipFile
+import re
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -242,6 +243,28 @@ class TimeTanh(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
+
+
 @CELERY.task(name=f"{TimeTanh.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -322,10 +345,12 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    info_str = f"_factor_{factor}_from_{retrieve_filename_from_url(entities_url)}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "time_tanh.zip",
+        f"time_tanh{info_str}.zip",
         "custom/element-similarities",
         "application/zip",
     )

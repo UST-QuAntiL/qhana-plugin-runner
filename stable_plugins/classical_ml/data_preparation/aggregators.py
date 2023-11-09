@@ -49,6 +49,9 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from qhana_plugin_runner.requests import open_url
+
+import re
 
 _plugin_name = "distance-aggregator"
 __version__ = "v0.2.0"
@@ -245,6 +248,28 @@ class Aggregator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
+
+
 @CELERY.task(name=f"{Aggregator.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -328,12 +353,14 @@ def calculation_task(self, db_id: int) -> str:
             }
         )
 
+    info_str = f"aggregator_{aggregator.name}_from_{retrieve_filename_from_url(attribute_distances_url)}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_distances, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "entity_distances.json",
+            f"entity_distances_{info_str}.json",
             "custom/entity-distances",
             "application/json",
         )

@@ -18,6 +18,8 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List, Dict
 from zipfile import ZipFile
+import re
+import muid
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -243,6 +245,32 @@ class SymMaxMean(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
+
+
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
+
+
 def _get_sim(elem_sims: Dict, val1, val2) -> float:
     if (val1, val2) in elem_sims:
         return elem_sims[(val1, val2)]["similarity"]
@@ -374,10 +402,14 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    concat_filenames = retrieve_filename_from_url(entities_url)
+    concat_filenames += retrieve_filename_from_url(element_similarities_url)
+    info_str = f"_from_{get_readable_hash(concat_filenames)}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "sym_max_mean.zip",
+        f"sym_max_mean{info_str}.zip",
         "custom/attribute-similarities",
         "application/zip",
     )

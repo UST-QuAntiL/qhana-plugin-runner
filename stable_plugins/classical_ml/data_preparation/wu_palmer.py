@@ -20,6 +20,8 @@ from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List, Dict, Tuple
 from zipfile import ZipFile
+import re
+import muid
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -274,6 +276,32 @@ class WuPalmer(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
+
+
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
+
+
 def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
     nodes: Dict[str, Tuple[str, ...]] = {}
     edges: Dict[str, str] = {}
@@ -520,10 +548,17 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    concat_filenames = retrieve_filename_from_url(entities_url)
+    concat_filenames += retrieve_filename_from_url(entities_metadata_url)
+    concat_filenames += retrieve_filename_from_url(taxonomies_zip_url)
+
+    info_str = "_with_root" if root_has_meaning_in_taxonomy else "_without_root"
+    info_str += f"_from_{get_readable_hash(concat_filenames)}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "wu_palmer.zip",
+        f"wu_palmer{info_str}.zip",
         "custom/element-similarities",
         "application/zip",
     )

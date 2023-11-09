@@ -19,6 +19,7 @@ from http import HTTPStatus
 from json import JSONEncoder, dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict, Generator, List, Mapping, Optional, Set, Union
+import re
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -307,6 +308,27 @@ class EntityFilter(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def retrieve_filename_from_url_request(response, url) -> str:
+    """
+    Given an url response and the original url to a file, it returns the name of the file
+    :param response: Response
+    :param url: str
+    :return: str
+    """
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
+
+
 def filter_rows(
     input_entities: Generator[Dict[str, Any], None, None],
     id_set: Set[str],
@@ -521,6 +543,8 @@ def entity_filter_task(self, db_id: int) -> str:
             attributes=attributes,
         )
 
+        info_str = f"_setting_{attribute_filter_strategy}_rows_{n_rows}_sampling_{n_sampled_rows}_from_{retrieve_filename_from_url_request(url_data, input_file_url)}"
+
         # Write to output file
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(entities=output_entities, file_=output, mimetype=mimetype)
@@ -532,7 +556,7 @@ def entity_filter_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "filtered_entities" + file_type,
+                f"filtered_entities{info_str}" + file_type,
                 "entity_filter_output",
                 mimetype,
             )

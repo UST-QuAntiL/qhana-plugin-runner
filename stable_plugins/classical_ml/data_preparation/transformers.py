@@ -19,6 +19,7 @@ from io import StringIO
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List
 from zipfile import ZipFile
+import re
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -53,6 +54,7 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from qhana_plugin_runner.requests import open_url
 
 _plugin_name = "sim-to-dist-transformers"
 __version__ = "v0.2.0"
@@ -268,6 +270,28 @@ class Transformers(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
+
+
 @CELERY.task(name=f"{Transformers.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -345,10 +369,12 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    info_str = f"_transformer_{transformer.name}_from_{retrieve_filename_from_url(attribute_similarities_url)}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "attr_dist.zip",
+        f"attr_dist{info_str}.zip",
         "custom/attribute-distances",
         "application/zip",
     )
