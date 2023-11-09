@@ -7,6 +7,7 @@ from typing import (
     Literal,
     Optional,
     Sequence,
+    Set,
     Tuple,
     TypeAlias,
     TypedDict,
@@ -15,6 +16,8 @@ from typing import (
 )
 
 from prance import BaseParser, ResolvingParser
+from werkzeug.datastructures import MultiDict
+from werkzeug.http import dump_header
 
 OpenapiSpec: TypeAlias = Union[str, BaseParser, ResolvingParser]
 
@@ -190,6 +193,28 @@ def get_query_variables(
         variables.append((name, value))
 
     return variables
+
+
+def get_parameter_headers(
+    spec: OpenapiSpec, path: str, method: str
+) -> MultiDict[str, str]:
+    parsed = parse_spec(spec)
+    params = get_endpoint_parameters(parsed, path, method)
+
+    headers = MultiDict()
+    for param in params:
+        if param.get("in") != "header":
+            continue
+        name = param.get("name")
+        if not name:
+            continue
+        value: str = ""
+        schema = param.get("schema")
+        if schema:
+            value = _get_json_example_from_schema(parsed.specification, schema)
+        headers.add(name, value)
+
+    return headers
 
 
 SecuritySchema = TypedDict(
@@ -507,6 +532,83 @@ def get_upload_files(spec: OpenapiSpec, path: str, method: str) -> Sequence[str]
     return files
 
 
+def _get_encoding_headers_3(
+    specification: dict, path: str, method: str
+) -> Dict[str, str]:
+    data = specification["paths"].get(path, {}).get(method.lower(), None)
+    if data is None:
+        return {}
+
+    headers = {}
+
+    # set accept header
+    output_content_types: Set[str] = set(
+        data.get("responses", {}).get("200", {}).get("content", {}).keys()
+    )
+    if "application/json" in output_content_types:
+        headers["accept"] = "application/json, */*;q=0.8"
+    elif "application/xml" in output_content_types:
+        headers["accept"] = "application/xml, */*;q=0.8"
+    elif "application/x-www-form-urlencoded" in output_content_types:
+        headers["accept"] = "application/x-www-form-urlencoded, */*;q=0.8"
+    elif output_content_types:
+        headers["accept"] = ", ".join(output_content_types) + ", */*;q=0.8"
+
+    # set content type header
+    input_content_types: Set[str] = set(
+        data.get("requestBody", {}).get("content", {}).keys()
+    )
+    if "application/json" in input_content_types:
+        headers["Content-Type"] = "application/json"
+    elif "application/xml" in input_content_types:
+        headers["Content-Type"] = "application/xml"
+    elif "application/x-www-form-urlencoded" in input_content_types:
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    elif "multipart/form-data" in input_content_types:
+        headers["Content-Type"] = "multipart/form-data"
+    elif input_content_types:
+        headers["Content-Type"] = input_content_types.pop()
+
+    return headers
+
+
+def get_encoding_headers(spec: OpenapiSpec, path: str, method: str) -> Dict[str, str]:
+    parser = parse_spec(spec)
+
+    specification = parser.specification
+    assert isinstance(specification, dict), "type assertion"
+
+    headers = {}
+
+    match parser.version_parsed:
+        case (2, _) | (2, _, _):
+            pass  # TODO maybe implement
+        case (3, 0 | 1) | (3, 0 | 1, _):
+            headers = _get_encoding_headers_3(specification, path, method)
+        case version:
+            print(f"unsupported version {version}")  # FIXME throw error?
+
+    return headers
+
+
+def get_headers(spec: OpenapiSpec, path: str, method: str) -> str:
+    parsed = parse_spec(spec)
+
+    headers = MultiDict()
+
+    headers.update(get_parameter_headers(parsed, path, method))
+    headers.update(get_encoding_headers(parsed, path, method))
+
+    def dump_value(values: List[str]) -> str:
+        if not values:
+            return ""
+        if len(values) == 1:
+            return values[0]
+        return dump_header(values)
+
+    return "\n".join(f"{name}: {dump_value(value)}" for name, value in headers.lists())
+
+
 if __name__ == "__main__":
     # FIXME remove later
     spec = parse_spec(
@@ -530,3 +632,5 @@ if __name__ == "__main__":
     print(security_schemes)
     security_requirements = get_endpoint_security_requirements(spec, "/pet", "post")
     print(security_requirements)
+    headers = get_headers(spec, "/pet", "post")
+    print(headers)

@@ -25,6 +25,7 @@ from ..openapi import (
     get_endpoint_methods,
     get_endpoint_paths,
     get_example_body,
+    get_headers,
     get_query_variables,
     get_upload_files,
     parse_spec,
@@ -108,8 +109,8 @@ def prefill_values(connector_id: str, last_step: str):
                 get_query_variables(parsed_spec, path, method)
             )
 
-            # TODO prefill header
-            pass
+            # prefill header
+            new_data["request_headers"] = get_headers(parsed_spec, path, method)
 
             # prefill body
             new_data["request_body"] = get_example_body(parsed_spec, path, method)
@@ -119,7 +120,7 @@ def prefill_values(connector_id: str, last_step: str):
                 finished.append(ConnectorKey.REQUEST_BODY.value)
                 connector["finished_steps"] = finished
 
-            # TODO prefill request files?
+            # prefill request files
             files = get_upload_files(parsed_spec, path, method)
             if files:
                 new_data["request_files"] = [
