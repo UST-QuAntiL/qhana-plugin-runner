@@ -460,9 +460,11 @@ def retrieve_filename_from_url_request(response, url) -> str:
     else:
         fname = url.split("/")[-1]
 
-    # Remove .json and .csv
-    fname = fname.removesuffix(".json")
-    fname = fname.removesuffix(".csv")
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
     return fname
 
 
