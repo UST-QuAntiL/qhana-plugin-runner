@@ -493,12 +493,6 @@
                 <legend>Request files</legend>
                 <div class="object-fields">
                     <div class="qhana-form-field">
-                        <label class="qhana-form-label" for="json__{{loop.index}}_formFieldName">Form field name</label>
-                        <div class="qhana-input-wrapper">
-                            <input class="qhana-form-input" name="json__{{loop.index}}_formFieldName" autocomplete="off" value="{{file['formFieldName']}}">
-                        </div>
-                    </div>
-                    <div class="qhana-form-field">
                         <label class="qhana-form-label" for="json__{{loop.index}}_contentType">Content type</label>
                         <div class="qhana-input-wrapper">
                             <input class="qhana-form-input" name="json__{{loop.index}}_contentType" list="contentTypeList" autocomplete="off" value="{{file['contentType']}}">
@@ -529,12 +523,6 @@
                 <fieldset class="object-container" id="SLUG__request_files" {{'disabled' if connector['isLoading']}}>
                     <legend>Request files</legend>
                     <div class="object-fields">
-                        <div class="qhana-form-field">
-                            <label class="qhana-form-label" for="json__SLUG_formFieldName">Form field name</label>
-                            <div class="qhana-input-wrapper">
-                                <input class="qhana-form-input" name="json__SLUG_formFieldName" autocomplete="off">
-                            </div>
-                        </div>
                         <div class="qhana-form-field">
                             <label class="qhana-form-label" for="json__SLUG_contentType">Content type</label>
                             <div class="qhana-input-wrapper">
