@@ -303,6 +303,7 @@ def find_total_qubits(qasm_code):
     return sum(map(int, matches))
 
 
+# regex to find total number of classicalbits
 def find_total_classicalbits(qasm_code):
     import re
 
@@ -315,26 +316,30 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     import pennylane as qml
     import time
 
+    # Define the number of qubits and classicalbits from the qasm code
     num_wires = find_total_qubits(circuit_qasm)
     num_classicalbits = find_total_classicalbits(circuit_qasm)
 
+    # choose PennyLane quantum devices for counts and statevector simulations
     circ = qml.device("default.qubit", wires=num_wires, shots=execution_options["shots"])
     circ_statevector = qml.device("default.qubit", wires=num_wires, shots=None)
 
-    my_circuit = qml.from_qasm(circuit_qasm)
+    penny_circuit = qml.from_qasm(circuit_qasm)
 
+    # Define a quantum node for counts results
     @qml.qnode(circ)
     def circuit():
-        my_circuit(wires=range(num_wires))
+        penny_circuit(wires=range(num_wires))
         return qml.counts()
 
     startime_counts = time.perf_counter_ns()
     result_counts = circuit()
     endtime_counts = time.perf_counter_ns()
 
+    # Define a quantum node for statevector results
     @qml.qnode(circ_statevector)
     def state_vector_circuit():
-        my_circuit(wires=range(num_wires))
+        penny_circuit(wires=range(num_wires))
         return qml.state()
 
     startime_state = time.perf_counter_ns()
@@ -351,7 +356,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     }
 
     shots = execution_options["shots"]
-
+    # If there are no classical bits return empty strg
     if num_classicalbits == 0:
         counts = {"": shots}
     else:
