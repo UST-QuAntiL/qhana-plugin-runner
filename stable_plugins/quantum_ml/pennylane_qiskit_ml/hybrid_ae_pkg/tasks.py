@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+import muid
+
 from tempfile import SpooledTemporaryFile
 
 from celery.utils.log import get_task_logger
@@ -28,6 +31,7 @@ from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import open_url
 
 from typing import List
 from torch import Tensor, tensor, float32, less_equal
@@ -37,6 +41,32 @@ from .backend.load_utils import get_indices_and_point_arr
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
+
+
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
 
 
 def prepare_data_for_output(id_list: list, data: List[List[float]]):
@@ -118,6 +148,13 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
             weights_dict[key] = value.tolist()
     weights_dict["net_type"] = str(qnn_name)
 
+    concat_filenames = retrieve_filename_from_url(train_data_url)
+    concat_filenames += retrieve_filename_from_url(test_data_url)
+
+    info_str = (
+        f"_qubits_{q_num}_dim_{embedding_size}_from_{get_readable_hash(concat_filenames)}"
+    )
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(
@@ -128,7 +165,7 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "training_data_embedding.json",
+            f"training_data_embedding{info_str}.json",
             "entity/vector",
             "application/json",
         )
@@ -142,7 +179,7 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "test_data_embedding.json",
+            f"test_data_embedding{info_str}.json",
             "entity/vector",
             "application/json",
         )
@@ -153,7 +190,7 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "autoencoder-weights.json",
+            f"autoencoder-weights{info_str}.json",
             "qnn-weights",
             "application/json",
         )
