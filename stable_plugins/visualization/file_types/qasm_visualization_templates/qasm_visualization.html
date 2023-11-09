@@ -53,7 +53,7 @@
     </details>
 </div>
 
-<img id="circuit-image" class="qhana-data-preview" onload="onCircuitImageLoad()" onerror="onCircuitImageError()">
+<img id="circuit-image" class="qhana-data-preview">
 <div class="container">
     <div id="spinner"></div>
 </div>
@@ -68,16 +68,6 @@
         return document.querySelector('input[name=data]').value;
     }
 
-    function updatePreview() {
-        const circuitUrl = getUrl()
-        if (currentUrl !== circuitUrl) {
-            document.querySelector('#spinner').style.display = '';
-            const preview = document.querySelector('#circuit-image');
-            const url = "{{ get_circuit_image_url }}?data=" + circuitUrl;
-            preview.setAttribute("src", url);
-        }
-    }
-
     function onCircuitImageLoad() {
         document.querySelector('#circuit-image').style.display = '';
         document.querySelector('#spinner').style.display = 'none';
@@ -90,9 +80,25 @@
         document.querySelector('#visualization-options').setAttribute('open', 'open');
     }
 
-    updatePreview();
+    function setupEventListeners() {
+        const dataInput = document.querySelector('input[name=data]');
+        dataInput.addEventListener("input", (event) => updatePreview());
+        const circuitImage = document.querySelector('#circuit-image');
+        circuitImage.addEventListener("load", (event) => onCircuitImageLoad());
+        circuitImage.addEventListener("error", (event) => onCircuitImageError());
+    }
 
-    const dataInput = document.querySelector('input[name=data]');
-    dataInput.addEventListener("input", (event) => updatePreview());
+    function updatePreview() {
+        const circuitUrl = getUrl()
+        if (currentUrl !== circuitUrl) {
+            document.querySelector('#spinner').style.display = '';
+            const preview = document.querySelector('#circuit-image');
+            const url = "{{ get_circuit_image_url }}?data=" + circuitUrl;
+            preview.setAttribute("src", url);
+        }
+    }
+
+    setupEventListeners();
+    updatePreview();
 </script>
 {% endblock script %}
