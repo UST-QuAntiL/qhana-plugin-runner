@@ -297,10 +297,11 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     import time
 
     startime = time.time()
+    # Convert circuit from qasm code
     circ = circuit_from_qasm_str(circuit_qasm)
 
     backend = QulacsBackend()
-    # compiled
+    # compiled circuit to be ready simulations with Backend
     compiled_circuit = backend.get_compiled_circuit(circ)
 
     startime_counts = time.perf_counter_ns()
@@ -309,7 +310,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     )  # count simulation with time
     counts = backend.get_result(handle).get_counts()
     endtime_counts = time.perf_counter_ns()
-
+    # statevector simulation with time
     startime_state = time.perf_counter_ns()
     statevector = backend.get_result(handle).get_state()
     endtime_state = time.perf_counter_ns()
