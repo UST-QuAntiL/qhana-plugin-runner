@@ -110,7 +110,7 @@ class PluginsView(MethodView):
                 data_output=[
                     DataMetadata(
                         data_type="*",
-                        content_type=["image/svg+xml"],
+                        content_type=["image/png"],
                         required=True,
                     )
                 ],
@@ -168,6 +168,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 example_values=url_for(f"{QASM_BLP.name}.MicroFrontend"),
+                get_circuit_image_url=url_for(f"{QASM_BLP.name}.get_circuit_image"),
             )
         )
 
