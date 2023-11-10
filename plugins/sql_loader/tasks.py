@@ -238,5 +238,4 @@ def get_second_task_html(
 ) -> str:
     params = retrieve_params_for_second_task(db_id, dumped_schema=arguments)
     df = second_task_execution(**params, limit=10, retrieval_only=True)
-    print(f"df: {df}")
     return build_table(df, color="grey_light") if df is not None else ""
