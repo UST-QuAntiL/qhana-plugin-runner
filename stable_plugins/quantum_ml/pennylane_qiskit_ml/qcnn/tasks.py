@@ -196,6 +196,7 @@ def calculation_task(self, db_id: int) -> str:
     weights_dict["net_type"] = str(model.__class__.__name__)
 
     # Output data
+    # TODO Improve names of output files
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
