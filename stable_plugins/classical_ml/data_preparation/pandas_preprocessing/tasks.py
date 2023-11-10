@@ -72,8 +72,12 @@ def first_task(self, db_id: int) -> str:
             "text/csv",
         )
         task_data.data["file_url"] = task_file.file_storage_data
-        # task_data.data["pandas_html"] = df.to_html(max_rows=100)
-        task_data.data["pandas_html"] = build_table(df, "grey_light")
+        table_html = df.to_html(max_rows=100, max_cols=100)
+        if len(str(table_html).encode('utf-8')) > 1000000:  # Check if table requires more than 1MB
+            table_html = df.to_html(max_rows=10, max_cols=10)
+            if len(str(table_html).encode('utf-8')) > 1000000: # Check if table requires more than 1MB
+                table_html = "Table is too large to display"
+        task_data.data["pandas_html"] = table_html
         task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
             {
                 "columns": [str(el) for el in df.columns.tolist()],

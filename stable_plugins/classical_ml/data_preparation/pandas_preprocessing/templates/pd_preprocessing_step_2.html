@@ -19,10 +19,17 @@
             margin: 8px;
         }
     </style>
+    <style>
+        div.pandas_table {
+            max-height: 200px;
+            max-width: 45rem;
+            overflow: auto;
+        }
+    </style>
 {% endblock head %}
 
 {% block content %}
-<div id="pandas_html" style='height: 200px; overflow: auto; width: fit-content'>{{ pandas_html }}</div>
+<div id="pandas_html" class="pandas_table">{{ pandas_html }}</div>
 <datalist id="columns_datalist">
     {% for column in columns_list %}
         <option value="{{ column }}"></option>
