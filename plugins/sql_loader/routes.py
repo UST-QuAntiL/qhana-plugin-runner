@@ -273,15 +273,14 @@ class GetPDHTML(MethodView):
     )
     @SQLLoader_BLP.require_jwt("jwt", optional=True)
     def get(self, arguments, db_id: int, step_id: float):
+        result = get_second_task_html.s(
+            db_id=db_id, arguments=SecondInputParametersSchema().dumps(arguments)
+        ).apply_async(expires=15)
+
         try:
-            return (
-                get_second_task_html.s(
-                    db_id=db_id, arguments=SecondInputParametersSchema().dumps(arguments)
-                )
-                .apply_async()
-                .get(timeout=15)
-            )
+            return result.get(timeout=15)
         except CeleryTimeoutError:
+            result.forget()
             return "Query timed out"
 
 
