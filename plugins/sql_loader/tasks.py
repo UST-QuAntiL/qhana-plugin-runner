@@ -175,7 +175,8 @@ def second_task_execution(
     if table_query != "":
         if limit is not None and isinstance(limit, int) and limit > 0:
             table_query = table_query.rstrip(";")
-            table_query = f"SELECT * FROM ({table_query}) AS temp LIMIT {limit}"
+            # Add \n's to avoid issues with comments
+            table_query = f"SELECT * FROM (\n{table_query}\n) AS temp LIMIT {limit}"
         df = db_manager.get_query_as_dataframe(table_query)
 
         # Check if given attribute can be used as a unique identifier
