@@ -35,6 +35,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
+    InputDataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
@@ -64,10 +65,19 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{PDPreprocessing_BLP.name}.FirstProcessView"),
                 ui_href=url_for(f"{PDPreprocessing_BLP.name}.FirstMicroFrontend"),
-                data_input=[],
+                data_input=[
+                    InputDataMetadata(
+                        data_type="entity",  # TODO Allow any data type as input
+                        content_type=[
+                            "text/csv",
+                        ],
+                        required=True,
+                        parameter="fileUrl",
+                    ),
+                ],
                 data_output=[
                     DataMetadata(
-                        data_type="",
+                        data_type="entity",  # TODO This should be the data type of the input
                         content_type=[
                             "text/csv",
                         ],
