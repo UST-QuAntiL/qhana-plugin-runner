@@ -29,7 +29,7 @@ QCNN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum CNN plugin API",
-    template_folder="",
+    template_folder="templates",
 )
 
 

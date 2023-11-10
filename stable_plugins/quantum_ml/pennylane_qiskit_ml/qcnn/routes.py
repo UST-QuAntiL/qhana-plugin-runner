@@ -167,7 +167,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "template.html",
+                "qcnn_template.html",
                 name=QCNN.instance.name,
                 version=QCNN.instance.version,
                 schema=schema,
