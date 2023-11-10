@@ -12,15 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from marshmallow import post_load
+from dataclasses import dataclass
+
 import marshmallow as ma
+from marshmallow import post_load
+
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     MaBaseSchema,
 )
 
-from dataclasses import dataclass
 from .backend.datasets import DataTypeEnum
 
 
@@ -49,7 +51,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Dataset Type",
-            "description": "Currently available dataset types are:\n- Two Spiral: Creates two spirals, spiraling out from the same point. Both spirals have a different label.",
+            "description": """Currently available dataset types are:
+- Two Spiral: Creates two spirals, spiraling out from the same point. Both spirals have a different label.
+- Checkerboard: Creates a 2x2 checkerboard pattern.""",
             "input_type": "select",
         },
     )

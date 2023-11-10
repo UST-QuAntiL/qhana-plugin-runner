@@ -14,13 +14,13 @@
 
 from marshmallow import post_load
 import marshmallow as ma
+from celery.utils.log import get_task_logger
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     FileUrl,
 )
-from celery.utils.log import get_task_logger
+from qhana_plugin_runner.util.logging import redact_log_data
 from .backend.quantum_backends import QuantumBackends
 from .backend.kernels.kernel import KernelEnum, EntanglementPatternEnum
 
@@ -183,7 +183,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "IBMQ Token",
             "description": "Token for IBMQ.",
-            "input_type": "text",
+            "input_type": "password",
         },
     )
     custom_backend = ma.fields.String(
@@ -198,6 +198,5 @@ class InputParametersSchema(FrontendFormBaseSchema):
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
-        TASK_LOGGER.info("test")
-        TASK_LOGGER.info(f"data: {data}")
+        TASK_LOGGER.info(f"data: {redact_log_data(data)}")
         return InputParameters(**data)

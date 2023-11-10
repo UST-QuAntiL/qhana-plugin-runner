@@ -157,6 +157,7 @@ def calculation_task(self, db_id: int) -> str:
     ibmq_token = input_params.ibmq_token
     custom_backend = input_params.custom_backend
     resolution = input_params.resolution
+    visualize = input_params.visualize
 
     # Log information about the input parameters
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
@@ -240,18 +241,20 @@ def calculation_task(self, db_id: int) -> str:
     if not qknn.heatmap_meaningful():
         resolution = 0
 
-    fig = plot_data(
-        train_data,
-        train_id_to_idx,
-        train_labels,
-        test_data,
-        test_id_to_idx,
-        predictions,
-        resolution=resolution,
-        predictor=qknn.label_points,
-        title=plot_title,
-        label_to_int=label_to_int,
-    )
+    fig = None
+    if visualize:
+        fig = plot_data(
+            train_data,
+            train_id_to_idx,
+            train_labels,
+            test_data,
+            test_id_to_idx,
+            predictions,
+            resolution=resolution,
+            predictor=qknn.label_points,
+            title=plot_title,
+            label_to_int=label_to_int,
+        )
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
