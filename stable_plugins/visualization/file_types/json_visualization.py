@@ -87,7 +87,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title=plugin.name,
             description=plugin.description,
-            name=plugin.identifier,
+            name=plugin.name,
             version=plugin.version,
             type=PluginType.visualization,
             entry_point=EntryPoint(
@@ -169,7 +169,9 @@ class MicroFrontend(MethodView):
 
 
 @JSON_BLP.route("/process/")
-class ProcessView(MethodView):
+class ProcessView(
+    MethodView
+):  # FIXME decide on a somewhat useful implementation for this (or remove completely!)
     """Start a long running processing task."""
 
     @JSON_BLP.arguments(JsonInputParametersSchema(unknown=EXCLUDE), location="form")

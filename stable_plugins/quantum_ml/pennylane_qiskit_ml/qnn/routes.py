@@ -61,7 +61,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Quantum Neutral Network (QNN)",
             description="Simple QNN with variable number of variational quantum layers",
-            name=QNN.instance.identifier,
+            name=QNN.instance.name,
             version=QNN.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(

@@ -55,7 +55,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Optics",
             description=Optics.instance.description,
-            name=Optics.instance.identifier,
+            name=Optics.instance.name,
             version=Optics.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(

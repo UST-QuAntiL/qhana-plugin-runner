@@ -109,7 +109,6 @@ def get_label_arr(
     entity_labels = list(get_label_generator(entity_labels_url))
 
     # Initialise label array
-    print(f"id_to_idx type: {type(id_to_idx)}\nid_to_idx: {id_to_idx}")
     labels = np.zeros(len(id_to_idx.keys()), dtype=int)
 
     if label_to_int is None:
@@ -154,6 +153,7 @@ def calculation_task(self, db_id: int) -> str:
     shots = input_params.shots
     ibmq_token = input_params.ibmq_token
     custom_backend = input_params.custom_backend
+    visualize = input_params.visualize
 
     # Log information about the input parameters
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
@@ -232,16 +232,18 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     # Create plot
-    fig = plot_data(
-        train_data,
-        train_id_to_idx,
-        train_labels,
-        test_data,
-        test_id_to_idx,
-        predictions,
-        title=plot_title,
-        label_to_int=label_to_int,
-    )
+    fig = None
+    if visualize:
+        fig = plot_data(
+            train_data,
+            train_id_to_idx,
+            train_labels,
+            test_data,
+            test_id_to_idx,
+            predictions,
+            title=plot_title,
+            label_to_int=label_to_int,
+        )
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
