@@ -51,6 +51,8 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
     file_url = FileUrl(
         required=True,
         allow_none=False,
+        data_input_type="*",
+        data_content_types="text/csv",
         metadata={
             "label": "File URL",
             "description": "The file must be a csv file.",
