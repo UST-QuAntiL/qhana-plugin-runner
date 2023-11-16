@@ -40,11 +40,11 @@ class DBEnum(Enum):
     def _get_db_dialect_drivers() -> dict:
         # Keep SQLite as the last entry, since it likes to connect to every database during the guessing phase
         # and throwing an error later!
-        return dict(
-            mysql="mysql+pymysql",
-            postgresql="postgresql+psycopg2",
-            sqlite="sqlite",
-        )
+        return {
+            "mysql": "mysql+pymysql",
+            "postgresql": "postgresql+psycopg2",
+            "sqlite": "sqlite",
+        }
 
     def _get_db_url(
         self,

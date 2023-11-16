@@ -92,16 +92,16 @@ def first_task(self, db_id: int) -> str:
     checkbox_list = get_checkbox_list_dict(tables_and_columns)
 
     task_data.data.update(
-        dict(
-            db_tables_and_columns=tables_and_columns,
-            checkbox_list=checkbox_list,
-            db_type=db_type,
-            db_host=db_host,
-            db_port=db_port,
-            db_user=db_user,
-            db_password=db_password,
-            db_database=db_database,
-        )
+        {
+            "db_tables_and_columns": tables_and_columns,
+            "checkbox_list": checkbox_list,
+            "db_type": db_type,
+            "db_host": db_host,
+            "db_port": db_port,
+            "db_user": db_user,
+            "db_password": db_password,
+            "db_database": db_database,
+        }
     )
 
     task_data.save(commit=True)
@@ -118,14 +118,14 @@ def retrieve_params_for_second_task(db_id: int, dumped_schema=None) -> dict:
         raise KeyError(msg)
 
     # Previous parameters
-    params = dict(
-        db_enum=DBEnum[task_data.data["db_type"]],
-        db_host=task_data.data["db_host"],
-        db_port=task_data.data["db_port"],
-        db_user=task_data.data["db_user"],
-        db_password=task_data.data["db_password"],
-        db_database=task_data.data["db_database"],
-    )
+    params = {
+        "db_enum": DBEnum[task_data.data["db_type"]],
+        "db_host": task_data.data["db_host"],
+        "db_port": task_data.data["db_port"],
+        "db_user": task_data.data["db_user"],
+        "db_password": task_data.data["db_password"],
+        "db_database": task_data.data["db_database"],
+    }
 
     input_params: SecondInputParameters = SecondInputParametersSchema().loads(
         task_data.parameters if dumped_schema is None else dumped_schema
