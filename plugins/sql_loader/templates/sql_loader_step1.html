@@ -1,0 +1,36 @@
+{% extends "simple_template.html" %}
+
+{% block script %}
+    {{ super() }}
+    <script>
+        var db_enum_value = document.getElementById("db_enum");
+
+        var db_host_vis = document.getElementById("db_host").parentNode.parentNode;
+        var db_port_vis = document.getElementById("db_port").parentNode.parentNode;
+        var db_user_vis = document.getElementById("db_user").parentNode.parentNode;
+        var db_password_vis = document.getElementById("db_password").parentNode.parentNode;
+
+        function db_enum_change() {
+            db_host_vis.style.display = "none";
+            db_port_vis.style.display = "none";
+            db_user_vis.style.display = "none";
+            db_password_vis.style.display = "none";
+            if (db_enum_value.value === "auto" || db_enum_value.value === "postgresql") {
+                db_host_vis.style.display = "block";
+                db_port_vis.style.display = "block";
+                db_user_vis.style.display = "block";
+                db_password_vis.style.display = "block";
+            } else if (db_enum_value.value === "mysql") {
+                db_host_vis.style.display = "block";
+                db_port_vis.style.display = "block";
+                db_user_vis.style.display = "block";
+                db_password_vis.style.display = "block";
+            }
+        }
+
+
+        db_enum_change();
+
+        db_enum_value.addEventListener("change", db_enum_change);
+    </script>
+{% endblock script %}
