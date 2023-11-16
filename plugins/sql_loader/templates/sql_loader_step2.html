@@ -96,7 +96,7 @@
 {% endblock content %}
 
 {% block script %}
-
+{{ super() }}
 <script>
     const checkbox_list = {{ checkbox_list | tojson }};
 
@@ -325,7 +325,4 @@
 
     set_box_values();
 </script>
-
-
-{{ super() }}
 {% endblock script %}
