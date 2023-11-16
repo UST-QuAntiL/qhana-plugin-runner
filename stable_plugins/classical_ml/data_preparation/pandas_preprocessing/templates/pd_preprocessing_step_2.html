@@ -228,7 +228,7 @@
                 threshold_dis.style.display = "block";
                 subset_dis.style.display = "block";
                 change_parameter(subset_dis, null, "Labels along other axis to consider, e.g. if you are dropping rows these would be a list of columns to include.");
-                set_subset_checklist(axis_val.value);
+                axis_change();
             } else if (preprocessing_enum_value.value === "fill_na") {
                 fill_value_dis.style.display = "block";
             } else if (preprocessing_enum_value.value === "drop_duplicates") {
