@@ -81,7 +81,7 @@ class CaseEnum(Enum):
         return self.value
 
 
-def process_subset(subset: Optional[str]) -> Optional[List[str]]:
+def process_subset(subset: Optional[str], is_int: bool = False) -> Optional[List[str]]:
     """
     Deserializes a json string, called subset in this method. If subset is a list of strings, then this list is
     returned, else None is returned.
@@ -93,6 +93,7 @@ def process_subset(subset: Optional[str]) -> Optional[List[str]]:
         result = json_loads(subset)
         if isinstance(result, list):
             if all(isinstance(el, str) for el in result):
+                result = [int(el) for el in result] if is_int else result
                 result = None if len(result) == 0 else result
             else:
                 result = None
@@ -118,7 +119,7 @@ def drop_missing_value(
     :param subset: str containing the columns or rows separated by commas
     :return: DataFrame
     """
-    subset = process_subset(subset)
+    subset = process_subset(subset, is_int=(axis == 1))
 
     df.dropna(axis=axis, thresh=threshold, subset=subset, inplace=True)
 
