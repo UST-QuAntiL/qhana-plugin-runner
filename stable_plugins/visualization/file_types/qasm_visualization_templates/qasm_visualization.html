@@ -70,7 +70,9 @@
     }
 
     function onCircuitImageLoad() {
-        document.querySelector('#circuit-image').style.display = '';
+        const preview = document.querySelector('#circuit-image');
+        preview.style.display = '';
+        sendMessage({ type: "ui-resize", height: preview.height });
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').removeAttribute('open');
     }
