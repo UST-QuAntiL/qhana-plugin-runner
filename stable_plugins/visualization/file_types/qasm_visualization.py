@@ -14,9 +14,8 @@
 
 import hashlib
 from http import HTTPStatus
-from json import dumps
-import os
 import pathlib
+from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 from celery import chain
 from celery.utils.log import get_task_logger
@@ -30,7 +29,6 @@ from flask.wrappers import Response
 from marshmallow import EXCLUDE
 from qiskit import QuantumCircuit
 from requests.exceptions import HTTPError
-from io import BytesIO
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -48,9 +46,10 @@ from qhana_plugin_runner.api.util import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from qhana_plugin_runner.db.models.virtual_plugins import DataBlob
+from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 
 _plugin_name = "qasm-visualization"
 __version__ = "v0.2.0"
@@ -157,18 +156,18 @@ class MicroFrontend(MethodView):
         plugin = QasmVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-        schema = QasmInputParametersSchema()
         return Response(
             render_template(
                 "qasm_visualization.html",
                 name=plugin.name,
                 version=plugin.version,
-                schema=schema,
+                schema=QasmInputParametersSchema(),
                 valid=valid,
                 values=data,
                 errors=errors,
                 example_values=url_for(f"{QASM_BLP.name}.MicroFrontend"),
                 get_circuit_image_url=url_for(f"{QASM_BLP.name}.get_circuit_image"),
+                process=url_for(f"{QASM_BLP.name}.ProcessView"),
             )
         )
 
@@ -186,54 +185,70 @@ class MicroFrontend(MethodView):
 def get_circuit_image(data: Mapping):
     circuit_url = data.get("data", None)
     if circuit_url is None:
-        abort(HTTPStatus.NOT_FOUND)
+        abort(HTTPStatus.BAD_REQUEST)
     url_hash = hashlib.sha256(circuit_url.encode("utf-8")).hexdigest()
-    image = DataBlob.get_value(QasmVisualization.instance.identifier, url_hash, None)
-    if image is not None:
-        return send_file(BytesIO(image), mimetype="image/png")
-    try:
-        with open_url(circuit_url) as quasm_response:
-            circuit_qasm = quasm_response.text
-    except HTTPError:
-        TASK_LOGGER.info(f"Could not load circuit from {circuit_url}")
-        abort(HTTPStatus.NOT_FOUND)
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
-    fig = circuit.draw(output="mpl")
-    figfile = BytesIO()
-    fig.savefig(figfile, format="png")
-    figfile.seek(0)
-    DataBlob.set_value(
-        QasmVisualization.instance.identifier, url_hash, figfile.getvalue(), commit=True
+    image_path = PluginState.get_value(
+        QasmVisualization.instance.identifier, url_hash, None
     )
-
-    return send_file(figfile, mimetype="image/png")
+    if image_path is None:
+        timeout = PluginState.get_value(
+            QasmVisualization.instance.identifier, f"timeout_{url_hash}", False
+        )
+        if not timeout:
+            start_task(circuit_url)
+            timeout = 2
+        else:
+            # increase timeout for next request
+            PluginState.set_value(
+                QasmVisualization.instance.identifier,
+                f"timeout_{url_hash}",
+                timeout + 2,
+                commit=True,
+            )
+        response = Response("Image not yet created!", HTTPStatus.SERVICE_UNAVAILABLE)
+        response.headers["Retry-After"] = timeout
+        return response
+    if image_path == "":
+        abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
+    if image_path is not None:
+        return send_file(image_path)
+    abort(HTTPStatus.NOT_FOUND)
 
 
 @QASM_BLP.route("/process/")
-class ProcessView(
-    MethodView
-):  # FIXME decide on a somewhat useful implementation for this (or remove completely!)
+class ProcessView(MethodView):
     """Start a long running processing task."""
 
     @QASM_BLP.arguments(QasmInputParametersSchema(unknown=EXCLUDE), location="form")
     @QASM_BLP.response(HTTPStatus.SEE_OTHER)
     @QASM_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        """Start the demo task."""
-        db_task = ProcessingTask(task_name=demo_task.name, parameters=dumps(arguments))
-        db_task.save(commit=True)
-
-        # all tasks need to know about db id to load the db entry
-        task: chain = demo_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
-        # save errors to db
-        task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async()
-
-        db_task.save(commit=True)
+        circuit_url = arguments.get("data", None)
+        if circuit_url is None:
+            abort(HTTPStatus.BAD_REQUEST)
+        db_task = start_task(circuit_url)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
+
+
+def start_task(url: str):
+    db_task = ProcessingTask(
+        task_name=create_circuit_image.name, data={"circuit_url": url}
+    )
+    db_task.save(commit=True)
+
+    # all tasks need to know about db id to load the db entry
+    task: chain = create_circuit_image.s(db_id=db_task.id) | save_task_result.s(
+        db_id=db_task.id
+    )
+    # save errors to db
+    task.link_error(save_task_error.s(db_id=db_task.id))
+    task.apply_async()
+
+    db_task.save(commit=True)
+    return db_task
 
 
 class QasmVisualization(QHAnaPluginBase):
@@ -260,8 +275,10 @@ class QasmVisualization(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{QasmVisualization.instance.identifier}.demo_task", bind=True)
-def demo_task(self, db_id: int) -> str:
+@CELERY.task(
+    name=f"{QasmVisualization.instance.identifier}.create_circuit_image", bind=True
+)
+def create_circuit_image(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new demo task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -270,4 +287,45 @@ def demo_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    return "Processing task for QASM visualization plugin not implemented yet!"
+    circuit_url = task_data.data.get("circuit_url", None)
+    url_hash = hashlib.sha256(circuit_url.encode("utf-8")).hexdigest()
+    PluginState.set_value(
+        QasmVisualization.instance.identifier, f"timeout_{url_hash}", 2, commit=True
+    )
+    try:
+        with open_url(circuit_url) as qasm_response:
+            circuit_qasm = qasm_response.text
+    except HTTPError:
+        PluginState.set_value(
+            QasmVisualization.instance.identifier,
+            url_hash,
+            "",
+            commit=True,
+        )
+        PluginState.delete_value(
+            QasmVisualization.instance.identifier, f"timeout_{url_hash}", commit=True
+        )
+        return "Invalid circuit URL!"
+    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+    fig = circuit.draw(output="mpl")
+    with SpooledTemporaryFile() as output:
+        fig.savefig(output, format="png")
+        file = STORE.persist_task_result(
+            db_id,
+            output,
+            f"circuit_{url_hash}.png",
+            "image/png",
+            "image/png",
+        )
+        PluginState.set_value(
+            QasmVisualization.instance.identifier,
+            url_hash,
+            file.file_storage_data,
+            commit=True,
+        )
+
+    PluginState.delete_value(
+        QasmVisualization.instance.identifier, f"timeout_{url_hash}", commit=True
+    )
+
+    return "Created image of circuit!"

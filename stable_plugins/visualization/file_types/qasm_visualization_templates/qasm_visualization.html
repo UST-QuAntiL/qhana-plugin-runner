@@ -48,6 +48,7 @@
         {{ forms.render_fields(schema, values=values, errors=errors) }}
         <div class="qhana-form-buttons">
             {{ forms.submit("validate", target="microfrontend") }}
+            {{ forms.submit("submit", action=process) }}
         </div>
         {% endcall %}
     </details>
@@ -90,12 +91,35 @@
 
     function updatePreview() {
         const circuitUrl = getUrl()
-        if (currentUrl !== circuitUrl) {
-            document.querySelector('#spinner').style.display = '';
-            const preview = document.querySelector('#circuit-image');
-            const url = "{{ get_circuit_image_url }}?data=" + circuitUrl;
-            preview.setAttribute("src", url);
+        if (currentUrl === circuitUrl) {
+            return;
         }
+        if (circuitUrl === "" || circuitUrl === null) {
+            onCircuitImageError();
+            return;
+        }
+        document.querySelector('#spinner').style.display = '';
+        const preview = document.querySelector('#circuit-image');
+        const url = "{{ get_circuit_image_url }}?data=" + circuitUrl;
+        fetch(url).then(response => {
+            if (response.ok) {
+                preview.setAttribute("src", url);
+                currentUrl = circuitUrl;
+            } else {
+                onCircuitImageError();
+                if (response.status === 503) {
+                    document.querySelector('#spinner').style.display = '';
+                    let timeout = response.headers.get('Retry-After');
+                    if (timeout === null) {
+                        timeout = 5;
+                    }
+                    setTimeout(updatePreview, timeout * 1000);
+                }
+            }
+        }).catch(error => {
+            console.log(error);
+            onCircuitImageError();
+        });
     }
 
     setupEventListeners();
