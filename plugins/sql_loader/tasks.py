@@ -77,7 +77,7 @@ def prep_first_inputs(
 def first_task(self, db_id: int) -> str:
     # get parameters
 
-    TASK_LOGGER.info(f"Starting new db manager calculation task with db id '{db_id}'")
+    TASK_LOGGER.info(f"Starting new sql loader calculation task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -210,7 +210,7 @@ def second_task_execution(
 
 @CELERY.task(name=f"{SQLLoaderPlugin.instance.identifier}.second_task", bind=True)
 def second_task(self, db_id: int) -> str:
-    TASK_LOGGER.info(f"Starting new db manager calculation task with db id '{db_id}'")
+    TASK_LOGGER.info(f"Starting new sql loader calculation task with db id '{db_id}'")
 
     params = retrieve_params_for_second_task(db_id)
     df = second_task_execution(**params)

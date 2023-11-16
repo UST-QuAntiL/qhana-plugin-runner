@@ -81,10 +81,10 @@ class PluginsView(MethodView):
 
 @SQLLoader_BLP.route("/ui/")
 class FirstMicroFrontend(MethodView):
-    """Micro frontend for the db manager plugin."""
+    """Micro frontend for the sql loader plugin."""
 
     @SQLLoader_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+        HTTPStatus.OK, description="Micro frontend of the sql loader plugin."
     )
     @SQLLoader_BLP.arguments(
         FirstInputParametersSchema(
@@ -99,7 +99,7 @@ class FirstMicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @SQLLoader_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+        HTTPStatus.OK, description="Micro frontend of the sql loader plugin."
     )
     @SQLLoader_BLP.arguments(
         FirstInputParametersSchema(
@@ -186,10 +186,10 @@ class FirstProcessView(MethodView):
 
 @SQLLoader_BLP.route("/<int:db_id>/<int:step_id>/ui/")
 class SecondMicroFrontend(MethodView):
-    """Micro frontend for the db manager plugin."""
+    """Micro frontend for the sql loader plugin."""
 
     @SQLLoader_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+        HTTPStatus.OK, description="Micro frontend of the sql loader plugin."
     )
     @SQLLoader_BLP.arguments(
         SecondInputParametersSchema(
@@ -204,7 +204,7 @@ class SecondMicroFrontend(MethodView):
         return self.render(request.form, db_id, step_id, errors)
 
     @SQLLoader_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the db manager plugin."
+        HTTPStatus.OK, description="Micro frontend of the sql loader plugin."
     )
     @SQLLoader_BLP.arguments(
         SecondInputParametersSchema(
