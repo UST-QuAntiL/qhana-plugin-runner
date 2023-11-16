@@ -76,7 +76,7 @@
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}
-        <button type="button" id="preview_button">
+        <button class="qhana-form-submit" type="button" id="preview_button">
             preview
         </button>
         {% if not errors and valid %}
