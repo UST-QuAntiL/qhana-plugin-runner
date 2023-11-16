@@ -67,7 +67,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{PDPreprocessing_BLP.name}.FirstMicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity",  # TODO Allow any data type as input
+                        data_type="*",
                         content_type=[
                             "text/csv",
                         ],
@@ -77,7 +77,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity",  # TODO This should be the data type of the input
+                        data_type="*",
                         content_type=[
                             "text/csv",
                         ],
