@@ -31,10 +31,22 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 
 from pandas import read_csv
-from pretty_html_table import build_table
 from .backend.checkbox_list import get_checkbox_list_dict
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_table_html(df) -> str:
+    table_html = df.to_html(max_rows=100, max_cols=100)
+    if (
+        len(str(table_html).encode("utf-8")) > 1000000
+    ):  # Check if table requires more than 1MB
+        table_html = df.to_html(max_rows=10, max_cols=10)
+        if (
+            len(str(table_html).encode("utf-8")) > 1000000
+        ):  # Check if table requires more than 1MB
+            table_html = "Table is too large to display"
+    return table_html
 
 
 @CELERY.task(name=f"{PDPreprocessing.instance.identifier}.first_task", bind=True)
@@ -72,15 +84,7 @@ def first_task(self, db_id: int) -> str:
             "text/csv",
         )
         task_data.data["file_url"] = task_file.file_storage_data
-        table_html = df.to_html(max_rows=100, max_cols=100)
-        if (
-            len(str(table_html).encode("utf-8")) > 1000000
-        ):  # Check if table requires more than 1MB
-            table_html = df.to_html(max_rows=10, max_cols=10)
-            if (
-                len(str(table_html).encode("utf-8")) > 1000000
-            ):  # Check if table requires more than 1MB
-                table_html = "Table is too large to display"
+        table_html = get_table_html(df)
         task_data.data["pandas_html"] = table_html
         task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
             {
@@ -137,8 +141,7 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
                 "text/csv",
             )
             task_data.data["file_url"] = task_file.file_storage_data
-            # task_data.data["pandas_html"] = df.to_html(max_rows=100)
-            task_data.data["pandas_html"] = build_table(df, "grey_light")
+            task_data.data["pandas_html"] = get_table_html(df)
             task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
                 {
                     "columns": [str(el) for el in df.columns.tolist()],
