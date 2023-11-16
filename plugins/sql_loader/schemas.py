@@ -140,7 +140,7 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "DB query",
-            "description": "The query to be executed on the database.",
+            "description": "The query to be executed on the database. Avoid ``;`` and comments at the end of the command.",
             "input_type": "textarea",
         },
     )
