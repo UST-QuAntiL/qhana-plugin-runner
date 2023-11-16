@@ -56,7 +56,7 @@ class PluginsView(MethodView):
         """db_manager endpoint returning the plugin metadata."""
 
         return PluginMetadata(
-            title="DB Manager",
+            title="SQL Loader",
             description=SQLLoaderPlugin.instance.description,
             name=SQLLoaderPlugin.instance.name,
             version=SQLLoaderPlugin.instance.version,
