@@ -35,9 +35,21 @@ from qhana_plugin_runner.storage import STORE
 from json import loads as json_load
 from .backend.db_enum import DBEnum
 from .backend.checkbox_list import get_checkbox_list_dict
-from pretty_html_table import build_table
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_table_html(df) -> str:
+    table_html = df.to_html(max_rows=100, max_cols=100)
+    if (
+        len(str(table_html).encode("utf-8")) > 1000000
+    ):  # Check if table requires more than 1MB
+        table_html = df.to_html(max_rows=10, max_cols=10)
+        if (
+            len(str(table_html).encode("utf-8")) > 1000000
+        ):  # Check if table requires more than 1MB
+            table_html = "Table is too large to display"
+    return table_html
 
 
 def get_href(db_host: str, db_port: Optional[int], db_database: str):
@@ -239,4 +251,4 @@ def get_second_task_html(
 ) -> str:
     params = retrieve_params_for_second_task(db_id, dumped_schema=arguments)
     df = second_task_execution(**params, limit=10, retrieval_only=True)
-    return build_table(df, color="grey_light") if df is not None else ""
+    return get_table_html(df) if df is not None else ""
