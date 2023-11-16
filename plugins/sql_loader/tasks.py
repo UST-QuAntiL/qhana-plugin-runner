@@ -188,6 +188,7 @@ def second_task_execution(
         if limit is not None and isinstance(limit, int) and limit > 0:
             table_query = table_query.rstrip(";")
             # Add \n's to avoid issues with comments
+            # This does not avoid ';  -- end of line'
             table_query = f"SELECT * FROM (\n{table_query}\n) AS temp LIMIT {limit}"
         df = db_manager.get_query_as_dataframe(table_query)
 
