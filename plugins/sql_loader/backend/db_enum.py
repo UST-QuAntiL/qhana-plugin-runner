@@ -6,10 +6,21 @@ from sqlalchemy import URL
 from .db_manager import DBManager
 
 from celery.utils.log import get_task_logger
-from validators import url as is_url
+from marshmallow.validate import URL as URLValidator
+from marshmallow.exceptions import ValidationError
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+ma_url = URLValidator()
+
+
+def is_url(url: str):
+    try:
+        ma_url(url)
+    except ValidationError:
+        return False
+    return True
 
 
 def sqlite_db_exists(database):
