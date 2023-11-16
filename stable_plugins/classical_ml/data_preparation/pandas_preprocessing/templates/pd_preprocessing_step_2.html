@@ -198,7 +198,11 @@
         }
 
         function axis_change() {
-            set_subset_checklist(axis_val.value);
+            let subset_name = "columns"
+            if (axis_val.value === "columns") {
+                subset_name = "rows"
+            }
+            set_subset_checklist(subset_name);
             save_subset_checklist();
         }
 
