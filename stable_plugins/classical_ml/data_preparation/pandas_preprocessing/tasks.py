@@ -29,11 +29,37 @@ from .schemas import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import open_url
 
+import re
 from pandas import read_csv
 from .backend.checkbox_list import get_checkbox_list_dict
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def retrieve_filename_from_url(url) -> str:
+    """
+    Given an url to a file, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    response = open_url(url)
+    fname = ""
+    if "Content-Disposition" in response.headers.keys():
+        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+        if fname[0] == fname[-1] and fname[0] in {"\"", "'"}:
+            fname = fname[1:-1]
+    else:
+        fname = url.split("/")[-1]
+    response.close()
+
+    # Remove file type endings
+    fname = fname.split(".")
+    fname = fname[:-1]
+    fname = ".".join(fname)
+
+    return fname
 
 
 def get_table_html(df) -> str:
@@ -79,11 +105,13 @@ def first_task(self, db_id: int) -> str:
         task_file = STORE.persist_task_result(
             db_id,
             output,
-            "file.csv",
+            "original_file.csv",
             "entity",  # TODO keep original data type
             "text/csv",
         )
-        task_data.data["file_url"] = task_file.file_storage_data
+        task_data.data["original_file_name"] = retrieve_filename_from_url(file_url)
+        task_data.data["info_str"] = ""
+        task_data.data["file_url"] = "file://" + task_file.file_storage_data
         table_html = get_table_html(df)
         task_data.data["pandas_html"] = table_html
         task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
@@ -133,14 +161,15 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
         file_id = step_id
         with SpooledTemporaryFile(mode="w") as output:
             df.to_csv(output, index=False)
+            task_data.data["info_str"] += f"{str(preprocessing_enum.name)}_"
             task_file = STORE.persist_task_result(
                 db_id,
                 output,
-                f"preprocessed_file{file_id}.csv",
+                f"pd_preprocessed_{task_data.data['info_str']}from_{task_data.data['original_file_name']}.csv",
                 "entity",  # TODO keep original data type
                 "text/csv",
             )
-            task_data.data["file_url"] = task_file.file_storage_data
+            task_data.data["file_url"] = "file://" + task_file.file_storage_data
             task_data.data["pandas_html"] = get_table_html(df)
             task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
                 {
