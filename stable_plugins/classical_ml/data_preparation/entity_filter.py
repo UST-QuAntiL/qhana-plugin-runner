@@ -318,6 +318,8 @@ def retrieve_filename_from_url_request(response, url) -> str:
     fname = ""
     if "Content-Disposition" in response.headers.keys():
         fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
+            fname = fname[1:-1]
     else:
         fname = url.split("/")[-1]
 
