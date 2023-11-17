@@ -1,0 +1,328 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+    {{ super() }}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .loader {
+          border: 16px solid #f3f3f3;
+          border-radius: 50%;
+          border-top: 16px solid #3498db;
+          width: 80px;
+          height: 80px;
+          -webkit-animation: spin 2s linear infinite; /* Safari */
+          animation: spin 2s linear infinite;
+        }
+
+        /* Safari */
+        @-webkit-keyframes spin {
+          0% { -webkit-transform: rotate(0deg); }
+          100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .html_table {
+            height: 200px;
+            overflow: auto;
+            width: fit-content
+        }
+
+        ul.qhana-form-input {
+            max-height: 150px;
+            color: var(--text);
+            background-color: var(--background);
+            border: 2px solid var(--border-color, currentColor);
+            border-radius: 5px;
+            max-width: initial;
+            box-sizing: border-box;
+            padding-inline: 0.5rem;
+            padding-block: 1.3ex;
+            overflow: hidden auto;
+            overflow-wrap: break-word;
+            list-style-type: none;
+            margin: 8px;
+        }
+    </style>
+{% endblock head %}
+
+
+{% block content %}
+<datalist id="id_attribute_list"></datalist>
+<div id="pandas_html"></div>
+<div class="qhana-microfrontend">
+    {% block help %}
+    {% if help_text or example_values %}
+    <details class="qhana-help">
+        <summary>Help</summary>
+        {% if help_text %}
+        {% autoescape false %}
+        {{help_text | markdown}}
+        {% endautoescape %}
+        {% else %}
+        <br>
+        {% endif %}
+        {% if example_values %}
+        <a href="{{example_values}}">Fill in example values.</a>
+        {% endif %}
+    </details>
+    {% endif %}
+    {% endblock help %}
+    {% call forms.render_form(target="microfrontend") %}
+    {{ forms.render_fields(schema, values=values, errors=errors) }}
+    <div class="qhana-form-buttons">
+        {{ forms.submit("validate", target="microfrontend")}}
+        {{ forms.submit("submit", action=process)}}
+        <button class="qhana-form-submit" type="button" id="preview_button">
+            preview
+        </button>
+        {% if not errors and valid %}
+        <span class="qhana-input-description"> Validation successful!</span>
+        <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+             x="0px" y="0px" width="25" height="15" viewBox="0 0 122.881 89.842"
+             enable-background="new 0 0 122.881 89.842">
+            <g>
+                <path fill="rgb(0, 247, 0)"
+                      d="M1.232,55.541c-1.533-1.388-1.652-3.756-0.265-5.289c1.388-1.534,3.756-1.652,5.29-0.265l34.053,30.878l76.099-79.699 c1.429-1.501,3.804-1.561,5.305-0.132c1.502,1.428,1.561,3.803,0.133,5.305L43.223,88.683l-0.005-0.005 c-1.396,1.468-3.716,1.563-5.227,0.196L1.232,55.541L1.232,55.541z"/>
+            </g>
+        </svg>
+        {% endif %}
+    </div>
+    {% endcall %}
+</div>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+<script>
+    const checkbox_list = {{ checkbox_list | tojson }};
+
+    const columns_list_value = document.getElementById("columns_list");
+    const wrapper = columns_list_value.parentNode;
+    columns_list_value.style.display = "none";
+
+    function update_check_all_box_indeterminate(event) {
+        let check_box = event.target;
+        let check_all_box = wrapper.children[1].children[0];
+
+        if (!check_all_box.indeterminate) {
+            check_all_box.indeterminate = (check_box.checked !== check_all_box.checked);
+        }
+    }
+
+    function check_all_box_change() {
+        let check_box_list = wrapper.children[2];
+        let checked_value = wrapper.children[1].children[0].checked;
+        //iterate through li elements
+        for (let box of check_box_list.children) {
+            // Set checked status
+            box.children[0].children[0].checked = checked_value;
+        }
+    }
+
+    function give_checkboxes_functionality() {
+        let check_box_list = wrapper.children[2];
+        check_box_list.querySelectorAll("input").forEach(box => {
+            box.addEventListener("change", update_check_all_box_indeterminate);
+        });
+
+
+        let check_all_box = wrapper.children[1].children[0];
+        check_all_box.addEventListener("change", check_all_box_change);
+    }
+
+    function init_checkbox_list() {
+        if (wrapper.children.length > 1) {
+            wrapper.replaceChildren(wrapper.children[0]);
+        }
+        wrapper.insertAdjacentHTML('beforeend', checkbox_list[table_name_value.value]);
+        give_checkboxes_functionality();
+    }
+
+    function set_box_values() {
+        if (columns_list_value.value) {
+            JSON.parse(columns_list_value.value).forEach(entry => {
+                document.getElementById(entry).checked = true;
+            });
+        }
+    }
+
+    function set_columns_list() {
+        let check_box_list = wrapper.children[2];
+        let columns_list_arr = [];
+        check_box_list.querySelectorAll("input").forEach(box => {
+            if (box.checked) {
+                columns_list_arr.push(box.name);
+            }
+        });
+        columns_list_value.value = JSON.stringify(columns_list_arr);
+    }
+
+    const qhana_buttons = document.getElementsByClassName("qhana-form-buttons")[0];
+    qhana_buttons.addEventListener("click", set_columns_list);
+</script>
+
+<script>
+    const preview_button = document.getElementById("preview_button");
+    const qhana_form = document.getElementsByClassName("qhana-form")[0];
+    const pandas_html_value = document.getElementById("pandas_html");
+
+    function retrieve_parameters(form) {
+        let inputs = {};
+        form.querySelectorAll("input, textarea").forEach(item => {
+            if (!item.id.endsWith("box")) {
+                if (item.type === "checkbox") {
+                    inputs[item.name] = item.checked;
+                } else {
+                    inputs[item.name] = item.value;
+                }
+            }
+        });
+        return inputs
+    }
+
+    function preview_button_click() {
+        set_columns_list();
+        pandas_html_value.innerHTML = "";
+        pandas_html_value.classList.remove("html_table");
+        pandas_html_value.classList.add("loader");
+
+
+        let data = new URLSearchParams(retrieve_parameters(qhana_form));
+        let target_url = new URL("{{ get_pd_html }}", window.location.href);
+
+        data.forEach((value, key) => {
+            target_url.searchParams.append(key, value);
+        })
+
+        fetch(target_url.toString())
+            // fetch() returns a promise. When we have received a response from the server,
+            // the promise's `then()` handler is called with the response.
+            .then((response) => {
+                // Our handler throws an error if the request did not succeed.
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status}`);
+                }
+                // Otherwise (if the response succeeded), our handler fetches the response
+                // as text by calling response.text(), and immediately returns the promise
+                // returned by `response.text()`.
+                return response.text();
+            })
+            // When response.text() has succeeded, the `then()` handler is called with
+            // the text
+            .then((text) => {
+                pandas_html_value.innerHTML = text;
+                if (pandas_html_value.innerHTML !== "" && pandas_html_value.innerHTML !== "Query timed out") {
+                    pandas_html_value.classList.add("html_table");
+                }
+                pandas_html_value.classList.remove("loader");
+            })
+            // Catch any errors that might happen
+            .catch((error) => {
+                console.log(`Could not fetch verse: ${error}`);
+                if (pandas_html_value.innerHTML !== "" && pandas_html_value.innerHTML !== "Query timed out") {
+                    pandas_html_value.classList.add("html_table");
+                }
+                pandas_html_value.classList.remove("loader");
+            });
+    }
+
+    preview_button.addEventListener("click", preview_button_click);
+</script>
+
+<script>
+    const save_table_value = document.getElementById("save_table");
+    const table_name_value = document.getElementById("table_name");
+    const attribute_to_id_value = document.getElementById("id_attribute");
+    const id_attribute_list_value = document.getElementById("id_attribute_list");
+    const tables_and_columns = {{ additional_info | tojson }};
+
+    const attribute_to_id_vis = attribute_to_id_value.parentNode.parentNode;
+    const columns_list_vis = columns_list_value.parentNode.parentNode;
+
+
+    function init_table_name_value() {
+        table_name_value.style.display = "none";
+        let table_select = document.createElement("select");
+        table_select.setAttribute("id", "table_select");
+        table_select.classList.add("qhana-form-input");
+
+        Object.keys(tables_and_columns).forEach(function (key) {
+            let table_option = document.createElement("option")
+            table_option.setAttribute("value", key);
+            table_option.innerText = key.toString();
+            if (key.toString() === table_name_value.value) {
+                table_option.setAttribute("selected", "selected");
+            }
+            table_select.appendChild(table_option);
+        });
+
+        table_name_value.parentNode.appendChild(table_select);
+        return table_select
+    }
+
+
+    function update_id_attribute_list() {
+        let current_table = table_select.value;
+        let columns = tables_and_columns[current_table];
+
+        // replaceChildren with array of new children somehow didn't work
+        id_attribute_list_value.replaceChildren();
+        columns.forEach(col => {
+            let c = document.createElement("option");
+            c.value = col;
+            id_attribute_list_value.appendChild(c);
+        });
+    }
+
+
+    function table_select_change() {
+        table_name_value.value = table_select.value;
+        init_checkbox_list();
+        update_id_attribute_list();
+    }
+
+
+    function save_table_change() {
+        attribute_to_id_vis.style.display = "none";
+        if (save_table_value.checked === true) {
+            attribute_to_id_vis.style.display = "block"
+        }
+    }
+
+
+    attribute_to_id_value.setAttribute("list", "id_attribute_list");
+    table_select = init_table_name_value();
+    save_table_change();
+    table_select_change();
+
+    save_table_value.addEventListener("change", save_table_change);
+    table_select.addEventListener("change", table_select_change);
+</script>
+
+<script>
+    const custom_query_value = document.getElementById("custom_query");
+    const db_query_vis = document.getElementById("db_query").parentNode.parentNode;
+    const table_name_vis = table_name_value.parentNode.parentNode;
+
+    function change_custom_query() {
+        db_query_vis.style.display = "none";
+        columns_list_vis.style.display = "block";
+        table_name_vis.style.display = "block";
+        if (custom_query_value.checked === true) {
+            db_query_vis.style.display = "block";
+            columns_list_vis.style.display = "none";
+            table_name_vis.style.display = "none";
+        }
+    }
+
+    change_custom_query();
+
+    custom_query_value.addEventListener("change", change_custom_query);
+
+    set_box_values();
+</script>
+{% endblock script %}
