@@ -153,9 +153,7 @@ def hybrid_autoencoder_pennylane_task(self, db_id: int) -> str:
     concat_filenames = retrieve_filename_from_url(train_data_url)
     concat_filenames += retrieve_filename_from_url(test_data_url)
 
-    info_str = (
-        f"_hybrid-ae_qubits_{q_num}_dim_{embedding_size}_from_{get_readable_hash(concat_filenames)}"
-    )
+    info_str = f"_hybrid-ae_qubits_{q_num}_dim_{embedding_size}_from_{get_readable_hash(concat_filenames)}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
