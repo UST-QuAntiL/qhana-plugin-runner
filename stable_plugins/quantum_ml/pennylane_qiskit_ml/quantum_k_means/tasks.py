@@ -181,7 +181,7 @@ def calculation_task(self, db_id: int) -> str:
 
     filename = retrieve_filename_from_url(entity_points_url)
 
-    info_str = f"_variant_{variant.name}_clusters_{clusters_cnt}_from_{filename}"
+    info_str = f"_q-k-means_variant_{variant.name}_clusters_{clusters_cnt}_from_{filename}"
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_clusters, output, "application/json")

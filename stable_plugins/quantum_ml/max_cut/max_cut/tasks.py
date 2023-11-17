@@ -136,7 +136,7 @@ def calculation_task(self, db_id: int) -> str:
             title=f"MaxCut Clusters",
         )
 
-    info_str = f"_solver_{max_cut_enum.name}_clusters_{2**num_clusters}_from_{retrieve_filename_from_url(adjacency_matrix_url)}"
+    info_str = f"_max-cut_solver_{max_cut_enum.name}_clusters_{2**num_clusters}_from_{retrieve_filename_from_url(adjacency_matrix_url)}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:

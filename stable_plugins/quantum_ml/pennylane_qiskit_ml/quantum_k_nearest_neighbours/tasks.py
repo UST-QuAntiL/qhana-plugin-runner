@@ -297,7 +297,7 @@ def calculation_task(self, db_id: int) -> str:
     filename_hash = get_readable_hash(concat_filenames)
 
     info_str = (
-        f"_variant_{variant.name}_neighbours_{neighbourhood_size}_from_{filename_hash}"
+        f"_qknn_variant_{variant.name}_neighbours_{neighbourhood_size}_from_{filename_hash}"
     )
 
     # Output the data

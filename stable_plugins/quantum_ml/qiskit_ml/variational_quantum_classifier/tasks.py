@@ -319,7 +319,7 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames += retrieve_filename_from_url(test_labels_url)
     filename_hash = get_readable_hash(concat_filenames)
 
-    info_str = f"_feature_map_{str(feature_map_enum.name).replace('_feature_map', '')}_feature_entanglement_{entanglement_pattern_feature_map}_ansatz_{vqc_ansatz_enum.name}_ansatz_entanglement_{entanglement_pattern_ansatz}_from_{filename_hash}"
+    info_str = f"_vqc_feature_map_{str(feature_map_enum.name).replace('_feature_map', '')}_feature_entanglement_{entanglement_pattern_feature_map}_ansatz_{vqc_ansatz_enum.name}_ansatz_entanglement_{entanglement_pattern_ansatz}_from_{filename_hash}"
 
     # Output
     with SpooledTemporaryFile(mode="w") as output:

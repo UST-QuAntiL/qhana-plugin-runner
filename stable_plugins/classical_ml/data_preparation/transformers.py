@@ -376,7 +376,7 @@ def calculation_task(self, db_id: int) -> str:
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        f"attr_dist{info_str}.zip",
+        f"transformers_attr_dist{info_str}.zip",
         "custom/attribute-distances",
         "application/zip",
     )

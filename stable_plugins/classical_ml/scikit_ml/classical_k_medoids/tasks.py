@@ -117,7 +117,7 @@ def calculation_task(self, db_id: int) -> str:
         )
 
     file_name = retrieve_filename_from_url(entity_points_url)
-    info_str = f"_clusters_{num_clusters}_init_{init_enum.get_init()}_method_{method_enum.name}_from_{file_name}"
+    info_str = f"_c_k_medoids_clusters_{num_clusters}_init_{init_enum.get_init()}_method_{method_enum.name}_from_{file_name}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:

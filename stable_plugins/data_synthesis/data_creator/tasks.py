@@ -81,7 +81,7 @@ def calculation_task(self, db_id: int) -> str:
         {"ID": ID, "href": "", "label": label} for ID, label in zip(test_id, test_labels)
     ]
 
-    info_str = f"_type_{dataset_type.name}"
+    info_str = f"_data-creator_type_{dataset_type.name}"
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
