@@ -93,11 +93,11 @@
 
     function updatePreview() {
         const circuitUrl = getUrl()
-        if (currentUrl === circuitUrl) {
-            return;
-        }
         if (circuitUrl === "" || circuitUrl === null) {
             onCircuitImageError();
+            return;
+        }
+        if (currentUrl === circuitUrl) {
             return;
         }
         document.querySelector('#spinner').style.display = '';
@@ -124,7 +124,7 @@
         });
     }
 
+    onCircuitImageError();
     setupEventListeners();
-    updatePreview();
 </script>
 {% endblock script %}
