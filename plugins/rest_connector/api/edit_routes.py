@@ -163,9 +163,7 @@ class WipConnectorView(MethodView):
                 )
 
         if update_key == ConnectorKey.CANCEL:
-            task_id = PluginState.get_value(
-                plugin.identifier, f"{connector_id}_bg_task"
-            )
+            task_id = PluginState.get_value(plugin.identifier, f"{connector_id}_bg_task")
             if task_id:
                 result = AsyncResult(task_id, app=CELERY)
                 result.revoke(terminate=True)
@@ -268,9 +266,7 @@ class WipConnectorView(MethodView):
 
         if update_key != ConnectorKey.NAME or step_has_autofill:
             connector["next_step"] = data.get("next_step", "")
-            PluginState.set_value(
-                plugin.identifier, connector_id, connector, commit=True
-            )
+            PluginState.set_value(plugin.identifier, connector_id, connector, commit=True)
 
         if step_has_autofill:
             task: Signature = prefill_values.s(
@@ -461,9 +457,7 @@ class WipConnectorView(MethodView):
         connector["finished_steps"] = finished
         return connector
 
-    def update_response_mapping(
-        self, connector: dict, new_response_mapping: str
-    ) -> dict:
+    def update_response_mapping(self, connector: dict, new_response_mapping: str) -> dict:
         parsed_response_mapping = ResponseOutputSchema(many=True).loads(
             new_response_mapping
         )
@@ -513,9 +507,7 @@ class WipConnectorView(MethodView):
 
         return connector
 
-    def undeploy_plugin(
-        self, connector: dict, connector_id: str, parent_id: str
-    ) -> dict:
+    def undeploy_plugin(self, connector: dict, connector_id: str, parent_id: str) -> dict:
         plugin_url = url_for(
             f"{REST_CONN_BLP.name}.VirtualPluginView",
             connector_id=connector_id,
