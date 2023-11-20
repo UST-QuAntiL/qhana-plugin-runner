@@ -28,6 +28,7 @@ from ..openapi import (
     get_headers,
     get_query_variables,
     get_upload_files,
+    get_endpoint_method_summary,
     parse_spec,
 )
 from ..plugin import RESTConnector
@@ -59,7 +60,7 @@ def unlock_connector(connector_id: str):
 )
 def prefill_values(connector_id: str, last_step: str):
     parent_plugin = RESTConnector.instance
-    
+
     # connector definition data
     connector = PluginState.get_value(
         parent_plugin.identifier, connector_id, default=None
@@ -100,7 +101,13 @@ def prefill_values(connector_id: str, last_step: str):
         spec = connector.get("openapi_spec_url")
         if path and isinstance(path, str) and spec and isinstance(spec, str):
             # find path methods
-            new_extra["autocomplete_methods"] = list(get_endpoint_methods(spec, path))
+            parsed_spec = parse_spec(spec)
+            methods = list(get_endpoint_methods(parsed_spec, path))
+            new_extra["autocomplete_methods"] = methods
+            new_extra["endpoint_summary"] = {
+                method.lower(): get_endpoint_method_summary(parsed_spec, path, method)
+                for method in methods
+            }
             changed = True
     elif last_step == ConnectorKey.ENDPOINT_METHOD.value:
         spec = connector.get("openapi_spec_url")
