@@ -22,14 +22,6 @@ from qhana_plugin_runner.db.models.virtual_plugins import (
     VirtualPlugin,
 )
 
-from ..database import (
-    deploy_connector,
-    get_deployed_connector,
-    get_wip_connectors,
-    save_wip_connectors,
-    undeploy_connector,
-)
-from ..plugin import RESTConnector
 from .blueprint import REST_CONN_BLP
 from .prefill_tasks import prefill_values, unlock_connector
 from .schemas import (
@@ -40,6 +32,14 @@ from .schemas import (
     RequestFileDescriptorSchema,
     ResponseOutputSchema,
 )
+from ..database import (
+    deploy_connector,
+    get_deployed_connector,
+    get_wip_connectors,
+    save_wip_connectors,
+    undeploy_connector,
+)
+from ..plugin import RESTConnector
 
 
 @REST_CONN_BLP.route("/wip-connectors-ui/<string:connector_id>/")
@@ -62,14 +62,17 @@ class WipConnectorUiView(MethodView):
 
         plugin = RESTConnector.instance
         connector = PluginState.get_value(plugin.identifier, connector_id, default={})
+        connector_extra = PluginState.get_value(
+            plugin.identifier, f"{connector_id}__extra", default={}
+        )
         assert isinstance(connector, dict), "Type assertion"
+        assert isinstance(connector_extra, dict), "Type assertion"
         return Response(
             render_template(
                 "rest_connector_edit.html",
                 name=name,
                 connector=ConnectorSchema().dump(connector),
-                autocomplete_paths=connector.get("autocomplete_paths", []),
-                autocomplete_methods=connector.get("autocomplete_methods", []),
+                extra=connector_extra,
                 http_methods=["GET", "PUT", "POST", "DELETE", "PATCH"],
                 process=url_for(
                     f"{REST_CONN_BLP.name}.{WipConnectorView.__name__}",
@@ -175,7 +178,9 @@ class WipConnectorView(MethodView):
             )
         elif update_key == ConnectorKey.CANCEL:
             # TODO cancel background task currently locking the connector
-            task_id = PluginState.get_value(plugin.identifier, f"{connector_id}_bg_task")
+            task_id = PluginState.get_value(
+                plugin.identifier, f"{connector_id}_bg_task"
+            )
             if task_id:
                 result = AsyncResult(task_id, app=CELERY)
                 result.revoke(terminate=True)
@@ -195,7 +200,9 @@ class WipConnectorView(MethodView):
 
         if update_key != ConnectorKey.NAME or step_has_autofill:
             connector["next_step"] = data.get("next_step", "")
-            PluginState.set_value(plugin.identifier, connector_id, connector, commit=True)
+            PluginState.set_value(
+                plugin.identifier, connector_id, connector, commit=True
+            )
 
         if step_has_autofill:
             task: Signature = prefill_values.s(
@@ -389,7 +396,9 @@ class WipConnectorView(MethodView):
         connector["finished_steps"] = finished
         return connector
 
-    def update_response_mapping(self, connector: dict, new_response_mapping: str) -> dict:
+    def update_response_mapping(
+        self, connector: dict, new_response_mapping: str
+    ) -> dict:
         parsed_response_mapping = ResponseOutputSchema(many=True).loads(
             new_response_mapping
         )
@@ -439,7 +448,9 @@ class WipConnectorView(MethodView):
 
         return connector
 
-    def undeploy_plugin(self, connector: dict, connector_id: str, parent_id: str) -> dict:
+    def undeploy_plugin(
+        self, connector: dict, connector_id: str, parent_id: str
+    ) -> dict:
         plugin_url = url_for(
             f"{REST_CONN_BLP.name}.VirtualPluginView",
             connector_id=connector_id,

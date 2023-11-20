@@ -59,20 +59,30 @@ def unlock_connector(connector_id: str):
 )
 def prefill_values(connector_id: str, last_step: str):
     parent_plugin = RESTConnector.instance
+    
+    # connector definition data
     connector = PluginState.get_value(
         parent_plugin.identifier, connector_id, default=None
+    )
+
+    # extra data that is not strictly required for the connector definition
+    # e.g., autocomplete info, extra documentation, etc.
+    connector_extra = PluginState.get_value(
+        parent_plugin.identifier, f"{connector_id}__extra", default={}
     )
     if connector is None:
         return
     assert isinstance(connector, dict)
+    assert isinstance(connector_extra, dict)
     new_data = dict(connector)
+    new_extra = dict(connector_extra)
 
     changed = False
 
     if last_step == ConnectorKey.OPENAPI_SPEC.value:
         spec = connector.get("openapi_spec_url")
         if spec and isinstance(spec, str):
-            new_data["autocomplete_paths"] = list(get_endpoint_paths(spec))
+            new_extra["autocomplete_paths"] = list(get_endpoint_paths(spec))
             changed = True
     elif last_step == ConnectorKey.ENDPOINT_URL.value:
         path = connector.get("endpoint_url")
@@ -90,7 +100,7 @@ def prefill_values(connector_id: str, last_step: str):
         spec = connector.get("openapi_spec_url")
         if path and isinstance(path, str) and spec and isinstance(spec, str):
             # find path methods
-            new_data["autocomplete_methods"] = list(get_endpoint_methods(spec, path))
+            new_extra["autocomplete_methods"] = list(get_endpoint_methods(spec, path))
             changed = True
     elif last_step == ConnectorKey.ENDPOINT_METHOD.value:
         spec = connector.get("openapi_spec_url")
@@ -135,6 +145,9 @@ def prefill_values(connector_id: str, last_step: str):
             changed = True
 
     if changed:
+        PluginState.set_value(
+            parent_plugin.identifier, f"{connector_id}__extra", new_extra
+        )
         PluginState.set_value(
             parent_plugin.identifier, connector_id, new_data, commit=True
         )
