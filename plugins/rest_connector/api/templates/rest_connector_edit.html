@@ -178,7 +178,7 @@
                 <div class="qhana-input-wrapper">
                     <input class="qhana-form-input" type="text" name="value" id="endpoint_url" list="endpoint_url_list" autocomplete="off" value="{{connector['endpointUrl']}}" {{'disabled' if connector['isLoading']}}>
                     <datalist id="endpoint_url_list">
-                        {%- for path in extra.autocomplete_paths -%}
+                        {%- for path in extra.get("autocomplete_paths", []) -%}
                         <option value="{{path}}"></option>
                         {%- endfor -%}
                     </datalist>
@@ -210,7 +210,7 @@
 
     <details class="step {{'done' if 'endpoint-method' in connector['finishedSteps']}}" {{"open" if connector["nextStep"] == "endpoint-method" else ""}}>
         <summary class="step-head" data-stepnr="4">
-            Endpoint method <span class="step-content-preview">{{connector["endpointMethod"]}} – {{extra.endpoint_summary[connector["endpointMethod"].lower()]}}</span>
+            Endpoint method <span class="step-content-preview">{{connector["endpointMethod"]}} – {{ extra.get("endpoint_summary", {})[connector["endpointMethod"].lower()] }}</span>
         </summary>
 
         <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-method" enctype="application/json" {{'inert' if connector['isLoading']}}>
@@ -218,8 +218,8 @@
                 <label class="qhana-form-label" for="endpoint_method">Endpoint URL</label>
                 <div class="qhana-input-wrapper">
                     <select class="qhana-form-input" name="value" id="endpoint_method" {{'disabled' if connector['isLoading']}}>
-                        {% for method in http_methods if not extra.autocomplete_methods or (method.lower() in extra.autocomplete_methods) %}
-                            <option value="{{ method }}" {% if connector['endpointMethod'] == method %} selected {% endif %}>{{ method }} – {{extra.endpoint_summary[method.lower()][:1000]}}</option>
+                        {% for method in http_methods if not extra.get("autocomplete_methods") or (method.lower() in extra.get("autocomplete_methods", [])) %}
+                            <option value="{{ method }}" {% if connector['endpointMethod'] == method %} selected {% endif %}>{{ method }} – {{ extra.get("endpoint_summary", {})[method.lower()][:1000] }}</option>
                         {% endfor %}
                     </select>
                 </div>
