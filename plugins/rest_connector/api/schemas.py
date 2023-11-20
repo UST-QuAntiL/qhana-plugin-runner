@@ -71,6 +71,7 @@ class WelcomeParametersSchema(FrontendFormBaseSchema):
 
 class ConnectorUpdateSchema(MaBaseSchema):
     key = EnumField(ConnectorKey, required=True, use_value=True)
+    ai_assist = ma.fields.Boolean(required=False, missing=False)
     value = ma.fields.String(required=True)
     next_step = ma.fields.String(required=False, missing="")
 

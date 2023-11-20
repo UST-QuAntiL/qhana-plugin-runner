@@ -36,6 +36,7 @@ from ..database import (
     deploy_connector,
     get_deployed_connector,
     get_wip_connectors,
+    remove_wip_connector,
     save_wip_connectors,
     undeploy_connector,
 )
@@ -73,6 +74,7 @@ class WipConnectorUiView(MethodView):
                 name=name,
                 connector=ConnectorSchema().dump(connector),
                 extra=connector_extra,
+                has_assistant=True,  # TODO check if ai assistant is actually available
                 http_methods=["GET", "PUT", "POST", "DELETE", "PATCH"],
                 process=url_for(
                     f"{REST_CONN_BLP.name}.{WipConnectorView.__name__}",
@@ -129,6 +131,8 @@ class WipConnectorView(MethodView):
         update_key: ConnectorKey = data["key"]
         update_value = data["value"]
 
+        ai_assist = data["ai_assist"]
+
         assert isinstance(update_value, str)
 
         if connector.get("is_deployed", False):
@@ -137,8 +141,82 @@ class WipConnectorView(MethodView):
                     HTTPStatus.BAD_REQUEST,
                     message="Cannot edit a currently deployed REST Connector. Please undeploy the connector first.",
                 )
-        # FIXME add is_loading check
 
+        if not connector.get("is_loading", False):
+            if ai_assist:
+                # TODO update connector using AI
+                pass
+            else:
+                connector = self.update_connector(
+                    connector_id,
+                    wip_connectors,
+                    plugin,
+                    connector,
+                    update_key,
+                    update_value,
+                )
+        else:
+            if update_key != ConnectorKey.CANCEL:
+                abort(
+                    HTTPStatus.BAD_REQUEST,
+                    message="Cannot edit a busy REST Connector. Please cancel background tasks first or wait for them to finish!",
+                )
+
+        if update_key == ConnectorKey.CANCEL:
+            task_id = PluginState.get_value(
+                plugin.identifier, f"{connector_id}_bg_task"
+            )
+            if task_id:
+                result = AsyncResult(task_id, app=CELERY)
+                result.revoke(terminate=True)
+                PluginState.delete_value(
+                    plugin.identifier, f"{connector_id}_bg_task", commit=True
+                )
+            connector["is_loading"] = False
+            data["next_step"] = connector.get("next_step", data.get("next_step", ""))
+
+        connector = self.start_autofill_task(
+            data, connector_id, plugin, connector, update_key
+        )
+
+        return ChainMap(connector, {"name": name})
+
+    @REST_CONN_BLP.response(HTTPStatus.NO_CONTENT)
+    def delete(self, connector_id: str):
+        wip_connectors = get_wip_connectors()
+
+        try:
+            name = wip_connectors[connector_id]
+        except KeyError:
+            name = get_deployed_connector(connector_id)
+            if name is None:
+                # Treat not found as already deleted
+                return HTTPStatus.NO_CONTENT
+
+        plugin = RESTConnector.instance
+        connector = PluginState.get_value(plugin.identifier, connector_id, default={})
+        assert isinstance(connector, dict), "Type assertion"
+
+        if connector.get("is_deployed", False):
+            abort(
+                HTTPStatus.BAD_REQUEST,
+                message="Cannot delete a currently deployed REST Connector. Please undeploy the connector first.",
+            )
+
+        if not connector.get("is_loading", False):
+            abort(
+                HTTPStatus.BAD_REQUEST,
+                message="Cannot delete a currently busy REST Connector. Please cancel any background task first or wait for them to finish.",
+            )
+
+        # delete DB entries
+        PluginState.delete_value(plugin.identifier, connector_id)
+        PluginState.delete_value(plugin.identifier, f"{connector_id}__extra")
+        remove_wip_connector(connector_id, commit=True)
+
+    def update_connector(
+        self, connector_id, wip_connectors, plugin, connector, update_key, update_value
+    ):
         if update_key == ConnectorKey.NAME:  # TODO support tag updates
             wip_connectors[connector_id] = update_value
             save_wip_connectors(wip_connectors, commit=True)
@@ -176,20 +254,10 @@ class WipConnectorView(MethodView):
             connector = self.undeploy_plugin(
                 connector, connector_id=connector_id, parent_id=plugin.identifier
             )
-        elif update_key == ConnectorKey.CANCEL:
-            # TODO cancel background task currently locking the connector
-            task_id = PluginState.get_value(
-                plugin.identifier, f"{connector_id}_bg_task"
-            )
-            if task_id:
-                result = AsyncResult(task_id, app=CELERY)
-                result.revoke(terminate=True)
-                PluginState.delete_value(
-                    plugin.identifier, f"{connector_id}_bg_task", commit=True
-                )
-            connector["is_loading"] = False
-            data["next_step"] = connector.get("next_step", data.get("next_step", ""))
 
+        return connector
+
+    def start_autofill_task(self, data, connector_id, plugin, connector, update_key):
         step_has_autofill = update_key in (
             ConnectorKey.OPENAPI_SPEC,
             ConnectorKey.ENDPOINT_URL,
@@ -222,10 +290,7 @@ class WipConnectorView(MethodView):
                     )
                 except TimeoutError:
                     pass
-
-        return ChainMap(connector, {"name": name})
-
-    # FIXME implement delete
+        return connector
 
     def update_base_url(self, connector: dict, new_base_url: str) -> dict:
         connector["base_url"] = new_base_url

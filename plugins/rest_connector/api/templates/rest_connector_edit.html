@@ -189,6 +189,21 @@
                 <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>set endpoint URL</button>
             </div>
         </form>
+
+        {%- if has_assistant -%}
+        <form action="{{process}}" method="post" class="qhana-form" data-step="endpoint-url" data-ai-input="true" enctype="application/json" {{'inert' if connector['isLoading']}}>
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="value">Request Help:</label>
+                <div class="qhana-input-wrapper">
+                    <textarea class="qhana-form-input" name="value" autocomplete="off" {{'disabled' if connector['isLoading']}}>I want to …</textarea>
+                </div>
+            </div>
+
+            <div class="qhana-form-buttons">
+                <button class="qhana-form-submit" type="submit" data-target="api" {{'disabled' if connector['isLoading']}}>Ask AI Assistant</button>
+            </div>
+        </form>
+        {%- endif -%}
     </details>
 
     <!-- FIXME add support for variables in endpoint -->
@@ -793,6 +808,10 @@
 
             if (nextStep) {
                 submitData.nextStep = nextStep;
+            }
+
+            if (form.getAttribute("data-ai-input") === "true") {
+                submitData.aiAssist = true;
             }
 
             sendMessage("ui-loading");
