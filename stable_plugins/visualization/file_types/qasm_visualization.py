@@ -196,10 +196,10 @@ def get_circuit_image(data: Mapping):
     url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
     image = DataBlob.get_value(QasmVisualization.instance.identifier, url_hash, None)
     if image is None:
-        response = Response("Image not yet created!", HTTPStatus.SERVICE_UNAVAILABLE)
-        response.headers["Retry-After"] = 5
-        if not PluginState.get_value(
-            QasmVisualization.instance.identifier, url_hash, None
+        if not (
+            task_id := PluginState.get_value(
+                QasmVisualization.instance.identifier, url_hash, None
+            )
         ):
             task_result = generate_image.s(url, url_hash).apply_async()
             PluginState.set_value(
@@ -208,14 +208,14 @@ def get_circuit_image(data: Mapping):
                 task_result.id,
                 commit=True,
             )
-            try:
-                task_result.get(timeout=5)
-                image = DataBlob.get_value(
-                    QasmVisualization.instance.identifier, url_hash
-                )
-            except celery.exceptions.TimeoutError:
-                return response
         else:
+            task_result = CELERY.AsyncResult(task_id)
+        try:
+            task_result.get(timeout=5)
+            image = DataBlob.get_value(QasmVisualization.instance.identifier, url_hash)
+        except celery.exceptions.TimeoutError:
+            response = Response("Image not yet created!", HTTPStatus.SERVICE_UNAVAILABLE)
+            response.headers["Retry-After"] = 5
             return response
     if not image:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
