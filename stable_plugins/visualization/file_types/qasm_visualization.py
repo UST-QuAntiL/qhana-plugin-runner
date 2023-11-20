@@ -288,7 +288,6 @@ def generate_image(self, url: str, hash: str) -> str:
             QasmVisualization.instance.identifier,
             hash,
             "",
-            commit=True,
         )
         PluginState.delete_value(QasmVisualization.instance.identifier, hash, commit=True)
         return "Invalid circuit URL!"
@@ -298,9 +297,7 @@ def generate_image(self, url: str, hash: str) -> str:
     figfile = BytesIO()
     fig.savefig(figfile, format="png")
     figfile.seek(0)
-    DataBlob.set_value(
-        QasmVisualization.instance.identifier, hash, figfile.getvalue(), commit=True
-    )
+    DataBlob.set_value(QasmVisualization.instance.identifier, hash, figfile.getvalue())
     TASK_LOGGER.info(f"Stored image of circuit {circuit.name}.")
     PluginState.delete_value(QasmVisualization.instance.identifier, hash, commit=True)
 
