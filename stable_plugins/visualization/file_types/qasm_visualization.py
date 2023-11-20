@@ -214,9 +214,7 @@ def get_circuit_image(data: Mapping):
             task_result.get(timeout=5)
             image = DataBlob.get_value(QasmVisualization.instance.identifier, url_hash)
         except celery.exceptions.TimeoutError:
-            response = Response("Image not yet created!", HTTPStatus.SERVICE_UNAVAILABLE)
-            response.headers["Retry-After"] = 5
-            return response
+            return Response("Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
     return send_file(BytesIO(image), mimetype="image/png")

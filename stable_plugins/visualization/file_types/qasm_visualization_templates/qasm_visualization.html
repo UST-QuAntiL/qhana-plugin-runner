@@ -104,18 +104,14 @@
         const preview = document.querySelector('#circuit-image');
         const url = "{{ get_circuit_image_url }}?data=" + circuitUrl;
         fetch(url).then(response => {
-            if (response.ok) {
+            if (response.status === 200) {
                 preview.setAttribute("src", url);
                 currentUrl = circuitUrl;
             } else {
                 onCircuitImageError();
-                if (response.status === 503) {
+                if (response.status === 202) {
                     document.querySelector('#spinner').style.display = '';
-                    let timeout = response.headers.get('Retry-After');
-                    if (timeout === null) {
-                        timeout = 5;
-                    }
-                    setTimeout(updatePreview, timeout * 1000);
+                    setTimeout(updatePreview, 5000);
                 }
             }
         }).catch(error => {
