@@ -1,6 +1,6 @@
 from collections import ChainMap
 from http import HTTPStatus
-from typing import Any, Dict, Mapping, Optional, Sequence, Union, cast
+from typing import Dict, Optional, cast
 
 from celery.canvas import Signature
 from celery.exceptions import TimeoutError
@@ -11,7 +11,6 @@ from flask.helpers import url_for
 from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
-from marshmallow import EXCLUDE, RAISE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
@@ -21,6 +20,7 @@ from qhana_plugin_runner.db.models.virtual_plugins import (
     PluginState,
     VirtualPlugin,
 )
+from .ai_tasks import ai_assistance
 
 from .blueprint import REST_CONN_BLP
 from .prefill_tasks import prefill_values, unlock_connector
@@ -144,8 +144,9 @@ class WipConnectorView(MethodView):
 
         if not connector.get("is_loading", False):
             if ai_assist:
-                # TODO update connector using AI
-                pass
+                connector = self.start_ai_assistance_task(
+                    connector_id, plugin, connector, update_key, update_value
+                )
             else:
                 connector = self.update_connector(
                     connector_id,
@@ -286,6 +287,40 @@ class WipConnectorView(MethodView):
                     )
                 except TimeoutError:
                     pass
+        return connector
+
+    def start_ai_assistance_task(
+        self,
+        connector_id: str,
+        plugin: RESTConnector,
+        connector: Dict,
+        update_key: ConnectorKey,
+        update_value: str,
+    ) -> Dict:
+        connector["is_loading"] = True
+        PluginState.set_value(plugin.identifier, connector_id, connector, commit=True)
+
+        task: Signature = ai_assistance.s(
+            connector_id=connector_id,
+            last_step=update_key.value,
+            user_request=update_value,
+        )
+        task.link_error(unlock_connector.si(connector_id=connector_id))
+        result = cast(Optional[AsyncResult], task.apply_async(expires=300))
+
+        if result:
+            PluginState.set_value(
+                plugin.identifier, f"{connector_id}_bg_task", result.id, commit=True
+            )
+            try:
+                result.get(timeout=30, propagate=False)
+                # reload connector to get changes
+                connector = PluginState.get_value(
+                    plugin.identifier, connector_id, default={}
+                )
+            except TimeoutError:
+                pass
+
         return connector
 
     def update_base_url(self, connector: dict, new_base_url: str) -> dict:

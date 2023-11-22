@@ -740,6 +740,10 @@
             "manage-plugin": "manage-plugin",
         };
 
+        const NEXT_STEP_AI_ASSIST = {
+            "endpoint-url": "endpoint-variables",
+        }
+
         const isLoading = {{'true' if connector['isLoading'] else 'false'}};
 
         /**
@@ -814,6 +818,7 @@
 
             if (form.getAttribute("data-ai-input") === "true") {
                 submitData.aiAssist = true;
+                submitData.nextStep = NEXT_STEP_AI_ASSIST[formKey];
             }
 
             sendMessage("ui-loading");
