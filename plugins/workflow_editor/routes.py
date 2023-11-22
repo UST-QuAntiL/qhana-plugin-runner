@@ -105,9 +105,7 @@ class WFEditorFrontend(MethodView):
                 valid=valid,
                 values=data,
                 errors=errors,
-                process=url_for(
-                    f"{WF_EDITOR_BLP.name}.{WorkflowEditorProcess.__name__}"
-                ),
+                process=url_for(f"{WF_EDITOR_BLP.name}.{WorkflowEditorProcess.__name__}"),
                 wf_editor_js=url_for(
                     f"{WF_EDITOR_BLP.name}.{WorkflowEditorJavaScript.__name__}"
                 ),
