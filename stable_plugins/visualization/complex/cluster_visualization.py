@@ -345,7 +345,9 @@ def calculation_task(self, db_id: int) -> str:
 
     concat_filenames = retrieve_filename_from_url(entity_points_url)
     concat_filenames += retrieve_filename_from_url(clusters_url)
-    info_str = f"_cluster-vis_from_{get_readable_hash(concat_filenames)}"
+    filenames_hash = get_readable_hash(concat_filenames)
+
+    info_str = f"_cluster-vis_{filenames_hash}"
 
     with SpooledTemporaryFile(mode="wt") as output:
         html = fig.to_html()

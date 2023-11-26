@@ -545,7 +545,8 @@ def entity_filter_task(self, db_id: int) -> str:
             attributes=attributes,
         )
 
-        info_str = f"_setting_{attribute_filter_strategy}_rows_{n_rows}_sampling_{n_sampled_rows}_from_{retrieve_filename_from_url_request(url_data, input_file_url)}"
+        filename = retrieve_filename_from_url_request(url_data, input_file_url)
+        info_str = f"_setting_{attribute_filter_strategy}_rows_{n_rows}_sampling_{n_sampled_rows}_from_{filename}"
 
         # Write to output file
         with SpooledTemporaryFile(mode="w") as output:

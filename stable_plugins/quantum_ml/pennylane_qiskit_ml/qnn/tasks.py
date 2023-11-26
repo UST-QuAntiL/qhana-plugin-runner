@@ -267,7 +267,7 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames += retrieve_filename_from_url(test_points_url)
     concat_filenames += retrieve_filename_from_url(test_label_points_url)
     filename_hash = get_readable_hash(concat_filenames)
-    info_str = f"_qnn_network_{network_enum.name}_optimizer_{optimizer.name}_epochs_{epochs}_from_{filename_hash}"
+    info_str = f"_qnn_network_{network_enum.name}_optimizer_{optimizer.name}_epochs_{epochs}_{filename_hash}"
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:

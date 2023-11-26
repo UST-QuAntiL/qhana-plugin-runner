@@ -355,7 +355,8 @@ def calculation_task(self, db_id: int) -> str:
             }
         )
 
-    info_str = f"aggregator_{aggregator.name}_from_{retrieve_filename_from_url(attribute_distances_url)}"
+    filename = retrieve_filename_from_url(attribute_distances_url)
+    info_str = f"aggregator_{aggregator.name}_from_{filename}"
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_distances, output, "application/json")

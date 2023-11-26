@@ -371,7 +371,8 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
-    info_str = f"_transformer_{transformer.name}_from_{retrieve_filename_from_url(attribute_similarities_url)}"
+    filename = retrieve_filename_from_url(attribute_similarities_url)
+    info_str = f"_transformer_{transformer.name}_from_{filename}"
 
     STORE.persist_task_result(
         db_id,

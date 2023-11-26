@@ -553,9 +553,10 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames = retrieve_filename_from_url(entities_url)
     concat_filenames += retrieve_filename_from_url(entities_metadata_url)
     concat_filenames += retrieve_filename_from_url(taxonomies_zip_url)
+    filenames_hash = get_readable_hash(concat_filenames)
 
     info_str = "_with_root" if root_has_meaning_in_taxonomy else "_without_root"
-    info_str += f"_from_{get_readable_hash(concat_filenames)}"
+    info_str += f"_{filenames_hash}"
 
     STORE.persist_task_result(
         db_id,

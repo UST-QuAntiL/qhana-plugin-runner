@@ -204,11 +204,11 @@ def get_pca(input_params: dict):
         if eigen_solver == "full":
             eigen_solver = "dense"
 
-        kernel_file = (
-            f"_{retrieve_filename_from_url(input_params['kernel_url'])}"
-            if input_params["kernel"].value == "precomputed"
-            else ""
-        )
+        if input_params["kernel"].value == "precomputed":
+            kernel_filename = retrieve_filename_from_url(input_params['kernel_url'])
+            kernel_file = f"_{kernel_filename}"
+        else:
+            kernel_file = ""
 
         return (
             KernelPCA(

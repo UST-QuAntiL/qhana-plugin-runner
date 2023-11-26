@@ -196,7 +196,10 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames = retrieve_filename_from_url(entity_points_url1)
     concat_filenames += retrieve_filename_from_url(entity_points_url2)
     filename_hash = get_readable_hash(concat_filenames)
-    info_str = f"_q-kernel_{str(kernel_enum.name).replace('kernel', '').strip('_')}_entanglement_{entanglement_pattern.name}_from_{filename_hash}"
+
+    kernel_name = str(kernel_enum.name).replace('kernel', '').strip('_')
+
+    info_str = f"_q-kernel_{kernel_name}_entanglement_{entanglement_pattern.name}_{filename_hash}"
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(kernel_json, output, "application/json")

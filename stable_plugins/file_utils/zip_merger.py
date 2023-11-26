@@ -287,8 +287,9 @@ def calculation_task(self, db_id: int) -> str:
 
     concat_filenames = retrieve_filename_from_url(zip1_url)
     concat_filenames += retrieve_filename_from_url(zip2_url)
+    filenames_hash = get_readable_hash(concat_filenames)
 
-    info_str = f"_from_{get_readable_hash(concat_filenames)}"
+    info_str = f"_{filenames_hash}"
 
     STORE.persist_task_result(
         db_id,

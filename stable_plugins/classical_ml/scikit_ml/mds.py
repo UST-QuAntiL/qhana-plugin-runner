@@ -391,7 +391,9 @@ def calculation_task(self, db_id: int) -> str:
 
         entity_points.append(new_entity_point)
 
-    info_str = f"_mds_dim_{dimensions}_metric_{str(metric.name).removesuffix('_mds')}_from_{retrieve_filename_from_url(entity_distances_url)}"
+    metric_name = str(metric.name).removesuffix('_mds')
+    filename = retrieve_filename_from_url(entity_distances_url)
+    info_str = f"_mds_dim_{dimensions}_metric_{metric_name}_from_{filename}"
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
