@@ -281,9 +281,11 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames += retrieve_filename_from_url(test_label_points_url)
     filename_hash = get_readable_hash(concat_filenames)
 
-    variant_name = str(variant.name).replace('window', '').strip('_')
+    variant_name = str(variant.name).replace("window", "").strip("_")
 
-    info_str = f"_q-parzen-window_variant_{variant_name}_window_{window_size}_{filename_hash}"
+    info_str = (
+        f"_q-parzen-window_variant_{variant_name}_window_{window_size}_{filename_hash}"
+    )
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:

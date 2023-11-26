@@ -296,7 +296,9 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames += retrieve_filename_from_url(test_label_points_url)
     filename_hash = get_readable_hash(concat_filenames)
 
-    info_str = f"_qknn_variant_{variant.name}_neighbours_{neighbourhood_size}_{filename_hash}"
+    info_str = (
+        f"_qknn_variant_{variant.name}_neighbours_{neighbourhood_size}_{filename_hash}"
+    )
 
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:

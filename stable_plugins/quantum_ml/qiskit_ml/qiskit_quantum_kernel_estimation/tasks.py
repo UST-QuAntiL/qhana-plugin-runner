@@ -196,7 +196,7 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames += retrieve_filename_from_url(entity_points_url2)
     filename_hash = get_readable_hash(concat_filenames)
 
-    kernel_name = str(kernel_enum.name).replace('_feature_map', '')
+    kernel_name = str(kernel_enum.name).replace("_feature_map", "")
 
     info_str = f"_qiskit-kernel_{kernel_name}_entanglement_{entanglement_pattern}_{filename_hash}"
 

@@ -234,9 +234,11 @@ def calculation_task(self, db_id: int) -> str:
     concat_filenames += retrieve_filename_from_url(test_label_points_url)
     filename_hash = get_readable_hash(concat_filenames)
 
-    kernel_name = str(kernel_enum.name).replace('kernel', '').strip('_')
+    kernel_name = str(kernel_enum.name).replace("kernel", "").strip("_")
 
-    info_str = f"_svm_kernel_{kernel_name}_regularization_{regularization_C}_{filename_hash}"
+    info_str = (
+        f"_svm_kernel_{kernel_name}_regularization_{regularization_C}_{filename_hash}"
+    )
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
