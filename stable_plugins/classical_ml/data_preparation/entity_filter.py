@@ -46,6 +46,7 @@ from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
+    retrieve_filename,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -308,29 +309,6 @@ class EntityFilter(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def retrieve_filename_from_url_request(response, url) -> str:
-    """
-    Given an url response and the original url to a file, it returns the name of the file
-    :param response: Response
-    :param url: str
-    :return: str
-    """
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
-
-
 def filter_rows(
     input_entities: Generator[Dict[str, Any], None, None],
     id_set: Set[str],
@@ -545,7 +523,7 @@ def entity_filter_task(self, db_id: int) -> str:
             attributes=attributes,
         )
 
-        filename = retrieve_filename_from_url_request(url_data, input_file_url)
+        filename = retrieve_filename(url_data)
         info_str = f"_setting_{attribute_filter_strategy}_rows_{n_rows}_sampling_{n_sampled_rows}_from_{filename}"
 
         # Write to output file

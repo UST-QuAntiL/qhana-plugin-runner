@@ -29,37 +29,12 @@ from .schemas import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.api.util import retrieve_filename
 
-import re
 from pandas import read_csv
 from .backend.checkbox_list import get_checkbox_list_dict
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def retrieve_filename_from_url(url) -> str:
-    """
-    Given an url to a file, it returns the name of the file
-    :param url: str
-    :return: str
-    """
-    response = open_url(url)
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-    response.close()
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
 
 
 def get_table_html(df) -> str:
@@ -109,7 +84,7 @@ def first_task(self, db_id: int) -> str:
             "entity",  # TODO keep original data type
             "text/csv",
         )
-        task_data.data["original_file_name"] = retrieve_filename_from_url(file_url)
+        task_data.data["original_file_name"] = retrieve_filename(file_url)
         task_data.data["info_str"] = ""
         task_data.data["file_url"] = "file://" + task_file.file_storage_data
         table_html = get_table_html(df)

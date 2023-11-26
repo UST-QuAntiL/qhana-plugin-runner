@@ -29,6 +29,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.api.util import retrieve_filename
 from .backend.load_utils import (
     load_kernel_matrix,
     get_indices_and_point_arr,
@@ -40,8 +41,6 @@ from .backend.svm import get_svc
 from sklearn.metrics import accuracy_score
 from .backend.visualize import plot_data, plot_confusion_matrix
 import muid
-import re
-from qhana_plugin_runner.requests import open_url
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -49,30 +48,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
-
-
-def retrieve_filename_from_url(url) -> str:
-    """
-    Given an url to a file, it returns the name of the file
-    :param url: str
-    :return: str
-    """
-    response = open_url(url)
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-    response.close()
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
 
 
 @CELERY.task(name=f"{SVM.instance.identifier}.calculation_task", bind=True)
@@ -125,8 +100,8 @@ def calculation_task(self, db_id: int) -> str:
         train_id_list, train_data = get_indices_and_point_arr(train_points_url)
         test_id_list, test_data = get_indices_and_point_arr(test_points_url)
 
-        concat_filenames += retrieve_filename_from_url(train_points_url)
-        concat_filenames += retrieve_filename_from_url(test_points_url)
+        concat_filenames += retrieve_filename(train_points_url)
+        concat_filenames += retrieve_filename(test_points_url)
     else:
         # Load kernels
         train_id_to_idx, _, train_kernel = load_kernel_matrix(train_kernel_url)
@@ -135,8 +110,8 @@ def calculation_task(self, db_id: int) -> str:
         train_id_list = get_id_list(train_id_to_idx)
         test_id_list = get_id_list(test_id_to_idx)
 
-        concat_filenames += retrieve_filename_from_url(train_kernel_url)
-        concat_filenames += retrieve_filename_from_url(test_kernel_url)
+        concat_filenames += retrieve_filename(train_kernel_url)
+        concat_filenames += retrieve_filename(test_kernel_url)
 
     # Load labels
     train_labels, label_to_int, int_to_label = get_label_arr(
@@ -230,8 +205,8 @@ def calculation_task(self, db_id: int) -> str:
         for idx in svc.support_
     ]
 
-    concat_filenames += retrieve_filename_from_url(train_label_points_url)
-    concat_filenames += retrieve_filename_from_url(test_label_points_url)
+    concat_filenames += retrieve_filename(train_label_points_url)
+    concat_filenames += retrieve_filename(test_label_points_url)
     filename_hash = get_readable_hash(concat_filenames)
 
     kernel_name = str(kernel_enum.name).replace("kernel", "").strip("_")

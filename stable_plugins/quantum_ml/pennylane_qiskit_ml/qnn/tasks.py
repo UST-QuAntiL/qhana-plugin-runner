@@ -36,6 +36,7 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
+from qhana_plugin_runner.api.util import retrieve_filename
 
 import numpy as np
 
@@ -58,8 +59,6 @@ from .backend.train_and_test import train
 from .backend.visualize import plot_data, plot_confusion_matrix
 
 import muid
-import re
-from qhana_plugin_runner.requests import open_url
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -67,30 +66,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
-
-
-def retrieve_filename_from_url(url) -> str:
-    """
-    Given an url to a file, it returns the name of the file
-    :param url: str
-    :return: str
-    """
-    response = open_url(url)
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-    response.close()
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
@@ -262,10 +237,10 @@ def calculation_task(self, db_id: int) -> str:
         conf_matrix = plot_confusion_matrix(test_labels, predictions, int_to_label)
 
     # Retrieve a has from the names of the input files
-    concat_filenames = retrieve_filename_from_url(train_points_url)
-    concat_filenames += retrieve_filename_from_url(train_label_points_url)
-    concat_filenames += retrieve_filename_from_url(test_points_url)
-    concat_filenames += retrieve_filename_from_url(test_label_points_url)
+    concat_filenames = retrieve_filename(train_points_url)
+    concat_filenames += retrieve_filename(train_label_points_url)
+    concat_filenames += retrieve_filename(test_points_url)
+    concat_filenames += retrieve_filename(test_label_points_url)
     filename_hash = get_readable_hash(concat_filenames)
     info_str = f"_qnn_network_{network_enum.name}_optimizer_{optimizer.name}_epochs_{epochs}_{filename_hash}"
 

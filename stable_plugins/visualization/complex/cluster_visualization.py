@@ -14,7 +14,6 @@
 from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
-import re
 import muid
 
 import flask
@@ -40,6 +39,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     SecurityBlueprint,
     FileUrl,
+    retrieve_filename,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -251,30 +251,6 @@ def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
-def retrieve_filename_from_url(url) -> str:
-    """
-    Given an url to a file, it returns the name of the file
-    :param url: str
-    :return: str
-    """
-    response = open_url(url)
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-    response.close()
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
-
-
 @CELERY.task(name=f"{VIS.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     import pandas as pd
@@ -343,8 +319,8 @@ def calculation_task(self, db_id: int) -> str:
         df, x="x", y="y", hover_name="ID", color="cluster", symbol="cluster", size="size"
     )
 
-    concat_filenames = retrieve_filename_from_url(entity_points_url)
-    concat_filenames += retrieve_filename_from_url(clusters_url)
+    concat_filenames = retrieve_filename(entity_points_url)
+    concat_filenames += retrieve_filename(clusters_url)
     filenames_hash = get_readable_hash(concat_filenames)
 
     info_str = f"_cluster-vis_{filenames_hash}"

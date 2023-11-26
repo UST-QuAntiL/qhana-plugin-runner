@@ -31,40 +31,15 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.api.util import retrieve_filename
 
 import numpy as np
 
 from .backend.load_utils import get_indices_and_point_arr
 from .backend.visualize import plot_data
-from qhana_plugin_runner.requests import open_url
-import re
 
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def retrieve_filename_from_url(url) -> str:
-    """
-    Given an url to a file, it returns the name of the file
-    :param url: str
-    :return: str
-    """
-    response = open_url(url)
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-    response.close()
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
 
 
 @CELERY.task(name=f"{Optics.instance.identifier}.calculation_task", bind=True)
@@ -137,7 +112,7 @@ def calculation_task(self, db_id: int) -> str:
             title=f"OPTICS Clusters",
         )
 
-    file_name = retrieve_filename_from_url(entity_points_url)
+    file_name = retrieve_filename(entity_points_url)
     info_str = f"_optics_method_{method_enum.value}_algorithm_{algorithm_enum.get_algorithm()}_metric_{metric_enum.get_metric()}_from_{file_name}"
 
     # Output data

@@ -45,6 +45,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
     SecurityBlueprint,
     FileUrl,
+    retrieve_filename,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -249,30 +250,6 @@ def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
-def retrieve_filename_from_url(url) -> str:
-    """
-    Given an url to a file, it returns the name of the file
-    :param url: str
-    :return: str
-    """
-    response = open_url(url)
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-    response.close()
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
-
-
 def _get_sim(elem_sims: Dict, val1, val2) -> float:
     if (val1, val2) in elem_sims:
         return elem_sims[(val1, val2)]["similarity"]
@@ -404,8 +381,8 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
-    concat_filenames = retrieve_filename_from_url(entities_url)
-    concat_filenames += retrieve_filename_from_url(element_similarities_url)
+    concat_filenames = retrieve_filename(entities_url)
+    concat_filenames += retrieve_filename(element_similarities_url)
     filenames_hash = get_readable_hash(concat_filenames)
     info_str = f"_{filenames_hash}"
 

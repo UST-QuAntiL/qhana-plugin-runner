@@ -29,12 +29,12 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 )
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.api.util import retrieve_filename
 
 from .pca_output import pca_to_output, get_output_dimensionality
 
 import numpy as np
 from itertools import islice
-import re
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -132,30 +132,6 @@ def load_kernel_matrix(kernel_url: str) -> (dict, dict, List[List[float]]):
     return id_to_idx_X, id_to_idx_Y, kernel_matrix
 
 
-def retrieve_filename_from_url(url) -> str:
-    """
-    Given an url to a file, it returns the name of the file
-    :param url: str
-    :return: str
-    """
-    response = open_url(url)
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-    response.close()
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
-
-
 def get_pca(input_params: dict):
     """
     Returns the correct pca model, given by the frontend's input paramters.
@@ -168,7 +144,7 @@ def get_pca(input_params: dict):
     # Result can't have dim <= 0. If this is entered, set to None.
     # If set to None all PCA types will compute as many components as possible
     # Exception for normal PCA we set n_components to 'mle', which automatically will choose the number of dimensions.
-    entities_file_name = retrieve_filename_from_url(input_params["entity_points_url"])
+    entities_file_name = retrieve_filename(input_params["entity_points_url"])
 
     if pca_type == PCATypeEnum.normal:
         return (
@@ -205,7 +181,7 @@ def get_pca(input_params: dict):
             eigen_solver = "dense"
 
         if input_params["kernel"].value == "precomputed":
-            kernel_filename = retrieve_filename_from_url(input_params["kernel_url"])
+            kernel_filename = retrieve_filename(input_params["kernel_url"])
             kernel_file = f"_{kernel_filename}"
         else:
             kernel_file = ""

@@ -41,6 +41,7 @@ from qhana_plugin_runner.api.util import (
     MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
+    retrieve_filename,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -447,29 +448,6 @@ def prepare_stream_output(
         yield get_entity_dict(id, one_hot_encodings)
 
 
-def retrieve_filename_from_url_request(response, url) -> str:
-    """
-    Given an url response and the original url to a file, it returns the name of the file
-    :param response: Response
-    :param url: str
-    :return: str
-    """
-    fname = ""
-    if "Content-Disposition" in response.headers.keys():
-        fname = re.findall("filename=(.+)", response.headers["Content-Disposition"])[0]
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
-        fname = url.split("/")[-1]
-
-    # Remove file type endings
-    fname = fname.split(".")
-    fname = fname[:-1]
-    fname = ".".join(fname)
-
-    return fname
-
-
 @CELERY.task(name=f"{OneHot.instance.identifier}.calculation_task", bind=True)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
@@ -505,7 +483,7 @@ def calculation_task(self, db_id: int) -> str:
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
     opened_url = open_url(entities_url)
-    entities_name = retrieve_filename_from_url_request(opened_url, entities_url)
+    entities_name = retrieve_filename(opened_url)
     entities = opened_url.json()
     (
         taxonomies_ancestors_list,
