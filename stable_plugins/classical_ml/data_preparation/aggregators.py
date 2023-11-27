@@ -49,10 +49,8 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from qhana_plugin_runner.requests import open_url
-from qhana_plugin_runner.api.util import retrieve_filename
+from qhana_plugin_runner.requests import retrieve_filename
 
-import re
 
 _plugin_name = "distance-aggregator"
 __version__ = "v0.2.0"

@@ -30,7 +30,7 @@ from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.api.util import retrieve_filename
+from qhana_plugin_runner.requests import retrieve_filename
 
 from typing import List
 from torch import Tensor, tensor, float32, less_equal

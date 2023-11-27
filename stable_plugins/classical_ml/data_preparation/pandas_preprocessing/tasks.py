@@ -29,7 +29,7 @@ from .schemas import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.api.util import retrieve_filename
+from qhana_plugin_runner.requests import retrieve_filename
 
 from pandas import read_csv
 from .backend.checkbox_list import get_checkbox_list_dict

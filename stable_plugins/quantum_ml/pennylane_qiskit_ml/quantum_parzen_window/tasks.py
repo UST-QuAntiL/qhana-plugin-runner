@@ -31,9 +31,8 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.api.util import retrieve_filename
 
 import numpy as np
 from sklearn.metrics import accuracy_score

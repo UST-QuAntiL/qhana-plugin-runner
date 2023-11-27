@@ -29,7 +29,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.api.util import retrieve_filename
+from qhana_plugin_runner.requests import retrieve_filename
 from .backend.load_utils import (
     load_kernel_matrix,
     get_indices_and_point_arr,

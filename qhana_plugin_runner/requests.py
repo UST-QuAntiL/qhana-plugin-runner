@@ -16,7 +16,7 @@
 
 from contextlib import contextmanager
 from io import BytesIO
-from re import Pattern
+from re import Pattern, findall
 from typing import Iterator, Optional, Tuple
 
 from flask import Flask
@@ -24,6 +24,9 @@ from flask.globals import current_app
 from pyrfc6266 import requests_response_to_filename, secure_filename
 from requests import Session
 from requests.models import Response
+
+from pathlib import Path
+from urllib.parse import urlparse
 
 REQUEST_SESSION = Session()
 
@@ -91,3 +94,42 @@ def open_url_as_file_like(
         yield filename, response.raw, content_type
     finally:
         response.close()
+
+
+def _retrieve_filename(url: str, response: Response):
+    """
+    Given an url response and the original url to a file, it returns the name of the file
+    :param response: Response
+    :param url: str
+    :return: str
+    """
+    if "Content-Disposition" in response.headers.keys():
+        fname = findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
+            fname = fname[1:-1]
+    else:
+        fname = Path(urlparse(url).path).name
+    response.close()
+
+    # Remove file type endings
+    fname = Path(fname).stem
+
+    return fname
+
+
+def retrieve_filename(url_or_response: str | Response) -> str:
+    """
+    Given an url to a file or an url response, it returns the name of the file
+    :param url: str
+    :return: str
+    """
+    if isinstance(url_or_response, str):
+        url = url_or_response
+        with open_url(url) as response:
+            return _retrieve_filename(url, response)
+    elif isinstance(url_or_response, Response):
+        response = url_or_response
+        url = response.url
+        return _retrieve_filename(url, response)
+
+    raise ValueError("Expected input to be str or request.Response.")

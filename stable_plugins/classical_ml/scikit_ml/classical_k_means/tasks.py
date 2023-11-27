@@ -30,7 +30,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.api.util import retrieve_filename
+from qhana_plugin_runner.requests import retrieve_filename
 
 from .backend.load_utils import get_indices_and_point_arr
 from .backend.visualize import plot_data
