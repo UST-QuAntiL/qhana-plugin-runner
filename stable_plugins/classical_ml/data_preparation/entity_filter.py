@@ -45,7 +45,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
-    SecurityBlueprint
+    SecurityBlueprint,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
