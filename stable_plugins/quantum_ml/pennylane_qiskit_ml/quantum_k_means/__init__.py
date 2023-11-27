@@ -37,7 +37,8 @@ class QKMeans(QHAnaPluginBase):
     description = (
         "This plugin groups the data into different clusters, with the help of quantum algorithms.\n"
         "Currently there are four implemented algorithms. Destructive interference and negative rotation are from [0], "
-        "positive correlation is from [1] and state preparation is from a previous colleague.\n\n"
+        "positive correlation is from [1] and state preparation is from a previous colleague.\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format in either a csv or a json file.\n"
         "Source:\n"
         "[0] [S. Khan and A. Awan and G. Vall-Llosera. K-Means Clustering on Noisy Intermediate Scale Quantum Computers.arXiv.](https://doi.org/10.48550/ARXIV.1909.12183)\n"
         "[1] <https://towardsdatascience.com/quantum-machine-learning-distance-estimation-for-k-means-clustering-26bccfbfcc76>"
