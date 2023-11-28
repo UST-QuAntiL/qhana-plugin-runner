@@ -29,11 +29,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from flask.wrappers import Response
 from marshmallow import EXCLUDE
-from qiskit import QuantumCircuit
 from requests.exceptions import HTTPError
-import matplotlib
-
-matplotlib.use("Agg")
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -276,6 +272,8 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{QasmVisualization.instance.identifier}.generate_image", bind=True)
 def generate_image(self, url: str, hash: str) -> str:
+    from qiskit import QuantumCircuit
+
     TASK_LOGGER.info(f"Generating image for circuit {url}...")
     try:
         with open_url(url) as qasm_response:
