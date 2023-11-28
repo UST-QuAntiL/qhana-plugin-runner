@@ -15,6 +15,8 @@
             width: 100vw;
             height: 100vh;
             display: relative;
+            background-color: white;
+            color: black
         }
     </style>
     
@@ -38,6 +40,11 @@
     {{ super() }}
 
     <script>
+    const state = window._qhana_microfrontend_state;
+    if (state) {
+        state.targetHeight = "full";
+    }
+
     const editor = ace.edit("editor");
     editor.getSession().setMode("ace/mode/xml");
     editor.setTheme("ace/theme/textmate");
