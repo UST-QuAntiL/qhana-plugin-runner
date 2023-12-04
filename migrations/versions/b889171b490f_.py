@@ -17,12 +17,14 @@ depends_on = None
 
 
 def upgrade():
-    op.drop_column("DataBlob", "id")
-    op.add_column("DataBlob", sa.Column("key", sa.String(500), primary_key=True))
-    op.create_primary_key("pk_DataBlob", "DataBlob", ["plugin_id", "key"])
+    with op.batch_alter_table("DataBlob") as batch_op:
+        batch_op.drop_column("id")
+        batch_op.add_column(sa.Column("key", sa.String(500), primary_key=True))
+        batch_op.create_primary_key("pk_DataBlob", ["plugin_id", "key"])
 
 
 def downgrade():
-    op.drop_column("DataBlob", "key")
-    op.add_column("DataBlob", sa.Column("id", sa.Integer(), primary_key=True))
-    op.create_primary_key("pk_DataBlob", "DataBlob", ["plugin_id", "id"])
+    with op.batch_alter_table("DataBlob") as batch_op:
+        batch_op.drop_column("key")
+        batch_op.add_column(sa.Column("id", sa.Integer(), primary_key=True))
+        batch_op.create_primary_key("pk_DataBlob", ["plugin_id", "id"])
