@@ -126,13 +126,15 @@ def check_for_human_tasks(
 
         # Extract form variables from the rendered form. Cannot use camunda endpoint for form variables (broken)
         form_variables = camunda_client.get_human_task_form_variables(
-            human_task_id=human_task.id
+            human_task_id=human_task.id, form_key=human_task.form_key
         )
 
         assert isinstance(db_task.data, dict)
 
         db_task.add_task_log_entry(f"Found new human task '{human_task.id}'.")
         db_task.data["form_params"] = json.dumps(form_variables)
+        if human_task.form_key and human_task.form_key.startswith("embedded:"):
+            db_task.data["external_form_key"] = human_task.form_key
         db_task.data["human_task_id"] = human_task.id
         db_task.data["human_task_definition_key"] = human_task.task_definition_key
 

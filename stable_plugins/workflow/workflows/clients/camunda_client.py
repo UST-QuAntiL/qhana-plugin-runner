@@ -150,6 +150,16 @@ class CamundaManagementClient:
 
         return response.json()
 
+    def get_deployed_task_form(self, task_id: str):
+        response = requests.get(
+            url=f"{self.camunda_endpoint}/task/{task_id}/deployed-form",
+            timeout=self.timeout,
+        )
+
+        response.raise_for_status()
+
+        return response.text
+
 
 class CamundaClient:
     """
@@ -372,7 +382,20 @@ class CamundaClient:
         response.raise_for_status()
         return [HumanTask.deserialize(t) for t in response.json()]
 
-    def get_human_task_form_variables(self, human_task_id: str):
+    def get_human_task_status(self, human_task_id: str) -> Optional[str]:
+        response = requests.get(
+            f"{self.base_url}/task/{human_task_id}",
+            timeout=self.timeout,
+        )
+
+        if response.status_code != 200:
+            return "ERROR"
+
+        return response.json().get("delegationState")
+
+    def get_human_task_form_variables(
+        self, human_task_id: str, form_key: Optional[str] = None
+    ):
         response = requests.get(
             f"{self.base_url}/task/{human_task_id}/form-variables",
             timeout=self.timeout,
@@ -380,18 +403,24 @@ class CamundaClient:
         response.raise_for_status()
         instance_variables = response.json()
 
+        form_is_embedded = form_key and form_key.startswith("embedded:")
+
         try:
             rendered_form = self.get_human_task_rendered_form(human_task_id)
         except HTTPError as err:
-            if err.response.status_code == 404:
+            if err.response.status_code == 404 and not form_is_embedded:
                 return {}  # no form variables if no rendered form!
-            raise  # otherwise reraise
+            if not form_is_embedded:
+                raise  # otherwise reraise
 
-        # Extract form variables from the rendered form. Cannot use only camunda endpoint for form variables (broken)  # TODO link issue
-        matches: List[str] = re.findall(
-            r'<input[^\>]*cam-variable-name="(?P<name>[^"]*)"', rendered_form
-        )  # returns a list of strings matching the 'name' group only
-        form_variables = set(matches)
+        if not form_is_embedded:
+            # Extract form variables from the rendered form. Cannot use only camunda endpoint for form variables (broken)  # TODO link issue
+            matches: List[str] = re.findall(
+                r'<input[^\>]*cam-variable-name="(?P<name>[^"]*)"', rendered_form
+            )  # returns a list of strings matching the 'name' group only
+            form_variables = set(matches)
+        else:
+            form_variables = set()
 
         return {k: v for k, v in instance_variables.items() if k in form_variables}
 

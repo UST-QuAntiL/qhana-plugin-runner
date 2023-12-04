@@ -8,6 +8,12 @@
     <!-- viewer distro (with pan and zoom) -->
     <script src="https://unpkg.com/bpmn-js@9.0.3/dist/bpmn-navigated-viewer.development.js"></script>
 
+    {%- if external_form: -%}
+    <!-- load camunda sdk and jquery -->
+    <script src="https://unpkg.com/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/camunda/bower-camunda-bpm-sdk-js@master/camunda-bpm-sdk.min.js"></script>
+    {%- endif -%}
+
     <style>
         #canvas {
             height: 25rem;
@@ -23,7 +29,15 @@
 {% block content %}
     <div id="canvas"></div>
 
+    {%- if not external_form: -%}
     {{ super() }}
+    {%- else: -%}
+    {{external_form|safe}}
+    <hr />
+    <div class="qhana-form-buttons">
+        {{ forms.submit("complete task", action=process, method="post")}}
+    </div>
+    {%- endif -%}
 {% endblock content %}
 
 {% block script %}
@@ -37,22 +51,156 @@
         container: '#canvas'
     });
 
+    var workflow_xml = {{workflow_xml|tojson}};
+
     // import diagram
     try {
-        bpmnViewer.importXML({{workflow_xml|tojson}}).then(() => {
+        if (workflow_xml) {
+            bpmnViewer.importXML(workflow_xml).then(() => {
 
-            // access viewer components
-            var canvas = bpmnViewer.get('canvas');
+                // access viewer components
+                var canvas = bpmnViewer.get('canvas');
 
-            canvas.zoom('fit-viewport');
+                canvas.zoom('fit-viewport');
 
-            if (humanTaskId) {
-                canvas.addMarker(humanTaskId, 'highlight');
-            }
-        });
+                if (humanTaskId) {
+                    canvas.addMarker(humanTaskId, 'highlight');
+                }
+            });
+        }
+        // TODO: show error message to user for else case...
     } catch (err) {
         console.error('could not import BPMN 2.0 diagram', err);
     }
     </script>
+
+    {%- if external_form: -%}
+    <script>
+        var processUrl = {{process | tojson}};
+        var humanTaskId = {{active_task_id | tojson}};
+
+        var form = document.querySelector("form:not(.qhana-form)");
+
+        var camClient = new CamSDK.Client({
+            mock: false,
+            apiUri: {{camunda_url | tojson}}
+        });
+
+        let camundaFormInstance = null;
+
+        new CamSDK.Form({
+            client: camClient,
+
+            // the task ID
+            taskId: humanTaskId,
+
+            formElement: form,
+
+            done: function(err, camForm) {
+                // TODO: investigate how to handle form submit! (bind a button press to call camForm.submit())
+                camForm.on('submit-success', afterFormSubmit);
+                camundaFormInstance = camForm;
+                console.log(camForm)
+            }
+        });
+
+        document.querySelector("button.qhana-form-submit").addEventListener("click", (event) => {
+            event.preventDefault();
+            afterFormSubmit();
+        });
+
+        function getFormVariables() {
+            const formData = new FormData();
+            if (!camundaFormInstance) {
+                return formData;
+            }
+
+            // content from https://github.com/camunda/camunda-bpm-platform/blob/cb15a424bcceb920e1ea0b199c6759bc886cbbc4/webapps/frontend/camunda-bpm-sdk-js/lib/forms/camunda-form.js#L699
+
+            var varManager = camundaFormInstance.variableManager;
+            var vars = varManager.variables;
+
+            // The default display value is different from the original value in varManager
+            camundaFormInstance.fields.forEach(function(field) {
+                if (vars[field.variableName]) {
+                vars[field.variableName].defaultValue = field.originalValue;
+
+                if (
+                    field.originalValue === '' ||
+                    typeof field.originalValue === 'undefined'
+                ) {
+                    vars[field.variableName].defaultValue = vars[field.variableName].value;
+                }
+                }
+            });
+
+            for (var v in vars) {
+                // only submit dirty variables
+                // LIMITATION: dirty checking is not performed for complex object variables
+
+                var val = vars[v].value;
+
+                // We want implicit type conversion in this case, the defaultValue is always a string
+                if (varManager.isDirty(v) || vars[v].defaultValue != val) {
+                    // if variable is JSON, serialize
+                    if (varManager.isJsonVariable(v)) {
+                        val = JSON.stringify(val);
+                    }
+
+                    // if variable is Date, add timezone info
+                    if (val && varManager.isDateVariable(v)) {
+                        val = moment(val, moment.ISO_8601).format('YYYY-MM-DDTHH:mm:ss.SSSZZ');
+                    }
+
+                    formData.set(v, val);
+                }
+            }
+            return formData;
+        }
+
+        function afterFormSubmit() {
+            const formData = getFormVariables();
+            sendMessage("ui-loading");
+
+            submitFormData(formData, processUrl, "post")
+                .then(
+                    (response) => {
+                        if (response.status === 200) {
+                            sendMessage({
+                                type: "form-submit",
+                                formData: (new URLSearchParams(formData)).toString(),
+                                formDataType: "application/x-www-form-urlencoded",
+                                dataInputs: new Array(...inputDataUrls),
+                                submitUrl: submitUrl,
+                                resultUrl: response.url,
+                            });
+                        } else {
+                            response.json().then((jsonBody) => {
+                                sendMessage({
+                                    type: "form-error",
+                                    status: response.status,
+                                    error: jsonBody,
+                                }, (error) => {
+                                    sendMessage({
+                                        type: "form-error",
+                                        status: response.status,
+                                        error: "unknown error",
+                                    });
+                                });
+                            });
+                        }
+                    },
+                    (error) => {
+                        // notify in case of error
+                        sendMessage({
+                            type: "form-error",
+                            status: 500,
+                            error: "unknown error",
+                        });
+                    }
+                );
+        }
+    </script>
+    {%- endif -%}
 
 {% endblock script %}
