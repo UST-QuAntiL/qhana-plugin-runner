@@ -14,7 +14,6 @@
 import os
 
 from celery.utils.log import get_task_logger
-from langchain.chat_models import ChatOpenAI
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
@@ -22,16 +21,13 @@ from .prefill_tasks import unlock_connector
 
 from ..plugin import RESTConnector
 from .schemas import ConnectorKey
-from ..prompts import get_relevant_endpoints
+from ..prompts import (
+    get_relevant_endpoints_from_llm,
+    get_relevant_endpoints_from_vector_store,
+    get_chat_model,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
-
-if "OPENAI_API_KEY" in os.environ:
-    chat_ai: ChatOpenAI | None = ChatOpenAI(openai_api_key=os.environ["OPENAI_API_KEY"])
-    TASK_LOGGER.info("using the supplied OPENAI_API_KEY")
-else:
-    chat_ai: ChatOpenAI | None = None
-    TASK_LOGGER.warning("OPENAI_API_KEY not set")
 
 
 @CELERY.task(name=f"{RESTConnector.instance.identifier}.ai_assistance")
@@ -58,14 +54,14 @@ def ai_assistance(connector_id: str, last_step: str, user_request: str):
     changed = False
 
     if last_step == ConnectorKey.ENDPOINT_URL.value:
-        if chat_ai is None:
-            raise ConnectionError(
-                "Can't connect to OpenAI because OPENAI_API_KEY was not set"
-            )
-
-        relevant_endpoints = get_relevant_endpoints(
-            chat_ai, connector["openapi_spec_url"], user_request
+        chat_ai = get_chat_model()
+        relevant_endpoints = get_relevant_endpoints_from_vector_store(
+            connector["openapi_spec_url"], user_request
         )
+        relevant_endpoints = get_relevant_endpoints_from_llm(
+            chat_ai, relevant_endpoints, user_request
+        )
+
         TASK_LOGGER.info(f"found these relevant endpoints: {relevant_endpoints}")
 
         if len(relevant_endpoints) > 0:
