@@ -60,9 +60,7 @@ def add_deployed_info(
             [VirtualPlugin.href == plugin_url]
         )
         return
-    plugins = VirtualPlugin.get_all(
-        for_parents=[WorkflowManagement.instance.identifier]
-    )
+    plugins = VirtualPlugin.get_all(for_parents=[WorkflowManagement.instance.identifier])
     urls = {p.href for p in plugins}
     for proc_def in process_definition:
         plugin_url = url_for(
@@ -90,9 +88,7 @@ class WfManagementView(MethodView):
             version=WorkflowManagement.instance.version,
             type=PluginType.interaction,
             entry_point=EntryPoint(
-                href=url_for(
-                    f"{WORKFLOW_MGMNT_BLP.name}.WorkflowsView", _external=True
-                ),
+                href=url_for(f"{WORKFLOW_MGMNT_BLP.name}.WorkflowsView", _external=True),
                 ui_href=url_for(
                     f"{WORKFLOW_MGMNT_BLP.name}.MicroFrontend", _external=True
                 ),
@@ -281,9 +277,7 @@ class WorkflowBPMNView(MethodView):
             if isinstance(err, HTTPError) and err.response.status_code == 404:
                 abort(404, message="Process definition does not exist.")
             abort(500, message="Could not reach camunda to verify process instance id.")
-        return Response(
-            process_xml, status=HTTPStatus.OK, content_type="application/xml"
-        )
+        return Response(process_xml, status=HTTPStatus.OK, content_type="application/xml")
 
 
 @WORKFLOW_MGMNT_BLP.route("/workflows/<string:process_definition_id>/plugin/")
@@ -407,9 +401,7 @@ class VirtualPluginUi(MethodView):
 
         form_params = cast(
             dict,
-            PluginState.get_value(
-                WorkflowManagement.instance.identifier, plugin_url, {}
-            ),
+            PluginState.get_value(WorkflowManagement.instance.identifier, plugin_url, {}),
         )
 
         for key, val in form_params.items():
@@ -454,9 +446,7 @@ class VirtualPluginProcess(MethodView):
 
         form_params = cast(
             dict,
-            PluginState.get_value(
-                WorkflowManagement.instance.identifier, plugin_url, {}
-            ),
+            PluginState.get_value(WorkflowManagement.instance.identifier, plugin_url, {}),
         )
 
         mapped_args = {
@@ -471,9 +461,7 @@ class VirtualPluginProcess(MethodView):
     def post(self, arguments: Mapping, process_definition_id: str):
         db_task = ProcessingTask(
             task_name=start_workflow_with_arguments.name,
-            parameters=json.dumps(
-                self._map_variables(process_definition_id, arguments)
-            ),
+            parameters=json.dumps(self._map_variables(process_definition_id, arguments)),
         )
         db_task.save(commit=False)
         DB.session.flush()  # flsuh to DB to get db_task id populated
