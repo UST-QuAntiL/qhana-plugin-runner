@@ -115,6 +115,8 @@
                 return formData;
             }
 
+            camundaFormInstance.retrieveVariables();
+
             // content from https://github.com/camunda/camunda-bpm-platform/blob/cb15a424bcceb920e1ea0b199c6759bc886cbbc4/webapps/frontend/camunda-bpm-sdk-js/lib/forms/camunda-form.js#L699
 
             var varManager = camundaFormInstance.variableManager;
@@ -170,8 +172,8 @@
                                 type: "form-submit",
                                 formData: (new URLSearchParams(formData)).toString(),
                                 formDataType: "application/x-www-form-urlencoded",
-                                dataInputs: new Array(...inputDataUrls),
-                                submitUrl: submitUrl,
+                                dataInputs: [],  // TODO
+                                submitUrl: processUrl,
                                 resultUrl: response.url,
                             });
                         } else {
