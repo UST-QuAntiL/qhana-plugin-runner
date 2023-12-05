@@ -32,6 +32,14 @@ def persist_workflow_output(
         process_instance_id
     )
 
+    has_return_variables = bool(return_variables)
+
+    if not has_return_variables:
+        # if no return variable is specified, then try to retrun all variables
+        return_variables = camunda_client.get_all_historic_process_instance_variables(
+            process_instance_id
+        )
+
     data_output_keys = {"name", "contentType", "dataType", "href"}
     data_outputs = []
 
@@ -184,6 +192,9 @@ def workflow_status_watcher(self, db_id: int) -> None:
             raise WorkflowStoppedError(
                 "Workflow process instance was stopped unexpectedly."
             )
+        TASK_LOGGER.info(
+            f"Workflow finished, persisting task result. (Process instance id: {process_instance_id})"
+        )
         persist_workflow_output(db_task, camunda_client, process_instance_id)
 
         self.replace(

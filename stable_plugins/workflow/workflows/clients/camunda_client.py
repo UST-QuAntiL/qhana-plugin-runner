@@ -499,6 +499,18 @@ class CamundaClient:
             name: val for name, prefixes, val in variables if return_prefix in prefixes
         }
 
+    def get_all_historic_process_instance_variables(self, process_instance_id: str):
+        response = requests.get(
+            f"{self.base_url}/history/variable-instance",
+            params={
+                "processInstanceId": process_instance_id,
+            },
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+        return {var["name"]: var for var in response.json()}
+
     def get_task_execution_id(self, task_id: str):
         """
         Gets the execution id of an external task
