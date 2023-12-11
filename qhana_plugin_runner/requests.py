@@ -105,15 +105,13 @@ def _retrieve_filename(url: str, response: Response):
     :param url: str
     :return: str
     """
+    fname = None
     if "Content-Disposition" in response.headers.keys():
-        fname = ""
         for content_disp in parse_options_header(response.headers["Content-Disposition"]):
             if isinstance(content_disp, dict) and "filename" in content_disp:
                 fname = content_disp["filename"]
                 break
-        if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
-            fname = fname[1:-1]
-    else:
+    if not fname:
         fname = Path(urlparse(url).path).name
     response.close()
 
