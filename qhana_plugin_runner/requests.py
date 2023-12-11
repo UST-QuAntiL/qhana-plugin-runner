@@ -136,4 +136,4 @@ def retrieve_filename(url_or_response: str | Response) -> str:
         url = response.url
         return _retrieve_filename(url, response)
 
-    raise ValueError("Expected input to be str or request.Response.")
+    raise TypeError("Expected input to be str or request.Response.")
