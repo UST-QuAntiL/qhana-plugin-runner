@@ -124,7 +124,7 @@ def _retrieve_filename(response: Response):
 def retrieve_filename(url_or_response: str | Response) -> str:
     """
     Given an url to a file or an url response, it returns the name of the file
-    :param url: str
+    :param url_or_response: str | Response
     :return: str
     """
     if isinstance(url_or_response, str):  # url_or_response is an url
