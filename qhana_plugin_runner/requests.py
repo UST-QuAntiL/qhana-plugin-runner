@@ -98,13 +98,13 @@ def open_url_as_file_like(
         response.close()
 
 
-def _retrieve_filename(url: str, response: Response):
+def _retrieve_filename(response: Response):
     """
-    Given an url response and the original url to a file, it returns the name of the file
+    Given an url response it returns the name of the file
     :param response: Response
-    :param url: str
     :return: str
     """
+    url = response.url
     fname = None
     if "Content-Disposition" in response.headers.keys():
         for content_disp in parse_options_header(response.headers["Content-Disposition"]):
@@ -127,13 +127,10 @@ def retrieve_filename(url_or_response: str | Response) -> str:
     :param url: str
     :return: str
     """
-    if isinstance(url_or_response, str):
-        url = url_or_response
-        with open_url(url, stream=True) as response:
-            return _retrieve_filename(url, response)
-    elif isinstance(url_or_response, Response):
-        response = url_or_response
-        url = response.url
-        return _retrieve_filename(url, response)
+    if isinstance(url_or_response, str):  # url_or_response is an url
+        with open_url(url_or_response, stream=True) as response:
+            return _retrieve_filename(response)
+    elif isinstance(url_or_response, Response):  # url_or_response is a response
+        return _retrieve_filename(url_or_response)
 
     raise TypeError("Expected input to be str or request.Response.")
