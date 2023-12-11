@@ -28,6 +28,8 @@ from requests.models import Response
 from pathlib import Path
 from urllib.parse import urlparse
 
+from werkzeug.http import parse_options_header
+
 REQUEST_SESSION = Session()
 
 
@@ -104,7 +106,11 @@ def _retrieve_filename(url: str, response: Response):
     :return: str
     """
     if "Content-Disposition" in response.headers.keys():
-        fname = findall("filename=(.+)", response.headers["Content-Disposition"])[0]
+        fname = ""
+        for content_disp in parse_options_header(response.headers["Content-Disposition"]):
+            if isinstance(content_disp, dict) and "filename" in content_disp:
+                fname = content_disp["filename"]
+                break
         if fname[0] == fname[-1] and fname[0] in {'"', "'"}:
             fname = fname[1:-1]
     else:
@@ -125,7 +131,7 @@ def retrieve_filename(url_or_response: str | Response) -> str:
     """
     if isinstance(url_or_response, str):
         url = url_or_response
-        with open_url(url) as response:
+        with open_url(url, stream=True) as response:
             return _retrieve_filename(url, response)
     elif isinstance(url_or_response, Response):
         response = url_or_response
