@@ -27,7 +27,7 @@ HA_BLP = SecurityBlueprint(
     _identifier,
     __name__,
     description="Hybrid Autoencoder plugin API.",
-    template_folder="hybrid_ae_templates",
+    template_folder="templates",
 )
 
 

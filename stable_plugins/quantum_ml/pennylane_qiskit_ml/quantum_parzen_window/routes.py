@@ -187,7 +187,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "template.html",
+                "quantum_parzen_window_template.html",
                 name=QParzenWindow.instance.name,
                 version=QParzenWindow.instance.version,
                 schema=InputParametersSchema(),

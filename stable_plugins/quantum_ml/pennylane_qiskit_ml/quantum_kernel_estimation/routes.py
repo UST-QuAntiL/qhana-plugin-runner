@@ -151,7 +151,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "quantum_kernel_estimation_template.html",
                 name=QKE.instance.name,
                 version=QKE.instance.version,
                 schema=InputParametersSchema(),

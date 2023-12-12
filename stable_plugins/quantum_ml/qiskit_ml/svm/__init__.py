@@ -29,6 +29,7 @@ SVM_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="SVM plugin API",
+    template_folder="templates",
 )
 
 sklearn_version = "1.1"
