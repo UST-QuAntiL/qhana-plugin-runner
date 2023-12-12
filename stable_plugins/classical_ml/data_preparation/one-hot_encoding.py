@@ -38,7 +38,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
-    MaBaseSchema,
     SecurityBlueprint,
     FileUrl,
 )
@@ -47,7 +46,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -480,7 +479,9 @@ def calculation_task(self, db_id: int) -> str:
     # load taxonomies
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
-    entities = open_url(entities_url).json()
+    opened_url = open_url(entities_url)
+    entities_name = retrieve_filename(opened_url)
+    entities = opened_url.json()
     (
         taxonomies_ancestors_list,
         attr_to_idx_dict_list,
@@ -498,7 +499,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "one-hot-encoded_points.csv",
+            f"one-hot-encoded_points_from_{entities_name}.csv",
             "entity/vector",
             "text/csv",
         )

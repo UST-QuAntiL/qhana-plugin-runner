@@ -36,6 +36,7 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
+from qhana_plugin_runner.requests import retrieve_filename
 
 import numpy as np
 
@@ -57,8 +58,14 @@ from .backend.datasets import OneHotDataset
 from .backend.train_and_test import train
 from .backend.visualize import plot_data, plot_confusion_matrix
 
+import muid
+
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
@@ -229,13 +236,21 @@ def calculation_task(self, db_id: int) -> str:
         # Create confusion matrix plot
         conf_matrix = plot_confusion_matrix(test_labels, predictions, int_to_label)
 
+    # Retrieve a has from the names of the input files
+    concat_filenames = retrieve_filename(train_points_url)
+    concat_filenames += retrieve_filename(train_label_points_url)
+    concat_filenames += retrieve_filename(test_points_url)
+    concat_filenames += retrieve_filename(test_label_points_url)
+    filename_hash = get_readable_hash(concat_filenames)
+    info_str = f"_qnn_network_{network_enum.name}_optimizer_{optimizer.name}_epochs_{epochs}_{filename_hash}"
+
     # Output the data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -263,7 +278,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "classification_plot.html",
+                f"classification_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -276,7 +291,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "confusion_matrix.html",
+                f"confusion_matrix{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -294,7 +309,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "qnn-weights.json",
+            f"qnn-weights{info_str}.json",
             "qnn-weights",
             "application/json",
         )
@@ -307,7 +322,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "representative-circuit.qasm",
+                f"representative-circuit{info_str}.qasm",
                 "representative-circuit",
                 "application/qasm",
             )

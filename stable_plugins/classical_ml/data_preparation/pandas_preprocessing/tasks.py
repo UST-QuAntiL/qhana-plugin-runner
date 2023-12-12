@@ -29,6 +29,7 @@ from .schemas import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import retrieve_filename
 
 from pandas import read_csv
 from .backend.checkbox_list import get_checkbox_list_dict
@@ -79,11 +80,13 @@ def first_task(self, db_id: int) -> str:
         task_file = STORE.persist_task_result(
             db_id,
             output,
-            "file.csv",
+            "original_file.csv",
             "entity",  # TODO keep original data type
             "text/csv",
         )
-        task_data.data["file_url"] = task_file.file_storage_data
+        task_data.data["original_file_name"] = retrieve_filename(file_url)
+        task_data.data["info_str"] = ""
+        task_data.data["file_url"] = "file://" + task_file.file_storage_data
         table_html = get_table_html(df)
         task_data.data["pandas_html"] = table_html
         task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
@@ -133,14 +136,15 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
         file_id = step_id
         with SpooledTemporaryFile(mode="w") as output:
             df.to_csv(output, index=False)
+            task_data.data["info_str"] += f"{str(preprocessing_enum.name)}_"
             task_file = STORE.persist_task_result(
                 db_id,
                 output,
-                f"preprocessed_file{file_id}.csv",
+                f"pd_preprocessed_{task_data.data['info_str']}from_{task_data.data['original_file_name']}.csv",
                 "entity",  # TODO keep original data type
                 "text/csv",
             )
-            task_data.data["file_url"] = task_file.file_storage_data
+            task_data.data["file_url"] = "file://" + task_file.file_storage_data
             task_data.data["pandas_html"] = get_table_html(df)
             task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
                 {

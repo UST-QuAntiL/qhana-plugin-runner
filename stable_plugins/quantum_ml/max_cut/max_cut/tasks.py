@@ -31,6 +31,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import retrieve_filename
 
 import numpy as np
 
@@ -110,13 +111,18 @@ def calculation_task(self, db_id: int) -> str:
             title=f"MaxCut Clusters",
         )
 
+    filename = retrieve_filename(adjacency_matrix_url)
+    total_num_clusters = 2**num_clusters
+
+    info_str = f"_max-cut_solver_{max_cut_enum.name}_clusters_{total_num_clusters}_from_{filename}"
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -129,7 +135,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "cluster_plot.html",
+                f"cluster_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
