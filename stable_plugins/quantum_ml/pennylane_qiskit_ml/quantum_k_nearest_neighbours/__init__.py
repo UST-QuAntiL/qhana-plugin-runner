@@ -28,7 +28,7 @@ QKNN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum k nearest neighbours plugin API.",
-    template_folder="",
+    template_folder="templates",
 )
 
 
@@ -52,7 +52,7 @@ class QKNN(QHAnaPluginBase):
         return QKNN_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1"
+        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\nmuid~=0.5.3"
 
 
 try:

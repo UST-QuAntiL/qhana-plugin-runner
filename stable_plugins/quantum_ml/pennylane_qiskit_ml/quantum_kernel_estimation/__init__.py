@@ -28,6 +28,7 @@ QKE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum-Kernel-Estimation plugin API",
+    template_folder="templates",
 )
 
 
@@ -51,7 +52,7 @@ class QKE(QHAnaPluginBase):
         return QKE_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30"
+        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nmuid~=0.5.3"
 
 
 try:

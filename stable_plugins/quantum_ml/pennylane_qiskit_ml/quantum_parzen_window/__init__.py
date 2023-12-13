@@ -28,7 +28,7 @@ QParzenWindow_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum parzen window plugin API.",
-    template_folder="",
+    template_folder="templates",
 )
 
 
@@ -51,7 +51,7 @@ class QParzenWindow(QHAnaPluginBase):
         return QParzenWindow_BLP
 
     def get_requirements(self) -> str:
-        return "pennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1"
+        return "pennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\nmuid~=0.5.3"
 
 
 try:

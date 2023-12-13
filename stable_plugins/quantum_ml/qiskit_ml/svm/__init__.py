@@ -29,6 +29,7 @@ SVM_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="SVM plugin API",
+    template_folder="templates",
 )
 
 sklearn_version = "1.1"
@@ -59,7 +60,7 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~=0.43\nqiskit-machine-learning~=0.4.0\nscikit-learn~={sklearn_version}\nplotly~=5.18.0\npandas~=1.5.0"
+        return f"qiskit~=0.43\nqiskit-machine-learning~=0.4.0\nscikit-learn~={sklearn_version}\nplotly~=5.18.0\npandas~=1.5.0\nmuid~=0.5.3"
 
 
 try:

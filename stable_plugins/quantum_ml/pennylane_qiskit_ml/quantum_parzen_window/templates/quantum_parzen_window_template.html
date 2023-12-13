@@ -1,9 +1,5 @@
 {% extends "simple_template.html" %}
 
-{% block head %}
-    {{ super() }}
-{% endblock head %}
-
 {% block script %}
     <script>
         // If a variable ends with _value, it's the element itself and the value can be retrieved or set
@@ -30,5 +26,5 @@
 
         backend_value.addEventListener("change", backend_change);
     </script>
-    {{ super() }}
+{{ super() }}
 {% endblock script %}

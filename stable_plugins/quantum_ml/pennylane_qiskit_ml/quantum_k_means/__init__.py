@@ -28,6 +28,7 @@ QKMEANS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum k-means plugin API.",
+    template_folder="templates",
 )
 
 

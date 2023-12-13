@@ -14,6 +14,7 @@
 from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
+import muid
 
 import flask
 from celery.canvas import chain
@@ -41,7 +42,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -239,10 +240,14 @@ class VIS(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "plotly~=5.18.0\npandas~=1.5.0"
+        return "plotly~=5.18.0\npandas~=1.5.0\nmuid~=0.5.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(name=f"{VIS.instance.identifier}.calculation_task", bind=True)
@@ -313,6 +318,12 @@ def calculation_task(self, db_id: int) -> str:
         df, x="x", y="y", hover_name="ID", color="cluster", symbol="cluster", size="size"
     )
 
+    concat_filenames = retrieve_filename(entity_points_url)
+    concat_filenames += retrieve_filename(clusters_url)
+    filenames_hash = get_readable_hash(concat_filenames)
+
+    info_str = f"_cluster-vis_{filenames_hash}"
+
     with SpooledTemporaryFile(mode="wt") as output:
         html = fig.to_html()
         output.write(html)
@@ -320,7 +331,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "plot.html",
+            f"plot{info_str}.html",
             "plot",
             "text/html",
         )

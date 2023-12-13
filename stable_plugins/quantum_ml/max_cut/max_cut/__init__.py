@@ -29,6 +29,7 @@ MaxCut_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Max Cut plugin API",
+    template_folder="templates",
 )
 
 
