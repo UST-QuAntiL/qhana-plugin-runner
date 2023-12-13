@@ -83,7 +83,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Training Data URL",
-            "description": "URL to a json file containing the training images.",
+            "description": "URL to a json file containing the training images. The shape needs to be: (width, height, channels) e.g. for a 5x3 gray-scale image the shape would be (5, 3, 1).",
             "input_type": "text",
         },
     )
@@ -105,7 +105,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Test Data URL",
-            "description": "URL to a json file containing the test images. These images will be labeled.",
+            "description": "URL to a json file containing the test images. These images will be labeled. The shape needs to be: (width, height, channels) e.g. for a 5x3 gray-scale image the shape would be (5, 3, 1).",
             "input_type": "text",
         },
     )
