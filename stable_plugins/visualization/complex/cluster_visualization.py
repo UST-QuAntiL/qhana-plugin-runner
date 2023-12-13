@@ -239,7 +239,7 @@ class VIS(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "plotly~=5.6.0\npandas~=1.5.0"
+        return "plotly~=5.18.0\npandas~=1.5.0"
 
 
 TASK_LOGGER = get_task_logger(__name__)
