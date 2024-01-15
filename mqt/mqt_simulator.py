@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2023 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import mimetypes
+import time
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
@@ -57,7 +58,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "mqt-simulator"
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -101,6 +102,15 @@ class MqtSimulatorParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "The number of shots to simulate. If execution options are specified they will override this setting!",
             "input_type": "number",
+        },
+    )
+    statevector = ma.fields.Bool(
+        required=False,
+        allow_none=True,
+        load_default=False,
+        metadata={
+            "label": "Include Statevector",
+            "description": "Include a statevector result.",
         },
     )
 
@@ -291,7 +301,7 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from qiskit import QuantumCircuit, execute
-    import time
+
     from mqt import ddsim
 
     startime_qasm = 0
@@ -316,12 +326,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         endtime_qasm = time.perf_counter_ns()
         counts = result_qasm.get_counts(circuit)
 
-    # statevector simulation with time
-    startime_state = time.perf_counter_ns()
-    result_state = execute(
-        circuit, backend_state
-    ).result()  # statevector simulation without shots
-    endtime_state = time.perf_counter_ns()
+    state_vector: Optional[Any] = None
+
+    if execution_options.get("statevector"):
+        # statevector simulation
+        result_state = execute(
+            circuit, backend_state
+        ).result()  # statevector simulation without shots
+        state_vector = result_state.get_statevector(circuit)
 
     metadata = {
         "jobId": None,
@@ -335,13 +347,8 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         # Time information
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenCounts_nanosecond": endtime_qasm - startime_qasm,
-        "timeTakenState_nanosecond": endtime_state - startime_state,
         "timeTakenIdle": 0,  # idle/waiting time
     }
-
-    state_vector: Optional[Any] = None
-
-    state_vector = result_state.get_statevector(circuit)
 
     return metadata, counts, state_vector
 
@@ -368,6 +375,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
+        "statevector": bool(task_options.get("statevector")),
     }
 
     if execution_options_url:
@@ -391,6 +399,16 @@ def execute_circuit(self, db_id: int) -> str:
 
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
+    if isinstance(execution_options["statevector"], str):
+        execution_options["statevector"] = execution_options["ststevector"] in (
+            "1",
+            "yes",
+            "Yes",
+            "YES",
+            "true",
+            "True",
+            "TRUE",
+        )
 
     metadata, counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
 
@@ -410,7 +428,7 @@ def execute_circuit(self, db_id: int) -> str:
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
 
-    if state_vector.any():
+    if state_vector is not None and state_vector.any():
         state_vector_ent = {"ID": experiment_id}
         dim = len(state_vector)
         key_len = len(str(dim))
