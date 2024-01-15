@@ -57,7 +57,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qiskit-simulator"
-__version__ = "v0.3.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -101,6 +101,15 @@ class QiskitSimulatorParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "The number of shots to simulate. If execution options are specified they will override this setting!",
             "input_type": "number",
+        },
+    )
+    statevector = ma.fields.Bool(
+        required=False,
+        allow_none=True,
+        load_default=False,
+        metadata={
+            "label": "Include Statevector",
+            "description": "Include a statevector result.",
         },
     )
 
@@ -293,26 +302,26 @@ TASK_LOGGER = get_task_logger(__name__)
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from qiskit import QiskitError, QuantumCircuit, execute, Aer
     from qiskit.result.result import ExperimentResult, Result
-    from qiskit_aer import StatevectorSimulator
-    import time
 
-    # backend = StatevectorSimulator()  # TODO noise model?
     backend_counts = Aer.get_backend("qasm_simulator")
     backend_statevector = Aer.get_backend("statevector_simulator")
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
 
-    # execution time for the count simulation in ns
-    startime_counts = time.perf_counter_ns()
     result_count: Result = execute(
         circuit, backend_counts, shots=execution_options["shots"]
     ).result()
-    endtime_counts = time.perf_counter_ns()
-
-    result_state: Result = execute(circuit, backend_statevector).result()
 
     if not result_count.success:
         # TODO better error
         raise ValueError("Circuit could not be simulated!", result_count)
+
+    if execution_options.get("statevector"):
+        # only execute if statevector result was requested in the first place
+        result_state: Optional[Result] = execute(circuit, backend_statevector).result()
+        if result_state and not result_state.success:
+            result_state = None
+    else:
+        result_state = None
 
     experiment_result: ExperimentResult = result_count.results[0]
     extra_metadata = result_count.metadata
@@ -341,7 +350,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         # Time information
         "date": result_count.date,
         "timeTaken": time_taken,  # total job time
-        "timeTaken_Counts_nanosecond": endtime_counts - startime_counts,
         "timeTakenIdle": 0,  # idle/waiting time
         "timeTakenQpu": time_taken,  # total qpu time
         "timeTakenQpuPrepare": time_taken - time_taken_execute,
@@ -356,7 +364,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     state_vector: Optional[Any] = None
     try:
-        state_vector = result_state.get_statevector()
+        state_vector = result_state.get_statevector() if result_state else None
     except QiskitError:
         pass
 
@@ -385,6 +393,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
+        "statevector": bool(task_options.get("statevector")),
     }
 
     if execution_options_url:
@@ -408,6 +417,16 @@ def execute_circuit(self, db_id: int) -> str:
 
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
+    if isinstance(execution_options["statevector"], str):
+        execution_options["statevector"] = execution_options["ststevector"] in (
+            "1",
+            "yes",
+            "Yes",
+            "YES",
+            "true",
+            "True",
+            "TRUE",
+        )
 
     metadata, counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
 
