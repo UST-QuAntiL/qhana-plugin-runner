@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2023 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import mimetypes
+import time
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
@@ -57,7 +58,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "pytket_qulacsBackend-simulator"
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -101,6 +102,15 @@ class Pytket_qulacsBackendSimulatorParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "The number of shots to simulate. If execution options are specified they will override this setting!",
             "input_type": "number",
+        },
+    )
+    statevector = ma.fields.Bool(
+        required=False,
+        allow_none=True,
+        load_default=False,
+        metadata={
+            "label": "Include Statevector",
+            "description": "Include a statevector result.",
         },
     )
 
@@ -294,7 +304,6 @@ TASK_LOGGER = get_task_logger(__name__)
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from pytket.extensions.qulacs import QulacsBackend
     from pytket.qasm import circuit_from_qasm_str
-    import time
 
     startime = time.time()
     # Convert circuit from qasm code
@@ -310,10 +319,12 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     )  # count simulation with time
     counts = backend.get_result(handle).get_counts()
     endtime_counts = time.perf_counter_ns()
-    # statevector simulation with time
-    startime_state = time.perf_counter_ns()
-    statevector = backend.get_result(handle).get_state()
-    endtime_state = time.perf_counter_ns()
+
+    if execution_options.get("statevector"):
+        # only execute if statevector result was requested in the first place
+        statevector = backend.get_result(handle).get_state()
+    else:
+        statevector = None
 
     endtime = time.time()
 
@@ -330,7 +341,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenQpu": simulation_time,
         "timeTaken_Counts_nanosecond": endtime_counts - startime_counts,
-        "timeTaken_Statevector_nanosecond": endtime_state - startime_state,
     }
 
     return metadata, dict(counts), statevector
@@ -360,6 +370,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
+        "statevector": bool(task_options.get("statevector")),
     }
 
     if execution_options_url:
@@ -383,6 +394,16 @@ def execute_circuit(self, db_id: int) -> str:
 
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
+    if isinstance(execution_options["statevector"], str):
+        execution_options["statevector"] = execution_options["ststevector"] in (
+            "1",
+            "yes",
+            "Yes",
+            "YES",
+            "true",
+            "True",
+            "TRUE",
+        )
 
     metadata, counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
 
@@ -395,7 +416,8 @@ def execute_circuit(self, db_id: int) -> str:
             db_id, output, "result-trace.json", "provenance/trace", "application/json"
         )
 
-    counts_str_keys = {str(key): int(value) for key, value in counts.items()}
+    # FIXME check if bit order is consistent withother simulators!!!
+    counts_str_keys = {"".join(str(b) for b in key): int(value) for key, value in counts.items()}
 
     with SpooledTemporaryFile(mode="w") as output:
         counts_str_keys["ID"] = experiment_id
@@ -404,7 +426,7 @@ def execute_circuit(self, db_id: int) -> str:
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
 
-    if state_vector.any():
+    if state_vector is not None and state_vector.any():
         state_vector_ent = {"ID": experiment_id}
         dim = len(state_vector)
         key_len = len(str(dim))
