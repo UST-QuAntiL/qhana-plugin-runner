@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2023 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import mimetypes
+import re
+import time
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
@@ -57,7 +59,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "pennylane-simulator"
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -101,6 +103,15 @@ class PennylaneSimulatorParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "The number of shots to simulate. If execution options are specified they will override this setting!",
             "input_type": "number",
+        },
+    )
+    statevector = ma.fields.Bool(
+        required=False,
+        allow_none=True,
+        load_default=False,
+        metadata={
+            "label": "Include Statevector",
+            "description": "Include a statevector result.",
         },
     )
 
@@ -291,8 +302,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def find_total_qubits(qasm_code):
-    import re
-
     # regex to find total number of qubits
     cleancomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
 
@@ -305,8 +314,6 @@ def find_total_qubits(qasm_code):
 
 # regex to find total number of classicalbits
 def find_total_classicalbits(qasm_code):
-    import re
-
     cleaned_qasm = re.sub(r"//.*\n?", "", qasm_code)
     matches = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)\];", cleaned_qasm)
     return sum(map(int, matches))
@@ -314,7 +321,6 @@ def find_total_classicalbits(qasm_code):
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     import pennylane as qml
-    import time
 
     # Define the number of qubits and classicalbits from the qasm code
     num_wires = find_total_qubits(circuit_qasm)
@@ -336,15 +342,17 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     result_counts = circuit()
     endtime_counts = time.perf_counter_ns()
 
-    # Define a quantum node for statevector results
-    @qml.qnode(circ_statevector)
-    def state_vector_circuit():
-        penny_circuit(wires=range(num_wires))
-        return qml.state()
+    if execution_options.get("statevector"):
+        # only execute if statevector result was requested in the first place
+        # Define a quantum node for statevector results
+        @qml.qnode(circ_statevector)
+        def state_vector_circuit():
+            penny_circuit(wires=range(num_wires))
+            return qml.state()
 
-    startime_state = time.perf_counter_ns()
-    result_state = state_vector_circuit()
-    endtime_state = time.perf_counter_ns()
+        result_state = state_vector_circuit()
+    else:
+        result_state = None
 
     metadata = {
         "qpuType": "simulator",
@@ -352,7 +360,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "shots": execution_options["shots"],
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenCounts_nanosecond": endtime_counts - startime_counts,
-        "timeTakenCounts_nanosecond": endtime_state - startime_state,
     }
 
     shots = execution_options["shots"]
@@ -367,8 +374,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
 @CELERY.task(name=f"{PennylaneSimulator.instance.identifier}.demo_task", bind=True)
 def execute_circuit(self, db_id: int) -> str:
-    import numpy as np
-
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -389,6 +394,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
+        "statevector": bool(task_options.get("statevector")),
     }
 
     if execution_options_url:
@@ -412,6 +418,16 @@ def execute_circuit(self, db_id: int) -> str:
 
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
+    if isinstance(execution_options["statevector"], str):
+        execution_options["statevector"] = execution_options["ststevector"] in (
+            "1",
+            "yes",
+            "Yes",
+            "YES",
+            "true",
+            "True",
+            "TRUE",
+        )
 
     metadata, counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
 
@@ -424,12 +440,12 @@ def execute_circuit(self, db_id: int) -> str:
             db_id, output, "result-trace.json", "provenance/trace", "application/json"
         )
 
-    if counts is not None and counts:
-        counts_t_strg = {key: str(value) for key, value in counts.items()}
-        counts_result = {"ID": experiment_id, "counts": counts_t_strg}
+    if counts:
+        counts_ent = {key: int(value) for key, value in counts.items()}
+        counts_ent["ID"] = experiment_id
 
         with SpooledTemporaryFile(mode="w") as output:
-            dump(counts_result, output)
+            dump(counts_ent, output)
             STORE.persist_task_result(
                 db_id,
                 output,
@@ -437,18 +453,17 @@ def execute_circuit(self, db_id: int) -> str:
                 "entity/vector",
                 "application/json",
             )
+    else:
+        raise ValueError("Failed to simulate circuit. No counts are available.")
 
-    # with SpooledTemporaryFile(mode="w") as output:
-    #   counts["ID"] = experiment_id
-    #  dump(counts, output)
-    # STORE.persist_task_result(
-    #    db_id, output, "result-counts.json", "entity/vector", "application/json"
-    # )
+    if state_vector is not None and any(state_vector):
+        str_vector = [str(x) for x in state_vector.tolist()]
 
-    if state_vector is not None and np.any(state_vector):
-        str_vector = [str(x) for x in state_vector.tolist()]  #### tolist here ok!
-
-        state_vector_ent = {"ID": experiment_id, "statevector": str_vector}
+        state_vector_ent = {"ID": experiment_id}
+        dim = len(str_vector)
+        key_len = len(str(dim))
+        for i, v in enumerate(str_vector):
+            state_vector_ent[f"{i:0{key_len}}"] = repr(v)
         with SpooledTemporaryFile(mode="w") as output:
             dump(state_vector_ent, output)
             STORE.persist_task_result(
