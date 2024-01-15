@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2023 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
 
 
 import mimetypes
+import re
+import time
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
@@ -58,7 +60,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "cirq-simulator"
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 CIRQ_BLP = SecurityBlueprint(
@@ -101,6 +103,15 @@ class CirqSimulatorParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "The number of shots to simulate. If execution options are specified they will override this setting!",
             "input_type": "number",
+        },
+    )
+    statevector = ma.fields.Bool(
+        required=False,
+        allow_none=True,
+        load_default=False,
+        metadata={
+            "label": "Include Statevector",
+            "description": "Include a statevector result.",
         },
     )
 
@@ -293,8 +304,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 # regex to find total number of classicalbits
 def find_total_classicalbits(qasm_code):
-    import re
-
     cleancomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
     matches = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)\];", cleancomment_qasm)
     if not matches:
@@ -303,11 +312,8 @@ def find_total_classicalbits(qasm_code):
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from cirq import Circuit, Simulator
-    from cirq.contrib.qasm_import import circuit_from_qasm
-    import time
     import cirq
-    import numpy as np
+    from cirq.contrib.qasm_import import circuit_from_qasm
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
     circuit = circuit_from_qasm(circuit_qasm)
@@ -326,12 +332,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     simulator = cirq.Simulator()
 
-    startime_state = time.perf_counter_ns()
-    state_vector = simulator.simulate(
-        circuit
-    ).final_state_vector  # simulation (statevector)
-    endtime_state = time.perf_counter_ns()
-
     histogram = {}
     if (
         has_measurem or num_classicalbits > 0
@@ -348,6 +348,13 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     else:  # If there are no measurements in qasm code
         shots = execution_options["shots"]
         histogram = {"": shots}
+
+    if execution_options.get("statevector"):
+        state_vector = simulator.simulate(
+            circuit
+        ).final_state_vector  # simulation (statevector)
+    else:
+        state_vector = None
 
     # Convert the outcomes to binary format
     binary_histogram = {
@@ -372,7 +379,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenIdle": 0,  # idle/waiting time
         "timeTakenCounts_nanosecond": endtime_count - startime_count,
-        "timeTakenState_nanosecond": endtime_state - startime_state,
     }
 
     return metadata, binary_histogram, state_vector
@@ -380,7 +386,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
 @CELERY.task(name=f"{CirqSimulator.instance.identifier}.demo_task", bind=True)
 def execute_circuit(self, db_id: int) -> str:
-    import numpy as np
 
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -402,6 +407,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
+        "statevector": bool(task_options.get("statevector")),
     }
 
     if execution_options_url:
@@ -425,6 +431,16 @@ def execute_circuit(self, db_id: int) -> str:
 
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
+    if isinstance(execution_options["statevector"], str):
+        execution_options["statevector"] = execution_options["ststevector"] in (
+            "1",
+            "yes",
+            "Yes",
+            "YES",
+            "true",
+            "True",
+            "TRUE",
+        )
 
     metadata, binary_histogram, state_vector = simulate_circuit(
         circuit_qasm, execution_options
@@ -450,9 +466,13 @@ def execute_circuit(self, db_id: int) -> str:
 
     # Finally, #if the conditions are ok, the `state_vector` is converted into a list,  and each element is transformed into a string, This can be used to convert complex numbers into the string format.
 
-    if state_vector is not None and np.any(state_vector):
+    if state_vector is not None and any(state_vector):
+        state_vector_ent = {"ID": experiment_id}
         str_vector = [str(x) for x in state_vector.tolist()]  #### tolist here ok!
-        state_vector_ent = {"ID": experiment_id, "statevector": str_vector}
+        dim = len(str_vector)
+        key_len = len(str(dim))
+        for i, v in enumerate(str_vector):
+            state_vector_ent[f"{i:0{key_len}}"] = repr(v)
 
         with SpooledTemporaryFile(mode="w") as output:
             dump(state_vector_ent, output)
