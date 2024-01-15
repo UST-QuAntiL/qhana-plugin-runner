@@ -29,7 +29,7 @@ psycopg2 = { version = "^2.9.3", optional = true }
 PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
-urllib3 = "^1.26"  # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
+urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
 
 [tool.poetry.dev-dependencies]
 black = ">=23.1.0"
@@ -66,6 +66,9 @@ reverse_relative = true
 group_by_package = true
 honor_noqa = true
 atomic = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.sphinx]
 copyright-year = 2021
