@@ -16,10 +16,11 @@
 import mimetypes
 import re
 import time
+from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, ChainMap, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
@@ -386,7 +387,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
 @CELERY.task(name=f"{CirqSimulator.instance.identifier}.demo_task", bind=True)
 def execute_circuit(self, db_id: int) -> str:
-
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:

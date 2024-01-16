@@ -14,10 +14,11 @@
 
 import mimetypes
 import time
+from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, ChainMap, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
