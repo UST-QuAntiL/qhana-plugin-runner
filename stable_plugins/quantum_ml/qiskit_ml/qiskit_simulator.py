@@ -13,10 +13,11 @@
 # limitations under the License.
 
 import mimetypes
+from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, ChainMap, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
@@ -418,7 +419,7 @@ def execute_circuit(self, db_id: int) -> str:
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
     if isinstance(execution_options["statevector"], str):
-        execution_options["statevector"] = execution_options["ststevector"] in (
+        execution_options["statevector"] = execution_options["statevector"] in (
             "1",
             "yes",
             "Yes",

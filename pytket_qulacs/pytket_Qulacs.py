@@ -14,10 +14,11 @@
 
 import mimetypes
 import time
+from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, ChainMap, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
@@ -417,7 +418,9 @@ def execute_circuit(self, db_id: int) -> str:
         )
 
     # FIXME check if bit order is consistent withother simulators!!!
-    counts_str_keys = {"".join(str(b) for b in key): int(value) for key, value in counts.items()}
+    counts_str_keys = {
+        "".join(str(b) for b in key): int(value) for key, value in counts.items()
+    }
 
     with SpooledTemporaryFile(mode="w") as output:
         counts_str_keys["ID"] = experiment_id
