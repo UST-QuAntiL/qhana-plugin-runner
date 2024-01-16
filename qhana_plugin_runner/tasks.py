@@ -72,7 +72,7 @@ def add_step(
 @CELERY.task(name=f"{_name}.save-result", bind=True, ignore_result=True)
 def save_task_result(self, task_log: str, db_id: int):
     """Save the task log in the database and update the final task status of the database task."""
-    if not isinstance(task_log, str):
+    if task_log is not None and not isinstance(task_log, str):
         raise TypeError(
             f"The task log / task metadata must be of type str to be stored in the database! (expected str but got {type(task_log)})"
         )
@@ -89,7 +89,9 @@ def save_task_result(self, task_log: str, db_id: int):
     task_data.task_status = "SUCCESS"
     task_data.clear_previous_step()
     task_data.finished_at = datetime.utcnow()
-    if isinstance(task_log, str):
+    if task_log is None:
+        pass
+    elif isinstance(task_log, str):
         task_data.add_task_log_entry(task_log)
     else:
         task_data.add_task_log_entry(repr(task_log))
