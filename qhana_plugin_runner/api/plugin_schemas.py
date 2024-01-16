@@ -99,11 +99,11 @@ class OutputDataMetadataSchema(DataMetadataSchema):
 @dataclass
 class PluginDependencyMetadata:
     parameter: str
-    name: str
-    version: str
-    tags: List[str]
-    type: PluginType
     required: bool
+    name: Optional[str] = None
+    version: Optional[str] = None
+    tags: Optional[List[str]] = None
+    type: Optional[PluginType] = None
 
 
 class PluginDependencyMetadataSchema(MaBaseSchema):
