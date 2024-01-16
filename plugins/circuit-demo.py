@@ -1,0 +1,458 @@
+# Copyright 2024 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from enum import Enum
+from http import HTTPStatus
+from typing import Mapping, Optional
+
+import marshmallow as ma
+from celery.canvas import chain
+from celery.utils.log import get_task_logger
+from flask import abort, redirect, jsonify
+from flask.app import Flask
+from flask.globals import request
+from flask.helpers import url_for
+from flask.templating import render_template
+from flask.views import MethodView
+from flask.wrappers import Response
+from marshmallow import EXCLUDE
+
+from qhana_plugin_runner.api.extra_fields import EnumField
+from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    EntryPoint,
+    PluginDependencyMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
+from qhana_plugin_runner.api.util import (
+    FrontendFormBaseSchema,
+    PluginUrl,
+    SecurityBlueprint,
+)
+from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.interop import (
+    call_plugin_endpoint_and_get_monitor_task,
+    get_plugin_endpoint,
+    get_task_result_no_wait,
+    monitor_result,
+)
+from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+
+_plugin_name = "circuit-demo-qiskit"
+__version__ = "v0.1.0"
+_identifier = plugin_identifier(_plugin_name, __version__)
+
+
+CIRCUIT_BLP = SecurityBlueprint(
+    _identifier,  # blueprint name
+    __name__,  # module import name!
+    description="Demo of a quantum circuit using qiskit and circuit executor plugins.",
+)
+
+
+class BELL_STATES(Enum):
+    PHI = "PHI"
+
+
+class CircuitDemoParametersSchema(FrontendFormBaseSchema):
+    state = EnumField(
+        BELL_STATES,
+        metadata={
+            "label": "Select Bell State",
+            "input_type": "select",
+        },
+    )
+    executor = PluginUrl(
+        required=True,
+        plugin_tags=["circuit-executor", "qasm-2"],
+        metadata={
+            "label": "Select Circuit Executor Plugin",
+        },
+    )
+
+
+@CIRCUIT_BLP.route("/")
+class PluginView(MethodView):
+    """Plugin Metadata resource."""
+
+    @CIRCUIT_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @CIRCUIT_BLP.require_jwt("jwt", optional=True)
+    def get(self):
+        """Endpoint returning the plugin metadata."""
+        plugin = CircuitQiskitDemo.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        return PluginMetadata(
+            title=plugin.name,
+            description=plugin.description,
+            name=plugin.name,
+            version=plugin.version,
+            type=PluginType.processing,
+            entry_point=EntryPoint(
+                href=url_for(f"{CIRCUIT_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{CIRCUIT_BLP.name}.MicroFrontend"),
+                plugin_dependencies=[
+                    PluginDependencyMetadata(
+                        required=True,
+                        parameter="executor",
+                        tags=["circuit-executor", "qasm-2"],
+                    ),
+                ],
+                data_input=[],
+                data_output=[
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=["applcation/json"],
+                        required=True,
+                    )
+                ],
+            ),
+            tags=CircuitQiskitDemo.instance.tags,
+        )
+
+
+@CIRCUIT_BLP.route("/ui/")
+class MicroFrontend(MethodView):
+    """Micro frontend for the circuit demo plugin."""
+
+    example_inputs = {
+        "state": "PHI",
+        "executor": "http://localhost:5005/plugins/qiskit-simulator@v0-3-0/",
+    }
+
+    @CIRCUIT_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the circuit demo plugin."
+    )
+    @CIRCUIT_BLP.arguments(
+        CircuitDemoParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @CIRCUIT_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors):
+        """Return the micro frontend."""
+        return self.render(request.args, errors, False)
+
+    @CIRCUIT_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the shor plugin."
+    )
+    @CIRCUIT_BLP.arguments(
+        CircuitDemoParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @CIRCUIT_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors, not errors)
+
+    def render(self, data: Mapping, errors: dict, valid: bool):
+        plugin = CircuitQiskitDemo.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        schema = CircuitDemoParametersSchema()
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=plugin.name,
+                version=plugin.version,
+                schema=schema,
+                valid=valid,
+                values=data,
+                errors=errors,
+                process=url_for(f"{CIRCUIT_BLP.name}.ProcessView"),
+                help_text="This is an example help text with basic **Markdown** support.",
+                example_values=url_for(
+                    f"{CIRCUIT_BLP.name}.MicroFrontend", **self.example_inputs
+                ),
+            )
+        )
+
+
+@CIRCUIT_BLP.route("/process/")
+class ProcessView(MethodView):
+    """Start a long running processing task."""
+
+    @CIRCUIT_BLP.arguments(CircuitDemoParametersSchema(unknown=EXCLUDE), location="form")
+    @CIRCUIT_BLP.response(HTTPStatus.SEE_OTHER)
+    @CIRCUIT_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments):
+        """Start the circuit demo task."""
+        state: Optional[BELL_STATES] = arguments.get("state", None)
+        if not state:
+            state = BELL_STATES.PHI
+
+        circuit_url = url_for(
+            f"{CIRCUIT_BLP.name}.{CircuitView.__name__}",
+            bell_state=state.value,
+            _external=True,
+        )
+        options_url = url_for(
+            f"{CIRCUIT_BLP.name}.{ExecutionOptionsView.__name__}", _external=True
+        )
+        db_task = ProcessingTask(
+            task_name=circuit_demo_task.name,
+            parameters=CircuitDemoParametersSchema().dumps(arguments),
+        )
+        db_task.save()
+        DB.session.flush()
+        continue_url = url_for(
+            f"{CIRCUIT_BLP.name}.{ContinueProcessView.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+        db_task.data = {
+            "circuit_url": circuit_url,
+            "options_url": options_url,
+            "continue_url": continue_url,
+        }
+        db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = circuit_demo_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
+
+        db_task.save(commit=True)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@CIRCUIT_BLP.route("/continue/<int:db_id>/")
+class ContinueProcessView(MethodView):
+    """Restart long running task that was blocked by an ongoing plugin computation."""
+
+    @CIRCUIT_BLP.response(HTTPStatus.NO_CONTENT)
+    def post(self, db_id: int):
+        """Check for updates in plugin computation and resume processing."""
+        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if task_data is None:
+            abort(HTTPStatus.NOT_FOUND)
+
+        if task_data.task_name != circuit_demo_task.name:
+            # processing task is from another plugin, cannot resume
+            abort(HTTPStatus.NOT_FOUND)
+
+        if not isinstance(task_data.data, dict):
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+
+        result_url = task_data.data.get("result_url")
+
+        if not result_url or task_data.is_finished:
+            abort(HTTPStatus.NOT_FOUND)
+
+        task = check_executor_result_task.s(db_id=db_id)
+        task.link_error(save_task_error.s(db_id=db_id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@CIRCUIT_BLP.route("/options/")
+class ExecutionOptionsView(MethodView):
+    """Get the execution options."""
+
+    def get(self):
+        """Get the requested execution options."""
+
+        return jsonify({"ID": "1", "shots": 2048, "statevector": False})
+
+
+@CIRCUIT_BLP.route("/circuit/<string:bell_state>/")
+class CircuitView(MethodView):
+    """Get the bell state circuit."""
+
+    def get(self, bell_state: str):
+        """Get the requested circuit."""
+        from qiskit.circuit import QuantumCircuit
+
+        state = BELL_STATES(bell_state)
+
+        circ = QuantumCircuit(2)
+
+        circ.h(0)
+        circ.cnot(0, 1)
+
+        circ.measure_all()
+
+        qasm_str = circ.qasm()
+
+        return qasm_str  # TODO set content type correctly...
+
+
+class CircuitQiskitDemo(QHAnaPluginBase):
+    name = _plugin_name
+    version = __version__
+    description = "A demo plugin implementing the shor algorithm using qiskit."
+    tags = ["shor"]
+
+    def __init__(self, app: Optional[Flask]) -> None:
+        super().__init__(app)
+
+    def get_api_blueprint(self):
+        return CIRCUIT_BLP
+
+    def get_requirements(self) -> str:
+        return "qiskit~=0.43"
+
+
+TASK_LOGGER = get_task_logger(__name__)
+
+
+@CELERY.task(name=f"{CircuitQiskitDemo.instance.identifier}.circuit_demo_task", bind=True)
+def circuit_demo_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Starting new circuit demo task with db id '{db_id}'")
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    params = CircuitDemoParametersSchema().loads(task_data.parameters or "{}")
+    state: Optional[BELL_STATES] = params.get("state", None)
+    executor: Optional[str] = params.get("executor", None)
+    if state is None:
+        state = BELL_STATES.PHI
+    if executor is None:
+        task_data.add_task_log_entry(
+            "No executor plugin specified, aborting task.", commit=True
+        )
+        raise ValueError(
+            "Cannot execute a quantum circuit without a circuit executor plugin specified."
+        )
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: bell state='{state}'; executor='{executor}'"
+    )
+
+    endpoint = get_plugin_endpoint(executor)
+
+    circuit_url = task_data.data["circuit_url"]
+    options_url = task_data.data["options_url"]
+    continue_url = task_data.data["continue_url"]
+
+    result_url = call_plugin_endpoint_and_get_monitor_task(
+        endpoint, {"circuit": circuit_url, "executionOptions": options_url}
+    )
+
+    task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
+    task_data.data = {
+        "result_url": result_url,
+    }
+    task_data.save(commit=True)
+
+    return self.replace(
+        monitor_result.s(result_url=result_url, webhook_url=continue_url, monitor="all")
+    )
+
+
+def add_new_substep(task_data: ProcessingTask, steps: list):
+    current_step = steps[-1] if steps else None
+    if current_step and not current_step.get("cleared", False):
+        step_id = current_step.get("stepId")
+        if step_id:
+            step_id = f"executor.{step_id}"
+        else:
+            step_id = f"executor.{len(steps)}"
+        task_data.clear_previous_step()
+        task_data.add_next_step(
+            href=current_step["href"],
+            ui_href=current_step["uiHref"],
+            step_id=step_id,
+            commit=True,
+        )
+
+
+@CELERY.task(
+    name=f"{CircuitQiskitDemo.instance.identifier}.check_executor_result_task", bind=True
+)
+def check_executor_result_task(self, db_id: int):
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to save results!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    result_url = task_data.data.get("result_url")
+
+    if task_data is None:
+        raise ValueError(f"No result URL present in task data with id {db_id}")
+
+    status, result = get_task_result_no_wait(result_url)
+
+    if status == "FAILURE":
+        task_data.add_task_log_entry(
+            f"--- Circuit Executor Log ---\n{result.get('log', '')}\n--- END ---\n",
+            commit=True,
+        )
+        raise ValueError("Circuit executor failed to execute the circuit!")
+    elif status == "PENDING":
+        steps = result.get("steps", [])
+        add_new_substep(task_data, steps)
+    elif status == "SUCCESS":
+        task_data.data["result"] = result
+        task_data.save(commit=True)
+        self.replace(
+            circuit_demo_result_task.si(db_id=db_id) | save_task_result.s(db_id=db_id)
+        )
+    else:
+        raise ValueError(f"Unknown task status {status}!")
+
+
+@CELERY.task(
+    name=f"{CircuitQiskitDemo.instance.identifier}.circuit_demo_result_task", bind=True
+)
+def circuit_demo_result_task(self, db_id: int) -> str:
+    TASK_LOGGER.info(f"Saving circuit demo task results with db id '{db_id}'")
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+
+    if task_data is None:
+        msg = f"Could not load task data with id {db_id} to save results!"
+        TASK_LOGGER.error(msg)
+        raise KeyError(msg)
+
+    for out in task_data.data.get("result", {}).get("outputs"):
+        if out.get("name", "").startswith("result-counts"):
+            name = out.get("name", "")
+            url = out.get("href", "")
+            data_type = out.get("dataType", "")
+            content_type = out.get("contentType", "")
+            STORE.persist_task_result(
+                db_id,
+                url,
+                name,
+                data_type,
+                content_type,
+                storage_provider="url_file_store",
+            )
+
+    return "Successfully saved task result!"
