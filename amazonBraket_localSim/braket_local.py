@@ -13,10 +13,13 @@
 # limitations under the License.
 
 import mimetypes
+import re
+import time
+from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, ChainMap, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
@@ -75,7 +78,7 @@ class BraketSimulatorParametersSchema(FrontendFormBaseSchema):
         data_input_type="executable/circuit",
         data_content_types="text/x-qasm",
         metadata={
-            "label": "OpenQASM Circuit",
+            "label": "OpenQASM 3 Circuit",
             "description": "URL to a quantum circuit in the OpenQASM format.",
             "input_type": "text",
         },
@@ -101,6 +104,15 @@ class BraketSimulatorParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "The number of shots to simulate. If execution options are specified they will override this setting!",
             "input_type": "number",
+        },
+    )
+    statevector = ma.fields.Bool(
+        required=False,
+        allow_none=True,
+        load_default=False,
+        metadata={
+            "label": "Include Statevector",
+            "description": "Include a statevector result.",
         },
     )
 
@@ -273,7 +285,7 @@ class Braket_LocalSimulator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Allows execution of quantum circuits using a simulator packaged with braket_local."
-    tags = ["circuit-executor", "qc-simulator", "braket_local", "qasm", "qasm-2"]
+    tags = ["circuit-executor", "qc-simulator", "braket_local", "qasm", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -282,7 +294,7 @@ class Braket_LocalSimulator(QHAnaPluginBase):
         return BRAKET_LOCAL_BLP
 
     def get_requirements(self) -> str:
-        return "qbraid~=0.4"
+        return "amazon-braket-sdk~=1.66.0"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -290,19 +302,20 @@ TASK_LOGGER = get_task_logger(__name__)
 
 # regex to find total number of classicalbits
 def find_total_classicalbits(qasm_code):
-    import re
-
     cleanedcomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
-    matches = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)\];", cleanedcomment_qasm)
-    return sum(map(int, matches))
+    # finds QASM 2 style bit registers that are still allowed in QASM 3
+    matches_legacy = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)];", cleanedcomment_qasm)
+    # finds single bit registers
+    matches_single = re.findall(r"bit [a-zA-Z0-9_]+;", cleanedcomment_qasm)
+    # finds bit registers with declared size
+    matches = re.findall(r"bit\[(\d+)] [a-zA-Z0-9_]+;", cleanedcomment_qasm)
+
+    return sum(map(int, matches_legacy)) + len(matches_single) + sum(map(int, matches))
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from braket.circuits import Circuit, ResultType
     from braket.devices import LocalSimulator
-    from qbraid.transpiler.cirq_qasm import from_qasm
-    from qbraid.transpiler.cirq_braket import to_braket
-    import time
 
     num_classical_bits = find_total_classicalbits(circuit_qasm)
 
@@ -310,34 +323,32 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
 
-    cirq_circuit = from_qasm(circuit_qasm)
-
     # Convert the Cirq circuit to a Braket circuit
-    braket_circuit = to_braket(cirq_circuit)
+    braket_circuit = Circuit.from_ir(circuit_qasm)
 
     device = LocalSimulator()
 
-    # Start the simulation for the state vectr
-    start_time_sv = time.perf_counter_ns()
-    state_vector_circuit = braket_circuit.copy()
-    state_vector_circuit.add_result_type(ResultType.StateVector())  # State vector
-    state_vector_result = device.run(state_vector_circuit, shots=0).result()
-    end_time_sv = time.perf_counter_ns()
-    statevector = [state_vector_result.values[0]]
-
     # Start the simulation for counts with time nanosecond
-    start_time_counts = time.perf_counter_ns()
+    start_time = time.time()
     result_meas = device.run(braket_circuit, shots=execution_options["shots"]).result()
-    end_time_counts = time.perf_counter_ns()
+    end_time = time.time()
 
     shots = execution_options["shots"]
 
-    # If no classical bits return empty strng
+    # If no classical bits return empty string
     if num_classical_bits == 0:
         result_counts = {"": shots}
-
     else:
         result_counts = result_meas.measurement_counts
+
+    statevector = None
+
+    if execution_options["statevector"]:
+        # Start the simulation for the state vector
+        state_vector_circuit = braket_circuit.copy()
+        state_vector_circuit.add_result_type(ResultType.StateVector())  # State vector
+        state_vector_result = device.run(state_vector_circuit, shots=0).result()
+        statevector = [state_vector_result.values[0]]
 
     metadata = {
         "jobId": "unknown",
@@ -345,8 +356,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "qpuVendor": "Amazon Web Services",
         "qpuName": "LocalSimulator",
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-        "timeTakenCounts_nanosecond": end_time_counts - start_time_counts,
-        "timeTakenCounts_nanosecond": end_time_sv - start_time_sv,
+        "timeTaken": end_time - start_time,
     }
 
     return metadata, dict(result_counts), statevector
@@ -374,6 +384,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
+        "statevector": task_options.get("statevector", False),
     }
 
     if execution_options_url:
@@ -397,6 +408,13 @@ def execute_circuit(self, db_id: int) -> str:
 
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
+
+    if isinstance(execution_options["statevector"], str):
+        execution_options["statevector"] = execution_options["statevector"].lower() in (
+            "1",
+            "yes",
+            "true",
+        )
 
     metadata, counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
 
