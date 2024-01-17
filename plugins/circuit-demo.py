@@ -14,12 +14,12 @@
 
 from enum import Enum
 from http import HTTPStatus
+from textwrap import dedent
 from typing import Mapping, Optional
 
-import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import abort, redirect, jsonify
+from flask import abort, jsonify, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -69,6 +69,9 @@ CIRCUIT_BLP = SecurityBlueprint(
 
 class BELL_STATES(Enum):
     PHI = "PHI"
+    PHI_MINUS = "PHI_MINUS"
+    PSI = "PSI"
+    PSI_MINUS = "PSI_MINUS"
 
 
 class CircuitDemoParametersSchema(FrontendFormBaseSchema):
@@ -134,7 +137,6 @@ class MicroFrontend(MethodView):
 
     example_inputs = {
         "state": "PHI",
-        "executor": "http://localhost:5005/plugins/qiskit-simulator@v0-3-0/",
     }
 
     @CIRCUIT_BLP.html_response(
@@ -153,7 +155,7 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors, False)
 
     @CIRCUIT_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the shor plugin."
+        HTTPStatus.OK, description="Micro frontend of the circuit demo plugin."
     )
     @CIRCUIT_BLP.arguments(
         CircuitDemoParametersSchema(
@@ -292,36 +294,90 @@ class CircuitView(MethodView):
 
     def get(self, bell_state: str):
         """Get the requested circuit."""
-        from qiskit.circuit import QuantumCircuit
 
         state = BELL_STATES(bell_state)
 
-        circ = QuantumCircuit(2)
+        qasm_str = ""
 
-        circ.h(0)
-        circ.cnot(0, 1)
+        if state == BELL_STATES.PHI:  # start with |00>
+            qasm_str = dedent(
+                """
+                OPENQASM 2.0;
+                include "qelib1.inc";
+                qreg q[2];
+                creg meas[2];
+                h q[0];
+                cx q[0],q[1];
+                barrier q[0],q[1];
+                measure q[0] -> meas[0];
+                measure q[1] -> meas[1];
+                """
+            ).lstrip()
+        if state == BELL_STATES.PHI_MINUS:  # start with |01>
+            qasm_str = dedent(
+                """
+                OPENQASM 2.0;
+                include "qelib1.inc";
+                qreg q[2];
+                creg meas[2];
+                x q[0];
+                h q[0];
+                cx q[0],q[1];
+                barrier q[0],q[1];
+                measure q[0] -> meas[0];
+                measure q[1] -> meas[1];
+                """
+            ).lstrip()
+        elif state == BELL_STATES.PSI:  # start with |10>
+            qasm_str = dedent(
+                """
+                OPENQASM 2.0;
+                include "qelib1.inc";
+                qreg q[2];
+                creg meas[2];
+                x q[1];
+                h q[0];
+                cx q[0],q[1];
+                barrier q[0],q[1];
+                measure q[0] -> meas[0];
+                measure q[1] -> meas[1];
+                """
+            ).lstrip()
+        elif state == BELL_STATES.PSI_MINUS:  # start with |11>
+            qasm_str = dedent(
+                """
+                OPENQASM 2.0;
+                include "qelib1.inc";
+                qreg q[2];
+                creg meas[2];
+                x q[0];
+                x q[1];
+                h q[0];
+                cx q[0],q[1];
+                barrier q[0],q[1];
+                measure q[0] -> meas[0];
+                measure q[1] -> meas[1];
+                """
+            ).lstrip()
 
-        circ.measure_all()
-
-        qasm_str = circ.qasm()
-
-        return qasm_str  # TODO set content type correctly...
+        return Response(
+            qasm_str,
+            HTTPStatus.OK,
+            mimetype="text/x-qasm",
+        )
 
 
 class CircuitQiskitDemo(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "A demo plugin implementing the shor algorithm using qiskit."
-    tags = ["shor"]
+    description = "A demo plugin implementing circuits for the bell states and executing them using a circuit executor."
+    tags = ["circuit-demo", "demo"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
         return CIRCUIT_BLP
-
-    def get_requirements(self) -> str:
-        return "qiskit~=0.43"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -364,9 +420,7 @@ def circuit_demo_task(self, db_id: int) -> str:
     )
 
     task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
-    task_data.data = {
-        "result_url": result_url,
-    }
+    task_data.data["result_url"] = result_url
     task_data.save(commit=True)
 
     return self.replace(
@@ -439,6 +493,17 @@ def circuit_demo_result_task(self, db_id: int) -> str:
         msg = f"Could not load task data with id {db_id} to save results!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
+
+    circuit_url = task_data.data.get("circuit_url")
+    if circuit_url and isinstance(circuit_url, str):
+        STORE.persist_task_result(
+            db_id,
+            circuit_url,
+            "circuit.qasm",
+            "executable/circuit",
+            "text/x-qasm",
+            storage_provider="url_file_store",
+        )
 
     for out in task_data.data.get("result", {}).get("outputs"):
         if out.get("name", "").startswith("result-counts"):
