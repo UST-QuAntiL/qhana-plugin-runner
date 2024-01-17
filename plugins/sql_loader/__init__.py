@@ -47,7 +47,7 @@ class SQLLoaderPlugin(QHAnaPluginBase):
         return SQLLoader_BLP
 
     def get_requirements(self) -> str:
-        return "pymysql\npsycopg2"
+        return "pymysql\npsycopg"
 
 
 try:

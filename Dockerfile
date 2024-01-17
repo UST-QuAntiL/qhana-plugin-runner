@@ -44,7 +44,7 @@ RUN python -m pip install poetry gunicorn
 
 COPY --chown=gunicorn . /app
 
-RUN python -m poetry export --without-hashes --extras=psycopg2 --extras=PyMySQL --format=requirements.txt -o requirements.txt && python -m pip install -r requirements.txt
+RUN python -m poetry export --without-hashes --extras=psycopg --extras=PyMySQL --format=requirements.txt -o requirements.txt && python -m pip install -r requirements.txt
 
 VOLUME ["/app/instance"]
 ENV QHANA_PLUGIN_RUNNER_INSTANCE_FOLDER="/app/instance"
