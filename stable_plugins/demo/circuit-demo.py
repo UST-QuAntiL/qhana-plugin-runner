@@ -55,7 +55,7 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "circuit-demo-qiskit"
+_plugin_name = "circuit-demo"
 __version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
@@ -63,7 +63,7 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 CIRCUIT_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Demo of a quantum circuit using qiskit and circuit executor plugins.",
+    description="Demo of a quantum circuit using circuit executor plugins.",
 )
 
 
@@ -99,7 +99,7 @@ class PluginView(MethodView):
     @CIRCUIT_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
-        plugin = CircuitQiskitDemo.instance
+        plugin = CircuitDemo.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
@@ -134,7 +134,7 @@ class PluginView(MethodView):
                     ),
                 ],
             ),
-            tags=CircuitQiskitDemo.instance.tags,
+            tags=CircuitDemo.instance.tags,
         )
 
 
@@ -177,7 +177,7 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
-        plugin = CircuitQiskitDemo.instance
+        plugin = CircuitDemo.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = CircuitDemoParametersSchema()
@@ -374,7 +374,7 @@ class CircuitView(MethodView):
         )
 
 
-class CircuitQiskitDemo(QHAnaPluginBase):
+class CircuitDemo(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "A demo plugin implementing circuits for the bell states and executing them using a circuit executor."
@@ -390,7 +390,7 @@ class CircuitQiskitDemo(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{CircuitQiskitDemo.instance.identifier}.circuit_demo_task", bind=True)
+@CELERY.task(name=f"{CircuitDemo.instance.identifier}.circuit_demo_task", bind=True)
 def circuit_demo_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting new circuit demo task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -453,7 +453,7 @@ def add_new_substep(task_data: ProcessingTask, steps: list):
 
 
 @CELERY.task(
-    name=f"{CircuitQiskitDemo.instance.identifier}.check_executor_result_task", bind=True
+    name=f"{CircuitDemo.instance.identifier}.check_executor_result_task", bind=True
 )
 def check_executor_result_task(self, db_id: int):
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -490,7 +490,7 @@ def check_executor_result_task(self, db_id: int):
 
 
 @CELERY.task(
-    name=f"{CircuitQiskitDemo.instance.identifier}.circuit_demo_result_task", bind=True
+    name=f"{CircuitDemo.instance.identifier}.circuit_demo_result_task", bind=True
 )
 def circuit_demo_result_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Saving circuit demo task results with db id '{db_id}'")
