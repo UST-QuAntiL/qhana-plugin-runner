@@ -30,7 +30,7 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata,
+    OutputDataMetadata,
     EntryPoint,
     PluginDependencyMetadata,
     PluginMetadata,
@@ -120,11 +120,18 @@ class PluginView(MethodView):
                 ],
                 data_input=[],
                 data_output=[
-                    DataMetadata(
+                    OutputDataMetadata(
                         data_type="entity/vector",
-                        content_type=["applcation/json"],
+                        content_type=["application/json"],
                         required=True,
-                    )
+                        name="result-counts.json",
+                    ),
+                    OutputDataMetadata(
+                        data_type="executable/circuit",
+                        content_type=["text/x-qasm"],
+                        required=True,
+                        name="circuit.qasm",
+                    ),
                 ],
             ),
             tags=CircuitQiskitDemo.instance.tags,
