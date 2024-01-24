@@ -47,7 +47,7 @@ class MaxCut(QHAnaPluginBase):
         return MaxCut_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\nqiskit-optimization~=0.5.0\ngit+https://github.com/pandrey-fr/maxcut.git@7ab0cf4a8131333ef6e67f23c4e43c190837c315\nplotly~=5.6.0\npandas~=1.5.0\nnetworkx~=2.8"
+        return "qiskit~=0.43\nqiskit-optimization~=0.5.0\ngit+https://github.com/pandrey-fr/maxcut.git@7ab0cf4a8131333ef6e67f23c4e43c190837c315\nplotly~=5.18.0\npandas~=1.5.0\nnetworkx~=2.8"
 
 
 try:
