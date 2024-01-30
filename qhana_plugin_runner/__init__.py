@@ -34,7 +34,6 @@ from tomlkit.api import parse as parse_toml
 
 from . import api, babel, celery, db, requests
 from .api import jwt_helper
-from .cache_config import cache
 from .licenses import register_licenses
 from .listeners import register_signal_listeners
 from .markdown import register_markdown_filter
@@ -68,9 +67,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         instance_relative_config=True,
         instance_path=environ.get(instance_folder_env_var, None),
     )
-
-    # bind cache to app
-    cache.init_app(app)
 
     # Start Loading config #################
 
