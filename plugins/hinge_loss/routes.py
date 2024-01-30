@@ -19,9 +19,22 @@ from celery.utils.log import get_task_logger
 from flask import Response, abort, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+
+from qhana_plugin_runner.api.plugin_schemas import (
+    ApiLink,
+    DataMetadata,
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+
+from . import HINGELOSS_BLP, HingeLoss
 from .interaction_utils.ie_utils import url_for_ie
 from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from .interaction_utils.tasks import make_callback
+from .schemas import HyperparamterInputData, HyperparamterInputSchema
 from .shared.enums import InteractionEndpointType
 from .shared.schemas import (
     CalcLossOrGradInput,
@@ -34,19 +47,6 @@ from .shared.schemas import (
     ObjectiveFunctionPassDataSchema,
     SingleNumpyArraySchema,
 )
-
-from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata,
-    EntryPoint,
-    InteractionEndpoint,
-    PluginMetadata,
-    PluginMetadataSchema,
-    PluginType,
-)
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-
-from . import HINGELOSS_BLP, HingeLoss
-from .schemas import HyperparamterInputData, HyperparamterInputSchema
 from .tasks import hinge_loss
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -67,22 +67,22 @@ class PluginsView(MethodView):
             version=HingeLoss.instance.version,
             type=PluginType.processing,
             tags=HingeLoss.instance.tags,
+            links=[
+                ApiLink(
+                    type=InteractionEndpointType.of_pass_data.value,
+                    # Since the endpoint has the task id in the url, we need to add a placeholder
+                    href=url_for_ie(
+                        f"{HINGELOSS_BLP.name}.{PassDataEndpoint.__name__}"
+                    ),
+                ),
+                ApiLink(
+                    type=InteractionEndpointType.calc_loss.value,
+                    href=url_for_ie(
+                        f"{HINGELOSS_BLP.name}.{CalcLossEndpoint.__name__}"
+                    ),
+                ),
+            ],
             entry_point=EntryPoint(
-                interaction_endpoints=[
-                    InteractionEndpoint(
-                        type=InteractionEndpointType.of_pass_data.value,
-                        # Since the endpoint has the task id in the url, we need to add a placeholder
-                        href=url_for_ie(
-                            f"{HINGELOSS_BLP.name}.{PassDataEndpoint.__name__}"
-                        ),
-                    ),
-                    InteractionEndpoint(
-                        type=InteractionEndpointType.calc_loss.value,
-                        href=url_for_ie(
-                            f"{HINGELOSS_BLP.name}.{CalcLossEndpoint.__name__}"
-                        ),
-                    ),
-                ],
                 href=url_for(f"{HINGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
                 ui_href=url_for(
                     f"{HINGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",

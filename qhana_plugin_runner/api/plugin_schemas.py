@@ -210,18 +210,9 @@ class StepMetadataSchema(MaBaseSchema):
 
 
 @dataclass
-class InteractionEndpoint:
-    type: str
-    href: str
-
-
-@dataclass
 class EntryPoint:
     href: str
     ui_href: str
-    interaction_endpoints: Optional[List[InteractionEndpoint]] = field(
-        default_factory=list
-    )
     data_input: List[InputDataMetadata] = field(default_factory=list)
     data_output: List[Union[OutputDataMetadata, DataMetadata]] = field(
         default_factory=list
@@ -245,12 +236,12 @@ class StepMetadata:
     cleared: bool = False
 
 
-class InteractionEndpointSchema(MaBaseSchema):
+class ApiLinkSchema(MaBaseSchema):
     type = ma.fields.Str(
         required=True,
         allow_none=False,
         metadata={
-            "description": "Type of the endpoint. All endpoints of the same type must be compatible with each other."
+            "description": "Type of the link. All endpoints of the same type must be compatible with each other."
         },
     )
     href = ma.fields.Url(
@@ -262,9 +253,9 @@ class InteractionEndpointSchema(MaBaseSchema):
     )
 
     @ma.post_load()
-    def make_interaction_endpoint(self, data: Dict[str, Any], **kwargs):
-        """Create a InteractionEndpoint object from the deserialized data."""
-        return InteractionEndpoint(**data)
+    def make_api_link(self, data: Dict[str, Any], **kwargs):
+        """Create a ApiLink object from the deserialized data."""
+        return ApiLink(**data)
 
 
 class EntryPointSchema(MaBaseSchema):
@@ -281,14 +272,6 @@ class EntryPointSchema(MaBaseSchema):
         metadata={
             "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
-    )
-    interaction_endpoints = ma.fields.List(
-        ma.fields.Nested(
-            InteractionEndpointSchema,
-            required=False,
-            allow_none=False,
-            metadata={"description": "A list of possible interaction endpoints."},
-        )
     )
     plugin_dependencies = ma.fields.List(
         ma.fields.Nested(
@@ -331,6 +314,12 @@ class EntryPointSchema(MaBaseSchema):
 
 
 @dataclass
+class ApiLink:
+    type: str
+    href: str
+
+
+@dataclass
 class PluginMetadata:
     title: str
     description: str
@@ -345,6 +334,9 @@ class PluginMetadata:
     ]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
+    links: List[ApiLink] = field(
+        default_factory=list
+    )
 
 
 class PluginMetadataSchema(MaBaseSchema):
@@ -388,6 +380,15 @@ class PluginMetadataSchema(MaBaseSchema):
         metadata={
             "description": "A list of tags describing the plugin (e.g. classical-algorithm, quantum-algorithm, hybrid-algorithm)."
         },
+    )
+    links = ma.fields.List(
+        ma.fields.Nested(
+            ApiLinkSchema,
+            required=False,
+            allow_none=False,
+            missing=tuple(),
+            metadata={"description": "A list of links to different parts of the plugin API for interacting with this plugin programatically."},
+        )
     )
 
     @ma.post_load()

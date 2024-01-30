@@ -291,7 +291,7 @@ class OptimizerSetupProcessStep(MethodView):
 
         of_calc_endpoint = [
             element
-            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            for element in of_plugin_metadata.links
             if element.type == InteractionEndpointType.calc_loss.value
         ]
 
@@ -299,7 +299,7 @@ class OptimizerSetupProcessStep(MethodView):
 
         of_pass_data_endpoint = [
             element
-            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            for element in of_plugin_metadata.links
             if element.type == InteractionEndpointType.of_pass_data.value
         ]
 
@@ -309,7 +309,7 @@ class OptimizerSetupProcessStep(MethodView):
 
         of_gradient_endpoint = [
             element
-            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            for element in of_plugin_metadata.links
             if element.type == InteractionEndpointType.calc_grad.value
         ]
 
@@ -320,7 +320,7 @@ class OptimizerSetupProcessStep(MethodView):
 
         of_loss_and_gradient_endpoint = [
             element
-            for element in of_plugin_metadata.entry_point.interaction_endpoints
+            for element in of_plugin_metadata.links
             if element.type == InteractionEndpointType.calc_loss_and_grad.value
         ]
 

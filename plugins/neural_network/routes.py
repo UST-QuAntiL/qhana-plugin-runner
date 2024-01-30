@@ -23,9 +23,22 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
+
+from qhana_plugin_runner.api.plugin_schemas import (
+    ApiLink,
+    DataMetadata,
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+
+from . import NN_BLP, NeuralNetwork
 from .interaction_utils.ie_utils import url_for_ie
 from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from .interaction_utils.tasks import make_callback
+from .neural_network import NN
 from .schemas import (
     HyperparamterInputData,
     HyperparamterInputSchema,
@@ -46,19 +59,6 @@ from .shared.schemas import (
     SingleNumpyArraySchema,
 )
 
-from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata,
-    EntryPoint,
-    InteractionEndpoint,
-    PluginMetadata,
-    PluginMetadataSchema,
-    PluginType,
-)
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-
-from . import NN_BLP, NeuralNetwork
-from .neural_network import NN
-
 TASK_LOGGER = get_task_logger(__name__)
 
 
@@ -77,28 +77,28 @@ class PluginsView(MethodView):
             version=NeuralNetwork.instance.version,
             type=PluginType.processing,
             tags=NeuralNetwork.instance.tags,
+            links=[
+                ApiLink(
+                    type=InteractionEndpointType.of_pass_data.value,
+                    # since the url has the task id as parameter, we need to add it here
+                    href=url_for_ie(f"{NN_BLP.name}.{PassDataEndpoint.__name__}"),
+                ),
+                ApiLink(
+                    type=InteractionEndpointType.calc_loss.value,
+                    href=url_for_ie(f"{NN_BLP.name}.{CalcLossEndpoint.__name__}"),
+                ),
+                ApiLink(
+                    type=InteractionEndpointType.calc_grad.value,
+                    href=url_for_ie(f"{NN_BLP.name}.{CalcGradientEndpoint.__name__}"),
+                ),
+                ApiLink(
+                    type=InteractionEndpointType.calc_grad.value,
+                    href=url_for_ie(
+                        f"{NN_BLP.name}.{CalcLossandGradEndpoint.__name__}"
+                    ),
+                ),
+            ],
             entry_point=EntryPoint(
-                interaction_endpoints=[
-                    InteractionEndpoint(
-                        type=InteractionEndpointType.of_pass_data.value,
-                        # since the url has the task id as parameter, we need to add it here
-                        href=url_for_ie(f"{NN_BLP.name}.{PassDataEndpoint.__name__}"),
-                    ),
-                    InteractionEndpoint(
-                        type=InteractionEndpointType.calc_loss.value,
-                        href=url_for_ie(f"{NN_BLP.name}.{CalcLossEndpoint.__name__}"),
-                    ),
-                    InteractionEndpoint(
-                        type=InteractionEndpointType.calc_grad.value,
-                        href=url_for_ie(f"{NN_BLP.name}.{CalcGradientEndpoint.__name__}"),
-                    ),
-                    InteractionEndpoint(
-                        type=InteractionEndpointType.calc_grad.value,
-                        href=url_for_ie(
-                            f"{NN_BLP.name}.{CalcLossandGradEndpoint.__name__}"
-                        ),
-                    ),
-                ],
                 href=url_for(f"{NN_BLP.name}.{OptimizerCallbackProcess.__name__}"),
                 ui_href=url_for(
                     f"{NN_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
