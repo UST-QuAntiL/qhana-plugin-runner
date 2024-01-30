@@ -21,9 +21,9 @@ from celery.utils.log import get_task_logger
 from flask import Response, redirect, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from optimizer.interaction_utils.tasks import make_callback
-from optimizer.shared.schemas import (
+from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
+from .interaction_utils.tasks import make_callback
+from .shared.schemas import (
     MinimizerCallbackData,
     MinimizerCallbackSchema,
     MinimizerInputData,
