@@ -17,10 +17,10 @@ from typing import Iterator, Optional
 import numpy as np
 import requests
 from celery.utils.log import get_task_logger
-from optimizer.coordinator import Optimizer
-from optimizer.interaction_utils.ie_utils import ie_replace_task_id
-from optimizer.shared.enums import InteractionEndpointType
-from optimizer.shared.schemas import (
+from . import Optimizer
+from .interaction_utils.ie_utils import ie_replace_task_id
+from .shared.enums import InteractionEndpointType
+from .shared.schemas import (
     ObjectiveFunctionPassData,
     ObjectiveFunctionPassDataResponse,
     ObjectiveFunctionPassDataResponseSchema,

@@ -39,12 +39,11 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import OPTIMIZER_BLP, Optimizer
+from .interaction_utils.ie_utils import ie_replace_task_id
+from .interaction_utils.tasks import invoke_task
 from .schemas import OptimizerSetupTaskInputData, OptimizerSetupTaskInputSchema
-from .tasks import echo_results, of_pass_data
-from ..interaction_utils.ie_utils import ie_replace_task_id
-from ..interaction_utils.tasks import invoke_task
-from ..shared.enums import InteractionEndpointType
-from ..shared.schemas import (
+from .shared.enums import InteractionEndpointType
+from .shared.schemas import (
     MinimizerCallbackData,
     MinimizerCallbackSchema,
     MinimizerInputData,
@@ -54,6 +53,7 @@ from ..shared.schemas import (
     TaskStatusChanged,
     TaskStatusChangedSchema,
 )
+from .tasks import echo_results, of_pass_data
 
 
 def get_plugin_metadata(plugin_url) -> PluginMetadata:
@@ -522,9 +522,12 @@ class MinimizerResultCallback(MethodView):
             raise KeyError(msg)
 
         if arguments.status != "SUCCESS" or arguments.url is None:
-            db_task.status = "FAILURE"
+            db_task.task_status = "FAILURE"
             db_task.save(commit=True)
-            return
+            return Response(status=HTTPStatus.OK)
+
+        if db_task.data.get("minimizer_result_url") == arguments.url:
+            return Response(status=HTTPStatus.OK)  # already handled this update
 
         db_task.data["minimizer_result_url"] = arguments.url
         db_task.clear_previous_step()

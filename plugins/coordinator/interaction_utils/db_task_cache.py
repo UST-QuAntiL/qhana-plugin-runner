@@ -1,16 +1,16 @@
 from typing import Optional
+from functools import lru_cache
 
 import sqlalchemy_json
 from celery.utils.log import get_task_logger
 
-from qhana_plugin_runner.cache_config import cache
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@cache.memoize(timeout=500)
+@lru_cache
 def get_of_calc_data(db_id: int) -> tuple:
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     if db_task is None:

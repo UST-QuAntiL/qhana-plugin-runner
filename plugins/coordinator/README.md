@@ -5,13 +5,11 @@ This optimizer plugin is the result of the master thesis `Implementing Variation
 
 It is a plugin that can be used to optimize given data with the help of a user selected objective function and minimizer.
 
-## Folder Structure
+## Folder Structure (OUTDATED)
 
 * `coordinator/` - Contains the coordinator plugin that is used to run the optimizer plugin.
 * `objective_functions/` - Contains the objective function plugins.
 * `minimizer/` - Contains the minimization plugins.
-* `interactions_utils/` - Contains utilities used for plugins interactions.
-* `shared/` - Contains the schemas and enums used by all plugins for the optimization process.
 
 ## How to create a new plugin for the optimizer
 
