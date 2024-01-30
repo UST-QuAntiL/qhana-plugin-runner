@@ -33,10 +33,10 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.storage import STORE
 
+from ..plugin import RESTConnector
 from .jinja_utils import render_template_sandboxed
 from .response_handling import ResponseHandlingStrategy
 from .schemas import ConnectorVariable
-from ..plugin import RESTConnector
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -66,6 +66,7 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
 
     assert isinstance(request_header_template, str)
     assert isinstance(request_body_template, str)
+    assert isinstance(request_file_descriptors, list)
 
     task_data.add_task_log_entry("Preparing request...", commit=True)
 
@@ -99,7 +100,7 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
         connector.get("response_handling", "default")
     )
 
-    request_files = _download_files(request_file_descriptors)
+    request_files = _prepare_request_files(request_file_descriptors, request_variables)
 
     task_data.add_task_log_entry(
         f"Sending {request_method} request to {request_url}", commit=True
@@ -119,10 +120,10 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
         )
     finally:
         # close request files
-        for file in request_files.values():
+        for file_ in request_files.values():
             try:
-                file[1].close()
-            except:
+                file_[1].close()
+            except:  # noqa
                 pass  # ensure other files are tried too
 
     task_data.add_task_log_entry("Handle response...", commit=True)
@@ -141,13 +142,15 @@ def perform_request(self, connector_id: str, db_id: int) -> str:
     )
 
     for response_map in response_mapping:
-        # FIXME: Files with dereference_url=True in the response output descriptor
-        # will have a URL in the content that points to the actual content.
-        # Use the URL file store for these files!
-        with SpooledTemporaryFile(mode="w") as output:
+        with SpooledTemporaryFile(mode="wb") as output:
             content = render_template_sandboxed(response_map["data"], template_context)
 
-            output.write(content)
+            if response_map.get("dereference_url"):
+                with requests.get(content) as response:  # TODO add timeout
+                    output.write(response.content)
+            else:
+                output.write(content.encode("utf-8"))
+
             STORE.persist_task_result(
                 task_db_id=db_id,
                 file_=output,
@@ -193,20 +196,26 @@ def prepare_variables(
     return request_variables
 
 
-def _download_files(
-    request_file_descriptors: List[Dict],
+def _prepare_request_files(
+    request_file_descriptors: List[Dict], variables: dict
 ) -> Dict[str, Tuple[str, BytesIO, str]]:
     request_files = {}
 
     for req_file in request_file_descriptors:
-        file_url = req_file["source"]
-        response = requests.get(file_url)
+        file_content_template = req_file["data"]
+        file_content = render_template_sandboxed(file_content_template, variables)
 
-        file = NamedTemporaryFile(mode="w+b")
-        file.write(response.content)
+        file_ = NamedTemporaryFile(mode="w+b")
+
+        if req_file.get("dereference_url"):
+            with requests.get(file_content) as response:  # TODO add timeout
+                file_.write(response.content)
+        else:
+            file_.write(file_content.encode("utf-8"))
+
         request_files[req_file["form_field_name"]] = (
             req_file["form_field_name"],
-            file,
+            file_,
             req_file["content_type"],
         )
 

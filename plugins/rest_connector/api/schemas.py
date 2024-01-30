@@ -71,6 +71,7 @@ class WelcomeParametersSchema(FrontendFormBaseSchema):
 
 class ConnectorUpdateSchema(MaBaseSchema):
     key = EnumField(ConnectorKey, required=True, use_value=True)
+    ai_assist = ma.fields.Boolean(required=False, missing=False)
     value = ma.fields.String(required=True)
     next_step = ma.fields.String(required=False, missing="")
 
@@ -102,8 +103,8 @@ class ConnectorVariable(TypedDict, total=False):
 
 
 class RequestFileDescriptorSchema(MaBaseSchema):
-    source = ma.fields.URL(required=True)  # TODO maybe use FileURL instead
-    form_field_name = ma.fields.String(required=False, allow_none=True)
+    data = ma.fields.String(required=True)
+    dereference_url = ma.fields.Boolean(required=False)
     content_type = ma.fields.String(required=False, allow_none=True)
 
 
