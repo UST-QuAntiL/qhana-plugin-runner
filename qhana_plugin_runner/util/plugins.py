@@ -19,7 +19,7 @@ from typing import ClassVar, Dict, List, Optional, Union
 
 from flask import Flask
 from flask.blueprints import Blueprint
-from packaging.version import Version, InvalidVersion
+from packaging.version import InvalidVersion, Version
 from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
 
@@ -199,9 +199,6 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
 def _load_plugins_from_folder(
     app: Flask,
     folder: Union[str, Path],
-    recursive: bool = True,
-    max_depth: int = 4,
-    current_depth: int = 0,
 ):
     """Load all plugins from a folder path.
 
@@ -215,9 +212,6 @@ def _load_plugins_from_folder(
     Args:
         app (Flask): the app instance (used for logging only)
         folder (Union[str, Path]): the folder path to scan for plugins
-        recursive (bool, optional): If true, recursively scan subfolders for plugins. Defaults to True.
-        max_depth (int, optional): Maximum depth for recursion. Defaults to 4.
-        current_depth (int, optional): Current depth of recursion. Defaults to 0.
     """
     if isinstance(folder, str):
         folder = Path(folder)
@@ -238,31 +232,17 @@ def _load_plugins_from_folder(
     if (folder / Path("__init__.py")).exists():
         _append_source_path(app, folder.parent)
         _try_load_plugin_package(app, folder)
-    else:
-        _append_source_path(app, folder)
+        return
 
-    if current_depth < max_depth:
-        for child in folder.iterdir():
-            if child.name.startswith("."):
-                continue
-            if child.is_file():
-                _try_load_plugin_file(app, child)
-            if child.is_dir() and recursive:
-                is_ignore_folder: bool = (child / Path(".ignore")).exists()
-                if is_ignore_folder:
-                    app.logger.info(
-                        f"Skipping folder '{child}' because it is marked as ignored."
-                    )
-                    continue
+    _append_source_path(app, folder)
 
-                is_plugin_folder: bool = (child / Path("__init__.py")).exists()
-
-                if is_plugin_folder:
-                    _try_load_plugin_package(app, child)
-                elif recursive:
-                    _load_plugins_from_folder(
-                        app, child, recursive, max_depth, current_depth + 1
-                    )
+    for child in folder.iterdir():
+        if child.name.startswith("."):
+            continue
+        if child.is_file():
+            _try_load_plugin_file(app, child)
+        if child.is_dir():
+            _try_load_plugin_package(app, child)
 
 
 def register_plugins(app: Flask):
