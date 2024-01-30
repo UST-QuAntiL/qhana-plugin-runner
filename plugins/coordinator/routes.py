@@ -325,9 +325,9 @@ class OptimizerSetupProcessStep(MethodView):
         ]
 
         if len(of_loss_and_gradient_endpoint) > 0:
-            db_task.data[
-                InteractionEndpointType.calc_loss_and_grad.value
-            ] = of_loss_and_gradient_endpoint[0].href
+            db_task.data[InteractionEndpointType.calc_loss_and_grad.value] = (
+                of_loss_and_gradient_endpoint[0].href
+            )
 
         of_href = urljoin(
             arguments.objective_function_plugin_selector,
