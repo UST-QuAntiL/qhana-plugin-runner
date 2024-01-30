@@ -23,15 +23,15 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from optimizer.interaction_utils.ie_utils import url_for_ie
-from optimizer.interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from optimizer.interaction_utils.tasks import make_callback
-from optimizer.objective_functions.neural_network.schemas import (
+from .interaction_utils.ie_utils import url_for_ie
+from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
+from .interaction_utils.tasks import make_callback
+from .schemas import (
     HyperparamterInputData,
     HyperparamterInputSchema,
 )
-from optimizer.shared.enums import InteractionEndpointType
-from optimizer.shared.schemas import (
+from .shared.enums import InteractionEndpointType
+from .shared.schemas import (
     CalcLossOrGradInput,
     CalcLossOrGradInputSchema,
     GradientResponseSchema,
