@@ -23,6 +23,7 @@ from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
+from braket.circuits import Instruction, gates
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
@@ -306,9 +307,9 @@ def find_total_classicalbits(qasm_code):
     # finds QASM 2 style bit registers that are still allowed in QASM 3
     matches_legacy = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)];", cleanedcomment_qasm)
     # finds single bit registers
-    matches_single = re.findall(r"bit [a-zA-Z0-9_]+;", cleanedcomment_qasm)
+    matches_single = re.findall(r"(?<!qu)bit [a-zA-Z0-9_]+;", cleanedcomment_qasm)
     # finds bit registers with declared size
-    matches = re.findall(r"bit\[(\d+)] [a-zA-Z0-9_]+;", cleanedcomment_qasm)
+    matches = re.findall(r"(?<!qu)bit\[(\d+)] [a-zA-Z0-9_]+;", cleanedcomment_qasm)
 
     return sum(map(int, matches_legacy)) + len(matches_single) + sum(map(int, matches))
 
@@ -325,6 +326,9 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     # Convert the Cirq circuit to a Braket circuit
     braket_circuit = Circuit.from_ir(circuit_qasm)
+
+    for i in range(num_classical_bits):
+        braket_circuit.add_instruction(Instruction(gates.I(), i))
 
     device = LocalSimulator()
 
