@@ -20,6 +20,7 @@ from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List, Dict, Tuple
 from zipfile import ZipFile
+import muid
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -53,7 +54,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -268,10 +269,14 @@ class WuPalmer(QHAnaPluginBase):
         return WU_PALMER_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "muid~=0.5.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
@@ -520,10 +525,18 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    concat_filenames = retrieve_filename(entities_url)
+    concat_filenames += retrieve_filename(entities_metadata_url)
+    concat_filenames += retrieve_filename(taxonomies_zip_url)
+    filenames_hash = get_readable_hash(concat_filenames)
+
+    info_str = "_with_root" if root_has_meaning_in_taxonomy else "_without_root"
+    info_str += f"_{filenames_hash}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "wu_palmer.zip",
+        f"wu_palmer{info_str}.zip",
         "custom/element-similarities",
         "application/zip",
     )

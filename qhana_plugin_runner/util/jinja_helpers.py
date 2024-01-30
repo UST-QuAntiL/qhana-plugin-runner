@@ -18,6 +18,8 @@ from flask import Flask
 from marshmallow import fields
 from marshmallow.validate import Length, Range
 
+from qhana_plugin_runner.api.util import FrontendFormBaseSchema
+
 
 def marshmallow_field_to_input_type(field: fields.Field) -> Optional[str]:
     if field.metadata.get("input_type"):
@@ -91,8 +93,19 @@ def space_delimited_list(
     return " ".join(str(i) for i in items)
 
 
+def get_datalist_from_schema(schema: FrontendFormBaseSchema, key: str) -> Optional[list]:
+    """Get datalist for a field from schema or schema.datalists dict. If not found, return None."""
+    datalist = schema.fields[key].metadata.get("datalist", None)
+    if datalist:
+        return datalist
+    if hasattr(schema, "datalists") and isinstance(schema.datalists, dict):
+        return schema.datalists.get(key, None)
+    return None
+
+
 def register_helpers(app: Flask):
     app.jinja_env.globals["get_input_type"] = marshmallow_field_to_input_type
     app.jinja_env.globals["get_input_attr_step"] = marshmallow_field_to_step_attr
     app.jinja_env.globals["get_validation_attrs"] = marshmallow_validators_to_field_attrs
     app.jinja_env.globals["space_delimited_list"] = space_delimited_list
+    app.jinja_env.globals["get_datalist_from_schema"] = get_datalist_from_schema

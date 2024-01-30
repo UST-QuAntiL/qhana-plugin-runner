@@ -27,7 +27,7 @@ HA_BLP = SecurityBlueprint(
     _identifier,
     __name__,
     description="Hybrid Autoencoder plugin API.",
-    template_folder="hybrid_ae_templates",
+    template_folder="templates",
 )
 
 
@@ -44,7 +44,7 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
         return HA_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\ntorch~=2.0.1"
+        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\ntorch~=2.0.1\nmuid~=0.5.3"
 
 
 try:

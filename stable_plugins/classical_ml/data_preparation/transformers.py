@@ -53,6 +53,7 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from qhana_plugin_runner.requests import retrieve_filename
 
 _plugin_name = "sim-to-dist-transformers"
 __version__ = "v0.2.0"
@@ -345,10 +346,13 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    filename = retrieve_filename(attribute_similarities_url)
+    info_str = f"_transformer_{transformer.name}_from_{filename}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "attr_dist.zip",
+        f"transformers_attr_dist{info_str}.zip",
         "custom/attribute-distances",
         "application/zip",
     )

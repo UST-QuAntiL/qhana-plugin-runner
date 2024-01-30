@@ -27,7 +27,7 @@ def bitlist_to_int(bitlist: List[int]) -> int:
 
 def int_to_bitlist(num, length: int):
     binary = bin(num)[2:]
-    result = [int(el) for el in reversed(binary)]
+    result = [int(el) for el in binary]
     if len(result) > length:
         raise ValueError(
             f"Binary representation of {num} needs at least {len(result)} bits, but only got {length}."
@@ -38,6 +38,11 @@ def int_to_bitlist(num, length: int):
 
 def is_binary(data: np.ndarray) -> bool:
     return np.array_equal(data, data.astype(bool))
+
+
+def check_binary(data: np.ndarray, error_msg: str):
+    if not is_binary(data):
+        raise ValueError(error_msg)
 
 
 def ceil_log2(value: float) -> int:

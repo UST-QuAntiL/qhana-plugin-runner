@@ -28,6 +28,7 @@ VQC_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="VQC plugin API",
+    template_folder="templates",
 )
 
 qiskit_ml_version = "0.4.0"
@@ -51,7 +52,7 @@ class VQC(QHAnaPluginBase):
         return VQC_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~=0.43\nqiskit-machine-learning~={qiskit_ml_version}\nscikit-learn~=1.1"
+        return f"qiskit~=0.43\nqiskit-machine-learning~={qiskit_ml_version}\nscikit-learn~=1.1\nmuid~=0.5.3"
 
 
 try:

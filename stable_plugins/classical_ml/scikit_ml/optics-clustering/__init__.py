@@ -29,6 +29,7 @@ Optics_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Optics plugin API",
+    template_folder="templates",
 )
 
 sklearn_version = "1.1"
@@ -51,7 +52,7 @@ class Optics(QHAnaPluginBase):
         return Optics_BLP
 
     def get_requirements(self) -> str:
-        return f"scikit-learn~={sklearn_version}\nplotly~=5.6.0\npandas~=1.5.0"
+        return f"scikit-learn~={sklearn_version}\nplotly~=5.18.0\npandas~=1.5.0"
 
 
 try:

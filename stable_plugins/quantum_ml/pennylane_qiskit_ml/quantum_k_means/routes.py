@@ -143,7 +143,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "quantum_k_means_template.html",
                 name=QKMeans.instance.name,
                 version=QKMeans.instance.version,
                 schema=InputParametersSchema(),

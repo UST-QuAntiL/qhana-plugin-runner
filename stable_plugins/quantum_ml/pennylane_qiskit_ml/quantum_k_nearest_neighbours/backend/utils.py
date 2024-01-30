@@ -27,7 +27,7 @@ def bitlist_to_int(bitlist: List[int]) -> int:
 
 def int_to_bitlist(num, length: int):
     binary = bin(num)[2:]
-    result = [int(el) for el in reversed(binary)]
+    result = [int(el) for el in binary]
     if len(result) > length:
         raise ValueError(
             f"Binary representation of {num} needs at least {len(result)} bits, but only got {length}."
@@ -47,9 +47,3 @@ def check_binary(data: np.ndarray, error_msg: str):
 
 def ceil_log2(value: float) -> int:
     return int(np.ceil(np.log2(value)))
-
-
-def check_for_duplicates(data: np.ndarray, error_msg: str):
-    print(f"Checking the following data for duplicates:\n{data}")
-    if len(np.unique(data, axis=0)) != len(data):
-        raise ValueError(error_msg)

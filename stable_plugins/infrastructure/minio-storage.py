@@ -72,6 +72,8 @@ class MinioStore(FileStore, name="minio"):
     settings of the storage provider use the `MINIO` config key. The default
     bucket can be configured by the setting `MINIO.bucket="custom-bucket"`.
     The default bucket can also be set via the `MINIO_BUCKET` environment variable.
+    Bucket names must start with a letter and only contain lower case letters
+    digits and `-`.
     """
 
     def __init__(self, app: Flask) -> None:

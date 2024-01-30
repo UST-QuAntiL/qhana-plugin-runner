@@ -45,14 +45,6 @@
     {% endblock content %}
 
     {% block script %}
-
-    <!-- FIXME remove the javascript block and frontentjs in favor of calling super in the template! (requires refactoring existing plugins!) -->
-    {% block javascript %}
-    {% if frontendjs %}
-        <script src={{frontendjs}}></script>
-    {% endif %}
-    {% endblock %}
-
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
     {% endblock script %}
 

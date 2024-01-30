@@ -28,6 +28,7 @@ QISKIT_QKE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Qiskit Quantum-Kernel-Estimation plugin API",
+    template_folder="templates",
 )
 
 
@@ -55,7 +56,7 @@ class QiskitQKE(QHAnaPluginBase):
         return QISKIT_QKE_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}"
+        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}\nmuid~=0.5.3"
 
 
 try:

@@ -1,3 +1,19 @@
+# Copyright 2021 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Module containing celery tasks."""
+
 from datetime import datetime
 from blinker import Namespace
 
@@ -5,6 +21,9 @@ from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+
+# make sure that celery tasks in plugin utils are always loaded
+from qhana_plugin_runner.plugin_utils import interop  # noqa
 
 from .celery import CELERY
 
@@ -67,13 +86,15 @@ def add_step(
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
 
-    AsyncResult(self.request.parent_id, app=CELERY).forget()
+    AsyncResult(
+        self.request.parent_id if self.request.parent_id else self.request.id, app=CELERY
+    ).forget()
 
 
 @CELERY.task(name=f"{_name}.save-result", bind=True, ignore_result=True)
 def save_task_result(self, task_log: str, db_id: int):
     """Save the task log in the database and update the final task status of the database task."""
-    if not isinstance(task_log, str):
+    if task_log is not None and not isinstance(task_log, str):
         raise TypeError(
             f"The task log / task metadata must be of type str to be stored in the database! (expected str but got {type(task_log)})"
         )
@@ -90,7 +111,9 @@ def save_task_result(self, task_log: str, db_id: int):
     task_data.task_status = "SUCCESS"
     task_data.clear_previous_step()
     task_data.finished_at = datetime.utcnow()
-    if isinstance(task_log, str):
+    if task_log is None:
+        pass
+    elif isinstance(task_log, str):
         task_data.add_task_log_entry(task_log)
     else:
         task_data.add_task_log_entry(repr(task_log))

@@ -32,7 +32,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
 import numpy as np
@@ -43,8 +43,13 @@ from .backend.vqc import QiskitVQC
 from sklearn.metrics import accuracy_score
 
 from .backend.visualization import plot_data, plot_confusion_matrix
+import muid
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def get_point(ent: dict) -> np.ndarray:
@@ -283,13 +288,23 @@ def calculation_task(self, db_id: int) -> str:
         label_to_int=label_to_int,
     )
 
+    concat_filenames = retrieve_filename(train_data_url)
+    concat_filenames += retrieve_filename(train_labels_url)
+    concat_filenames += retrieve_filename(test_data_url)
+    concat_filenames += retrieve_filename(test_labels_url)
+    filename_hash = get_readable_hash(concat_filenames)
+
+    feature_map_name = str(feature_map_enum.name).replace("_feature_map", "")
+
+    info_str = f"_vqc_feature_map_{feature_map_name}_e_{entanglement_pattern_feature_map}_ansatz_{vqc_ansatz_enum.name}_e_{entanglement_pattern_ansatz}_{filename_hash}"
+
     # Output
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "test_labels.json",
+            f"test_labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -302,7 +317,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "classification_plot.html",
+                f"classification_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -315,7 +330,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "confusion_matrix.html",
+                f"confusion_matrix{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -325,7 +340,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
+            f"representative_circuit{info_str}.qasm",
             "representative-circuit",
             "application/qasm",
         )
@@ -335,7 +350,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "vqc_metadata.json",
+            f"vqc_metadata{info_str}.json",
             "vqc-metadata",
             "application/json",
         )
