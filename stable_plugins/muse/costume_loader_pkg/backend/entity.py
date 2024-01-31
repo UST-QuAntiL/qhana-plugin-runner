@@ -217,9 +217,9 @@ class EntityFactory:
         )
 
         tables[Attribute.dominanteCharaktereigenschaft] = dominant_character_trait_table
-        columns[
-            Attribute.dominanteCharaktereigenschaft
-        ] = dominant_character_trait_table.c.DominanteCharaktereigenschaft
+        columns[Attribute.dominanteCharaktereigenschaft] = (
+            dominant_character_trait_table.c.DominanteCharaktereigenschaft
+        )
 
         ###################
         # Stereotyp table #
@@ -311,9 +311,9 @@ class EntityFactory:
         )
 
         tables[Attribute.koerpermodifikation] = body_modification_table
-        columns[
-            Attribute.koerpermodifikation
-        ] = body_modification_table.c.Koerpermodifikationname
+        columns[Attribute.koerpermodifikation] = (
+            body_modification_table.c.Koerpermodifikationname
+        )
 
         #########################
         # KostuemTimecode table #
