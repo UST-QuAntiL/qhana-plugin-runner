@@ -315,15 +315,21 @@ class VirtualPluginView(MethodView):
 
         return PluginMetadata(
             title=title,
-            description=plugin.description
-            if plugin
-            else process_definition.get("description", ""),
-            name=plugin.name
-            if plugin and plugin.name
-            else process_definition.get("key", process_definition_id),
-            version=plugin.version
-            if plugin and plugin.version is not None
-            else str(process_definition.get("version", 1)),
+            description=(
+                plugin.description
+                if plugin
+                else process_definition.get("description", "")
+            ),
+            name=(
+                plugin.name
+                if plugin and plugin.name
+                else process_definition.get("key", process_definition_id)
+            ),
+            version=(
+                plugin.version
+                if plugin and plugin.version is not None
+                else str(process_definition.get("version", 1))
+            ),
             tags=plugin.tag_list if plugin else ["workflow", "bpmn"],
             type=PluginType.processing,
             entry_point=EntryPoint(
