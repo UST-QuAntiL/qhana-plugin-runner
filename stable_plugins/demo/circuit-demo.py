@@ -17,11 +17,10 @@ from http import HTTPStatus
 from textwrap import dedent
 from typing import Mapping, Optional
 
-from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, jsonify, redirect
 from flask.app import Flask
-from flask.globals import request
+from flask.globals import request, current_app
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -54,7 +53,7 @@ from qhana_plugin_runner.plugin_utils.interop import (
     subscribe,
 )
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import save_task_error, save_task_result, TASK_STEPS_CHANGED
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "circuit-demo"
@@ -461,6 +460,10 @@ def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
             step_id=step_id,
             commit=True,
         )
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_task.id)
+
         return external_step_id
     return None
 

@@ -3,8 +3,11 @@ import urllib.parse
 from celery.utils.log import get_task_logger
 from requests import Response, post
 
+from flask.globals import current_app
+
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import TASK_STEPS_CHANGED, TASK_DETAILS_CHANGED
 
 _name = "qhana-plugin-runner-interactions"
 
@@ -77,6 +80,7 @@ def invoke_task(
     ui_href = ui_href._replace(query=f"callbackUrl={callback_url}&{ui_href.query}")
     ui_href = urllib.parse.urlunparse(ui_href)
 
+    task_data.clear_previous_step()
     task_data.add_next_step(href=href, ui_href=ui_href, step_id=step_id)
 
     if isinstance(task_log, str):
@@ -85,4 +89,9 @@ def invoke_task(
         task_data.add_task_log_entry(repr(task_log))
 
     task_data.save(commit=True)
+
+    app = current_app._get_current_object()
+    TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
+    TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
+
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")

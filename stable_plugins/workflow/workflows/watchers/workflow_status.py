@@ -2,6 +2,7 @@ import json
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 
+from flask.globals import current_app
 from celery.utils.log import get_task_logger
 from requests.exceptions import RequestException
 
@@ -9,7 +10,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import save_task_result
+from qhana_plugin_runner.tasks import save_task_result, TASK_DETAILS_CHANGED, TASK_STEPS_CHANGED
 
 from .. import DeployWorkflow
 from ..clients.camunda_client import CamundaClient
@@ -93,12 +94,16 @@ def check_for_incidents(
 
     assert isinstance(db_task.data, dict)
 
+    db_task.clear_previous_step()
     db_task.add_next_step(
         step_id="workflow-incident",
         href=db_task.data["href_incident"],
         ui_href=db_task.data["ui_href_incident"],
         commit=True,
     )
+
+    app = current_app._get_current_object()
+    TASK_STEPS_CHANGED.send(app, task_id=db_task.id)
 
     return True
 
@@ -136,12 +141,17 @@ def check_for_human_tasks(
         db_task.data["human_task_id"] = human_task.id
         db_task.data["human_task_definition_key"] = human_task.task_definition_key
 
+        db_task.clear_previous_step()
         db_task.add_next_step(
             step_id=human_task.id,
             href=db_task.data["href"],
             ui_href=db_task.data["ui_href"],
             commit=True,
         )
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_task.id)
+        TASK_DETAILS_CHANGED.send(app, task_id=db_task.id)
 
         return True
 
