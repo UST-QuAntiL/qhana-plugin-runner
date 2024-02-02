@@ -334,9 +334,7 @@ class PluginMetadata:
     ]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
-    links: List[ApiLink] = field(
-        default_factory=list
-    )
+    links: List[ApiLink] = field(default_factory=list)
 
 
 class PluginMetadataSchema(MaBaseSchema):
@@ -387,7 +385,9 @@ class PluginMetadataSchema(MaBaseSchema):
             required=False,
             allow_none=False,
             missing=tuple(),
-            metadata={"description": "A list of links to different parts of the plugin API for interacting with this plugin programatically."},
+            metadata={
+                "description": "A list of links to different parts of the plugin API for interacting with this plugin programatically."
+            },
         )
     )
 

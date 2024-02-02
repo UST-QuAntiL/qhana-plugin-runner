@@ -53,7 +53,11 @@ from qhana_plugin_runner.plugin_utils.interop import (
     subscribe,
 )
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import save_task_error, save_task_result, TASK_STEPS_CHANGED
+from qhana_plugin_runner.tasks import (
+    save_task_error,
+    save_task_result,
+    TASK_STEPS_CHANGED,
+)
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "circuit-demo"
@@ -428,7 +432,9 @@ def circuit_demo_task(self, db_id: int) -> str:
     task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
     task_data.data["result_url"] = result_url
 
-    subscribed = subscribe(result_url=result_url, webhook_url=continue_url, events=["steps", "status"])
+    subscribed = subscribe(
+        result_url=result_url, webhook_url=continue_url, events=["steps", "status"]
+    )
     task_data.data["subscribed"] = subscribed
     if subscribed:
         task_data.add_task_log_entry("Subscribed to events from external task.")
@@ -437,10 +443,11 @@ def circuit_demo_task(self, db_id: int) -> str:
 
     task_data.save(commit=True)
 
-
     if not subscribed:
         return self.replace(
-            monitor_result.s(result_url=result_url, webhook_url=continue_url, monitor="all")
+            monitor_result.s(
+                result_url=result_url, webhook_url=continue_url, monitor="all"
+            )
         )
 
 
@@ -503,25 +510,23 @@ def check_executor_result_task(self, db_id: int):
                 monitor_external_substep.s(
                     result_url=result_url,
                     webhook_url=continue_url,
-                    substep=external_step_id
+                    substep=external_step_id,
                 )
             )
         elif not subscribed:
             return self.replace(
                 # wait for external substep or status change
                 monitor_result.s(
-                    result_url=result_url,
-                    webhook_url=continue_url,
-                    monitor="all"
+                    result_url=result_url, webhook_url=continue_url, monitor="all"
                 )
             )
     elif status == "SUCCESS":
         if "result" in task_data.data:
-            return # already checking for result, prevent duplicate task scheduling!
+            return  # already checking for result, prevent duplicate task scheduling!
 
         task_data.data["result"] = result
         task_data.save(commit=True)
-        
+
         return self.replace(
             circuit_demo_result_task.si(db_id=db_id) | save_task_result.s(db_id=db_id)
         )

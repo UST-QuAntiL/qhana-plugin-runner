@@ -47,7 +47,11 @@ def on_virtual_plugin_remove(app, *, plugin_url, **extra):
 def on_task_update(app: Flask, *, task_id: int, event_type: Optional[str], **extra):
     subscribers = TaskUpdateSubscription.get_by_task_and_event(task_id, event_type)
     for webhook in subscribers:
-        call_webhook.s(webhook_url=webhook.webhook_href, task_url=webhook.task_href, event_type=event_type).apply_async()
+        call_webhook.s(
+            webhook_url=webhook.webhook_href,
+            task_url=webhook.task_href,
+            event_type=event_type,
+        ).apply_async()
 
 
 def on_task_status_update(app: Flask, *, task_id: int, **extra):

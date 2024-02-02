@@ -81,7 +81,6 @@ def invoke_task(
 
     task_data.add_next_step(href=href, ui_href=ui_href, step_id=step_id)
 
-
     if isinstance(task_log, str):
         task_data.add_task_log_entry(task_log)
     else:

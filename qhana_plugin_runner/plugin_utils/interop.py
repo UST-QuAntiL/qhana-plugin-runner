@@ -43,7 +43,9 @@ def get_plugin_endpoint(
         return urljoin(plugin_url, url)
 
 
-def call_plugin_endpoint(endpoint_url: str, data: Dict[str, Any], debug: bool=False) -> str:
+def call_plugin_endpoint(
+    endpoint_url: str, data: Dict[str, Any], debug: bool = False
+) -> str:
     """Call a plugin endpoint and return the result url.
 
     Only use this with the main entry point of a plugin.
@@ -98,7 +100,9 @@ class ResultUnchangedError(Exception):
     pass
 
 
-def _check_result_for_updates(status: Literal["PENDING", "SUCCESS", "FAILURE"], result) -> Optional[Literal["status", "steps"]]:
+def _check_result_for_updates(
+    status: Literal["PENDING", "SUCCESS", "FAILURE"], result
+) -> Optional[Literal["status", "steps"]]:
     if status in ("SUCCESS", "FAILURE"):
         return "status"
 
@@ -109,10 +113,12 @@ def _check_result_for_updates(status: Literal["PENDING", "SUCCESS", "FAILURE"], 
     return None  # no updates found
 
 
-def _check_result_for_cleared_substep(status: Literal["PENDING", "SUCCESS", "FAILURE"], result, substep: Union[str, int]) -> Optional[Literal["status", "steps"]]:
+def _check_result_for_cleared_substep(
+    status: Literal["PENDING", "SUCCESS", "FAILURE"], result, substep: Union[str, int]
+) -> Optional[Literal["status", "steps"]]:
     if status in ("SUCCESS", "FAILURE"):
         return "status"
-    
+
     steps: List[dict] = result.get("steps", [])
 
     step: Optional[dict] = None
@@ -128,21 +134,29 @@ def _check_result_for_cleared_substep(status: Literal["PENDING", "SUCCESS", "FAI
                 step = s
         else:
             raise ValueError(f"Substep with ID {substep} not present!")
-        
+
     if step is None:
         raise ValueError("Could not find step to monitor.")
-    
+
     if step.get("cleared", False):
         return "steps"
     return None  # no updates found
 
 
-def _subscribe_for_events(subscribe_url: str, webhook_url: str, events: Union[Literal["all"], Sequence[str]] = "all") -> Tuple[Literal["PENDING", "SUCCESS", "FAILURE"], Any]:
+def _subscribe_for_events(
+    subscribe_url: str,
+    webhook_url: str,
+    events: Union[Literal["all"], Sequence[str]] = "all",
+) -> Tuple[Literal["PENDING", "SUCCESS", "FAILURE"], Any]:
     result_data = None
     if events == "all":
         events = [None]
     for event in events:
-        with REQUEST_SESSION.post(subscribe_url, json={"command": "subscribe", "webhookHref": webhook_url, "event": event}, timeout=3) as result:
+        with REQUEST_SESSION.post(
+            subscribe_url,
+            json={"command": "subscribe", "webhookHref": webhook_url, "event": event},
+            timeout=3,
+        ) as result:
             result.raise_for_status()
             result_data = result.json()
     status = result_data.get("status") if result_data else "FAILURE"
@@ -152,7 +166,12 @@ def _subscribe_for_events(subscribe_url: str, webhook_url: str, events: Union[Li
         return "FAILURE", result_data
 
 
-def subscribe(result_url: str, webhook_url: str, events: Union[Literal["all"], Sequence[str]] = "all", check_for_updates: bool=True) -> bool:
+def subscribe(
+    result_url: str,
+    webhook_url: str,
+    events: Union[Literal["all"], Sequence[str]] = "all",
+    check_for_updates: bool = True,
+) -> bool:
     """Subscribe to task result events.
 
     Args:
@@ -171,7 +190,9 @@ def subscribe(result_url: str, webhook_url: str, events: Union[Literal["all"], S
         for link in result.get("links", []):
             if link.get("type") == "subscribe":
                 try:
-                    status, result = _subscribe_for_events(link["href"], webhook_url, events)
+                    status, result = _subscribe_for_events(
+                        link["href"], webhook_url, events
+                    )
                     subscribed = True
                 except RequestException:
                     pass  # could not subscribe because of some error
@@ -191,8 +212,6 @@ def subscribe(result_url: str, webhook_url: str, events: Union[Literal["all"], S
     return subscribed
 
 
-
-
 @CELERY.task(
     name=f"{__name__}.monitor_result",
     bind=True,
@@ -206,7 +225,7 @@ def monitor_result(
     result_url: str,
     webhook_url: str,
     monitor: Literal["status", "steps", "all"] = "all",
-    retry: bool=True,
+    retry: bool = True,
 ) -> None:
     """Monitor task result for status or step events by polling.
 
@@ -223,7 +242,9 @@ def monitor_result(
     updates = _check_result_for_updates(status, result)
 
     if updates and (updates == monitor or monitor == "all"):
-        REQUEST_SESSION.post(webhook_url, params={"source": result_url, "event": updates}, timeout=1)
+        REQUEST_SESSION.post(
+            webhook_url, params={"source": result_url, "event": updates}, timeout=1
+        )
         return  # found an update, stop monitoring to save resources
 
     if retry:
@@ -242,8 +263,8 @@ def monitor_external_substep(
     self,
     result_url: str,
     webhook_url: str,
-    substep: Union[str,int],
-    retry: bool=True,
+    substep: Union[str, int],
+    retry: bool = True,
 ) -> None:
     """Monitor an external task for a specific step to be cleared.
 
@@ -258,12 +279,14 @@ def monitor_external_substep(
     updates = _check_result_for_cleared_substep(status, result, substep)
 
     if updates:
-        REQUEST_SESSION.post(webhook_url, params={"source": result_url, "event": updates}, timeout=1)
+        REQUEST_SESSION.post(
+            webhook_url, params={"source": result_url, "event": updates}, timeout=1
+        )
         return  # found an update, stop monitoring to save resources
 
     if retry:
         raise ResultUnchangedError  # retry later
-    
+
 
 @CELERY.task(
     name=f"{__name__}.notify_webhook",
@@ -277,4 +300,6 @@ def notify_webhook(
     result_url: str,
     event: str,
 ) -> None:
-    REQUEST_SESSION.post(webhook_url, params={"source": result_url, "event": event}, timeout=1)
+    REQUEST_SESSION.post(
+        webhook_url, params={"source": result_url, "event": event}, timeout=1
+    )

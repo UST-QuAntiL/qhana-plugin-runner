@@ -177,10 +177,13 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     result.forget()
 
 
-@CELERY.task(name=f"{_name}.call_webhook", bind=True, ignore_result=True,
+@CELERY.task(
+    name=f"{_name}.call_webhook",
+    bind=True,
+    ignore_result=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
-    max_retries=3,)
+    max_retries=3,
+)
 def call_webhook(self, webhook_url: str, task_url: str, event_type: str):
     post(webhook_url, params={"source": task_url, "event": event_type}, timeout=1)
-

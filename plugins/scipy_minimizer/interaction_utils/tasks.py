@@ -92,5 +92,5 @@ def invoke_task(
     app = current_app._get_current_object()
     TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
     TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
-    
+
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")

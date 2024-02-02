@@ -10,7 +10,11 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import save_task_result, TASK_DETAILS_CHANGED, TASK_STEPS_CHANGED
+from qhana_plugin_runner.tasks import (
+    save_task_result,
+    TASK_DETAILS_CHANGED,
+    TASK_STEPS_CHANGED,
+)
 
 from .. import DeployWorkflow
 from ..clients.camunda_client import CamundaClient
