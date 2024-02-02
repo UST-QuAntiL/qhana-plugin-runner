@@ -15,10 +15,12 @@
 """Module containing celery tasks."""
 
 from datetime import datetime
-from blinker import Namespace
 
+from requests import post
+from blinker import Namespace
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
+from flask.globals import current_app
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -34,6 +36,13 @@ TASK_LOGGER = get_task_logger(_name)
 TASK_SIGNALS = Namespace()
 
 TASK_STATUS_CHANGED = TASK_SIGNALS.signal("task-status-changed")
+"""Signal for changes of the task status."""
+
+TASK_STEPS_CHANGED = TASK_SIGNALS.signal("task-steps-changed")
+"""Signal for changes of the step lists of tasks. Changes include new steps and clearing existing steps."""
+
+TASK_DETAILS_CHANGED = TASK_SIGNALS.signal("task-details-changed")
+"""Signal for any changes of a task excluding status and step events."""
 
 
 # TODO add periodic cleanup task to remove old results from the database!
@@ -86,6 +95,10 @@ def add_step(
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
 
+    app = current_app._get_current_object()
+    TASK_STEPS_CHANGED.send(app, task_id=db_id)
+    TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+
     AsyncResult(
         self.request.parent_id if self.request.parent_id else self.request.id, app=CELERY
     ).forget()
@@ -121,7 +134,9 @@ def save_task_result(self, task_log: str, db_id: int):
     task_data.save(commit=True)
     TASK_LOGGER.debug(f"Save task log for task with db id '{db_id}' successful.")
 
-    TASK_STATUS_CHANGED.send(self, db_id=db_id)
+    app = current_app._get_current_object()
+    TASK_STATUS_CHANGED.send(app, task_id=db_id)
+    TASK_DETAILS_CHANGED.send(app, task_id=db_id)
 
     # TODO: clean TaskData entries
 
@@ -153,8 +168,19 @@ def save_task_error(self, failing_task_id: str, db_id: int):
 
     task_data.save(commit=True)
 
-    TASK_STATUS_CHANGED.send(self, db_id=db_id)
+    app = current_app._get_current_object()
+    TASK_STATUS_CHANGED.send(app, task_id=db_id)
+    TASK_DETAILS_CHANGED.send(app, task_id=db_id)
 
     # TODO: maybe clean TaskData entries
 
     result.forget()
+
+
+@CELERY.task(name=f"{_name}.call_webhook", bind=True, ignore_result=True,
+    autoretry_for=(ConnectionError,),
+    retry_backoff=True,
+    max_retries=3,)
+def call_webhook(self, webhook_url: str, task_url: str, event_type: str):
+    post(webhook_url, params={"source": task_url, "event": event_type}, timeout=1)
+

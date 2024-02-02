@@ -13,16 +13,16 @@
 # limitations under the License.
 
 from datetime import datetime
-from typing import List, Optional, Sequence, Union
+from typing import List, NamedTuple, Optional, Sequence, Union
 
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import sqltypes as sql
-from sqlalchemy.sql.expression import select
+from sqlalchemy.sql.expression import distinct, or_, select, delete
 from sqlalchemy.sql.schema import ForeignKey
 
-from .mutable_json import JSON_LIKE, MutableJSON
 from ..db import DB, REGISTRY
+from .mutable_json import JSON_LIKE, MutableJSON
 
 
 @REGISTRY.mapped_as_dataclass
@@ -110,6 +110,18 @@ class ProcessingTask:
 
     outputs: Mapped[List["TaskFile"]] = relationship(
         "TaskFile", back_populates="task", lazy="select", default_factory=list
+    )
+
+    links: Mapped[List["TaskLink"]] = relationship(
+        "TaskLink", back_populates="task", lazy="selectin", default_factory=list
+    )
+
+    subscriptions: Mapped[List["TaskUpdateSubscription"]] = relationship(
+        "TaskUpdateSubscription", back_populates="task", lazy="select", default_factory=list
+    )
+
+    jobs: Mapped[List["TaskJob"]] = relationship(
+        "TaskJob", back_populates="task", lazy="select", default_factory=list
     )
 
     @property
@@ -210,6 +222,150 @@ class ProcessingTask:
     def get_by_id(cls, id_: int) -> Optional["ProcessingTask"]:
         """Get the object instance by the object id from the database. (None if not found)"""
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
+
+
+@REGISTRY.mapped_as_dataclass
+class TaskLink:
+    """Links that get exposed in the task result.
+    
+    Use these links to expose additional endpoints relevant for plugin-to-plugin 
+    interaction that depends on the current task context.
+    """
+    __tablename__ = "TaskLink"
+
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    task: Mapped[ProcessingTask] = relationship(
+        "ProcessingTask", back_populates="links", lazy="selectin"
+    )
+    type: Mapped[str] = mapped_column(sql.String(64))
+    href: Mapped[str] = mapped_column(sql.String(500))
+    task_id: Mapped[Optional[int]] = mapped_column(
+        sql.INTEGER(),
+        ForeignKey(ProcessingTask.id),
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+
+@REGISTRY.mapped_as_dataclass
+class TaskJob:
+    """Running celery tasks associated with a processing task.
+    
+    Use this table to keep track of celery tasks that might need to be cancelled or monitored.
+    """
+    __tablename__ = "TaskJob"
+
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    task: Mapped[ProcessingTask] = relationship(
+        "ProcessingTask", back_populates="jobs", lazy="selectin"
+    )
+    job_id: Mapped[str] = mapped_column(sql.String(500))
+    task_id: Mapped[Optional[int]] = mapped_column(
+        sql.INTEGER(),
+        ForeignKey(ProcessingTask.id),
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+    @classmethod
+    def get_by_task(cls, task: Union[int,ProcessingTask]) -> List[str]:
+        """Get all job ids for a task."""
+        q = select(distinct(cls.job_id))
+        if isinstance(task, ProcessingTask):
+            q = q.filter_by(task=task)
+        else:
+            q = q.filter_by(task_id=task)
+        return DB.session.execute(q).scalars().all()
+
+    def register_new_job(cls, task: Union[int,ProcessingTask], job_id: str, commit:bool=False):
+        """Register a new job for a task."""
+        if isinstance(task, int):
+            job = TaskJob(task=None, job_id=job_id)
+            job.task_id = task
+        else:
+            job = TaskJob(task=task, job_id=job_id)
+        DB.session.add(job)
+        if commit:
+            DB.session.commit()
+
+    def remove_job(cls, job_id: str, commit:bool=False):
+        q = delete(cls).filter_by(job_id=job_id)
+        DB.session.execute(q)
+        if commit:
+            DB.session.commit()
+
+    def remove_all_jobs_of_task(cls, task: Union[int,ProcessingTask], commit:bool=False):
+        q = delete(cls)
+        if isinstance(task, int):
+            q = q.filter_by(task_id=task)
+        else:
+            q = q.filter_by(task=task)
+        DB.session.execute(q)
+        if commit:
+            DB.session.commit()
+
+
+class WebhookRef(NamedTuple):
+    webhook_href: str
+    task_href: str
+
+
+@REGISTRY.mapped_as_dataclass
+class TaskUpdateSubscription:
+    """Table for webhook subscriptions to task updates."""
+    __tablename__ = "TaskUpdateSubscription"
+
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    task: Mapped[ProcessingTask] = relationship(
+        "ProcessingTask", back_populates="subscriptions", lazy="selectin"
+    )
+    webhook_href: Mapped[str] = mapped_column(sql.String(500))
+    task_href: Mapped[str] = mapped_column(sql.String(500))
+    event_type: Mapped[Optional[str]] = mapped_column(sql.String(64), nullable=True, default=None)
+    task_id: Mapped[Optional[int]] = mapped_column(
+        sql.INTEGER(),
+        ForeignKey(ProcessingTask.id),
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+    @classmethod
+    def get_by_task_and_event(cls, task: Union[int,ProcessingTask], event: Optional[str]=None) -> List[WebhookRef]:
+        """Get all webhooks for a task matching the given event type. ('None' matches all types.)"""
+        q = select(cls.webhook_href, cls.task_href).distinct()
+        if isinstance(task, ProcessingTask):
+            q = q.filter_by(task=task)
+        else:
+            q = q.filter_by(task_id=task)
+        if event is not None:
+            q = q.filter(or_(cls.event_type==None, cls.event_type==event))
+        return [WebhookRef(*r) for r in DB.session.execute(q).all()]
+    
+    @classmethod
+    def get_by_task_and_subscriber(cls, task: Union[int,ProcessingTask], webhook_href: str, event: Union[str,None]=...) -> List["TaskUpdateSubscription"]:
+        """Get all webhooks for a task matching the given event type. ('None' matches all types.)"""
+        q = select(cls).filter_by(webhook_href=webhook_href)
+        if isinstance(task, ProcessingTask):
+            q = q.filter_by(task=task)
+        else:
+            q = q.filter_by(task_id=task)
+        if event is None:
+            q = q.filter(cls.event_type == None)
+        elif event is not ...:
+            q = q.filter(cls.event_type == event)
+        return DB.session.execute(q).scalars().all()
+
+    def save(self, commit: bool = False):
+        """Add this object to the current session and optionally commit the session to persist all objects in the session."""
+        DB.session.add(self)
+        if commit:
+            DB.session.commit()
 
 
 @REGISTRY.mapped_as_dataclass

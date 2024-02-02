@@ -30,8 +30,8 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
-    OutputDataMetadata,
     EntryPoint,
+    OutputDataMetadata,
     PluginDependencyMetadata,
     PluginMetadata,
     PluginMetadataSchema,
@@ -46,10 +46,12 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.interop import (
-    call_plugin_endpoint_and_get_monitor_task,
+    call_plugin_endpoint,
     get_plugin_endpoint,
     get_task_result_no_wait,
+    monitor_external_substep,
     monitor_result,
+    subscribe,
 )
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
@@ -239,9 +241,7 @@ class ProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = circuit_demo_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
-        )
+        task = circuit_demo_task.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -422,23 +422,34 @@ def circuit_demo_task(self, db_id: int) -> str:
     options_url = task_data.data["options_url"]
     continue_url = task_data.data["continue_url"]
 
-    result_url = call_plugin_endpoint_and_get_monitor_task(
+    result_url = call_plugin_endpoint(
         endpoint, {"circuit": circuit_url, "executionOptions": options_url}
     )
 
     task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
     task_data.data["result_url"] = result_url
+
+    subscribed = subscribe(result_url=result_url, webhook_url=continue_url, events=["steps", "status"])
+    task_data.data["subscribed"] = subscribed
+    if subscribed:
+        task_data.add_task_log_entry("Subscribed to events from external task.")
+    else:
+        task_data.add_task_log_entry("Event subscription failed!")
+
     task_data.save(commit=True)
 
-    return self.replace(
-        monitor_result.s(result_url=result_url, webhook_url=continue_url, monitor="all")
-    )
+
+    if not subscribed:
+        return self.replace(
+            monitor_result.s(result_url=result_url, webhook_url=continue_url, monitor="all")
+        )
 
 
-def add_new_substep(task_data: ProcessingTask, steps: list):
+def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
     current_step = steps[-1] if steps else None
     if current_step and not current_step.get("cleared", False):
         step_id = current_step.get("stepId")
+        external_step_id = step_id if step_id else len(steps) - 1
         if step_id:
             step_id = f"executor.{step_id}"
         else:
@@ -450,6 +461,8 @@ def add_new_substep(task_data: ProcessingTask, steps: list):
             step_id=step_id,
             commit=True,
         )
+        return external_step_id
+    return None
 
 
 @CELERY.task(
@@ -464,8 +477,10 @@ def check_executor_result_task(self, db_id: int):
         raise KeyError(msg)
 
     result_url = task_data.data.get("result_url")
+    continue_url = task_data.data["continue_url"]
+    subscribed = task_data.data["subscribed"]
 
-    if task_data is None:
+    if result_url is None:
         raise ValueError(f"No result URL present in task data with id {db_id}")
 
     status, result = get_task_result_no_wait(result_url)
@@ -478,11 +493,33 @@ def check_executor_result_task(self, db_id: int):
         raise ValueError("Circuit executor failed to execute the circuit!")
     elif status == "PENDING":
         steps = result.get("steps", [])
-        add_new_substep(task_data, steps)
+        external_step_id = add_new_substep(task_data, steps)
+        if external_step_id and not subscribed:
+            return self.replace(
+                # wait for external substep to clear
+                monitor_external_substep.s(
+                    result_url=result_url,
+                    webhook_url=continue_url,
+                    substep=external_step_id
+                )
+            )
+        elif not subscribed:
+            return self.replace(
+                # wait for external substep or status change
+                monitor_result.s(
+                    result_url=result_url,
+                    webhook_url=continue_url,
+                    monitor="all"
+                )
+            )
     elif status == "SUCCESS":
+        if "result" in task_data.data:
+            return # already checking for result, prevent duplicate task scheduling!
+
         task_data.data["result"] = result
         task_data.save(commit=True)
-        self.replace(
+        
+        return self.replace(
             circuit_demo_result_task.si(db_id=db_id) | save_task_result.s(db_id=db_id)
         )
     else:
@@ -512,7 +549,9 @@ def circuit_demo_result_task(self, db_id: int) -> str:
             storage_provider="url_file_store",
         )
 
-    for out in task_data.data.get("result", {}).get("outputs"):
+    outputs = task_data.data.get("result", {}).get("outputs", [])
+
+    for out in outputs:
         if out.get("name", "").startswith("result-counts"):
             name = out.get("name", "")
             url = out.get("href", "")
@@ -527,4 +566,4 @@ def circuit_demo_result_task(self, db_id: int) -> str:
                 storage_provider="url_file_store",
             )
 
-    return "Successfully saved task result!"
+    return "Successfully  circuit executor task result!"
