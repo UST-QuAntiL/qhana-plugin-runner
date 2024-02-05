@@ -469,7 +469,7 @@ def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
         )
 
         app = current_app._get_current_object()
-        TASK_STEPS_CHANGED.send(app, task_id=db_task.id)
+        TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
 
         return external_step_id
     return None
