@@ -15,38 +15,31 @@
 from typing import Optional
 from celery.utils.log import get_task_logger
 from qiskit import IBMQ
+from qiskit.providers import BackendV1
 
 from qiskit.providers.exceptions import QiskitBackendNotFoundError
-from qiskit.providers.ibmq.exceptions import IBMQAccountError
-from qiskit.providers.ibmq.accountprovider import AccountProvider
-from qiskit.providers.ibmq.ibmqbackend import IBMQBackend, IBMQSimulator
-from qiskit.providers.ibmq.api.exceptions import RequestsApiError
+from qiskit_ibm_provider import IBMProvider, IBMInputValueError, IBMBackend
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_provider(ibmq_token: str) -> Optional[AccountProvider]:
+def get_provider(ibmq_token: str) -> Optional[IBMProvider]:
     """Get the IBMQ provider from the token. If no provider is found (e.g. invalid token), return None.
 
     Args:
         ibmq_token: The IBMQ token to use.
     """
     try:
-        provider = IBMQ.enable_account(ibmq_token)
-    except IBMQAccountError as e:
-        # Try to get provider from existing accounts
-        providers = (p for p in IBMQ.providers() if p.credentials.token == ibmq_token)
-        provider = next(iter(providers), None)
-        if not provider:
-            TASK_LOGGER.info("No IBMQ provider found!")
-    except RequestsApiError:
+        provider = IBMProvider(ibmq_token)
+    except IBMInputValueError:
         TASK_LOGGER.info("Login failed!")
         return None
+
     return provider
 
 
-def get_backends(ibmq_token: str) -> Optional[list[IBMQBackend | IBMQSimulator]]:
+def get_backends(ibmq_token: str) -> Optional[list[IBMBackend]]:
     """Get the list of available backends for the given IBMQ token. If no provider is found (e.g. invalid token), return None."""
     provider = get_provider(ibmq_token)
     if provider is None:
@@ -59,12 +52,10 @@ def get_backend_names(ibmq_token: str) -> Optional[list[str]]:
     backends = get_backends(ibmq_token)
     if backends is None:
         return None
-    return [backend.name() for backend in backends]
+    return [backend.name for backend in backends]
 
 
-def get_qiskit_backend(
-    backend: str, ibmq_token: str
-) -> Optional[IBMQBackend | IBMQSimulator]:
+def get_qiskit_backend(backend: str, ibmq_token: str) -> Optional[BackendV1]:
     """Get the backend with the given name from the IBMQ provider. If no provider is found (e.g. invalid token), return None."""
     provider = get_provider(ibmq_token)
     if provider is None:

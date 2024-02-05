@@ -13,14 +13,13 @@
 # limitations under the License.
 
 from json import dump
-import os
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 from uuid import uuid4
 from celery import chain
-from qiskit.providers.ibmq.job import IBMQJob
 from qiskit.result.result import ExperimentResult, Result
 from qiskit import QuantumCircuit, execute
+from qiskit_ibm_provider import IBMJob
 from qiskit_ibm_runtime import QiskitRuntimeService
 from celery.utils.log import get_task_logger
 
@@ -122,7 +121,7 @@ def start_execution(self, db_id: int) -> str:
 
     TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")
 
-    job: IBMQJob = execute(circuit, backend, shots=circuit_params.shots)
+    job: IBMJob = execute(circuit, backend, shots=circuit_params.shots)
 
     db_task.data["job_id"] = job.job_id()
     db_task.clear_previous_step()

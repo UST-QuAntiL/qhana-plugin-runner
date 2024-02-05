@@ -32,6 +32,7 @@ QISKIT_EXECUTOR_BLP = SecurityBlueprint(
 
 
 qiskit_version = "0.43"
+qiskit_ibm_provider_version = "0.8"
 
 
 class QiskitExecutor(QHAnaPluginBase):
@@ -47,7 +48,7 @@ class QiskitExecutor(QHAnaPluginBase):
         return QISKIT_EXECUTOR_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~={qiskit_version}"
+        return f"qiskit~={qiskit_version}\nqiskit-ibm-provider~={qiskit_ibm_provider_version}"
 
 
 try:
