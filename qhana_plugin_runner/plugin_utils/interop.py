@@ -245,9 +245,9 @@ def monitor_result(
     """
     status, result = get_task_result_no_wait(result_url)
 
-    updates = _check_result_for_updates(status, result)
+    event = _check_result_for_updates(status, result)
 
-    if updates and (updates == monitor or monitor == "all"):
+    if event and (event == monitor or monitor == "all"):
         # found an update, stop monitoring to save resources
         return self.replace(call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event))
 
@@ -280,9 +280,9 @@ def monitor_external_substep(
     """
     status, result = get_task_result_no_wait(result_url)
 
-    updates = _check_result_for_cleared_substep(status, result, substep)
+    event = _check_result_for_cleared_substep(status, result, substep)
 
-    if updates:
+    if event:
         # found an update, stop monitoring to save resources
         return self.replace(call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event))
 
