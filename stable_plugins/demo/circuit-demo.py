@@ -20,7 +20,7 @@ from typing import Mapping, Optional
 from celery.utils.log import get_task_logger
 from flask import abort, jsonify, redirect
 from flask.app import Flask
-from flask.globals import request, current_app
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -54,9 +54,9 @@ from qhana_plugin_runner.plugin_utils.interop import (
 )
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
     save_task_error,
     save_task_result,
-    TASK_STEPS_CHANGED,
 )
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
@@ -452,26 +452,39 @@ def circuit_demo_task(self, db_id: int) -> str:
 
 
 def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
+    last_step = None
+    if task_data.steps:
+        last_step = task_data.steps[-1]
     current_step = steps[-1] if steps else None
-    if current_step and not current_step.get("cleared", False):
+    if current_step:
         step_id = current_step.get("stepId")
-        external_step_id = step_id if step_id else len(steps) - 1
         if step_id:
             step_id = f"executor.{step_id}"
         else:
             step_id = f"executor.{len(steps)}"
-        task_data.clear_previous_step()
-        task_data.add_next_step(
-            href=current_step["href"],
-            ui_href=current_step["uiHref"],
-            step_id=step_id,
-            commit=True,
-        )
 
-        app = current_app._get_current_object()
-        TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
+        if not current_step.get("cleared", False):
+            if last_step and not last_step.cleared and last_step.step_id == step_id and last_step.href == current_step["href"]:
+                # new step and last step are identical, assume duplicate request and do nothing
+                return None
+            external_step_id = step_id if step_id else len(steps) - 1
+            task_data.clear_previous_step()
+            task_data.add_next_step(
+                href=current_step["href"],
+                ui_href=current_step["uiHref"],
+                step_id=step_id,
+                commit=True,
+            )
 
-        return external_step_id
+            app = current_app._get_current_object()
+            TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
+
+            return external_step_id
+        elif current_step.get("cleared", False) and task_data.has_uncleared_step:
+            if last_step and last_step.step_id == step_id:
+                task_data.clear_previous_step(commit=True)
+                app = current_app._get_current_object()
+                TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
     return None
 
 
