@@ -275,6 +275,13 @@ class TaskView(MethodView):
         return self.convert_task_data(task_data)
 
     def subscribe(self, task_data: ProcessingTask, subscription_data):
+        subscriptions = TaskUpdateSubscription.get_by_task_and_subscriber(
+            task=task_data,
+            webhook_href=subscription_data["webhook_href"],
+            event=subscription_data.get("event", None)
+        )
+        if subscriptions:
+            return  # prevent multiple subscriptions for the same event type and webhook
         subscription = TaskUpdateSubscription(
             task=task_data,
             webhook_href=subscription_data["webhook_href"],
@@ -287,7 +294,7 @@ class TaskView(MethodView):
         subscriptions = TaskUpdateSubscription.get_by_task_and_subscriber(
             task=task_data,
             webhook_href=subscription_data["webhook_href"],
-            event=subscription_data.get("type", ...)
+            event=subscription_data.get("event", ...)
         )
         for subscriber in subscriptions:
             DB.session.delete(subscriber)
