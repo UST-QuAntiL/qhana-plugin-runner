@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
 from http import HTTPStatus
 from typing import Mapping, Optional
-from datetime import datetime
 
 import marshmallow as ma
 from flask import abort, redirect
 from flask.app import Flask
-from flask.globals import request
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -40,6 +40,7 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import TASK_STATUS_CHANGED
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "file-upload"
@@ -205,6 +206,9 @@ class ProcessView(MethodView):
 
         db_task.finished_at = datetime.utcnow()
         db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STATUS_CHANGED.send(app, task_id=db_task.id)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER

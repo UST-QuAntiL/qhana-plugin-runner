@@ -22,7 +22,7 @@ import requests
 from celery import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
-from flask.globals import request
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -36,7 +36,13 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import (
+    TASK_DETAILS_CHANGED,
+    TASK_STATUS_CHANGED,
+    TASK_STEPS_CHANGED,
+    save_task_error,
+    save_task_result,
+)
 
 from . import OPTIMIZER_BLP, Optimizer
 from .interaction_utils.ie_utils import ie_replace_task_id
@@ -398,6 +404,9 @@ class ObjectiveFunctionInvokationCallback(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+
         min_href = db_task.data["min_href"]
         min_ui_href = db_task.data["min_ui_href"]
         min_callback_url = db_task.data["minimize_callback_url"]
@@ -450,6 +459,10 @@ class MinimizerSetupCallback(MethodView):
         db_task.progress_value = 75
         db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
 
         calc_loss_endpoint_url: str = db_task.data.get(
             InteractionEndpointType.calc_loss.value
@@ -515,6 +528,7 @@ class MinimizerResultCallback(MethodView):
         Returns:
             A redirect to the task view.
         """
+        app = current_app._get_current_object()
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -524,6 +538,7 @@ class MinimizerResultCallback(MethodView):
         if arguments.status != "SUCCESS" or arguments.url is None:
             db_task.task_status = "FAILURE"
             db_task.save(commit=True)
+            TASK_STATUS_CHANGED.send(app, task_id=db_id)
             return Response(status=HTTPStatus.OK)
 
         if db_task.data.get("minimizer_result_url") == arguments.url:
@@ -532,6 +547,8 @@ class MinimizerResultCallback(MethodView):
         db_task.data["minimizer_result_url"] = arguments.url
         db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
         task: chain = echo_results.s(db_id=db_id) | save_task_result.s(db_id=db_id)
         task.link_error(save_task_error.s(db_id=db_id))

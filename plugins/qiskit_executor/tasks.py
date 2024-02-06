@@ -16,25 +16,27 @@ from json import dump
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 from uuid import uuid4
+
 from celery import chain
-from qiskit.result.result import ExperimentResult, Result
+from celery.utils.log import get_task_logger
+from flask.globals import current_app
 from qiskit import QuantumCircuit, execute
+from qiskit.result.result import ExperimentResult, Result
 from qiskit_ibm_provider import IBMJob
 from qiskit_ibm_runtime import QiskitRuntimeService
-from celery.utils.log import get_task_logger
 
-from qhana_plugin_runner.tasks import add_step, save_task_result
-from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
-from . import QiskitExecutor
-from .schemas import (
-    CircuitParameters,
-    CircuitParameterSchema,
-)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import TASK_STEPS_CHANGED, add_step, save_task_result
 
+from . import QiskitExecutor
+from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
+from .schemas import (
+    CircuitParameters,
+    CircuitParameterSchema,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -126,6 +128,9 @@ def start_execution(self, db_id: int) -> str:
     db_task.data["job_id"] = job.job_id()
     db_task.clear_previous_step()
     db_task.save(commit=True)
+
+    app = current_app._get_current_object()
+    TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
     # start the result watcher task
     task: chain = result_watcher.si(db_id=db_task.id) | save_task_result.s(

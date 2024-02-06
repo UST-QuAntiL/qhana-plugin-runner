@@ -15,34 +15,36 @@
 import os
 from http import HTTPStatus
 from typing import Mapping, Optional
-from flask import Response
-from flask import redirect
-from flask.globals import request
+
+from celery.utils.log import get_task_logger
+from flask import Response, redirect
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from celery.utils.log import get_task_logger
-from qhana_plugin_runner.db.db import DB
 
-from qhana_plugin_runner.plugin_utils.execution_utils import parse_execution_options
-from qhana_plugin_runner.util.logging import redact_log_data
-from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
-from .schemas import (
-    BackendParameterSchema,
-    CircuitParameters,
-    CircuitParameterSchema,
-    AuthenticationParameterSchema,
-)
 from qhana_plugin_runner.api.plugin_schemas import (
-    OutputDataMetadata,
     EntryPoint,
+    InputDataMetadata,
+    OutputDataMetadata,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    InputDataMetadata,
 )
+from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.execution_utils import parse_execution_options
+from qhana_plugin_runner.tasks import TASK_STEPS_CHANGED
+from qhana_plugin_runner.util.logging import redact_log_data
+
+from . import QISKIT_EXECUTOR_BLP, QiskitExecutor
+from .schemas import (
+    AuthenticationParameterSchema,
+    BackendParameterSchema,
+    CircuitParameters,
+    CircuitParameterSchema,
+)
 from .tasks import start_execution
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -352,6 +354,9 @@ class AuthenticationView(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+
         start_execution.s(db_id=db_task.id).apply_async()
 
         return redirect(
@@ -443,6 +448,9 @@ class BackendSelectionView(MethodView):
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
         start_execution.s(db_id=db_task.id).apply_async()
 

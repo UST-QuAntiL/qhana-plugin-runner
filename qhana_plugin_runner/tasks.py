@@ -16,11 +16,11 @@
 
 from datetime import datetime
 
-from requests import post
 from blinker import Namespace
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
+from requests import post
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -122,6 +122,7 @@ def save_task_result(self, task_log: str, db_id: int):
         task_data.progress_value = task_data.progress_target
 
     task_data.task_status = "SUCCESS"
+    had_uncleared_step = task_data.has_uncleared_step
     task_data.clear_previous_step()
     task_data.finished_at = datetime.utcnow()
     if task_log is None:
@@ -137,6 +138,8 @@ def save_task_result(self, task_log: str, db_id: int):
     app = current_app._get_current_object()
     TASK_STATUS_CHANGED.send(app, task_id=db_id)
     TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+    if had_uncleared_step:
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
     # TODO: clean TaskData entries
 

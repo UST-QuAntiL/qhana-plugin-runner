@@ -18,7 +18,7 @@ from typing import List, NamedTuple, Optional, Sequence, Union
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import sqltypes as sql
-from sqlalchemy.sql.expression import distinct, or_, select, delete
+from sqlalchemy.sql.expression import delete, distinct, or_, select
 from sqlalchemy.sql.schema import ForeignKey
 
 from ..db import DB, REGISTRY
@@ -87,7 +87,7 @@ class ProcessingTask:
 
     multi_step: Mapped[bool] = mapped_column(sql.Boolean(), default=False)
 
-    steps: Mapped[OrderingList] = relationship(
+    steps: Mapped[OrderingList["Step"]] = relationship(
         "Step",
         order_by="Step.number",
         collection_class=ordering_list("number"),
@@ -154,6 +154,10 @@ class ProcessingTask:
             else:
                 return "UNKNOWN"
         return "PENDING"
+
+    @property
+    def has_uncleared_step(self) -> bool:
+        return any(not step.cleared for step in self.steps)
 
     def clear_previous_step(self, commit: bool = False):
         """Set ``"cleared"`` of previous step to ``true`` if available. Note: call before calling add_next_step."""
