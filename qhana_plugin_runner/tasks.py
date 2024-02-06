@@ -20,7 +20,6 @@ from blinker import Namespace
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
-from requests import post
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
@@ -178,15 +177,3 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     # TODO: maybe clean TaskData entries
 
     result.forget()
-
-
-@CELERY.task(
-    name=f"{_name}.call_webhook",
-    bind=True,
-    ignore_result=True,
-    autoretry_for=(ConnectionError,),
-    retry_backoff=True,
-    max_retries=3,
-)
-def call_webhook(self, webhook_url: str, task_url: str, event_type: str):
-    post(webhook_url, params={"source": task_url, "event": event_type}, timeout=1)

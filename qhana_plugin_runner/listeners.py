@@ -19,12 +19,12 @@ from typing import Optional
 from flask import Flask
 
 from .db.models.tasks import TaskUpdateSubscription
+from .plugin_utils.interop import call_webhook
 from .registry_client import PLUGIN_REGISTRY_CLIENT
 from .tasks import (
     TASK_DETAILS_CHANGED,
     TASK_STATUS_CHANGED,
     TASK_STEPS_CHANGED,
-    call_webhook,
 )
 
 

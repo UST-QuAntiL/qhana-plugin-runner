@@ -17,6 +17,7 @@
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 from urllib.parse import urljoin
 
+from requests import post
 from requests.exceptions import ConnectionError, RequestException
 
 from qhana_plugin_runner.celery import CELERY
@@ -199,12 +200,17 @@ def subscribe(
                 break
 
     if check_for_updates:
-        updates = _check_result_for_updates(status, result)
         task = None
-        if updates == "status" and (events == "all" or "status" in events):
-            task = notify_webhook.s(webhook_url, result_url, "status")
-        if updates == "substeps" and (events == "all" or "steps" in events):
-            task = notify_webhook.s(webhook_url, result_url, "steps")
+        monitor = "all"
+        if events != "all":
+            if "status" not in events:
+                monitor = "steps"
+            elif "steps" not in events:
+                monitor = "status"
+            if "status" not in events and "steps" not in events:
+                monitor = None
+        if monitor:
+            task = monitor_result.s(result_url=result_url, webhook_url=webhook_url, monitor=monitor, retry=False)
 
         if task:
             task.apply_async(delay=1)
@@ -242,10 +248,8 @@ def monitor_result(
     updates = _check_result_for_updates(status, result)
 
     if updates and (updates == monitor or monitor == "all"):
-        REQUEST_SESSION.post(
-            webhook_url, params={"source": result_url, "event": updates}, timeout=1
-        )
-        return  # found an update, stop monitoring to save resources
+        # found an update, stop monitoring to save resources
+        return self.replace(call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event))
 
     if retry:
         raise ResultUnchangedError  # retry later
@@ -279,27 +283,20 @@ def monitor_external_substep(
     updates = _check_result_for_cleared_substep(status, result, substep)
 
     if updates:
-        REQUEST_SESSION.post(
-            webhook_url, params={"source": result_url, "event": updates}, timeout=1
-        )
-        return  # found an update, stop monitoring to save resources
+        # found an update, stop monitoring to save resources
+        return self.replace(call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event))
 
     if retry:
         raise ResultUnchangedError  # retry later
 
 
 @CELERY.task(
-    name=f"{__name__}.notify_webhook",
+    name=f"{__name__}.call_webhook",
+    bind=True,
     ignore_result=True,
     autoretry_for=(ConnectionError,),
     retry_backoff=True,
     max_retries=3,
 )
-def notify_webhook(
-    webhook_url: str,
-    result_url: str,
-    event: str,
-) -> None:
-    REQUEST_SESSION.post(
-        webhook_url, params={"source": result_url, "event": event}, timeout=1
-    )
+def call_webhook(self, webhook_url: str, task_url: str, event_type: str):
+    post(webhook_url, params={"source": task_url, "event": event_type}, timeout=1)
