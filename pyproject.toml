@@ -25,14 +25,14 @@ jsonschema = "^4.6.1"
 sqlalchemy-json = "^0.5.0"
 sqlalchemy = "^2.0.8"
 invoke = "^2.0.0"
-psycopg2 = { version = "^2.9.3", optional = true }
+psycopg = { version = "^3.1.17", optional = true }
 PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
 urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
 
 [tool.poetry.dev-dependencies]
-black = ">=23.1.0"
+black = ">=24.1.1,<24.2.0"
 flake8 = "^3.9.2"
 pytest = "^6.2.4"
 flake8-docstrings = "^1.6.0"
@@ -48,7 +48,7 @@ pip-licenses = "^3.5.3"
 linuxdoc = "^20221025"
 
 [tool.poetry.extras]
-psycopg2 = ["psycopg2"]
+psycopg = ["psycopg"]
 PyMySQL = ["PyMySQL"]
 
 [tool.poetry.scripts]

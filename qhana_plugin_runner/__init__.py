@@ -148,6 +148,14 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         if len(config["URL_REWRITE_RULES"]) != len(url_map):
             pass  # TODO some rewrite rules were dismissed as invalid!
 
+    # fix psycopg2 database urls of old docker compose files
+    if (db_url := config.get("SQLALCHEMY_DATABASE_URI", "")).startswith(
+        "postgresql+psycopg2:"
+    ):
+        config["SQLALCHEMY_DATABASE_URI"] = db_url.replace(
+            "postgresql+psycopg2:", "postgresql+psycopg:", 1
+        )
+
     # End Loading config #################
 
     # Configure logging

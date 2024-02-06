@@ -89,9 +89,9 @@ class EntityTupleMixin:
         return cls(*iterable)
 
 
-_ENTITY_TYPE_TUPLE_CLASSES: Dict[
-    Tuple[str, ...], Type[NamedTuple]
-] = {}  # TODO cache invalidation (use lru cache?)
+_ENTITY_TYPE_TUPLE_CLASSES: Dict[Tuple[str, ...], Type[NamedTuple]] = (
+    {}
+)  # TODO cache invalidation (use lru cache?)
 
 
 def get_entity_tuple_class(
@@ -138,16 +138,14 @@ class ResponseLike(Protocol):
         parse_constant: Optional[Callable[[str], Any]] = None,
         object_pairs_hook: Optional[Callable[[List[Tuple[Any, Any]]], Any]] = None,
         **kwds: Any,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     def iter_lines(
         self,
         chunk_size: int = 512,
         decode_unicode: bool = False,
         delimiter: Optional[Union[Text, bytes]] = None,
-    ) -> Iterator[Any]:
-        ...
+    ) -> Iterator[Any]: ...
 
 
 def entity_attribute_sort_key(attribute_name: str):
