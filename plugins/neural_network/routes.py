@@ -93,9 +93,7 @@ class PluginsView(MethodView):
                 ),
                 ApiLink(
                     type=InteractionEndpointType.calc_grad.value,
-                    href=url_for_ie(
-                        f"{NN_BLP.name}.{CalcLossandGradEndpoint.__name__}"
-                    ),
+                    href=url_for_ie(f"{NN_BLP.name}.{CalcLossandGradEndpoint.__name__}"),
                 ),
             ],
             entry_point=EntryPoint(

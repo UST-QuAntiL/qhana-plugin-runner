@@ -75,15 +75,11 @@ class PluginsView(MethodView):
                 ApiLink(
                     type=InteractionEndpointType.of_pass_data.value,
                     # since the endpoint has the task id as parameter, we need to add it here
-                    href=url_for_ie(
-                        f"{RIDGELOSS_BLP.name}.{PassDataEndpoint.__name__}"
-                    ),
+                    href=url_for_ie(f"{RIDGELOSS_BLP.name}.{PassDataEndpoint.__name__}"),
                 ),
                 ApiLink(
                     type=InteractionEndpointType.calc_loss.value,
-                    href=url_for_ie(
-                        f"{RIDGELOSS_BLP.name}.{CalcLossEndpoint.__name__}"
-                    ),
+                    href=url_for_ie(f"{RIDGELOSS_BLP.name}.{CalcLossEndpoint.__name__}"),
                 ),
             ],
             entry_point=EntryPoint(

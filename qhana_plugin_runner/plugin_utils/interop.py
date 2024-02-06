@@ -210,7 +210,12 @@ def subscribe(
             if "status" not in events and "steps" not in events:
                 monitor = None
         if monitor:
-            task = monitor_result.s(result_url=result_url, webhook_url=webhook_url, monitor=monitor, retry=False)
+            task = monitor_result.s(
+                result_url=result_url,
+                webhook_url=webhook_url,
+                monitor=monitor,
+                retry=False,
+            )
 
         if task:
             task.apply_async(delay=1)
@@ -249,7 +254,9 @@ def monitor_result(
 
     if event and (event == monitor or monitor == "all"):
         # found an update, stop monitoring to save resources
-        return self.replace(call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event))
+        return self.replace(
+            call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event)
+        )
 
     if retry:
         raise ResultUnchangedError  # retry later
@@ -284,7 +291,9 @@ def monitor_external_substep(
 
     if event:
         # found an update, stop monitoring to save resources
-        return self.replace(call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event))
+        return self.replace(
+            call_webhook.s(webhook_url=webhook_url, task_url=result_url, event_type=event)
+        )
 
     if retry:
         raise ResultUnchangedError  # retry later

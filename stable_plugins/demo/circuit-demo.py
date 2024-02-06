@@ -445,7 +445,7 @@ def circuit_demo_task(self, db_id: int) -> str:
 
     task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
     task_data.data["result_url"] = result_url
-    task_data.save(commit=True) # commit to save result url to DB
+    task_data.save(commit=True)  # commit to save result url to DB
 
     subscribed = subscribe(
         result_url=result_url, webhook_url=continue_url, events=["steps", "status"]
@@ -482,7 +482,12 @@ def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
             step_id = f"executor.{len(steps)}"
 
         if not current_step.get("cleared", False):
-            if last_step and not last_step.cleared and last_step.step_id == step_id and last_step.href == current_step["href"]:
+            if (
+                last_step
+                and not last_step.cleared
+                and last_step.step_id == step_id
+                and last_step.href == current_step["href"]
+            ):
                 # new step and last step are identical, assume duplicate request and do nothing
                 return None
             external_step_id = step_id if step_id else len(steps) - 1

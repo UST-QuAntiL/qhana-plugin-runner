@@ -214,14 +214,13 @@ class TaskView(MethodView):
         links = [
             TaskLink(
                 type="subscribe",
-                href=url_for("tasks-api.TaskView", task_id=str(task_data.id), _external=True),
+                href=url_for(
+                    "tasks-api.TaskView", task_id=str(task_data.id), _external=True
+                ),
             )
         ]
 
-        links += [
-            TaskLink(href=link.href, type=link.type)
-            for link in task_data.links
-        ]
+        links += [TaskLink(href=link.href, type=link.type) for link in task_data.links]
 
         if not task_data.is_finished:
             return TaskData(
@@ -270,7 +269,9 @@ class TaskView(MethodView):
             case "unsubscribe":
                 self.unsubscribe(task_data, command)
             case cmd:
-                abort(HTTPStatus.BAD_REQUEST, message=f"Command '{cmd}' is not supported!")
+                abort(
+                    HTTPStatus.BAD_REQUEST, message=f"Command '{cmd}' is not supported!"
+                )
 
         return self.convert_task_data(task_data)
 
@@ -278,14 +279,18 @@ class TaskView(MethodView):
         subscriptions = TaskUpdateSubscription.get_by_task_and_subscriber(
             task=task_data,
             webhook_href=subscription_data["webhook_href"],
-            event=subscription_data.get("event", None)
+            event=subscription_data.get("event", None),
         )
         if subscriptions:
             return  # prevent multiple subscriptions for the same event type and webhook
         subscription = TaskUpdateSubscription(
             task=task_data,
             webhook_href=subscription_data["webhook_href"],
-            task_href=url_for(f"{TASKS_API.name}.{TaskView.__name__}", task_id=task_data.id, _external=True), 
+            task_href=url_for(
+                f"{TASKS_API.name}.{TaskView.__name__}",
+                task_id=task_data.id,
+                _external=True,
+            ),
             event_type=subscription_data.get("event"),
         )
         subscription.save(commit=True)
@@ -294,7 +299,7 @@ class TaskView(MethodView):
         subscriptions = TaskUpdateSubscription.get_by_task_and_subscriber(
             task=task_data,
             webhook_href=subscription_data["webhook_href"],
-            event=subscription_data.get("event", ...)
+            event=subscription_data.get("event", ...),
         )
         for subscriber in subscriptions:
             DB.session.delete(subscriber)
