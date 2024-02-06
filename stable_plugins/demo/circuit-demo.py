@@ -25,11 +25,12 @@ from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from flask.wrappers import Response
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, fields
 
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
+    MaBaseSchema,
     OutputDataMetadata,
     PluginDependencyMetadata,
     PluginMetadata,
@@ -54,6 +55,7 @@ from qhana_plugin_runner.plugin_utils.interop import (
 )
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import (
+    TASK_DETAILS_CHANGED,
     TASK_STEPS_CHANGED,
     save_task_error,
     save_task_result,
@@ -94,6 +96,11 @@ class CircuitDemoParametersSchema(FrontendFormBaseSchema):
             "label": "Select Circuit Executor Plugin",
         },
     )
+
+
+class WebhookParams(MaBaseSchema):
+    source = fields.URL()
+    event = fields.String()
 
 
 @CIRCUIT_BLP.route("/")
@@ -260,8 +267,9 @@ class ProcessView(MethodView):
 class ContinueProcessView(MethodView):
     """Restart long running task that was blocked by an ongoing plugin computation."""
 
+    @CIRCUIT_BLP.arguments(WebhookParams(partial=True), location="query")
     @CIRCUIT_BLP.response(HTTPStatus.NO_CONTENT)
-    def post(self, db_id: int):
+    def post(self, params: dict, db_id: int):
         """Check for updates in plugin computation and resume processing."""
         task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if task_data is None:
@@ -274,12 +282,18 @@ class ContinueProcessView(MethodView):
         if not isinstance(task_data.data, dict):
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
 
+        event_source = params.get("source", None)
+        event_type = params.get("event", None)
+
         result_url = task_data.data.get("result_url")
+
+        if event_source != result_url:
+            abort(HTTPStatus.NOT_FOUND)
 
         if not result_url or task_data.is_finished:
             abort(HTTPStatus.NOT_FOUND)
 
-        task = check_executor_result_task.s(db_id=db_id)
+        task = check_executor_result_task.s(db_id=db_id, event_type=event_type)
         task.link_error(save_task_error.s(db_id=db_id))
         task.apply_async()
 
@@ -431,6 +445,7 @@ def circuit_demo_task(self, db_id: int) -> str:
 
     task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
     task_data.data["result_url"] = result_url
+    task_data.save(commit=True) # commit to save result url to DB
 
     subscribed = subscribe(
         result_url=result_url, webhook_url=continue_url, events=["steps", "status"]
@@ -442,6 +457,9 @@ def circuit_demo_task(self, db_id: int) -> str:
         task_data.add_task_log_entry("Event subscription failed!")
 
     task_data.save(commit=True)
+
+    app = current_app._get_current_object()
+    TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
 
     if not subscribed:
         return self.replace(
@@ -491,7 +509,7 @@ def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
 @CELERY.task(
     name=f"{CircuitDemo.instance.identifier}.check_executor_result_task", bind=True
 )
-def check_executor_result_task(self, db_id: int):
+def check_executor_result_task(self, db_id: int, event_type: Optional[str]):
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -509,12 +527,13 @@ def check_executor_result_task(self, db_id: int):
     status, result = get_task_result_no_wait(result_url)
 
     if status == "FAILURE":
-        task_data.add_task_log_entry(
-            f"--- Circuit Executor Log ---\n{result.get('log', '')}\n--- END ---\n",
-            commit=True,
-        )
+        if "--- Circuit Executor Log ---" not in task_data.task_log:
+            task_data.add_task_log_entry(
+                f"--- Circuit Executor Log ---\n{result.get('log', '')}\n--- END ---\n",
+                commit=True,
+            )
         raise ValueError("Circuit executor failed to execute the circuit!")
-    elif status == "PENDING":
+    elif status == "PENDING" and event_type != "status":
         steps = result.get("steps", [])
         external_step_id = add_new_substep(task_data, steps)
         if external_step_id and not subscribed:
@@ -533,7 +552,7 @@ def check_executor_result_task(self, db_id: int):
                     result_url=result_url, webhook_url=continue_url, monitor="all"
                 )
             )
-    elif status == "SUCCESS":
+    elif status == "SUCCESS" and event_type == "status":
         if "result" in task_data.data:
             return  # already checking for result, prevent duplicate task scheduling!
 
