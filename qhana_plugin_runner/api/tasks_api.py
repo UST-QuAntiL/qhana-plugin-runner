@@ -279,7 +279,7 @@ class TaskView(MethodView):
             task=task_data,
             webhook_href=subscription_data["webhook_href"],
             task_href=url_for(f"{TASKS_API.name}.{TaskView.__name__}", task_id=task_data.id, _external=True), 
-            event_type=subscription_data.get("type"),
+            event_type=subscription_data.get("event"),
         )
         subscription.save(commit=True)
 
