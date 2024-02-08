@@ -13,7 +13,7 @@ Optional Tags:
 
 | Tag               | Description |
 |:------------------|:------------|
-| `gradient`        | If present, the plugin can also calcualte the gradient of the objective function, whcih is exposed through additional task specific links.      |
+| `gradient`        | If present, the plugin can also calcualte the gradient of the objective function, which is exposed through additional task specific links.      |
 
 
 ## Interface
@@ -94,6 +94,24 @@ Async endpoints will initially return a redirect to the resource that will later
 The result resource must answer with HTTP status code `404` (not found) or `204` (no content) when the result is not yet ready.
 When the result is ready, the resource must answer with HTTP status code `200` and the result.
 :::
+
+
+#### `of-weights` (active during step 4)
+
+* Method: `get`
+
+The endpoint is used to communicate the number of weights used by the objective function.
+
+**Outputs:**
+
+The output is a single JSON object with the key `weights` for the number of weights this objective function expects.
+
+
+```json
+{
+    "weights": 11
+}
+```
 
 
 #### `of-evaluate` (active during step 4)
