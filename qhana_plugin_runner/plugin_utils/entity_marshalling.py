@@ -224,6 +224,7 @@ def ensure_tuple(
 
 class ArrayEntity(NamedTuple):
     """An entity containing array data in a values attribute."""
+
     ID: str
     href: Optional[str]
     values: Sequence[Union[int, float, None]]
