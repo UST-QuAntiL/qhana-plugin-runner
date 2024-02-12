@@ -16,13 +16,7 @@ from dataclasses import dataclass
 
 import marshmallow as ma
 
-from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema
-
-
-class HingeLossTaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
+from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema, FileUrl
 
 
 @dataclass
@@ -37,10 +31,47 @@ class HyperparamterInputSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Regularization parameter",
             "description": "Regularization parameter for Hinge Loss function.",
-            "input_type": "textarea",
+            "input_type": "number",
         },
     )
 
     @ma.post_load
     def make_object(self, data, **kwargs):
         return HyperparamterInputData(**data)
+
+
+class PassDataSchema(FrontendFormBaseSchema):
+    features = FileUrl(
+        data_input_type="entity/vector",
+        data_content_types=["text/csv", "application/json", "application/X-lines+json"],
+        required=True,
+        metadata={
+            "label": "Features: 2-D array",
+            "description": "Each entity is 1 sample with k numeric features.",
+        },
+    )
+    target = FileUrl(
+        data_input_type="entity/vector",
+        data_content_types=["text/csv", "application/json"],
+        required=True,
+        metadata={
+            "label": "Target: 1-D array",
+            "description": "Each entity is 1 sample with 1 numeric target value.",
+        },
+    )
+
+
+class EvaluateSchema(FrontendFormBaseSchema):
+    pass  # intentionally empty
+
+
+class WeightsResponseSchema(MaBaseSchema):
+    weights = ma.fields.Integer(required=True, allow_none=False)
+
+
+class EvaluateRequestSchema(MaBaseSchema):
+    weights = ma.fields.List(ma.fields.Number(), required=True, allow_none=False)
+
+
+class LossResponseSchema(MaBaseSchema):
+    loss = ma.fields.Number(required=True, allow_none=False)

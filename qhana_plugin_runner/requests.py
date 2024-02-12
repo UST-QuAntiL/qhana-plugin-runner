@@ -14,20 +14,19 @@
 
 """Functions for opening files from external URLs."""
 
+import mimetypes
 from contextlib import contextmanager
 from io import BytesIO
-from re import Pattern, findall
+from pathlib import Path
+from re import Pattern
 from typing import Iterator, Optional, Tuple
+from urllib.parse import urlparse
 
 from flask import Flask
 from flask.globals import current_app
 from pyrfc6266 import requests_response_to_filename, secure_filename
 from requests import Session
 from requests.models import Response
-
-from pathlib import Path
-from urllib.parse import urlparse
-
 from werkzeug.http import parse_options_header
 
 REQUEST_SESSION = Session()
@@ -96,6 +95,16 @@ def open_url_as_file_like(
         yield filename, response.raw, content_type
     finally:
         response.close()
+
+
+def get_mimetype(response: Response, default=None) -> Optional[str]:
+    try:
+        return response.headers["Content-Type"]
+    except KeyError:
+        matches = mimetypes.MimeTypes().guess_type(url=response.url)
+        if matches:
+            return matches[0]
+    return default
 
 
 def _retrieve_filename(response: Response):

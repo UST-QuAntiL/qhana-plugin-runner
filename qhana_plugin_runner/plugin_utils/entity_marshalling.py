@@ -30,6 +30,7 @@ from typing import (
     List,
     NamedTuple,
     Optional,
+    Protocol,
     Sequence,
     Text,
     TextIO,
@@ -39,8 +40,6 @@ from typing import (
     Union,
 )
 from unicodedata import category, normalize
-
-from typing import Protocol
 
 
 class EntityTupleMixin:
@@ -221,6 +220,66 @@ def ensure_tuple(
             yield tuple_(**item)
         else:
             yield item
+
+
+class ArrayEntity(NamedTuple):
+    """An entity containing array data in a values attribute."""
+    ID: str
+    href: Optional[str]
+    values: Sequence[Union[int, float, None]]
+
+
+def _str_to_nr(value: Optional[str], strict: bool = False) -> Union[float, int, None]:
+    if value is None or value == "" or value.isspace():
+        if strict:
+            raise ValueError("Array entity values must not be None!")
+        return None
+    try:
+        if value.isdecimal():
+            return int(value)
+        return float(value)
+    except ValueError:
+        if strict:
+            raise ValueError("Array entity values must not be None!")
+        return None
+
+
+def ensure_array(
+    items: Iterable[Union[Dict[str, Any], NamedTuple]], strict: bool = False
+) -> Generator[ArrayEntity, None, None]:
+    """Convert entities from a "entity/vector" or "entity/numberic" format into array entities.
+
+    This method tries to convert all string values to numbers.
+    Missing values (`None`) are left as is by default.
+    String values that cannot be converted to numbers will instead become missing values `None`.
+
+    With `strict` behaviour, missing values will result in exceptions (`ValueError`).
+
+    Args:
+        items (Iterable[Dict[str, Any]|NamedTuple]): the input entitiy stream/iterable
+        strict (bool, optional): if True any value that cannot be converted to a number raises an exception. Defaults to False.
+
+    Yields:
+        Generator[ArrayEntity, None, None]: the output iterable
+    """
+    for item in items:
+        if isinstance(item, dict):
+            id_ = item.pop("ID")
+            href = item.pop("href", None)
+            values_raw = (v for k, v in sorted(item.items(), key=lambda i: i[0]))
+        else:
+            id_ = item[0]
+            if hasattr(item, "href"):
+                href = item[1]
+                values_raw = item[2:]
+            else:
+                href = None
+                values_raw = item[1:]
+        values = tuple(
+            v if isinstance(v, (int, float)) else _str_to_nr(v, strict=strict)
+            for v in values_raw
+        )
+        yield ArrayEntity(id_, href, values)
 
 
 def load_entities(
