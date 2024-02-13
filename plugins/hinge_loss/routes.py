@@ -16,7 +16,8 @@ from http import HTTPStatus
 from typing import Mapping, Optional
 
 import numpy as np
-from flask import Response, abort, redirect, render_template, request, url_for
+from flask import Response, redirect, render_template, request, url_for
+from flask_smorest import abort
 from flask.globals import current_app
 from flask.views import MethodView
 from marshmallow import EXCLUDE
@@ -77,9 +78,9 @@ class PluginsView(MethodView):
                     f"{HINGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
                 ),
                 plugin_dependencies=[],
-                data_input=[],
+                data_input=[],  # TODO: what about input data required in later steps? add a step(id) attribute to the metadata here?
                 data_output=[
-                    DataMetadata(
+                    DataMetadata(  # FIXME
                         data_type="txt",
                         content_type=["text/plain"],
                         required=True,
