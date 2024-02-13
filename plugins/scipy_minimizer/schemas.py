@@ -18,7 +18,7 @@ from enum import Enum
 import marshmallow as ma
 
 from qhana_plugin_runner.api.extra_fields import EnumField
-from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema
+from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema, FileUrl
 
 
 class MinimizerEnum(Enum):
@@ -64,3 +64,25 @@ class MinimizerSetupTaskInputSchema(FrontendFormBaseSchema):
     @ma.post_load
     def make_task_input_data(self, data, **kwargs):
         return MinimizerSetupTaskInputData(**data)
+
+
+class MinimizeSchema(FrontendFormBaseSchema):
+    objective_function = ma.fields.URL(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Objective Function Task Result URL",
+            "description": "The URL of an objective function task result in the evaluate step.",
+            "input_type": "url",
+        },
+    )
+    initial_weights = FileUrl(
+        data_input_type="entity/vector",
+        data_content_types=["text/csv", "application/json"],
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "Initial Weights",
+            "description": "Preset weights to warm-start the minimization with.",
+        },
+    )

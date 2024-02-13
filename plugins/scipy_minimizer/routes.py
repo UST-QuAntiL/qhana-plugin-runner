@@ -14,21 +14,13 @@
 
 
 from http import HTTPStatus
-from logging import Logger
 from typing import Mapping, Optional
 
-from celery.utils.log import get_task_logger
 from flask import Response, redirect, render_template, request, url_for
+from flask.globals import current_app
 from flask.views import MethodView
+from flask_smorest import abort
 from marshmallow import EXCLUDE
-from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from .interaction_utils.tasks import make_callback
-from .shared.schemas import (
-    MinimizerCallbackData,
-    MinimizerCallbackSchema,
-    MinimizerInputData,
-    MinimizerInputSchema,
-)
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -37,20 +29,25 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskUpdateSubscription
+from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    save_task_error,
+    save_task_result,
+)
 
 from . import SCIPY_MINIMIZER_BLP, ScipyMinimizer
+from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from .schemas import (
     MinimizerEnum,
     MinimizerSetupTaskInputData,
     MinimizerSetupTaskInputSchema,
     MinimizerTaskResponseSchema,
+    MinimizeSchema,
 )
 from .tasks import minimize_task
 
 
-@SCIPY_MINIMIZER_BLP.route("/")
 class MetadataView(MethodView):
     """Plugins collection resource."""
 
@@ -74,7 +71,7 @@ class MetadataView(MethodView):
                 ),  # URL for the first micro frontend endpoint
                 data_input=[],
                 data_output=[
-                    DataMetadata(
+                    DataMetadata(  # FIXME
                         data_type="txt",
                         content_type=["text/plain"],
                         required=True,
@@ -170,9 +167,6 @@ class MinimizerSetupMicroFrontend(MethodView):
         )
 
 
-TASK_LOGGER: Logger = get_task_logger(__name__)
-
-
 @SCIPY_MINIMIZER_BLP.route("/process-setup/")
 class MinimizerSetupProcessStep(MethodView):
     """Callback to the coordinator."""
@@ -191,51 +185,120 @@ class MinimizerSetupProcessStep(MethodView):
             task_name="minimizer_task",
         )
         db_task.data["method"] = arguments.method.value
+
+        # add callback as webhook subscriber subscribing to all updates
+        subscription = TaskUpdateSubscription(
+            db_task,
+            webhook_href=callback.callback_url,
+            task_href=url_for(
+                "tasks-api.TaskView", task_id=str(db_task.id), _external=True
+            ),
+            event_type=None,
+        )
+
+        subscription.save()
+
+        db_task.add_next_step(
+            href=url_for(
+                f"{SCIPY_MINIMIZER_BLP.name}.{MinimizationEndpoint.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+            ui_href=url_for(
+                f"{SCIPY_MINIMIZER_BLP.name}.{MinimizationMicroFrontend.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+            step_id="minimize",
+        )
+
         db_task.save(commit=True)
 
-        minimize_endpoint = url_for(
-            f"{SCIPY_MINIMIZER_BLP.name}.{MinimizationEndpoint.__name__}",
-            db_id=db_task.id,
-            _external=True,
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_task.id)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
-        callback_schema = MinimizerCallbackSchema()
-        callback_data = callback_schema.dump(
-            MinimizerCallbackData(
-                minimize_endpoint_url=minimize_endpoint,
+
+@SCIPY_MINIMIZER_BLP.route("/task/<int:db_id>/ui-minimize/")
+class MinimizationMicroFrontend(MethodView):
+    """Micro frontend for the minimize step."""
+
+    @SCIPY_MINIMIZER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the minimize step."
+    )
+    @SCIPY_MINIMIZER_BLP.arguments(
+        MinimizeSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="query",
+        required=False,
+    )
+    @SCIPY_MINIMIZER_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        """Return the micro frontend."""
+        return self.render(request.args, errors, db_id=db_id)
+
+    @SCIPY_MINIMIZER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the minimize step."
+    )
+    @SCIPY_MINIMIZER_BLP.arguments(
+        MinimizeSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="form",
+        required=False,
+    )
+    @SCIPY_MINIMIZER_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors, db_id=db_id)
+
+    def render(self, data: Mapping, errors: dict, db_id: int):
+        plugin = ScipyMinimizer.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        schema = MinimizeSchema()
+
+        process_url = url_for(
+            f"{SCIPY_MINIMIZER_BLP.name}.{MinimizationEndpoint.__name__}", db_id=db_id
+        )
+        example_values_url = url_for(
+            f"{SCIPY_MINIMIZER_BLP.name}.{MinimizationMicroFrontend.__name__}",
+            db_id=db_id,
+        )
+
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=ScipyMinimizer.instance.name,
+                version=ScipyMinimizer.instance.version,
+                schema=schema,
+                values=data,
+                errors=errors,
+                process=process_url,  # URL of the processing step
+                help_text="Pass data to the objective function.",
+                example_values=example_values_url,  # URL of this endpoint
             )
         )
-        make_callback(callback.callback_url, callback_data)
 
 
-@SCIPY_MINIMIZER_BLP.route("<int:db_id>/minimize/")
+@SCIPY_MINIMIZER_BLP.route("/task/<int:db_id>/minimize/")
 class MinimizationEndpoint(MethodView):
     """Endpoint for the minimization."""
 
-    @SCIPY_MINIMIZER_BLP.arguments(MinimizerInputSchema(unknown=EXCLUDE), location="json")
-    def post(self, input_data: MinimizerInputData, db_id: int):
+    @SCIPY_MINIMIZER_BLP.arguments(MinimizeSchema(unknown=EXCLUDE), location="form")
+    def post(self, input_data: dict, db_id: int):
         """Minimize the objective function."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
-        if input_data.callback_url:
-            db_task.data["status_changed_callback_urls"] = [input_data.callback_url]
-        db_task.data["calc_loss_endpoint_url"] = input_data.calc_loss_endpoint_url
-        db_task.data["calc_loss_and_gradient_endpoint_url"] = (
-            input_data.calc_loss_and_gradient_endpoint_url
-        )
-        if input_data.calc_gradient_endpoint_url:
-            db_task.data["calc_gradient_endpoint_url"] = (
-                input_data.calc_gradient_endpoint_url
-            )
-        schema = MinimizerInputSchema()
-        serialized_input_data = schema.dump(input_data)
-        db_task.data["x0"] = serialized_input_data["x0"]
-        db_task.data["task_view"] = url_for(
-            "tasks-api.TaskView", task_id=db_task.id, _external=True
-        )
+            abort(HTTPStatus.NOT_FOUND, message=msg)
+
+        assert isinstance(db_task.data, dict)
+
+        db_task.data["objective_function_task"] = input_data["objective_function"]
+        initial_weights_url = input_data.get("initial_weights")
+        if initial_weights_url:
+            db_task.data["initial_weights_url"] = initial_weights_url
 
         db_task.save(commit=True)
         task = minimize_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
