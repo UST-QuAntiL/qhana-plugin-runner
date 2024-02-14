@@ -343,6 +343,9 @@ poetry run sphinx-apidoc --separate --force -o docs/source . ./tasks.py docs plu
 rm docs/source/modules.rst  # delete modules file as this repository only contains one module
 ```
 
+Building pdf documentation locally requires the [`mermaid-cli`](https://github.com/mermaidjs/mermaid.cli) to generate images of the embedded mermaid diagrams.
+For more information please see <https://github.com/mgaitan/sphinxcontrib-mermaid>.
+
 
 ## Updating the Third-Party Licenses
 

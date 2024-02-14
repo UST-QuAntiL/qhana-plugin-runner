@@ -101,7 +101,7 @@ d3_zoom = true
 # init_js = """mermaid.initialize({startOnLoad:true});"""
 
 # configure image generation using mermaid cli (https://github.com/mermaidjs/mermaid.cli#options)
-# params = ["--theme", "forest"]
+# params = ["--theme", "forest", "-p", "puppeteer-config.json"]
 
 [tool.sphinx.myst]
 # create anchors for h1 and h2
