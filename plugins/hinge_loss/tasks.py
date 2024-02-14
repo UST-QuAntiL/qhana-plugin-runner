@@ -119,7 +119,7 @@ def load_data(self, db_id: int) -> str:
         key_y = f"{db_id}.target"
         y_dump = BytesIO()
         np.save(y_dump, y_array, allow_pickle=False)
-        DataBlob.set_value(HingeLoss.instance.name, key_y, y_array.dumps())
+        DataBlob.set_value(HingeLoss.instance.name, key_y, y_dump.getvalue())
         task_data.data["target_key"] = key_y
         del data  # clear large data from memory faster
         del y_array
