@@ -17,9 +17,9 @@ from typing import Mapping, Optional
 
 import numpy as np
 from flask import Response, redirect, render_template, request, url_for
-from flask_smorest import abort
 from flask.globals import current_app
 from flask.views import MethodView
+from flask_smorest import abort
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -193,18 +193,18 @@ class SetupProcess(MethodView):
         db_task.data["c"] = arguments.c
         db_task.data["weights"] = -1
 
+        db_task.save()
+        DB.session.flush()
+
         # add callback as webhook subscriber subscribing to all updates
         subscription = TaskUpdateSubscription(
             db_task,
-            webhook_href=callback.callback_url,
+            webhook_href=callback.callback,
             task_href=url_for(
                 "tasks-api.TaskView", task_id=str(db_task.id), _external=True
             ),
             event_type=None,
         )
-
-        db_task.save()
-        DB.session.flush()
 
         weights_link = TaskLink(
             db_task,
@@ -316,7 +316,7 @@ class PassDataEndpoint(MethodView):
 
     @HINGELOSS_BLP.arguments(
         PassDataSchema(unknown=EXCLUDE),
-        location="json",
+        location="form",
         required=True,
     )
     @HINGELOSS_BLP.response(HTTPStatus.SEE_OTHER)
