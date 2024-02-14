@@ -283,7 +283,7 @@ if "init_js" in _mermaid_options:
 if "params" in _mermaid_options:
     mermaid_params = _mermaid_options["params"]
 else:
-    mermaid_params = ['-p', 'puppeteer-config.json']
+    mermaid_params = ["-p", "puppeteer-config.json"]
 
 
 # -- Extra Files -------------------------------------------------------------
