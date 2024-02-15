@@ -24,50 +24,36 @@ from qhana_plugin_runner.api.util import (
 )
 
 
-class OptimizerTaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
-class OptimizerCallbackTaskInputSchema(FrontendFormBaseSchema):
-    input_str = ma.fields.String(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Input String",
-            "description": "A simple string input.",
-            "input_type": "textarea",
-        },
-    )
+class WebhookParams(MaBaseSchema):
+    source = ma.fields.URL()
+    event = ma.fields.String()
 
 
 @dataclass
 class OptimizerSetupTaskInputData:
-    input_file_url: str
-    target_variable: str
+    features: str
+    target: str
     objective_function_plugin_selector: str
     minimizer_plugin_selector: str
 
 
 class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
-    input_file_url = FileUrl(
+    features = FileUrl(
+        data_input_type="entity/vector",
+        data_content_types=["text/csv", "application/json", "application/X-lines+json"],
         required=True,
-        allow_none=False,
-        data_input_type="*",
-        data_content_types=["text/csv"],
         metadata={
-            "label": "Dataset URL",
-            "description": "URL to a csv file with optimizable data.",
+            "label": "Features",
+            "description": "A list of entities with numeric features. Each entity is 1 sample with k numeric features.",
         },
     )
-    target_variable = ma.fields.String(
+    target = FileUrl(
+        data_input_type="entity/vector",
+        data_content_types=["text/csv", "application/json"],
         required=True,
-        allow_none=False,
         metadata={
-            "label": "Target Variable",
-            "description": "Name of the target variable in the dataset.",
-            "input_type": "text",
+            "label": "Target",
+            "description": "A list of entities with the target value(s) for optimization. Each entity is 1 sample with 1 (or more) numeric target value(s).",
         },
     )
     objective_function_plugin_selector = PluginUrl(
@@ -75,7 +61,7 @@ class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
         allow_none=False,
         plugin_tags=["objective-function"],
         metadata={
-            "label": "Objective-Function Plugin Selector",
+            "label": "Objective-Function Plugin",
             "description": "URL of objective-function-plugin.",
             "input_type": "text",
         },
@@ -85,7 +71,7 @@ class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
         allow_none=False,
         plugin_tags=["minimization"],
         metadata={
-            "label": "Minimizer Plugin Selector",
+            "label": "Minimizer Plugin",
             "description": "URL of minimizer-plugin.",
             "input_type": "text",
         },
