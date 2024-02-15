@@ -16,7 +16,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 from urllib.parse import unquote
 
 import marshmallow as ma
@@ -395,3 +395,22 @@ class PluginMetadataSchema(MaBaseSchema):
     def make_plugin_metadata(self, data: Dict[str, Any], **kwargs):
         """Create a PluginMetadata object from the deserialized data."""
         return PluginMetadata(**data)
+
+
+class WebhookParams(TypedDict):
+    """Parameters passed as query params to webhooks subscribed to task updates.
+
+    Keys:
+        source (str): The url of the task result that was updated.
+        event (str|None): The type of event that triggered this update. (i.e. 'status'|'steps'|'details')
+    """
+
+    source: str
+    event: Optional[str]
+
+
+class WebhookParamsSchema(MaBaseSchema):
+    """Parameters passed as query params to webhooks subscribed to task updates."""
+
+    source = ma.fields.URL(schemes=("http", "https"), required=True, allow_none=False)
+    event = ma.fields.String(allow_none=True, missing=None)
