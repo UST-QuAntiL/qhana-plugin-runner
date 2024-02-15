@@ -29,6 +29,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
+from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskUpdateSubscription
 from qhana_plugin_runner.tasks import (
     TASK_STEPS_CHANGED,
@@ -48,6 +49,7 @@ from .schemas import (
 from .tasks import minimize_task
 
 
+@SCIPY_MINIMIZER_BLP.route("/")
 class MetadataView(MethodView):
     """Plugins collection resource."""
 
@@ -186,10 +188,13 @@ class MinimizerSetupProcessStep(MethodView):
         )
         db_task.data["method"] = arguments.method.value
 
+        db_task.save()
+        DB.session.flush()
+
         # add callback as webhook subscriber subscribing to all updates
         subscription = TaskUpdateSubscription(
             db_task,
-            webhook_href=callback.callback_url,
+            webhook_href=callback.callback,
             task_href=url_for(
                 "tasks-api.TaskView", task_id=str(db_task.id), _external=True
             ),
