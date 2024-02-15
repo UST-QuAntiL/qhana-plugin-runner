@@ -1,4 +1,4 @@
-# Passing through result steps
+# Subscribing for plugin updates
 
 * Status: [proposed]
 * Deciders: []
