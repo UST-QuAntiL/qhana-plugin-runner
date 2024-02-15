@@ -58,6 +58,7 @@ class FileAdapter(BaseAdapter):
 
         if resp.status_code is None:  # if no error
             try:
+                resp.encoding = "utf-8"
                 file_object = file_path.open(mode="rb")  # read binary
                 resp.raw = file_object
 
