@@ -15,21 +15,21 @@
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 
-import requests
 import numpy as np
+import requests
 from celery.utils.log import get_task_logger
 from scipy.optimize import minimize as scipy_minimize
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-    load_entities,
     ensure_array,
+    load_entities,
+    save_entities,
 )
 from qhana_plugin_runner.plugin_utils.interop import get_task_result_no_wait
+from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.requests import open_url, get_mimetype
 
 from . import ScipyMinimizer
 
@@ -53,6 +53,7 @@ def loss_(calc_loss_endpoint_url: str):
         if isinstance(x0, np.ndarray):
             weights = x0.tolist()
         response = requests.post(calc_loss_endpoint_url, json={"weights": weights})
+        response.raise_for_status()
         return response.json()["loss"]
 
     return loss
@@ -164,18 +165,14 @@ def minimize_task(self, db_id: int) -> str:
     weights_response = requests.get(get_weight_count_endpoint, timeout=3)
     weights_response.raise_for_status()
 
-    nr_of_weights = weights_response.json()[
-        "weights"
-    ]  # FIXME load from objective function task
+    nr_of_weights = weights_response.json()["weights"]
 
-    if not isinstance(nr_of_weights, int) or nr_of_weights > 0:
+    if not isinstance(nr_of_weights, int) or nr_of_weights <= 0:
         raise ValueError(
-            f"Objective function provided a nonsensical nr of weights '{nr_of_weights}'!"
+            f"Objective function provided a nonsensical nr of weights '{nr_of_weights}' ({type(nr_of_weights)})!"
         )
 
-    initial_weights = np.random.randn(
-        nr_of_weights
-    )  # FIXME load from initial weights or randomize from number of weights
+    initial_weights = np.random.randn(nr_of_weights)
 
     initial_weights_url = task_data.data.get("initial_weights_url", None)
 
@@ -219,11 +216,10 @@ def minimize_task(self, db_id: int) -> str:
 
     result = scipy_minimize(**minimize_params)
 
-    csv_attributes = [f"x_{i}" for i in range(len(result.x))]
+    # FIXME: entity attributes will not sort correctly under lexicographical order!!!
+    csv_attributes = ["ID"] + [f"x_{i}" for i in range(len(result.x))]
 
-    final_weights = dict(zip(csv_attributes, result.x.tolist()))
-
-    final_weights["ID"] = "weights"
+    final_weights = tuple(["weights"] + result.x.tolist())
 
     entities = [final_weights]
 
