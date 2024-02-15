@@ -15,6 +15,7 @@
 """Module containing celery tasks."""
 
 from datetime import datetime
+from typing import Optional
 
 from blinker import Namespace
 from celery.result import AsyncResult
@@ -53,7 +54,7 @@ def add_step(
     step_id: str,
     href: str,
     ui_href: str,
-    prog_value: int,
+    prog_value: Optional[int] = None,
     prog_start: int = 0,
     prog_target: int = 100,
     prog_unit: str = "%",
@@ -64,7 +65,7 @@ def add_step(
         step_id (str): ID of step, e.g., ``"step1"`` or ``"step1.step2b"``.
         href (str): The *absolute* URL of the REST entry point resource.
         ui_href (str): The *absolute* URL of the micro frontend that corresponds to the REST entry point resource.
-        prog_value (int): progress value.
+        prog_value (int|None): progress value. If None, use <nr of steps>/<nr of steps + 1> as progress.
         prog_start (int): progress start value.
         prog_target (int): progress target value.
         prog_unit (str): progress unit(default: "%").
@@ -79,6 +80,15 @@ def add_step(
     if task_data is None:
         # TODO use better fitting error
         raise KeyError(f"Could not find db entry for id {db_id}, add_step failed!")
+
+    if prog_value is None:
+        # if no progress is given, set progress as "<steps completed>/<all steps>"
+        # without specific unit
+        nr_of_steps = len(task_data.steps)
+        prog_value = nr_of_steps
+        prog_start = 0
+        prog_target = nr_of_steps + 1
+        prog_unit = ""
 
     task_data.progress_start = prog_start
     task_data.progress_target = prog_target
