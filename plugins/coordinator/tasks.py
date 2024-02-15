@@ -454,7 +454,7 @@ def check_final_result(self, db_id: int):
         task_data.save(commit=True)
 
         app = current_app._get_current_object()
-        TASK_STATUS_CHANGED.send(app)
+        TASK_STATUS_CHANGED.send(app, task_id=db_id)
         return
 
     # both subtasks must have finished successfully
