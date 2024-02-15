@@ -45,7 +45,7 @@ def get_plugin_endpoint(
 
 
 def call_plugin_endpoint(
-    endpoint_url: str, data: Dict[str, Any], debug: bool = False
+    endpoint_url: str, data: Optional[Dict[str, Any]], debug: bool = False
 ) -> str:
     """Call a plugin endpoint and return the result url.
 
@@ -53,7 +53,7 @@ def call_plugin_endpoint(
 
     Args:
         endpoint_url (str): the main processing endpoint url of the plugin.
-        data: (Dict[str, Any]): the data to pass to the endpoint.
+        data: (Dict[str, Any]|None): the data to pass to the endpoint.
         debug: (bool): if debg is True and the response status code indicates an error print the response body. Only use this during development. Defaults to False
 
     Returns:
