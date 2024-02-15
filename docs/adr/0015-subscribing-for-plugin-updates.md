@@ -1,8 +1,8 @@
 # Subscribing for plugin updates
 
-* Status: [proposed]
-* Deciders: []
-* Date: [2023-01-13]
+* Status: [accepted]
+* Deciders: [Fabian Bühler]
+* Date: [2024-02-16]
 
 ## Context and Problem Statement
 
@@ -20,11 +20,12 @@ The invoking plugin needs a way to pass this step to the user while still being 
 * Proxy the micro frontend
 * Proxy the REST endpoint
 * Proxy both
-* Provide a subscription mechanism for update events of the plugin result
+* **Provide a subscription mechanism for update events of the plugin result** (accepted)
 
 ## Decision Outcome
 
-TBD
+Implement a subscription mechanism for receiving task result updates via webhook notifications.
+
 
 ## Pros and Cons of the Options
 
@@ -63,5 +64,18 @@ The notification happens via webhook (e.g., by a post request to a specific url)
 * Good, because this removes the need for polling entirely (for servers with webhooks)
 * Bad, because it requires more effort to implement (only once in the plugin runner)
 * Bad, because the subscription process inctroduces more complex behaviour
+
+#### Subscribing to Events
+
+A task result with a link of the type `subscribe` allows for registering webhooks to receive update events of that task.
+Once a webhook subscribed to a specifc or all update events it will receive a `post` call with the url of the task result that is the `source` of the event and the event type.
+
+#### Calling a Plugin and Subscribe
+
+Since a task result is not available for registering a webhook before the entry point of a plugin was used to create the initial task result, there needs to be another mechanism in these cases.
+For uncooperative plugins proxying the micro frontend and the processing endpoint is the only solution that can be guaranteed to work.
+However, cooperative plugins can accept an extra parameter in both endpoints containing the url of the webhook to subscribe to events.
+For the micro frontend this parameter must be passed as a query parameter, as this is the only reliable way to preserve/encode the parameter in the micro frontend link.
+Such cooperative plugins can be identified by certain tags.
 
 <!-- markdownlint-disable-file MD013 -->
