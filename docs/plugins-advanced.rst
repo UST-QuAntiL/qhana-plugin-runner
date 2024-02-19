@@ -165,6 +165,23 @@ This makes sure that the user will get to complete any unforseen step in both pl
 .. note:: The plugin runner contains utility functions to subscribe to plugins in the ``qhana_plugin_runner.plugin_utils.interop`` package.
 
 
-.. todo:: extra links used for additional plugin interactions
+Using Additional Links
+""""""""""""""""""""""
 
+In some cases, only using the entry point of a plugin or the steps provided during execution is not sufficient to allow for certain kinds of interaction between plugins.
+In those cases, plugins can provide additional links as part of their API surface exposed for such interactions.
+The micro frontends of these plugins may also make use of these endpoints internally to expose this functionality to the user.
+
+Plugins can expose two kinds of links:
+
+1. Links that can be called **outside a task context**.
+2. Links that require **task specific** information.
+
+The first kind of links are links that can be useful to inquire more data before actually starting a plugin.
+For example, a circuit executor may offer such a link to fetch the available quantum computers and their state prior to execution.
+These links are specified in the plugin metadata (see :ref:`plugins:plugin metadata`).
+
+The second kind of links can use task specific state for their computation.
+For example, the :doc:`objective function plugins </plugin-types/objective-function>` expose such a link to allow calculating the loss value multiple times during the task execution.
+These links should be specified in the ``links`` attribute of the task result reource (see :ref:`plugins:processing plugin results`).
 
