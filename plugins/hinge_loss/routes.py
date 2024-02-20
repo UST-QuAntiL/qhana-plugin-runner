@@ -43,8 +43,9 @@ from qhana_plugin_runner.tasks import (
 )
 
 from . import HINGELOSS_BLP, HingeLoss
-from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from .schemas import (
+    CallbackUrl,
+    CallbackUrlSchema,
     EvaluateRequestSchema,
     EvaluateSchema,
     HyperparamterInputData,
