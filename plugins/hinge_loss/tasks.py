@@ -68,8 +68,8 @@ def hinge_loss(w, X, y, C=1.0):
 
 
 @CELERY.task(name=f"{HingeLoss.instance.identifier}.load_data", bind=True)
-def load_data(self, db_id: int) -> str:
-    """"""
+def load_data(self, db_id: int):
+    """Load the features and target arrays into DB for fast and efficient access."""
     TASK_LOGGER.info(f"Load data for optimization '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -126,8 +126,6 @@ def load_data(self, db_id: int) -> str:
         del y_dump
 
     task_data.clear_previous_step()
-
-    # TODO: task_data.add_next_step()
 
     task_data.save(commit=True)
 

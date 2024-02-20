@@ -253,10 +253,6 @@ class SetupProcess(MethodView):
 class PassDataMicroFrontend(MethodView):
     """Micro frontend for the pass_data step."""
 
-    example_inputs = {
-        "c": 1.0,
-    }
-
     @HINGELOSS_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend for the pass_data step."
     )
@@ -358,10 +354,6 @@ class PassDataEndpoint(MethodView):
 @HINGELOSS_BLP.route("/task/<int:db_id>/ui-evaluate/")
 class EvaluateMicroFrontend(MethodView):
     """Micro frontend for the evaluate step."""
-
-    example_inputs = {
-        "c": 1.0,
-    }
 
     @HINGELOSS_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend for the evaluate step."
