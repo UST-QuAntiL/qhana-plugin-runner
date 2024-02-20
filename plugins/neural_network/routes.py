@@ -15,51 +15,50 @@
 from http import HTTPStatus
 from typing import Mapping, Optional
 
+import numpy as np
 import torch
-from celery.utils.log import get_task_logger
-from flask import Response, abort
-from flask.globals import request
-from flask.helpers import url_for
-from flask.templating import render_template
+from flask import Response, redirect, render_template, request, url_for
+from flask.globals import current_app
 from flask.views import MethodView
+from flask_smorest import abort
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    ApiLink,
     DataMetadata,
     EntryPoint,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.db import DB
+from qhana_plugin_runner.db.models.tasks import (
+    ProcessingTask,
+    TaskLink,
+    TaskUpdateSubscription,
+)
+from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    add_step,
+    save_task_error,
+    save_task_result,
+)
 
 from . import NN_BLP, NeuralNetwork
-from .interaction_utils.ie_utils import url_for_ie
-from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from .interaction_utils.tasks import make_callback
 from .neural_network import NN
 from .schemas import (
+    CallbackUrl,
+    CallbackUrlSchema,
+    CombinedResponseSchema,
+    EvaluateRequestSchema,
+    EvaluateSchema,
+    GradientResponseSchema,
     HyperparamterInputData,
     HyperparamterInputSchema,
-)
-from .shared.enums import InteractionEndpointType
-from .shared.schemas import (
-    CalcLossOrGradInput,
-    CalcLossOrGradInputSchema,
-    GradientResponseSchema,
-    LossAndGradientResponseData,
-    LossAndGradientResponseSchema,
     LossResponseSchema,
-    ObjectiveFunctionInvokationCallbackData,
-    ObjectiveFunctionInvokationCallbackSchema,
-    ObjectiveFunctionPassData,
-    ObjectiveFunctionPassDataResponseSchema,
-    ObjectiveFunctionPassDataSchema,
-    SingleNumpyArraySchema,
+    PassDataSchema,
+    WeightsResponseSchema,
 )
-
-TASK_LOGGER = get_task_logger(__name__)
+from .tasks import clear_task_data, load_data, load_data_from_db
 
 
 @NN_BLP.route("/")
@@ -77,34 +76,16 @@ class PluginsView(MethodView):
             version=NeuralNetwork.instance.version,
             type=PluginType.processing,
             tags=NeuralNetwork.instance.tags,
-            links=[
-                ApiLink(
-                    type=InteractionEndpointType.of_pass_data.value,
-                    # since the url has the task id as parameter, we need to add it here
-                    href=url_for_ie(f"{NN_BLP.name}.{PassDataEndpoint.__name__}"),
-                ),
-                ApiLink(
-                    type=InteractionEndpointType.calc_loss.value,
-                    href=url_for_ie(f"{NN_BLP.name}.{CalcLossEndpoint.__name__}"),
-                ),
-                ApiLink(
-                    type=InteractionEndpointType.calc_grad.value,
-                    href=url_for_ie(f"{NN_BLP.name}.{CalcGradientEndpoint.__name__}"),
-                ),
-                ApiLink(
-                    type=InteractionEndpointType.calc_grad.value,
-                    href=url_for_ie(f"{NN_BLP.name}.{CalcLossandGradEndpoint.__name__}"),
-                ),
-            ],
+            links=[],
             entry_point=EntryPoint(
-                href=url_for(f"{NN_BLP.name}.{OptimizerCallbackProcess.__name__}"),
+                href=url_for(f"{NN_BLP.name}.{SetupProcess.__name__}"),
                 ui_href=url_for(
                     f"{NN_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
                 ),
                 plugin_dependencies=[],
-                data_input=[],
+                data_input=[],  # TODO: what about input data required in later steps? add a step(id) attribute to the metadata here?
                 data_output=[
-                    DataMetadata(
+                    DataMetadata(  # FIXME
                         data_type="txt",
                         content_type=["text/plain"],
                         required=True,
@@ -173,7 +154,8 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         if not data:
             data = {"number_of_neurons": 5}
         process_url = url_for(
-            f"{NN_BLP.name}.{OptimizerCallbackProcess.__name__}",
+            f"{NN_BLP.name}.{SetupProcess.__name__}",
+            # forward the callback url to the processing step
             **callback_schema.dump(callback),
         )
         example_values_url = url_for(
@@ -199,13 +181,13 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         )
 
 
-@NN_BLP.route("/optimizer-callback/")
-class OptimizerCallbackProcess(MethodView):
-    """Make a callback to the optimizer plugin after selection the hyperparameter."""
+@NN_BLP.route("/hyperparameter/")
+class SetupProcess(MethodView):
+    """Save the hyperparameters to the database."""
 
     @NN_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @NN_BLP.arguments(CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True)
-    @NN_BLP.response(HTTPStatus.OK, ObjectiveFunctionInvokationCallbackSchema())
+    @NN_BLP.response(HTTPStatus.SEE_OTHER)
     @NN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
@@ -215,86 +197,317 @@ class OptimizerCallbackProcess(MethodView):
         )
         # save the data in the db
         db_task.data["number_of_neurons"] = arguments.number_of_neurons
-        db_task.save(commit=True)
-        callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
-            ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
+        db_task.data["weights"] = -1
+
+        db_task.save()
+        DB.session.flush()
+
+        # add callback as webhook subscriber subscribing to all updates
+        subscription = TaskUpdateSubscription(
+            db_task,
+            webhook_href=callback.callback,
+            task_href=url_for(
+                "tasks-api.TaskView", task_id=str(db_task.id), _external=True
+            ),
+            event_type=None,
         )
 
-        make_callback(callback.callback_url, callback_data)
+        weights_link = TaskLink(
+            db_task,
+            type="of-weights",
+            href=url_for(
+                f"{NN_BLP.name}.{WeightsEndpoint.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+        )
+        calc_loss_link = TaskLink(
+            db_task,
+            type="of-evaluate",
+            href=url_for(
+                f"{NN_BLP.name}.{CalcLossEndpoint.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+        )
+        calc_grad_link = TaskLink(
+            db_task,
+            type="of-evaluate-gradient",
+            href=url_for(
+                f"{NN_BLP.name}.{CalcGradientEndpoint.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+        )
+        calc_loss_and_grad_link = TaskLink(
+            db_task,
+            type="of-evaluate-combined",
+            href=url_for(
+                f"{NN_BLP.name}.{CalcLossandGradEndpoint.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+        )
+        DB.session.add(weights_link)
+        DB.session.add(calc_loss_link)
+        DB.session.add(calc_grad_link)
+        DB.session.add(calc_loss_and_grad_link)
+
+        subscription.save()
+
+        db_task.add_next_step(
+            href=url_for(f"{NN_BLP.name}.{PassDataEndpoint.__name__}", db_id=db_task.id),
+            ui_href=url_for(
+                f"{NN_BLP.name}.{PassDataMicroFrontend.__name__}", db_id=db_task.id
+            ),
+            step_id="pass_data",
+            commit=True,
+        )
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_task.id)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
 
 
-@NN_BLP.route("/<int:db_id>/pass-data/")
+@NN_BLP.route("/task/<int:db_id>/ui-pass-data/")
+class PassDataMicroFrontend(MethodView):
+    """Micro frontend for the pass_data step."""
+
+    @NN_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the pass_data step."
+    )
+    @NN_BLP.arguments(
+        PassDataSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="query",
+        required=False,
+    )
+    @NN_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        """Return the micro frontend."""
+        return self.render(request.args, errors, db_id=db_id)
+
+    @NN_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the pass_data step."
+    )
+    @NN_BLP.arguments(
+        PassDataSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="form",
+        required=False,
+    )
+    @NN_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors, db_id=db_id)
+
+    def render(self, data: Mapping, errors: dict, db_id: int):
+        plugin = NeuralNetwork.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        schema = PassDataSchema()
+
+        process_url = url_for(f"{NN_BLP.name}.{PassDataEndpoint.__name__}", db_id=db_id)
+        example_values_url = url_for(
+            f"{NN_BLP.name}.{PassDataMicroFrontend.__name__}", db_id=db_id
+        )
+
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=NeuralNetwork.instance.name,
+                version=NeuralNetwork.instance.version,
+                schema=schema,
+                values=data,
+                errors=errors,
+                process=process_url,  # URL of the processing step
+                help_text="Pass data to the objective function.",
+                example_values=example_values_url,  # URL of this endpoint
+            )
+        )
+
+
+@NN_BLP.route("/task/<int:db_id>/pass-data/")
 class PassDataEndpoint(MethodView):
-    """Endpoint to add additional data to the db task."""
+    """Endpoint to load the features and target data."""
 
     @NN_BLP.arguments(
-        ObjectiveFunctionPassDataSchema(unknown=EXCLUDE),
-        location="json",
+        PassDataSchema(unknown=EXCLUDE),
+        location="form",
         required=True,
     )
-    @NN_BLP.response(HTTPStatus.OK, ObjectiveFunctionPassDataResponseSchema())
+    @NN_BLP.response(HTTPStatus.SEE_OTHER)
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: ObjectiveFunctionPassData, db_id: int) -> dict:
-        """Endpoint to add additional info to the db task."""
+    def post(self, input_data: dict, db_id: int):
+        """Load features and target data."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+            abort(HTTPStatus.NOT_FOUND, message=msg)
 
-        serialized_data = ObjectiveFunctionPassDataSchema().dump(input_data)
+        assert isinstance(db_task.data, dict)
 
-        db_task.data["x"] = serialized_data["x"]
-        db_task.data["y"] = serialized_data["y"]
-        number_of_neurons: int = db_task.data["number_of_neurons"]
-        # the number of weights a neural network with a single hidden layer has is:
-        number_weights = (
-            input_data.x.shape[1] * number_of_neurons
-            + number_of_neurons * 1
-            + number_of_neurons
-            + 1
-        )
+        db_task.data["features_url"] = input_data["features"]
+        db_task.data["target_url"] = input_data["target"]
+
         db_task.save(commit=True)
 
-        return {"number_weights": number_weights}
+        task = load_data.s(db_id=db_id) | add_step.si(
+            db_id=db_id,
+            step_id="evaluate",
+            href=url_for(f"{NN_BLP.name}.{EvaluateEndpoint.__name__}", db_id=db_id),
+            ui_href=url_for(
+                f"{NN_BLP.name}.{EvaluateMicroFrontend.__name__}", db_id=db_id
+            ),
+            task_log="Finished loading data.",
+        )
+        task.link_error(save_task_error.s(db_id=db_id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
 
 
-@NN_BLP.route("/<int:db_id>/calc-loss-endpoint/")
+@NN_BLP.route("/task/<int:db_id>/ui-evaluate/")
+class EvaluateMicroFrontend(MethodView):
+    """Micro frontend for the evaluate step."""
+
+    @NN_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the evaluate step."
+    )
+    @NN_BLP.arguments(
+        EvaluateSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="query",
+        required=False,
+    )
+    @NN_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        """Return the micro frontend."""
+        return self.render(request.args, errors, db_id=db_id)
+
+    @NN_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the evaluate step."
+    )
+    @NN_BLP.arguments(
+        EvaluateSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="form",
+        required=False,
+    )
+    @NN_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors, db_id=db_id)
+
+    def render(self, data: Mapping, errors: dict, db_id: int):
+        plugin = NeuralNetwork.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        schema = EvaluateSchema()
+
+        process_url = url_for(f"{NN_BLP.name}.{EvaluateEndpoint.__name__}", db_id=db_id)
+        example_values_url = url_for(
+            f"{NN_BLP.name}.{EvaluateMicroFrontend.__name__}", db_id=db_id
+        )
+
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=NeuralNetwork.instance.name,
+                version=NeuralNetwork.instance.version,
+                schema=schema,
+                values=data,
+                errors=errors,
+                process=process_url,  # URL of the processing step
+                help_text="Complete the objective function task and clean up resources.",
+                example_values=example_values_url,  # URL of this endpoint
+            )
+        )
+
+
+@NN_BLP.route("/task/<int:db_id>/evaluate/")
+class EvaluateEndpoint(MethodView):
+    """Endpoint to complete the objective function task."""
+
+    @NN_BLP.arguments(
+        EvaluateSchema(unknown=EXCLUDE),
+        location="json",
+        required=True,
+    )
+    @NN_BLP.response(HTTPStatus.SEE_OTHER)
+    @NN_BLP.require_jwt("jwt", optional=True)
+    def post(self, input_data: dict, db_id: int):
+        """Complete the objective function task."""
+        task = clear_task_data.s(db_id=db_id) | save_task_result.s(db_id=db_id)
+        task.link_error(save_task_error.s(db_id=db_id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
+        )
+
+
+#### Task Specific Endpoints ###################################################
+
+
+@NN_BLP.route("/task/<int:db_id>/weights/")
+class WeightsEndpoint(MethodView):
+    """Endpoint for the number of weights."""
+
+    @NN_BLP.response(HTTPStatus.OK, WeightsResponseSchema())
+    @NN_BLP.require_jwt("jwt", optional=True)
+    def get(self, db_id: int) -> dict:
+
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            abort(HTTPStatus.NOT_FOUND, message=msg)
+
+        return {"weights": db_task.data.get("weights", -1)}
+
+
+def _prepare_network(db_id: int, evaluate_input: dict):
+
+    db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    if db_task is None:
+        msg = f"Could not load task data with id {db_id} to read parameters!"
+        abort(HTTPStatus.NOT_FOUND, message=msg)
+
+    assert isinstance(db_task.data, dict)
+
+    weights = np.array(evaluate_input["weights"])
+    features = load_data_from_db(db_task.data["features_key"])
+    target = load_data_from_db(db_task.data["target_key"])
+    number_of_neurons: int = db_task.data["number_of_neurons"]
+
+    # create the neural network
+    nn = NN(features.shape[1], number_of_neurons)
+    # set the weights
+    nn.set_weights(weights)
+
+    return (
+        nn,
+        torch.tensor(features, dtype=torch.float32),
+        torch.tensor(target, dtype=torch.float32),
+    )
+
+
+@NN_BLP.route("/task/<int:db_id>/loss/")
 class CalcLossEndpoint(MethodView):
     """Endpoint for the loss calculation."""
 
     @NN_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @NN_BLP.arguments(
-        CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
+        EvaluateRequestSchema(unknown=EXCLUDE), location="json", required=True
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
-        """Endpoint for the calculation callback."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+    def post(self, input_data: dict, db_id: int) -> dict:
+        """Calculate the loss given the specific weights."""
 
-        if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
-        if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
-        number_of_neurons: int = db_task.data["number_of_neurons"]
+        nn, features, target = _prepare_network(db_id=db_id, evaluate_input=input_data)
 
-        # create the neural network
-        nn = NN(input_data.x.shape[1], number_of_neurons)
-        # set the weights
-        nn.set_weights(input_data.x0)
-
-        loss = nn.get_loss(
-            torch.tensor(input_data.x, dtype=torch.float32),
-            torch.tensor(input_data.y, dtype=torch.float32),
-        )
+        loss = nn.get_loss(features, target)
         return {"loss": loss}
 
 
@@ -304,78 +517,31 @@ class CalcGradientEndpoint(MethodView):
 
     @NN_BLP.response(HTTPStatus.OK, GradientResponseSchema())
     @NN_BLP.arguments(
-        CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
+        EvaluateRequestSchema(unknown=EXCLUDE), location="json", required=True
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
+    def post(self, input_data: dict, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
 
-        if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
-        if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
+        nn, features, target = _prepare_network(db_id=db_id, evaluate_input=input_data)
 
-        number_of_neurons: int = db_task.data["number_of_neurons"]
-
-        nn = NN(input_data.x.shape[1], number_of_neurons)
-
-        nn.set_weights(input_data.x0)
-
-        gradient = nn.get_gradient(
-            torch.tensor(input_data.x, dtype=torch.float32),
-            torch.tensor(input_data.y, dtype=torch.float32),
-        )
-        return {"gradient": gradient}
+        gradient = nn.get_gradient(features, target)
+        return {"gradient": gradient.tolist()}
 
 
 @NN_BLP.route("/<int:db_id>/calc-loss-and-grad/")
 class CalcLossandGradEndpoint(MethodView):
     """Endpoint for the loss and gradient calculation."""
 
-    @NN_BLP.response(HTTPStatus.OK, LossAndGradientResponseSchema())
+    @NN_BLP.response(HTTPStatus.OK, CombinedResponseSchema())
     @NN_BLP.arguments(
-        CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
+        EvaluateRequestSchema(unknown=EXCLUDE), location="json", required=True
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
+    def post(self, input_data: dict, db_id: int) -> dict:
         """Endpoint for the calculation callback."""
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
 
-        if input_data.x is None:
-            input_data.x = (
-                SingleNumpyArraySchema().load({"array": db_task.data["x"]}).array
-            )
-        if input_data.y is None:
-            input_data.y = (
-                SingleNumpyArraySchema().load({"array": db_task.data["y"]}).array
-            )
+        nn, features, target = _prepare_network(db_id=db_id, evaluate_input=input_data)
 
-        number_of_neurons: int = db_task.data["number_of_neurons"]
-
-        nn = NN(input_data.x.shape[1], number_of_neurons)
-
-        nn.set_weights(input_data.x0)
-
-        loss, grad = nn.get_loss_and_gradient(
-            torch.tensor(input_data.x, dtype=torch.float32),
-            torch.tensor(input_data.y, dtype=torch.float32),
-        )
-
-        response = LossAndGradientResponseSchema().dump(
-            LossAndGradientResponseData(loss=loss, gradient=grad)
-        )
-
-        return response
+        loss, grad = nn.get_loss_and_gradient(features, target)
+        return {"loss": loss, "gradient": grad.tolist()}

@@ -16,7 +16,20 @@ from dataclasses import dataclass
 
 import marshmallow as ma
 
-from qhana_plugin_runner.api.util import FrontendFormBaseSchema
+from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema, MaBaseSchema
+
+
+@dataclass
+class CallbackUrl:
+    callback: str
+
+
+class CallbackUrlSchema(MaBaseSchema):
+    callback = ma.fields.URL(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return CallbackUrl(**data)
 
 
 @dataclass
@@ -31,10 +44,56 @@ class HyperparamterInputSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Number of neurons",
             "description": "Number of neurons for the neural network.",
-            "input_type": "text",
+            "input_type": "number",
         },
     )
 
     @ma.post_load
     def make_object(self, data, **kwargs):
         return HyperparamterInputData(**data)
+
+
+class PassDataSchema(FrontendFormBaseSchema):
+    features = FileUrl(
+        data_input_type="entity/vector",
+        data_content_types=["text/csv", "application/json", "application/X-lines+json"],
+        required=True,
+        metadata={
+            "label": "Features: 2-D array",
+            "description": "Each entity is 1 sample with k numeric features.",
+        },
+    )
+    target = FileUrl(
+        data_input_type="entity/vector",
+        data_content_types=["text/csv", "application/json"],
+        required=True,
+        metadata={
+            "label": "Target: 1-D array",
+            "description": "Each entity is 1 sample with 1 numeric target value.",
+        },
+    )
+
+
+class EvaluateSchema(FrontendFormBaseSchema):
+    pass  # intentionally empty
+
+
+class WeightsResponseSchema(MaBaseSchema):
+    weights = ma.fields.Integer(required=True, allow_none=False)
+
+
+class EvaluateRequestSchema(MaBaseSchema):
+    weights = ma.fields.List(ma.fields.Number(), required=True, allow_none=False)
+
+
+class LossResponseSchema(MaBaseSchema):
+    loss = ma.fields.Number(required=True, allow_none=False)
+
+
+class GradientResponseSchema(MaBaseSchema):
+    gradient = ma.fields.List(ma.fields.Number(), required=True, allow_none=False)
+
+
+class CombinedResponseSchema(MaBaseSchema):
+    loss = ma.fields.Number(required=True, allow_none=False)
+    gradient = ma.fields.List(ma.fields.Number(), required=True, allow_none=False)
