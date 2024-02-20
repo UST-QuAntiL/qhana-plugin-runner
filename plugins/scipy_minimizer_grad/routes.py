@@ -38,8 +38,9 @@ from qhana_plugin_runner.tasks import (
 )
 
 from . import SCIPY_MINIMIZER_GRAD_BLP, ScipyMinimizerGrad
-from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
 from .schemas import (
+    CallbackUrl,
+    CallbackUrlSchema,
     MinimizerEnum,
     MinimizerSetupTaskInputData,
     MinimizerSetupTaskInputSchema,
