@@ -69,7 +69,7 @@ def async_request(url: str, json: Optional[Any] = None, timeout: int = 24 * 6 * 
             sleep(sleep_duration)
             sleep_duration = min(max_sleep, sleep_duration * 2)
         try:
-            response = requests.post(url, json={"weights": weights}, timeout=3)
+            response = requests.post(url, json=json, timeout=3)
             if is_first:
                 url = response.url  # follow redirects on first request
             is_first = False
@@ -154,7 +154,7 @@ def loss_and_jac_(calc_loss_and_gradient_endpoint_url: str):
             url=calc_loss_and_gradient_endpoint_url, json={"weights": weights}
         )
         data = response.json()
-        return data["loss"], np.ndarray(data["gradient"])
+        return data["loss"], np.array(data["gradient"])
 
     return loss_and_jac
 
