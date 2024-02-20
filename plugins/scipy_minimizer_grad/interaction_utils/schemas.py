@@ -7,11 +7,11 @@ from qhana_plugin_runner.api.util import MaBaseSchema
 
 @dataclass
 class CallbackUrl:
-    callback_url: str
+    callback: str
 
 
 class CallbackUrlSchema(MaBaseSchema):
-    callback_url = ma.fields.URL(required=True, allow_none=False, data_key="callbackUrl")
+    callback = ma.fields.URL(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
