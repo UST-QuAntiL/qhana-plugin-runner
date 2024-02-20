@@ -15,45 +15,46 @@
 from http import HTTPStatus
 from typing import Mapping, Optional
 
-from celery.utils.log import get_task_logger
-from flask import Response, abort
-from flask.globals import request
-from flask.helpers import url_for
-from flask.templating import render_template
+import numpy as np
+from flask import Response, redirect, render_template, request, url_for
+from flask.globals import current_app
 from flask.views import MethodView
+from flask_smorest import abort
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    ApiLink,
     DataMetadata,
     EntryPoint,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.db import DB
+from qhana_plugin_runner.db.models.tasks import (
+    ProcessingTask,
+    TaskLink,
+    TaskUpdateSubscription,
+)
+from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    add_step,
+    save_task_error,
+    save_task_result,
+)
 
 from . import RIDGELOSS_BLP, RidgeLoss
-from .interaction_utils.db_task_cache import get_of_calc_data
-from .interaction_utils.ie_utils import url_for_ie
-from .interaction_utils.schemas import CallbackUrl, CallbackUrlSchema
-from .interaction_utils.tasks import make_callback
-from .schemas import HyperparamterInputData, HyperparamterInputSchema
-from .shared.enums import InteractionEndpointType
-from .shared.schemas import (
-    CalcLossOrGradInput,
-    CalcLossOrGradInputSchema,
+from .schemas import (
+    CallbackUrl,
+    CallbackUrlSchema,
+    EvaluateRequestSchema,
+    EvaluateSchema,
+    HyperparamterInputData,
+    HyperparamterInputSchema,
     LossResponseSchema,
-    ObjectiveFunctionInvokationCallbackData,
-    ObjectiveFunctionInvokationCallbackSchema,
-    ObjectiveFunctionPassData,
-    ObjectiveFunctionPassDataResponseSchema,
-    ObjectiveFunctionPassDataSchema,
-    SingleNumpyArraySchema,
+    PassDataSchema,
+    WeightsResponseSchema,
 )
-from .tasks import ridge_loss
-
-TASK_LOGGER = get_task_logger(__name__)
+from .tasks import clear_task_data, load_data, load_data_from_db, ridge_loss
 
 
 @RIDGELOSS_BLP.route("/")
@@ -71,26 +72,16 @@ class PluginsView(MethodView):
             version=RidgeLoss.instance.version,
             type=PluginType.processing,
             tags=RidgeLoss.instance.tags,
-            links=[
-                ApiLink(
-                    type=InteractionEndpointType.of_pass_data.value,
-                    # since the endpoint has the task id as parameter, we need to add it here
-                    href=url_for_ie(f"{RIDGELOSS_BLP.name}.{PassDataEndpoint.__name__}"),
-                ),
-                ApiLink(
-                    type=InteractionEndpointType.calc_loss.value,
-                    href=url_for_ie(f"{RIDGELOSS_BLP.name}.{CalcLossEndpoint.__name__}"),
-                ),
-            ],
+            links=[],
             entry_point=EntryPoint(
-                href=url_for(f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}"),
+                href=url_for(f"{RIDGELOSS_BLP.name}.{SetupProcess.__name__}"),
                 ui_href=url_for(
                     f"{RIDGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
                 ),
                 plugin_dependencies=[],
-                data_input=[],
+                data_input=[],  # TODO: what about input data required in later steps? add a step(id) attribute to the metadata here?
                 data_output=[
-                    DataMetadata(
+                    DataMetadata(  # FIXME
                         data_type="txt",
                         content_type=["text/plain"],
                         required=True,
@@ -159,7 +150,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         if not data:
             data = {"alpha": 0.1}
         process_url = url_for(
-            f"{RIDGELOSS_BLP.name}.{OptimizerCallbackProcess.__name__}",
+            f"{RIDGELOSS_BLP.name}.{SetupProcess.__name__}",
             # forward the callback url to the processing endpoint
             **callback_schema.dump(callback),
         )
@@ -188,15 +179,15 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         )
 
 
-@RIDGELOSS_BLP.route("/optimizer-callback/")
-class OptimizerCallbackProcess(MethodView):
-    """Make a callback to the coordinator plugin after selection the hyperparameter."""
+@RIDGELOSS_BLP.route("/hyperparameter/")
+class SetupProcess(MethodView):
+    """Save the hyperparameters to the database."""
 
     @RIDGELOSS_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @RIDGELOSS_BLP.arguments(
         CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
     )
-    @RIDGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionInvokationCallbackSchema())
+    @RIDGELOSS_BLP.response(HTTPStatus.SEE_OTHER)
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
         """Start the invoked task."""
@@ -204,70 +195,292 @@ class OptimizerCallbackProcess(MethodView):
         db_task = ProcessingTask(
             task_name="ridge-loss",
         )
-        # save the hyperparameter in the db
-        hyperparameter = {"alpha": arguments.alpha}
-        db_task.data["hyperparameter"] = hyperparameter
-        db_task.save(commit=True)
-        callback_data = ObjectiveFunctionInvokationCallbackSchema().dump(
-            ObjectiveFunctionInvokationCallbackData(task_id=db_task.id)
+        db_task.data["alpha"] = arguments.alpha
+        db_task.data["weights"] = -1
+
+        db_task.save()
+        DB.session.flush()
+
+        # add callback as webhook subscriber subscribing to all updates
+        subscription = TaskUpdateSubscription(
+            db_task,
+            webhook_href=callback.callback,
+            task_href=url_for(
+                "tasks-api.TaskView", task_id=str(db_task.id), _external=True
+            ),
+            event_type=None,
         )
-        # make callback to coordinator plugin with the task id as parameter
-        make_callback(callback.callback_url, callback_data)
+
+        weights_link = TaskLink(
+            db_task,
+            type="of-weights",
+            href=url_for(
+                f"{RIDGELOSS_BLP.name}.{WeightsEndpoint.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+        )
+        calc_loss_link = TaskLink(
+            db_task,
+            type="of-evaluate",
+            href=url_for(
+                f"{RIDGELOSS_BLP.name}.{CalcLossEndpoint.__name__}",
+                db_id=db_task.id,
+                _external=True,
+            ),
+        )
+        DB.session.add(weights_link)
+        DB.session.add(calc_loss_link)
+
+        subscription.save()
+
+        db_task.add_next_step(
+            href=url_for(
+                f"{RIDGELOSS_BLP.name}.{PassDataEndpoint.__name__}", db_id=db_task.id
+            ),
+            ui_href=url_for(
+                f"{RIDGELOSS_BLP.name}.{PassDataMicroFrontend.__name__}", db_id=db_task.id
+            ),
+            step_id="pass_data",
+            commit=True,
+        )
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_task.id)
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
 
 
-@RIDGELOSS_BLP.route("/<int:db_id>/pass-data/")
+@RIDGELOSS_BLP.route("/task/<int:db_id>/ui-pass-data/")
+class PassDataMicroFrontend(MethodView):
+    """Micro frontend for the pass_data step."""
+
+    @RIDGELOSS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the pass_data step."
+    )
+    @RIDGELOSS_BLP.arguments(
+        PassDataSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="query",
+        required=False,
+    )
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        """Return the micro frontend."""
+        return self.render(request.args, errors, db_id=db_id)
+
+    @RIDGELOSS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the pass_data step."
+    )
+    @RIDGELOSS_BLP.arguments(
+        PassDataSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="form",
+        required=False,
+    )
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors, db_id=db_id)
+
+    def render(self, data: Mapping, errors: dict, db_id: int):
+        plugin = RidgeLoss.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        schema = PassDataSchema()
+
+        process_url = url_for(
+            f"{RIDGELOSS_BLP.name}.{PassDataEndpoint.__name__}", db_id=db_id
+        )
+        example_values_url = url_for(
+            f"{RIDGELOSS_BLP.name}.{PassDataMicroFrontend.__name__}", db_id=db_id
+        )
+
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=RidgeLoss.instance.name,
+                version=RidgeLoss.instance.version,
+                schema=schema,
+                values=data,
+                errors=errors,
+                process=process_url,  # URL of the processing step
+                help_text="Pass data to the objective function.",
+                example_values=example_values_url,  # URL of this endpoint
+            )
+        )
+
+
+@RIDGELOSS_BLP.route("/task/<int:db_id>/pass-data/")
 class PassDataEndpoint(MethodView):
-    """Endpoint to add additional data to the db task."""
+    """Endpoint to load the features and target data."""
 
     @RIDGELOSS_BLP.arguments(
-        ObjectiveFunctionPassDataSchema(unknown=EXCLUDE),
-        location="json",
+        PassDataSchema(unknown=EXCLUDE),
+        location="form",
         required=True,
     )
-    @RIDGELOSS_BLP.response(HTTPStatus.OK, ObjectiveFunctionPassDataResponseSchema())
+    @RIDGELOSS_BLP.response(HTTPStatus.SEE_OTHER)
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: ObjectiveFunctionPassData, db_id: int) -> dict:
-        """Endpoint to add additional info to the db task."""
+    def post(self, input_data: dict, db_id: int):
+        """Load features and target data."""
         db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+            abort(HTTPStatus.NOT_FOUND, message=msg)
 
-        serialized_data = ObjectiveFunctionPassDataSchema().dump(input_data)
+        assert isinstance(db_task.data, dict)
 
-        db_task.data["x"] = serialized_data["x"]
-        db_task.data["y"] = serialized_data["y"]
+        db_task.data["features_url"] = input_data["features"]
+        db_task.data["target_url"] = input_data["target"]
 
         db_task.save(commit=True)
 
-        # return the number of weights which is the number of data points in the x array
-        return {"number_weights": input_data.x.shape[1]}
+        task = load_data.s(db_id=db_id) | add_step.si(
+            db_id=db_id,
+            step_id="evaluate",
+            href=url_for(
+                f"{RIDGELOSS_BLP.name}.{EvaluateEndpoint.__name__}", db_id=db_id
+            ),
+            ui_href=url_for(
+                f"{RIDGELOSS_BLP.name}.{EvaluateMicroFrontend.__name__}", db_id=db_id
+            ),
+            task_log="Finished loading data.",
+        )
+        task.link_error(save_task_error.s(db_id=db_id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
 
 
-@RIDGELOSS_BLP.route("/<int:db_id>/calc-loss-endpoint/")
+@RIDGELOSS_BLP.route("/task/<int:db_id>/ui-evaluate/")
+class EvaluateMicroFrontend(MethodView):
+    """Micro frontend for the evaluate step."""
+
+    @RIDGELOSS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the evaluate step."
+    )
+    @RIDGELOSS_BLP.arguments(
+        EvaluateSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="query",
+        required=False,
+    )
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        """Return the micro frontend."""
+        return self.render(request.args, errors, db_id=db_id)
+
+    @RIDGELOSS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the evaluate step."
+    )
+    @RIDGELOSS_BLP.arguments(
+        EvaluateSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True),
+        location="form",
+        required=False,
+    )
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        """Return the micro frontend with prerendered inputs."""
+        return self.render(request.form, errors, db_id=db_id)
+
+    def render(self, data: Mapping, errors: dict, db_id: int):
+        plugin = RidgeLoss.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        schema = EvaluateSchema()
+
+        process_url = url_for(
+            f"{RIDGELOSS_BLP.name}.{EvaluateEndpoint.__name__}", db_id=db_id
+        )
+        example_values_url = url_for(
+            f"{RIDGELOSS_BLP.name}.{EvaluateMicroFrontend.__name__}", db_id=db_id
+        )
+
+        return Response(
+            render_template(
+                "simple_template.html",
+                name=RidgeLoss.instance.name,
+                version=RidgeLoss.instance.version,
+                schema=schema,
+                values=data,
+                errors=errors,
+                process=process_url,  # URL of the processing step
+                help_text="Complete the objective function task and clean up resources.",
+                example_values=example_values_url,  # URL of this endpoint
+            )
+        )
+
+
+@RIDGELOSS_BLP.route("/task/<int:db_id>/evaluate/")
+class EvaluateEndpoint(MethodView):
+    """Endpoint to complete the objective function task."""
+
+    @RIDGELOSS_BLP.arguments(
+        EvaluateSchema(unknown=EXCLUDE),
+        location="json",
+        required=True,
+    )
+    @RIDGELOSS_BLP.response(HTTPStatus.SEE_OTHER)
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def post(self, input_data: dict, db_id: int):
+        """Complete the objective function task."""
+        task = clear_task_data.s(db_id=db_id) | save_task_result.s(db_id=db_id)
+        task.link_error(save_task_error.s(db_id=db_id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
+        )
+
+
+#### Task Specific Endpoints ###################################################
+
+
+@RIDGELOSS_BLP.route("/task/<int:db_id>/weights/")
+class WeightsEndpoint(MethodView):
+    """Endpoint for the number of weights."""
+
+    @RIDGELOSS_BLP.response(HTTPStatus.OK, WeightsResponseSchema())
+    @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
+    def get(self, db_id: int) -> dict:
+
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            abort(HTTPStatus.NOT_FOUND, message=msg)
+
+        return {"weights": db_task.data.get("weights", -1)}
+
+
+@RIDGELOSS_BLP.route("/task/<int:db_id>/loss/")
 class CalcLossEndpoint(MethodView):
-    """Endpoint for the calculation callback."""
+    """Endpoint for the loss calculation."""
 
     @RIDGELOSS_BLP.response(HTTPStatus.OK, LossResponseSchema())
     @RIDGELOSS_BLP.arguments(
-        CalcLossOrGradInputSchema(unknown=EXCLUDE), location="json", required=True
+        EvaluateRequestSchema(unknown=EXCLUDE), location="json", required=True
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, input_data: CalcLossOrGradInput, db_id: int) -> dict:
-        """Endpoint for the calculation callback."""
-        # get the data from the cache
-        x, y, hyperparameter = get_of_calc_data(db_id)
+    def post(self, input_data: dict, db_id: int) -> dict:
+        """Calculate the loss given the specific weights."""
 
-        if input_data.x is None:
-            input_data.x = SingleNumpyArraySchema().load({"array": x}).array
-        if input_data.y is None:
-            input_data.y = SingleNumpyArraySchema().load({"array": y}).array
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            abort(HTTPStatus.NOT_FOUND, message=msg)
+
+        assert isinstance(db_task.data, dict)
+
+        weights = np.array(input_data["weights"])
+        features = load_data_from_db(db_task.data["features_key"])
+        target = load_data_from_db(db_task.data["target_key"])
 
         loss = ridge_loss(
-            X=input_data.x,
-            y=input_data.y,
-            w=input_data.x0,
-            alpha=hyperparameter["alpha"],
+            X=features,
+            y=target,
+            w=weights,
+            alpha=db_task.data["alpha"],
         )
         return {"loss": loss}
