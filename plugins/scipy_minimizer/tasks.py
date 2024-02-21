@@ -28,6 +28,8 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_array,
     load_entities,
     save_entities,
+    array_to_entity,
+    ArrayEntity,
 )
 from qhana_plugin_runner.plugin_utils.interop import get_task_result_no_wait
 from qhana_plugin_runner.requests import get_mimetype, open_url
@@ -202,12 +204,10 @@ def minimize_task(self, db_id: int) -> str:
 
     TASK_LOGGER.info(f"Optimization result: {result}")
 
-    # FIXME: entity attributes will not sort correctly under lexicographical order!!!
-    csv_attributes = ["ID"] + [f"x_{i}" for i in range(len(result.x))]
+    array_entities = [ArrayEntity("weights", "", result.x.tolist())]
+    entities = tuple(array_to_entity(array_entities, prefix="x_"))
 
-    final_weights = tuple(["weights"] + result.x.tolist())
-
-    entities = [final_weights]
+    csv_attributes = entities[0].entity_attributes
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entities, output, "text/csv", attributes=csv_attributes)
