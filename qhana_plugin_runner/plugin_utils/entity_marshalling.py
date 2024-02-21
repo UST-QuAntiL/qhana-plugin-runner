@@ -287,8 +287,8 @@ def array_to_entity(
     items: Iterable[ArrayEntity],
     prefix: str = "dim",
     suffix: str = "",
-    tuple_: Optional[Callable[[Iterable[Any]], T]] = None,
-) -> Generator[T, None, None]:
+    tuple_: Optional[Callable[[Iterable[Any]], Union[T, NamedTuple]]] = None,
+) -> Generator[Union[T, NamedTuple], None, None]:
     """Convert entities from array entities to standard tuple based entity.
 
     If `tupe_` is not set, this method creates a new NamedTuple instance with attributes shaped like this:
@@ -298,7 +298,7 @@ def array_to_entity(
         items (Iterable[ArrayEntity]): the input array entitiy stream/iterable
         prefix (str; default "dim"): the prefix for the array attribute column names
         suffix (str; default "dim"): the suffix for the array attribute column names
-        tuple_ (Callable[..., Tuple|NamedTuple], optional): if set, this function is used to build the result tuples
+        tuple_ (Callable[Iterable, Tuple|NamedTuple], optional): if set, this function is used to build the result tuples
 
     Yields:
         Generator[ArrayEntity, None, None]: the output iterable
@@ -316,13 +316,13 @@ def array_to_entity(
         ]
         attrs = tuple(attrs)
 
-        tuple_ = get_entity_tuple_class(tuple(attrs), name="ArrayEntity")
+        tuple_ = get_entity_tuple_class(tuple(attrs), name="ArrayEntity")._make
 
     assert tuple_ is not None
 
-    yield tuple_(first.ID, first.href, *first.values)
+    yield tuple_((first.ID, first.href, *first.values))
     for item in items_iter:
-        yield tuple_(item.ID, item.href, *item.values)
+        yield tuple_((item.ID, item.href, *item.values))
 
 
 def load_entities(
