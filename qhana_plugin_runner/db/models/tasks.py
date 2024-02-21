@@ -123,10 +123,6 @@ class ProcessingTask:
         default_factory=list,
     )
 
-    jobs: Mapped[List["TaskJob"]] = relationship(
-        "TaskJob", back_populates="task", lazy="select", default_factory=list
-    )
-
     @property
     def is_finished(self) -> bool:
         """Return true if the task has finished either successfully or with an error."""
@@ -255,71 +251,6 @@ class TaskLink:
         repr=False,
         compare=False,
     )
-
-
-@REGISTRY.mapped_as_dataclass
-class TaskJob:
-    """Running celery tasks associated with a processing task.
-
-    Use this table to keep track of celery tasks that might need to be cancelled or monitored.
-    """
-
-    __tablename__ = "TaskJob"
-
-    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
-    task: Mapped[ProcessingTask] = relationship(
-        "ProcessingTask", back_populates="jobs", lazy="selectin"
-    )
-    job_id: Mapped[str] = mapped_column(sql.String(500))
-    task_id: Mapped[Optional[int]] = mapped_column(
-        sql.INTEGER(),
-        ForeignKey(ProcessingTask.id),
-        default=None,
-        init=False,
-        repr=False,
-        compare=False,
-    )
-
-    @classmethod
-    def get_by_task(cls, task: Union[int, ProcessingTask]) -> List[str]:
-        """Get all job ids for a task."""
-        q = select(distinct(cls.job_id))
-        if isinstance(task, ProcessingTask):
-            q = q.filter_by(task=task)
-        else:
-            q = q.filter_by(task_id=task)
-        return DB.session.execute(q).scalars().all()
-
-    def register_new_job(
-        cls, task: Union[int, ProcessingTask], job_id: str, commit: bool = False
-    ):
-        """Register a new job for a task."""
-        if isinstance(task, int):
-            job = TaskJob(task=None, job_id=job_id)
-            job.task_id = task
-        else:
-            job = TaskJob(task=task, job_id=job_id)
-        DB.session.add(job)
-        if commit:
-            DB.session.commit()
-
-    def remove_job(cls, job_id: str, commit: bool = False):
-        q = delete(cls).filter_by(job_id=job_id)
-        DB.session.execute(q)
-        if commit:
-            DB.session.commit()
-
-    def remove_all_jobs_of_task(
-        cls, task: Union[int, ProcessingTask], commit: bool = False
-    ):
-        q = delete(cls)
-        if isinstance(task, int):
-            q = q.filter_by(task_id=task)
-        else:
-            q = q.filter_by(task=task)
-        DB.session.execute(q)
-        if commit:
-            DB.session.commit()
 
 
 class WebhookRef(NamedTuple):
