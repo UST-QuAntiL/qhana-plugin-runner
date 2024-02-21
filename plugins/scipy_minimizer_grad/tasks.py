@@ -128,7 +128,7 @@ def jac_(calc_gradient_endpoint_url: str):
         response = async_request(
             url=calc_gradient_endpoint_url, json={"weights": weights}
         )
-        return np.ndarray(response.json()["gradient"])
+        return np.array(response.json()["gradient"])
 
     return jac
 
