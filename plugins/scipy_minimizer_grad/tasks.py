@@ -13,18 +13,20 @@
 # limitations under the License.
 
 from tempfile import SpooledTemporaryFile
-from typing import Optional, Any
 from time import sleep, time
+from typing import Any, Optional
 
 import numpy as np
 import requests
-from requests.exceptions import ConnectionError, Timeout
 from celery.utils.log import get_task_logger
+from requests.exceptions import ConnectionError, Timeout
 from scipy.optimize import minimize as scipy_minimize
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ArrayEntity,
+    array_to_entity,
     ensure_array,
     load_entities,
     save_entities,
@@ -273,12 +275,10 @@ def minimize_task(self, db_id: int) -> str:
 
     TASK_LOGGER.info(f"Optimization result: {result}")
 
-    # FIXME: entity attributes will not sort correctly under lexicographical order!!!
-    csv_attributes = ["ID"] + [f"x_{i}" for i in range(len(result.x))]
+    array_entities = [ArrayEntity("weights", "", result.x.tolist())]
+    entities = tuple(array_to_entity(array_entities, prefix="x_"))
 
-    final_weights = tuple(["weights"] + result.x.tolist())
-
-    entities = [final_weights]
+    csv_attributes = entities[0].entity_attributes
 
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entities, output, "text/csv", attributes=csv_attributes)
