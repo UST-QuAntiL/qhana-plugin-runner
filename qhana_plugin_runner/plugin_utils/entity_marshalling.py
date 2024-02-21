@@ -320,9 +320,9 @@ def array_to_entity(
 
     assert tuple_ is not None
 
-    yield tuple_((first.ID, first.href, *first.values))
+    yield tuple_(first.ID, first.href, *first.values)
     for item in items_iter:
-        yield tuple_((item.ID, item.href, *item.values))
+        yield tuple_(item.ID, item.href, *item.values)
 
 
 def load_entities(
