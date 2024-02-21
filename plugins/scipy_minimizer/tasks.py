@@ -13,10 +13,12 @@
 # limitations under the License.
 
 from tempfile import SpooledTemporaryFile
-from typing import Optional
+from typing import Optional, Any
+from time import sleep, time
 
 import numpy as np
 import requests
+from requests.exceptions import ConnectionError, Timeout
 from celery.utils.log import get_task_logger
 from scipy.optimize import minimize as scipy_minimize
 
@@ -36,6 +38,54 @@ from . import ScipyMinimizer
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def async_request(url: str, json: Optional[Any] = None, timeout: int = 24 * 6 * 60):
+    """Call an evaluation endpoint of the objective function and return the result.
+
+    This function follows redirects and polls the endpoint until the result is available if required.
+    The function does an exponential backoff up to 30 seconds to reduce load on the target server.
+    If the connection fails for some reason 5 times on succession, the connectione error will be escalated.
+
+    Args:
+        url (str): the url to call
+        json (Optional[Any], optional): the data to pass to the endpoint. Defaults to None.
+        timeout (int, optional): the timeout in seconds after which an error will be thrown. Defaults to 24 hours.
+
+    Raises:
+        Timeout: reached the final timeout
+
+    Returns:
+        Response: the resulting response
+    """
+    errors = 0
+    is_first = True
+    sleep_duration = 1
+    max_sleep = 30
+    timeout_after = time() + timeout
+    while errors < 5:
+        if time() > timeout_after:
+            raise Timeout()  # timeout after specified time
+        if not is_first:
+            # sleep after first request and adjust next sleep duration
+            sleep(sleep_duration)
+            sleep_duration = min(max_sleep, sleep_duration * 2)
+        try:
+            response = requests.post(url, json=json, timeout=3)
+            if is_first:
+                url = response.url  # follow redirects on first request
+            is_first = False
+            errors = max(0, errors - 1)  # successfull attempts decrease errors
+        except ConnectionError:
+            is_first = False
+            errors += 1
+            if errors >= 5:
+                raise
+            continue  # error with the connection, wait and retry
+        if response.status_code == 204 or (is_first and response.status_code == 404):
+            continue  # no result available, wait and retry
+        response.raise_for_status()
+        return response
+
+
 def loss_(calc_loss_endpoint_url: str):
     """
     Function generator to calculate loss. This returns a function that calculates loss
@@ -52,62 +102,10 @@ def loss_(calc_loss_endpoint_url: str):
         weights = x0
         if isinstance(x0, np.ndarray):
             weights = x0.tolist()
-        response = requests.post(calc_loss_endpoint_url, json={"weights": weights})
-        response.raise_for_status()
+        response = async_request(url=calc_loss_endpoint_url, json={"weights": weights})
         return response.json()["loss"]
 
     return loss
-
-
-# TODO: remove (gradients not required here)
-def jac_(calc_gradient_endpoint_url: str):
-    """
-    Function generator to calculate the gradient. This returns a function that calculates the gradient
-    for given input data and hyperparameters.
-
-    Args:
-        calc_gradient_endpoint_url: The URL to which the gradient calculation request will be sent.
-
-    Returns:
-        A function that calculates the gradient.
-    """
-
-    def jac(x0):
-        weights = x0
-        if isinstance(x0, np.ndarray):
-            weights = x0.tolist()
-
-        response = requests.post(calc_gradient_endpoint_url, json={"weights": weights})
-        return np.ndarray(response.json()["gradient"])
-
-    return jac
-
-
-# TODO: remove (gradients not required here)
-def loss_and_jac_(calc_loss_and_gradient_endpoint_url: str):
-    """
-    Function generator to calculate the loss and gradient. This returns a function that calculates the loss
-    and gradient for given input data and hyperparameters.
-
-    Args:
-        calc_loss_and_gradient_endpoint_url: The URL to which the loss and gradient calculation request will be sent.
-
-    Returns:
-        A function that calculates the loss and gradient.
-    """
-
-    def loss_and_jac(x0):
-        weights = x0
-        if isinstance(x0, np.ndarray):
-            weights = x0.tolist()
-
-        response = requests.post(
-            calc_loss_and_gradient_endpoint_url, json={"weights": weights}
-        )
-        data = response.json()
-        return data["loss"], np.ndarray(data["gradient"])
-
-    return loss_and_jac
 
 
 @CELERY.task(name=f"{ScipyMinimizer.instance.identifier}.minimize", bind=True)
@@ -200,21 +198,9 @@ def minimize_task(self, db_id: int) -> str:
 
     minimize_params = {"fun": loss_fun, "x0": initial_weights, "method": method}
 
-    # TODO: remove (gradients not required here)
-    """
-    if minimizer_input_data.calc_gradient_endpoint_url:
-        jac = jac_(minimizer_input_data.calc_gradient_endpoint_url)
-        minimize_params["jac"] = jac
-
-    if minimizer_input_data.calc_loss_and_gradient_endpoint_url:
-        loss_and_jac = loss_and_jac_(
-            minimizer_input_data.calc_loss_and_gradient_endpoint_url
-        )
-        minimize_params["jac"] = True
-        minimize_params["fun"] = loss_and_jac
-    """
-
     result = scipy_minimize(**minimize_params)
+
+    TASK_LOGGER.info(f"Optimization result: {result}")
 
     # FIXME: entity attributes will not sort correctly under lexicographical order!!!
     csv_attributes = ["ID"] + [f"x_{i}" for i in range(len(result.x))]
