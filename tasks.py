@@ -247,7 +247,12 @@ def start_containers(c):
 
 @task
 def worker(
-    c, pool="solo", concurrency=1, dev=False, log_level="INFO", periodic_scheduler=False
+    c,
+    pool="threads",
+    concurrency=2,
+    dev=False,
+    log_level="INFO",
+    periodic_scheduler=False,
 ):
     """Run the celery worker, optionally starting the redis broker.
 

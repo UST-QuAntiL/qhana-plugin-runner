@@ -16,7 +16,8 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
+from urllib.parse import unquote
 
 import marshmallow as ma
 from marshmallow.validate import Regexp
@@ -235,15 +236,39 @@ class StepMetadata:
     cleared: bool = False
 
 
+class ApiLinkSchema(MaBaseSchema):
+    type = ma.fields.Str(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "Type of the link. All endpoints of the same type must be compatible with each other."
+        },
+    )
+    href = ma.fields.Url(
+        required=True,
+        allow_none=False,
+        metadata={
+            "description": "The URL of a REST endpoint that is usable by other plugins."
+        },
+    )
+
+    @ma.post_load()
+    def make_api_link(self, data: Dict[str, Any], **kwargs):
+        """Create a ApiLink object from the deserialized data."""
+        return ApiLink(**data)
+
+
 class EntryPointSchema(MaBaseSchema):
     href = ma.fields.Url(
         required=True,
         allow_none=False,
+        relative=True,
         metadata={"description": "The URL of the REST entry point resource."},
     )
     ui_href = ma.fields.Url(
         required=True,
         allow_none=False,
+        relative=True,
         metadata={
             "description": "The URL of the micro frontend that corresponds to the REST entry point resource."
         },
@@ -273,6 +298,26 @@ class EntryPointSchema(MaBaseSchema):
         )
     )
 
+    @ma.pre_load()
+    def unquote_url(self, data: Dict[str, Any], **kwargs):
+        """Unquote the url."""
+        url_fieds = ("href", "ui_href")
+        for f in url_fieds:
+            if f in data:
+                data[f] = unquote(data[f])
+        return data
+
+    @ma.post_load()
+    def make_entry_point(self, data: Dict[str, Any], **kwargs):
+        """Create a EntryPoint object from the deserialized data."""
+        return EntryPoint(**data)
+
+
+@dataclass
+class ApiLink:
+    type: str
+    href: str
+
 
 @dataclass
 class PluginMetadata:
@@ -289,53 +334,83 @@ class PluginMetadata:
     ]
     entry_point: EntryPoint
     tags: List[str] = field(default_factory=list)
+    links: List[ApiLink] = field(default_factory=list)
 
 
 class PluginMetadataSchema(MaBaseSchema):
     title = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Human readable plugin title."},
     )
     description = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Human readable plugin description."},
     )
     name = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Unique name of the plugin."},
     )
     version = ma.fields.String(
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Version of the plugin."},
     )
     type = EnumField(
         PluginType,
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={"description": "Type of the plugin"},
     )
     entry_point = ma.fields.Nested(
         EntryPointSchema,
         required=True,
         allow_none=False,
-        dump_only=True,
+        data_key="entryPoint",
         metadata={"description": "The entry point of the plugin"},
     )
     tags = ma.fields.List(
         ma.fields.String(),
         required=True,
         allow_none=False,
-        dump_only=True,
         metadata={
             "description": "A list of tags describing the plugin (e.g. classical-algorithm, quantum-algorithm, hybrid-algorithm)."
         },
     )
+    links = ma.fields.List(
+        ma.fields.Nested(
+            ApiLinkSchema,
+            required=False,
+            allow_none=False,
+            missing=tuple(),
+            metadata={
+                "description": "A list of links to different parts of the plugin API for interacting with this plugin programatically."
+            },
+        )
+    )
+
+    @ma.post_load()
+    def make_plugin_metadata(self, data: Dict[str, Any], **kwargs):
+        """Create a PluginMetadata object from the deserialized data."""
+        return PluginMetadata(**data)
+
+
+class WebhookParams(TypedDict):
+    """Parameters passed as query params to webhooks subscribed to task updates.
+
+    Keys:
+        source (str): The url of the task result that was updated.
+        event (str|None): The type of event that triggered this update. (i.e. 'status'|'steps'|'details')
+    """
+
+    source: str
+    event: Optional[str]
+
+
+class WebhookParamsSchema(MaBaseSchema):
+    """Parameters passed as query params to webhooks subscribed to task updates."""
+
+    source = ma.fields.URL(schemes=("http", "https"), required=True, allow_none=False)
+    event = ma.fields.String(allow_none=True, missing=None)

@@ -30,6 +30,7 @@ from typing import (
     List,
     NamedTuple,
     Optional,
+    Protocol,
     Sequence,
     Text,
     TextIO,
@@ -39,8 +40,6 @@ from typing import (
     Union,
 )
 from unicodedata import category, normalize
-
-from typing import Protocol
 
 
 class EntityTupleMixin:
@@ -221,6 +220,109 @@ def ensure_tuple(
             yield tuple_(**item)
         else:
             yield item
+
+
+class ArrayEntity(NamedTuple):
+    """An entity containing array data in a values attribute."""
+
+    ID: str
+    href: Optional[str]
+    values: Sequence[Union[int, float, None]]
+
+
+def _str_to_nr(value: Optional[str], strict: bool = False) -> Union[float, int, None]:
+    if value is None or value == "" or value.isspace():
+        if strict:
+            raise ValueError("Array entity values must not be None!")
+        return None
+    try:
+        if value.isdecimal():
+            return int(value)
+        return float(value)
+    except ValueError:
+        if strict:
+            raise ValueError("Array entity values must not be None!")
+        return None
+
+
+def ensure_array(
+    items: Iterable[Union[Dict[str, Any], NamedTuple]], strict: bool = False
+) -> Generator[ArrayEntity, None, None]:
+    """Convert entities from a "entity/vector" or "entity/numberic" format into array entities.
+
+    This method tries to convert all string values to numbers.
+    Missing values (`None`) are left as is by default.
+    String values that cannot be converted to numbers will instead become missing values `None`.
+
+    With `strict` behaviour, missing values will result in exceptions (`ValueError`).
+
+    Args:
+        items (Iterable[Dict[str, Any]|NamedTuple]): the input entitiy stream/iterable
+        strict (bool, optional): if True any value that cannot be converted to a number raises an exception. Defaults to False.
+
+    Yields:
+        Generator[ArrayEntity, None, None]: the output iterable
+    """
+    for item in items:
+        if isinstance(item, dict):
+            id_ = item.pop("ID")
+            href = item.pop("href", None)
+            values_raw = (v for k, v in sorted(item.items(), key=lambda i: i[0]))
+        else:
+            id_ = item[0]
+            if hasattr(item, "href"):
+                href = item[1]
+                values_raw = item[2:]
+            else:
+                href = None
+                values_raw = item[1:]
+        values = tuple(
+            v if isinstance(v, (int, float)) else _str_to_nr(v, strict=strict)
+            for v in values_raw
+        )
+        yield ArrayEntity(id_, href, values)
+
+
+def array_to_entity(
+    items: Iterable[ArrayEntity],
+    prefix: str = "dim",
+    suffix: str = "",
+    tuple_: Optional[Callable[[Iterable[Any]], Union[T, NamedTuple]]] = None,
+) -> Generator[Union[T, NamedTuple], None, None]:
+    """Convert entities from array entities to standard tuple based entity.
+
+    If `tupe_` is not set, this method creates a new NamedTuple instance with attributes shaped like this:
+    `["ID", "href", f"{prefix}{index}{suffix}", "dim01", "dim02", ...]`
+
+    Args:
+        items (Iterable[ArrayEntity]): the input array entitiy stream/iterable
+        prefix (str; default "dim"): the prefix for the array attribute column names
+        suffix (str; default "dim"): the suffix for the array attribute column names
+        tuple_ (Callable[Iterable, Tuple|NamedTuple], optional): if set, this function is used to build the result tuples
+
+    Yields:
+        Generator[ArrayEntity, None, None]: the output iterable
+    """
+    items_iter = iter(items)
+    first = next(items_iter, None)
+    if first is None:
+        return
+    if tuple_ is None:
+        attrs = ["ID", "href"]
+        dimension = len(first.values)
+        dimension_len = len(str(dimension))
+        attrs += [
+            f"{prefix}{index:0{dimension_len}}{suffix}" for index in range(dimension)
+        ]
+        attrs = tuple(attrs)
+
+        tuple_ = get_entity_tuple_class(tuple(attrs), name="ArrayEntity")._make
+
+    assert tuple_ is not None
+
+    yield tuple_((first.ID, first.href, *first.values))
+    for item in items_iter:
+        yield tuple_((item.ID, item.href, *item.values))
 
 
 def load_entities(

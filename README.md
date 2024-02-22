@@ -79,7 +79,7 @@ There is a default launch configuration for vscode that should work on all platf
 To use the configuration copy `default-launch.json` to `.vscode/launch.json`.
 The `all` configuration starts the API and the worker process.
 For code changes both debugging sessions must be restarted as they do not autoreload code!
-
+To debug plugins that need concurrent celery workers, like the optimizer plugin, use the `default-concurrent-launch.json` configuration.
 
 ### Trying out the Plugin-Runner
 
@@ -342,6 +342,9 @@ Update the python source documentation
 poetry run sphinx-apidoc --separate --force -o docs/source . ./tasks.py docs plugins migrations
 rm docs/source/modules.rst  # delete modules file as this repository only contains one module
 ```
+
+Building pdf documentation locally requires the [`mermaid-cli`](https://github.com/mermaidjs/mermaid.cli) to generate images of the embedded mermaid diagrams.
+For more information please see <https://github.com/mgaitan/sphinxcontrib-mermaid>.
 
 
 ## Updating the Third-Party Licenses
