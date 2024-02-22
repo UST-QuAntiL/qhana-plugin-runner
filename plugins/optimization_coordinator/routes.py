@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
 from http import HTTPStatus
 from logging import Logger
 from typing import Mapping, Optional
@@ -334,6 +335,7 @@ class ObjectiveFunctionWebhook(MethodView):
                 old_status = db_task.status
 
                 db_task.task_status = "FAILURE"
+                db_task.finished_at = datetime.utcnow()
                 db_task.data["of_success"] = False
                 db_task.add_task_log_entry(f"Objective function FAILED! ({of_task_url})")
                 if task_state not in ("setup-minimizer", "minimize") and (
@@ -433,6 +435,7 @@ class MinimizerWebhook(MethodView):
                 old_status = db_task.status
 
                 db_task.task_status = "FAILURE"
+                db_task.finished_at = datetime.utcnow()
                 db_task.data["minimizer_success"] = False
                 db_task.add_task_log_entry(f"Minimizer FAILED! ({minimizer_task_url})")
                 if log := result.get("log"):

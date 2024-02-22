@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
 from typing import Optional
 from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 
@@ -451,6 +452,7 @@ def check_final_result(self, db_id: int):
     if of_state is False or minimizer_state is False:
         TASK_LOGGER.info("One or more sub tasks have finished as failed!")
         task_data.task_status = "FAILURE"
+        task_data.finished_at = datetime.utcnow()
         task_data.save(commit=True)
 
         app = current_app._get_current_object()
