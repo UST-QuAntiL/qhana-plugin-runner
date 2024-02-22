@@ -42,10 +42,11 @@ class MinimizerEnum(Enum):
     tnc = "TNC"
     slsqp = "SLSQP"
     trust_constr = "trust-constr"
-    dogleg = "dogleg"
-    trust_ncg = "trust-ncg"
-    trust_krylov = "trust-krylov"
-    trust_exact = "trust-exact"
+    # optimizers requiring hessian / hessian product:
+    # dogleg = "dogleg"
+    # trust_ncg = "trust-ncg"
+    # trust_krylov = "trust-krylov"
+    # trust_exact = "trust-exact"
 
 
 class MinimizerTaskResponseSchema(MaBaseSchema):
