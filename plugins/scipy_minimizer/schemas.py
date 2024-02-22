@@ -21,6 +21,19 @@ from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema, FileUrl
 
 
+@dataclass
+class CallbackUrl:
+    callback: str
+
+
+class CallbackUrlSchema(MaBaseSchema):
+    callback = ma.fields.URL(required=True, allow_none=False)
+
+    @ma.post_load
+    def make_object(self, data, **kwargs):
+        return CallbackUrl(**data)
+
+
 class MinimizerEnum(Enum):
     nelder_mead = "Nelder-Mead"
     powell = "Powell"
