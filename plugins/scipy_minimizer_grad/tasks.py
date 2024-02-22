@@ -71,7 +71,9 @@ def async_request(url: str, json: Optional[Any] = None, timeout: int = 24 * 6 * 
             sleep(sleep_duration)
             sleep_duration = min(max_sleep, sleep_duration * 2)
         try:
-            response = requests.post(url, json=json, timeout=3)
+            response = requests.request(
+                method=("POST" if is_first else "GET"), url=url, json=json, timeout=3
+            )
             if is_first:
                 url = response.url  # follow redirects on first request
             is_first = False
