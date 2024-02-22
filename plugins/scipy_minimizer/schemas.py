@@ -39,16 +39,11 @@ class MinimizerEnum(Enum):
     powell = "Powell"
     cg = "CG"
     bfgs = "BFGS"
-    newton_cg = "Newton-CG"
     lbfgsb = "L-BFGS-B"
     tnc = "TNC"
     cobyla = "COBYLA"
     slsqp = "SLSQP"
     trust_constr = "trust-constr"
-    dogleg = "dogleg"
-    trust_ncg = "trust-ncg"
-    trust_krylov = "trust-krylov"
-    trust_exact = "trust-exact"
 
 
 class MinimizerTaskResponseSchema(MaBaseSchema):
