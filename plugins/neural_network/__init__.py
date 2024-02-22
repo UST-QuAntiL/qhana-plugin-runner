@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "neural-network"
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -35,7 +35,7 @@ class NeuralNetwork(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Neural Network objective-function plugin."
-    tags = ["optimization", "invokable", "objective-function", "gradient"]
+    tags = ["optimization", "objective-function", "gradient"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
