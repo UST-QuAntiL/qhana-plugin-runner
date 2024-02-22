@@ -216,7 +216,7 @@ def minimize_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "minimization-results.csv",
+            f"final_weights_scipy_{method}.csv",
             "entity/vector",
             "text/csv",
         )
