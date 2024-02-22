@@ -69,7 +69,7 @@ class OptimizerSetupTaskInputSchema(FrontendFormBaseSchema):
     minimizer_plugin_selector = PluginUrl(
         required=True,
         allow_none=False,
-        plugin_tags=["minimization"],
+        plugin_tags=["minimizer"],
         metadata={
             "label": "Minimizer Plugin",
             "description": "URL of minimizer-plugin.",
