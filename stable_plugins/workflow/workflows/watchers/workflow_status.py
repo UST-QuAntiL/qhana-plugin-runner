@@ -141,6 +141,7 @@ def check_for_human_tasks(
 
         db_task.add_task_log_entry(f"Found new human task '{human_task.id}'.")
         db_task.data["form_params"] = json.dumps(form_variables)
+        db_task.data.pop("external_form_key", None)  # remove old form key
         if human_task.form_key and human_task.form_key.startswith("embedded:"):
             db_task.data["external_form_key"] = human_task.form_key
         db_task.data["human_task_id"] = human_task.id

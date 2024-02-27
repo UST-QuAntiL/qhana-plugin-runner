@@ -202,5 +202,7 @@ def process_input(self, db_id: int) -> None:
             f"Task with ID '{human_task_id}' could not be completed because of an unknown error!"
         )
 
+    task_data.data.pop("external_form_key", None)
+
     task_data.clear_previous_step()
     task_data.save(commit=True)
