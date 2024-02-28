@@ -41,7 +41,9 @@ class Optics(QHAnaPluginBase):
     description = (
         "Clusters data with the OPTICS algorithm. "
         f"The plugin uses the implementation by scikit-learn v{sklearn_version}. "
-        "More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS)."
+        "More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS).\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
     )
     tags = []
 

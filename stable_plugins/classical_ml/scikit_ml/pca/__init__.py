@@ -36,13 +36,15 @@ sklearn_version = "1.1"
 
 class PCA(QHAnaPluginBase):
     name = _plugin_name
-    version = __version__
     description = (
         "The PCA Plugin reduces the number of dimensions by computing the principle components.\n"
         "The new orthonormal basis consists of the k first principle components. "
         "The methods implemented here are from scikit-learn. "
-        f"Currently this plugin uses scikit-learn version {sklearn_version}."
+        f"Currently this plugin uses scikit-learn version {sklearn_version}.\n\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
     )
+    version = __version__
     tags = ["dimension-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:

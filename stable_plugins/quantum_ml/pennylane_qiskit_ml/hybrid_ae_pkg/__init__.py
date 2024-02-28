@@ -34,7 +34,11 @@ HA_BLP = SecurityBlueprint(
 class HybridAutoencoderPlugin(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Reduces the dimensionality of a given dataset with a combination of classical and quantum neural networks."
+    description = (
+        "Reduces the dimensionality of a given dataset with a combination of classical and quantum neural networks.\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
+    )
     tags = ["dimensionality-reduction"]
 
     def __init__(self, app: Optional[Flask]) -> None:

@@ -35,9 +35,15 @@ QNN_BLP = SecurityBlueprint(
 class QNN(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Classifies data with a dressed quantum or a classical neural network"
+    description = (
+        "Classifies data with a dressed quantum or a classical neural network.\n"
+        "A dressed quantum neural network has a classical neural network in front of and after the quantum network.\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
+        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin."
+    )
 
-    tags = ["classification"]
+    tags = ["classification", "quantum", "classical", "neural network"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
