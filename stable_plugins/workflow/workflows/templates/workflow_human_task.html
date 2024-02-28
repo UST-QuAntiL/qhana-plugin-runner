@@ -97,10 +97,8 @@
             formElement: form,
 
             done: function(err, camForm) {
-                // TODO: investigate how to handle form submit! (bind a button press to call camForm.submit())
                 camForm.on('submit-success', afterFormSubmit);
                 camundaFormInstance = camForm;
-                console.log(camForm)
             }
         });
 
