@@ -57,8 +57,9 @@ class SubscriptionDataSchema(MaBaseSchema):
         metadata={"description": "Whether to subscribe or unsubscribe."},
     )
     event = ma.fields.String(
-        required=True,
+        required=False,
         allow_none=True,
+        missing=None,
         metadata={"description": "The type of event to subscribe to."},
     )
     webhook_href = ma.fields.Url(
