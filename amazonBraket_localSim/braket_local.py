@@ -23,7 +23,6 @@ from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
-from braket.circuits import Instruction, gates
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
@@ -315,6 +314,7 @@ def find_total_classicalbits(qasm_code):
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
+    from braket.circuits import Instruction, gates
     from braket.circuits import Circuit, ResultType
     from braket.devices import LocalSimulator
 
