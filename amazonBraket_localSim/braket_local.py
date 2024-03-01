@@ -324,6 +324,10 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
 
+    # remove stdgates.inc import to avoid FileNotFoundError
+
+    circuit_qasm = circuit_qasm.replace('include "stdgates.inc";', "")
+
     # Convert the Cirq circuit to a Braket circuit
     braket_circuit = Circuit.from_ir(circuit_qasm)
 
@@ -345,8 +349,12 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     else:
         result_counts = result_meas.measurement_counts
 
+        # reverse qubit order in order to be compatible with qiskit
+        result_counts = {k[::-1]: v for k, v in result_counts.items()}
+
     statevector = None
 
+    # TODO: should be tested for compatibility with other plugins
     if execution_options["statevector"]:
         # Start the simulation for the state vector
         state_vector_circuit = braket_circuit.copy()
