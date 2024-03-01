@@ -26,6 +26,7 @@ from uuid import uuid4
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
+from cirq import Operation
 from flask import abort, redirect
 from flask.app import Flask
 from flask.globals import request
@@ -326,8 +327,8 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     number_qubits = len(list(circuit.all_qubits()))
 
-    num_classicalbits = find_total_classicalbits(circuit_qasm)
-    has_measurem = any(
+    num_classical_bits = find_total_classicalbits(circuit_qasm)
+    has_measurement = any(
         isinstance(op.gate, cirq.MeasurementGate) for op in circuit.all_operations()
     )  # Check if the circuit includes any measurement Gates
 
@@ -335,9 +336,10 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     histogram = {}
     if (
-        has_measurem or num_classicalbits > 0
+        has_measurement or num_classical_bits > 0
     ):  # If the circuit (qasm code) has measurements  measure all qubits
-        circuit_copy.append(cirq.measure(*circuit.all_qubits(), key="result"))
+        qubits = sorted(list(circuit.all_qubits()), reverse=True)
+        circuit_copy.append(cirq.measure(*qubits, key="result"))
 
         startime_count = time.perf_counter_ns()
         result_count = simulator.run(
