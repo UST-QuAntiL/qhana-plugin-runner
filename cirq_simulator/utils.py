@@ -111,9 +111,8 @@ def _parse_to_histogram(
             measurement_key = register_name + "_" + str(i)
 
             if measurement_key in measurement_keys:
-                register_measurements.append(
-                    result.measurements[measurement_key].reshape((-1))
-                )
+                measurements = _records_to_measurements(result)
+                register_measurements.append(measurements[measurement_key].reshape((-1)))
             else:
                 register_measurements.append(np.zeros((result.repetitions,)))
 
@@ -143,3 +142,21 @@ def _parse_to_histogram(
         histogram[formatted_measurement_string] = count
 
     return histogram
+
+
+def _records_to_measurements(result: Result) -> Dict[str, np.ndarray]:
+    """
+    Converts `Result.records` to the format of `Result.measurements` while handling multiple measurements into the same
+    classical register in order to fix `ValueError: Cannot extract 2D measurements for repeated keys` when calling
+    `Results.measurements`.
+    :param result:
+    :return:
+    """
+    measurements = {}
+
+    for key, data in result.records.items():
+        reps, instances, qubits = data.shape
+        # use always the last instance of a measurement key
+        measurements[key] = data[:, -1, :].reshape((reps, qubits))
+
+    return measurements
