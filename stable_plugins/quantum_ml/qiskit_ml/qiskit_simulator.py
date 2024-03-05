@@ -321,7 +321,10 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     ).result()
 
     if not result_count.success:
-        from qiskit.visualization.circuit.circuit_visualization import _text_circuit_drawer
+        from qiskit.visualization.circuit.circuit_visualization import (
+            _text_circuit_drawer,
+        )
+
         drawn_circuit = str(_text_circuit_drawer(circuit, encoding="utf-8"))
         TASK_LOGGER.warning("Failed to simulate circuit.\n" + drawn_circuit)
         raise ValueError("Circuit could not be simulated!", result_count)
