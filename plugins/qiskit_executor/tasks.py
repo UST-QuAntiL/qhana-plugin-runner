@@ -20,7 +20,11 @@ from uuid import uuid4
 from celery import chain
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
-from qiskit import QuantumCircuit, execute
+from qiskit import QiskitError, QuantumCircuit, execute
+from qiskit.qasm2 import loads as loads2
+from qiskit.qasm3 import QASM3ImporterError
+from qiskit.qasm3 import loads as loads3
+from qiskit.qasm3 import loads as loads3
 from qiskit.result.result import ExperimentResult, Result
 from qiskit_ibm_provider import IBMJob
 from qiskit_ibm_runtime import QiskitRuntimeService
@@ -33,10 +37,7 @@ from qhana_plugin_runner.tasks import TASK_STEPS_CHANGED, add_step, save_task_re
 
 from . import QiskitExecutor
 from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
-from .schemas import (
-    CircuitParameters,
-    CircuitParameterSchema,
-)
+from .schemas import CircuitParameters, CircuitParameterSchema
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -119,7 +120,12 @@ def start_execution(self, db_id: int) -> str:
         circuit_qasm = quasm_response.text
 
     backend.shots = circuit_params.shots
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+
+    circuit: QuantumCircuit
+    try:
+        circuit = loads3(circuit_qasm)
+    except QASM3ImporterError:
+        circuit = loads2(circuit_qasm)
 
     TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")
 
@@ -212,7 +218,13 @@ def result_watcher(self, db_id: int) -> str:
         "timeTakenQpuExecute": time_taken_execute,
     }
 
-    counts = result.get_counts()
+    if result.results[0].metadata["num_clbits"] == 0:
+        counts = {"": experiment_result.shots}
+    else:
+        try:
+            counts = result.get_counts()
+        except QiskitError:
+            counts = {"": experiment_result.shots}
 
     experiment_id = str(uuid4())
 

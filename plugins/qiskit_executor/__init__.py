@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "qiskit-executor"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -39,7 +39,7 @@ class QiskitExecutor(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Allows execution of quantum circuits using IBM Quantum backends."
-    tags = ["circuit-executor", "qc-executor", "qiskit", "qasm", "qasm-2"]
+    tags = ["circuit-executor", "qc-executor", "qiskit", "qasm", "qasm-2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
