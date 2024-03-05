@@ -59,7 +59,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "mqt-simulator"
-__version__ = "v1.0.0"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -284,7 +284,7 @@ class MqtSimulator(QHAnaPluginBase):
     description = (
         "Allows execution of quantum circuits using a simulator packaged with mqt."
     )
-    tags = ["circuit-executor", "qc-simulator", "mqt", "qasm", "qasm-2"]
+    tags = ["circuit-executor", "qc-simulator", "mqt", "qasm", "qasm-2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -302,22 +302,30 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from qiskit import QuantumCircuit, execute
+    from qiskit.qasm2 import loads as loads2
+    from qiskit.qasm3 import loads as loads3, QASM3ImporterError
 
     from mqt import ddsim
 
     startime_qasm = 0
     endtime_qasm = 0
 
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+    circuit: QuantumCircuit
+    try:
+        circuit = loads3(circuit_qasm)
+    except QASM3ImporterError:
+        circuit = loads2(circuit_qasm)
+
     backend_Qasm = ddsim.DDSIMProvider().get_backend("qasm_simulator")
     backend_state = ddsim.DDSIMProvider().get_backend("statevector_simulator")
 
     # If no measurements set shots to an empty string
 
+    shots = execution_options["shots"]
     if not circuit.clbits:
-        shots = execution_options["shots"]
         counts = {"": shots}
-
+    elif not circuit.qubits or not circuit.get_instructions("measure"):
+        counts = {"": shots}
     else:
         # QASM simulation with time
         startime_qasm = time.perf_counter_ns()
@@ -344,7 +352,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "qpuVendor": "TUM | IBM ",
         "qpuName": None,
         "qpuVersion": None,
-        "shots": execution_options["shots"],
+        "shots": shots,
         # Time information
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenCounts_nanosecond": endtime_qasm - startime_qasm,
