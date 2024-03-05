@@ -58,7 +58,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qiskit-simulator"
-__version__ = "v1.0.0"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -285,7 +285,7 @@ class QiskitSimulator(QHAnaPluginBase):
     description = (
         "Allows execution of quantum circuits using a simulator packaged with qiskit."
     )
-    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2"]
+    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -302,18 +302,28 @@ TASK_LOGGER = get_task_logger(__name__)
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from qiskit import QiskitError, QuantumCircuit, execute, Aer
+    from qiskit.qasm2 import loads as loads2
+    from qiskit.qasm3 import loads as loads3, QASM3ImporterError
     from qiskit.result.result import ExperimentResult, Result
 
     backend_counts = Aer.get_backend("qasm_simulator")
     backend_statevector = Aer.get_backend("statevector_simulator")
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+
+    circuit: QuantumCircuit
+
+    try:
+        circuit = loads3(circuit_qasm)
+    except QASM3ImporterError:
+        circuit = loads2(circuit_qasm)
 
     result_count: Result = execute(
         circuit, backend_counts, shots=execution_options["shots"]
     ).result()
 
     if not result_count.success:
-        # TODO better error
+        from qiskit.visualization.circuit.circuit_visualization import _text_circuit_drawer
+        drawn_circuit = str(_text_circuit_drawer(circuit, encoding="utf-8"))
+        TASK_LOGGER.warning("Failed to simulate circuit.\n" + drawn_circuit)
         raise ValueError("Circuit could not be simulated!", result_count)
 
     if execution_options.get("statevector"):
@@ -361,7 +371,10 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     if result_count.results[0].metadata["num_clbits"] == 0:
         counts = {"": experiment_result.shots}
     else:
-        counts = result_count.get_counts()
+        try:
+            counts = result_count.get_counts()
+        except QiskitError:
+            counts = {"": experiment_result.shots}
 
     state_vector: Optional[Any] = None
     try:
