@@ -331,6 +331,21 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     # Convert the Cirq circuit to a Braket circuit
     braket_circuit = Circuit.from_ir(circuit_qasm)
 
+    shots = execution_options["shots"]
+
+    metadata = {
+        "jobId": "unknown",
+        "qpuType": "simulator",
+        "qpuVendor": "Amazon Web Services",
+        "qpuName": "LocalSimulator",
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "timeTaken": 0,
+    }
+
+    if not braket_circuit.qubits:
+        # circuit does not contain any qubit
+        return metadata, {"": shots}, None
+
     for i in range(num_classical_bits):
         braket_circuit.add_instruction(Instruction(gates.I(), i))
 
@@ -340,8 +355,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     start_time = time.time()
     result_meas = device.run(braket_circuit, shots=execution_options["shots"]).result()
     end_time = time.time()
-
-    shots = execution_options["shots"]
 
     # If no classical bits return empty string
     if num_classical_bits == 0:
@@ -362,14 +375,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         state_vector_result = device.run(state_vector_circuit, shots=0).result()
         statevector = [state_vector_result.values[0]]
 
-    metadata = {
-        "jobId": "unknown",
-        "qpuType": "simulator",
-        "qpuVendor": "Amazon Web Services",
-        "qpuName": "LocalSimulator",
-        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-        "timeTaken": end_time - start_time,
-    }
+    metadata["timeTaken"] = end_time - start_time
 
     return metadata, dict(result_counts), statevector
 
