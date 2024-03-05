@@ -318,7 +318,12 @@ def find_total_classicalbits(qasm_code):
 
 
 def has_measurements(qasm_code):
-    return bool(re.search(r"measure\s+[a-zA-Z0-9_]+\[(\d+)\]\s+->\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;", qasm_code))
+    return bool(
+        re.search(
+            r"measure\s+[a-zA-Z0-9_]+\[(\d+)\]\s+->\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;",
+            qasm_code,
+        )
+    )
 
 
 def inspect_qasm(qasm_code):
