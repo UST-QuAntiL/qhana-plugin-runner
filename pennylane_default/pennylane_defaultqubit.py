@@ -302,30 +302,53 @@ class PennylaneSimulator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def find_total_qubits(qasm_code):
+def find_total_qubits(qasm_code) -> int:
     # regex to find total number of qubits
-    cleancomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
-
-    matches = re.findall(r"qreg [a-zA-Z0-9_]+\[(\d+)\];", cleancomment_qasm)
+    matches = re.findall(r"qreg\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;", qasm_code)
     if not matches:
-        raise ValueError("No valid qreg definitions in the QASM code.")
+        return 0
 
     return sum(map(int, matches))
 
 
 # regex to find total number of classicalbits
 def find_total_classicalbits(qasm_code):
-    cleaned_qasm = re.sub(r"//.*\n?", "", qasm_code)
-    matches = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)\];", cleaned_qasm)
+    matches = re.findall(r"creg\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;", qasm_code)
     return sum(map(int, matches))
+
+
+def has_measurements(qasm_code):
+    return bool(re.search(r"measure\s+[a-zA-Z0-9_]+\[(\d+)\]\s+->\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;", qasm_code))
+
+
+def inspect_qasm(qasm_code):
+    cleaned_qasm = re.sub(r"//.*\n?", "", qasm_code)
+    return (
+        find_total_qubits(cleaned_qasm),
+        find_total_classicalbits(cleaned_qasm),
+        has_measurements(cleaned_qasm),
+    )
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     import pennylane as qml
 
+    shots = execution_options["shots"]
+
     # Define the number of qubits and classicalbits from the qasm code
-    num_wires = find_total_qubits(circuit_qasm)
-    num_classicalbits = find_total_classicalbits(circuit_qasm)
+    num_wires, num_classicalbits, has_measurements = inspect_qasm(circuit_qasm)
+
+    metadata = {
+        "qpuType": "simulator",
+        "qpuVendor": "Xanadu Inc",
+        "shots": shots,
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "timeTakenCounts_nanosecond": 0,
+    }
+
+    if num_wires == 0 or not has_measurements:
+        # no quantum bits, nothing to simulate
+        return metadata, {"": shots}, None
 
     # choose PennyLane quantum devices for counts and statevector simulations
     circ = qml.device("default.qubit", wires=num_wires, shots=execution_options["shots"])
@@ -355,15 +378,8 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     else:
         result_state = None
 
-    metadata = {
-        "qpuType": "simulator",
-        "qpuVendor": "Xanadu Inc",
-        "shots": execution_options["shots"],
-        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-        "timeTakenCounts_nanosecond": endtime_counts - startime_counts,
-    }
+    metadata["timeTakenCounts_nanosecond"] = endtime_counts - startime_counts
 
-    shots = execution_options["shots"]
     # If there are no classical bits return empty strg
     if num_classicalbits == 0:
         counts = {"": shots}
