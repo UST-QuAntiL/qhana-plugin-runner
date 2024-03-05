@@ -35,26 +35,11 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.api.util import (
-    SecurityBlueprint,
-)
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
-from qhana_plugin_runner.util.plugins import plugin_identifier
-from . import CirqSimulator
+from . import CirqSimulator, CIRQ_BLP
 from .schemas import CirqSimulatorParametersSchema
 from .tasks import execute_circuit
-
-
-_plugin_name = "cirq-simulator"
-__version__ = "v1.0.0"
-_identifier = plugin_identifier(_plugin_name, __version__)
-
-CIRQ_BLP = SecurityBlueprint(
-    _identifier,  # blueprint name
-    __name__,  # module import name!
-    description="Circuit executor exposing the cirq simulators as backend.",
-)
 
 
 @CIRQ_BLP.route("/")
