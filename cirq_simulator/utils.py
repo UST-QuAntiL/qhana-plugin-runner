@@ -1,7 +1,7 @@
 # regex to find total number of classical bits
 import re
 import time
-from typing import Dict, Union, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import cirq
 import numpy as np
@@ -9,9 +9,14 @@ from cirq import Circuit, Result
 from cirq.contrib.qasm_import import circuit_from_qasm
 
 
+def replace_barriers(circuit_qasm):
+    """Comment out barrier statements as cirq does not support them."""
+    return re.sub(r"barrier[^\n;]*;", r"//\0", circuit_qasm)
+
+
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
-    circuit = circuit_from_qasm(circuit_qasm)
+    circuit = circuit_from_qasm(replace_barriers(circuit_qasm))
     # Zero time indicates no measurements (in qasm code)
     star_time_count = 0
     end_time_count = 0
@@ -44,9 +49,11 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     # Convert the outcomes to binary format
     binary_histogram = {
-        format(outcome, f"0{number_qubits}b")
-        if outcome and isinstance(outcome, int)
-        else outcome: frequency
+        (
+            format(outcome, f"0{number_qubits}b")
+            if outcome and isinstance(outcome, int)
+            else outcome
+        ): frequency
         for outcome, frequency in histogram.items()
     }
 
