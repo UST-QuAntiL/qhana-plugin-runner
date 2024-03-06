@@ -13,12 +13,13 @@
 # limitations under the License.
 
 import mimetypes
+import re
 import time
 from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Tuple, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
@@ -302,13 +303,82 @@ class Pytket_qulacsBackendSimulator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def postprocess_counts(
+    counts: Dict[Tuple[int, ...], int], qubits_readout, c_registers, mapping
+) -> Dict[str, int]:
+    """Map the tuples in the count dictionary to qiskit style string results.
+
+    Args:
+        counts (Dict[Tuple[int, ...], int]): the counts dictionary containing tuples of qbit measurements
+        qubits_readout (Dict[qubit, int]): the dictionary how the qubits are read out from the circuit
+        c_registers (List[BitRegister]): the classical registers in the order they appear in the result string
+        mapping (Dict[qubit, bit]): the mapping from qubits to classical bits
+
+    Returns:
+        Dict[str, int]: the qiskit style counts dictionary
+    """
+    reversed_mapping = {}
+    for qb, b in mapping.items():
+        reversed_mapping[b] = qb
+
+    # qubits that are not measured are not included in the result tuple, even if they are
+    # included in the qubit readout mapping!
+    # -> remove qubits that were not measured (by checking the mapping)
+    # -> keep the order of qubits from the readout mapping
+    used_qubits = sorted(
+        [q for q in qubits_readout if q in mapping], key=lambda q: qubits_readout[q]
+    )
+    qbit_to_int = {q: i for i, q in enumerate(used_qubits)}
+
+    def get_result(count: Tuple[int, ...], bit) -> str:
+        qbit = reversed_mapping.get(bit, None)
+        if qbit is None:
+            return "0"
+        return str(count[qbit_to_int[qbit]])
+
+    def map_result(count: Tuple[int, ...]):
+        return " ".join(
+            "".join(get_result(count, b) for b in reversed(reg)) for reg in c_registers
+        )
+
+    return {map_result(v): c for v, c in counts.items()}
+
+
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
+    from pytket.circuit import Circuit
     from pytket.extensions.qulacs import QulacsBackend
     from pytket.qasm import circuit_from_qasm_str
 
+    shots = execution_options["shots"]
+
+    metadata = {
+        "qpuType": "simulator",
+        "qpuVendor": "Quantinuum & Qulacs Team",
+        "qpuName": "QulacsBackend",
+        "qpuVersion": None,
+        "shots": "shots",
+        "timeTaken": 0,
+        "timeTakenIdle": 0,
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+    }
+
     startime = time.time()
     # Convert circuit from qasm code
-    circ = circuit_from_qasm_str(circuit_qasm)
+    circ: Circuit = circuit_from_qasm_str(circuit_qasm)
+
+    def c_reg_pos(c_reg) -> int:
+        """Find the position of the classical register definition in the qasm string."""
+        # TODO: the regex may find definitions that were commented out...
+        match = re.search(f"creg\\s+{c_reg.name}\\[{c_reg.size}\\]\\s*;", circuit_qasm)
+        if match:
+            return match.start()
+        return len(circuit_qasm)
+
+    # sort classical registers by appeareance in the qasm definition
+    c_registers = sorted(circ.c_registers, key=c_reg_pos, reverse=True)
+
+    if not circ.qubit_to_bit_map:
+        return metadata, {"": shots}, None
 
     backend = QulacsBackend()
     # compiled circuit to be ready simulations with Backend
@@ -318,8 +388,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     handle = backend.process_circuit(
         compiled_circuit, n_shots=execution_options["shots"]
     )  # count simulation with time
-    counts = backend.get_result(handle).get_counts()
+    result = backend.get_result(handle)
     endtime_counts = time.perf_counter_ns()
+
+    # get result and transform counts to qiskit style counts
+    counts = dict(result.get_counts())
+    counts = postprocess_counts(
+        counts, circ.qubit_readout, c_registers, circ.qubit_to_bit_map
+    )
 
     if execution_options.get("statevector"):
         # only execute if statevector result was requested in the first place
@@ -331,20 +407,15 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     simulation_time = endtime - startime
 
-    metadata = {
-        "qpuType": "simulator",
-        "qpuVendor": "Quantinuum & Qulacs Team",
-        "qpuName": "QulacsBackend",
-        "qpuVersion": None,
-        "shots": execution_options["shots"],
-        "timeTaken": simulation_time,
-        "timeTakenIdle": 0,
-        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-        "timeTakenQpu": simulation_time,
-        "timeTaken_Counts_nanosecond": endtime_counts - startime_counts,
-    }
+    metadata.update(
+        {
+            "timeTaken": simulation_time,
+            "timeTakenQpu": simulation_time,
+            "timeTaken_Counts_nanosecond": endtime_counts - startime_counts,
+        }
+    )
 
-    return metadata, dict(counts), statevector
+    return metadata, counts, statevector
 
 
 @CELERY.task(
