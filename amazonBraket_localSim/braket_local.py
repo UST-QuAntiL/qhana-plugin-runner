@@ -294,33 +294,48 @@ class Braket_LocalSimulator(QHAnaPluginBase):
         return BRAKET_LOCAL_BLP
 
     def get_requirements(self) -> str:
-        return "amazon-braket-sdk~=1.66.0"
+        return "amazon-braket-sdk~=1.66.0\nqiskit~=0.43"
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-# regex to find total number of classicalbits
-def find_total_classicalbits(qasm_code):
-    cleanedcomment_qasm = re.sub(r"//.*\n?", "", qasm_code)
-    # finds QASM 2 style bit registers that are still allowed in QASM 3
-    matches_legacy = re.findall(r"creg [a-zA-Z0-9_]+\[(\d+)];", cleanedcomment_qasm)
-    # finds single bit registers
-    matches_single = re.findall(r"(?<!qu)bit [a-zA-Z0-9_]+;", cleanedcomment_qasm)
-    # finds bit registers with declared size
-    matches = re.findall(r"(?<!qu)bit\[(\d+)] [a-zA-Z0-9_]+;", cleanedcomment_qasm)
+def postprocess_counts(
+    counts: Dict[str, int], qiskit_circuit
+) -> Dict[str, int]:
+    qubit_positions = {q: i for i, q in enumerate(qiskit_circuit.qubits)}
+    measurements = {}
 
-    return sum(map(int, matches_legacy)) + len(matches_single) + sum(map(int, matches))
+    # TODO: this function misses bits that are not part of registers (only for qasm3)!
+
+    for m in qiskit_circuit.get_instructions("measure"):
+        for qb, cb in zip(m.qubits, m.clbits):
+            measurements[cb] = qubit_positions[qb]
+
+    def get_bit(count: str, bit) -> str:
+        qbit = measurements.get(bit, None)
+        if qbit is None:
+            return "0"
+        return count[qbit]
+
+    def map_count(count: str) -> str:
+        return " ".join(
+            "".join(get_bit(count, bit) for bit in reversed(reg))
+            for reg in reversed(qiskit_circuit.cregs)
+        )
+
+    return {map_count(k): v for k, v in counts.items()}
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     from braket.circuits import Instruction, gates
     from braket.circuits import Circuit, ResultType
     from braket.devices import LocalSimulator
+    from qiskit import QuantumCircuit
+    from qiskit.qasm3 import loads as loads3
 
-    num_classical_bits = find_total_classicalbits(circuit_qasm)
-
-    # # Convert QASM code to a Cirq circuit
+    # Convert QASM code to a Cirq circuit
+    qiskit_circuit: QuantumCircuit = loads3(circuit_qasm)
 
     circuit_qasm = circuit_qasm.replace("\r\n", "\n")
 
@@ -342,11 +357,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "timeTaken": 0,
     }
 
-    if not braket_circuit.qubits:
-        # circuit does not contain any qubit
+    if not qiskit_circuit.qubits or not qiskit_circuit.clbits:
+        # circuit does not contain any qubit or classical bits
+        return metadata, {"": shots}, None
+    if not qiskit_circuit.get_instructions("measure"):
+        # missing measurement instructions
         return metadata, {"": shots}, None
 
-    for i in range(num_classical_bits):
+    for i in range(len(qiskit_circuit.qubits)):
         braket_circuit.add_instruction(Instruction(gates.I(), i))
 
     device = LocalSimulator()
@@ -356,14 +374,9 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     result_meas = device.run(braket_circuit, shots=execution_options["shots"]).result()
     end_time = time.time()
 
-    # If no classical bits return empty string
-    if num_classical_bits == 0:
-        result_counts = {"": shots}
-    else:
-        result_counts = result_meas.measurement_counts
+    result_counts = result_meas.measurement_counts
 
-        # reverse qubit order in order to be compatible with qiskit
-        result_counts = {k[::-1]: v for k, v in result_counts.items()}
+    result_counts = postprocess_counts(result_counts, qiskit_circuit)
 
     statevector = None
 
@@ -377,7 +390,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     metadata["timeTaken"] = end_time - start_time
 
-    return metadata, dict(result_counts), statevector
+    return metadata, result_counts, statevector
 
 
 @CELERY.task(name=f"{Braket_LocalSimulator.instance.identifier}.demo_task", bind=True)
