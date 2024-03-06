@@ -300,9 +300,7 @@ class Braket_LocalSimulator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def postprocess_counts(
-    counts: Dict[str, int], qiskit_circuit
-) -> Dict[str, int]:
+def postprocess_counts(counts: Dict[str, int], qiskit_circuit) -> Dict[str, int]:
     qubit_positions = {q: i for i, q in enumerate(qiskit_circuit.qubits)}
     measurements = {}
 
