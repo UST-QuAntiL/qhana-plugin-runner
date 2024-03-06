@@ -136,9 +136,50 @@ This substep should only be used if authentication is required and was not provi
 The inputs to this step can be an API Token, a username+password pair or any other form of authentication data.
 This step is always expected to be filled out by a user.
 
+
 ### Interaction Endpoints
 
-*None*
+#### `devices` *(optional)*
+
+* Method: `get`
+
+The endpoint is used to retrieve a list of devices that the circuit executor can directly access.
+
+:::{note}
+The list must only include devices that the circuit executor can use directly to compute the quantum circuit result.
+:::
+
+**Inputs:** the get input does not require any inputs, but an API token may be provided using the `Authorization` header.
+If a token is available, then the plugin should return an up-to-date list of available backends.
+
+**Outputs:** a JSON list containing an object for each device with information about that device.
+The attributes `name` and `vendor` are required and together they form the unique device identidfier.
+The optional attributes `title` and `description` can be used to include a human readable title and additional information about the device that should be displayed to a user.
+Optionally, the attribute `available` can be used to signal which of the backends is currently available for execution.
+Additionally, further information about the backend may be provided.
+
+```json
+[
+    {
+        "name": "<the device identifier name>",
+        "vendor": "<the vendor of the device>",
+        "title": "<Device title to present in UIs>",
+        "description>": "<device description>",
+        "available": false,
+        "...": "..."
+    },
+    {
+        "name": "ibm_sherbrooke",
+        "vendor": "ibm",
+        "title": "IBM Sherbrooke",
+        "description>": "127 Qubits, Eagle r3",
+        "available": false,
+        "qubits": 127,
+        "CLOPS": 5000
+    }
+]
+```
+
 
 
 
