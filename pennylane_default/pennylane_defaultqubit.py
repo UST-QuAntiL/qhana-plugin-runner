@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import mimetypes
-import re
 import time
 from collections import ChainMap
 from http import HTTPStatus
@@ -60,7 +59,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "pennylane-simulator"
-__version__ = "v1.0.0"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -287,7 +286,7 @@ class PennylaneSimulator(QHAnaPluginBase):
     description = (
         "Allows execution of quantum circuits using a simulator packaged with qiskit."
     )
-    tags = ["circuit-executor", "qc-simulator", "pennylane", "qasm", "qasm-2"]
+    tags = ["circuit-executor", "qc-simulator", "pennylane", "qasm", "qasm-2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -302,46 +301,41 @@ class PennylaneSimulator(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def find_total_qubits(qasm_code) -> int:
-    # regex to find total number of qubits
-    matches = re.findall(r"qreg\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;", qasm_code)
-    if not matches:
-        return 0
+def postprocess_counts(
+    counts: Dict[str, int], qiskit_circuit: "QuantumCircuit"
+) -> Dict[str, int]:
+    qubit_positions = {q: i for i, q in enumerate(qiskit_circuit.qubits)}
+    measurements = {}
 
-    return sum(map(int, matches))
+    # TODO: this function misses bits that are not part of registers (only for qasm3)!
 
+    for m in qiskit_circuit.get_instructions("measure"):
+        for qb, cb in zip(m.qubits, m.clbits):
+            measurements[cb] = qubit_positions[qb]
 
-# regex to find total number of classicalbits
-def find_total_classicalbits(qasm_code):
-    matches = re.findall(r"creg\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;", qasm_code)
-    return sum(map(int, matches))
+    def get_bit(count: str, bit) -> str:
+        qbit = measurements.get(bit, None)
+        if qbit is None:
+            return "0"
+        return count[qbit]
 
-
-def has_measurements(qasm_code):
-    return bool(
-        re.search(
-            r"measure\s+[a-zA-Z0-9_]+\[(\d+)\]\s+->\s+[a-zA-Z0-9_]+\[(\d+)\]\s*;",
-            qasm_code,
+    def map_count(count: str) -> str:
+        return " ".join(
+            "".join(get_bit(count, bit) for bit in reversed(reg))
+            for reg in reversed(qiskit_circuit.cregs)
         )
-    )
 
-
-def inspect_qasm(qasm_code):
-    cleaned_qasm = re.sub(r"//.*\n?", "", qasm_code)
-    return (
-        find_total_qubits(cleaned_qasm),
-        find_total_classicalbits(cleaned_qasm),
-        has_measurements(cleaned_qasm),
-    )
+    return {map_count(k): v for k, v in counts.items()}
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
     import pennylane as qml
+    from qiskit import QuantumCircuit
+    from qiskit.qasm2 import loads as loads2
+    from qiskit.qasm3 import QASM3ImporterError
+    from qiskit.qasm3 import loads as loads3
 
     shots = execution_options["shots"]
-
-    # Define the number of qubits and classicalbits from the qasm code
-    num_wires, num_classicalbits, has_measurements = inspect_qasm(circuit_qasm)
 
     metadata = {
         "qpuType": "simulator",
@@ -351,20 +345,31 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "timeTakenCounts_nanosecond": 0,
     }
 
-    if num_wires == 0 or not has_measurements:
-        # no quantum bits, nothing to simulate
+    qiskit_circuit: QuantumCircuit
+    try:
+        qiskit_circuit = loads3(circuit_qasm)
+    except QASM3ImporterError:
+        qiskit_circuit = loads2(circuit_qasm)
+    penny_circuit = qml.from_qiskit(qiskit_circuit)
+
+    if not qiskit_circuit.qubits or not qiskit_circuit.clbits:
+        # missing either qubits or classical bits
         return metadata, {"": shots}, None
+    if not qiskit_circuit.get_instructions("measure"):
+        # missing measurement instructions
+        return metadata, {"": shots}, None
+
+    num_wires = len(qiskit_circuit.qubits)
 
     # choose PennyLane quantum devices for counts and statevector simulations
     circ = qml.device("default.qubit", wires=num_wires, shots=execution_options["shots"])
     circ_statevector = qml.device("default.qubit", wires=num_wires, shots=None)
 
-    penny_circuit = qml.from_qasm(circuit_qasm)
-
     # Define a quantum node for counts results
     @qml.qnode(circ)
     def circuit():
         penny_circuit(wires=range(num_wires))
+        qml.measure(1)
         return qml.counts()
 
     startime_counts = time.perf_counter_ns()
@@ -385,11 +390,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     metadata["timeTakenCounts_nanosecond"] = endtime_counts - startime_counts
 
-    # If there are no classical bits return empty strg
-    if num_classicalbits == 0:
-        counts = {"": shots}
-    else:
-        counts = dict(result_counts)
+    counts = postprocess_counts(dict(result_counts), qiskit_circuit)
 
     return metadata, counts, result_state
 
@@ -522,3 +523,10 @@ def execute_circuit(self, db_id: int) -> str:
         )
 
     return "Finished simulating circuit."
+
+
+try:
+    # import for type annotations
+    from qiskit import QuantumCircuit
+except ImportError:
+    pass
