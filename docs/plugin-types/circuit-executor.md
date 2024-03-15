@@ -149,7 +149,7 @@ The endpoint is used to retrieve a list of devices that the circuit executor can
 The list must only include devices that the circuit executor can use directly to compute the quantum circuit result.
 :::
 
-**Inputs:** the get input does not require any inputs, but an API token may be provided using the `Authorization` header.
+**Inputs:** the endpoint does not require any inputs, but an API token may be provided using the `Authorization` header.
 If a token is available, then the plugin should return an up-to-date list of available backends.
 
 **Outputs:** a JSON list containing an object for each device with information about that device.
@@ -164,7 +164,7 @@ Additionally, further information about the backend may be provided.
         "name": "<the device identifier name>",
         "vendor": "<the vendor of the device>",
         "title": "<Device title to present in UIs>",
-        "description>": "<device description>",
+        "description": "<device description>",
         "available": false,
         "...": "..."
     },
@@ -172,7 +172,7 @@ Additionally, further information about the backend may be provided.
         "name": "ibm_sherbrooke",
         "vendor": "ibm",
         "title": "IBM Sherbrooke",
-        "description>": "127 Qubits, Eagle r3",
+        "description": "127 Qubits, Eagle r3",
         "available": false,
         "qubits": 127,
         "CLOPS": 5000
