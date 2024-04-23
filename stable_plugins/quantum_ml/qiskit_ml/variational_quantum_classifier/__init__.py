@@ -28,6 +28,7 @@ VQC_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="VQC plugin API",
+    template_folder="templates",
 )
 
 qiskit_ml_version = "0.4.0"
@@ -38,7 +39,11 @@ class VQC(QHAnaPluginBase):
     version = __version__
     description = (
         "This plugin implements the Variational Quantum Classifier (VQC) by Qiskit [0]. It's currently using version "
-        f"{qiskit_ml_version} of qiskit's machine learning library."
+        f"{qiskit_ml_version} of qiskit's machine learning library.\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
+        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin.\n\n"
+        "Source:\n"
         "[0] [Qiskit documentation, Variational Quantum Classifier](https://qiskit.org/documentation/machine-learning/stubs/qiskit_machine_learning.algorithms.VQC.html#qiskit_machine_learning.algorithms.VQC)\n"
         "[1] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)"
     )
@@ -51,7 +56,7 @@ class VQC(QHAnaPluginBase):
         return VQC_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~=0.43\nqiskit-machine-learning~={qiskit_ml_version}\nscikit-learn~=1.1"
+        return f"qiskit~=0.43\nqiskit-machine-learning~={qiskit_ml_version}\nscikit-learn~=1.1\nmuid~=0.5.3"
 
 
 try:

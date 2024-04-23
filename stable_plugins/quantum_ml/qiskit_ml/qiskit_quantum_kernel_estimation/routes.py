@@ -151,7 +151,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "qiskit_quantum_kernel_estimation_template.html",
                 name=QiskitQKE.instance.name,
                 version=QiskitQKE.instance.version,
                 schema=InputParametersSchema(),

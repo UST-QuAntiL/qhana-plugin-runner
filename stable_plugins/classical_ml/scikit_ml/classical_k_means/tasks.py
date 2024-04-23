@@ -30,6 +30,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import retrieve_filename
 
 from .backend.load_utils import get_indices_and_point_arr
 from .backend.visualize import plot_data
@@ -83,13 +84,16 @@ def calculation_task(self, db_id: int) -> str:
             title=f"Classical {num_clusters}-Means Clusters",
         )
 
+    file_name = retrieve_filename(entity_points_url)
+    info_str = f"_c-k-means_clusters_{num_clusters}_from_{file_name}"
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -102,7 +106,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "cluster_plot.html",
+                f"cluster_plot{info_str}.html",
                 "plot",
                 "text/html",
             )

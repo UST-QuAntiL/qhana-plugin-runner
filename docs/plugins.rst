@@ -50,6 +50,12 @@ Example of plugin metadata:
             "preprocessing",
             "quantum-algorithm"
         ],
+        "links": [
+            {
+                "type": "special-link",
+                "href": "./special/"
+            }
+        ],
         "entryPoint": {
             "href": "./process/",
             "uiHref": "./ui/",
@@ -121,6 +127,9 @@ Example of plugin metadata:
       - ``["data-loader", "MUSE"]``
       - A list of tags describing the plugin. Unknown tags must be ignored while parsing this list. 
         Tags specific to a certain plugin(-family) should be prefixed consistently to avoid name collisions.
+    * - Links
+      - ``{…}``
+      - Special links (additional API-level entry points) that are always available outside of a task context.
     * - Entry Point
       - ``{…}``
       - The entry point of the plugin. Contains a link to the REST entry point and to the corresponding micro frontend.
@@ -282,7 +291,13 @@ Example of a plugin result:
                 "cleared": true
             }
         ],
-        "data": [
+        "links": [
+            {
+                "type": "special-link",
+                "href": "./task/<UUID>/special/"
+            }
+        ],
+        "outputs": [
             {
                 "href": ".../<UUID>/data/1",
                 "dataType": "entity/list",
@@ -314,7 +329,10 @@ Example of a plugin result:
       - ``[…]``
       - A (growing) list of sub-steps that need new (user-) input before the final result can be computed.
         Only the last step in the list can be marked with ``clear: false`` to indicate that the step is awaiting some input.
-    * - Data
+    * - Links
+      - ``{…}``
+      - Special links (additional API-level entry points) that are only available in a task context.
+    * - Outputs
       - ``[…]``
       - The list of data that was produced for this result. Must only be present on ``SUCCESS`` or ``ERROR`` results.
 

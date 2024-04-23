@@ -35,7 +35,11 @@ ClassicKMeans_BLP = SecurityBlueprint(
 class ClassicalKMeans(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Clusters data with classical k means algorithm"
+    description = (
+        "Clusters data with classical k means algorithm.\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
+    )
 
     tags = []
 
@@ -46,7 +50,7 @@ class ClassicalKMeans(QHAnaPluginBase):
         return ClassicKMeans_BLP
 
     def get_requirements(self) -> str:
-        return "plotly~=5.6.0\nscikit-learn~=1.1"
+        return "plotly~=5.18.0\nscikit-learn~=1.1"
 
 
 try:

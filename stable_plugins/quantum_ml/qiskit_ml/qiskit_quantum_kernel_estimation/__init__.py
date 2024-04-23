@@ -28,6 +28,7 @@ QISKIT_QKE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Qiskit Quantum-Kernel-Estimation plugin API",
+    template_folder="templates",
 )
 
 
@@ -43,6 +44,8 @@ class QiskitQKE(QHAnaPluginBase):
         "Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature "
         "maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed "
         f"kernel by Havlíček [0]. The following versions were used `qiskit~={qiskit_version}` and `qiskit-machine-learning~={qiskit_ml_version}`.\n\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format. "
+        "They may be stored in either a csv or a json file. The plugin ``data-creator`` can generate these entities.\n\n"
         "Source:\n"
         "[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)"
     )
@@ -55,7 +58,7 @@ class QiskitQKE(QHAnaPluginBase):
         return QISKIT_QKE_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}"
+        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}\nmuid~=0.5.3"
 
 
 try:

@@ -28,7 +28,11 @@ from qhana_plugin_runner.db.models.virtual_plugins import (
     PluginState,
     VirtualPlugin,
 )
-from qhana_plugin_runner.tasks import save_task_error
+from qhana_plugin_runner.tasks import (
+    TASK_DETAILS_CHANGED,
+    TASK_STEPS_CHANGED,
+    save_task_error,
+)
 
 from .clients.camunda_client import CamundaClient, CamundaManagementClient
 from .datatypes.camunda_datatypes import WorkflowIncident
@@ -315,15 +319,21 @@ class VirtualPluginView(MethodView):
 
         return PluginMetadata(
             title=title,
-            description=plugin.description
-            if plugin
-            else process_definition.get("description", ""),
-            name=plugin.name
-            if plugin and plugin.name
-            else process_definition.get("key", process_definition_id),
-            version=plugin.version
-            if plugin and plugin.version is not None
-            else str(process_definition.get("version", 1)),
+            description=(
+                plugin.description
+                if plugin
+                else process_definition.get("description", "")
+            ),
+            name=(
+                plugin.name
+                if plugin and plugin.name
+                else process_definition.get("key", process_definition_id)
+            ),
+            version=(
+                plugin.version
+                if plugin and plugin.version is not None
+                else str(process_definition.get("version", 1))
+            ),
             tags=plugin.tag_list if plugin else ["workflow", "bpmn"],
             type=PluginType.processing,
             entry_point=EntryPoint(
@@ -600,6 +610,10 @@ class IncidentsProcessView(MethodView):
                     db_task.add_task_log_entry(
                         "Continuing with the workflow.", commit=True
                     )
+
+                    app = current_app._get_current_object()
+                    TASK_STEPS_CHANGED.send(app, task_id=db_id)
+                    TASK_DETAILS_CHANGED.send(app, task_id=db_id)
                 else:
                     # cannot continue until all incidents are resolved!
                     return redirect(
@@ -612,6 +626,10 @@ class IncidentsProcessView(MethodView):
                 )
                 db_task.clear_previous_step()
                 db_task.add_task_log_entry("Cancelled workflow!", commit=True)
+
+                app = current_app._get_current_object()
+                TASK_STEPS_CHANGED.send(app, task_id=db_id)
+                TASK_DETAILS_CHANGED.send(app, task_id=db_id)
 
         # all tasks need to know about db id to load the db entry
         task: chain = workflow_status_watcher.si(db_id=db_task.id)

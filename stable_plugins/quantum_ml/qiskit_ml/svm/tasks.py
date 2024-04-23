@@ -29,6 +29,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import retrieve_filename
 from .backend.load_utils import (
     load_kernel_matrix,
     get_indices_and_point_arr,
@@ -39,9 +40,14 @@ from .backend.svm import get_svc
 
 from sklearn.metrics import accuracy_score
 from .backend.visualize import plot_data, plot_confusion_matrix
+import muid
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(name=f"{SVM.instance.identifier}.calculation_task", bind=True)
@@ -83,6 +89,8 @@ def calculation_task(self, db_id: int) -> str:
     # load data
     train_data, test_data = None, None
     train_kernel, test_kernel = None, None
+
+    concat_filenames = ""
     if (
         train_points_url is not None
         and train_points_url != ""
@@ -91,6 +99,9 @@ def calculation_task(self, db_id: int) -> str:
     ):
         train_id_list, train_data = get_indices_and_point_arr(train_points_url)
         test_id_list, test_data = get_indices_and_point_arr(test_points_url)
+
+        concat_filenames += retrieve_filename(train_points_url)
+        concat_filenames += retrieve_filename(test_points_url)
     else:
         # Load kernels
         train_id_to_idx, _, train_kernel = load_kernel_matrix(train_kernel_url)
@@ -98,6 +109,9 @@ def calculation_task(self, db_id: int) -> str:
         # Get id lists
         train_id_list = get_id_list(train_id_to_idx)
         test_id_list = get_id_list(test_id_to_idx)
+
+        concat_filenames += retrieve_filename(train_kernel_url)
+        concat_filenames += retrieve_filename(test_kernel_url)
 
     # Load labels
     train_labels, label_to_int, int_to_label = get_label_arr(
@@ -191,13 +205,23 @@ def calculation_task(self, db_id: int) -> str:
         for idx in svc.support_
     ]
 
+    concat_filenames += retrieve_filename(train_label_points_url)
+    concat_filenames += retrieve_filename(test_label_points_url)
+    filename_hash = get_readable_hash(concat_filenames)
+
+    kernel_name = str(kernel_enum.name).replace("kernel", "").strip("_")
+
+    info_str = (
+        f"_svm_kernel_{kernel_name}_regularization_{regularization_C}_{filename_hash}"
+    )
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(output_labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -210,7 +234,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                f"plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -223,7 +247,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "confusion_matrix.html",
+                f"confusion_matrix{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -233,7 +257,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "support-vectors.json",
+            f"support-vectors{info_str}.json",
             "support-vectors",
             "application/json",
         )

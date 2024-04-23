@@ -5,15 +5,12 @@ from typing import Mapping, Optional
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
-from flask.globals import request
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import HELLO_MULTI_BLP, HelloWorldMultiStep
-from .schemas import HelloWorldParametersSchema
-from .tasks import preprocessing_task, processing_task
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginMetadata,
@@ -21,7 +18,16 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
+from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    add_step,
+    save_task_error,
+    save_task_result,
+)
+
+from . import HELLO_MULTI_BLP, HelloWorldMultiStep
+from .schemas import HelloWorldParametersSchema
+from .tasks import preprocessing_task, processing_task
 
 
 @HELLO_MULTI_BLP.route("/")
@@ -241,6 +247,9 @@ class DemoStepView(MethodView):
         db_task.parameters = dumps(arguments)
         db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
         # all tasks need to know about db id to load the db entry
         task: chain = processing_task.s(db_id=db_task.id) | save_task_result.s(

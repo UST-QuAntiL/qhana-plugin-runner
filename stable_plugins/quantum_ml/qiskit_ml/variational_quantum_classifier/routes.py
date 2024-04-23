@@ -191,7 +191,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "variational_quantum_classifier_template.html",
                 name=VQC.instance.name,
                 version=VQC.instance.version,
                 schema=InputParametersSchema(),

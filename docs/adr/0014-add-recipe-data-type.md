@@ -1,4 +1,4 @@
-# Add a recipe data type
+# Add a recipe data type [undecided]
 
 * Status: [proposed]
 * Deciders: []

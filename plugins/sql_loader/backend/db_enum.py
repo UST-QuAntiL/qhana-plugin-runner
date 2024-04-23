@@ -42,7 +42,7 @@ class DBEnum(Enum):
         # and throwing an error later!
         return {
             "mysql": "mysql+pymysql",
-            "postgresql": "postgresql+psycopg2",
+            "postgresql": "postgresql+psycopg",
             "sqlite": "sqlite",
         }
 

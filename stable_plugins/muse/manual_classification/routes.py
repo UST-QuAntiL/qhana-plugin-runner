@@ -3,38 +3,34 @@ from json import dumps
 from typing import Mapping, Optional
 
 from celery.canvas import chain
+from celery.utils.log import get_task_logger
 from flask import Response, redirect
-from flask.globals import request
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from celery.utils.log import get_task_logger
 from marshmallow.utils import INCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    EntryPoint,
+    InputDataMetadata,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    EntryPoint,
-    DataMetadata,
-    InputDataMetadata,
-)
-
-from . import MANUAL_CLASSIFICATION_BLP, ManualClassification
-from .schemas import (
-    LoadParametersSchema,
-    ClassificationSchema,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
     add_step,
     save_task_error,
     save_task_result,
 )
 
-from .tasks import pre_render_classification, add_class, save_classification
-
+from . import MANUAL_CLASSIFICATION_BLP, ManualClassification
+from .schemas import ClassificationSchema, LoadParametersSchema
+from .tasks import add_class, pre_render_classification, save_classification
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -278,6 +274,9 @@ class ClassificationView(MethodView):
         db_task.clear_previous_step(commit=True)
         db_task.save()
 
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+
         # add classification step
         db_task.data["step_id"] += 1
         step_id = "annotate-class-" + str(db_task.data["step_id"])
@@ -301,11 +300,11 @@ class ClassificationView(MethodView):
             prog_value=(db_task.data["step_id"] / (db_task.data["step_id"] + 1)) * 100,
         )
 
+        db_task.save(commit=True)
+
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
-
-        db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
@@ -331,7 +330,11 @@ class ClassificationDoneView(MethodView):
 
         db_task.parameters = dumps(arguments)
         db_task.clear_previous_step(commit=True)
-        db_task.save()
+
+        db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
         # all tasks need to know about db id to load the db entry
         task: chain = (
@@ -343,8 +346,6 @@ class ClassificationDoneView(MethodView):
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_id))
         task.apply_async()
-
-        db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER

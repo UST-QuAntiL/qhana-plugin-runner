@@ -63,25 +63,25 @@ Such a metadata file could look like the following for first scaling and then do
         "title":"Min"
         "description":"A vector with the minimum of each dimension",
         "function":"subtract",
-        "params":{"x1": x, "x2": [2,1]}
+        "params":{"x1": 1, "x2": [2,1]}
     }
     {
         "title":"Max"
         "description":"A vector with the maximum of each dimension, after subtracting the minimum",
         "function":"divide",
-        "params":{"x1": x, "x2": [10,10]}
+        "params":{"x1": 1, "x2": [10,10]}
     }
     {
         "title":"Mean",
         "description":"A vector containing the mean of each feature",
         "function":"subtract",
-        "params":{"x1": x, "x2": [0.01317,0.002229]}
+        "params":{"x1": 1, "x2": [0.01317,0.002229]}
     },
     {
         "title":"Transposed Principle Components",
         "description":"A matrix containing the principle components of a PCA, but transposed",
         "function":"matmul",
-        "params":{"x1": x, "x2": [[-1.0], [0.0]]}
+        "params":{"x1": 1, "x2": [[-1.0], [0.0]]}
     }
 ]
 ```
@@ -98,16 +98,16 @@ Such a metadata file could look like the following for first scaling and then do
 
 ```{code-block} json
 {
-    "plugin":"scaling",
-    "version":"v0.1.0",
-    "params":{"type": "minmax", "x": x, "min": [2,1], "max": [10,10]}
+    "plugin": "scaling",
+    "version": "v0.1.0",
+    "params": {"type": "minmax", "x": 1, "min": [2,1], "max": [10,10]}
 }
 ```
 
 ```{code-block} json
 {
-    "title":"pca",
-    "params":{"type": "normal", "x": x, "mean": [0.01317,0.002229], "components": [[-1.0,0.0]]}
+    "title": "pca",
+    "params": {"type": "normal", "x": 1, "mean": [0.01317,0.002229], "components": [[-1.0,0.0]]}
 }
 ```
 

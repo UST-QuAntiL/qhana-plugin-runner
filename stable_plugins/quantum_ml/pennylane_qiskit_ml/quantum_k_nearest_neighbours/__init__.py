@@ -28,7 +28,7 @@ QKNN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Quantum k nearest neighbours plugin API.",
-    template_folder="",
+    template_folder="templates",
 )
 
 
@@ -38,6 +38,9 @@ class QKNN(QHAnaPluginBase):
     description = (
         "This plugin implements quantum k nearest neighbours algorithms. Given a set of already labeled data "
         "and an integer k, a new data point is labeled by a majority vote of the k nearest training points.\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
+        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin.\n\n"
         "Source:\n"
         "[0] [Schuld, M., Sinayskiy, I., Petruccione, F. (2014). Quantum Computing for Pattern Classification. In: Pham, DN., Park, SB. (eds) PRICAI 2014: Trends in Artificial Intelligence. PRICAI 2014. Lecture Notes in Computer Science(), vol 8862. Springer, Cham.](https://doi.org/10.1007/978-3-319-13560-1_17)\n"
         "[1] [Basheer, Afrad and Afham, A. and Goyal, Sandeep K. (2020). Quantum k-nearest neighbors algorithm. In arXiv.](https://doi.org/10.48550/arXiv.2003.09187)\n"
@@ -52,7 +55,7 @@ class QKNN(QHAnaPluginBase):
         return QKNN_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1"
+        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\nmuid~=0.5.3"
 
 
 try:

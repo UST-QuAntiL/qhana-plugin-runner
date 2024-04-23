@@ -113,9 +113,9 @@ extensions = [
 autosectionlabel_prefix_document = False
 autosectionlabel_maxdepth = None
 
-intersphinx_mapping: Optional[
-    Dict[str, Tuple[str, Union[Optional[str], Tuple[str]]]]
-] = None
+intersphinx_mapping: Optional[Dict[str, Tuple[str, Union[Optional[str], Tuple[str]]]]] = (
+    None
+)
 intersphinx_timeout = 30
 
 source_suffix = {
@@ -178,6 +178,10 @@ if sphinx_config.get("enable-graphviz", False):
         graphviz_dot = config.get("dot", "dot")
         graphviz_dot_args = config.get("dot-args", [])
         graphviz_output_format = config.get("output-format", "png")
+
+# enable mermaid diagrams
+if sphinx_config.get("enable-mermaid", False):
+    extensions.append("sphinxcontrib.mermaid")
 
 # enable sphinx napoleon
 if sphinx_config.get("enable-napoleon", False):
@@ -268,6 +272,18 @@ if _md_extensions and isinstance(_md_extensions, list):
 _md_substitutions = _myst_options.get("substitutions", None)
 if _md_substitutions and isinstance(_md_substitutions, dict):
     myst_substitutions = _md_substitutions
+
+# mermaid configuration
+_mermaid_options = sphinx_config.get("mermaid", {})
+
+if "d3_zoom" in _mermaid_options:
+    mermaid_d3_zoom = _mermaid_options["d3_zoom"]
+if "init_js" in _mermaid_options:
+    mermaid_init_js = _mermaid_options["init_js"]
+if "params" in _mermaid_options:
+    mermaid_params = _mermaid_options["params"]
+else:
+    mermaid_params = ["-p", "puppeteer-config.json"]
 
 
 # -- Extra Files -------------------------------------------------------------

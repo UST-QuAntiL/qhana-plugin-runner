@@ -18,6 +18,7 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List, Dict
 from zipfile import ZipFile
+import muid
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -51,7 +52,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -237,10 +238,14 @@ class SymMaxMean(QHAnaPluginBase):
         return SYM_MAX_MEAN_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "muid~=0.5.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def _get_sim(elem_sims: Dict, val1, val2) -> float:
@@ -374,10 +379,15 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    concat_filenames = retrieve_filename(entities_url)
+    concat_filenames += retrieve_filename(element_similarities_url)
+    filenames_hash = get_readable_hash(concat_filenames)
+    info_str = f"_{filenames_hash}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "sym_max_mean.zip",
+        f"sym_max_mean{info_str}.zip",
         "custom/attribute-similarities",
         "application/zip",
     )

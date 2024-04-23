@@ -29,6 +29,7 @@ Optics_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Optics plugin API",
+    template_folder="templates",
 )
 
 sklearn_version = "1.1"
@@ -40,7 +41,9 @@ class Optics(QHAnaPluginBase):
     description = (
         "Clusters data with the OPTICS algorithm. "
         f"The plugin uses the implementation by scikit-learn v{sklearn_version}. "
-        "More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS)."
+        "More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS).\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
     )
     tags = []
 
@@ -51,7 +54,7 @@ class Optics(QHAnaPluginBase):
         return Optics_BLP
 
     def get_requirements(self) -> str:
-        return f"scikit-learn~={sklearn_version}\nplotly~=5.6.0\npandas~=1.5.0"
+        return f"scikit-learn~={sklearn_version}\nplotly~=5.18.0\npandas~=1.5.0"
 
 
 try:

@@ -31,6 +31,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import retrieve_filename
 
 import numpy as np
 
@@ -111,13 +112,16 @@ def calculation_task(self, db_id: int) -> str:
             title=f"OPTICS Clusters",
         )
 
+    file_name = retrieve_filename(entity_points_url)
+    info_str = f"_optics_method_{method_enum.value}_algorithm_{algorithm_enum.get_algorithm()}_metric_{metric_enum.get_metric()}_from_{file_name}"
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(labels, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "labels.json",
+            f"labels{info_str}.json",
             "entity/label",
             "application/json",
         )
@@ -130,7 +134,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "cluster_plot.html",
+                f"cluster_plot{info_str}.html",
                 "plot",
                 "text/html",
             )
