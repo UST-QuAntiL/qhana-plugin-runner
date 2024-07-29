@@ -54,7 +54,7 @@ Start a redis instance in a docker container and start the worker process used f
 
 ```bash
 poetry run invoke start-broker
-poetry run invoke worker  # use strg+c to stop worker
+poetry run invoke worker --watch  # use strg+c to stop worker
 ```
 
 ### Plugin folders
