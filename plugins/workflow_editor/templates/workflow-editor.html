@@ -40,6 +40,9 @@
     {{ super() }}
 
     <script>
+   // enable pattern plugin
+    window.ENABLE_PATTERN_PLUGIN = true;
+
     const state = window._qhana_microfrontend_state;
     if (state) {
         state.targetHeight = "full";
@@ -63,8 +66,15 @@
         },
         {
             name: "qhana",
-        }
+        },
+        {
+            name: "pattern",
+            // added patern to config array
+        },
     ]
+   // to see the plugin configurations in the console
+    console.log("Plugin Configurations: ", modeler.pluginConfigs);
+        
     </script>
 
 {% endblock script %}
