@@ -24,12 +24,12 @@ __version__ = "v0.0.6"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-
 BAR_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Simple Bar Diagram API.",
 )
+
 
 class BarDiagram(QHAnaPluginBase):
     name = _plugin_name
@@ -42,7 +42,7 @@ class BarDiagram(QHAnaPluginBase):
 
     def get_api_blueprint(self):
         return BAR_BLP
-    
+
     def get_requirements(self) -> str:
         return "plotly~=5.18.0\npandas~=1.5.0\nmuid~=0.5.3"
 

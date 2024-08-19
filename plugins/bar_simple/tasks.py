@@ -48,7 +48,7 @@ def visualization_task(self, db_id: int) -> str:
         msg = f"Could not load task data with id {db_id} to read parameters!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
-    
+
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     clusters_url = input_params.clusters_url
