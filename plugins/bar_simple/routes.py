@@ -54,7 +54,7 @@ class PluginsView(MethodView):
     @BAR_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
-        
+
         return PluginMetadata(
             title="Bar Diagram",
             description=BarDiagram.instance.description,
@@ -118,7 +118,7 @@ class MicroFrontend(MethodView):
 
     def render(self, data: Mapping, errors: dict):
         schema = InputParametersSchema()
-        
+
         data_dict = dict(data)
 
         # define default values
@@ -127,7 +127,7 @@ class MicroFrontend(MethodView):
         # overwrite default values with other values if possible
         default_values.update(data_dict)
         data_dict = default_values
-        
+
         return Response(
             render_template(
                 "simple_template.html",
