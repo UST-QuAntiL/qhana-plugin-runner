@@ -31,7 +31,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
     InputDataMetadata,
-    DataMetadata
+    DataMetadata,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import (
@@ -44,6 +44,7 @@ from qhana_plugin_runner.tasks import (
 from . import BAR_BLP, BarDiagram
 from .schemas import InputParametersSchema, TaskResponseSchema
 from .tasks import visualization_task
+
 
 @BAR_BLP.route("/")
 class PluginsView(MethodView):
@@ -73,9 +74,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="plot",
-                        content_type=["text/html"],
-                        required=True
+                        data_type="plot", content_type=["text/html"], required=True
                     )
                 ],
             ),
@@ -152,13 +151,15 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Start the visualization task."""
         db_task = ProcessingTask(
-            task_name=visualization_task.name, 
-            parameters=InputParametersSchema().dumps(arguments)
-            )
+            task_name=visualization_task.name,
+            parameters=InputParametersSchema().dumps(arguments),
+        )
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = visualization_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = visualization_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()

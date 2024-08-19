@@ -24,6 +24,7 @@ __version__ = "v0.0.6"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
+
 BAR_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
