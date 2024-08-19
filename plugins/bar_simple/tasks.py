@@ -31,8 +31,10 @@ from qhana_plugin_runner.storage import STORE
 
 TASK_LOGGER = get_task_logger(__name__)
 
+
 def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
+
 
 @CELERY.task(name=f"{BarDiagram.instance.identifier}.visualization_task", bind=True)
 def visualization_task(self, db_id: int) -> str:
@@ -50,9 +52,7 @@ def visualization_task(self, db_id: int) -> str:
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     clusters_url = input_params.clusters_url
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: clusters_url='{clusters_url}'"
-    )   
+    TASK_LOGGER.info(f"Loaded input parameters from db: clusters_url='{clusters_url}'")
 
     # load data from file
 
@@ -76,7 +76,7 @@ def visualization_task(self, db_id: int) -> str:
         }
     )
 
-    fig = px.bar(df, x='Cluster ID', y='Amount', color='Cluster ID')
+    fig = px.bar(df, x="Cluster ID", y="Amount", color="Cluster ID")
     fig.update_coloraxes(showscale=False)
 
     filenames_hash = get_readable_hash(retrieve_filename(clusters_url))
@@ -84,7 +84,7 @@ def visualization_task(self, db_id: int) -> str:
     info_str = f"_bar-diagram_{filenames_hash}"
 
     with SpooledTemporaryFile(mode="wt") as output:
-        html = fig.to_html(include_plotlyjs='cdn')
+        html = fig.to_html(include_plotlyjs="cdn")
         output.write(html)
 
         STORE.persist_task_result(

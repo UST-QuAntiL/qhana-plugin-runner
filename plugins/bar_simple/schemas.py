@@ -14,24 +14,23 @@
 
 from marshmallow import post_load
 import marshmallow as ma
-from qhana_plugin_runner.api.util import (
-    FrontendFormBaseSchema,
-    MaBaseSchema,
-    FileUrl
-)
+from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema, FileUrl
 from dataclasses import dataclass
+
 
 class TaskResponseSchema(MaBaseSchema):
     name = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
     task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
 
+
 @dataclass(repr=False)
 class InputParameters:
-    clusters_url : str
+    clusters_url: str
 
     def __str__(self):
         return str(self.__dict__)
+
 
 class InputParametersSchema(FrontendFormBaseSchema):
     clusters_url = FileUrl(
@@ -49,3 +48,4 @@ class InputParametersSchema(FrontendFormBaseSchema):
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
         return InputParameters(**data)
+    
