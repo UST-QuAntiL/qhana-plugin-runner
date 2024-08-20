@@ -97,7 +97,7 @@ def visualization_task(self, db_id: int) -> str:
         size="size",
         hover_name="ID",
         color="Cluster ID",
-        hover_data={"size":False},
+        hover_data={"size": False},
     )
 
     if do_svm:
