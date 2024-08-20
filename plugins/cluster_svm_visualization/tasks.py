@@ -97,13 +97,13 @@ def visualization_task(self, db_id: int) -> str:
         size="size",
         hover_name="ID",
         color="Cluster ID",
-        hover_data={"size":False}
-        )
+        hover_data={"size":False},
+    )
 
     if do_svm:
-        cluster_list = [[] for _ in range(0, max_cluster+1)]
+        cluster_list = [[] for _ in range(0, max_cluster + 1)]
         for idx, label in enumerate(label_list):
-            cluster_list[label].append([pt_x_list[idx], pt_y_list[idx]])        
+            cluster_list[label].append([pt_x_list[idx], pt_y_list[idx]])
 
         for i, cl1 in enumerate(cluster_list):
             for j, cl2 in enumerate(cluster_list):
@@ -114,9 +114,9 @@ def visualization_task(self, db_id: int) -> str:
                 cluster_label = cluster_label + [j for _ in range(0, len(cl2))]
                 cl = cl1 + cl2
 
-                clf = svm.SVC(kernel='linear')
+                clf = svm.SVC(kernel="linear")
                 clf.fit(cl, cluster_label)
-                
+
                 a = -clf.coef_[0][0] / clf.coef_[0][1]
                 b = clf.intercept_[0] / clf.coef_[0][1]
 
@@ -126,8 +126,8 @@ def visualization_task(self, db_id: int) -> str:
                     go.Scatter(
                         x=x_range,
                         y=[a * x - b for x in x_range],
-                        mode='lines',
-                        name=f'SVM for cluster {i} and {j}',
+                        mode="lines",
+                        name=f"SVM for cluster {i} and {j}",
                         hoveron="fills",
                     )
                 )

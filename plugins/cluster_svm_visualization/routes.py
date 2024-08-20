@@ -92,7 +92,8 @@ class MicroFrontend(MethodView):
     """Micro frontend for the Cluster SVM Visualization plugin."""
 
     @VIS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend for the Cluster SVM Visualization plugin."
+        HTTPStatus.OK,
+        description="Micro frontend for the Cluster SVM Visualization plugin.",
     )
     @VIS_BLP.arguments(
         InputParametersSchema(
@@ -107,7 +108,8 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors)
 
     @VIS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend for the Cluster SVM Visualization plugin."
+        HTTPStatus.OK,
+        description="Micro frontend for the Cluster SVM Visualization plugin.",
     )
     @VIS_BLP.arguments(
         InputParametersSchema(

@@ -77,7 +77,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
 
-
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
         return InputParameters(**data)
