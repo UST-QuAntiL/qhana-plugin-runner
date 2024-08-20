@@ -16,7 +16,6 @@
 from tempfile import SpooledTemporaryFile
 
 from typing import Optional
-from json import loads
 
 from celery.utils.log import get_task_logger
 
