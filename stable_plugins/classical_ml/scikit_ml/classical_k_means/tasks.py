@@ -100,7 +100,7 @@ def calculation_task(self, db_id: int) -> str:
 
     if fig is not None:
         with SpooledTemporaryFile(mode="wt") as output:
-            html = fig.to_html()
+            html = fig.to_html(include_plotlyjs="cdn")
             output.write(html)
 
             STORE.persist_task_result(

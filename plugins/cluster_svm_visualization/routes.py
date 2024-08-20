@@ -37,77 +37,86 @@ from qhana_plugin_runner.tasks import (
     save_task_result,
 )
 
-from . import BAR_BLP, BarDiagram
+from . import VIS_BLP, ClusterSVM
 from .schemas import InputParametersSchema, TaskResponseSchema
 from .tasks import visualization_task
 
 
-@BAR_BLP.route("/")
+@VIS_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @BAR_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
-    @BAR_BLP.require_jwt("jwt", optional=True)
+    @VIS_BLP.response(HTTPStatus.OK, PluginMetadataSchema)
+    @VIS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
 
         return PluginMetadata(
-            title="Bar Diagram",
-            description=BarDiagram.instance.description,
-            name=BarDiagram.instance.name,
-            version=BarDiagram.instance.version,
+            title="Cluster SVM Visualization",
+            description=ClusterSVM.instance.description,
+            name=ClusterSVM.instance.name,
+            version=ClusterSVM.instance.version,
             type=PluginType.visualization,
             entry_point=EntryPoint(
-                href=url_for(f"{BAR_BLP.name}.ProcessView"),
-                ui_href=url_for(f"{BAR_BLP.name}.MicroFrontend"),
+                href=url_for(f"{VIS_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{VIS_BLP.name}.MicroFrontend"),
                 data_input=[
+                    InputDataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter="entityUrl",
+                    ),
                     InputDataMetadata(
                         data_type="entity/label",
                         content_type=["application/json"],
                         required=True,
                         parameter="clustersUrl",
-                    )
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
                         data_type="plot", content_type=["text/html"], required=True
-                    )
+                    ),
+                    DataMetadata(
+                        data_type="plot3d", content_type=["text/html"], required=False
+                    ),
                 ],
             ),
-            tags=BarDiagram.instance.tags,
+            tags=ClusterSVM.instance.tags,
         )
 
 
-@BAR_BLP.route("/ui/")
+@VIS_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the Simple Bar Diagram plugin."""
+    """Micro frontend for the Cluster SVM Visualization plugin."""
 
-    @BAR_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend for the Simple Bar Diagram plugin."
+    @VIS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the Cluster SVM Visualization plugin."
     )
-    @BAR_BLP.arguments(
+    @VIS_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @BAR_BLP.require_jwt("jwt", optional=True)
+    @VIS_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         return self.render(request.args, errors)
 
-    @BAR_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend for the Simple Bar Diagram plugin."
+    @VIS_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend for the Cluster SVM Visualization plugin."
     )
-    @BAR_BLP.arguments(
+    @VIS_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @BAR_BLP.require_jwt("jwt", optional=True)
+    @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors)
@@ -127,23 +136,23 @@ class MicroFrontend(MethodView):
         return Response(
             render_template(
                 "simple_template.html",
-                name=BarDiagram.instance.name,
-                version=BarDiagram.instance.version,
+                name=ClusterSVM.instance.name,
+                version=ClusterSVM.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
-                process=url_for(f"{BAR_BLP.name}.ProcessView"),
+                process=url_for(f"{VIS_BLP.name}.ProcessView"),
             )
         )
 
 
-@BAR_BLP.route("/process/")
+@VIS_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @BAR_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @BAR_BLP.response(HTTPStatus.OK, TaskResponseSchema())
-    @BAR_BLP.require_jwt("jwt", optional=True)
+    @VIS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
+    @VIS_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the visualization task."""
         db_task = ProcessingTask(
