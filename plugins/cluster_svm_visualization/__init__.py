@@ -35,7 +35,7 @@ class ClusterSVM(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Prints provided Data into a Scatter Plot with SVM."
-    tags = ["cluster","SVM", "visualization"]
+    tags = ["cluster", "SVM", "visualization"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
