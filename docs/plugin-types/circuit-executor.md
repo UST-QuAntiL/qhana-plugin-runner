@@ -62,10 +62,10 @@ Circuit executor plugins can have two types of data (i.e. file based) inputs:
     Unknown execution options must be ignored.
     Execution options that are specific to specific plugins should have unique names.
 
-    | Attribute     | Description                             |
-    |:--------------|:----------------------------------------|
-    | `shots`       | The number of shots to run the circuit. |
-    | `statevector` | Output should include a statevector.    |
+    | Attribute     | Description                                     |
+    |:--------------|:------------------------------------------------|
+    | `shots`       | The number of shots to run the circuit.         |
+    | `statevector` | If true, request additional statevector result. |
 
 
 Circuit executor plugins can have two types of direct parameter inputs:
