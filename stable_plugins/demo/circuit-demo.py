@@ -96,11 +96,22 @@ class CircuitDemoParametersSchema(FrontendFormBaseSchema):
             "label": "Select Circuit Executor Plugin",
         },
     )
+    statevector = fields.Bool(
+        required=False,
+        missing=False,
+        metadata={
+            "label": "Request statevector",
+        },
+    )
 
 
 class WebhookParams(MaBaseSchema):
     source = fields.URL()
     event = fields.String()
+
+
+class ExecutionOptionsParams(MaBaseSchema):
+    statevector = fields.Bool(missing=False)
 
 
 @CIRCUIT_BLP.route("/")
@@ -229,8 +240,13 @@ class ProcessView(MethodView):
             bell_state=state.value,
             _external=True,
         )
+
+        statevector: bool = arguments.get("statevector", False)
+
         options_url = url_for(
-            f"{CIRCUIT_BLP.name}.{ExecutionOptionsView.__name__}", _external=True
+            f"{CIRCUIT_BLP.name}.{ExecutionOptionsView.__name__}",
+            statevector=statevector,
+            _external=True,
         )
         db_task = ProcessingTask(
             task_name=circuit_demo_task.name,
@@ -306,10 +322,11 @@ class ContinueProcessView(MethodView):
 class ExecutionOptionsView(MethodView):
     """Get the execution options."""
 
-    def get(self):
+    @CIRCUIT_BLP.arguments(ExecutionOptionsParams(), location="query", as_kwargs=True)
+    def get(self, statevector: bool = False):
         """Get the requested execution options."""
 
-        return jsonify({"ID": "1", "shots": 2048, "statevector": False})
+        return jsonify({"ID": "1", "shots": 2048, "statevector": statevector})
 
 
 @CIRCUIT_BLP.route("/circuit/<string:bell_state>/")
