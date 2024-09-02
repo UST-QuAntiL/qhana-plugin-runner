@@ -597,7 +597,7 @@ def circuit_demo_result_task(self, db_id: int) -> str:
     outputs = task_data.data.get("result", {}).get("outputs", [])
 
     for out in outputs:
-        if out.get("name", "").startswith("result-counts"):
+        if out.get("name", "").startswith(("result-counts", "result-statevector")):
             name = out.get("name", "")
             url = out.get("href", "")
             data_type = out.get("dataType", "")
