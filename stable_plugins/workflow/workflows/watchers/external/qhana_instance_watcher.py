@@ -1,4 +1,4 @@
-from typing import cast
+from typing import cast, Optional, Union, TypedDict
 
 import requests
 from celery.utils.functional import maybe_list
@@ -31,6 +31,12 @@ class TaskNotFinishedError(Exception):
     pass
 
 
+class QHAnaStepData(TypedDict):
+    resultUrl: str
+    stepNr: Union[str, int]
+    href: str
+
+
 def extract_second_topic_component(topic: str):
     split_topic = topic.split(".", maxsplit=1)
     if len(split_topic) <= 1:
@@ -53,6 +59,7 @@ def qhana_instance_watcher(
     external_task_id: str,
     execution_id: str,
     process_instance_id: str,
+    plugin: Optional[str] = None,
 ):
     """
     Creates new qhana plugin instances and watches for results.
@@ -63,12 +70,16 @@ def qhana_instance_watcher(
     camunda_client = CamundaClient(config)
     TASK_LOGGER.debug("Searching for plugins")
 
-    try:
-        plugin_name = extract_second_topic_component(topic_name)
-    except ValueError:
-        raise BadTaskDefinitionError(
-            message=f"Malformed task topic name '{topic_name}'. Name must contain a '.' separating the plugin name!"
-        )
+    if plugin is None:
+        # legacy route, extract plugin name from topic
+        try:
+            plugin_name = extract_second_topic_component(topic_name)
+        except ValueError:
+            raise BadTaskDefinitionError(
+                message=f"Malformed task topic name '{topic_name}'. Name must contain a '.' separating the plugin name!"
+            )
+    else:
+        plugin_name = plugin
 
     query_params = {}
     if "@" in plugin_name:
@@ -155,6 +166,7 @@ def qhana_step_watcher(
     external_task_id: str,
     execution_id: str,
     process_instance_id: str,
+    step_data: Optional[QHAnaStepData] = None,
 ):
     """
     Sends inputs to an open plugin step and watches for new results.
@@ -165,19 +177,24 @@ def qhana_step_watcher(
     camunda_client = CamundaClient(config)
     TASK_LOGGER.debug("Receiving plugin step.")
 
-    try:
-        step_var = extract_second_topic_component(topic_name)
-    except ValueError:
-        raise BadTaskDefinitionError(
-            message=f"Malformed task topic name '{topic_name}'. Name must contain a '.' separating the step variable name!"
-        )
+    if step_data is None:
+        # legacy route, extract step data from topic
+        try:
+            step_var = extract_second_topic_component(topic_name)
+        except ValueError:
+            raise BadTaskDefinitionError(
+                message=f"Malformed task topic name '{topic_name}'. Name must contain a '.' separating the step variable name!"
+            )
 
-    workflow_local_variables = camunda_client.get_task_local_variables(execution_id)
+        workflow_local_variables = camunda_client.get_task_local_variables(execution_id)
 
-    if step_var not in workflow_local_variables:
-        raise BadTaskDefinitionError(message=f"Missing task step variable '{step_var}'.")
+        if step_var not in workflow_local_variables:
+            raise BadTaskDefinitionError(message=f"Missing task step variable '{step_var}'.")
 
-    step: dict = workflow_local_variables[step_var]["value"]
+        step: dict = workflow_local_variables[step_var]["value"]
+    else:
+        step = step_data
+
     if step.keys() < {"resultUrl", "stepNr", "href"}:
         raise BadTaskDefinitionError(
             message=f"The plugin step to execute is incomplete! Step: {step}"
