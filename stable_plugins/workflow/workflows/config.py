@@ -24,6 +24,7 @@ class WorkflowConfig(TypedDict):
     disable_legacy_support: bool
     qhana_task_topic: str
     plugin_variable: str
+    plugin_version_variable: str
     step_variable: str
     task_input_variable_prefix: str
     task_output_variable_prefix: str
@@ -113,8 +114,9 @@ def get_config(app: Flask | None = None) -> WorkflowPluginConfig:
         "legacy_plugin_task_topic_prefix": "plugin",
         "legacy_step_topic_prefix": "plugin-step",
         "qhana_task_topic": "qhana-task",
-        "plugin_variable": "qhana-plugin",
-        "step_variable": "qhana-plugin-step",
+        "plugin_variable": "qhanaPlugin",
+        "plugin_version_variable": "qhanaPluginVersion",
+        "step_variable": "qhanaPluginStep",
         "task_output_variable_prefix": "qoutput",
         "task_input_variable_prefix": "qinput",
         "prefix_separator": ".",
