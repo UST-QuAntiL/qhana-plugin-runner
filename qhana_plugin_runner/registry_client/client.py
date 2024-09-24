@@ -245,7 +245,7 @@ class PluginRegistryClient:
         for api_link in base.get_links_by_rel("api"):
             new_base = self.fetch_by_api_link(api_link, query_params=query_params)
             final_result = self.search_by_rel(
-                rel, query_params, allow_collection_resource, base=new_base
+                rel, query_params, allow_collection_resource=allow_collection_resource, base=new_base
             )
             if final_result is not None:
                 return final_result
