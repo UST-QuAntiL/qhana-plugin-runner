@@ -59,6 +59,7 @@ class HumanTask:
     delegation_state: str
     process_instance_id: str
     task_definition_key: str
+    form_key: Optional[str]
 
     @classmethod
     def deserialize(cls, serialized):
@@ -70,4 +71,5 @@ class HumanTask:
             delegation_state=serialized["delegationState"],
             process_instance_id=serialized["processInstanceId"],
             task_definition_key=serialized["taskDefinitionKey"],
+            form_key=serialized.get("formKey"),
         )
