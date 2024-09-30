@@ -199,6 +199,8 @@ class Muse4MusicClient:
 
 #  FIXME remove test code later!
 if __name__ == "__main__":
+    from util import entity_to_id, person_to_entity, opus_to_entity, part_to_entity
+
     client = Muse4MusicClient("http://127.0.0.1:5001/")
 
     with requests.session():
@@ -208,14 +210,14 @@ if __name__ == "__main__":
         for tax in taxonomies[:2]:
             taxonomy = client.get_taxonomy(tax)
             taxonomy["items"] = [...]
-            print(taxonomy)
+            print(*entity_to_id(taxonomy), taxonomy)
         people = client.get_people()
-        print([p["name"] for p in people])
+        print([person_to_entity(p) for p in people])
         opuses = client.get_opuses()
-        print([o["name"] for o in opuses])
+        print([opus_to_entity(o) for o in opuses])
         parts = client.get_parts()
-        print([(p["id"], p["opus_id"]) for p in parts])
+        print([part_to_entity(p) for p in parts])
         subparts = client.get_subparts()
-        print([(p["label"], p["id"], p["part_id"]) for p in subparts])
+        print([(*entity_to_id(p), p["label"], p["id"], p["part_id"]) for p in subparts])
         voices = client.get_voices(subparts[0]["_links"]["self"]["href"])
-        print([v["name"] for v in voices])
+        print([(entity_to_id(v).id_, v["name"]) for v in voices])
