@@ -95,7 +95,7 @@ def _extract(
             return None
         return value
     if type == "entity":
-        entity_to_id(value).id_
+        return entity_to_id(value).id_
     if type == "taxItem":
         # TODO: handle not applicable values???
         if isinstance(value, (tuple, list)):
