@@ -185,11 +185,9 @@ def opus_to_entity(entity):
     name = _extract(entity, "name")
     original_name = _extract(entity, "original_name")
     composer = _extract(entity, "composer", "entity")
-    genre = _extract(entity, "genre", "taxItem", "Genre")  # FIXME taxonomy Name!
-    grundton = _extract(entity, "grundton", "taxItem", "Grundton")  # FIXME taxonomy Name!
-    tonalitaet = _extract(
-        entity, "tonalitaet", "taxItem", "Tonalität"
-    )  # FIXME taxonomy Name!
+    genre = _extract(entity, "genre", "taxItem", "Gattung")
+    grundton = _extract(entity, "grundton", "taxItem", "Grundton")
+    tonalitaet = _extract(entity, "tonalitaet", "taxItem", "Tonalitaet")
     movements = _extract(entity, "movements", "int")
     composition_year = _extract(entity, "composition_year", "int")
     composition_place = _extract(entity, "composition_place")
@@ -285,81 +283,91 @@ def part_to_entity(entity):
     measure_end = _extract(entity, "measure_end.measure", "int")
     measure_end_page = _extract(entity, "measure_end.from_page", "int")
     occurence_in_movement = _extract(
-        entity, "occurence_in_movement", "taxItem", "Auftreten"
-    )  # FIXME taxonomy Name!
-    formal_functions = _extract(
-        entity, "formal_functions", "taxItem", "FormaleFunktion"
-    )  # FIXME taxonomy Name!
+        entity, "occurence_in_movement", "taxItem", "AuftretenSatz"
+    )
+    formal_functions = _extract(entity, "formal_functions", "taxItem", "FormaleFunktion")
 
     instr_quant_before = _extract(
         entity,
         "instrumentation_context.instrumentation_quantity_before",
         "taxItem",
-        "InstrumentationQuality",
-    )  # FIXME taxonomy Name!
+        "InstrumentierungEinbettungQuantitaet",
+    )
     instr_quant_after = _extract(
         entity,
         "instrumentation_context.instrumentation_quantity_after",
         "taxItem",
-        "InstrumentationQuality",
-    )  # FIXME taxonomy Name!
+        "InstrumentierungEinbettungQuantitaet",
+    )
     instr_qual_before = _extract(
         entity,
         "instrumentation_context.instrumentation_quality_before",
         "taxItem",
-        "InstrumentationQuantity",
-    )  # FIXME taxonomy Name!
+        "InstrumentierungEinbettungQualitaet",
+    )
     instr_qual_after = _extract(
         entity,
         "instrumentation_context.instrumentation_quality_after",
         "taxItem",
-        "InstrumentationQuantity",
-    )  # FIXME taxonomy Name!
+        "InstrumentierungEinbettungQualitaet",
+    )
 
     loudness_before = _extract(
-        entity, "dynamic_context.loudness_before", "taxItem", "Dynamic"
-    )  # FIXME taxonomy Name!
+        entity, "dynamic_context.loudness_before", "taxItem", "Lautstaerke"
+    )
     loudness_after = _extract(
-        entity, "dynamic_context.loudness_after", "taxItem", "Dynamic"
-    )  # FIXME taxonomy Name!
+        entity, "dynamic_context.loudness_after", "taxItem", "Lautstaerke"
+    )
     dynamic_trend_before = _extract(
-        entity, "dynamic_context.dynamic_trend_before", "taxItem", "DynamicTrend"
-    )  # FIXME taxonomy Name!
+        entity, "dynamic_context.dynamic_trend_before", "taxItem", "LautstaerkeEinbettung"
+    )
     dynamic_trend_after = _extract(
-        entity, "dynamic_context.dynamic_trend_after", "taxItem", "DynamicTrend"
-    )  # FIXME taxonomy Name!
+        entity, "dynamic_context.dynamic_trend_after", "taxItem", "LautstaerkeEinbettung"
+    )
 
     tempo_before = _extract(
-        entity, "tempo_context.tempo_context_before", "taxItem", "TempoContext"
-    )  # FIXME taxonomy Name!
+        entity, "tempo_context.tempo_context_before", "taxItem", "TempoEinbettung"
+    )
     tempo_after = _extract(
-        entity, "tempo_context.tempo_context_after", "taxItem", "TempoContext"
-    )  # FIXME taxonomy Name!
+        entity, "tempo_context.tempo_context_after", "taxItem", "TempoEinbettung"
+    )
     tempo_trend_before = _extract(
-        entity, "tempo_context.tempo_trend_before", "taxItem", "TempoTrend"
-    )  # FIXME taxonomy Name!
+        entity, "tempo_context.tempo_trend_before", "taxItem", "TempoEntwicklung"
+    )
     tempo_trend_after = _extract(
-        entity, "tempo_context.tempo_trend_after", "taxItem", "TempoTrend"
-    )  # FIXME taxonomy Name!
+        entity, "tempo_context.tempo_trend_after", "taxItem", "TempoEntwicklung"
+    )
 
     ambitus_before = _extract(
-        entity, "dramaturgic_context.ambitus_context_before", "taxItem", "Ambitus"
-    )  # FIXME taxonomy Name!
+        entity,
+        "dramaturgic_context.ambitus_context_before",
+        "taxItem",
+        "AmbitusEinbettung",
+    )
     ambitus_after = _extract(
-        entity, "dramaturgic_context.ambitus_context_after", "taxItem", "Ambitus"
-    )  # FIXME taxonomy Name!
+        entity,
+        "dramaturgic_context.ambitus_context_after",
+        "taxItem",
+        "AmbitusEinbettung",
+    )
     ambitus_change_before = _extract(
-        entity, "dramaturgic_context.ambitus_change_before", "taxItem", "AmbitusChange"
-    )  # FIXME taxonomy Name!
+        entity,
+        "dramaturgic_context.ambitus_change_before",
+        "taxItem",
+        "AmbitusEntwicklung",
+    )
     ambitus_change_after = _extract(
-        entity, "dramaturgic_context.ambitus_change_after", "taxItem", "AmbitusChange"
-    )  # FIXME taxonomy Name!
+        entity,
+        "dramaturgic_context.ambitus_change_after",
+        "taxItem",
+        "AmbitusEntwicklung",
+    )
     melodic_line_before = _extract(
-        entity, "dramaturgic_context.melodic_line_before", "taxItem", "MelodicLine"
-    )  # FIXME taxonomy Name!
+        entity, "dramaturgic_context.melodic_line_before", "taxItem", "Melodiebewegung"
+    )
     melodic_line_after = _extract(
-        entity, "dramaturgic_context.melodic_line_after", "taxItem", "MelodicLine"
-    )  # FIXME taxonomy Name!
+        entity, "dramaturgic_context.melodic_line_after", "taxItem", "Melodiebewegung"
+    )
 
     return PartEntity(
         id_,
