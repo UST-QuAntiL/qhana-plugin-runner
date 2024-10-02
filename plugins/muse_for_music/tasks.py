@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 from json import loads as json_load
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 
+import requests
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
@@ -26,7 +27,9 @@ from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 from requests import session
 
 from . import M4MLoaderPlugin
+from .muse_for_music_client import Muse4MusicClient
 from .schemas import InputParameters, InputParametersSchema
+from .util import opus_to_entity, person_to_entity, part_to_entity, taxonomy_to_entity
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -52,7 +55,51 @@ def import_data(self, db_id: int) -> str:
     if muse_for_music_url is None:
         muse_for_music_url = get_muse_for_music_url_from_registry()
 
-    # FIXME implement
+    client = Muse4MusicClient(muse_for_music_url)
+
+    with requests.session():
+        client.login(input_params.username, input_params.password)
+        client.test_login()
+
+        opuses = client.get_opuses()
+        opus_entities = [opus_to_entity(o)._asdict() for o in opuses]
+
+        with SpooledTemporaryFile(mode="w") as output:
+            output.write(json.dumps(opus_entities))
+            STORE.persist_task_result(
+                db_id, output, "opuses.json", "entity/list", "application/json"
+            )
+
+        people = client.get_people()
+        person_entities = [person_to_entity(p)._asdict() for p in people]
+
+        with SpooledTemporaryFile(mode="w") as output:
+            output.write(json.dumps(person_entities))
+            STORE.persist_task_result(
+                db_id, output, "people.json", "entity/list", "application/json"
+            )
+
+        parts = client.get_parts()
+        part_entities = [part_to_entity(p)._asdict() for p in parts]
+
+        with SpooledTemporaryFile(mode="w") as output:
+            output.write(json.dumps(part_entities))
+            STORE.persist_task_result(
+                db_id, output, "parts.json", "entity/list", "application/json"
+            )
+
+        # TODO: subparts
+        # TODO: taxonomies
+
+        taxonomies = client.get_taxonomies()
+        first_taxonomy = client.get_taxonomy(taxonomies[0])
+        first_taxonomy_entity = taxonomy_to_entity(first_taxonomy)._asdict()
+
+        with SpooledTemporaryFile(mode="w") as output:
+            output.write(json.dumps(first_taxonomy_entity))
+            STORE.persist_task_result(
+                db_id, output, "taxonomy1.json", "graph/taxonomy", "application/json"
+            )
 
     return "Import finished."
 
