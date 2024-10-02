@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "muse-for-music-loader"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -37,7 +37,7 @@ class M4MLoaderPlugin(QHAnaPluginBase):
     version = __version__
     description = "Load data from a MUSE4Music instance."
 
-    tags = ["MUSE4Music"]
+    tags = ["MUSE4Music", "data-loading"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

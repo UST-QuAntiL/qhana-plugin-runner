@@ -55,7 +55,7 @@ class PluginsView(MethodView):
             description=M4MLoaderPlugin.instance.description,
             name=M4MLoaderPlugin.instance.name,
             version=M4MLoaderPlugin.instance.version,
-            type=PluginType.processing,
+            type=PluginType.dataloader,
             entry_point=EntryPoint(
                 href=url_for(f"{M4MLoader_BLP.name}.{ProcessView.__name__}"),
                 ui_href=url_for(f"{M4MLoader_BLP.name}.{MicroFrontend.__name__}"),
