@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Literal, NamedTuple, Optional
+from typing import Any, List, Literal, NamedTuple, Optional, Dict
 from urllib.parse import urlparse
 
 
@@ -401,3 +401,38 @@ def part_to_entity(entity):
         melodic_line_before,
         melodic_line_after,
     )
+
+
+class TaxonomyEntity(NamedTuple):
+    GRAPH_ID: str
+    type: str
+    ref_target: str  # TODO: serialize to "ref-target"
+    entities: List[str]
+    relations: List[Dict[str, str]]
+
+
+def _get_entities_and_relations_from_item(item):
+    name = item["name"]
+    entities = {name}
+    relations = []
+
+    for child in item["children"]:
+        relations.append({"source": name, "target": child["name"]})
+
+        new_entities, new_relations = _get_entities_and_relations_from_item(child)
+        entities.update(new_entities)
+        relations.extend(new_relations)
+
+    return entities, relations
+
+
+def taxonomy_to_entity(entity):
+    if entity["taxonomy_type"] == "tree":
+        graph_id = entity_to_id(entity).id_
+        tax_type = "tree"
+        ref_target = "entities.json"  # TODO: use correct target
+        entities, relations = _get_entities_and_relations_from_item(entity["items"])
+
+        return TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations)
+    elif entity["taxonomy_type"] == "list":
+        raise NotImplemented  # TODO
