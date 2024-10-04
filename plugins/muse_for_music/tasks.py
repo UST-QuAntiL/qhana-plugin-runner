@@ -15,6 +15,7 @@ import json
 from json import loads as json_load
 from tempfile import SpooledTemporaryFile
 from typing import Optional
+from zipfile import ZipFile
 
 import requests
 from celery.utils.log import get_task_logger
@@ -78,7 +79,7 @@ def import_data(self, db_id: int) -> str:
                 opus_entities, output, "text/csv", attributes=OpusEntity._fields
             )
             STORE.persist_task_result(
-                db_id, output, "opuses.json", "entity/list", "text/csv"
+                db_id, output, "opuses.csv", "entity/list", "text/csv"
             )
 
         people = client.get_people()
@@ -89,7 +90,7 @@ def import_data(self, db_id: int) -> str:
                 person_entities, output, "text/csv", attributes=PersonEntity._fields
             )
             STORE.persist_task_result(
-                db_id, output, "people.json", "entity/list", "text/csv"
+                db_id, output, "people.csv", "entity/list", "text/csv"
             )
 
         parts = client.get_parts()
@@ -100,21 +101,31 @@ def import_data(self, db_id: int) -> str:
                 part_entities, output, "text/csv", attributes=PartEntity._fields
             )
             STORE.persist_task_result(
-                db_id, output, "parts.json", "entity/list", "text/csv"
+                db_id, output, "parts.csv", "entity/list", "text/csv"
             )
 
         # TODO: subparts
-        # TODO: taxonomies
 
-        taxonomies = client.get_taxonomies()
-        first_taxonomy = client.get_taxonomy(taxonomies[0])
-        first_taxonomy_entity = taxonomy_to_entity(first_taxonomy)._asdict()
+        taxonomy_urls = client.get_taxonomies()
+        tmp_zip_file = SpooledTemporaryFile(mode="wb")
+        zip_file = ZipFile(tmp_zip_file, "w")
 
-        with SpooledTemporaryFile(mode="w") as output:
-            output.write(json.dumps(first_taxonomy_entity))
-            STORE.persist_task_result(
-                db_id, output, "taxonomy1.json", "graph/taxonomy", "application/json"
+        for taxonomy_url in taxonomy_urls:
+            taxonomy = client.get_taxonomy(taxonomy_url)
+            taxonomy_entity = taxonomy_to_entity(taxonomy)._asdict()
+            zip_file.writestr(
+                taxonomy_entity["GRAPH_ID"] + ".json", json.dumps(taxonomy_entity)
             )
+
+        zip_file.close()
+
+        STORE.persist_task_result(
+            db_id,
+            tmp_zip_file,
+            "taxonomies.zip",
+            "graph/taxonomy",
+            "application/zip",
+        )
 
     return "Import finished."
 

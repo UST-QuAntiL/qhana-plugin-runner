@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Literal, NamedTuple, Optional, Dict
+from typing import Any, List, Literal, NamedTuple, Optional, Dict, Tuple, Set
 from urllib.parse import urlparse
 
 
@@ -411,7 +411,9 @@ class TaxonomyEntity(NamedTuple):
     relations: List[Dict[str, str]]
 
 
-def _get_entities_and_relations_from_item(item):
+def _parse_tree_node(item) -> Tuple[Set[str], List[Dict[str, str]]]:
+    # TODO: use ID instead of name?
+    # TODO: add "na" entity
     name = item["name"]
     entities = {name}
     relations = []
@@ -419,20 +421,37 @@ def _get_entities_and_relations_from_item(item):
     for child in item["children"]:
         relations.append({"source": name, "target": child["name"]})
 
-        new_entities, new_relations = _get_entities_and_relations_from_item(child)
+        new_entities, new_relations = _parse_tree_node(child)
         entities.update(new_entities)
         relations.extend(new_relations)
 
     return entities, relations
 
 
-def taxonomy_to_entity(entity):
-    if entity["taxonomy_type"] == "tree":
-        graph_id = entity_to_id(entity).id_
-        tax_type = "tree"
-        ref_target = "entities.json"  # TODO: use correct target
-        entities, relations = _get_entities_and_relations_from_item(entity["items"])
+def _parse_list_to_tree(items: List) -> Tuple[Set[str], List[Dict[str, str]]]:
+    # TODO: use ID instead of name?
+    # TODO: add "na" entity
+    entities = {"root"}
+    relations = []
 
-        return TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations)
+    for item in items:
+        entities.add(item["name"])
+        relations.append({"source": "root", "target": item["name"]})
+
+    return entities, relations
+
+
+def taxonomy_to_entity(entity):
+    graph_id = entity_to_id(entity).id_
+    tax_type = "tree"
+    ref_target = "entities.json"  # TODO: use correct target
+
+    if entity["taxonomy_type"] == "tree":
+        entities, relations = _parse_tree_node(entity["items"])
     elif entity["taxonomy_type"] == "list":
-        raise NotImplemented  # TODO
+        # gets handled like a tree with depth 1
+        entities, relations = _parse_list_to_tree(entity["items"])
+    else:
+        raise ValueError(f"Unknown taxonomy type {entity['taxonomy_type']}")
+
+    return TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations)
