@@ -56,7 +56,7 @@ def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
     return parse_toml("\n".join(file_like.readlines()))
 
 
-def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool=False):
+def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = False):
     """Flask app factory."""
 
     instance_folder_env_var = f"{ENV_VAR_PREFIX}_INSTANCE_FOLDER"
