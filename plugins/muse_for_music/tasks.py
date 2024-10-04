@@ -21,6 +21,7 @@ from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
@@ -29,7 +30,15 @@ from requests import session
 from . import M4MLoaderPlugin
 from .muse_for_music_client import Muse4MusicClient
 from .schemas import InputParameters, InputParametersSchema
-from .util import opus_to_entity, person_to_entity, part_to_entity, taxonomy_to_entity
+from .util import (
+    opus_to_entity,
+    person_to_entity,
+    part_to_entity,
+    taxonomy_to_entity,
+    OpusEntity,
+    PersonEntity,
+    PartEntity,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -65,27 +74,33 @@ def import_data(self, db_id: int) -> str:
         opus_entities = [opus_to_entity(o)._asdict() for o in opuses]
 
         with SpooledTemporaryFile(mode="w") as output:
-            output.write(json.dumps(opus_entities))
+            save_entities(
+                opus_entities, output, "text/csv", attributes=OpusEntity._fields
+            )
             STORE.persist_task_result(
-                db_id, output, "opuses.json", "entity/list", "application/json"
+                db_id, output, "opuses.json", "entity/list", "text/csv"
             )
 
         people = client.get_people()
         person_entities = [person_to_entity(p)._asdict() for p in people]
 
         with SpooledTemporaryFile(mode="w") as output:
-            output.write(json.dumps(person_entities))
+            save_entities(
+                person_entities, output, "text/csv", attributes=PersonEntity._fields
+            )
             STORE.persist_task_result(
-                db_id, output, "people.json", "entity/list", "application/json"
+                db_id, output, "people.json", "entity/list", "text/csv"
             )
 
         parts = client.get_parts()
         part_entities = [part_to_entity(p)._asdict() for p in parts]
 
         with SpooledTemporaryFile(mode="w") as output:
-            output.write(json.dumps(part_entities))
+            save_entities(
+                part_entities, output, "text/csv", attributes=PartEntity._fields
+            )
             STORE.persist_task_result(
-                db_id, output, "parts.json", "entity/list", "application/json"
+                db_id, output, "parts.json", "entity/list", "text/csv"
             )
 
         # TODO: subparts
