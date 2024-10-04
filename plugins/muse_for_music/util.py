@@ -406,9 +406,15 @@ def part_to_entity(entity):
 class TaxonomyEntity(NamedTuple):
     GRAPH_ID: str
     type: str
-    ref_target: str  # TODO: serialize to "ref-target"
+    ref_target: str
     entities: List[str]
     relations: List[Dict[str, str]]
+
+    def to_dict(self):
+        dictionary = self._asdict()
+        dictionary["ref-target"] = dictionary.pop("ref_target")
+
+        return dictionary
 
 
 def _parse_tree_node(item) -> Tuple[Set[str], List[Dict[str, str]]]:

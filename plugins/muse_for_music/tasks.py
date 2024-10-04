@@ -112,7 +112,7 @@ def import_data(self, db_id: int) -> str:
 
         for taxonomy_url in taxonomy_urls:
             taxonomy = client.get_taxonomy(taxonomy_url)
-            taxonomy_entity = taxonomy_to_entity(taxonomy)._asdict()
+            taxonomy_entity = taxonomy_to_entity(taxonomy).to_dict()
             zip_file.writestr(
                 taxonomy_entity["GRAPH_ID"] + ".json", json.dumps(taxonomy_entity)
             )
