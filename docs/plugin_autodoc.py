@@ -64,15 +64,17 @@ def get_plugins(base_path):
 
 
 def write_index(doc, plugins):
-    doc.write(":::{Table} Plugin Overview\n")
+    doc.write(":::{list-table} Plugin Overview\n")
+    doc.write(":header-rows: 1\n")
     doc.write(":width: 100%\n")
-    doc.write(":widths: 30 20 10 50\n\n")
-    doc.write("| Plugin | ID | Type | Tags |\n")
-    doc.write("|--------|----|------|------|\n")
+    doc.write(":widths: 30 10 30\n\n")
+    doc.write("* - Plugin\n  - Type\n  - Tags\n")
+    sep = "\n\n    "
     for p in sorted(plugins, key=lambda p: p["name"]):
-        doc.write(
-            f"|[{p['name']} (@{p['version']})](#{p['id']})|{p['identifier']}|{p['type']}|{', '.join(p['tags'])}|\n"
-        )
+        doc.write(f"* - [{p['name']} (@{p['version']})](#{p['id']})\n\n")
+        doc.write(f"    {p['identifier']}\n")
+        doc.write(f"  - {p['type']}\n")
+        doc.write(f"  - {sep.join(p['tags'])}\n")
     doc.write("\n:::\n\n")
 
 
@@ -93,12 +95,12 @@ def write_merged_data(doc, plugins):
             output_datatypes.add(output_def["dataType"])
 
     doc.write("## Overview\n\n")
-    doc.write(f"**Used tags:** {', '.join(f'`{t}`' for t in sorted(tags))}\\\n")
+    doc.write(f"**Used tags:** {', '.join(f'`{t}`' for t in sorted(tags))}\n\n")
     doc.write(
         f"**Input formats:** {', '.join(f'`{f}`' for f in sorted(input_formats))}\\\n"
     )
     doc.write(
-        f"**Output formats:** {', '.join(f'`{f}`' for f in sorted(output_formats))}\\\n"
+        f"**Output formats:** {', '.join(f'`{f}`' for f in sorted(output_formats))}\n\n"
     )
     doc.write(
         f"**Input datatypes:** {', '.join(f'`{f}`' for f in sorted(input_datatypes))}\\\n"
