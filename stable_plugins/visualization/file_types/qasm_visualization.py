@@ -53,7 +53,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 
 _plugin_name = "qasm-visualization"
-__version__ = "v0.3.0"
+__version__ = "v0.3.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -115,7 +115,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["visualization", "qasm"],
+            tags=plugin.tags,
         )
 
 
@@ -250,7 +250,7 @@ class QasmVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Visualizes QASM data."
-    tags = ["visualization"]
+    tags = ["visualization", "qasm"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

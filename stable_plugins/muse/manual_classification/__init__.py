@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "manual-classification"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 MANUAL_CLASSIFICATION_BLP = SecurityBlueprint(
@@ -35,7 +35,7 @@ class ManualClassification(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Manually annotate classes for data sets from MUSE database."
-    tags = ["data-annotation"]
+    tags = ["preprocessing", "data-annotation", "manual"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

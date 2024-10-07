@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "classical-k-means"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -41,7 +41,7 @@ class ClassicalKMeans(QHAnaPluginBase):
         "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
     )
 
-    tags = []
+    tags = ["ML", "clustering"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
