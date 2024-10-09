@@ -12,7 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, List, Literal, NamedTuple, Optional, Dict, Tuple, Set
+from typing import (
+    Annotated,
+    Any,
+    Dict,
+    List,
+    Literal,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Union,
+)
 from urllib.parse import urlparse
 
 
@@ -140,12 +150,12 @@ def person_to_entity(entity):
 class OpusEntity(NamedTuple):
     ID: str
     href: str
-    name: str
+    opus_name: str
     original_name: str
-    composer: str
-    genre: str
-    grundton: str
-    tonalitaet: str
+    composer: Annotated[str, {"ref_target": "people.csv"}]
+    genre: Annotated[str, {"taxonomy": "Gattung"}]
+    grundton: Annotated[str, {"taxonomy": "Grundton"}]
+    tonalitaet: Annotated[str, {"taxonomy": "Tonalitaet"}]
     movements: Optional[int]
     composition_year: Optional[int]
     composition_place: Optional[str]
@@ -182,74 +192,66 @@ def opus_to_entity(entity):
     if entity.keys() < OPUS_FIELDS:
         raise ValueError("Given Entity does not match the shape of opus entities!")
 
-    name = _extract(entity, "name")
-    original_name = _extract(entity, "original_name")
-    composer = _extract(entity, "composer", "entity")
-    genre = _extract(entity, "genre", "taxItem", "Gattung")
-    grundton = _extract(entity, "grundton", "taxItem", "Grundton")
-    tonalitaet = _extract(entity, "tonalitaet", "taxItem", "Tonalitaet")
-    movements = _extract(entity, "movements", "int")
-    composition_year = _extract(entity, "composition_year", "int")
-    composition_place = _extract(entity, "composition_place")
-    notes = _extract(entity, "notes")
-    score_link = _extract(entity, "score_link")
-    first_printed_at = _extract(entity, "first_printed_at")
-    first_printed_in = _extract(entity, "first_printed_in", "int")
-    first_played_at = _extract(entity, "first_played_at")
-    first_played_in = _extract(entity, "first_played_in", "int")
-
     return OpusEntity(
         id_,
         href,
-        name,
-        original_name,
-        composer,
-        genre,
-        grundton,
-        tonalitaet,
-        movements,
-        composition_year,
-        composition_place,
-        notes,
-        score_link,
-        first_printed_at,
-        first_printed_in,
-        first_played_at,
-        first_played_in,
+        _extract(entity, "name"),
+        _extract(entity, "original_name"),
+        _extract(entity, "composer", "entity"),
+        _extract(entity, "genre", "taxItem", "Gattung"),
+        _extract(entity, "grundton", "taxItem", "Grundton"),
+        _extract(entity, "tonalitaet", "taxItem", "Tonalitaet"),
+        _extract(entity, "movements", "int"),
+        _extract(entity, "composition_year", "int"),
+        _extract(entity, "composition_place"),
+        _extract(entity, "notes"),
+        _extract(entity, "score_link"),
+        _extract(entity, "first_printed_at"),
+        _extract(entity, "first_printed_in", "int"),
+        _extract(entity, "first_played_at"),
+        _extract(entity, "first_played_in", "int"),
     )
 
 
 class PartEntity(NamedTuple):
     ID: str
     href: str
-    name: str
-    opus: str
+    part_name: str
+    opus: Annotated[str, {"ref_target": "opuses.csv"}]
     movement: Optional[int]
     length: Optional[int]
     measure_start: Optional[int]
     measure_start_ref_page: Optional[int]
     measure_end: Optional[int]
     measure_end_ref_page: Optional[int]
-    occurence_in_movement: Optional[str]
-    formal_functions: List[str]
-    instrument_quantity_before: Optional[str]
-    instrument_quantity_after: Optional[str]
-    instrument_quality_before: Optional[str]
-    instrument_quality_after: Optional[str]
-    loudness_before: Optional[str]
-    loudness_after: Optional[str]
-    dynamic_trend_before: Optional[str]
-    dynamic_trend_after: Optional[str]
-    tempo_before: Optional[str]
-    tempo_after: Optional[str]
-    tempo_trend_before: Optional[str]
-    tempo_trend_after: Optional[str]
-    ambitus_before: Optional[str]
-    ambitus_after: Optional[str]
-    ambitus_change_before: Optional[str]
-    ambitus_change_after: Optional[str]
-    melodic_line_before: Optional[str]
-    melodic_line_after: Optional[str]
+    occurence_in_movement: Annotated[Optional[str], {"taxonomy": "AuftretenSatz"}]
+    formal_functions: Annotated[List[str], {"taxonomy": "FormaleFunktion"}]
+    instrument_quantity_before: Annotated[
+        Optional[str], {"taxonomy": "InstrumentierungEinbettungQuantitaet"}
+    ]
+    instrument_quantity_after: Annotated[
+        Optional[str], {"taxonomy": "InstrumentierungEinbettungQuantitaet"}
+    ]
+    instrument_quality_before: Annotated[
+        Optional[str], {"taxonomy": "InstrumentierungEinbettungQualitaet"}
+    ]
+    instrument_quality_after: Annotated[
+        Optional[str], {"taxonomy": "InstrumentierungEinbettungQualitaet"}
+    ]
+    loudness_before: Annotated[Optional[str], {"taxonomy": "Lautstaerke"}]
+    loudness_after: Annotated[Optional[str], {"taxonomy": "Lautstaerke"}]
+    dynamic_trend_before: Annotated[Optional[str], {"taxonomy": "LautstaerkeEinbettung"}]
+    dynamic_trend_after: Annotated[Optional[str], {"taxonomy": "LautstaerkeEinbettung"}]
+    tempo_before: Annotated[Optional[str], {"taxonomy": "TempoEinbettung"}]
+    tempo_after: Annotated[Optional[str], {"taxonomy": "TempoEinbettung"}]
+    tempo_trend_before: Annotated[Optional[str], {"taxonomy": "TempoEntwicklung"}]
+    tempo_trend_after: Annotated[Optional[str], {"taxonomy": "TempoEntwicklung"}]
+    ambitus_before: Annotated[Optional[str], {"taxonomy": "AmbitusEinbettung"}]
+    ambitus_after: Annotated[Optional[str], {"taxonomy": "AmbitusEinbettung"}]
+    ambitus_change_before: Annotated[Optional[str], {"taxonomy": "AmbitusEntwicklung"}]
+    ambitus_change_after: Annotated[Optional[str], {"taxonomy": "AmbitusEntwicklung"}]
+    melodic_line_before: Annotated[Optional[str], {"taxonomy": "Melodiebewegung"}]
+    melodic_line_after: Annotated[Optional[str], {"taxonomy": "Melodiebewegung"}]
 
 
 PART_FIELDS = {
@@ -274,132 +276,102 @@ def part_to_entity(entity):
     if entity.keys() < PART_FIELDS:
         raise ValueError("Given Entity does not match the shape of part entities!")
 
-    name = _extract(entity, "name")
-    opus = f'o_{_extract(entity, "opus_id", "int")}'
-    movement = _extract(entity, "movement", "int")
-    length = _extract(entity, "length", "int")
-    measure_start = _extract(entity, "measure_start.measure", "int")
-    measure_start_page = _extract(entity, "measure_start.from_page", "int")
-    measure_end = _extract(entity, "measure_end.measure", "int")
-    measure_end_page = _extract(entity, "measure_end.from_page", "int")
-    occurence_in_movement = _extract(
-        entity, "occurence_in_movement", "taxItem", "AuftretenSatz"
-    )
-    formal_functions = _extract(entity, "formal_functions", "taxItem", "FormaleFunktion")
-
-    instr_quant_before = _extract(
-        entity,
-        "instrumentation_context.instrumentation_quantity_before",
-        "taxItem",
-        "InstrumentierungEinbettungQuantitaet",
-    )
-    instr_quant_after = _extract(
-        entity,
-        "instrumentation_context.instrumentation_quantity_after",
-        "taxItem",
-        "InstrumentierungEinbettungQuantitaet",
-    )
-    instr_qual_before = _extract(
-        entity,
-        "instrumentation_context.instrumentation_quality_before",
-        "taxItem",
-        "InstrumentierungEinbettungQualitaet",
-    )
-    instr_qual_after = _extract(
-        entity,
-        "instrumentation_context.instrumentation_quality_after",
-        "taxItem",
-        "InstrumentierungEinbettungQualitaet",
-    )
-
-    loudness_before = _extract(
-        entity, "dynamic_context.loudness_before", "taxItem", "Lautstaerke"
-    )
-    loudness_after = _extract(
-        entity, "dynamic_context.loudness_after", "taxItem", "Lautstaerke"
-    )
-    dynamic_trend_before = _extract(
-        entity, "dynamic_context.dynamic_trend_before", "taxItem", "LautstaerkeEinbettung"
-    )
-    dynamic_trend_after = _extract(
-        entity, "dynamic_context.dynamic_trend_after", "taxItem", "LautstaerkeEinbettung"
-    )
-
-    tempo_before = _extract(
-        entity, "tempo_context.tempo_context_before", "taxItem", "TempoEinbettung"
-    )
-    tempo_after = _extract(
-        entity, "tempo_context.tempo_context_after", "taxItem", "TempoEinbettung"
-    )
-    tempo_trend_before = _extract(
-        entity, "tempo_context.tempo_trend_before", "taxItem", "TempoEntwicklung"
-    )
-    tempo_trend_after = _extract(
-        entity, "tempo_context.tempo_trend_after", "taxItem", "TempoEntwicklung"
-    )
-
-    ambitus_before = _extract(
-        entity,
-        "dramaturgic_context.ambitus_context_before",
-        "taxItem",
-        "AmbitusEinbettung",
-    )
-    ambitus_after = _extract(
-        entity,
-        "dramaturgic_context.ambitus_context_after",
-        "taxItem",
-        "AmbitusEinbettung",
-    )
-    ambitus_change_before = _extract(
-        entity,
-        "dramaturgic_context.ambitus_change_before",
-        "taxItem",
-        "AmbitusEntwicklung",
-    )
-    ambitus_change_after = _extract(
-        entity,
-        "dramaturgic_context.ambitus_change_after",
-        "taxItem",
-        "AmbitusEntwicklung",
-    )
-    melodic_line_before = _extract(
-        entity, "dramaturgic_context.melodic_line_before", "taxItem", "Melodiebewegung"
-    )
-    melodic_line_after = _extract(
-        entity, "dramaturgic_context.melodic_line_after", "taxItem", "Melodiebewegung"
-    )
-
     return PartEntity(
         id_,
         href,
-        name,
-        opus,
-        movement,
-        length,
-        measure_start,
-        measure_start_page,
-        measure_end,
-        measure_end_page,
-        occurence_in_movement,
-        formal_functions,
-        instr_quant_before,
-        instr_quant_after,
-        instr_qual_before,
-        instr_qual_after,
-        loudness_before,
-        loudness_after,
-        dynamic_trend_before,
-        dynamic_trend_after,
-        tempo_before,
-        tempo_after,
-        tempo_trend_before,
-        tempo_trend_after,
-        ambitus_before,
-        ambitus_after,
-        ambitus_change_before,
-        ambitus_change_after,
-        melodic_line_before,
-        melodic_line_after,
+        _extract(entity, "name"),
+        f'o_{_extract(entity, "opus_id", "int")}',
+        _extract(entity, "movement", "int"),
+        _extract(entity, "length", "int"),
+        _extract(entity, "measure_start.measure", "int"),
+        _extract(entity, "measure_start.from_page", "int"),
+        _extract(entity, "measure_end.measure", "int"),
+        _extract(entity, "measure_end.from_page", "int"),
+        _extract(entity, "occurence_in_movement", "taxItem", "AuftretenSatz"),
+        _extract(entity, "formal_functions", "taxItem", "FormaleFunktion"),
+        _extract(
+            entity,
+            "instrumentation_context.instrumentation_quantity_before",
+            "taxItem",
+            "InstrumentierungEinbettungQuantitaet",
+        ),
+        _extract(
+            entity,
+            "instrumentation_context.instrumentation_quantity_after",
+            "taxItem",
+            "InstrumentierungEinbettungQuantitaet",
+        ),
+        _extract(
+            entity,
+            "instrumentation_context.instrumentation_quality_before",
+            "taxItem",
+            "InstrumentierungEinbettungQualitaet",
+        ),
+        _extract(
+            entity,
+            "instrumentation_context.instrumentation_quality_after",
+            "taxItem",
+            "InstrumentierungEinbettungQualitaet",
+        ),
+        _extract(entity, "dynamic_context.loudness_before", "taxItem", "Lautstaerke"),
+        _extract(entity, "dynamic_context.loudness_after", "taxItem", "Lautstaerke"),
+        _extract(
+            entity,
+            "dynamic_context.dynamic_trend_before",
+            "taxItem",
+            "LautstaerkeEinbettung",
+        ),
+        _extract(
+            entity,
+            "dynamic_context.dynamic_trend_after",
+            "taxItem",
+            "LautstaerkeEinbettung",
+        ),
+        _extract(
+            entity, "tempo_context.tempo_context_before", "taxItem", "TempoEinbettung"
+        ),
+        _extract(
+            entity, "tempo_context.tempo_context_after", "taxItem", "TempoEinbettung"
+        ),
+        _extract(
+            entity, "tempo_context.tempo_trend_before", "taxItem", "TempoEntwicklung"
+        ),
+        _extract(
+            entity, "tempo_context.tempo_trend_after", "taxItem", "TempoEntwicklung"
+        ),
+        _extract(
+            entity,
+            "dramaturgic_context.ambitus_context_before",
+            "taxItem",
+            "AmbitusEinbettung",
+        ),
+        _extract(
+            entity,
+            "dramaturgic_context.ambitus_context_after",
+            "taxItem",
+            "AmbitusEinbettung",
+        ),
+        _extract(
+            entity,
+            "dramaturgic_context.ambitus_change_before",
+            "taxItem",
+            "AmbitusEntwicklung",
+        ),
+        _extract(
+            entity,
+            "dramaturgic_context.ambitus_change_after",
+            "taxItem",
+            "AmbitusEntwicklung",
+        ),
+        _extract(
+            entity,
+            "dramaturgic_context.melodic_line_before",
+            "taxItem",
+            "Melodiebewegung",
+        ),
+        _extract(
+            entity, "dramaturgic_context.melodic_line_after", "taxItem", "Melodiebewegung"
+        ),
     )
 
 
@@ -407,7 +379,7 @@ class TaxonomyEntity(NamedTuple):
     GRAPH_ID: str
     type: str
     ref_target: str
-    entities: List[str]
+    entities: List[Union[str, dict]]
     relations: List[Dict[str, str]]
 
     def to_dict(self):
@@ -417,32 +389,40 @@ class TaxonomyEntity(NamedTuple):
         return dictionary
 
 
-def _parse_tree_node(item) -> Tuple[Set[str], List[Dict[str, str]]]:
-    # TODO: use ID instead of name?
+def _parse_tree_node(item, tax_id: str) -> Tuple[List[dict], List[Dict[str, str]]]:
     # TODO: add "na" entity
+    id_ = f'{tax_id}_{item["id"]}'
     name = item["name"]
-    entities = {name}
+    entities = [
+        {"ID": id_, "tax_item_name": name, "description": item.get("description", "")}
+    ]
     relations = []
 
     for child in item["children"]:
-        relations.append({"source": name, "target": child["name"]})
+        relations.append({"source": id_, "target": f'{tax_id}_{child["id"]}'})
 
-        new_entities, new_relations = _parse_tree_node(child)
-        entities.update(new_entities)
+        new_entities, new_relations = _parse_tree_node(child, tax_id)
+        entities.extend(new_entities)
         relations.extend(new_relations)
 
     return entities, relations
 
 
-def _parse_list_to_tree(items: List) -> Tuple[Set[str], List[Dict[str, str]]]:
-    # TODO: use ID instead of name?
+def _parse_list_to_tree(
+    items: List, tax_id: str
+) -> Tuple[List[dict], List[Dict[str, str]]]:
     # TODO: add "na" entity
-    entities = {"root"}
+    root_id = f"{tax_id}_root"
+    entities = [{"ID": root_id, "tax_item_name": "root", "description": ""}]
     relations = []
 
     for item in items:
-        entities.add(item["name"])
-        relations.append({"source": "root", "target": item["name"]})
+        id_ = f'{tax_id}_{item["id"]}'
+        name = item["name"]
+        entities.append(
+            {"ID": id_, "tax_item_name": name, "description": item.get("description", "")}
+        )
+        relations.append({"source": root_id, "target": id_})
 
     return entities, relations
 
@@ -452,11 +432,13 @@ def taxonomy_to_entity(entity):
     tax_type = "tree"
     ref_target = "entities.json"  # TODO: use correct target
 
+    tax_id = entity_to_id(entity).id_
+
     if entity["taxonomy_type"] == "tree":
-        entities, relations = _parse_tree_node(entity["items"])
+        entities, relations = _parse_tree_node(entity["items"], tax_id)
     elif entity["taxonomy_type"] == "list":
         # gets handled like a tree with depth 1
-        entities, relations = _parse_list_to_tree(entity["items"])
+        entities, relations = _parse_list_to_tree(entity["items"], tax_id)
     else:
         raise ValueError(f"Unknown taxonomy type {entity['taxonomy_type']}")
 
