@@ -143,7 +143,7 @@ class MicroFrontend(MethodView):
 
     @VIS_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the cluster scatter visualization plugin."
+        description="Micro frontend of the cluster scatter visualization plugin.",
     )
     @VIS_BLP.arguments(
         CSInputParametersSchema(
@@ -159,7 +159,7 @@ class MicroFrontend(MethodView):
 
     @VIS_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the cluster scatter visualization plugin."
+        description="Micro frontend of the cluster scatter visualization plugin.",
     )
     @VIS_BLP.arguments(
         CSInputParametersSchema(
