@@ -66,6 +66,7 @@ def visualization_task(self, db_id: int) -> str:
 
     pt_x_list = [0 for _ in range(0, len(entity_points))]
     pt_y_list = [0 for _ in range(0, len(entity_points))]
+    pt_z_list = [0 for _ in range(0, len(entity_points))]
     label_list = [0 for _ in range(0, len(entity_points))]
     id_list = [x for x in range(0, len(entity_points))]
     size_list = [10 for _ in range(0, len(entity_points))]
@@ -75,6 +76,8 @@ def visualization_task(self, db_id: int) -> str:
         idx = int(pt["ID"])
         pt_x_list[idx] = pt["dim0"]
         pt_y_list[idx] = pt["dim1"]
+        if do_3d:
+            pt_z_list[idx] = pt["dim2"]
 
     for cl in clusters:
         label_list[int(cl["ID"])] = cl["label"]
@@ -85,20 +88,33 @@ def visualization_task(self, db_id: int) -> str:
             "ID": [f"Point {x}" for x in id_list],
             "x": pt_x_list,
             "y": pt_y_list,
+            "z": pt_z_list,
             "Cluster ID": [str(x) for x in label_list],
             "size": size_list,
         }
     )
 
-    fig = px.scatter(
-        df,
-        x="x",
-        y="y",
-        size="size",
-        hover_name="ID",
-        color="Cluster ID",
-        hover_data={"size": False},
-    )
+    if not do_3d:
+        fig = px.scatter(
+            df,
+            x="x",
+            y="y",
+            size="size",
+            hover_name="ID",
+            color="Cluster ID",
+            hover_data={"size": False},
+        )
+    else:
+        fig = px.scatter_3d(
+            df,
+            x="x",
+            y="y",
+            z="z",
+            size="size",
+            hover_name="ID",
+            color="Cluster ID",
+            hover_data={"size": False},
+        )
 
     if do_svm:
         cluster_list = [[] for _ in range(0, max_cluster + 1)]
