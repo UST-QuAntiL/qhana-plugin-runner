@@ -1,4 +1,4 @@
-# Copyright 2023 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,38 +17,34 @@ from typing import Optional
 from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from pathlib import Path
+from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
-
-_plugin_name = "data-creator"
-__version__ = "v0.2.2"
+_plugin_name = "zxcalculus"
+__version__ = "v0.0.4"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-DataCreator_BLP = SecurityBlueprint(
+VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Data Creator plugin API",
-    template_folder="templates",
+    description="ZXCalculus API.",
 )
 
 
-class DataCreator(QHAnaPluginBase):
+class ZXCalculus(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "A plugin to create datasets."
-
-    tags = []
+    description = "Generates a random circuit, visualizes and simplifies it."
+    tags = ["zxcalculus", "circuit"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return DataCreator_BLP
+        return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "numpy~=1.13"
+        return "plotly~=5.18.0\npyzx~=0.8.0\nmpld3~=0.5.10"
 
 
 try:

@@ -39,6 +39,7 @@ class InputParameters:
     num_test_points: int
     turns: float = None
     noise: float = None
+    centers: int = None
 
     def __str__(self):
         return str(self.__dict__.copy())
@@ -91,6 +92,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Turns",
             "description": "Determines the turns of the spiral dataset",
             "input_type": "text",
+        },
+    )
+    centers = ma.fields.Integer(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "No. Centers",
+            "description": "Determines the number of Blobs",
+            "input_type": "number",
         },
     )
 
