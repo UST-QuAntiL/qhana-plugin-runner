@@ -56,10 +56,10 @@ def visualization_task(self, db_id: int) -> str:
     simplify = input_params.simplify
 
     circuit = zx.generate.cliffordT(qubits, depth)
-    zx.settings.drawing_backend = 'd3'
+    zx.settings.drawing_backend = "d3"
     fig = zx.draw(circuit)
     html = mpld3.fig_to_html(fig)
-    if simplify: 
+    if simplify:
         zx.simplify.full_reduce(circuit)
         circuit.normalize()
         fig = zx.draw(circuit)

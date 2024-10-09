@@ -60,7 +60,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Simplify",
             "description": "Simplify the generated circuit.",
             "input_type": "checkbox",
-        }
+        },
     )
 
     @post_load

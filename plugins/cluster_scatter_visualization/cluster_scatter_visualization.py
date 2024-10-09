@@ -123,7 +123,7 @@ class PluginsView(MethodView):
                         content_type=["application/json"],
                         required=True,
                         parameter="clustersUrl",
-                    )
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
@@ -142,7 +142,8 @@ class MicroFrontend(MethodView):
     """Micro frontend for the cluster scatter visualization plugin."""
 
     @VIS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the cluster scatter visualization plugin."
+        HTTPStatus.OK,
+        description="Micro frontend of the cluster scatter visualization plugin."
     )
     @VIS_BLP.arguments(
         CSInputParametersSchema(
@@ -157,7 +158,8 @@ class MicroFrontend(MethodView):
         return self.render(request.args, errors, False)
 
     @VIS_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the cluster scatter visualization plugin."
+        HTTPStatus.OK,
+        description="Micro frontend of the cluster scatter visualization plugin."
     )
     @VIS_BLP.arguments(
         CSInputParametersSchema(

@@ -79,15 +79,17 @@ def checkerboard(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         rand_points[i] = x, y
     return rand_points, labels
 
+
 def blobs(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the Blobs dataset."""
     x, y = make_blobs(
         n_samples=n_points,
         centers=centers,
         n_features=2,
-        )
+    )
 
     return x, y
+
 
 def checkerboard_3d(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the 3D checkerboard dataset."""
@@ -105,12 +107,12 @@ def checkerboard_3d(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     return rand_points, labels
 
 
-def blobs_3d(n_points: int, centers:int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+def blobs_3d(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the 3D Blobs dataset."""
     x, y = make_blobs(
         n_samples=n_points,
         centers=centers,
         n_features=3,
-        )
+    )
 
     return x, y
