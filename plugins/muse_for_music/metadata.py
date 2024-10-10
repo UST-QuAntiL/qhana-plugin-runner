@@ -39,6 +39,8 @@ def get_attribute_metadata(entity_class) -> List[AttributeMetadata]:
                 multiple = True
                 annotation = getattr(annotation, "__args__", [str])[0]
 
+        if issubclass(annotation, bool):
+            attr_type = "boolean"
         if issubclass(annotation, str):
             attr_type = "string"
         if issubclass(annotation, int):

@@ -77,6 +77,13 @@ def entity_to_id(entity) -> EntityId:
     return EntityId(identifier, href)
 
 
+def tax_item_to_id(item, tax_id: str):
+    id_ = item["id"]
+    if item.get("name") == "na":
+        id_ = "na"
+    return f"{tax_id}_{id_}"
+
+
 def _extract(
     obj,
     attr: str,
@@ -109,11 +116,12 @@ def _extract(
     if type == "taxItem":
         # TODO: handle not applicable values???
         if isinstance(value, (tuple, list)):
-            return [f't_{taxonomy}_{v["id"]}' for v in value if v["id"] >= 0]
+            tax_id = f"t_{taxonomy}"
+            return [tax_item_to_id(v, tax_id) for v in value if v["id"] >= 0]
         if value:
             if value["id"] < 0:
                 return None
-            return f't_{taxonomy}_{value["id"]}'
+            return tax_item_to_id(value, f"t_{taxonomy}")
         return None
 
 
@@ -375,6 +383,46 @@ def part_to_entity(entity):
     )
 
 
+class SubpartEntity(NamedTuple):
+    ID: str
+    href: str
+    subpart_label: str
+    part: str
+    opus: str
+    is_tutti: bool
+
+
+SUBPART_FIELDS = {
+    "part_id",
+    "label",
+    "is_tutti",
+    "occurence_in_part",
+    "share_of_part",
+    "instrumentation",
+    "tempo",
+    "dynamic",
+    "harmonics",
+}
+
+
+def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
+    id_, href = entity_to_id(entity)
+
+    if entity.keys() < SUBPART_FIELDS:
+        raise ValueError("Given Entity does not match the shape of subpart entities!")
+
+    part_id = f'p_{_extract(entity, "part_id", "int")}'
+
+    return SubpartEntity(
+        id_,
+        href,
+        _extract(entity, "label"),
+        part_id,
+        part_id_to_opus_id[part_id],
+        entity["is_tutti"],
+    )
+
+
 class TaxonomyEntity(NamedTuple):
     GRAPH_ID: str
     type: str
@@ -391,7 +439,7 @@ class TaxonomyEntity(NamedTuple):
 
 def _parse_tree_node(item, tax_id: str) -> Tuple[List[dict], List[Dict[str, str]]]:
     # TODO: add "na" entity
-    id_ = f'{tax_id}_{item["id"]}'
+    id_ = tax_item_to_id(item, tax_id)
     name = item["name"]
     entities = [
         {"ID": id_, "tax_item_name": name, "description": item.get("description", "")}
@@ -399,7 +447,7 @@ def _parse_tree_node(item, tax_id: str) -> Tuple[List[dict], List[Dict[str, str]
     relations = []
 
     for child in item["children"]:
-        relations.append({"source": id_, "target": f'{tax_id}_{child["id"]}'})
+        relations.append({"source": id_, "target": tax_item_to_id(child, tax_id)})
 
         new_entities, new_relations = _parse_tree_node(child, tax_id)
         entities.extend(new_entities)
@@ -417,7 +465,7 @@ def _parse_list_to_tree(
     relations = []
 
     for item in items:
-        id_ = f'{tax_id}_{item["id"]}'
+        id_ = tax_item_to_id(item, tax_id)
         name = item["name"]
         entities.append(
             {"ID": id_, "tax_item_name": name, "description": item.get("description", "")}
