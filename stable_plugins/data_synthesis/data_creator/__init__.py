@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 _plugin_name = "data-creator"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -39,7 +39,7 @@ class DataCreator(QHAnaPluginBase):
     version = __version__
     description = "A plugin to create datasets."
 
-    tags = []
+    tags = ["data-loading", "data-synthesizing"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

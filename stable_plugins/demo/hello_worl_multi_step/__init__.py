@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "hello-world-multi-step"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -36,7 +36,7 @@ class HelloWorldMultiStep(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Tests the connection of all components by printing some text. Also tests the ability to execute multi-step plugins."
-    tags = ["hello-world", "multistep"]
+    tags = ["hello-world", "demo", "multistep"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

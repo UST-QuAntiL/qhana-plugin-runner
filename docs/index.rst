@@ -20,7 +20,7 @@ Welcome to QHAna-Plugin-Runner's documentation!
     plugin-types/index
     data-formats/index
     cli
-    plugin-overview
+    all-plugins
     adr/index
     source/qhana_plugin_runner
     changelog

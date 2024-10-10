@@ -12,6 +12,8 @@ class LoadParametersSchema(FrontendFormBaseSchema):
     input_file_url = FileUrl(
         required=True,
         allow_none=False,
+        data_content_types=["text/csv", "application/json", "application/X-lines+json"],
+        data_input_type="entity",
         metadata={
             "label": "Entities URL",
             "description": "URL to a json file with a list of entities.",

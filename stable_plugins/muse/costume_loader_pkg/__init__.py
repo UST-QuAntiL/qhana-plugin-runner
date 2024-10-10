@@ -19,7 +19,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "costume-loader"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -35,7 +35,7 @@ class CostumeLoader(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Loads all the costumes or base elements from the MUSE database."
-    tags = ["data-loading"]
+    tags = ["data-loading", "MUSE"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

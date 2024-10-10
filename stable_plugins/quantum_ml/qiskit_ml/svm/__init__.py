@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "svm"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -56,7 +56,7 @@ class SVM(QHAnaPluginBase):
         "[3] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
     )
 
-    tags = ["quantum", "classical", "supervised"]
+    tags = ["QML", "ML", "quantum", "classical", "classification", "supervised-learning"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

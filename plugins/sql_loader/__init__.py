@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "sql-loader"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -38,7 +38,7 @@ class SQLLoaderPlugin(QHAnaPluginBase):
     version = __version__
     description = "Allows to manage sql databases and use them as a source."
 
-    tags = ["sql", "mysql", "mariadb", "postgresql"]
+    tags = ["data-loading", "sql", "mysql", "mariadb", "postgresql"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

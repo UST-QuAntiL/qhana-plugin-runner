@@ -99,6 +99,16 @@ with api_spec_path.open() as api_spec:
     api_title = info.get("title")
     version = info.get("version")
 
+# -- update plugin documentation ---------------------------------------------
+
+plugin_doc_command = ["python", "docs/plugin_autodoc.py"]
+
+if not ON_READTHEDOCS:
+    plugin_doc_command = ["poetry", "run"] + plugin_doc_command
+
+subprocess.run(plugin_doc_command, cwd=project_root, env=flask_environ)
+
+
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be

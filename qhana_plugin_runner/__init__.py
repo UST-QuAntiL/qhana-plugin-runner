@@ -56,7 +56,7 @@ def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
     return parse_toml("\n".join(file_like.readlines()))
 
 
-def create_app(test_config: Optional[Dict[str, Any]] = None):
+def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = False):
     """Flask app factory."""
 
     instance_folder_env_var = f"{ENV_VAR_PREFIX}_INSTANCE_FOLDER"
@@ -176,7 +176,8 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
             default_logging_handler.setFormatter(formatter)
             default_logging_handler.setLevel(log_severity)
             root = getLogger()
-            root.addHandler(default_logging_handler)
+            if not silent_log:
+                root.addHandler(default_logging_handler)
             app.logger.removeHandler(default_logging_handler)
 
     logger: Logger = app.logger

@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "vqc"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -47,7 +47,7 @@ class VQC(QHAnaPluginBase):
         "[0] [Qiskit documentation, Variational Quantum Classifier](https://qiskit.org/documentation/machine-learning/stubs/qiskit_machine_learning.algorithms.VQC.html#qiskit_machine_learning.algorithms.VQC)\n"
         "[1] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)"
     )
-    tags = ["classification", "quantum"]
+    tags = ["QML", "classification", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

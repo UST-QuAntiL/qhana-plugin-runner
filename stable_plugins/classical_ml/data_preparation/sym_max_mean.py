@@ -58,7 +58,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sym-max-mean"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -229,7 +229,7 @@ class SymMaxMean(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Compares attributes and returns similarity values."
-    tags = ["attribute-similarity-calculation"]
+    tags = ["preprocessing", "similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

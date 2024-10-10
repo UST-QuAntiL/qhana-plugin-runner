@@ -49,7 +49,7 @@ class PluginsView(MethodView):
                 data_input=[],
                 data_output=[],
             ),
-            tags=["workflow", "bpmn", "camunda-engine"],
+            tags=DeployWorkflow.instance.tags,
         )
 
 

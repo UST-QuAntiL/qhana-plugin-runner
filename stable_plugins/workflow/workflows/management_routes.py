@@ -99,7 +99,7 @@ class WfManagementView(MethodView):
                 data_input=[],
                 data_output=[],
             ),
-            tags=["workflow", "bpmn", "camunda-engine"],
+            tags=WorkflowManagement.instance.tags,
         )
 
 
