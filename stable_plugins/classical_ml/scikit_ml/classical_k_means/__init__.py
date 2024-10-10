@@ -41,7 +41,7 @@ class ClassicalKMeans(QHAnaPluginBase):
         "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
     )
 
-    tags = ["ML", "clustering"]
+    tags = ["ML", "clustering", "classical"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
