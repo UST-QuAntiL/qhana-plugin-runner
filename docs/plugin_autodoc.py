@@ -123,7 +123,7 @@ def write_plugin(doc, p):
         doc.write("|-----------|--------------| :------: |\n")
         for data_input in p["input"]:
             doc.write(
-                f"|{data_input['dataType']}|{', '.join(data_input['contentType'])}|{'✓' if data_input['required'] else '🗙'}|\n"
+                f"|{data_input['dataType']}|{', '.join(data_input['contentType'])}|{'✓' if data_input['required'] else '╳'}|\n"
             )
         doc.write("\n\n")
     if p["output"]:
@@ -132,7 +132,7 @@ def write_plugin(doc, p):
         doc.write("|-----------|--------------| :----: |\n")
         for data_output in p["output"]:
             doc.write(
-                f"|{data_output['dataType']}|{', '.join(data_output['contentType'])}|{'✓' if data_output['required'] else '🗙'}|\n"
+                f"|{data_output['dataType']}|{', '.join(data_output['contentType'])}|{'✓' if data_output['required'] else '╳'}|\n"
             )
         doc.write("\n\n")
 

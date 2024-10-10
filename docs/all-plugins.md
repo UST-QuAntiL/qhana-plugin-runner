@@ -21,12 +21,16 @@
   - processing
   - ML
 
+    classical
+
     clustering
 * - [Classical k Medoids (@v0.1.1)](#classical-k-medoids)
 
     classical-k-medoids@v0-1-1
   - processing
   - ML
+
+    classical
 
     clustering
 * - [Cluster Visualization (@v0.3.0)](#cluster-visualization)
@@ -120,6 +124,8 @@
     optics@v0-1-1
   - processing
   - ML
+
+    classical
 
     clustering
 * - [Optimizer plugin (@v1.0.1)](#optimizer)
@@ -473,7 +479,7 @@ Aggregates attribute distances to entity distances.
 (classical-k-means)=
 ### Classical k Means (@v0.1.1)
 
-processing – ML, clustering\
+processing – ML, classical, clustering\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/classical_k_means/__init__.py`
 
 Clusters data with classical k means algorithm.
@@ -491,13 +497,13 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
 
 
 (classical-k-medoids)=
 ### Classical k Medoids (@v0.1.1)
 
-processing – ML, clustering\
+processing – ML, classical, clustering\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/classical_k_medoids/__init__.py`
 
 Clusters data with classical k medoids algorithm.
@@ -515,7 +521,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
 
 
 (cluster-visualization)=
@@ -613,7 +619,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
 |entity/vector|application/json, text/csv|✓|
-|entity/vector|application/json, text/csv|🗙|
+|entity/vector|application/json, text/csv|╳|
 
 
 **Outputs:**
@@ -667,7 +673,7 @@ Clusters data with the max cut algorithm
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
 
 
 (mds)=
@@ -719,7 +725,7 @@ Converts Data to One-Hot Encodings
 (optics)=
 ### Optics (@v0.1.1)
 
-processing – ML, clustering\
+processing – ML, classical, clustering\
 *Path:* {file}`stable_plugins/classical_ml/scikit_ml/optics-clustering/__init__.py`
 
 Clusters data with the OPTICS algorithm. The plugin uses the implementation by scikit-learn v1.1. More information about the algorithm can be found [here](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html#sklearn.cluster.OPTICS).
@@ -737,7 +743,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
 
 
 (optimizer)=
@@ -800,7 +806,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|custom/plot|text/html|🗙|
+|custom/plot|text/html|╳|
 |custom/pca-metadata|application/json|✓|
 |entity/vector|text/csv|✓|
 
@@ -818,7 +824,7 @@ Allows execution of quantum circuits using IBM Quantum backends.
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
 |executable/circuit|text/x-qasm|✓|
-|provenance/execution-options|text/csv, application/json, application/X-lines+json|🗙|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
 
 
 **Outputs:**
@@ -873,7 +879,7 @@ Labels data with the help of a quantum convolutional neural network
 |entity/shaped_vector|application/json, text/csv|✓|
 |entity/label|application/json, text/csv|✓|
 |entity/shaped_vector|application/json, text/csv|✓|
-|entity/label|application/json, text/csv|🗙|
+|entity/label|application/json, text/csv|╳|
 
 
 **Outputs:**
@@ -930,7 +936,7 @@ Simple QNN with variable number of variational quantum layers
 |entity/vector|application/json, text/csv|✓|
 |entity/label|application/json, text/csv|✓|
 |entity/vector|application/json, text/csv|✓|
-|entity/label|application/json, text/csv|🗙|
+|entity/label|application/json, text/csv|╳|
 
 
 **Outputs:**
@@ -938,10 +944,10 @@ Simple QNN with variable number of variational quantum layers
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
+|plot/*|text/html|╳|
 |qnn-weights/*|application/json|✓|
-|representative-circuit/*|application/qasm|🗙|
+|representative-circuit/*|application/qasm|╳|
 
 
 (quantum-parzen-window)=
@@ -964,7 +970,7 @@ Source:
 |entity/vector|application/json, text/csv|✓|
 |entity/label|application/json, text/csv|✓|
 |entity/vector|application/json, text/csv|✓|
-|entity/label|application/json, text/csv|🗙|
+|entity/label|application/json, text/csv|╳|
 
 
 **Outputs:**
@@ -972,8 +978,8 @@ Source:
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
+|plot/*|text/html|╳|
 |representative-circuit/*|application/qasm|✓|
 
 
@@ -997,7 +1003,7 @@ Source:
 |entity/vector|application/json, text/csv|✓|
 |entity/label|application/json, text/csv|✓|
 |entity/vector|application/json, text/csv|✓|
-|entity/label|application/json, text/csv|🗙|
+|entity/label|application/json, text/csv|╳|
 
 
 **Outputs:**
@@ -1005,8 +1011,8 @@ Source:
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
+|plot/*|text/html|╳|
 |representative-circuit/*|application/qasm|✓|
 |vqc-metadata/*|application/json|✓|
 
@@ -1033,7 +1039,7 @@ Source:
 |entity/vector|application/json, text/csv|✓|
 |entity/label|application/json, text/csv|✓|
 |entity/vector|application/json, text/csv|✓|
-|entity/label|application/json, text/csv|🗙|
+|entity/label|application/json, text/csv|╳|
 
 
 **Outputs:**
@@ -1041,8 +1047,8 @@ Source:
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
+|plot/*|text/html|╳|
 |representative-circuit/*|application/qasm|✓|
 
 
@@ -1116,12 +1122,12 @@ Source:
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|text/csv, application/json|🗙|
+|entity/vector|text/csv, application/json|╳|
 |entity/label|text/csv, application/json|✓|
-|entity/vector|text/csv, application/json|🗙|
-|entity/label|text/csv, application/json|🗙|
-|entity/matrix|text/csv, application/json|🗙|
-|entity/matrix|text/csv, application/json|🗙|
+|entity/vector|text/csv, application/json|╳|
+|entity/label|text/csv, application/json|╳|
+|entity/matrix|text/csv, application/json|╳|
+|entity/matrix|text/csv, application/json|╳|
 
 
 **Outputs:**
@@ -1129,8 +1135,8 @@ Source:
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/label|application/json|✓|
-|plot/*|text/html|🗙|
-|plot/*|text/html|🗙|
+|plot/*|text/html|╳|
+|plot/*|text/html|╳|
 |entity/vector|application/json|✓|
 
 
@@ -1466,7 +1472,7 @@ Allows execution of quantum circuits using a simulator packaged with qiskit.
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
 |executable/circuit|text/x-qasm|✓|
-|provenance/execution-options|text/csv, application/json, application/X-lines+json|🗙|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
 
 
 **Outputs:**
@@ -1474,7 +1480,7 @@ Allows execution of quantum circuits using a simulator packaged with qiskit.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/vector|application/json|✓|
-|entity/vector|application/json|🗙|
+|entity/vector|application/json|╳|
 |provenance/trace|application/json|✓|
 |provenance/execution-options|application/json|✓|
 
