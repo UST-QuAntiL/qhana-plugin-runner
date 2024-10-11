@@ -52,13 +52,13 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url, retrieve_filename
+from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sym-max-mean"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -74,7 +74,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types="application/json",
+        data_content_types=["text/csv", "application/json"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -290,7 +290,14 @@ def calculation_task(self, db_id: int) -> str:
     # load data from file
 
     with open_url(entities_url) as entities_data:
-        entities = list(load_entities(entities_data, "application/json"))
+        mimetype = get_mimetype(entities_data)
+        entities = []
+
+        for ent in load_entities(entities_data, mimetype):
+            if hasattr(ent, "_asdict"):  # is NamedTuple
+                entities.append(ent._asdict())
+            else:
+                entities.append(ent)
 
     element_similarities = {}
 
