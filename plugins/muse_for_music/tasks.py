@@ -39,6 +39,8 @@ from .util import (
     OpusEntity,
     PersonEntity,
     PartEntity,
+    get_attribute_metadata,
+    AttributeMetadata,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -126,6 +128,24 @@ def import_data(self, db_id: int) -> str:
             "graph/taxonomy",
             "application/zip",
         )
+
+        metadata = get_attribute_metadata()
+        metadata_entities = [metadata._asdict() for metadata in metadata]
+
+        with SpooledTemporaryFile(mode="w") as output:
+            save_entities(
+                metadata_entities,
+                output,
+                "application/json",
+                attributes=AttributeMetadata._fields,
+            )
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "attribute_metadata.json",
+                "entity/attribute-metadata",
+                "application/json",
+            )
 
     return "Import finished."
 

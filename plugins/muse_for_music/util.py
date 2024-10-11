@@ -22,6 +22,9 @@ from typing import (
     Optional,
     Tuple,
     Union,
+    get_type_hints,
+    get_origin,
+    get_args,
 )
 from urllib.parse import urlparse
 
@@ -31,7 +34,7 @@ class EntityId(NamedTuple):
     href: str
 
 
-def entity_to_id(entity) -> EntityId:
+def entity_to_id(entity: Dict) -> EntityId:
     href: Optional[str] = None
 
     match entity:
@@ -278,7 +281,7 @@ PART_FIELDS = {
 }
 
 
-def part_to_entity(entity):
+def part_to_entity(entity: Dict):
     id_, href = entity_to_id(entity)
 
     if entity.keys() < PART_FIELDS:
@@ -475,7 +478,9 @@ def _parse_list_to_tree(
     return entities, relations
 
 
-def taxonomy_to_entity(entity):
+def taxonomy_to_entity(
+    entity: Dict,
+) -> TaxonomyEntity:
     graph_id = entity_to_id(entity).id_
     tax_type = "tree"
     ref_target = "entities.json"  # TODO: use correct target
@@ -491,3 +496,110 @@ def taxonomy_to_entity(entity):
         raise ValueError(f"Unknown taxonomy type {entity['taxonomy_type']}")
 
     return TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations)
+
+
+class AttributeMetadata(NamedTuple):
+    ID: str
+    title: str
+    description: str
+    type: str
+    multiple: bool
+    ordered: bool
+    separator: str
+    taxonomy_name: str | None
+    refTarget: str | None
+    schema: str | None
+
+
+def _unwrap_optional(type_hint: type) -> type:
+    if get_origin(type_hint) == Union:
+        return get_args(type_hint)[0]
+
+    return type_hint
+
+
+def _entity_class_to_attribute_metadata(entity_class: type) -> List[AttributeMetadata]:
+    type_hints = get_type_hints(entity_class, include_extras=True)
+    metadata = []
+
+    for attribute, type_hint in type_hints.items():
+        if attribute in ("ID", "href"):
+            continue
+
+        type_name = None
+        ref_target = None
+        taxonomy = None
+        multiple = False
+
+        if get_origin(type_hint) == Annotated:
+            type_meta = type_hint.__metadata__[0]
+            type_hint = get_args(type_hint)[0]
+
+            if "ref_target" in type_meta:
+                ref_target = type_meta["ref_target"]
+                type_name = "ref"
+
+            if "taxonomy" in type_meta:
+                taxonomy = type_meta["taxonomy"]
+                type_name = "ref"
+
+        type_hint = _unwrap_optional(type_hint)
+
+        if get_origin(type_hint) == List or get_origin(type_hint) == list:
+            multiple = True
+            type_hint = get_args(type_hint)[0]
+
+        if type_name != "ref":
+            if type_hint == str:
+                type_name = "string"
+
+            if type_hint == int:
+                type_name = "integer"
+
+            if type_hint == float:
+                type_name = "number"
+
+            if type_hint == bool:
+                type_name = "boolean"
+
+        metadata.append(
+            AttributeMetadata(
+                attribute,
+                attribute,
+                "",
+                type_name,
+                multiple,
+                False,
+                ";",
+                taxonomy,
+                f"taxonomies.zip:t_{taxonomy}.json" if taxonomy else ref_target,
+                None,
+            )
+        )
+
+    return metadata
+
+
+def get_attribute_metadata() -> List[AttributeMetadata]:
+    metadata = []
+
+    metadata.extend(_entity_class_to_attribute_metadata(PersonEntity))
+    metadata.extend(_entity_class_to_attribute_metadata(OpusEntity))
+    metadata.extend(_entity_class_to_attribute_metadata(PartEntity))
+    metadata.extend(_entity_class_to_attribute_metadata(SubpartEntity))
+
+    deduplicated_metadata = {}
+
+    for meta in metadata:
+        deduplicated_metadata[meta.ID] = meta
+
+    return list(deduplicated_metadata.values())
+
+
+def _main():
+    for meta in _entity_class_to_attribute_metadata(PartEntity):
+        print(meta)
+
+
+if __name__ == "__main__":
+    _main()
