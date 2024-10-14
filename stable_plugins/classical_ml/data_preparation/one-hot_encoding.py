@@ -97,8 +97,8 @@ Improvements:
 """
 
 
-_plugin_name = "one-hot encoding"
-__version__ = "v0.2.0"
+_plugin_name = "one-hot-encoding"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -307,8 +307,8 @@ class CalcView(MethodView):
 class OneHot(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Converts Muse Data to One-Hot Encodings"
-    tags = ["encoding", "one-hot"]
+    description = "Converts Data to One-Hot Encodings"
+    tags = ["preprocessing", "encoding", "one-hot-encoding"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

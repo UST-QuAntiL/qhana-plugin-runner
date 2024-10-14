@@ -133,7 +133,7 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=["neural-network", "machine-learning"],
+            tags=QNN.instance.tags,
         )
 
 

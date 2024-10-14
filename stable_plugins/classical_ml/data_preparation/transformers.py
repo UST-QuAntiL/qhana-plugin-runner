@@ -56,7 +56,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.requests import retrieve_filename
 
 _plugin_name = "sim-to-dist-transformers"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -254,7 +254,7 @@ class Transformers(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Transforms similarities to distances."
-    tags = ["sim-to-dist"]
+    tags = ["preprocessing", "similarity-calculation", "distance-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
