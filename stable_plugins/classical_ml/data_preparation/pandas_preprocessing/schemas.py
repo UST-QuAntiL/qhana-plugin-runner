@@ -28,6 +28,7 @@ from .backend.pandas_preprocessing import (
     KeepEnum,
     PositionEnum,
     CaseEnum,
+    HowEnum,
 )
 
 from celery.utils.log import get_task_logger
@@ -69,7 +70,7 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
 class SecondInputParameters:
     preprocessing_enum: PreprocessingEnum
     axis: AxisEnum
-    threshold: int
+    how: HowEnum
     subset: str
     fill_value: str
     keep: KeepEnum
@@ -119,15 +120,15 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    threshold = ma.fields.Integer(
+    how = EnumField(
+        HowEnum,
         required=True,
         allow_none=False,
         metadata={
-            "label": "Threshold",
-            "description": "Requires that many non-NA values. Cannot be combined with how. If left empty, then all values may not be NA.",
-            "input_type": "number",
+            "label": "How",
+            "description": "Select when a row / column is dropped. Any: if any NA is present, it will be dropped. All: if all values are NA, it will be dropped.",
+            "input_type": "select",
         },
-        validate=validate.Range(min=0, min_inclusive=True),
     )
     subset = ma.fields.String(
         required=False,
