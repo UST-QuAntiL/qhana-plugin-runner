@@ -1,46 +1,44 @@
 {% extends "simple_template.html" %}
 
 {% block head %}
-    {{ super() }}
+{{ super() }}
 
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-    />
-    <style>
-        body {
-            margin: 0px;
-        }
-        .content {
-            width: 100vw;
-            height: 100vh;
-            display: relative;
-            background-color: white;
-            color: black
-        }
-    </style>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/ace.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/mode-xml.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+<style>
+    body {
+        margin: 0px;
+    }
 
-    <script src="{{wf_editor_js}}"></script>
+    .content {
+        width: 100vw;
+        height: 100vh;
+        display: relative;
+        background-color: white;
+        color: black
+    }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/ace.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/mode-xml.min.js"></script>
+
+<script src="{{wf_editor_js}}"></script>
 {% endblock head %}
 
 {% block content %}
-    <div class="content" id="modeler-container">
-        <quantum-workflow-modeler id="main-wf-modeler"></quantum-workflow-modeler>
-    </div>
-    <div id="editor_wrap" style="display: none">
-      <div id="editor_dragbar"></div>
-      <div id="editor"></div>
-    </div>
+<div class="content" id="modeler-container">
+    <quantum-workflow-modeler id="main-wf-modeler"></quantum-workflow-modeler>
+</div>
+<div id="editor_wrap" style="display: none">
+    <div id="editor_dragbar"></div>
+    <div id="editor"></div>
+</div>
 {% endblock content %}
 
 {% block script %}
-    {{ super() }}
+{{ super() }}
 
-    <script>
-   // enable pattern plugin
+<script>
+    // enable pattern plugin
     window.ENABLE_PATTERN_PLUGIN = true;
 
     const state = window._qhana_microfrontend_state;
@@ -53,29 +51,45 @@
     editor.setTheme("ace/theme/textmate");
 
     const modeler = document.getElementById("main-wf-modeler");
+    console.log({ modeler });
 
-    modeler.pluginConfigs = [
-        {
-            name: "dataflow",
-        },
-        {
-            name: "quantme",
-        },
-        {
-            name: "planqk",
-        },
-        {
-            name: "qhana",
-        },
-        {
-            name: "pattern",
-            // added patern to config array
-        },
-    ]
-   // to see the plugin configurations in the console
-    console.log("Plugin Configurations: ", modeler.pluginConfigs);
+    
+
+   
+            modeler.pluginConfigs = [
+                {
+                    name: "dataflow",
+                    
+                },
+                {
+                    name: "quantme",
+                    
+                },
+                {
+                    name: "planqk",
+                },
+                {
+                    name: "qhana",
+                    config: {
+                        qhanaPluginRegistryURL: " http://localhost:5009/api",
+                        
+                    }
+                },
+                {
+                    name: "pattern",
+                
+                },
+            ];
+
+            
+
+            console.log("Plugin Configurations: ", modeler.pluginConfigs);
+            console.log("QHAna Plugins: ", modeler.qhanaPlugins);
+
+            
         
-    </script>
+        
+
+</script>
 
 {% endblock script %}
- 
