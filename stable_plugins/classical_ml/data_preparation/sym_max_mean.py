@@ -74,7 +74,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types=["text/csv", "application/json"],
+        data_content_types="application/json",
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
