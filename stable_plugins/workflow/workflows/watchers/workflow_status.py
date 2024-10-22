@@ -37,6 +37,14 @@ def persist_workflow_output(
         process_instance_id
     )
 
+    has_return_variables = bool(return_variables)
+
+    if not has_return_variables:
+        # if no return variable is specified, then try to retrun all variables
+        return_variables = camunda_client.get_all_historic_process_instance_variables(
+            process_instance_id
+        )
+
     data_output_keys = {"name", "contentType", "dataType", "href"}
     data_outputs = []
 
@@ -135,13 +143,16 @@ def check_for_human_tasks(
 
         # Extract form variables from the rendered form. Cannot use camunda endpoint for form variables (broken)
         form_variables = camunda_client.get_human_task_form_variables(
-            human_task_id=human_task.id
+            human_task_id=human_task.id, form_key=human_task.form_key
         )
 
         assert isinstance(db_task.data, dict)
 
         db_task.add_task_log_entry(f"Found new human task '{human_task.id}'.")
         db_task.data["form_params"] = json.dumps(form_variables)
+        db_task.data.pop("external_form_key", None)  # remove old form key
+        if human_task.form_key and human_task.form_key.startswith("embedded:"):
+            db_task.data["external_form_key"] = human_task.form_key
         db_task.data["human_task_id"] = human_task.id
         db_task.data["human_task_definition_key"] = human_task.task_definition_key
 
@@ -196,6 +207,9 @@ def workflow_status_watcher(self, db_id: int) -> None:
             raise WorkflowStoppedError(
                 "Workflow process instance was stopped unexpectedly."
             )
+        TASK_LOGGER.info(
+            f"Workflow finished, persisting task result. (Process instance id: {process_instance_id})"
+        )
         persist_workflow_output(db_task, camunda_client, process_instance_id)
 
         self.replace(
