@@ -28,6 +28,8 @@ from typing import (
 )
 from urllib.parse import urlparse
 
+from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+
 
 class EntityId(NamedTuple):
     id_: str
@@ -498,19 +500,6 @@ def taxonomy_to_entity(
     return TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations)
 
 
-class AttributeMetadata(NamedTuple):
-    ID: str
-    title: str
-    description: str
-    type: str
-    multiple: bool
-    ordered: bool
-    separator: str
-    taxonomy_name: str | None
-    refTarget: str | None
-    schema: str | None
-
-
 def _unwrap_optional(type_hint: type) -> type:
     if get_origin(type_hint) == Union:
         return get_args(type_hint)[0]
@@ -573,14 +562,14 @@ def _entity_class_to_attribute_metadata(entity_class: type) -> List[AttributeMet
                 ";",
                 taxonomy,
                 f"taxonomies.zip:t_{taxonomy}.json" if taxonomy else ref_target,
-                None,
+                {},
             )
         )
 
     return metadata
 
 
-def get_attribute_metadata() -> List[AttributeMetadata]:
+def get_attribute_metadata() -> Dict[str, AttributeMetadata]:
     metadata = []
 
     metadata.extend(_entity_class_to_attribute_metadata(PersonEntity))
@@ -593,7 +582,7 @@ def get_attribute_metadata() -> List[AttributeMetadata]:
     for meta in metadata:
         deduplicated_metadata[meta.ID] = meta
 
-    return list(deduplicated_metadata.values())
+    return deduplicated_metadata
 
 
 def _main():

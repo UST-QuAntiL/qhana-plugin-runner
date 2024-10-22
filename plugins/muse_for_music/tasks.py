@@ -22,6 +22,7 @@ from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import tuple_serializer, dict_serializer
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
@@ -67,40 +68,52 @@ def import_data(self, db_id: int) -> str:
     if muse_for_music_url is None:
         muse_for_music_url = get_muse_for_music_url_from_registry()
 
+    # TODO: load from env vars
+
     client = Muse4MusicClient(muse_for_music_url)
+    metadata = get_attribute_metadata()
 
     with requests.session():
         client.login(input_params.username, input_params.password)
         client.test_login()
 
         opuses = client.get_opuses()
-        opus_entities = [opus_to_entity(o)._asdict() for o in opuses]
+        serializer = tuple_serializer(OpusEntity._fields, metadata)
+        serialized_opuses = [serializer(opus_to_entity(o)) for o in opuses]
 
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(
-                opus_entities, output, "text/csv", attributes=OpusEntity._fields
+                serialized_opuses,
+                output,
+                "text/csv",
+                attributes=OpusEntity._fields,
             )
             STORE.persist_task_result(
                 db_id, output, "opuses.csv", "entity/list", "text/csv"
             )
 
         people = client.get_people()
-        person_entities = [person_to_entity(p)._asdict() for p in people]
+        serializer = tuple_serializer(PersonEntity._fields, metadata)
+        serialized_persons = [serializer(person_to_entity(p)) for p in people]
 
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(
-                person_entities, output, "text/csv", attributes=PersonEntity._fields
+                serialized_persons,
+                output,
+                "text/csv",
+                attributes=PersonEntity._fields,
             )
             STORE.persist_task_result(
                 db_id, output, "people.csv", "entity/list", "text/csv"
             )
 
         parts = client.get_parts()
-        part_entities = [part_to_entity(p)._asdict() for p in parts]
+        serializer = tuple_serializer(PartEntity._fields, metadata)
+        serialized_parts = [serializer(part_to_entity(p)) for p in parts]
 
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(
-                part_entities, output, "text/csv", attributes=PartEntity._fields
+                serialized_parts, output, "text/csv", attributes=PartEntity._fields
             )
             STORE.persist_task_result(
                 db_id, output, "parts.csv", "entity/list", "text/csv"
@@ -129,15 +142,13 @@ def import_data(self, db_id: int) -> str:
             "application/zip",
         )
 
-        metadata = get_attribute_metadata()
-        metadata_entities = [metadata._asdict() for metadata in metadata]
+        metadata_entities = [metadata.to_dict() for metadata in metadata.values()]
 
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(
                 metadata_entities,
                 output,
                 "application/json",
-                attributes=AttributeMetadata._fields,
             )
             STORE.persist_task_result(
                 db_id,
