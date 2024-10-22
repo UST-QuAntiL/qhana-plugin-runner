@@ -229,7 +229,7 @@ class SymMaxMean(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Compares attributes and returns similarity values."
-    tags = ["attribute-similarity-calculation"]
+    tags = ["preprocessing", "similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

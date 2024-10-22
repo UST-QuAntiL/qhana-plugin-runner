@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qnn"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -43,7 +43,7 @@ class QNN(QHAnaPluginBase):
         "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin."
     )
 
-    tags = ["classification", "quantum", "classical", "neural network"]
+    tags = ["QML", "classification", "quantum", "classical", "neural-network"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

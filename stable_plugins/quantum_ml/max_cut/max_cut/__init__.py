@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "max_cut"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -38,7 +38,7 @@ class MaxCut(QHAnaPluginBase):
     version = __version__
     description = "Clusters data with the max cut algorithm"
 
-    tags = []
+    tags = ["QML", "clustering", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -53,7 +53,7 @@ from qhana_plugin_runner.requests import retrieve_filename
 
 
 _plugin_name = "distance-aggregator"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -232,7 +232,7 @@ class Aggregator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Aggregates attribute distances to entity distances."
-    tags = ["aggregator"]
+    tags = ["preprocessing", "distance-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -12,26 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from marshmallow import post_load, validate
-import marshmallow as ma
-from qhana_plugin_runner.api.util import (
-    FrontendFormBaseSchema,
-    MaBaseSchema,
-    FileUrl,
-)
-from qhana_plugin_runner.api import EnumField
-
 from dataclasses import dataclass
+
+import marshmallow as ma
+from marshmallow import post_load, validate
+
+from qhana_plugin_runner.api import EnumField
+from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema, MaBaseSchema
+
 from .backend.pandas_preprocessing import (
-    PreprocessingEnum,
     AxisEnum,
+    CaseEnum,
     KeepEnum,
     PositionEnum,
-    CaseEnum,
     HowEnum,
+    PreprocessingEnum,
 )
-
-from celery.utils.log import get_task_logger
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -53,7 +49,7 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="*",
-        data_content_types="text/csv",
+        data_content_types=["text/csv", "application/json"],
         metadata={
             "label": "File URL",
             "description": "The file must be a csv file.",

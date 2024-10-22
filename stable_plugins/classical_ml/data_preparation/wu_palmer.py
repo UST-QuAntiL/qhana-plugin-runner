@@ -260,7 +260,7 @@ class WuPalmer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Compares elements and returns similarity values."
-    tags = ["similarity-calculation"]
+    tags = ["preprocessing", "similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
