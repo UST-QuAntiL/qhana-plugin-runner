@@ -560,8 +560,8 @@ def _entity_class_to_attribute_metadata(entity_class: type) -> List[AttributeMet
                 multiple,
                 False,
                 ";",
-                taxonomy,
                 f"taxonomies.zip:t_{taxonomy}.json" if taxonomy else ref_target,
+                None,
                 {},
             )
         )
