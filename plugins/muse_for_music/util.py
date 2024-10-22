@@ -583,12 +583,3 @@ def get_attribute_metadata() -> Dict[str, AttributeMetadata]:
         deduplicated_metadata[meta.ID] = meta
 
     return deduplicated_metadata
-
-
-def _main():
-    for meta in _entity_class_to_attribute_metadata(PartEntity):
-        print(meta)
-
-
-if __name__ == "__main__":
-    _main()
