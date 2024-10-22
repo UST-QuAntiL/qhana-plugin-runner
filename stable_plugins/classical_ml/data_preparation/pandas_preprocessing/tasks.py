@@ -144,7 +144,7 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
                 db_id,
                 output,
                 f"pd_preprocessed_{task_data.data['info_str']}from_{task_data.data['original_file_name']}.csv",
-                "entity",  # TODO keep original data type
+                "entity/list",  # TODO keep original data type
                 "text/csv",
             )
             task_data.data["file_url"] = "file://" + task_file.file_storage_data

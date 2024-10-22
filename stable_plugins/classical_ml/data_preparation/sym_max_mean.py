@@ -52,7 +52,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url, retrieve_filename
+from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -290,7 +290,14 @@ def calculation_task(self, db_id: int) -> str:
     # load data from file
 
     with open_url(entities_url) as entities_data:
-        entities = list(load_entities(entities_data, "application/json"))
+        mimetype = get_mimetype(entities_data)
+        entities = []
+
+        for ent in load_entities(entities_data, mimetype):
+            if hasattr(ent, "_asdict"):  # is NamedTuple
+                entities.append(ent._asdict())
+            else:
+                entities.append(ent)
 
     element_similarities = {}
 
