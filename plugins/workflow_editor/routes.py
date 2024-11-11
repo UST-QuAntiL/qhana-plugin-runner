@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from importlib import resources
 from typing import Any, Dict, Mapping, Optional, Sequence, Union, cast
-
+from flask import current_app
 from flask import render_template
 from flask.globals import request
 from flask.helpers import url_for
@@ -109,6 +109,8 @@ class WFEditorFrontend(MethodView):
                 wf_editor_js=url_for(
                     f"{WF_EDITOR_BLP.name}.{WorkflowEditorJavaScript.__name__}"
                 ),
+               qhanaPluginRegistryURL= current_app.config.get("PLUGIN_REGISTRY_URL", "http://localhost:5006")
+
             )
         )
 
