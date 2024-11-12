@@ -122,8 +122,7 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         # define default values
         default_values = {
-            "username": "admin",  # FIXME remove default later!
-            "password": "admin",  # FIXME remove default later!
+            "url": "",
         }
 
         # overwrite default values with other values if possible

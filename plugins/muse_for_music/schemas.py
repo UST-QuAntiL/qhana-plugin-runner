@@ -13,9 +13,11 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from typing import Dict, Optional, Union
 
 import marshmallow as ma
-from marshmallow import post_load
+from marshmallow import post_load, pre_load
+from werkzeug.datastructures import ImmutableMultiDict
 
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 
@@ -24,9 +26,11 @@ from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 class InputParameters:
     username: str
     password: str
+    muse_url: Optional[str] = None
 
     def __repr__(self):
-        return f'{type(self).__name__}(username="{self.username}", password="***")'
+        url = "" if self.muse_url is None else f', muse_url="{self.muse_url}"'
+        return f'{type(self).__name__}(username="{self.username}", password="***"{url})'
 
     __str__ = __repr__
 
@@ -36,7 +40,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         metadata={
-            "label": "MUSE4Anything Username",
+            "label": "MUSE4Music Username",
             "input_type": "text",
         },
     )
@@ -48,6 +52,26 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "password",
         },
     )
+    muse_url = ma.fields.Url(
+        required=False,
+        allow_none=True,
+        metadata={
+            "label": "MUSE4Music URL",
+            "input_type": "string",
+        },
+    )
+
+    @pre_load
+    def prepare_for_validation(
+        self, data: Union[Dict, ImmutableMultiDict], **kwargs
+    ) -> dict:
+        if isinstance(data, ImmutableMultiDict):
+            data = data.to_dict()
+        else:
+            data = dict(data)
+        if not data.get("museUrl"):
+            data.pop("museUrl", None)
+        return data
 
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
