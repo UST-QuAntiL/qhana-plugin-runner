@@ -53,7 +53,6 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 import json
 from itertools import count, chain
-import numpy as np
 
 
 """ 
@@ -422,6 +421,8 @@ def prepare_stream_output(
     """
     Transforms an entity into it's one-hot encoding and yields it.
     """
+    import numpy as np
+
     for entity in entities:
         id = entity["ID"]
         one_hot_encodings = np.zeros((dim,))
