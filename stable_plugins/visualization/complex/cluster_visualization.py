@@ -14,7 +14,6 @@
 from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
-import muid
 
 import flask
 from celery.canvas import chain
@@ -247,6 +246,8 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_readable_hash(s: str) -> str:
+    import muid
+
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 

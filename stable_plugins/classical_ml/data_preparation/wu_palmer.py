@@ -20,7 +20,6 @@ from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional, List, Dict, Tuple
 from zipfile import ZipFile
-import muid
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -276,6 +275,8 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def get_readable_hash(s: str) -> str:
+    import muid
+
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
