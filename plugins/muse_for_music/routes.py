@@ -122,7 +122,7 @@ class MicroFrontend(MethodView):
         data_dict = dict(data)
         # define default values
         default_values = {
-            "url": "",
+            "museUrl": "",
         }
 
         # overwrite default values with other values if possible
