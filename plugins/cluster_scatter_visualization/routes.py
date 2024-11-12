@@ -15,21 +15,16 @@
 import hashlib
 from http import HTTPStatus
 from io import BytesIO
-import pathlib
-from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional
+from typing import Mapping
 from celery import chain
 import celery
-from celery.utils.log import get_task_logger
 from flask import abort, redirect, send_file
-from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from flask.wrappers import Response
 from marshmallow import EXCLUDE
-from requests.exceptions import HTTPError
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -39,55 +34,14 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
-from qhana_plugin_runner.api.util import (
-    FileUrl,
-    FrontendFormBaseSchema,
-    SecurityBlueprint,
-)
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.requests import open_url
-from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 
-_plugin_name = "cluster-scatter-visualization"
-__version__ = "v0.0.1"
-_identifier = plugin_identifier(_plugin_name, __version__)
-
-
-VIS_BLP = SecurityBlueprint(
-    _identifier,  # blueprint name
-    __name__,  # module import name!
-    description="A visualization plugin for cluster scatter data.",
-    template_folder="cluster_scatter_visualization_templates",
-)
-
-
-class CSInputParametersSchema(FrontendFormBaseSchema):
-    entity_url = FileUrl(
-        required=True,
-        allow_none=False,
-        data_input_type="entity/vector",
-        data_content_types=["application/json"],
-        metadata={
-            "label": "Entity Point URL",
-            "description": "URL to a json file containing the points.",
-            "input_type": "text",
-        },
-    )
-    clusters_url = FileUrl(
-        required=True,
-        allow_none=True,
-        data_input_type="entity/vector",
-        data_content_types=["application/json"],
-        metadata={
-            "label": "Cluster URL",
-            "description": "URL to a json file containing the cluster labels.",
-            "input_type": "text",
-        },
-    )
+from . import VIS_BLP, ClusterScatterVisualization
+from .schemas import ClusterScatterInputParametersSchema
+from .tasks import generate_image, process
 
 
 @VIS_BLP.route("/")
@@ -98,7 +52,7 @@ class PluginsView(MethodView):
     @VIS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
-        plugin = CSVisualization.instance
+        plugin = ClusterScatterVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
@@ -128,7 +82,7 @@ class PluginsView(MethodView):
                 data_output=[
                     DataMetadata(
                         data_type="plot",
-                        content_type=["image/svg+xml"],
+                        content_type=["text/html"],
                         required=True,
                     )
                 ],
@@ -146,7 +100,7 @@ class MicroFrontend(MethodView):
         description="Micro frontend of the cluster scatter visualization plugin.",
     )
     @VIS_BLP.arguments(
-        CSInputParametersSchema(
+        ClusterScatterInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -162,7 +116,7 @@ class MicroFrontend(MethodView):
         description="Micro frontend of the cluster scatter visualization plugin.",
     )
     @VIS_BLP.arguments(
-        CSInputParametersSchema(
+        ClusterScatterInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -174,7 +128,7 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
-        plugin = CSVisualization.instance
+        plugin = ClusterScatterVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return Response(
@@ -182,44 +136,41 @@ class MicroFrontend(MethodView):
                 "cluster_scatter_visualization.html",
                 name=plugin.name,
                 version=plugin.version,
-                schema=CSInputParametersSchema(),
+                schema=ClusterScatterInputParametersSchema(),
                 valid=valid,
                 values=data,
                 errors=errors,
                 example_values=url_for(f"{VIS_BLP.name}.MicroFrontend"),
-                get_circuit_image_url=url_for(f"{VIS_BLP.name}.get_circuit_image"),
+                get_image_url=url_for(f"{VIS_BLP.name}.get_image"),
                 process=url_for(f"{VIS_BLP.name}.ProcessView"),
             )
         )
 
 
-class ImageNotFinishedError(Exception):
-    pass
-
-
-@VIS_BLP.route("/circuits/")
-@VIS_BLP.response(HTTPStatus.OK, description="Circuit image.")
+@VIS_BLP.route("/plots/")
+@VIS_BLP.response(HTTPStatus.OK, description="Cluster Scatter VIsualization.")
 @VIS_BLP.arguments(
-    CSInputParametersSchema(unknown=EXCLUDE),
+    ClusterScatterInputParametersSchema(unknown=EXCLUDE),
     location="query",
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
-def get_circuit_image(data: Mapping):
-    url = data.get("data", None)
-    if not url:
+def get_image(data: Mapping):
+    entity_url = data.get("entity_url", None)
+    clusters_url = data.get("clusters_url", None)
+    if not entity_url or not clusters_url:
         abort(HTTPStatus.BAD_REQUEST)
-    url_hash = hashlib.sha256(url.encode("utf-8")).hexdigest()
-    image = DataBlob.get_value(CSVisualization.instance.identifier, url_hash, None)
+    url_hash = hashlib.sha256(entity_url.encode("utf-8")).hexdigest()
+    image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash, None)
     if image is None:
         if not (
             task_id := PluginState.get_value(
-                CSVisualization.instance.identifier, url_hash, None
+                ClusterScatterVisualization.instance.identifier, url_hash, None
             )
         ):
-            task_result = generate_image.s(url, url_hash).apply_async()
+            task_result = generate_image.s(entity_url, clusters_url, url_hash).apply_async()
             PluginState.set_value(
-                CSVisualization.instance.identifier,
+                ClusterScatterVisualization.instance.identifier,
                 url_hash,
                 task_result.id,
                 commit=True,
@@ -228,125 +179,39 @@ def get_circuit_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            image = DataBlob.get_value(CSVisualization.instance.identifier, url_hash)
+            image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash)
         except celery.exceptions.TimeoutError:
             return Response("Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
-    return send_file(BytesIO(image), mimetype="image/svg+xml")
+    return send_file(BytesIO(image), mimetype="image/png;base64")
 
 
 @VIS_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @VIS_BLP.arguments(CSInputParametersSchema(unknown=EXCLUDE), location="form")
+    @VIS_BLP.arguments(ClusterScatterInputParametersSchema(unknown=EXCLUDE), location="form")
     @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        circuit_url = arguments.get("data", None)
-        if circuit_url is None:
+        entity_url = arguments.get("entity_url", None)
+        clusters_url = arguments.get("clusters_url", None)
+        if entity_url is None:
             abort(HTTPStatus.BAD_REQUEST)
-        url_hash = hashlib.sha256(circuit_url.encode("utf-8")).hexdigest()
+        url_hash = hashlib.sha256(entity_url.encode("utf-8")).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
-
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id, url=circuit_url, hash=url_hash
+            db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(db_id=db_task.id, url=circuit_url, hash=url_hash)
+        task.apply_async(db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash)
 
         db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
-
-
-class CSVisualization(QHAnaPluginBase):
-    name = _plugin_name
-    version = __version__
-    description = "Visualizes cluster data in a scatter plot."
-    tags = ["visualization"]
-
-    def __init__(self, app: Optional[Flask]) -> None:
-        super().__init__(app)
-
-        # create folder for circuit images
-        pathlib.Path(__file__).parent.absolute().joinpath("img").mkdir(
-            parents=True, exist_ok=True
-        )
-
-    def get_api_blueprint(self):
-        return VIS_BLP
-
-    def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nqiskit~=0.43"
-
-
-TASK_LOGGER = get_task_logger(__name__)
-
-
-@CELERY.task(name=f"{CSVisualization.instance.identifier}.generate_image", bind=True)
-def generate_image(self, url: str, hash: str) -> str:
-    from qiskit import QuantumCircuit
-    import matplotlib
-
-    matplotlib.use("SVG")
-
-    TASK_LOGGER.info(f"Generating image for circuit {url}...")
-    try:
-        with open_url(url) as qasm_response:
-            circuit_qasm = qasm_response.text
-    except HTTPError:
-        TASK_LOGGER.error(f"Invalid circuit URL: {url}")
-        DataBlob.set_value(
-            CSVisualization.instance.identifier,
-            hash,
-            "",
-        )
-        PluginState.delete_value(CSVisualization.instance.identifier, hash, commit=True)
-        return "Invalid circuit URL!"
-
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
-    fig = circuit.draw(output="mpl", interactive=False)
-    figfile = BytesIO()
-    fig.savefig(figfile, format="svg")
-    figfile.seek(0)
-    DataBlob.set_value(CSVisualization.instance.identifier, hash, figfile.getvalue())
-    TASK_LOGGER.info(f"Stored image of circuit {circuit.name}.")
-    PluginState.delete_value(CSVisualization.instance.identifier, hash, commit=True)
-
-    return "Created image of circuit!"
-
-
-@CELERY.task(
-    name=f"{CSVisualization.instance.identifier}.process",
-    bind=True,
-    autoretry_for=(ImageNotFinishedError,),
-    retry_backoff=True,
-    max_retries=None,
-)
-def process(self, db_id: str, url: str, hash: str) -> str:
-    if not (image := DataBlob.get_value(CSVisualization.instance.identifier, hash)):
-        if not (
-            task_id := PluginState.get_value(CSVisualization.instance.identifier, hash)
-        ):
-            task_result = generate_image.s(url, hash).apply_async()
-            PluginState.set_value(
-                CSVisualization.instance.identifier,
-                hash,
-                task_result.id,
-                commit=True,
-            )
-        raise ImageNotFinishedError()
-    with SpooledTemporaryFile() as output:
-        output.write(image)
-        output.seek(0)
-        STORE.persist_task_result(
-            db_id, output, f"circuit_{hash}.svg", "image/svg", "image/svg+xml"
-        )
-    return "Created image of circuit!"

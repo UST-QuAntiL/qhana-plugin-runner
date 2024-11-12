@@ -54,7 +54,7 @@
     </details>
 </div>
 
-<img id="circuit-image" class="qhana-data-preview">
+<img id="cluster-image" class="qhana-data-preview">
 <div class="container">
     <div id="spinner"></div>
 </div>
@@ -63,52 +63,63 @@
 {% block script %}
 {{ super() }}
 <script>
-    let currentUrl = null;
+    let currentEntityUrl = null;
+    let currentClustersUrl = null;
 
-    function getUrl() {
-        return document.querySelector('input[name=data]').value;
+    function getEntityUrl() {
+        return document.querySelector('input[name=entityUrl]').value;
     }
 
-    function onCircuitImageLoad() {
-        const preview = document.querySelector('#circuit-image');
+    function getClustersUrl() {
+        return document.querySelector('input[name=clustersUrl]').value;
+    }
+
+    function onImageLoad() {
+        const preview = document.querySelector('#cluster-image');
         preview.style.display = '';
         sendMessage({ type: "ui-resize", height: preview.height });
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').removeAttribute('open');
     }
 
-    function onCircuitImageError() {
-        document.querySelector('#circuit-image').style.display = 'none';
+    function onImageError() {
+        document.querySelector('#cluster-image').style.display = 'none';
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').setAttribute('open', 'open');
     }
 
     function setupEventListeners() {
-        const dataInput = document.querySelector('input[name=data]');
-        dataInput.addEventListener("input", (event) => updatePreview());
-        const circuitImage = document.querySelector('#circuit-image');
-        circuitImage.addEventListener("load", (event) => onCircuitImageLoad());
-        circuitImage.addEventListener("error", (event) => onCircuitImageError());
+        const entityInput = document.querySelector('input[name=entityUrl]');
+        entityInput.addEventListener("input", (event) => updatePreview());
+        const clusterInput = document.querySelector('input[name=clustersUrl]');
+        clusterInput.addEventListener("input", (event) => updatePreview());
+        const circuitImage = document.querySelector('#cluster-image');
+        circuitImage.addEventListener("load", (event) => onImageLoad());
+        circuitImage.addEventListener("error", (event) => onImageError());
     }
 
     function updatePreview() {
-        const circuitUrl = getUrl()
-        if (circuitUrl === "" || circuitUrl === null) {
-            onCircuitImageError();
+        const entityUrl = getEntityUrl();
+        const clustersUrl = getClustersUrl();
+        console.log(entityUrl);
+        console.log(clustersUrl);
+        if (entityUrl === "" || entityUrl === null || clustersUrl === "" || clustersUrl === null) {
+            onImageError();
             return;
         }
-        if (currentUrl === circuitUrl) {
+        if (currentEntityUrl === entityUrl && currentClustersUrl === clustersUrl) {
             return;
         }
         document.querySelector('#spinner').style.display = '';
-        const preview = document.querySelector('#circuit-image');
-        const url = "{{ get_circuit_image_url }}?data=" + circuitUrl;
+        const preview = document.querySelector('#cluster-image');
+        const url = "{{ get_image_url }}?entityUrl=" + entityUrl + "&clustersUrl=" + clustersUrl;
         fetch(url).then(response => {
             if (response.status === 200) {
                 preview.setAttribute("src", url);
-                currentUrl = circuitUrl;
+                currentEntityUrl = entityUrl;
+                currentClustersUrl = clustersUrl;
             } else {
-                onCircuitImageError();
+                onImageError();
                 if (response.status === 202) {
                     document.querySelector('#spinner').style.display = '';
                     setTimeout(updatePreview, 5000);
@@ -116,11 +127,11 @@
             }
         }).catch(error => {
             console.log(error);
-            onCircuitImageError();
+            onImageError();
         });
     }
 
-    onCircuitImageError();
+    onImageError();
     setupEventListeners();
 </script>
 {% endblock script %}
