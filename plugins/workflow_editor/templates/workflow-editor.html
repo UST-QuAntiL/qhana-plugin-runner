@@ -14,14 +14,14 @@
         height: 100vh;
         display: relative;
         background-color: white;
-        color: black
+        color: black;
     }
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/ace.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/mode-xml.min.js"></script>
-
 <script src="{{wf_editor_js}}"></script>
+
 {% endblock head %}
 
 {% block content %}
@@ -38,7 +38,6 @@
 {{ super() }}
 
 <script>
-    // enable pattern plugin
     window.ENABLE_PATTERN_PLUGIN = true;
 
     const state = window._qhana_microfrontend_state;
@@ -52,52 +51,65 @@
 
     const modeler = document.getElementById("main-wf-modeler");
     console.log({ modeler });
+    
+    fetch('http://localhost:5005/plugins')
+        .then(response => response.json())
+        .then(data => {
+            modeler.qhanaPlugins = data;
+            console.log("Fetched QHAna Plugins:", modeler.qhanaPlugins);
+        })
+        .catch(error => {
+            console.error("Error fetching QHAna plugins:", error);
+        });
 
-            
-            fetch('http://localhost:5005/plugins')
-                .then(response => response.json())
-                .then(data => {
-                    modeler.qhanaPlugins = data;
-                    console.log("Fetched QHAna Plugins:", modeler.qhanaPlugins);
-                })
-                .catch(error => {
-                    console.error("Error fetching QHAna plugins:", error);
-                });
+    modeler.pluginConfigs = [
+        {
+            name: "dataflow",
+            config: {
+                configurationsEndpoint: "{{dataflowEndpoint}}"
+            }
+        },
+        {
+            name: "quantme",
+            config: {
+                transformationFrameworkEndpoint: "{{transformationFrameworkEndpoint}}",
+                nisqAnalyzerEndpoint: "{{nisqAnalyzerEndpoint}}",
+                nisqAnalyzerUiEndpoint: "{{nisqAnalyzerUiEndpoint}}",
+                qprovEndpoint: "{{qprovEndpoint}}",
+                scriptSplitterEndpoint: "{{scriptSplitterEndpoint}}",
+                scriptSplitterThreshold: "{{scriptSplitterThreshold}}",
+                qiskitRuntimeHandlerEndpoint: "{{qiskitRuntimeHandlerEndpoint}}",
+                awsRuntimeHandlerEndpoint: "{{awsRuntimeHandlerEndpoint}}"
+            }
+        },
+        {
+            name: "planqk"
+        },
+        {
+            name: "qhana",
+            config: {
+                qhanaPluginRegistryURL: "{{qhanaPluginRegistryURL}}"
+            }
+        },
+        {
+            name: "pattern",
+            config: {
+                patternAtlasEndpoint: "{{patternAtlasEndpoint}}",
+                patternAtlasUIEndpoint: "{{patternAtlasUIEndpoint}}",
+                qcAtlasEndpoint: "{{qcAtlasEndpoint}}"
+            }
+        },
+        {
+            name: "opentosca", 
+            config: {
+                opentoscaEndpoint: "{{opentoscaEndpoint}}",
+                wineryEndpoint: "{{wineryEndpoint}}"
+            }
+        }
+    ];
 
-   
-            modeler.pluginConfigs = [
-                {
-                    name: "dataflow",
-                    
-                },
-                {
-                    name: "quantme",
-                    
-                },
-                {
-                    name: "planqk",
-                },
-                {
-                    name: "qhana",
-                    config: {
-                        qhanaPluginRegistryURL: "{{qhanaPluginRegistryURL}}",
-                    }
-                },
-                {
-                    name: "pattern",
-                
-                },
-            ];
-
-            
-
-            console.log("Plugin Configurations: ", modeler.pluginConfigs);
-            console.log("QHAna Plugins: ", modeler.qhanaPlugins);
-
-            
-        
-        
-
+    console.log("Plugin Configurations: ", modeler.pluginConfigs);
+    console.log("QHAna Plugins: ", modeler.qhanaPlugins);
 </script>
 
 {% endblock script %}

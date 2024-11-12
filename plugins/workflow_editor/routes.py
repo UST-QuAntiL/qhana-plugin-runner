@@ -109,8 +109,30 @@ class WFEditorFrontend(MethodView):
                 wf_editor_js=url_for(
                     f"{WF_EDITOR_BLP.name}.{WorkflowEditorJavaScript.__name__}"
                 ),
-               qhanaPluginRegistryURL= current_app.config.get("PLUGIN_REGISTRY_URL", "http://localhost:5006")
+                # QHAna plugin configuration
+                qhanaPluginRegistryURL=current_app.config.get("PLUGIN_REGISTRY_URL", "http://localhost:5006"),
 
+                # Data flow plugin configuration
+                configurationsEndpoint=current_app.config.get("SERVICE_DATA_CONFIG", "http://localhost:8000/service-task"),
+
+                # OpenTOSCA plugin configuration
+                opentoscaEndpoint=current_app.config.get("OPENTOSCA_ENDPOINT", "http://localhost:1337/csars"),
+                wineryEndpoint=current_app.config.get("WINERY_ENDPOINT", "http://localhost:8080/winery"),
+
+                # Pattern plugin configuration
+                patternAtlasEndpoint=current_app.config.get("PATTERN_ATLAS_ENDPOINT", "http://localhost:8080/pattern-atlas"),
+                patternAtlasUIEndpoint=current_app.config.get("PATTERN_ATLAS_UI_ENDPOINT", "http://localhost:8080/pattern-atlas"),
+                qcAtlasEndpoint=current_app.config.get("QC_ATLAS_ENDPOINT", "http://localhost:8080/qc-atlas"),
+
+                # QuantME plugin configuration
+                nisqAnalyzerEndpoint=current_app.config.get("NISQ_ANALYZER_ENDPOINT", "http://localhost:8080/nisq-analyzer"),
+                nisqAnalyzerUiEndpoint=current_app.config.get("NISQ_ANALYZER_UI_ENDPOINT", "http://localhost:8080/nisq-analyzer"),
+                qprovEndpoint=current_app.config.get("QPROV_ENDPOINT", "http://localhost:8080/qprov"),
+                scriptSplitterEndpoint=current_app.config.get("SCRIPT_SPLITTER_ENDPOINT", "http://localhost:8080/script-splitter"),
+                scriptSplitterThreshold=current_app.config.get("SCRIPT_SPLITTER_THRESHOLD", "0.5"),
+                qiskitRuntimeHandlerEndpoint=current_app.config.get("QISKIT_RUNTIME_HANDLER_ENDPOINT", "http://localhost:8080/qiskit-runtime-handler"),
+                awsRuntimeHandlerEndpoint=current_app.config.get("AWS_RUNTIME_HANDLER_ENDPOINT", "http://localhost:8080/aws-runtime-handler"),
+                transformationFrameworkEndpoint=current_app.config.get("TRANSFORMATION_FRAMEWORK_ENDPOINT", "http://localhost:8080/transformation-framework")
             )
         )
 

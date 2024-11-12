@@ -1,6 +1,6 @@
 {
   "name": "workflow_editor",
-  "version": "1.5.2",
+  "version": "1.4.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@planqk/quantum-workflow-modeler": "^1.4.2"
+    "@planqk/quantum-workflow-modeler": "^1.5.2"
   },
   "devDependencies": {
     "esbuild": "0.19.7"
