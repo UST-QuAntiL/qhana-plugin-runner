@@ -3,6 +3,9 @@
 ## Overview
 This guide explains the step-by-step process for adding new configuration variables to the plugins of the Workflow Editor.
 
+## Reference Implementation
+This guide is based on patterns used in the [QHAna Plugin Runner Workflows](https://github.com/UST-QuAntiL/qhana-plugin-runner/tree/main/stable_plugins/workflow/workflows), which serves as a reference implementation.
+
 ## Steps
 
 ### 1. Define the Configuration Variable:
