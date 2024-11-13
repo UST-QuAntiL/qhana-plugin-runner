@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from importlib import resources
-from typing import Any, Dict, Mapping, Optional, Sequence, Union, cast
+from typing import Mapping
 from flask import current_app
 from flask import render_template
 from flask.globals import request
@@ -110,45 +110,96 @@ class WFEditorFrontend(MethodView):
                     f"{WF_EDITOR_BLP.name}.{WorkflowEditorJavaScript.__name__}"
                 ),
                 # QHAna plugin configuration
-                qhanaPluginRegistryURL=current_app.config.get("PLUGIN_REGISTRY_URL", "http://localhost:5006"),
+                qhanaPluginRegistryURL=current_app.config.get(
+                    "PLUGIN_REGISTRY_URL", "http://localhost:5006"
+                ),
 
                 # Data flow plugin configuration
-                configurationsEndpoint=current_app.config.get("SERVICE_DATA_CONFIG", "http://localhost:8000/service-task"),
+                configurationsEndpoint=current_app.config.get(
+                    "SERVICE_DATA_CONFIG", "http://localhost:8000/service-task"
+                ),
 
                 # OpenTOSCA plugin configuration
-                opentoscaEndpoint=current_app.config.get("OPENTOSCA_ENDPOINT", "http://localhost:1337/csars"),
-                wineryEndpoint=current_app.config.get("WINERY_ENDPOINT", "http://localhost:8080/winery"),
+                opentoscaEndpoint=current_app.config.get(
+                    "OPENTOSCA_ENDPOINT", "http://localhost:1337/csars"
+                ),
+                wineryEndpoint=current_app.config.get(
+                    "WINERY_ENDPOINT", "http://localhost:8080/winery"
+                ),
 
                 # Pattern plugin configuration
-                patternAtlasEndpoint=current_app.config.get("PATTERN_ATLAS_ENDPOINT", "http://localhost:8080/pattern-atlas"),
-                patternAtlasUIEndpoint=current_app.config.get("PATTERN_ATLAS_UI_ENDPOINT", "http://localhost:8080/pattern-atlas"),
-                qcAtlasEndpoint=current_app.config.get("QC_ATLAS_ENDPOINT", "http://localhost:8080/qc-atlas"),
+                patternAtlasEndpoint=current_app.config.get(
+                    "PATTERN_ATLAS_ENDPOINT", "http://localhost:8080/pattern-atlas"
+                ),
+                patternAtlasUIEndpoint=current_app.config.get(
+                    "PATTERN_ATLAS_UI_ENDPOINT", "http://localhost:8080/pattern-atlas"
+                ),
+                qcAtlasEndpoint=current_app.config.get(
+                    "QC_ATLAS_ENDPOINT", "http://localhost:8080/qc-atlas"
+                ),
 
                 # QuantME plugin configuration
-                nisqAnalyzerEndpoint=current_app.config.get("NISQ_ANALYZER_ENDPOINT", "http://localhost:8080/nisq-analyzer"),
-                nisqAnalyzerUiEndpoint=current_app.config.get("NISQ_ANALYZER_UI_ENDPOINT", "http://localhost:8080/nisq-analyzer"),
-                qprovEndpoint=current_app.config.get("QPROV_ENDPOINT", "http://localhost:8080/qprov"),
-                scriptSplitterEndpoint=current_app.config.get("SCRIPT_SPLITTER_ENDPOINT", "http://localhost:8080/script-splitter"),
-                scriptSplitterThreshold=current_app.config.get("SCRIPT_SPLITTER_THRESHOLD", "0.5"),
-                qiskitRuntimeHandlerEndpoint=current_app.config.get("QISKIT_RUNTIME_HANDLER_ENDPOINT", "http://localhost:8080/qiskit-runtime-handler"),
-                awsRuntimeHandlerEndpoint=current_app.config.get("AWS_RUNTIME_HANDLER_ENDPOINT", "http://localhost:8080/aws-runtime-handler"),
-                transformationFrameworkEndpoint=current_app.config.get("TRANSFORMATION_FRAMEWORK_ENDPOINT", "http://localhost:8080/transformation-framework"),
+                nisqAnalyzerEndpoint=current_app.config.get(
+                    "NISQ_ANALYZER_ENDPOINT", "http://localhost:8080/nisq-analyzer"
+                ),
+                nisqAnalyzerUiEndpoint=current_app.config.get(
+                    "NISQ_ANALYZER_UI_ENDPOINT", "http://localhost:8080/nisq-analyzer"
+                ),
+                qprovEndpoint=current_app.config.get(
+                    "QPROV_ENDPOINT", "http://localhost:8080/qprov"
+                ),
+                scriptSplitterEndpoint=current_app.config.get(
+                    "SCRIPT_SPLITTER_ENDPOINT", "http://localhost:8080/script-splitter"
+                ),
+                scriptSplitterThreshold=current_app.config.get(
+                    "SCRIPT_SPLITTER_THRESHOLD", "0.5"
+                ),
+                qiskitRuntimeHandlerEndpoint=current_app.config.get(
+                    "QISKIT_RUNTIME_HANDLER_ENDPOINT",
+                    "http://localhost:8080/qiskit-runtime-handler"
+                ),
+                awsRuntimeHandlerEndpoint=current_app.config.get(
+                    "AWS_RUNTIME_HANDLER_ENDPOINT",
+                    "http://localhost:8080/aws-runtime-handler"
+                ),
+                transformationFrameworkEndpoint=current_app.config.get(
+                    "TRANSFORMATION_FRAMEWORK_ENDPOINT",
+                    "http://localhost:8080/transformation-framework"
+                ),
 
-                #Editor Configuration
-                camundaEndpoint=current_app.config.get("CAMUNDA_ENDPOINT", "http://localhost:8080/camunda"),
-                downloadFileName=current_app.config.get("DOWNLOAD_FILE_NAME", "workflow.bpmn"),
-                transformedWorkflowHandler=current_app.config.get("TRANSFORMED_WORKFLOW_HANDLER", "inline"),
-                autoSaveFileOption=current_app.config.get("AUTO_SAVE_FILE_OPTION", "interval"),
+                # Editor Configuration
+                camundaEndpoint=current_app.config.get(
+                    "CAMUNDA_ENDPOINT", "http://localhost:8080/camunda"
+                ),
+                downloadFileName=current_app.config.get(
+                    "DOWNLOAD_FILE_NAME", "workflow.bpmn"
+                ),
+                transformedWorkflowHandler=current_app.config.get(
+                    "TRANSFORMED_WORKFLOW_HANDLER", "inline"
+                ),
+                autoSaveFileOption=current_app.config.get(
+                    "AUTO_SAVE_FILE_OPTION", "interval"
+                ),
                 fileFormat=current_app.config.get("FILE_FORMAT", "bpmn"),
-                autoSaveIntervalSize=current_app.config.get("AUTO_SAVE_INTERVAL", "300000"),
+                autoSaveIntervalSize=current_app.config.get(
+                    "AUTO_SAVE_INTERVAL", "300000"
+                ),
                 githubToken=current_app.config.get("GITHUB_TOKEN", ""),
                 githubRepositoryName=current_app.config.get("QRM_REPONAME", ""),
                 githubUsername=current_app.config.get("QRM_USERNAME", ""),
                 githubRepositoryPath=current_app.config.get("QRM_REPOPATH", ""),
-                uploadGithubRepositoryName=current_app.config.get("UPLOAD_GITHUB_REPO", ""),
-                uploadGithubRepositoryOwner=current_app.config.get("UPLOAD_GITHUB_USER", ""),
-                uploadGithubRepositoryPath=current_app.config.get("UPLOAD_GITHUB_REPOPATH", "qrms"),
-                uploadFileName=current_app.config.get("UPLOAD_FILE_NAME", "quantum-workflow-model"),
+                uploadGithubRepositoryName=current_app.config.get(
+                    "UPLOAD_GITHUB_REPO", ""
+                ),
+                uploadGithubRepositoryOwner=current_app.config.get(
+                    "UPLOAD_GITHUB_USER", ""
+                ),
+                uploadGithubRepositoryPath=current_app.config.get(
+                    "UPLOAD_GITHUB_REPOPATH", "qrms"
+                ),
+                uploadFileName=current_app.config.get(
+                    "UPLOAD_FILE_NAME", "quantum-workflow-model"
+                ),
                 uploadBranchName=current_app.config.get("UPLOAD_BRANCH_NAME", "")
             )
         )
