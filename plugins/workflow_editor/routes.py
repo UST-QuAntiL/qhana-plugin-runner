@@ -113,12 +113,10 @@ class WFEditorFrontend(MethodView):
                 qhanaPluginRegistryURL=current_app.config.get(
                     "PLUGIN_REGISTRY_URL", "http://localhost:5006"
                 ),
-
                 # Data flow plugin configuration
                 configurationsEndpoint=current_app.config.get(
                     "SERVICE_DATA_CONFIG", "http://localhost:8000/service-task"
                 ),
-
                 # OpenTOSCA plugin configuration
                 opentoscaEndpoint=current_app.config.get(
                     "OPENTOSCA_ENDPOINT", "http://localhost:1337/csars"
@@ -126,7 +124,6 @@ class WFEditorFrontend(MethodView):
                 wineryEndpoint=current_app.config.get(
                     "WINERY_ENDPOINT", "http://localhost:8080/winery"
                 ),
-
                 # Pattern plugin configuration
                 patternAtlasEndpoint=current_app.config.get(
                     "PATTERN_ATLAS_ENDPOINT", "http://localhost:8080/pattern-atlas"
@@ -137,7 +134,6 @@ class WFEditorFrontend(MethodView):
                 qcAtlasEndpoint=current_app.config.get(
                     "QC_ATLAS_ENDPOINT", "http://localhost:8080/qc-atlas"
                 ),
-
                 # QuantME plugin configuration
                 nisqAnalyzerEndpoint=current_app.config.get(
                     "NISQ_ANALYZER_ENDPOINT", "http://localhost:8080/nisq-analyzer"
@@ -156,17 +152,16 @@ class WFEditorFrontend(MethodView):
                 ),
                 qiskitRuntimeHandlerEndpoint=current_app.config.get(
                     "QISKIT_RUNTIME_HANDLER_ENDPOINT",
-                    "http://localhost:8080/qiskit-runtime-handler"
+                    "http://localhost:8080/qiskit-runtime-handler",
                 ),
                 awsRuntimeHandlerEndpoint=current_app.config.get(
                     "AWS_RUNTIME_HANDLER_ENDPOINT",
-                    "http://localhost:8080/aws-runtime-handler"
+                    "http://localhost:8080/aws-runtime-handler",
                 ),
                 transformationFrameworkEndpoint=current_app.config.get(
                     "TRANSFORMATION_FRAMEWORK_ENDPOINT",
-                    "http://localhost:8080/transformation-framework"
+                    "http://localhost:8080/transformation-framework",
                 ),
-
                 # Editor Configuration
                 camundaEndpoint=current_app.config.get(
                     "CAMUNDA_ENDPOINT", "http://localhost:8080/camunda"
@@ -200,7 +195,7 @@ class WFEditorFrontend(MethodView):
                 uploadFileName=current_app.config.get(
                     "UPLOAD_FILE_NAME", "quantum-workflow-model"
                 ),
-                uploadBranchName=current_app.config.get("UPLOAD_BRANCH_NAME", "")
+                uploadBranchName=current_app.config.get("UPLOAD_BRANCH_NAME", ""),
             )
         )
 
