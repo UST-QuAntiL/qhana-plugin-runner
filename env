@@ -1,0 +1,52 @@
+# Editor Variables
+PLUGIN_REGISTRY_URL="http://localhost:5006/api",
+AUTOSAVE_INTERVAL=300000,
+DOWNLOAD_FILE_NAME="quantum-workflow-model"
+UPLOAD_BRANCH_NAME=""
+UPLOAD_FILE_NAME="workflow"
+UPLOAD_GITHUB_REPO=""
+UPLOAD_GITHUB_REPOPATH="qrms"
+UPLOAD_GITHUB_USER=""
+GITHUB_TOKEN=""
+
+# Plugin Enablement
+ENABLE_DATA_FLOW_PLUGIN="true"
+ENABLE_PATTERN_PLUGIN="true"
+ENABLE_PLANQK_PLUGIN="true"
+ENABLE_QHANA_PLUGIN="true"
+ENABLE_QUANTME_PLUGIN="true"
+ENABLE_OPENTOSCA_PLUGIN="true"
+
+# Camunda Configuration
+CAMUNDA_ENDPOINT="http://localhost:8090/engine-rest"
+
+# Data Flow Plugin Configuration
+DATA_CONFIG="https://raw.githubusercontent.com/PlanQK/workflow-modeler/master/components/bpmn-q/modeler-component/extensions/quantme/configurations/quantmeDataObjects.json",
+    "https://raw.githubusercontent.com/PlanQK/workflow-modeler/master/components/bpmn-q/modeler-component/extensions/quantme/configurations/quantmeDataObjects.json",
+SERVICE_DATA_CONFIG="http://localhost:8000/service-task"
+
+# OpenTOSCA Plugin Configuration
+OPENTOSCA_ENDPOINT="http://localhost:1337/csars"
+WINERY_ENDPOINT="http://localhost:8080/winery"
+
+# Pattern Plugin Configuration
+PATTERN_ATLAS_ENDPOINT="http://localhost:1977/patternatlas/patternLanguages/af7780d5-1f97-4536-8da7-4194b093ab1d"
+PATTERN_ATLAS_UI_ENDPOINT="http://localhost:1978"
+QC_ATLAS_ENDPOINT="http://localhost:6626"
+
+# QHAna Plugin Configuration
+QHANA_PLUGIN_REGISTRY_URL="http://localhost:5006/api/"
+
+# QuantME Plugin Configuration
+AWS_RUNTIME_HANDLER_ENDPOINT="http://localhost:8890"
+NISQ_ANALYZER_ENDPOINT="http://localhost:8098/nisq-analyzer"
+NISQ_ANALYZER_UI_ENDPOINT="http://localhost:5009/#/algorithms"
+PROVENANCE_COLLECTION="false"
+QISKIT_RUNTIME_HANDLER_ENDPOINT="http://localhost:8889"
+QPROV_ENDPOINT="http://localhost:8099/qprov"
+QRM_USERNAME=""
+QRM_REPONAME=""
+QRM_REPOPATH=""
+SCRIPT_SPLITTER_ENDPOINT="http://localhost:8891"
+SCRIPT_SPLITTER_THRESHOLD=5
+TRANSFORMATION_FRAMEWORK_ENDPOINT="http://localhost:8888"
