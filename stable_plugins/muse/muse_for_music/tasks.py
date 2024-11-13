@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-from json import loads as json_load
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 from zipfile import ZipFile
@@ -22,7 +21,7 @@ from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.attributes import tuple_serializer, dict_serializer
+from qhana_plugin_runner.plugin_utils.attributes import tuple_serializer
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
@@ -41,7 +40,6 @@ from .util import (
     PersonEntity,
     PartEntity,
     get_attribute_metadata,
-    AttributeMetadata,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -63,7 +61,10 @@ def import_data(self, db_id: int) -> str:
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
-    muse_for_music_url = None
+    muse_for_music_url: Optional[str] = None
+
+    if input_params.muse_url:
+        muse_for_music_url = input_params.muse_url
 
     if muse_for_music_url is None:
         muse_for_music_url = get_muse_for_music_url_from_registry()

@@ -81,6 +81,13 @@
     preprocessing
 
     quantum
+* - [MUSE4Music Loader (@v0.1.1)](#muse-for-music-loader)
+
+    muse-for-music-loader@v0-1-1
+  - dataloader
+  - MUSE4Music
+
+    data-loading
 * - [Manual Classification (@v0.2.1)](#manual-classification)
 
     manual-classification@v0-2-1
@@ -444,7 +451,7 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `QML`, `bpmn`, `camunda-engine`, `circuit-demo`, `circuit-executor`, `classical`, `classification`, `clustering`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `json`, `kernel`, `manual`, `mapping`, `mariadb`, `minimizer`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `objective-function`, `one-hot-encoding`, `optimization`, `postgresql`, `preprocessing`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantum`, `rest`, `sample`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `camunda-engine`, `circuit-demo`, `circuit-executor`, `classical`, `classification`, `clustering`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `json`, `kernel`, `manual`, `mapping`, `mariadb`, `minimizer`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `objective-function`, `one-hot-encoding`, `optimization`, `postgresql`, `preprocessing`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantum`, `rest`, `sample`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`
 
 **Input formats:** `application/X-lines+json`, `application/json`, `application/zip`, `text/csv`, `text/x-qasm`\
 **Output formats:** `*/*`, `application/csv`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
@@ -629,6 +636,23 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |entity/vector|application/json|✓|
 |entity/vector|application/json|✓|
 |qnn-weights/*|application/json|✓|
+
+
+(muse-for-music-loader)=
+### MUSE4Music Loader (@v0.1.1)
+
+dataloader – MUSE4Music, data-loading\
+*Path:* {file}`stable_plugins/muse/muse_for_music/__init__.py`
+
+Load data from a MUSE4Music instance.
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/list|application/json|✓|
+|entity/attribute-metadata|application/json|✓|
+|graph/taxonomy|application/zip|✓|
 
 
 (manual-classification)=
