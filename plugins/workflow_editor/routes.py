@@ -132,7 +132,24 @@ class WFEditorFrontend(MethodView):
                 scriptSplitterThreshold=current_app.config.get("SCRIPT_SPLITTER_THRESHOLD", "0.5"),
                 qiskitRuntimeHandlerEndpoint=current_app.config.get("QISKIT_RUNTIME_HANDLER_ENDPOINT", "http://localhost:8080/qiskit-runtime-handler"),
                 awsRuntimeHandlerEndpoint=current_app.config.get("AWS_RUNTIME_HANDLER_ENDPOINT", "http://localhost:8080/aws-runtime-handler"),
-                transformationFrameworkEndpoint=current_app.config.get("TRANSFORMATION_FRAMEWORK_ENDPOINT", "http://localhost:8080/transformation-framework")
+                transformationFrameworkEndpoint=current_app.config.get("TRANSFORMATION_FRAMEWORK_ENDPOINT", "http://localhost:8080/transformation-framework"),
+
+                #Editor Configuration
+                camundaEndpoint=current_app.config.get("CAMUNDA_ENDPOINT", "http://localhost:8080/camunda"),
+                downloadFileName=current_app.config.get("DOWNLOAD_FILE_NAME", "workflow.bpmn"),
+                transformedWorkflowHandler=current_app.config.get("TRANSFORMED_WORKFLOW_HANDLER", "inline"),
+                autoSaveFileOption=current_app.config.get("AUTO_SAVE_FILE_OPTION", "interval"),
+                fileFormat=current_app.config.get("FILE_FORMAT", "bpmn"),
+                autoSaveIntervalSize=current_app.config.get("AUTO_SAVE_INTERVAL", "300000"),
+                githubToken=current_app.config.get("GITHUB_TOKEN", ""),
+                githubRepositoryName=current_app.config.get("QRM_REPONAME", ""),
+                githubUsername=current_app.config.get("QRM_USERNAME", ""),
+                githubRepositoryPath=current_app.config.get("QRM_REPOPATH", ""),
+                uploadGithubRepositoryName=current_app.config.get("UPLOAD_GITHUB_REPO", ""),
+                uploadGithubRepositoryOwner=current_app.config.get("UPLOAD_GITHUB_USER", ""),
+                uploadGithubRepositoryPath=current_app.config.get("UPLOAD_GITHUB_REPOPATH", "qrms"),
+                uploadFileName=current_app.config.get("UPLOAD_FILE_NAME", "quantum-workflow-model"),
+                uploadBranchName=current_app.config.get("UPLOAD_BRANCH_NAME", "")
             )
         )
 
