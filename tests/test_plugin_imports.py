@@ -121,6 +121,22 @@ def extract_imports(code: str, path: Path):  # noqa: C901
                         return
 
 
+def is_not_in_project_repo(module: tuple[str, ...]) -> bool:
+    if not module:
+        return True
+
+    imported_path = REPOSITORY_PATH / module[0]
+    if imported_path.exists():
+        return False  # module is a relative import
+    if len(module) == 1:
+        imported_path = REPOSITORY_PATH / f"{module[0]}.py"
+        if imported_path.exists():
+            return False  # module is a relative import
+
+    # module is not found inside the repository
+    return True
+
+
 def is_valid_import(module: tuple[str, ...], lineno, file_) -> bool:
     """Check if a given import is considered ok."""
     if not module:
@@ -143,16 +159,9 @@ def is_valid_import(module: tuple[str, ...], lineno, file_) -> bool:
         ), f"Plugins must use relative imports! Found import '{'.'.join(module)}' in line {lineno} of file {file_}"
 
     # check if absolute import resolves to a path relative to the repository
-    imported_path = REPOSITORY_PATH / "/".join(module)
-    if len(module) >= 2:
-        # check parent path as last entry may be part of a module and not a module itself
-        assert (
-            not imported_path.parent.exists()
-        ), f"Plugins must use relative imports! Found import '{'.'.join(module)}' in line {lineno} of file {file_}"
-    else:
-        assert (
-            not imported_path.exists()
-        ), f"Plugins must use relative imports! Found import '{'.'.join(module)}' in line {lineno} of file {file_}"
+    assert is_not_in_project_repo(
+        module
+    ), f"Plugins must use relative imports! Found import '{'.'.join(module)}' in line {lineno} of file {file_}"
 
     return False
 
