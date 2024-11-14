@@ -144,9 +144,15 @@ def is_valid_import(module: tuple[str, ...], lineno, file_) -> bool:
 
     # check if absolute import resolves to a path relative to the repository
     imported_path = REPOSITORY_PATH / "/".join(module)
-    assert (
-        not imported_path.exists() and not imported_path.parent.exists()
-    ), f"Plugins must use relative imports! Found import '{'.'.join(module)}' in line {lineno} of file {file_}"
+    if len(module) >= 2:
+        # check parent path as last entry may be part of a module and not a module itself
+        assert (
+            not imported_path.parent.exists()
+        ), f"Plugins must use relative imports! Found import '{'.'.join(module)}' in line {lineno} of file {file_}"
+    else:
+        assert (
+            not imported_path.exists()
+        ), f"Plugins must use relative imports! Found import '{'.'.join(module)}' in line {lineno} of file {file_}"
 
     return False
 
