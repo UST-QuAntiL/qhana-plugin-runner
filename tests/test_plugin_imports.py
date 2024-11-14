@@ -16,6 +16,7 @@
 
 import ast
 import sys
+from collections import deque
 from pathlib import Path
 
 # search for plugins in the following locations
@@ -119,6 +120,33 @@ def extract_imports(code: str, path: Path):  # noqa: C901
                 if isinstance(base, ast.Name):
                     if str(base.id) in base_class_aliases:
                         return
+
+
+def extract_all_imports(code: str, path: Path):
+    """Use the ast module to extract all information about all import statements in the code."""
+    tree = ast.parse(code, path)
+
+    nodes = deque(ast.iter_child_nodes(tree))
+
+    while nodes:
+        node = nodes.popleft()
+        if isinstance(node, ast.Import):
+            for n in node.names:
+                module = tuple(n.name.split(".", maxsplit=1))
+                if module:
+                    yield module[0], n.lineno
+        elif isinstance(node, ast.ImportFrom):
+            if node.level > 0:
+                yield node.level, node.lineno
+            else:
+                assert (
+                    node.module is not None
+                ), f"Bad import found in line {node.lineno} in file {path}"
+                module = node.module.split(".", maxsplit=1)
+                if module:
+                    yield module[0], node.lineno
+        else:
+            nodes.extend(ast.iter_child_nodes(node))
 
 
 def is_not_in_project_repo(module: tuple[str, ...]) -> bool:
@@ -258,3 +286,29 @@ def test_plugin_imports():
             check_file_imports(loc, visited=visited_files)
         elif loc.is_dir():
             check_folder_imports(loc, module_base=loc, visited=visited_files)
+
+
+def test_relative_imports():
+    """Check all plugins for potential absolute imports of plugin modules or
+    relative imports beyond plugin boundaries."""
+    plugin_locations = get_plugin_roots()
+    for loc in plugin_locations:
+        for file_ in loc.rglob("**/*.py"):
+            imports = extract_all_imports(file_.read_text(), file_)
+            for module, lineno in imports:
+                if isinstance(module, int):
+                    import_path = file_
+                    for _ in range(module - 1):
+                        assert (
+                            import_path.parent
+                        ), f"Found out of bounds relative import in line {lineno} of file {file_}!"
+                        import_path = import_path.parent
+                    assert import_path.is_relative_to(
+                        loc
+                    ), f"Found out of bounds relative import in line {lineno} of file {file_}!"
+                else:
+                    if module == "qhana_plugin_runner":
+                        continue
+                    assert is_not_in_project_repo(
+                        (module,)
+                    ), f"Plugins must use relative imports! Found import '{module}[...]' in line {lineno} of file {file_}"
