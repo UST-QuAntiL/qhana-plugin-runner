@@ -112,7 +112,7 @@ class WFEditorFrontend(MethodView):
                 # QHAna plugin configuration
                 qhanaPluginRegistryURL=current_app.config.get(
                     "PLUGIN_REGISTRY_URL", "http://localhost:5006/api"
-                ).strip('"').rstrip(","),
+                ),
                 # Data flow plugin configuration
                 configurationsEndpoint=current_app.config.get(
                     "SERVICE_DATA_CONFIG", "http://localhost:8000/service-task"
