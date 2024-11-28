@@ -1,6 +1,6 @@
 # Editor Variables
-PLUGIN_REGISTRY_URL="http://localhost:5006/api",
-AUTOSAVE_INTERVAL=300000,
+
+AUTOSAVE_INTERVAL=300000
 DOWNLOAD_FILE_NAME="quantum-workflow-model"
 UPLOAD_BRANCH_NAME=""
 UPLOAD_FILE_NAME="workflow"
@@ -35,7 +35,7 @@ PATTERN_ATLAS_UI_ENDPOINT="http://localhost:1978"
 QC_ATLAS_ENDPOINT="http://localhost:6626"
 
 # QHAna Plugin Configuration
-QHANA_PLUGIN_REGISTRY_URL="http://localhost:5006/api/"
+PLUGIN_REGISTRY_URL="http://localhost:5006/api"
 
 # QuantME Plugin Configuration
 AWS_RUNTIME_HANDLER_ENDPOINT="http://localhost:8890"

@@ -88,7 +88,7 @@
         {
             name: "qhana",
             config: {
-                qhanaPluginRegistryURL: "{{qhanaPluginRegistryURL}}"
+                qhanaPluginRegistryURL: "{{qhanaPluginRegistryURL|safe}}"
             }
         },
         {
@@ -104,6 +104,26 @@
             config: {
                 opentoscaEndpoint: "{{opentoscaEndpoint}}",
                 wineryEndpoint: "{{wineryEndpoint}}"
+            }
+        },
+        {
+            name: "editor",
+            config: {
+                camundaEndpoint: "{{camundaEndpoint}}",
+                fileName: "{{fileName}}",
+                transformedWorkflowHandler: "{{transformedWorkflowHandler}}",
+                autoSaveFileOption: "{{autoSaveFileOption}}",
+                fileFormat: "{{fileFormat}}",
+                autoSaveIntervalSize: "{{autoSaveIntervalSize}}",
+                githubToken: "{{githubToken}}",
+                githubRepositoryName: "{{githubRepositoryName}}",
+                githubUsername: "{{githubUsername}}",
+                githubRepositoryPath: "{{githubRepositoryPath}}",
+                uploadGithubRepositoryName: "{{uploadGithubRepositoryName}}",
+                uploadGithubRepositoryOwner: "{{uploadGithubRepositoryOwner}}",
+                uploadGithubRepositoryPath: "{{uploadGithubRepositoryPath}}",
+                uploadFileName: "{{uploadFileName}}",
+                uploadBranchName: "{{uploadBranchName}}",
             }
         }
     ];
