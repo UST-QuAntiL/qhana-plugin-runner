@@ -11,8 +11,6 @@ from flask_smorest import abort
 from marshmallow import EXCLUDE
 import html
 
-
-
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginMetadata,
@@ -113,7 +111,10 @@ class WFEditorFrontend(MethodView):
                     f"{WF_EDITOR_BLP.name}.{WorkflowEditorJavaScript.__name__}"
                 ),
                 # QHAna plugin configuration
-                qhanaPluginRegistryURL=current_app.config.get("PLUGIN_REGISTRY_URL", "http://localhost:5006/api").strip('"').rstrip(','),
+                qhanaPluginRegistryURL=current_app.config.get(
+                    "PLUGIN_REGISTRY_URL", 
+                    "http://localhost:5006/api"
+                ).strip('"').rstrip(","),
                 # Data flow plugin configuration
                 configurationsEndpoint=current_app.config.get(
                     "SERVICE_DATA_CONFIG", "http://localhost:8000/service-task"
