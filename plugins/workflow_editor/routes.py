@@ -9,7 +9,6 @@ from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
 from marshmallow import EXCLUDE
-import html
 
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
@@ -112,8 +111,7 @@ class WFEditorFrontend(MethodView):
                 ),
                 # QHAna plugin configuration
                 qhanaPluginRegistryURL=current_app.config.get(
-                    "PLUGIN_REGISTRY_URL", 
-                    "http://localhost:5006/api"
+                    "PLUGIN_REGISTRY_URL", "http://localhost:5006/api"
                 ).strip('"').rstrip(","),
                 # Data flow plugin configuration
                 configurationsEndpoint=current_app.config.get(
