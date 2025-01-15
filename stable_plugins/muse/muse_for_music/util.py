@@ -22,9 +22,9 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    get_type_hints,
-    get_origin,
     get_args,
+    get_origin,
+    get_type_hints,
 )
 from urllib.parse import urlparse
 
@@ -392,9 +392,36 @@ class SubpartEntity(NamedTuple):
     ID: str
     href: str
     subpart_label: str
-    part: str
-    opus: str
+    part: Annotated[str, {"ref_target": "parts.csv"}]
+    opus: Annotated[str, {"ref_target": "opuses.csv"}]
     is_tutti: bool
+    occurence_in_part: Annotated[Optional[str], {"taxonomy": "AuftretenWerkausschnitt"}]
+    share_of_part: Annotated[Optional[str], {"taxonomy": "Anteil"}]
+    instrumentation: Annotated[List[str], {"taxonomy": "Instrument"}]
+    tempo_markings: Annotated[List[str], {"taxonomy": "Tempo"}]
+    tempo_changes: Annotated[List[str], {"taxonomy": "TempoEntwicklung"}]
+    dynamic_markings: Annotated[List[Optional[str]], {"taxonomy": "Lautstaerke"}]
+    dynamic_markings_extra: Annotated[
+        List[Optional[str]], {"taxonomy": "LautstaerkeZusatz"}
+    ]
+    dynamic_changes: Annotated[List[str], {"taxonomy": "LautstaerkeEntwicklung"}]
+    degree_of_dissonance: Annotated[Optional[str], {"taxonomy": "Dissonanzgrad"}]
+    dissonances: Annotated[List[str], {"taxonomy": "Dissonanzen"}]
+    chords: Annotated[List[str], {"taxonomy": "Akkord"}]
+    harmonic_complexity: Annotated[Optional[str], {"taxonomy": "HarmonischeKomplexitaet"}]
+    harmonic_density: Annotated[Optional[str], {"taxonomy": "HarmonischeDichte"}]
+    harmonic_phenomenons: Annotated[List[str], {"taxonomy": "HarmonischePhaenomene"}]
+    harmonic_changes: Annotated[List[str], {"taxonomy": "HarmonischeEntwicklung"}]
+    harmonische_function: Annotated[
+        List[str], {"taxonomy": "HarmonischeFunktionVerwandschaft"}
+    ]
+    harmonic_analysis: Optional[str]
+    hc__tonalitaet: Annotated[List[Optional[str]], {"taxonomy": "Tonalitaet"}]
+    hc__harmonic_function: Annotated[
+        List[Optional[str]], {"taxonomy": "HarmonischeFunktion"}
+    ]
+    hc__grundton: Annotated[List[Optional[str]], {"taxonomy": "Grundton"}]
+    hc__harmonic_step: Annotated[List[Optional[str]], {"taxonomy": "HarmonischeStufe"}]
 
 
 SUBPART_FIELDS = {
@@ -417,6 +444,8 @@ def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
         raise ValueError("Given Entity does not match the shape of subpart entities!")
 
     part_id = f'p_{_extract(entity, "part_id", "int")}'
+    dynamic_markings = entity.get("dynamic", {}).get("dynamic_markings", [])
+    harmonic_centers = entity.get("harmonics", {}).get("harmonic_centers", [])
 
     return SubpartEntity(
         id_,
@@ -424,7 +453,48 @@ def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
         _extract(entity, "label"),
         part_id,
         part_id_to_opus_id[part_id],
-        entity["is_tutti"],
+        bool(entity.get("is_tutti")),
+        _extract(entity, "occurence_in_part", "taxItem", "AuftretenWerkausschnitt"),
+        _extract(entity, "share_of_part", "taxItem", "Anteil"),
+        _extract(entity, "instrumentation", "taxItem", "Instrument"),
+        _extract(entity, "tempo.tempo_markings", "taxItem", "Tempo"),
+        _extract(entity, "tempo.tempo_changes", "taxItem", "TempoEntwicklung"),
+        [_extract(e, "lautstaerke", "taxItem", "Lautstaerke") for e in dynamic_markings],
+        [
+            _extract(e, "lautstaerke_zusatz", "taxItem", "LautstaerkeZusatz")
+            for e in dynamic_markings
+        ],
+        _extract(entity, "dynamic.dynamic_changes", "taxItem", "LautstaerkeEntwicklung"),
+        _extract(entity, "harmonics.degree_of_dissonance", "taxItem", "Dissonanzgrad"),
+        _extract(entity, "harmonics.dissonances", "taxItem", "Dissonanzen"),
+        _extract(entity, "harmonics.chords", "taxItem", "Akkord"),
+        _extract(
+            entity, "harmonics.harmonic_complexity", "taxItem", "HarmonischeKomplexitaet"
+        ),
+        _extract(entity, "harmonics.harmonic_density", "taxItem", "HarmonischeDichte"),
+        _extract(
+            entity, "harmonics.harmonic_phenomenons", "taxItem", "HarmonischePhaenomene"
+        ),
+        _extract(
+            entity, "harmonics.harmonic_changes", "taxItem", "HarmonischeEntwicklung"
+        ),
+        _extract(
+            entity,
+            "harmonics.harmonische_funktion",
+            "taxItem",
+            "HarmonischeFunktionVerwandschaft",
+        ),
+        _extract(entity, "harmonics.harmonic_analyse"),
+        [_extract(e, "tonalitaet", "taxItem", "Tonalitaet") for e in harmonic_centers],
+        [
+            _extract(e, "harmonische_funktion", "taxItem", "HarmonischeFunktion")
+            for e in harmonic_centers
+        ],
+        [_extract(e, "grundton", "taxItem", "Grundton") for e in harmonic_centers],
+        [
+            _extract(e, "harmonische_stufe", "taxItem", "HarmonischeStufe")
+            for e in harmonic_centers
+        ],
     )
 
 
