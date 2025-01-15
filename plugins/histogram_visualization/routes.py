@@ -38,8 +38,8 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 
-from . import VIS_BLP, ClusterScatterVisualization
-from .schemas import ClusterScatterInputParametersSchema
+from . import VIS_BLP, HistogramVisualization
+from .schemas import HistogramInputParametersSchema
 from .tasks import generate_image, process
 
 
@@ -51,7 +51,7 @@ class PluginsView(MethodView):
     @VIS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
-        plugin = ClusterScatterVisualization.instance
+        plugin = HistogramVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
@@ -69,13 +69,7 @@ class PluginsView(MethodView):
                         data_type="entity/vector",
                         content_type=["application/json"],
                         required=True,
-                        parameter="entityUrl",
-                    ),
-                    InputDataMetadata(
-                        data_type="entity/label",
-                        content_type=["application/json"],
-                        required=True,
-                        parameter="clustersUrl",
+                        parameter="data",
                     ),
                 ],
                 data_output=[
@@ -86,20 +80,20 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["visualization", "cluster", "scatter"],
+            tags=["visualization", "histogram"],
         )
 
 
 @VIS_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the cluster scatter visualization plugin."""
+    """Micro frontend for the histogram visualization plugin."""
 
     @VIS_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the cluster scatter visualization plugin.",
+        description="Micro frontend of the histogram visualization plugin.",
     )
     @VIS_BLP.arguments(
-        ClusterScatterInputParametersSchema(
+        HistogramInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -112,10 +106,10 @@ class MicroFrontend(MethodView):
 
     @VIS_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the cluster scatter visualization plugin.",
+        description="Micro frontend of the histogram visualization plugin.",
     )
     @VIS_BLP.arguments(
-        ClusterScatterInputParametersSchema(
+        HistogramInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -127,15 +121,15 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
-        plugin = ClusterScatterVisualization.instance
+        plugin = HistogramVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return Response(
             render_template(
-                "cluster_scatter_visualization.html",
+                "histogram_visualization.html",
                 name=plugin.name,
                 version=plugin.version,
-                schema=ClusterScatterInputParametersSchema(),
+                schema=HistogramInputParametersSchema(),
                 valid=valid,
                 values=data,
                 errors=errors,
@@ -147,33 +141,29 @@ class MicroFrontend(MethodView):
 
 
 @VIS_BLP.route("/plots/")
-@VIS_BLP.response(HTTPStatus.OK, description="Cluster Scatter Visualization.")
+@VIS_BLP.response(HTTPStatus.OK, description="Histogram Visualization.")
 @VIS_BLP.arguments(
-    ClusterScatterInputParametersSchema(unknown=EXCLUDE),
+    HistogramInputParametersSchema(unknown=EXCLUDE),
     location="query",
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
 def get_image(data: Mapping):
-    entity_url = data.get("entity_url", None)
-    clusters_url = data.get("clusters_url", None)
-    
-    with open("B:\\Dokumente\\Bachelor\\test.txt", 'wt') as f:
-        f.write(str(clusters_url))
+    data_url = data.get("data", None)
 
-    if not entity_url:
+    if not data_url:
         abort(HTTPStatus.BAD_REQUEST)
-    url_hash = hashlib.sha256((entity_url + str(clusters_url)).encode("utf-8")).hexdigest()
-    image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash, None)
+    url_hash = hashlib.sha256(data_url.encode("utf-8")).hexdigest()
+    image = DataBlob.get_value(HistogramVisualization.instance.identifier, url_hash, None)
     if image is None:
         if not (
             task_id := PluginState.get_value(
-                ClusterScatterVisualization.instance.identifier, url_hash, None
+                HistogramVisualization.instance.identifier, url_hash, None
             )
         ):
-            task_result = generate_image.s(entity_url, clusters_url, url_hash).apply_async()
+            task_result = generate_image.s(data_url, url_hash).apply_async()
             PluginState.set_value(
-                ClusterScatterVisualization.instance.identifier,
+                HistogramVisualization.instance.identifier,
                 url_hash,
                 task_result.id,
                 commit=True,
@@ -182,12 +172,11 @@ def get_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash)
+            image = DataBlob.get_value(HistogramVisualization.instance.identifier, url_hash)
         except celery.exceptions.TimeoutError:
             return Response("Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:
-        abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
-    
+        abort(HTTPStatus.BAD_REQUEST, "Invalid data URL!")
     return Response(image)
 
 
@@ -195,24 +184,23 @@ def get_image(data: Mapping):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @VIS_BLP.arguments(ClusterScatterInputParametersSchema(unknown=EXCLUDE), location="form")
+    @VIS_BLP.arguments(HistogramInputParametersSchema(unknown=EXCLUDE), location="form")
     @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        entity_url = arguments.get("entity_url", None)
-        clusters_url = arguments.get("clusters_url", None)
-        if entity_url is None:
+        data = arguments.get("data", None)
+        if data is None:
             abort(HTTPStatus.BAD_REQUEST)
-        url_hash = hashlib.sha256(entity_url.encode("utf-8")).hexdigest()
+        url_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash
+            db_id=db_task.id, data_url=data, hash=url_hash
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash)
+        task.apply_async(db_id=db_task.id, data_url=data, hash=url_hash)
 
         db_task.save(commit=True)
 

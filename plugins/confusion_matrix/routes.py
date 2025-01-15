@@ -14,10 +14,11 @@
 
 import hashlib
 from http import HTTPStatus
+import json
 from typing import Mapping
 from celery import chain
 import celery
-from flask import abort, redirect, send_file
+from flask import abort, redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -38,9 +39,9 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 
-from . import VIS_BLP, ClusterScatterVisualization
-from .schemas import ClusterScatterInputParametersSchema
-from .tasks import generate_image, process
+from . import VIS_BLP, ConfusionMatrixVisualization
+from .schemas import ConfusionMatrixInputParametersSchema
+from .tasks import generate_table, process
 
 
 @VIS_BLP.route("/")
@@ -51,7 +52,7 @@ class PluginsView(MethodView):
     @VIS_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
-        plugin = ClusterScatterVisualization.instance
+        plugin = ConfusionMatrixVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
@@ -66,40 +67,40 @@ class PluginsView(MethodView):
                 plugin_dependencies=[],
                 data_input=[
                     InputDataMetadata(
-                        data_type="entity/vector",
+                        data_type="entity/label",
                         content_type=["application/json"],
                         required=True,
-                        parameter="entityUrl",
+                        parameter="clustersUrl1",
                     ),
                     InputDataMetadata(
                         data_type="entity/label",
                         content_type=["application/json"],
                         required=True,
-                        parameter="clustersUrl",
+                        parameter="clustersUrl2",
                     ),
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="plot",
+                        data_type="table",
                         content_type=["text/html"],
                         required=True,
                     )
                 ],
             ),
-            tags=["visualization", "cluster", "scatter"],
+            tags=["visualization", "cluster", "confusion matrix"],
         )
 
 
 @VIS_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the cluster scatter visualization plugin."""
+    """Micro frontend for the confusion matrix plugin."""
 
     @VIS_BLP.html_response(
         HTTPStatus.OK,
-        description="Micro frontend of the cluster scatter visualization plugin.",
+        description="Micro frontend of the confusion matrix plugin.",
     )
     @VIS_BLP.arguments(
-        ClusterScatterInputParametersSchema(
+        ConfusionMatrixInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
@@ -115,7 +116,7 @@ class MicroFrontend(MethodView):
         description="Micro frontend of the cluster scatter visualization plugin.",
     )
     @VIS_BLP.arguments(
-        ClusterScatterInputParametersSchema(
+        ConfusionMatrixInputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
@@ -127,53 +128,50 @@ class MicroFrontend(MethodView):
         return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
-        plugin = ClusterScatterVisualization.instance
+        plugin = ConfusionMatrixVisualization.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return Response(
             render_template(
-                "cluster_scatter_visualization.html",
+                "confusion_matrix.html",
                 name=plugin.name,
                 version=plugin.version,
-                schema=ClusterScatterInputParametersSchema(),
+                schema=ConfusionMatrixInputParametersSchema(),
                 valid=valid,
                 values=data,
                 errors=errors,
                 example_values=url_for(f"{VIS_BLP.name}.MicroFrontend"),
-                get_image_url=url_for(f"{VIS_BLP.name}.get_image"),
+                get_table_url=url_for(f"{VIS_BLP.name}.get_table"),
                 process=url_for(f"{VIS_BLP.name}.ProcessView"),
             )
         )
 
 
-@VIS_BLP.route("/plots/")
+@VIS_BLP.route("/tables/")
 @VIS_BLP.response(HTTPStatus.OK, description="Cluster Scatter Visualization.")
 @VIS_BLP.arguments(
-    ClusterScatterInputParametersSchema(unknown=EXCLUDE),
+    ConfusionMatrixInputParametersSchema(unknown=EXCLUDE),
     location="query",
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
-def get_image(data: Mapping):
-    entity_url = data.get("entity_url", None)
-    clusters_url = data.get("clusters_url", None)
-    
-    with open("B:\\Dokumente\\Bachelor\\test.txt", 'wt') as f:
-        f.write(str(clusters_url))
-
-    if not entity_url:
+def get_table(data: Mapping):
+    clusters_url1 = data.get("clusters_url1", None)
+    clusters_url2 = data.get("clusters_url2", None)
+    optimize = data.get("optimize", None)
+    if not clusters_url1 or not clusters_url2:
         abort(HTTPStatus.BAD_REQUEST)
-    url_hash = hashlib.sha256((entity_url + str(clusters_url)).encode("utf-8")).hexdigest()
-    image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash, None)
-    if image is None:
+    url_hash = hashlib.sha256((clusters_url1+clusters_url2+str(optimize)).encode("utf-8")).hexdigest()
+    table = DataBlob.get_value(ConfusionMatrixVisualization.instance.identifier, url_hash, None)
+    if table is None:
         if not (
             task_id := PluginState.get_value(
-                ClusterScatterVisualization.instance.identifier, url_hash, None
+                ConfusionMatrixVisualization.instance.identifier, url_hash, None
             )
         ):
-            task_result = generate_image.s(entity_url, clusters_url, url_hash).apply_async()
+            task_result = generate_table.s(clusters_url1, clusters_url2, optimize, url_hash).apply_async()
             PluginState.set_value(
-                ClusterScatterVisualization.instance.identifier,
+                ConfusionMatrixVisualization.instance.identifier,
                 url_hash,
                 task_result.id,
                 commit=True,
@@ -182,37 +180,45 @@ def get_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash)
+            table = DataBlob.get_value(ConfusionMatrixVisualization.instance.identifier, url_hash)
         except celery.exceptions.TimeoutError:
-            return Response("Image not yet created!", HTTPStatus.ACCEPTED)
-    if not image:
+            return Response("Table not yet created!", HTTPStatus.ACCEPTED)
+    if not table:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
     
-    return Response(image)
+    print(table)
+    table = str.encode(table.decode().replace("array(", "").replace(")", ""), encoding="utf-8")
+    table_dict = json.loads(table)
+    return Response(render_template(
+        "table.html",
+        confusion_matrix=table_dict["confusion_matrix"],
+        wrong_ids=table_dict["wrong_ids"],
+        permutation=table_dict["permutation"]
+    ))
 
 
 @VIS_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @VIS_BLP.arguments(ClusterScatterInputParametersSchema(unknown=EXCLUDE), location="form")
+    @VIS_BLP.arguments(ConfusionMatrixInputParametersSchema(unknown=EXCLUDE), location="form")
     @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        entity_url = arguments.get("entity_url", None)
-        clusters_url = arguments.get("clusters_url", None)
-        if entity_url is None:
+        clusters_url1 = arguments.get("clusters_url1", None)
+        clusters_url2 = arguments.get("clusters_url2", None)
+        if clusters_url1 is None or clusters_url2 is None:
             abort(HTTPStatus.BAD_REQUEST)
-        url_hash = hashlib.sha256(entity_url.encode("utf-8")).hexdigest()
+        url_hash = hashlib.sha256((clusters_url1 + clusters_url2).encode("utf-8")).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash
+            db_id=db_task.id, clusters_url1=clusters_url1, clusters_url2=clusters_url2, hash=url_hash
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash)
+        task.apply_async(db_id=db_task.id, clusters_url1=clusters_url1, clusters_url2=clusters_url2, hash=url_hash)
 
         db_task.save(commit=True)
 

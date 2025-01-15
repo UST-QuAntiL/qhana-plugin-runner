@@ -1,0 +1,57 @@
+<html>
+
+<style>
+    table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        color: white;
+    }
+    th, td {
+        text-align: center;
+        border: 1px solid white;
+        vertical-align: middle;
+        word-wrap: break-word;
+    }
+    body {
+        background-color: #424242
+    }
+</style>
+    
+
+    <body>
+        <table id="main-table">
+            <colgroup>
+                <col style="width: 5%;">
+                {% for i in range(confusion_matrix|count + 1) %}
+                    <col style="width: {{ 95/(confusion_matrix|count + 1) }}%;">
+                {% endfor %}
+            </colgroup>
+            <tr>
+                <td rowspan="2" style="border:none;"></td>
+                <td style="border:none;"></td>
+                <th colspan={{ confusion_matrix|count }}>Predicted Label</th>
+            </tr>
+            <tr>
+                <td>Wrong: {{ wrong_ids }}</td>
+                {% for i in range(confusion_matrix|count) %}
+                    <th>{{i}}</th>
+                {% endfor %}
+            </tr>
+
+            {% for i in range(confusion_matrix|count) %}
+                <tr>
+                    {% if i == 0 %}
+                        <th style="writing-mode: vertical-lr;" rowspan={{ confusion_matrix|count }}>Actual Label</th>
+                    {% endif %}
+                    <th>{{i}}</th>
+                    {% for j in range(confusion_matrix[i]|count) %}
+                        <td style="background:{% if i == j %}#214221{% else %}#842121{% endif %};">{{ confusion_matrix[i][j] }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        
+        </table>
+    </body>
+    <div style="color:white">{{ permutation }}</div>
+</html>

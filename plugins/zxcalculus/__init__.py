@@ -16,11 +16,13 @@ from typing import Optional
 
 from flask import Flask
 
+import pathlib
+
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "zxcalculus"
-__version__ = "v0.0.4"
+__version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -28,23 +30,29 @@ VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="ZXCalculus API.",
+    template_folder="zxcalculus_visualization_templates",
 )
 
 
-class ZXCalculus(QHAnaPluginBase):
+class ZXCalculusVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Generates a random circuit, visualizes and simplifies it."
-    tags = ["zxcalculus", "circuit"]
+    description = "Visualizes QASM as ZXCalculus and gives the option to simplify it."
+    tags = ["visualization", "zxcalculus", "circuit"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
+
+        # create folder for histogram images
+        pathlib.Path(__file__).parent.absolute().joinpath("files").mkdir(
+            parents=True, exist_ok=True
+        )
 
     def get_api_blueprint(self):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "plotly~=5.18.0\npyzx~=0.8.0\nmpld3~=0.5.10"
+        return "pylatexenc~=2.10\npyzx~=0.8.0\nmpld3~=0.5.10"
 
 
 try:

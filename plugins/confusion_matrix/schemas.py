@@ -17,27 +17,36 @@ from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
 )
+import marshmallow as ma
 
-class ClusterScatterInputParametersSchema(FrontendFormBaseSchema):
-    entity_url = FileUrl(
+class ConfusionMatrixInputParametersSchema(FrontendFormBaseSchema):
+    clusters_url1 = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="entity/vector",
-        data_content_types=["application/json"],
-        metadata={
-            "label": "Entity Point URL",
-            "description": "URL to a json file containing the points.",
-            "input_type": "text",
-        },
-    )
-    clusters_url = FileUrl(
-        required=True,
-        allow_none=True,
         data_input_type="entity/label",
         data_content_types=["application/json"],
         metadata={
             "label": "Cluster URL",
-            "description": "URL to a json file containing the cluster labels.",
+            "description": "URL to a json file containing the first set of cluster labels.",
             "input_type": "text",
+        },
+    )
+    clusters_url2 = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="entity/label",
+        data_content_types=["application/json"],
+        metadata={
+            "label": "Cluster URL",
+            "description": "URL to a json file containing the second set of cluster labels.",
+            "input_type": "text",
+        },
+    )
+    optimize = ma.fields.Boolean(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Optimize",
+            "description": "Optimize the Confusion Matrix by reordering the labels.",
         },
     )

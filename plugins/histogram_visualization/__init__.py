@@ -22,28 +22,24 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 from qhana_plugin_runner.util.plugins import plugin_identifier
 
-_plugin_name = "cluster-scatter-visualization"
-__version__ = "v0.3.0"
+_plugin_name = "histogram-visualization"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="A visualization plugin that creates a scatter plot using the provided data." \
-            + " When an Entity Point URL is provided, a simple scatter plot will be created." \
-            + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created" \
-            + " using plotly. Supports 2D and 3D data visualization.",
-    template_folder="cluster_scatter_visualization_templates",
+    description="A visualization plugin for creating Historgrams using the counts of different labels." \
+                    + "The labels are shown on the x Axis and the counts on the y Axis.",
+    template_folder="histogram_visualization_templates",
 )
 
-class ClusterScatterVisualization(QHAnaPluginBase):
+class HistogramVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "A visualization plugin that creates a scatter plot using the provided data." \
-            + " When an Entity Point URL is provided, a simple scatter plot will be created." \
-            + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created" \
-            + " using plotly. Supports 2D and 3D data visualization."
-    tags = ["visualization", "cluster", "scatter"]
+    description = "A visualization plugin for creating Historgrams using the counts of different labels." \
+                    + "The labels are shown on the x Axis and the counts on the y Axis."
+    tags = ["visualization", "histogram"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -52,7 +48,7 @@ class ClusterScatterVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nqiskit~=0.43\nkaleido~=0.2.1\ndash~=2.18.1"
+        return "pylatexenc~=2.10\nkaleido~=0.2.1\n"
 
 
 try:

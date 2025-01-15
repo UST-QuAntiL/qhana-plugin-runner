@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from io import BytesIO
 import muid
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from tempfile import SpooledTemporaryFile
 from celery.utils.log import get_task_logger
 from requests.exceptions import HTTPError
@@ -40,8 +38,6 @@ def get_readable_hash(s: str) -> str:
 
 @CELERY.task(name=f"{ClusterScatterVisualization.instance.identifier}.generate_image", bind=True)
 def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
-    from dash import html, dcc
-    from base64 import b64encode
 
     TASK_LOGGER.info(f"Generating plot for entites {entity_url} and clusters {clusters_url}...")
     try:
@@ -57,18 +53,20 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
         PluginState.delete_value(ClusterScatterVisualization.instance.identifier, hash, commit=True)
         return "Invalid Entity URL!"
     
-    try:
-        with open_url(clusters_url) as url:
-            clusters = url.json()
-    except HTTPError:
-        TASK_LOGGER.error(f"Invalid Cluster URL: {clusters_url}")
-        DataBlob.set_value(
-            ClusterScatterVisualization.instance.identifier,
-            hash,
-            "",
-        )
-        PluginState.delete_value(ClusterScatterVisualization.instance.identifier, hash, commit=True)
-        return "Invalid Cluster URL!"
+    clusters = []
+    if clusters_url is not None:
+        try:
+            with open_url(clusters_url) as url:
+                clusters = url.json()
+        except HTTPError:
+            TASK_LOGGER.error(f"Invalid Cluster URL: {clusters_url}")
+            DataBlob.set_value(
+                ClusterScatterVisualization.instance.identifier,
+                hash,
+                "",
+            )
+            PluginState.delete_value(ClusterScatterVisualization.instance.identifier, hash, commit=True)
+            return "Invalid Cluster URL!"
 
     pt_x_list = [0 for _ in range(0, len(entities))]
     pt_y_list = [0 for _ in range(0, len(entities))]
@@ -128,19 +126,10 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
             color="Cluster ID",
             hover_data={"size": False},
         )
+    
+    html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
 
-    print("---------------------------------------------")
-    print(do_3d)
-    img_bytes = fig.to_image(format="png", engine="kaleido")
-    encoding = b64encode(img_bytes).decode()
-    img_b64 = "data:image/png;base64," + encoding
-    html_img = html.Img(src=img_b64, style={'height': '500px'})
-    dcc_graph = dcc.Graph(figure=fig)
-    print("-----------------------------------------------")
-    print(dcc_graph)
-    print(type(dcc_graph))
-    DataBlob.set_value(ClusterScatterVisualization.instance.identifier, hash, img_bytes)
-    TASK_LOGGER.info(f"Stored image of plot.")
+    DataBlob.set_value(ClusterScatterVisualization.instance.identifier, hash, html_bytes)
     PluginState.delete_value(ClusterScatterVisualization.instance.identifier, hash, commit=True)
 
     return "Created image of plot!"

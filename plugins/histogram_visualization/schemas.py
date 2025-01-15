@@ -1,4 +1,4 @@
-# Copyright 2023 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,28 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from qhana_plugin_runner.api.util import (
     FileUrl,
     FrontendFormBaseSchema,
 )
-import marshmallow as ma
 
-class ZXCalculusInputParametersSchema(FrontendFormBaseSchema):
+class HistogramInputParametersSchema(FrontendFormBaseSchema):
     data = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="executable/circuit",
-        data_content_types=["text/x-qasm"],
+        data_input_type="entity/vector",
+        data_content_types=["application/json"],
         metadata={
-            "label": "Qasm Circuit URL",
-            "description": "URL to a QASM Circuit.",
-        },
-    )
-    optimized = ma.fields.Boolean(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Optimize",
-            "description": "Optimize Circuit.",
+            "label": "Data Point URL",
+            "description": "URL to a json file containing the data.",
+            "input_type": "text",
         },
     )

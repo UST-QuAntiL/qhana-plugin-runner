@@ -43,8 +43,8 @@
     </details>
 </div>
 
-<div id="cluster-frame" style="width: 750px; height:0px;">
-    <object id="cluster-plot" type="text/html" style="width: 100%; height: 100%;" display="none"></object>
+<div id="histogram-frame" style="width: 750px; height:0px;">
+    <object id="histogram-plot" type="text/html" style="width: 100%; height: 100%;" display="none"></object>
 </div>
 <div class="container">
     <div id="spinner"></div>
@@ -53,70 +53,59 @@
 
 {% block script %}
 {{ super() }}
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
-<script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 <script>
-    let currentEntityUrl = null;
-    let currentClustersUrl = null;
+    let currentUrl = null;
 
-    function getEntityUrl() {
-        return document.querySelector('input[name=entityUrl]').value;
-    }
-
-    function getClustersUrl() {
-        return document.querySelector('input[name=clustersUrl]').value;
+    function getUrl() {
+        return document.querySelector('input[name=data]').value;
     }
 
     function onImageLoad() {
-        setSize();      
+        setSize();
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').removeAttribute('open');
     }
 
     function onImageError() {
-        const frame = document.querySelector('#cluster-frame');
+        const frame = document.querySelector('#histogram-frame');
         frame.setAttribute('style', 'width: 100 %; height: 0 px;');
-        sendMessage({ type: "ui-resize", height: 400});
-        document.querySelector('#cluster-plot').style.display = 'none';
+        sendMessage({ type: "ui-resize", height: 250});
+        document.querySelector('#histogram-plot').style.display = 'none';
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').setAttribute('open', 'open');
     }
 
     function setupEventListeners() {
-        const entityInput = document.querySelector('input[name=entityUrl]');
+        const entityInput = document.querySelector('input[name=data]');
         entityInput.addEventListener("input", (event) => updatePreview());
-        const clusterInput = document.querySelector('input[name=clustersUrl]');
-        clusterInput.addEventListener("input", (event) => updatePreview());
     }
 
     function setSize() {
-        const frame = document.querySelector('#cluster-frame');
+        const frame = document.querySelector('#histogram-frame');
         const frame_width = getMicrofrontendWidth() - 0.05 * getMicrofrontendWidth();
         const frame_height = frame_width * 2 / 3;
         frame.setAttribute('style', 'width: ' + frame_width + 'px; height: ' + frame_height + 'px;');
         sendMessage({ type: "ui-resize", height: frame.clientHeight + 60 });
     }
 
-    async function updatePreview() {
-        const entityUrl = getEntityUrl();
-        const clustersUrl = getClustersUrl();
-        if (entityUrl === "" || entityUrl === null) {
+    function updatePreview() {
+        const dataUrl = getUrl();
+        if (dataUrl === "" || dataUrl === null) {
             onImageError();
             return;
         }
-        if (currentEntityUrl === entityUrl && currentClustersUrl === clustersUrl) {
+        if (currentUrl === dataUrl) {
             return;
         }
         document.querySelector('#spinner').style.display = '';
-        const url = "{{ get_image_url }}?entityUrl=" + entityUrl + "&clustersUrl=" + (clustersUrl === null ? "" : clustersUrl);
-        const preview = document.querySelector('#cluster-plot')
+        const preview = document.querySelector('#histogram-plot');
+        const url = "{{ get_image_url }}?data=" + dataUrl;
         fetch(url).then(response => {
             if (response.status === 200) {
                 preview.style.display = '';
                 preview.setAttribute("data", url);
                 onImageLoad();
-                currentEntityUrl = entityUrl;
-                currentClustersUrl = clustersUrl;
+                currentUrl = dataUrl;
             } else {
                 onImageError();
                 if (response.status === 202) {
