@@ -29,16 +29,19 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="A visualization plugin for creating Historgrams using the counts of different labels." \
-                    + "The labels are shown on the x Axis and the counts on the y Axis.",
+    description="A visualization plugin for creating Historgrams using the counts of different labels."
+    + "The labels are shown on the x Axis and the counts on the y Axis.",
     template_folder="histogram_visualization_templates",
 )
+
 
 class HistogramVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "A visualization plugin for creating Historgrams using the counts of different labels." \
-                    + "The labels are shown on the x Axis and the counts on the y Axis."
+    description = (
+        "A visualization plugin for creating Historgrams using the counts of different labels."
+        + "The labels are shown on the x Axis and the counts on the y Axis."
+    )
     tags = ["visualization", "histogram"]
 
     def __init__(self, app: Optional[Flask]) -> None:

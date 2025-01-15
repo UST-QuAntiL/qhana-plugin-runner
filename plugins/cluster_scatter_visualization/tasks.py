@@ -36,10 +36,14 @@ def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
-@CELERY.task(name=f"{ClusterScatterVisualization.instance.identifier}.generate_image", bind=True)
+@CELERY.task(
+    name=f"{ClusterScatterVisualization.instance.identifier}.generate_image", bind=True
+)
 def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
 
-    TASK_LOGGER.info(f"Generating plot for entites {entity_url} and clusters {clusters_url}...")
+    TASK_LOGGER.info(
+        f"Generating plot for entites {entity_url} and clusters {clusters_url}..."
+    )
     try:
         with open_url(entity_url) as url:
             entities = url.json()
@@ -50,9 +54,11 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
             hash,
             "",
         )
-        PluginState.delete_value(ClusterScatterVisualization.instance.identifier, hash, commit=True)
+        PluginState.delete_value(
+            ClusterScatterVisualization.instance.identifier, hash, commit=True
+        )
         return "Invalid Entity URL!"
-    
+
     clusters = []
     if clusters_url is not None:
         try:
@@ -65,7 +71,9 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
                 hash,
                 "",
             )
-            PluginState.delete_value(ClusterScatterVisualization.instance.identifier, hash, commit=True)
+            PluginState.delete_value(
+                ClusterScatterVisualization.instance.identifier, hash, commit=True
+            )
             return "Invalid Cluster URL!"
 
     pt_x_list = [0 for _ in range(0, len(entities))]
@@ -78,7 +86,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
 
     do_3d = True
 
-    try :
+    try:
         _ = entities[0]["dim2"]
     except Exception:
         do_3d = False
@@ -126,11 +134,13 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
             color="Cluster ID",
             hover_data={"size": False},
         )
-    
+
     html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
 
     DataBlob.set_value(ClusterScatterVisualization.instance.identifier, hash, html_bytes)
-    PluginState.delete_value(ClusterScatterVisualization.instance.identifier, hash, commit=True)
+    PluginState.delete_value(
+        ClusterScatterVisualization.instance.identifier, hash, commit=True
+    )
 
     return "Created image of plot!"
 
@@ -144,9 +154,13 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
 )
 def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> str:
     print("\n\n-------------------------1-------------------------\n\n")
-    if not (image := DataBlob.get_value(ClusterScatterVisualization.instance.identifier, hash)):
+    if not (
+        image := DataBlob.get_value(ClusterScatterVisualization.instance.identifier, hash)
+    ):
         if not (
-            task_id := PluginState.get_value(ClusterScatterVisualization.instance.identifier, hash)
+            task_id := PluginState.get_value(
+                ClusterScatterVisualization.instance.identifier, hash
+            )
         ):
             print("--------------------------2")
             task_result = generate_image.s(entity_url, clusters_url, hash).apply_async()

@@ -172,7 +172,9 @@ def get_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            image = DataBlob.get_value(HistogramVisualization.instance.identifier, url_hash)
+            image = DataBlob.get_value(
+                HistogramVisualization.instance.identifier, url_hash
+            )
         except celery.exceptions.TimeoutError:
             return Response("Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:

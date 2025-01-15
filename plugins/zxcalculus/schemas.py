@@ -18,6 +18,7 @@ from qhana_plugin_runner.api.util import (
 )
 import marshmallow as ma
 
+
 class ZXCalculusInputParametersSchema(FrontendFormBaseSchema):
     data = FileUrl(
         required=True,

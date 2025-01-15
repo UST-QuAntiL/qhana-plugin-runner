@@ -18,6 +18,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
 )
 
+
 class ClusterScatterInputParametersSchema(FrontendFormBaseSchema):
     entity_url = FileUrl(
         required=True,

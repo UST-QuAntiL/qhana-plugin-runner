@@ -37,7 +37,9 @@ def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
-@CELERY.task(name=f"{HistogramVisualization.instance.identifier}.generate_image", bind=True)
+@CELERY.task(
+    name=f"{HistogramVisualization.instance.identifier}.generate_image", bind=True
+)
 def generate_image(self, data_url: str, hash: str) -> str:
 
     TASK_LOGGER.info(f"Generating histogram plot for data in {data_url}...")
@@ -51,9 +53,11 @@ def generate_image(self, data_url: str, hash: str) -> str:
             hash,
             "",
         )
-        PluginState.delete_value(HistogramVisualization.instance.identifier, hash, commit=True)
+        PluginState.delete_value(
+            HistogramVisualization.instance.identifier, hash, commit=True
+        )
         return "Invalid Entity URL!"
-    
+
     x_array = []
     y_array = []
 
@@ -61,7 +65,7 @@ def generate_image(self, data_url: str, hash: str) -> str:
         if label != "ID":
             x_array.append(label)
             y_array.append(int(data[label]))
-    
+
     df = pd.DataFrame(
         {
             "Values": x_array,
@@ -70,12 +74,14 @@ def generate_image(self, data_url: str, hash: str) -> str:
     )
 
     fig = px.histogram(df, x="Values", y="Counts", color="Values", text_auto=True)
-    fig.update_traces(showlegend=False) 
+    fig.update_traces(showlegend=False)
 
     html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
 
     DataBlob.set_value(HistogramVisualization.instance.identifier, hash, html_bytes)
-    PluginState.delete_value(HistogramVisualization.instance.identifier, hash, commit=True)
+    PluginState.delete_value(
+        HistogramVisualization.instance.identifier, hash, commit=True
+    )
 
     return "Created image of plot!"
 
@@ -89,9 +95,13 @@ def generate_image(self, data_url: str, hash: str) -> str:
 )
 def process(self, db_id: str, data_url: str, hash: str) -> str:
     print("\n\n-------------------------1-------------------------\n\n")
-    if not (image := DataBlob.get_value(HistogramVisualization.instance.identifier, hash)):
+    if not (
+        image := DataBlob.get_value(HistogramVisualization.instance.identifier, hash)
+    ):
         if not (
-            task_id := PluginState.get_value(HistogramVisualization.instance.identifier, hash)
+            task_id := PluginState.get_value(
+                HistogramVisualization.instance.identifier, hash
+            )
         ):
             print("--------------------------2---------------------")
             with open_url(data_url) as url:

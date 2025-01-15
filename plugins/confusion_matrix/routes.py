@@ -161,7 +161,12 @@ def get_table(data: Mapping):
     optimize = data.get("optimize", None)
     if not clusters_url1 or not clusters_url2:
         abort(HTTPStatus.BAD_REQUEST)
-    url_hash = hashlib.sha256((clusters_url1+clusters_url2+str(optimize)).encode("utf-8")).hexdigest()
+    url_hash = hashlib.sha256(
+        (clusters_url1 + clusters_url2 + str(optimize)).encode("utf-8")
+    ).hexdigest()
+    table = DataBlob.get_value(
+        ConfusionMatrixVisualization.instance.identifier, url_hash, None
+    )
     table = DataBlob.get_value(ConfusionMatrixVisualization.instance.identifier, url_hash, None)
     if table is None:
         if not (
@@ -169,7 +174,9 @@ def get_table(data: Mapping):
                 ConfusionMatrixVisualization.instance.identifier, url_hash, None
             )
         ):
-            task_result = generate_table.s(clusters_url1, clusters_url2, optimize, url_hash).apply_async()
+            task_result = generate_table.s(
+                clusters_url1, clusters_url2, optimize, url_hash
+            ).apply_async()
             PluginState.set_value(
                 ConfusionMatrixVisualization.instance.identifier,
                 url_hash,
@@ -180,28 +187,36 @@ def get_table(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            table = DataBlob.get_value(ConfusionMatrixVisualization.instance.identifier, url_hash)
+            table = DataBlob.get_value(
+                ConfusionMatrixVisualization.instance.identifier, url_hash
+            )
         except celery.exceptions.TimeoutError:
             return Response("Table not yet created!", HTTPStatus.ACCEPTED)
     if not table:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
-    
+
     print(table)
-    table = str.encode(table.decode().replace("array(", "").replace(")", ""), encoding="utf-8")
+    table = str.encode(
+        table.decode().replace("array(", "").replace(")", ""), encoding="utf-8"
+    )
     table_dict = json.loads(table)
-    return Response(render_template(
-        "table.html",
-        confusion_matrix=table_dict["confusion_matrix"],
-        wrong_ids=table_dict["wrong_ids"],
-        permutation=table_dict["permutation"]
-    ))
+    return Response(
+        render_template(
+            "table.html",
+            confusion_matrix=table_dict["confusion_matrix"],
+            wrong_ids=table_dict["wrong_ids"],
+            permutation=table_dict["permutation"],
+        )
+    )
 
 
 @VIS_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @VIS_BLP.arguments(ConfusionMatrixInputParametersSchema(unknown=EXCLUDE), location="form")
+    @VIS_BLP.arguments(
+        ConfusionMatrixInputParametersSchema(unknown=EXCLUDE), location="form"
+    )
     @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -209,7 +224,9 @@ class ProcessView(MethodView):
         clusters_url2 = arguments.get("clusters_url2", None)
         if clusters_url1 is None or clusters_url2 is None:
             abort(HTTPStatus.BAD_REQUEST)
-        url_hash = hashlib.sha256((clusters_url1 + clusters_url2).encode("utf-8")).hexdigest()
+        url_hash = hashlib.sha256(
+            (clusters_url1 + clusters_url2).encode("utf-8")
+        ).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
         # all tasks need to know about db id to load the db entry
@@ -218,7 +235,12 @@ class ProcessView(MethodView):
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(db_id=db_task.id, clusters_url1=clusters_url1, clusters_url2=clusters_url2, hash=url_hash)
+        task.apply_async(
+            db_id=db_task.id,
+            clusters_url1=clusters_url1,
+            clusters_url2=clusters_url2,
+            hash=url_hash,
+        )
 
         db_task.save(commit=True)
 

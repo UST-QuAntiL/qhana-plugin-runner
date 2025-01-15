@@ -35,10 +35,16 @@ def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
-@CELERY.task(name=f"{ConfusionMatrixVisualization.instance.identifier}.generate_table", bind=True)
-def generate_table(self, clusters_url1: str, clusters_url2: str, optimize: bool, hash: str) -> str:
+@CELERY.task(
+    name=f"{ConfusionMatrixVisualization.instance.identifier}.generate_table", bind=True
+)
+def generate_table(
+    self, clusters_url1: str, clusters_url2: str, optimize: bool, hash: str
+) -> str:
 
-    TASK_LOGGER.info(f"Generating table for clusters {clusters_url1} and clusters {clusters_url2}...")
+    TASK_LOGGER.info(
+        f"Generating table for clusters {clusters_url1} and clusters {clusters_url2}..."
+    )
     try:
         with open_url(clusters_url1) as url:
             clusters1 = url.json()
@@ -49,9 +55,11 @@ def generate_table(self, clusters_url1: str, clusters_url2: str, optimize: bool,
             hash,
             "",
         )
-        PluginState.delete_value(ConfusionMatrixVisualization.instance.identifier, hash, commit=True)
+        PluginState.delete_value(
+            ConfusionMatrixVisualization.instance.identifier, hash, commit=True
+        )
         return "Invalid Entity URL!"
-    
+
     try:
         with open_url(clusters_url2) as url:
             clusters2 = url.json()
@@ -62,7 +70,9 @@ def generate_table(self, clusters_url1: str, clusters_url2: str, optimize: bool,
             hash,
             "",
         )
-        PluginState.delete_value(ConfusionMatrixVisualization.instance.identifier, hash, commit=True)
+        PluginState.delete_value(
+            ConfusionMatrixVisualization.instance.identifier, hash, commit=True
+        )
         return "Invalid Cluster URL!"
 
     confusion_dict = dict()
@@ -89,7 +99,9 @@ def generate_table(self, clusters_url1: str, clusters_url2: str, optimize: bool,
         elif labels[0] >= len(label_list) or labels[1] >= len(label_list):
             wrong_ids += 1
         else:
-            confusion_matrix[label_list.index(labels[0])][label_list.index(labels[1])] += 1
+            confusion_matrix[label_list.index(labels[0])][
+                label_list.index(labels[1])
+            ] += 1
 
     permutation_str = ""
     confusion_matrix = np.array(confusion_matrix)
@@ -98,7 +110,10 @@ def generate_table(self, clusters_url1: str, clusters_url2: str, optimize: bool,
         cost_matrix = np.max(confusion_matrix) - confusion_matrix
         _, permutation = linear_sum_assignment(cost_matrix)
         confusion_matrix = confusion_matrix[:, permutation]
-        permutation_str = "To achieve an optimal confusion matrix, the column order is now the following: " + str(permutation[0])
+        permutation_str = (
+            "To achieve an optimal confusion matrix, the column order is now the following: "
+            + str(permutation[0])
+        )
         permutation = permutation[1:]
         for i in permutation:
             permutation_str += ", " + str(i)
@@ -110,8 +125,12 @@ def generate_table(self, clusters_url1: str, clusters_url2: str, optimize: bool,
     }
     context_bytes = str.encode(str(context).replace("'", '"'), encoding="utf-8")
 
-    DataBlob.set_value(ConfusionMatrixVisualization.instance.identifier, hash, context_bytes)
-    PluginState.delete_value(ConfusionMatrixVisualization.instance.identifier, hash, commit=True)
+    DataBlob.set_value(
+        ConfusionMatrixVisualization.instance.identifier, hash, context_bytes
+    )
+    PluginState.delete_value(
+        ConfusionMatrixVisualization.instance.identifier, hash, commit=True
+    )
 
     return "Created table!"
 
@@ -124,9 +143,15 @@ def generate_table(self, clusters_url1: str, clusters_url2: str, optimize: bool,
     max_retries=None,
 )
 def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> str:
-    if not (image := DataBlob.get_value(ConfusionMatrixVisualization.instance.identifier, hash)):
+    if not (
+        image := DataBlob.get_value(
+            ConfusionMatrixVisualization.instance.identifier, hash
+        )
+    ):
         if not (
-            task_id := PluginState.get_value(ConfusionMatrixVisualization.instance.identifier, hash)
+            task_id := PluginState.get_value(
+                ConfusionMatrixVisualization.instance.identifier, hash
+            )
         ):
             task_result = generate_table.s(entity_url, clusters_url, hash).apply_async()
             PluginState.set_value(

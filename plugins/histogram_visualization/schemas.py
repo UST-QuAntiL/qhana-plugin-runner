@@ -18,6 +18,7 @@ from qhana_plugin_runner.api.util import (
     FrontendFormBaseSchema,
 )
 
+
 class HistogramInputParametersSchema(FrontendFormBaseSchema):
     data = FileUrl(
         required=True,

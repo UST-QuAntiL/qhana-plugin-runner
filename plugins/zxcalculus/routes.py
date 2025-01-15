@@ -157,14 +157,20 @@ def get_image(data: Mapping):
 
     url_hash_norm = hashlib.sha256(data_url.encode("utf-8")).hexdigest()
     url_hash_opt = hashlib.sha256((data_url + "_optimized").encode("utf-8")).hexdigest()
-    image = DataBlob.get_value(ZXCalculusVisualization.instance.identifier, url_hash_opt if optimized else url_hash_norm, None)
+    image = DataBlob.get_value(
+        ZXCalculusVisualization.instance.identifier,
+        url_hash_opt if optimized else url_hash_norm,
+        None,
+    )
     if image is None:
         if not (
             task_id := PluginState.get_value(
                 ZXCalculusVisualization.instance.identifier, url_hash_norm, None
             )
         ):
-            task_result = generate_image.s(data_url, url_hash_norm, url_hash_opt).apply_async()
+            task_result = generate_image.s(
+                data_url, url_hash_norm, url_hash_opt
+            ).apply_async()
             PluginState.set_value(
                 ZXCalculusVisualization.instance.identifier,
                 url_hash_norm,
@@ -175,7 +181,10 @@ def get_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            image = DataBlob.get_value(ZXCalculusVisualization.instance.identifier, url_hash_opt if optimized else url_hash_norm)
+            image = DataBlob.get_value(
+                ZXCalculusVisualization.instance.identifier,
+                url_hash_opt if optimized else url_hash_norm,
+            )
         except celery.exceptions.TimeoutError:
             return Response("Circuit Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:

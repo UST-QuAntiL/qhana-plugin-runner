@@ -39,7 +39,9 @@ def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
-@CELERY.task(name=f"{ZXCalculusVisualization.instance.identifier}.generate_image", bind=True)
+@CELERY.task(
+    name=f"{ZXCalculusVisualization.instance.identifier}.generate_image", bind=True
+)
 def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
 
     TASK_LOGGER.info(f"Generating ZXCalculus circuit for data in {data_url}...")
@@ -58,17 +60,24 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
             hash_opt,
             "",
         )
-        PluginState.delete_value(ZXCalculusVisualization.instance.identifier, hash_norm, commit=True)
+        PluginState.delete_value(
+            ZXCalculusVisualization.instance.identifier, hash_norm, commit=True
+        )
         return "Invalid Entity URL!"
-    
-    path = pathlib.Path(__file__).parent.absolute().joinpath("files").joinpath("circuit.qasm")
+
+    path = (
+        pathlib.Path(__file__)
+        .parent.absolute()
+        .joinpath("files")
+        .joinpath("circuit.qasm")
+    )
 
     with open(path, "wt") as f:
         f.write(data)
 
     circuit = zx.Circuit.load(path)
     graph = circuit.to_graph()
-    
+
     zx.simplify.full_reduce(graph)
     graph.normalize()
 
@@ -80,9 +89,15 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
     html_opt = mpld3.fig_to_html(fig_opt)
     html_bytes_opt = str.encode(html_opt, encoding="utf-8")
 
-    DataBlob.set_value(ZXCalculusVisualization.instance.identifier, hash_norm, html_bytes_norm)
-    DataBlob.set_value(ZXCalculusVisualization.instance.identifier, hash_opt, html_bytes_opt)
-    PluginState.delete_value(ZXCalculusVisualization.instance.identifier, hash_norm, commit=True)
+    DataBlob.set_value(
+        ZXCalculusVisualization.instance.identifier, hash_norm, html_bytes_norm
+    )
+    DataBlob.set_value(
+        ZXCalculusVisualization.instance.identifier, hash_opt, html_bytes_opt
+    )
+    PluginState.delete_value(
+        ZXCalculusVisualization.instance.identifier, hash_norm, commit=True
+    )
 
     return "Created circuit!"
 
@@ -95,9 +110,13 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
     max_retries=None,
 )
 def process(self, db_id: str, data_url: str, hash: str) -> str:
-    if not (image := DataBlob.get_value(ZXCalculusVisualization.instance.identifier, hash)):
+    if not (
+        image := DataBlob.get_value(ZXCalculusVisualization.instance.identifier, hash)
+    ):
         if not (
-            task_id := PluginState.get_value(ZXCalculusVisualization.instance.identifier, hash)
+            task_id := PluginState.get_value(
+                ZXCalculusVisualization.instance.identifier, hash
+            )
         ):
             with open_url(data_url) as url:
                 data = url.json()

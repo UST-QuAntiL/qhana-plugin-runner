@@ -19,6 +19,7 @@ from qhana_plugin_runner.api.util import (
 )
 import marshmallow as ma
 
+
 class ConfusionMatrixInputParametersSchema(FrontendFormBaseSchema):
     clusters_url1 = FileUrl(
         required=True,

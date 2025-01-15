@@ -29,20 +29,22 @@ _identifier = plugin_identifier(_plugin_name, __version__)
 VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="A visualization plugin that creates a scatter plot using the provided data." \
-            + " When an Entity Point URL is provided, a simple scatter plot will be created." \
-            + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created" \
-            + " using plotly. Supports 2D and 3D data visualization.",
+    description="A visualization plugin that creates a scatter plot using the provided data."
+    + " When an Entity Point URL is provided, a simple scatter plot will be created."
+    + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created"
+    + " using plotly. Supports 2D and 3D data visualization.",
     template_folder="cluster_scatter_visualization_templates",
 )
 
 class ClusterScatterVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "A visualization plugin that creates a scatter plot using the provided data." \
-            + " When an Entity Point URL is provided, a simple scatter plot will be created." \
-            + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created" \
-            + " using plotly. Supports 2D and 3D data visualization."
+    description = (
+        "A visualization plugin that creates a scatter plot using the provided data."
+        + " When an Entity Point URL is provided, a simple scatter plot will be created."
+        + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created"
+        + " using plotly. Supports 2D and 3D data visualization."
+    )
     tags = ["visualization", "cluster", "scatter"]
 
     def __init__(self, app: Optional[Flask]) -> None:

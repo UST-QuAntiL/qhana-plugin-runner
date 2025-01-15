@@ -157,21 +157,23 @@ class MicroFrontend(MethodView):
 def get_image(data: Mapping):
     entity_url = data.get("entity_url", None)
     clusters_url = data.get("clusters_url", None)
-    
-    with open("B:\\Dokumente\\Bachelor\\test.txt", 'wt') as f:
-        f.write(str(clusters_url))
-
     if not entity_url:
         abort(HTTPStatus.BAD_REQUEST)
-    url_hash = hashlib.sha256((entity_url + str(clusters_url)).encode("utf-8")).hexdigest()
-    image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash, None)
+    url_hash = hashlib.sha256(
+        (entity_url + str(clusters_url)).encode("utf-8")
+    ).hexdigest()
+    image = DataBlob.get_value(
+        ClusterScatterVisualization.instance.identifier, url_hash, None
+    )
     if image is None:
         if not (
             task_id := PluginState.get_value(
                 ClusterScatterVisualization.instance.identifier, url_hash, None
             )
         ):
-            task_result = generate_image.s(entity_url, clusters_url, url_hash).apply_async()
+            task_result = generate_image.s(
+                entity_url, clusters_url, url_hash
+            ).apply_async()
             PluginState.set_value(
                 ClusterScatterVisualization.instance.identifier,
                 url_hash,
@@ -182,12 +184,14 @@ def get_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            image = DataBlob.get_value(ClusterScatterVisualization.instance.identifier, url_hash)
+            image = DataBlob.get_value(
+                ClusterScatterVisualization.instance.identifier, url_hash
+            )
         except celery.exceptions.TimeoutError:
             return Response("Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
-    
+
     return Response(image)
 
 
@@ -195,7 +199,9 @@ def get_image(data: Mapping):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @VIS_BLP.arguments(ClusterScatterInputParametersSchema(unknown=EXCLUDE), location="form")
+    @VIS_BLP.arguments(
+        ClusterScatterInputParametersSchema(unknown=EXCLUDE), location="form"
+    )
     @VIS_BLP.response(HTTPStatus.SEE_OTHER)
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -208,11 +214,19 @@ class ProcessView(MethodView):
         db_task.save(commit=True)
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash
+            db_id=db_task.id,
+            entity_url=entity_url,
+            clusters_url=clusters_url,
+            hash=url_hash,
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url, hash=url_hash)
+        task.apply_async(
+            db_id=db_task.id,
+            entity_url=entity_url,
+            clusters_url=clusters_url,
+            hash=url_hash,
+        )
 
         db_task.save(commit=True)
 
