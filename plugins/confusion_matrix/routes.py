@@ -167,7 +167,9 @@ def get_table(data: Mapping):
     table = DataBlob.get_value(
         ConfusionMatrixVisualization.instance.identifier, url_hash, None
     )
-    table = DataBlob.get_value(ConfusionMatrixVisualization.instance.identifier, url_hash, None)
+    table = DataBlob.get_value(
+        ConfusionMatrixVisualization.instance.identifier, url_hash, None
+    )
     if table is None:
         if not (
             task_id := PluginState.get_value(
@@ -231,7 +233,10 @@ class ProcessView(MethodView):
         db_task.save(commit=True)
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id, clusters_url1=clusters_url1, clusters_url2=clusters_url2, hash=url_hash
+            db_id=db_task.id,
+            clusters_url1=clusters_url1,
+            clusters_url2=clusters_url2,
+            hash=url_hash,
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
