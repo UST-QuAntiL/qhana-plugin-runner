@@ -46,7 +46,7 @@ def get_readable_hash(s: str) -> str:
 def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
 
     TASK_LOGGER.info(f"Generating ZXCalculus circuit for data in {data_url}...")
-    # Check that Data_url is correct 
+    # Check that Data_url is correct
     try:
         with open_url(data_url) as url:
             data = url.text

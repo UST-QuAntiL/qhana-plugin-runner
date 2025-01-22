@@ -76,7 +76,9 @@ def generate_plot(self, data_url: str, hash: str) -> str:
     )
 
     fig = px.histogram(df, x="Values", y="Counts", color="Values", text_auto=True)
-    fig.update_layout(yaxis=dict(title=dict(text="Sum of Counts, Total: " + str(sum(y_array)))))
+    fig.update_layout(
+        yaxis=dict(title=dict(text="Sum of Counts, Total: " + str(sum(y_array))))
+    )
     fig.update_traces(showlegend=False)
 
     html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
@@ -97,9 +99,7 @@ def generate_plot(self, data_url: str, hash: str) -> str:
     max_retries=None,
 )
 def process(self, db_id: str, data_url: str, hash: str) -> str:
-    if not (
-        plot := DataBlob.get_value(HistogramVisualization.instance.identifier, hash)
-    ):
+    if not (plot := DataBlob.get_value(HistogramVisualization.instance.identifier, hash)):
         if not (
             task_id := PluginState.get_value(
                 HistogramVisualization.instance.identifier, hash

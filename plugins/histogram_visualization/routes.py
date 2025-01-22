@@ -163,7 +163,7 @@ def get_plot(data: Mapping):
                 HistogramVisualization.instance.identifier, url_hash, None
             )
         ):
-            # Add the generate_table from task.py as an async method 
+            # Add the generate_table from task.py as an async method
             task_result = generate_plot.s(data_url, url_hash).apply_async()
             PluginState.set_value(
                 HistogramVisualization.instance.identifier,

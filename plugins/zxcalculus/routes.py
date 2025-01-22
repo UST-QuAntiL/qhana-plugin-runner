@@ -172,7 +172,7 @@ def get_image(data: Mapping):
                 ZXCalculusVisualization.instance.identifier, url_hash_norm, None
             )
         ):
-            # Add the generate_image from task.py as an async method 
+            # Add the generate_image from task.py as an async method
             task_result = generate_image.s(
                 data_url, url_hash_norm, url_hash_opt
             ).apply_async()

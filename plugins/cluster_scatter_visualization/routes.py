@@ -154,7 +154,7 @@ class MicroFrontend(MethodView):
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
-# Method called through the micro frontend, when an entity_url is selected, 
+# Method called through the micro frontend, when an entity_url is selected,
 # or when a cluster_url is selected, whil an entity_url is present
 def get_plot(data: Mapping):
     entity_url = data.get("entity_url", None)

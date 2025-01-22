@@ -155,7 +155,7 @@ class MicroFrontend(MethodView):
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
-# Method called through the micro frontend, when both cluster_urls are selected, 
+# Method called through the micro frontend, when both cluster_urls are selected,
 # or when the optimize checkbox is changed, while two cluster_urls are selected
 def get_table(data: Mapping):
     clusters_url1 = data.get("clusters_url1", None)
