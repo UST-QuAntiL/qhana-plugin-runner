@@ -87,7 +87,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["visualization", "cluster", "confusion matrix"],
+            tags=["visualization", "cluster", "confusion-matrix"],
         )
 
 
