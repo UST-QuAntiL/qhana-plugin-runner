@@ -22,15 +22,15 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 from qhana_plugin_runner.util.plugins import plugin_identifier
 
-_plugin_name = "confusion_matrix"
-__version__ = "v0.4.0"
+_plugin_name = "confusion-matrix"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="A visualization plugin that creates a confusion matrix using the provided data."
-    + " Accepts two cluster URLs as inputs an outputs an HTML table showing the matrix."
+    + " Accepts two cluster URLs as inputs and outputs an HTML table showing the matrix."
     + " If desired the matrix can be optimized, trying to maximize the amount of true positives,"
     + " by reordering the columns. The new column order will be shown at the bottom.",
     template_folder="confusion_matrix_templates",
@@ -38,15 +38,15 @@ VIS_BLP = SecurityBlueprint(
 
 
 class ConfusionMatrixVisualization(QHAnaPluginBase):
-    name = _plugin_name
+    name = "Confusion Matrix Visualization"
     version = __version__
     description = (
         "A visualization plugin that creates a confusion matrix using the provided data."
-        + " Accepts two cluster URLs as inputs an outputs an HTML table showing the matrix."
+        + " Accepts two cluster URLs as inputs and outputs an HTML table showing the matrix."
         + " If desired the matrix can be optimized, trying to maximize the amount of true positives,"
         + " by reordering the columns. The new column order will be shown at the bottom."
     )
-    tags = ["visualization", "cluster", "confusion matrix"]
+    tags = ["visualization", "cluster", "confusion-matrix"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -55,7 +55,7 @@ class ConfusionMatrixVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nscipy~=1.15.0\nnumpy~=2.1.3"
+        return "pylatexenc~=2.10\nscipy~=1.10.1\nnumpy~=1.13"
 
 
 try:

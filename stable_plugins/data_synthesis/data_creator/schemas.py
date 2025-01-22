@@ -54,7 +54,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Dataset Type",
             "description": """Currently available dataset types are:
 - Two Spiral: Creates two spirals, spiraling out from the same point. Both spirals have a different label.
-- Checkerboard: Creates a 2x2 checkerboard pattern.""",
+- Checkerboard: Creates a 2x2 checkerboard pattern.
+- Blobs: Creates isotropic Gaussian blobs for clustering.
+- 3D Checkerboard: Creates a 3D 2x2x2 checkerboard pattern.
+- 3D Blobs: Creates 3D isotropic Gaussian blobs for clustering.""",
             "input_type": "select",
         },
     )

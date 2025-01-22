@@ -35,6 +35,7 @@ class ZXCalculusInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Optimize",
-            "description": "Optimize Circuit.",
+            "description": "Optimize Circuit as much as possible, by applying ZX-Calculus axioms."
+            + " Will generate an additional image below the original one.",
         },
     )

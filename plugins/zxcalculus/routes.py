@@ -148,13 +148,17 @@ class MicroFrontend(MethodView):
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
+# Method called through the micro frontend, when a data_url is selected,
+# or when the Optimized Checkbox is changed
 def get_image(data: Mapping):
     data_url = data.get("data", None)
     optimized = data.get("optimized", None)
 
+    # Data_Url needs to be provided, while optimized is always provided through the Micro frontend
     if not data_url or optimized == None:
         abort(HTTPStatus.BAD_REQUEST)
 
+    # Two circuits are created with two different hashes
     url_hash_norm = hashlib.sha256(data_url.encode("utf-8")).hexdigest()
     url_hash_opt = hashlib.sha256((data_url + "_optimized").encode("utf-8")).hexdigest()
     image = DataBlob.get_value(
@@ -168,6 +172,7 @@ def get_image(data: Mapping):
                 ZXCalculusVisualization.instance.identifier, url_hash_norm, None
             )
         ):
+            # Add the generate_image from task.py as an async method 
             task_result = generate_image.s(
                 data_url, url_hash_norm, url_hash_opt
             ).apply_async()
@@ -181,6 +186,7 @@ def get_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
+            # Both images were created, retrieve the correct one
             image = DataBlob.get_value(
                 ZXCalculusVisualization.instance.identifier,
                 url_hash_opt if optimized else url_hash_norm,
@@ -189,6 +195,7 @@ def get_image(data: Mapping):
             return Response("Circuit Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:
         abort(HTTPStatus.BAD_REQUEST, "Invalid data URL!")
+    # Returns html to the micro frontend
     return Response(image)
 
 

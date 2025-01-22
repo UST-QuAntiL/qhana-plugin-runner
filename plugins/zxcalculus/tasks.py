@@ -42,9 +42,11 @@ def get_readable_hash(s: str) -> str:
 @CELERY.task(
     name=f"{ZXCalculusVisualization.instance.identifier}.generate_image", bind=True
 )
+# Optimized is not required, as both images are generated
 def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
 
     TASK_LOGGER.info(f"Generating ZXCalculus circuit for data in {data_url}...")
+    # Check that Data_url is correct 
     try:
         with open_url(data_url) as url:
             data = url.text
@@ -65,6 +67,7 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
         )
         return "Invalid Entity URL!"
 
+    # Save text to path, so it can be loaded in to zx
     path = (
         pathlib.Path(__file__)
         .parent.absolute()
@@ -81,10 +84,12 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
     zx.simplify.full_reduce(graph)
     graph.normalize()
 
+    # Normal figures
     fig_norm = zx.draw(circuit)
     html_norm = mpld3.fig_to_html(fig_norm)
     html_bytes_norm = str.encode(html_norm, encoding="utf-8")
 
+    # Optimized figures
     fig_opt = zx.draw(graph)
     html_opt = mpld3.fig_to_html(fig_opt)
     html_bytes_opt = str.encode(html_opt, encoding="utf-8")
@@ -99,7 +104,7 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
         ZXCalculusVisualization.instance.identifier, hash_norm, commit=True
     )
 
-    return "Created circuit!"
+    return "Created circuits!"
 
 
 @CELERY.task(

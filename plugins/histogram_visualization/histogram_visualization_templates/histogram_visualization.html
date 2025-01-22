@@ -44,7 +44,7 @@
 </div>
 
 <div id="histogram-frame" style="width: 750px; height:0px;">
-    <object id="histogram-plot" type="text/html" style="width: 100%; height: 100%;" display="none"></object>
+    <iframe id="histogram-plot" type="text/html" style="border: none; width: 100%; height: 100%;" display="none"></iframe>
 </div>
 <div class="container">
     <div id="spinner"></div>
@@ -54,32 +54,30 @@
 {% block script %}
 {{ super() }}
 <script>
-    let currentUrl = null;
-
-    function getUrl() {
-        return document.querySelector('input[name=data]').value;
-    }
-
-    function onImageLoad() {
+    // Only called when a plot was succesfully generated
+    function onPlotLoad() {
         setSize();
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').removeAttribute('open');
     }
 
-    function onImageError() {
+    // Resets the iframe without a plot
+    function onPlotError() {
         const frame = document.querySelector('#histogram-frame');
-        frame.setAttribute('style', 'width: 100 %; height: 0 px;');
+        frame.setAttribute('style', 'border: none; width: 100 %; height: 0 px;');
         sendMessage({ type: "ui-resize", height: 250});
         document.querySelector('#histogram-plot').style.display = 'none';
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').setAttribute('open', 'open');
     }
 
+    // Setup event listeners for the data_url
     function setupEventListeners() {
         const entityInput = document.querySelector('input[name=data]');
         entityInput.addEventListener("input", (event) => updatePreview());
     }
 
+    // Frame is set to 2/3 of the width, as plotly doesn't provide a fitting height
     function setSize() {
         const frame = document.querySelector('#histogram-frame');
         const frame_width = getMicrofrontendWidth() - 0.05 * getMicrofrontendWidth();
@@ -89,25 +87,22 @@
     }
 
     function updatePreview() {
-        const dataUrl = getUrl();
+        const dataUrl = document.querySelector('input[name=data]').value;
+        // Data Url is required
         if (dataUrl === "" || dataUrl === null) {
-            onImageError();
-            return;
-        }
-        if (currentUrl === dataUrl) {
+            onPlotError();
             return;
         }
         document.querySelector('#spinner').style.display = '';
         const preview = document.querySelector('#histogram-plot');
-        const url = "{{ get_image_url }}?data=" + dataUrl;
+        const url = "{{ get_plot_url }}?data=" + dataUrl;
         fetch(url).then(response => {
             if (response.status === 200) {
                 preview.style.display = '';
-                preview.setAttribute("data", url);
-                onImageLoad();
-                currentUrl = dataUrl;
+                preview.setAttribute("src", url);
+                onPlotLoad();
             } else {
-                onImageError();
+                onPlotError();
                 if (response.status === 202) {
                     document.querySelector('#spinner').style.display = '';
                     setTimeout(updatePreview, 5000);
@@ -115,11 +110,11 @@
             }
         }).catch(error => {
             console.log(error);
-            onImageError();
+            onPlotError();
         });
     }
 
-    onImageError();
+    onPlotError();
     setupEventListeners();
 </script>
 {% endblock script %}

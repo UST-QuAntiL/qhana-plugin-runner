@@ -28,7 +28,7 @@ class ConfusionMatrixInputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Cluster URL",
-            "description": "URL to a json file containing the first set of cluster labels.",
+            "description": "URL to a json file containing the Actual Labels.",
             "input_type": "text",
         },
     )
@@ -39,7 +39,7 @@ class ConfusionMatrixInputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Cluster URL",
-            "description": "URL to a json file containing the second set of cluster labels.",
+            "description": "URL to a json file containing the Predicted Labels.",
             "input_type": "text",
         },
     )
@@ -48,6 +48,8 @@ class ConfusionMatrixInputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Optimize",
-            "description": "Optimize the Confusion Matrix by reordering the labels.",
+            "description": "Optimize the Confusion Matrix by reordering the labels."
+            + " This option should be used, when the predicted labels were created without "
+            + " matching the actual Labels.",
         },
     )

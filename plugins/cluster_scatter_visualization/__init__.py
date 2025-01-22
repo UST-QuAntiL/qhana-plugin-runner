@@ -23,7 +23,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 from qhana_plugin_runner.util.plugins import plugin_identifier
 
 _plugin_name = "cluster-scatter-visualization"
-__version__ = "v0.3.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 VIS_BLP = SecurityBlueprint(
@@ -31,19 +31,19 @@ VIS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="A visualization plugin that creates a scatter plot using the provided data."
     + " When an Entity Point URL is provided, a simple scatter plot will be created."
-    + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created"
+    + " To include clustering, provide an appropriate Cluster URL. All plots are interactive and created"
     + " using plotly. Supports 2D and 3D data visualization.",
     template_folder="cluster_scatter_visualization_templates",
 )
 
 
 class ClusterScatterVisualization(QHAnaPluginBase):
-    name = _plugin_name
+    name = "Clustered Scatter Plot Visualization"
     version = __version__
     description = (
         "A visualization plugin that creates a scatter plot using the provided data."
         + " When an Entity Point URL is provided, a simple scatter plot will be created."
-        + "To include clustering, provide an appropriate Cluster URL. All plots are interactive an created"
+        + "To include clustering, provide an appropriate Cluster URL. All plots are interactive and created"
         + " using plotly. Supports 2D and 3D data visualization."
     )
     tags = ["visualization", "cluster", "scatter"]

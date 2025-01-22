@@ -45,6 +45,7 @@ def generate_table(
     TASK_LOGGER.info(
         f"Generating table for clusters {clusters_url1} and clusters {clusters_url2}..."
     )
+    # Check that cluster_url1 is correct
     try:
         with open_url(clusters_url1) as url:
             clusters1 = url.json()
@@ -60,6 +61,7 @@ def generate_table(
         )
         return "Invalid Entity URL!"
 
+    # Check that clusters_url2 is correct
     try:
         with open_url(clusters_url2) as url:
             clusters2 = url.json()
@@ -75,6 +77,7 @@ def generate_table(
         )
         return "Invalid Cluster URL!"
 
+    # confusion_dict has the ID as the key, and a list of one or two labels as the value
     confusion_dict = dict()
     wrong_ids = 0
     label_list = []
@@ -91,13 +94,17 @@ def generate_table(
             wrong_ids += 1
 
     label_list.sort()
+    # Confusion matrix is a two dimensional list
     confusion_matrix = [[0 for _ in label_list] for _ in label_list]
 
     for labels in confusion_dict.values():
+        # ID was only present in clusters1 but not in the second
         if len(labels) < 2:
             wrong_ids += 1
-        elif labels[0] >= len(label_list) or labels[1] >= len(label_list):
+        # ID was only present in clusters2 but not in the first
+        elif labels[0] not in label_list or labels[1] not in label_list:
             wrong_ids += 1
+        # Add the value to the confusion_matrix
         else:
             confusion_matrix[label_list.index(labels[0])][
                 label_list.index(labels[1])
@@ -108,21 +115,24 @@ def generate_table(
 
     if optimize:
         cost_matrix = np.max(confusion_matrix) - confusion_matrix
+        # Linear_sum_assignment solves the optimization problem
         _, permutation = linear_sum_assignment(cost_matrix)
         confusion_matrix = confusion_matrix[:, permutation]
         permutation_str = (
             "To achieve an optimal confusion matrix, the column order is now the following: "
-            + str(permutation[0])
+            + str(label_list[permutation[0]])
         )
         permutation = permutation[1:]
         for i in permutation:
-            permutation_str += ", " + str(i)
+            permutation_str += ", " + str(label_list[i])
 
     context = {
         "confusion_matrix": confusion_matrix,
+        "label_list": label_list,
         "wrong_ids": wrong_ids,
         "permutation": permutation_str,
     }
+    # Ensure that strings are marked with "" to work properly
     context_bytes = str.encode(str(context).replace("'", '"'), encoding="utf-8")
 
     DataBlob.set_value(
@@ -165,6 +175,6 @@ def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> 
         output.write(image)
         output.seek(0)
         STORE.persist_task_result(
-            db_id, output, f"circuit_{hash}.svg", "image/svg", "image/svg+xml"
+            db_id, output, f"table_{hash}.html", "table/html", "text/html"
         )
     return "Created Confusion Matrix Table!"

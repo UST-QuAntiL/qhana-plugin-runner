@@ -80,6 +80,7 @@ def checkerboard(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     return rand_points, labels
 
 
+# Creates Gaussian blobs for clusering using sckit-learns make_blobs
 def blobs(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the Blobs dataset."""
     x, y = make_blobs(
@@ -91,6 +92,7 @@ def blobs(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray
     return x, y
 
 
+# Creates a 3D 2x2x2 checkerboard pattern
 def checkerboard_3d(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the 3D checkerboard dataset."""
     rand_points = (np.random.rand(n_points, 3) * 2) - 1
@@ -107,6 +109,7 @@ def checkerboard_3d(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     return rand_points, labels
 
 
+# Creates 3D Gaussian blobs for clusering using sckit-learns make_blobs
 def blobs_3d(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the 3D Blobs dataset."""
     x, y = make_blobs(

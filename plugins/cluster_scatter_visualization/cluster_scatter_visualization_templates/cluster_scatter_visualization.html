@@ -44,7 +44,7 @@
 </div>
 
 <div id="cluster-frame" style="width: 750px; height:0px;">
-    <object id="cluster-plot" type="text/html" style="width: 100%; height: 100%;" display="none"></object>
+    <iframe id="cluster-plot" type="text/html" style="border: none; width: 100%; height: 100%;" display="none"></iframe>
 </div>
 <div class="container">
     <div id="spinner"></div>
@@ -56,32 +56,24 @@
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 <script>
-    let currentEntityUrl = null;
-    let currentClustersUrl = null;
-
-    function getEntityUrl() {
-        return document.querySelector('input[name=entityUrl]').value;
-    }
-
-    function getClustersUrl() {
-        return document.querySelector('input[name=clustersUrl]').value;
-    }
-
-    function onImageLoad() {
+    // Only called when a plot was succesfully generated
+    function onPlotLoad() {
         setSize();      
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').removeAttribute('open');
     }
 
-    function onImageError() {
+    // Resets the iframe without a plot
+    function onPlotError() {
         const frame = document.querySelector('#cluster-frame');
-        frame.setAttribute('style', 'width: 100 %; height: 0 px;');
-        sendMessage({ type: "ui-resize", height: 400});
+        frame.setAttribute('style', 'border: none; width: 100 %; height: 0 px;');
+        sendMessage({ type: "ui-resize", height: 350});
         document.querySelector('#cluster-plot').style.display = 'none';
         document.querySelector('#spinner').style.display = 'none';
         document.querySelector('#visualization-options').setAttribute('open', 'open');
     }
 
+    // Setup event listeners for the entityUrl and clustersUrl input fields
     function setupEventListeners() {
         const entityInput = document.querySelector('input[name=entityUrl]');
         entityInput.addEventListener("input", (event) => updatePreview());
@@ -89,36 +81,34 @@
         clusterInput.addEventListener("input", (event) => updatePreview());
     }
 
+    // Frame is set to 2/3 of the width, as plotly doesn't provide a fitting height
     function setSize() {
         const frame = document.querySelector('#cluster-frame');
         const frame_width = getMicrofrontendWidth() - 0.05 * getMicrofrontendWidth();
         const frame_height = frame_width * 2 / 3;
-        frame.setAttribute('style', 'width: ' + frame_width + 'px; height: ' + frame_height + 'px;');
+        frame.setAttribute('style', 'border: none; width: ' + frame_width + 'px; height: ' + frame_height + 'px;');
         sendMessage({ type: "ui-resize", height: frame.clientHeight + 60 });
     }
 
     async function updatePreview() {
-        const entityUrl = getEntityUrl();
-        const clustersUrl = getClustersUrl();
+        const entityUrl = document.querySelector('input[name=entityUrl]').value;
+        const clustersUrl = document.querySelector('input[name=clustersUrl]').value;
+        // Only an entity Url is required to generate a plot
         if (entityUrl === "" || entityUrl === null) {
-            onImageError();
-            return;
-        }
-        if (currentEntityUrl === entityUrl && currentClustersUrl === clustersUrl) {
+            onPlotError();
             return;
         }
         document.querySelector('#spinner').style.display = '';
-        const url = "{{ get_image_url }}?entityUrl=" + entityUrl + "&clustersUrl=" + (clustersUrl === null ? "" : clustersUrl);
+        // clustersUrl is set to null when no clustersUrl is provided
+        const url = "{{ get_plot_url }}?entityUrl=" + entityUrl + "&clustersUrl=" + (clustersUrl === null ? "" : clustersUrl);
         const preview = document.querySelector('#cluster-plot')
         fetch(url).then(response => {
             if (response.status === 200) {
                 preview.style.display = '';
-                preview.setAttribute("data", url);
-                onImageLoad();
-                currentEntityUrl = entityUrl;
-                currentClustersUrl = clustersUrl;
+                preview.setAttribute("src", url);
+                onPlotLoad();
             } else {
-                onImageError();
+                onPlotError();
                 if (response.status === 202) {
                     document.querySelector('#spinner').style.display = '';
                     setTimeout(updatePreview, 5000);
@@ -126,11 +116,11 @@
             }
         }).catch(error => {
             console.log(error);
-            onImageError();
+            onPlotError();
         });
     }
 
-    onImageError();
+    onPlotError();
     setupEventListeners();
 </script>
 {% endblock script %}

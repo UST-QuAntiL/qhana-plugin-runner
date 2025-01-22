@@ -27,7 +27,7 @@ class HistogramInputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Data Point URL",
-            "description": "URL to a json file containing the data.",
+            "description": "URL to a json file containing the counts. Data values need to be integers, while keys can be any labels.",
             "input_type": "text",
         },
     )

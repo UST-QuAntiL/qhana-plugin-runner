@@ -257,6 +257,15 @@ function notifyParentWindowOnHeightChange(lastHeight = 0) {
 }
 
 /**
+ * Return width of object.
+ *
+ * @returns width of object
+ */
+function getMicrofrontendWidth() {
+    return document.documentElement.scrollWidth;
+}
+
+/**
  * Notify the parent window that a micro frontend was successfully loaded and is available to receive messages.
  * 
  * Must be called **after** the message listener was attached to the window!

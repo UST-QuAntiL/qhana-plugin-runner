@@ -22,28 +22,38 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "zxcalculus"
-__version__ = "v0.1.0"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
 VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="ZXCalculus API.",
+    description="A visualization plugin that visualizes a provided OpenQASM circuit in the ZX-Calculus."
+    + " When a QASM Circuit URL is provided, a circuit in the ZX-Calculus will be created."
+    + " When the Optimize Checkbox is checked, an additional circuit is generated."
+    + " This circuit is optimized using the automatic optimization method provided by the pyzx package,"
+    + " and will be displayed below the original circuit",
     template_folder="zxcalculus_visualization_templates",
 )
 
 
 class ZXCalculusVisualization(QHAnaPluginBase):
-    name = _plugin_name
+    name = "ZX-Calculus Visualization"
     version = __version__
-    description = "Visualizes QASM as ZXCalculus and gives the option to simplify it."
+    description = (
+        "A visualization plugin that visualizes a provided OpenQASM circuit in the ZX-Calculus."
+        + " When a QASM Circuit URL is provided, a circuit in the ZX-Calculus will be created."
+        + " When the Optimize Checkbox is checked, an additional circuit is generated."
+        + " This circuit is optimized using the automatic optimization method provided by the pyzx package,"
+        + " and will be displayed below the original circuit"
+    )
     tags = ["visualization", "zxcalculus", "circuit"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
-        # create folder for histogram images
+        # create folder for circuit qasms
         pathlib.Path(__file__).parent.absolute().joinpath("files").mkdir(
             parents=True, exist_ok=True
         )

@@ -17,7 +17,7 @@ from http import HTTPStatus
 from typing import Mapping
 from celery import chain
 import celery
-from flask import abort, redirect, send_file
+from flask import abort, redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -40,7 +40,7 @@ from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 
 from . import VIS_BLP, ClusterScatterVisualization
 from .schemas import ClusterScatterInputParametersSchema
-from .tasks import generate_image, process
+from .tasks import generate_plot, process
 
 
 @VIS_BLP.route("/")
@@ -80,7 +80,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="plot",
+                        data_type="image/html",
                         content_type=["text/html"],
                         required=True,
                     )
@@ -140,7 +140,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 example_values=url_for(f"{VIS_BLP.name}.MicroFrontend"),
-                get_image_url=url_for(f"{VIS_BLP.name}.get_image"),
+                get_plot_url=url_for(f"{VIS_BLP.name}.get_plot"),
                 process=url_for(f"{VIS_BLP.name}.ProcessView"),
             )
         )
@@ -154,24 +154,29 @@ class MicroFrontend(MethodView):
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
-def get_image(data: Mapping):
+# Method called through the micro frontend, when an entity_url is selected, 
+# or when a cluster_url is selected, whil an entity_url is present
+def get_plot(data: Mapping):
     entity_url = data.get("entity_url", None)
     clusters_url = data.get("clusters_url", None)
+    # Only an entity_url is required to generate a plot
     if not entity_url:
         abort(HTTPStatus.BAD_REQUEST)
+    # As the clusters_url can be null, the str method is required
     url_hash = hashlib.sha256(
         (entity_url + str(clusters_url)).encode("utf-8")
     ).hexdigest()
-    image = DataBlob.get_value(
+    plot = DataBlob.get_value(
         ClusterScatterVisualization.instance.identifier, url_hash, None
     )
-    if image is None:
+    if plot is None:
         if not (
             task_id := PluginState.get_value(
                 ClusterScatterVisualization.instance.identifier, url_hash, None
             )
         ):
-            task_result = generate_image.s(
+            # Add the generate_plot from task.py as an async method
+            task_result = generate_plot.s(
                 entity_url, clusters_url, url_hash
             ).apply_async()
             PluginState.set_value(
@@ -184,15 +189,17 @@ def get_image(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
-            image = DataBlob.get_value(
+            # Retrieve the generated html
+            plot = DataBlob.get_value(
                 ClusterScatterVisualization.instance.identifier, url_hash
             )
         except celery.exceptions.TimeoutError:
-            return Response("Image not yet created!", HTTPStatus.ACCEPTED)
-    if not image:
+            return Response("Plot not yet created!", HTTPStatus.ACCEPTED)
+    if not plot:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
 
-    return Response(image)
+    # Returns the html to the micro frontend
+    return Response(plot)
 
 
 @VIS_BLP.route("/process/")

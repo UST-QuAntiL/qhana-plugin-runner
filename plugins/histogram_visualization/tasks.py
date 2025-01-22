@@ -29,7 +29,7 @@ from . import HistogramVisualization
 TASK_LOGGER = get_task_logger(__name__)
 
 
-class ImageNotFinishedError(Exception):
+class PlotNotFinishedError(Exception):
     pass
 
 
@@ -38,11 +38,12 @@ def get_readable_hash(s: str) -> str:
 
 
 @CELERY.task(
-    name=f"{HistogramVisualization.instance.identifier}.generate_image", bind=True
+    name=f"{HistogramVisualization.instance.identifier}.generate_plot", bind=True
 )
-def generate_image(self, data_url: str, hash: str) -> str:
+def generate_plot(self, data_url: str, hash: str) -> str:
 
     TASK_LOGGER.info(f"Generating histogram plot for data in {data_url}...")
+    # Check that data_url is correct
     try:
         with open_url(data_url) as url:
             data = url.json()
@@ -61,6 +62,7 @@ def generate_image(self, data_url: str, hash: str) -> str:
     x_array = []
     y_array = []
 
+    # X-Axis are the labels, Y-Axis the counts
     for label in data:
         if label != "ID":
             x_array.append(label)
@@ -74,6 +76,7 @@ def generate_image(self, data_url: str, hash: str) -> str:
     )
 
     fig = px.histogram(df, x="Values", y="Counts", color="Values", text_auto=True)
+    fig.update_layout(yaxis=dict(title=dict(text="Sum of Counts, Total: " + str(sum(y_array)))))
     fig.update_traces(showlegend=False)
 
     html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
@@ -83,43 +86,41 @@ def generate_image(self, data_url: str, hash: str) -> str:
         HistogramVisualization.instance.identifier, hash, commit=True
     )
 
-    return "Created image of plot!"
+    return "Created plot!"
 
 
 @CELERY.task(
     name=f"{HistogramVisualization.instance.identifier}.process",
     bind=True,
-    autoretry_for=(ImageNotFinishedError,),
+    autoretry_for=(PlotNotFinishedError,),
     retry_backoff=True,
     max_retries=None,
 )
 def process(self, db_id: str, data_url: str, hash: str) -> str:
-    print("\n\n-------------------------1-------------------------\n\n")
     if not (
-        image := DataBlob.get_value(HistogramVisualization.instance.identifier, hash)
+        plot := DataBlob.get_value(HistogramVisualization.instance.identifier, hash)
     ):
         if not (
             task_id := PluginState.get_value(
                 HistogramVisualization.instance.identifier, hash
             )
         ):
-            print("--------------------------2---------------------")
             with open_url(data_url) as url:
                 data = url.json()
             for d in data:
                 print(d)
-            task_result = generate_image.s(data_url, hash).apply_async()
+            task_result = generate_plot.s(data_url, hash).apply_async()
             PluginState.set_value(
                 HistogramVisualization.instance.identifier,
                 hash,
                 task_result.id,
                 commit=True,
             )
-        raise ImageNotFinishedError()
+        raise PlotNotFinishedError()
     with SpooledTemporaryFile() as output:
-        output.write(image)
+        output.write(plot)
         output.seek(0)
         STORE.persist_task_result(
-            db_id, output, f"circuit_{hash}.svg", "image/svg", "image/svg+xml"
+            db_id, output, f"plot_{hash}.html", "image/html", "text/html"
         )
-    return "Created image of circuit!"
+    return "Created Plot!"

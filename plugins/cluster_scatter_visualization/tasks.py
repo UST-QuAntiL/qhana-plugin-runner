@@ -28,7 +28,7 @@ from . import ClusterScatterVisualization
 TASK_LOGGER = get_task_logger(__name__)
 
 
-class ImageNotFinishedError(Exception):
+class PlotNotFinishedError(Exception):
     pass
 
 
@@ -37,9 +37,9 @@ def get_readable_hash(s: str) -> str:
 
 
 @CELERY.task(
-    name=f"{ClusterScatterVisualization.instance.identifier}.generate_image", bind=True
+    name=f"{ClusterScatterVisualization.instance.identifier}.generate_plot", bind=True
 )
-def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
+def generate_plot(self, entity_url: str, clusters_url: str, hash: str) -> str:
 
     TASK_LOGGER.info(
         f"Generating plot for entites {entity_url} and clusters {clusters_url}..."
@@ -47,6 +47,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
     try:
         with open_url(entity_url) as url:
             entities = url.json()
+    # An entity URL is required, or no plot can be generated
     except HTTPError:
         TASK_LOGGER.error(f"Invalid Entity URL: {entity_url}")
         DataBlob.set_value(
@@ -60,6 +61,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
         return "Invalid Entity URL!"
 
     clusters = []
+    # Only check the cluster url as valid, if one is provided
     if clusters_url is not None:
         try:
             with open_url(clusters_url) as url:
@@ -76,6 +78,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
             )
             return "Invalid Cluster URL!"
 
+    # Setup all necessary lists and the max_cluster counter
     pt_x_list = [0 for _ in range(0, len(entities))]
     pt_y_list = [0 for _ in range(0, len(entities))]
     pt_z_list = [0 for _ in range(0, len(entities))]
@@ -84,13 +87,10 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
     size_list = [10 for _ in range(0, len(entities))]
     max_cluster = 0
 
-    do_3d = True
+    # Check if provided data is three-dimensional
+    do_3d = "dim2" in entities[0]
 
-    try:
-        _ = entities[0]["dim2"]
-    except Exception:
-        do_3d = False
-
+    # Load all entity points into their respective lists
     for pt in entities:
         idx = int(pt["ID"])
         pt_x_list[idx] = pt["dim0"]
@@ -98,6 +98,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
         if do_3d:
             pt_z_list[idx] = pt["dim2"]
 
+    # Load all clusters in to the label_list and update max_cluster
     for cl in clusters:
         label_list[int(cl["ID"])] = cl["label"]
         max_cluster = max(max_cluster, cl["label"])
@@ -113,6 +114,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
         }
     )
 
+    # 2D Plot generation
     if not do_3d:
         fig = px.scatter(
             df,
@@ -123,6 +125,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
             color="Cluster ID",
             hover_data={"size": False},
         )
+    # 3D Plot generation
     else:
         fig = px.scatter_3d(
             df,
@@ -135,6 +138,7 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
             hover_data={"size": False},
         )
 
+    # Html needs to be saved as bytes, so it can be stored in a DataBlob
     html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
 
     DataBlob.set_value(ClusterScatterVisualization.instance.identifier, hash, html_bytes)
@@ -142,39 +146,37 @@ def generate_image(self, entity_url: str, clusters_url: str, hash: str) -> str:
         ClusterScatterVisualization.instance.identifier, hash, commit=True
     )
 
-    return "Created image of plot!"
+    return "Created plot!"
 
 
 @CELERY.task(
     name=f"{ClusterScatterVisualization.instance.identifier}.process",
     bind=True,
-    autoretry_for=(ImageNotFinishedError,),
+    autoretry_for=(PlotNotFinishedError,),
     retry_backoff=True,
     max_retries=None,
 )
 def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> str:
-    print("\n\n-------------------------1-------------------------\n\n")
     if not (
-        image := DataBlob.get_value(ClusterScatterVisualization.instance.identifier, hash)
+        plot := DataBlob.get_value(ClusterScatterVisualization.instance.identifier, hash)
     ):
         if not (
             task_id := PluginState.get_value(
                 ClusterScatterVisualization.instance.identifier, hash
             )
         ):
-            print("--------------------------2")
-            task_result = generate_image.s(entity_url, clusters_url, hash).apply_async()
+            task_result = generate_plot.s(entity_url, clusters_url, hash).apply_async()
             PluginState.set_value(
                 ClusterScatterVisualization.instance.identifier,
                 hash,
                 task_result.id,
                 commit=True,
             )
-        raise ImageNotFinishedError()
+        raise PlotNotFinishedError()
     with SpooledTemporaryFile() as output:
-        output.write(image)
+        output.write(plot)
         output.seek(0)
         STORE.persist_task_result(
-            db_id, output, f"circuit_{hash}.svg", "image/svg", "image/svg+xml"
+            db_id, output, f"plot_{hash}.svg", "image/html", "text/html"
         )
-    return "Created image of circuit!"
+    return "Created plot!"

@@ -81,7 +81,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="table",
+                        data_type="table/html",
                         content_type=["text/html"],
                         required=True,
                     )
@@ -155,10 +155,13 @@ class MicroFrontend(MethodView):
     required=True,
 )
 @VIS_BLP.require_jwt("jwt", optional=True)
+# Method called through the micro frontend, when both cluster_urls are selected, 
+# or when the optimize checkbox is changed, while two cluster_urls are selected
 def get_table(data: Mapping):
     clusters_url1 = data.get("clusters_url1", None)
     clusters_url2 = data.get("clusters_url2", None)
     optimize = data.get("optimize", None)
+    # Check, that both cluster_urls are present
     if not clusters_url1 or not clusters_url2:
         abort(HTTPStatus.BAD_REQUEST)
     url_hash = hashlib.sha256(
@@ -176,6 +179,7 @@ def get_table(data: Mapping):
                 ConfusionMatrixVisualization.instance.identifier, url_hash, None
             )
         ):
+            # Add the generate_table from task.py as an async method
             task_result = generate_table.s(
                 clusters_url1, clusters_url2, optimize, url_hash
             ).apply_async()
@@ -189,6 +193,7 @@ def get_table(data: Mapping):
             task_result = CELERY.AsyncResult(task_id)
         try:
             task_result.get(timeout=5)
+            # Retrieve the generated html
             table = DataBlob.get_value(
                 ConfusionMatrixVisualization.instance.identifier, url_hash
             )
@@ -197,15 +202,17 @@ def get_table(data: Mapping):
     if not table:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
 
-    print(table)
+    # Data is sligtly changed when it is saved, so it needs to be adjusted a bit
     table = str.encode(
         table.decode().replace("array(", "").replace(")", ""), encoding="utf-8"
     )
     table_dict = json.loads(table)
+    # Create a response for the micro frontend using the table.html template
     return Response(
         render_template(
             "table.html",
             confusion_matrix=table_dict["confusion_matrix"],
+            label_list=table_dict["label_list"],
             wrong_ids=table_dict["wrong_ids"],
             permutation=table_dict["permutation"],
         )
