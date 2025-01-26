@@ -114,15 +114,19 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
     retry_backoff=True,
     max_retries=None,
 )
-def process(self, db_id: str, data_url: str, hash_norm: str, hash_opt: str, optimized: bool) -> str:
+def process(
+    self, db_id: str, data_url: str, hash_norm: str, hash_opt: str, optimized: bool
+) -> str:
     if not (
-        image := DataBlob.get_value(ZXCalculusVisualization.instance.identifier,
-                                    hash_opt if optimized else hash_norm,)
+        image := DataBlob.get_value(
+            ZXCalculusVisualization.instance.identifier,
+            hash_opt if optimized else hash_norm,
+        )
     ):
         if not (
             task_id := PluginState.get_value(
                 ZXCalculusVisualization.instance.identifier,
-                hash_opt if optimized else hash_norm
+                hash_opt if optimized else hash_norm,
             )
         ):
             task_result = generate_image.s(data_url, hash_norm, hash_opt).apply_async()

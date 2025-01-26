@@ -223,7 +223,7 @@ class ProcessView(MethodView):
             data_url=data,
             hash_norm=url_hash_norm,
             hash_opt=url_hash_opt,
-            optimized=optimized
+            optimized=optimized,
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
@@ -232,8 +232,8 @@ class ProcessView(MethodView):
             data_url=data,
             hash_norm=url_hash_norm,
             hash_opt=url_hash_opt,
-            optimized=optimized
-            )
+            optimized=optimized,
+        )
 
         db_task.save(commit=True)
 

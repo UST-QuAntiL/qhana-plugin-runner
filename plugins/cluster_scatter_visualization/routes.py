@@ -221,7 +221,7 @@ class ProcessView(MethodView):
         ).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
-        
+
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
             db_id=db_task.id,

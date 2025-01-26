@@ -157,7 +157,9 @@ def generate_table(
     retry_backoff=True,
     max_retries=None,
 )
-def process(self, db_id: str, clusters_url1: str, clusters_url2: str, optimize: bool, hash: str) -> str:
+def process(
+    self, db_id: str, clusters_url1: str, clusters_url2: str, optimize: bool, hash: str
+) -> str:
     if not (
         table := DataBlob.get_value(
             ConfusionMatrixVisualization.instance.identifier, hash
@@ -168,7 +170,9 @@ def process(self, db_id: str, clusters_url1: str, clusters_url2: str, optimize: 
                 ConfusionMatrixVisualization.instance.identifier, hash
             )
         ):
-            task_result = generate_table.s(clusters_url1, clusters_url2, optimize, hash).apply_async()
+            task_result = generate_table.s(
+                clusters_url1, clusters_url2, optimize, hash
+            ).apply_async()
             PluginState.set_value(
                 ConfusionMatrixVisualization.instance.identifier,
                 hash,
