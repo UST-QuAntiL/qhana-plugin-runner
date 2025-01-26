@@ -231,10 +231,13 @@ class ProcessView(MethodView):
     def post(self, arguments):
         clusters_url1 = arguments.get("clusters_url1", None)
         clusters_url2 = arguments.get("clusters_url2", None)
+        optimize = arguments.get("optimize", None)
         if clusters_url1 is None or clusters_url2 is None:
             abort(HTTPStatus.BAD_REQUEST)
+        if optimize is None:
+            optimize = False
         url_hash = hashlib.sha256(
-            (clusters_url1 + clusters_url2).encode("utf-8")
+            (clusters_url1 + clusters_url2 + str(optimize)).encode("utf-8")
         ).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
@@ -243,6 +246,7 @@ class ProcessView(MethodView):
             db_id=db_task.id,
             clusters_url1=clusters_url1,
             clusters_url2=clusters_url2,
+            optimize=optimize,
             hash=url_hash,
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
@@ -251,6 +255,7 @@ class ProcessView(MethodView):
             db_id=db_task.id,
             clusters_url1=clusters_url1,
             clusters_url2=clusters_url2,
+            optimize=optimize,
             hash=url_hash,
         )
 

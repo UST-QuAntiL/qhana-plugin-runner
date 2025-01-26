@@ -81,7 +81,7 @@ def generate_plot(self, data_url: str, hash: str) -> str:
     )
     fig.update_traces(showlegend=False)
 
-    html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
+    html_bytes = str.encode(fig.to_html(full_html=True), encoding="utf-8")
 
     DataBlob.set_value(HistogramVisualization.instance.identifier, hash, html_bytes)
     PluginState.delete_value(
@@ -105,10 +105,6 @@ def process(self, db_id: str, data_url: str, hash: str) -> str:
                 HistogramVisualization.instance.identifier, hash
             )
         ):
-            with open_url(data_url) as url:
-                data = url.json()
-            for d in data:
-                print(d)
             task_result = generate_plot.s(data_url, hash).apply_async()
             PluginState.set_value(
                 HistogramVisualization.instance.identifier,

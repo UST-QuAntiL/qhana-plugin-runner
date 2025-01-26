@@ -114,23 +114,21 @@ def generate_image(self, data_url: str, hash_norm: str, hash_opt: str) -> str:
     retry_backoff=True,
     max_retries=None,
 )
-def process(self, db_id: str, data_url: str, hash: str) -> str:
+def process(self, db_id: str, data_url: str, hash_norm: str, hash_opt: str, optimized: bool) -> str:
     if not (
-        image := DataBlob.get_value(ZXCalculusVisualization.instance.identifier, hash)
+        image := DataBlob.get_value(ZXCalculusVisualization.instance.identifier,
+                                    hash_opt if optimized else hash_norm,)
     ):
         if not (
             task_id := PluginState.get_value(
-                ZXCalculusVisualization.instance.identifier, hash
+                ZXCalculusVisualization.instance.identifier,
+                hash_opt if optimized else hash_norm
             )
         ):
-            with open_url(data_url) as url:
-                data = url.json()
-            for d in data:
-                print(d)
-            task_result = generate_image.s(data_url, hash).apply_async()
+            task_result = generate_image.s(data_url, hash_norm, hash_opt).apply_async()
             PluginState.set_value(
                 ZXCalculusVisualization.instance.identifier,
-                hash,
+                hash_opt if optimized else hash_norm,
                 task_result.id,
                 commit=True,
             )
@@ -138,7 +136,8 @@ def process(self, db_id: str, data_url: str, hash: str) -> str:
     with SpooledTemporaryFile() as output:
         output.write(image)
         output.seek(0)
+        new_hash = hash_opt if optimized else hash_norm
         STORE.persist_task_result(
-            db_id, output, f"circuit_{hash}.svg", "image/svg", "image/svg+xml"
+            db_id, output, f"circuit_{new_hash}.html", "image/html", "text/html"
         )
     return "Created image of circuit!"

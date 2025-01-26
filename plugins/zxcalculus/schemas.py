@@ -31,7 +31,7 @@ class ZXCalculusInputParametersSchema(FrontendFormBaseSchema):
         },
     )
     optimized = ma.fields.Boolean(
-        required=True,
+        required=False,
         allow_none=False,
         metadata={
             "label": "Optimize",

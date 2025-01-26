@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import muid
+import json
 from tempfile import SpooledTemporaryFile
 from celery.utils.log import get_task_logger
 from requests.exceptions import HTTPError
+from flask.templating import render_template
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.storage import STORE
@@ -23,6 +25,9 @@ from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 from . import ConfusionMatrixVisualization
 import numpy as np
 from scipy.optimize import linear_sum_assignment
+
+# Make sure that numpy doesn't truncutate arrays, when converting them to string
+np.set_printoptions(threshold=np.inf)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -152,9 +157,9 @@ def generate_table(
     retry_backoff=True,
     max_retries=None,
 )
-def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> str:
+def process(self, db_id: str, clusters_url1: str, clusters_url2: str, optimize: bool, hash: str) -> str:
     if not (
-        image := DataBlob.get_value(
+        table := DataBlob.get_value(
             ConfusionMatrixVisualization.instance.identifier, hash
         )
     ):
@@ -163,7 +168,7 @@ def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> 
                 ConfusionMatrixVisualization.instance.identifier, hash
             )
         ):
-            task_result = generate_table.s(entity_url, clusters_url, hash).apply_async()
+            task_result = generate_table.s(clusters_url1, clusters_url2, optimize, hash).apply_async()
             PluginState.set_value(
                 ConfusionMatrixVisualization.instance.identifier,
                 hash,
@@ -172,7 +177,20 @@ def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> 
             )
         raise ImageNotFinishedError()
     with SpooledTemporaryFile() as output:
-        output.write(image)
+        # Data is sligtly changed when it is saved, so it needs to be adjusted a bit
+        table = str.encode(
+            table.decode().replace("array(", "").replace(")", ""), encoding="utf-8"
+        )
+        table_dict = json.loads(table)
+        # Create a working html file using the table.html template
+        table_html = render_template(
+            "table.html",
+            confusion_matrix=table_dict["confusion_matrix"],
+            label_list=table_dict["label_list"],
+            wrong_ids=table_dict["wrong_ids"],
+            permutation=table_dict["permutation"],
+        )
+        output.write(str.encode(table_html))
         output.seek(0)
         STORE.persist_task_result(
             db_id, output, f"table_{hash}.html", "table/html", "text/html"

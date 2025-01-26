@@ -160,7 +160,7 @@ def get_plot(data: Mapping):
     entity_url = data.get("entity_url", None)
     clusters_url = data.get("clusters_url", None)
     # Only an entity_url is required to generate a plot
-    if not entity_url:
+    if entity_url is None:
         abort(HTTPStatus.BAD_REQUEST)
     # As the clusters_url can be null, the str method is required
     url_hash = hashlib.sha256(
@@ -216,9 +216,12 @@ class ProcessView(MethodView):
         clusters_url = arguments.get("clusters_url", None)
         if entity_url is None:
             abort(HTTPStatus.BAD_REQUEST)
-        url_hash = hashlib.sha256(entity_url.encode("utf-8")).hexdigest()
+        url_hash = hashlib.sha256(
+            (entity_url + str(clusters_url)).encode("utf-8")
+        ).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
+        
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
             db_id=db_task.id,

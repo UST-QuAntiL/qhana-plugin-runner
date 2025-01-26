@@ -208,18 +208,32 @@ class ProcessView(MethodView):
     @VIS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         data = arguments.get("data", None)
+        optimized = arguments.get("optimized", None)
         if data is None:
             abort(HTTPStatus.BAD_REQUEST)
-        url_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
+        if optimized is None:
+            optimized = False
+        url_hash_norm = hashlib.sha256(data.encode("utf-8")).hexdigest()
+        url_hash_opt = hashlib.sha256((data + "_optimized").encode("utf-8")).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id, data_url=data, hash=url_hash
+            db_id=db_task.id,
+            data_url=data,
+            hash_norm=url_hash_norm,
+            hash_opt=url_hash_opt,
+            optimized=optimized
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(db_id=db_task.id, data_url=data, hash=url_hash)
+        task.apply_async(
+            db_id=db_task.id,
+            data_url=data,
+            hash_norm=url_hash_norm,
+            hash_opt=url_hash_opt,
+            optimized=optimized
+            )
 
         db_task.save(commit=True)
 

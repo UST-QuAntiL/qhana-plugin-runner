@@ -139,7 +139,7 @@ def generate_plot(self, entity_url: str, clusters_url: str, hash: str) -> str:
         )
 
     # Html needs to be saved as bytes, so it can be stored in a DataBlob
-    html_bytes = str.encode(fig.to_html(full_html=False), encoding="utf-8")
+    html_bytes = str.encode(fig.to_html(full_html=True), encoding="utf-8")
 
     DataBlob.set_value(ClusterScatterVisualization.instance.identifier, hash, html_bytes)
     PluginState.delete_value(
@@ -177,6 +177,6 @@ def process(self, db_id: str, entity_url: str, clusters_url: str, hash: str) -> 
         output.write(plot)
         output.seek(0)
         STORE.persist_task_result(
-            db_id, output, f"plot_{hash}.svg", "image/html", "text/html"
+            db_id, output, f"plot_{hash}.html", "image/html", "text/html"
         )
     return "Created plot!"

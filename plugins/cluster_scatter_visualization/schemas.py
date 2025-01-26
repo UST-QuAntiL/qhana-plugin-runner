@@ -32,7 +32,7 @@ class ClusterScatterInputParametersSchema(FrontendFormBaseSchema):
         },
     )
     clusters_url = FileUrl(
-        required=True,
+        required=False,
         allow_none=True,
         data_input_type="entity/label",
         data_content_types=["application/json"],
