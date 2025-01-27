@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "quantum-k-nearest-neighbours"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -46,7 +46,7 @@ class QKNN(QHAnaPluginBase):
         "[1] [Basheer, Afrad and Afham, A. and Goyal, Sandeep K. (2020). Quantum k-nearest neighbors algorithm. In arXiv.](https://doi.org/10.48550/arXiv.2003.09187)\n"
         "[2] [Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest Neighbors Classification Based on the Metric of Hamming Distance. Int J Theor Phys 56, 3496–3507 (2017).](https://doi.org/10.1007/s10773-017-3514-4)\n"
     )
-    tags = ["k-nearest-neighbours", "supervised-learning"]
+    tags = ["QML", "clustering", "quantum", "supervised-learning"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

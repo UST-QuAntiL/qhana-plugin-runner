@@ -550,6 +550,23 @@ The plugin runner has builtin support for some formats, e.g. the ones specified 
 .. seealso:: The plugin utils module for marshalling entity data: :py:mod:`qhana_plugin_runner.plugin_utils.entity_marshalling`
 
 
+Loading Entities
+""""""""""""""""
+
+The plugin runner provides various utility functions to load entity data.
+The function :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.load_entities` can be used to load entities.
+To ensure a dict or tuple output type for entities use the functions :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.ensure_dict` and :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.ensure_tuple` respectively.
+Entities of type :ref:`data-formats/examples/entities:entity/vector` can be preprocessed with the :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.ensure_array` function.
+
+
+.. warning::
+    If the plugin accepts entitiy data serialized as ``text/csv``, then the plugin should also accept an (optional) :ref:`entity/attribute-metadata <data-formats/data-loader-formats:attribute metadata>` input.
+    The attribute metadata can be used to preprocess the entity data, e.g., convert numbers to numeric data types or split list like values into lists.
+    This can be achieved by first creating a deserializer with :py:func:`~qhana_plugin_runner.plugin_utils.attributes.tuple_deserializer` or :py:func:`~qhana_plugin_runner.plugin_utils.attributes.dict_deserializer` and second using that serializer on each tuple or dict.
+
+    Use :py:func:`~qhana_plugin_runner.plugin_utils.attributes.parse_attribute_metadata` to parse the attribute metadata entities.
+
+
 File Outputs
 ------------
 
@@ -572,3 +589,21 @@ When writing a new plugin that outputs data first consider using an already spec
 This will increase the chance that other plugins can work with that data seamlessly.
 
 .. seealso:: The plugin utils module for marshalling entity data: :py:mod:`qhana_plugin_runner.plugin_utils.entity_marshalling`
+
+
+Saving Entities
+"""""""""""""""
+
+The plugin runner provides various utility functions to save entity data.
+The function :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.save_entities` can be used to save entities.
+Entities of type :ref:`data-formats/examples/entities:entity/vector` can be preprocessed with the :py:func:`~qhana_plugin_runner.plugin_utils.entity_marshalling.array_to_entity` function.
+
+
+.. warning::
+    If the plugin saves new entitiy data (or modifies entity data), then the plugin should also provide an :ref:`entity/attribute-metadata <data-formats/data-loader-formats:attribute metadata>` output describing the attributes of the entitites.
+    The attribute metadata can be used by other plugins to preprocess the entity data, e.g., convert numbers to numeric data types or split list like values into lists.
+    It can also be used by the plugin creating the entity data to ensure that all entities get serialized correctly.
+    This can be achieved by first creating a serializer with :py:func:`~qhana_plugin_runner.plugin_utils.attributes.tuple_serializer` or :py:func:`~qhana_plugin_runner.plugin_utils.attributes.dict_serializer` and second using that serializer on each tuple or dict.
+
+    Use :py:meth:`~qhana_plugin_runner.plugin_utils.attributes.AttributeMetadata.to_dict` to serialize the :py:class:`~qhana_plugin_runner.plugin_utils.attributes.AttributeMetadata` objects themselves.
+

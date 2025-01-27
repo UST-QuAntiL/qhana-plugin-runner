@@ -1,4 +1,4 @@
-# Copyright 2023 QHAna plugin runner contributors.
+# Copyright 2024 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,39 +19,38 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-
-_plugin_name = "pandas-preprocessing"
+_plugin_name = "muse-for-music-loader"
 __version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-PDPreprocessing_BLP = SecurityBlueprint(
+M4MLoader_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Pandas Preprocessing plugin API",
+    description="MUSE4Music Loader plugin API",
     template_folder="templates",
 )
 
 
-class PDPreprocessing(QHAnaPluginBase):
+class M4MLoaderPlugin(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Uses pandas preprocessing methods, to preprocess csv files."
+    description = "Load data from a MUSE4Music instance."
 
-    tags = ["preprocessing", "data-cleaning"]
+    tags = ["MUSE4Music", "data-loading"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return PDPreprocessing_BLP
+        return M4MLoader_BLP
 
-    def get_requirements(self) -> str:
-        return "pandas~=1.5.0"
+    # def get_requirements(self) -> str:
+    #     return ""
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
+    # It is important to import the routes **after** COSTUME_LOADER_BLP and the Plugin are defined, because they are
     # accessed as soon as the routes are imported.
     from . import routes
 except ImportError:

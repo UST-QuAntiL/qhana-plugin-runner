@@ -39,7 +39,7 @@ class DataCreator(QHAnaPluginBase):
     version = __version__
     description = "A plugin to create datasets."
 
-    tags = []
+    tags = ["data-loading", "data-synthesizing"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

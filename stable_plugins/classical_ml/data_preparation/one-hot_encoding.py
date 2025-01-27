@@ -53,7 +53,6 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 import json
 from itertools import count, chain
-import numpy as np
 
 
 """ 
@@ -97,8 +96,8 @@ Improvements:
 """
 
 
-_plugin_name = "one-hot encoding"
-__version__ = "v0.2.0"
+_plugin_name = "one-hot-encoding"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -307,8 +306,8 @@ class CalcView(MethodView):
 class OneHot(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Converts Muse Data to One-Hot Encodings"
-    tags = ["encoding", "one-hot"]
+    description = "Converts Data to One-Hot Encodings"
+    tags = ["preprocessing", "encoding", "one-hot-encoding"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -422,6 +421,8 @@ def prepare_stream_output(
     """
     Transforms an entity into it's one-hot encoding and yields it.
     """
+    import numpy as np
+
     for entity in entities:
         id = entity["ID"]
         one_hot_encodings = np.zeros((dim,))

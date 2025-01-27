@@ -31,7 +31,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.requests import retrieve_filename
 
-from pandas import read_csv
+from pandas import read_csv, read_json
 from .backend.checkbox_list import get_checkbox_list_dict
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -72,7 +72,10 @@ def first_task(self, db_id: int) -> str:
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
-    df = read_csv(file_url)
+    try:
+        df = read_json(file_url, orient="records")
+    except:
+        df = read_csv(file_url)
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
@@ -141,7 +144,7 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
                 db_id,
                 output,
                 f"pd_preprocessed_{task_data.data['info_str']}from_{task_data.data['original_file_name']}.csv",
-                "entity",  # TODO keep original data type
+                "entity/list",  # TODO keep original data type
                 "text/csv",
             )
             task_data.data["file_url"] = "file://" + task_file.file_storage_data

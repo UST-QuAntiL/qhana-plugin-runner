@@ -36,6 +36,14 @@ from tomlkit import parse
 
 ON_READTHEDOCS = environ.get("READTHEDOCS") == "True"
 
+# Define the canonical URL if you are using a custom domain on Read the Docs
+html_baseurl = environ.get("READTHEDOCS_CANONICAL_URL", "")
+# Tell Jinja2 templates the build is running on Read the Docs
+if environ.get("READTHEDOCS", "") == "True":
+    if "html_context" not in globals():
+        html_context = {}
+    html_context["READTHEDOCS"] = True
+
 # -- Project information -----------------------------------------------------
 
 current_path = Path(".").absolute()
@@ -98,6 +106,16 @@ with api_spec_path.open() as api_spec:
     info = spec.get("info", {})
     api_title = info.get("title")
     version = info.get("version")
+
+# -- update plugin documentation ---------------------------------------------
+
+plugin_doc_command = ["python", "docs/plugin_autodoc.py"]
+
+if not ON_READTHEDOCS:
+    plugin_doc_command = ["poetry", "run"] + plugin_doc_command
+
+subprocess.run(plugin_doc_command, cwd=project_root, env=flask_environ)
+
 
 # -- General configuration ---------------------------------------------------
 

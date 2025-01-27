@@ -63,6 +63,14 @@ class KeepEnum(Enum):
         return self.value
 
 
+class HowEnum(Enum):
+    any = "any"
+    all = "all"
+
+    def get(self):
+        return self.value
+
+
 class PositionEnum(Enum):
     front = "front"
     end = "end"
@@ -105,7 +113,7 @@ def process_subset(subset: Optional[str], is_int: bool = False) -> Optional[List
 def drop_missing_value(
     df: DataFrame,
     axis: int = 0,
-    threshold: int = no_default,
+    how: str = "any",
     subset: str = None,
     **kwargs,
 ) -> DataFrame:
@@ -115,13 +123,13 @@ def drop_missing_value(
     returns the new dataframe.
     :param df: DataFrame
     :param axis: int
-    :param threshold: int
+    :param how: HowEnum
     :param subset: str containing the columns or rows separated by commas
     :return: DataFrame
     """
     subset = process_subset(subset, is_int=(axis == 1))
 
-    df.dropna(axis=axis, thresh=threshold, subset=subset, inplace=True)
+    df.dropna(axis=axis, how=how, subset=subset, inplace=True)
 
     return df
 

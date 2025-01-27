@@ -41,6 +41,7 @@ from qhana_plugin_runner.tasks import (
 )
 
 from . import PDPreprocessing, PDPreprocessing_BLP
+from .backend.pandas_preprocessing import HowEnum
 from .schemas import (
     FirstInputParametersSchema,
     SecondInputParametersSchema,
@@ -72,9 +73,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="*",
-                        content_type=[
-                            "text/csv",
-                        ],
+                        content_type=["text/csv", "application/json"],
                         required=True,
                         parameter="fileUrl",
                     ),
@@ -244,7 +243,7 @@ class SecondMicroFrontend(MethodView):
         fields = schema.fields
         # define default values
         default_values = {
-            fields["threshold"].data_key: 0,
+            fields["how"].data_key: HowEnum.any,
         }
 
         # overwrite default values with other values if possible
