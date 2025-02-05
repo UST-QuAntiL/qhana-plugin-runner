@@ -1,4 +1,4 @@
-# Copyright 2023 QHAna plugin runner contributors.
+# Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,41 +14,44 @@
 
 from typing import Optional
 
-from flask import Flask
+import pathlib
+
+from flask.app import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from pathlib import Path
+from qhana_plugin_runner.util.plugins import QHAnaPluginBase
+from qhana_plugin_runner.util.plugins import plugin_identifier
 
-
-_plugin_name = "data-creator"
-__version__ = "v0.2.3"
+_plugin_name = "histogram-visualization"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
-
-DataCreator_BLP = SecurityBlueprint(
+VIS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Data Creator plugin API",
-    template_folder="templates",
+    description="A visualization plugin for creating Historgrams using the counts of different labels."
+    + "The labels are shown on the x Axis and the counts on the y Axis.",
+    template_folder="histogram_visualization_templates",
 )
 
 
-class DataCreator(QHAnaPluginBase):
-    name = _plugin_name
+class HistogramVisualization(QHAnaPluginBase):
+    name = "Histogram Visualization"
     version = __version__
-    description = "A plugin to create datasets."
-
-    tags = ["data-loading", "data-synthesizing"]
+    description = (
+        "A visualization plugin for creating Historgrams using the counts of different labels."
+        + "The labels are shown on the x Axis and the counts on the y Axis."
+    )
+    tags = ["visualization", "histogram"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return DataCreator_BLP
+        return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "numpy~=1.13"
+        return "pylatexenc~=2.10\nkaleido~=0.2.1\n"
 
 
 try:
