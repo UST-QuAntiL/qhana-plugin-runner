@@ -387,9 +387,16 @@ class VirtualPluginUi(MethodView):
 
     def render(self, data: Mapping, process_definition_id: str, errors: dict):
         camunda = CamundaManagementClient(config)
-        process_xml: str = camunda.get_process_definition_xml(
-            definition_id=process_definition_id
-        )
+
+        try:
+            process_xml: str = camunda.get_process_definition_xml(
+                definition_id=process_definition_id
+            )
+        except RequestException:
+            current_app.logger.warning(
+                "Could not load workflow process definition.", exc_info=True
+            )
+            process_xml = ""
 
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
@@ -532,9 +539,15 @@ class IncidentsFrontend(MethodView):
         assert isinstance(process_instance_id, str)
 
         camunda = CamundaManagementClient(config)
-        process_xml: str = camunda.get_process_definition_xml(
-            definition_id=process_definition_id
-        )
+        try:
+            process_xml: str = camunda.get_process_definition_xml(
+                definition_id=process_definition_id
+            )
+        except RequestException:
+            current_app.logger.warning(
+                "Could not load workflow process definition.", exc_info=True
+            )
+            process_xml = ""
 
         camunda_client = CamundaClient(config=config)
 
@@ -692,9 +705,28 @@ class HumanTaskFrontend(MethodView):
         assert isinstance(process_instance_id, str)
 
         camunda = CamundaManagementClient(config)
-        process_xml: str = camunda.get_process_definition_xml(
-            definition_id=process_definition_id
-        )
+        try:
+            process_xml: str = camunda.get_process_definition_xml(
+                definition_id=process_definition_id
+            )
+        except RequestException:
+            current_app.logger.warning(
+                "Could not load workflow process definition.", exc_info=True
+            )
+            process_xml = ""
+
+        external_form: Optional[str] = None
+
+        form_key = db_task.data.get("external_form_key", "")
+        assert isinstance(form_key, str)
+
+        if form_key.startswith("embedded:"):
+            try:
+                external_form = camunda.get_deployed_task_form(
+                    db_task.data.get("human_task_id", "")
+                )
+            except Exception:
+                external_form = "ERROR loading external form. Try again later."
 
         form_params: Dict[str, dict] = {}
 
@@ -721,8 +753,10 @@ class HumanTaskFrontend(MethodView):
 
         return Response(
             render_template(
-                "workflow_human_task.html",  # FIXME update template to not use iframe!
+                "workflow_human_task.html",
                 workflow_xml=process_xml,
+                camunda_url=config["camunda_base_url"],
+                active_task_id=db_task.data.get("human_task_id", ""),
                 human_task_id=db_task.data.get("human_task_definition_key", ""),
                 name=WorkflowManagement.instance.name,
                 version=WorkflowManagement.instance.version,
@@ -733,6 +767,7 @@ class HumanTaskFrontend(MethodView):
                 process=url_for(
                     f"{WORKFLOW_MGMNT_BLP.name}.HumanTaskProcessView", db_id=db_id
                 ),
+                external_form=external_form,
             )
         )
 
