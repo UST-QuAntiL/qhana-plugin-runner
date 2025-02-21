@@ -35,12 +35,14 @@ from .util import (
     PartEntity,
     PersonEntity,
     SubpartEntity,
+    VoiceEntity,
     get_attribute_metadata,
     opus_to_entity,
     part_to_entity,
     person_to_entity,
     subpart_to_entity,
     taxonomy_to_entity,
+    voice_to_entity,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -129,6 +131,8 @@ def import_data(self, db_id: int) -> str:
         mapped = [subpart_to_entity(p, part_id_to_opus_id) for p in subparts]
         serialized_subparts = [serializer(p) for p in mapped]
 
+        subpart_id_to_part_id = {sp.ID: sp.part for sp in mapped}
+
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(
                 serialized_subparts, output, "text/csv", attributes=SubpartEntity._fields
@@ -137,11 +141,25 @@ def import_data(self, db_id: int) -> str:
                 db_id, output, "subparts.csv", "entity/list", "text/csv"
             )
 
-        # TODO: test subparts
-        # TODO: voices
-        # TODO: voice relations
-        # TODO: partial graphs? (opus to parts, parts to subparts, subparts to voices, etc.)
-        # TODO: full graph (all partial graphs merged)
+        voices = []
+        for subpart in mapped:
+            voices.extend(client.get_voices(subpart.href))
+        serializer = tuple_serializer(VoiceEntity._fields, metadata)
+        mapped = [
+            voice_to_entity(v, subpart_id_to_part_id, part_id_to_opus_id) for v in voices
+        ]
+        serialized_voices = [serializer(v) for v in mapped]
+
+        with SpooledTemporaryFile(mode="w") as output:
+            save_entities(
+                serialized_voices, output, "text/csv", attributes=VoiceEntity._fields
+            )
+            STORE.persist_task_result(
+                db_id, output, "voices.csv", "entity/list", "text/csv"
+            )
+
+        # TODO: partial graphs? (opus to parts, parts to subparts, subparts to voices, citations, voice relations, etc.)
+        # TODO: full graph? (all partial graphs merged)
 
         taxonomy_urls = client.get_taxonomies()
         tmp_zip_file = SpooledTemporaryFile(mode="wb")
