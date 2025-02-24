@@ -65,6 +65,8 @@ def entity_to_id(entity: Dict) -> EntityId:
         case ["taxonomies", "tree" | "list", str(tax)]:
             identifier = f"t_{tax}"
         case ["taxonomies", "tree" | "list", str(tax), str(item_id)]:
+            if entity.get("name") == "na":
+                item_id = "na"
             identifier = f"t_{tax}_{item_id}"
         case ["persons", str(person)]:
             identifier = f"c_{person}"
@@ -125,7 +127,6 @@ def _extract(  # noqa: C901
             return None
         return entity_to_id(value).id_
     if type == "taxItem":
-        # TODO: handle not applicable values???
         if isinstance(value, (tuple, list)):
             tax_id = f"t_{taxonomy}"
             return [tax_item_to_id(v, tax_id) for v in value if v["id"] >= 0]
@@ -750,14 +751,27 @@ class TaxonomyEntity(NamedTuple):
         return dictionary
 
 
-def _parse_tree_node(item, tax_id: str) -> Tuple[List[dict], List[Dict[str, str]]]:
-    # TODO: add "na" entity
+def _parse_tree_node(
+    item, tax_id: str, na_item: Optional[Dict] = None
+) -> Tuple[List[dict], List[Dict[str, str]]]:
     id_ = tax_item_to_id(item, tax_id)
     name = item["name"]
     entities = [
         {"ID": id_, "tax_item_name": name, "description": item.get("description", "")}
     ]
     relations = []
+
+    if na_item:
+        na_id = tax_item_to_id(na_item, tax_id)
+        entities.append(
+            {
+                "ID": na_id,
+                "tax_item_name": "na",
+                "description": na_item.get("description", ""),
+            }
+        )
+        # assume first node as root
+        relations.append({"source": id_, "target": na_id})
 
     for child in item["children"]:
         relations.append({"source": id_, "target": tax_item_to_id(child, tax_id)})
@@ -770,12 +784,22 @@ def _parse_tree_node(item, tax_id: str) -> Tuple[List[dict], List[Dict[str, str]
 
 
 def _parse_list_to_tree(
-    items: List, tax_id: str
+    items: List, tax_id: str, na_item: Optional[Dict] = None
 ) -> Tuple[List[dict], List[Dict[str, str]]]:
-    # TODO: add "na" entity
     root_id = f"{tax_id}_root"
     entities = [{"ID": root_id, "tax_item_name": "root", "description": ""}]
     relations = []
+
+    if na_item:
+        na_id = tax_item_to_id(na_item, tax_id)
+        entities.append(
+            {
+                "ID": na_id,
+                "tax_item_name": "na",
+                "description": na_item.get("description", ""),
+            }
+        )
+        relations.append({"source": root_id, "target": na_id})
 
     for item in items:
         id_ = tax_item_to_id(item, tax_id)
@@ -793,15 +817,19 @@ def taxonomy_to_entity(
 ) -> TaxonomyEntity:
     graph_id = entity_to_id(entity).id_
     tax_type = "tree"
-    ref_target = "entities.json"  # TODO: use correct target
+    ref_target = "taxonomies.zip"
 
     tax_id = entity_to_id(entity).id_
 
+    na_item = entity.get("na_item", None)
+
     if entity["taxonomy_type"] == "tree":
-        entities, relations = _parse_tree_node(entity["items"], tax_id)
+        entities, relations = _parse_tree_node(entity["items"], tax_id, na_item=na_item)
     elif entity["taxonomy_type"] == "list":
         # gets handled like a tree with depth 1
-        entities, relations = _parse_list_to_tree(entity["items"], tax_id)
+        entities, relations = _parse_list_to_tree(
+            entity["items"], tax_id, na_item=na_item
+        )
     else:
         raise ValueError(f"Unknown taxonomy type {entity['taxonomy_type']}")
 
@@ -858,6 +886,9 @@ def _entity_class_to_attribute_metadata(entity_class: type) -> List[AttributeMet
 
             if type_hint == bool:
                 type_name = "boolean"
+
+        if type_name is None:
+            raise ValueError("Cannot use None as type name!")
 
         metadata.append(
             AttributeMetadata(
