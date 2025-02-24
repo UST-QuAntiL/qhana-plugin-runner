@@ -20,6 +20,7 @@ from typing import (
     Literal,
     NamedTuple,
     Optional,
+    Sequence,
     Tuple,
     Union,
     get_args,
@@ -735,6 +736,63 @@ def voice_to_entity(
             for r in related_voices
         ],
     )
+
+
+class VoiceRelation(NamedTuple):
+    source: str
+    target: str
+    voice_relation_kind: Annotated[Optional[str], {"taxonomy": "VoiceToVoiceRelation"}]
+
+
+def voices_to_voice_relation_graph(voices: Sequence[VoiceEntity]):
+    entities = []
+    relations = []
+
+    for voice in voices:
+        entities.append(voice.ID)
+        for target, kind in zip(voice.related_voices, voice.voice_relation_kind):
+            if target is None:
+                continue
+            relations.append(VoiceRelation(voice.ID, target, kind))
+    return {
+        "GRAPH_ID": "voice-relations",
+        "type": "directed",
+        "ref-target": "voices.csv",
+        "entities": entities,
+        "relations": relations,
+    }
+
+
+class OpusCitationRelation(NamedTuple):
+    source: str
+    target: str
+    via: Annotated[str, {"ref_target": "voices.csv"}]
+    opus_citation_kind: Annotated[Optional[str], {"taxonomy": "Zitat"}]
+
+
+def voices_to_opus_citation_graph(voices: Sequence[VoiceEntity]):
+    entities = set()
+    relations = []
+
+    for voice in voices:
+        entities.add(voice.opus)
+        for target, kind in zip(voice.cited_opus, voice.opus_citation_kind):
+            if target is None:
+                continue
+            entities.add(target)
+            relations.append(OpusCitationRelation(voice.opus, target, voice.ID, kind))
+        for target in voice.cited_composer:
+            if target is None:
+                continue
+            entities.add(target)
+            relations.append(OpusCitationRelation(voice.opus, target, voice.ID, None))
+    return {
+        "GRAPH_ID": "opus-citations",
+        "type": "directed",
+        "ref-target": ["opuses.csv", "pople.csv"],
+        "entities": sorted(entities),
+        "relations": relations,
+    }
 
 
 class TaxonomyEntity(NamedTuple):

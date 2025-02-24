@@ -43,6 +43,8 @@ from .util import (
     subpart_to_entity,
     taxonomy_to_entity,
     voice_to_entity,
+    voices_to_opus_citation_graph,
+    voices_to_voice_relation_graph,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -145,10 +147,10 @@ def import_data(self, db_id: int) -> str:
         for subpart in mapped:
             voices.extend(client.get_voices(subpart.href))
         serializer = tuple_serializer(VoiceEntity._fields, metadata)
-        mapped = [
+        mapped_voices = [
             voice_to_entity(v, subpart_id_to_part_id, part_id_to_opus_id) for v in voices
         ]
-        serialized_voices = [serializer(v) for v in mapped]
+        serialized_voices = [serializer(v) for v in mapped_voices]
 
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(
@@ -158,8 +160,21 @@ def import_data(self, db_id: int) -> str:
                 db_id, output, "voices.csv", "entity/list", "text/csv"
             )
 
-        # TODO: partial graphs? (opus to parts, parts to subparts, subparts to voices, citations, voice relations, etc.)
-        # TODO: full graph? (all partial graphs merged)
+        voice_rel_graph = voices_to_voice_relation_graph(mapped_voices)
+        with SpooledTemporaryFile(mode="w") as output:
+            json.dump(voice_rel_graph, output)
+            STORE.persist_task_result(
+                db_id, output, "voice-relations.csv", "graph/directed", "application/json"
+            )
+
+        opus_cite_graph = voices_to_opus_citation_graph(mapped_voices)
+        with SpooledTemporaryFile(mode="w") as output:
+            json.dump(opus_cite_graph, output)
+            STORE.persist_task_result(
+                db_id, output, "citations.csv", "graph/directed", "application/json"
+            )
+
+        # TODO: full graph? (all entity relations as graph?)
 
         taxonomy_urls = client.get_taxonomies()
         tmp_zip_file = SpooledTemporaryFile(mode="wb")
