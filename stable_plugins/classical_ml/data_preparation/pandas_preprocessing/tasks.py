@@ -89,7 +89,17 @@ def first_task(self, db_id: int) -> str:
         )
         task_data.data["original_file_name"] = retrieve_filename(file_url)
         task_data.data["info_str"] = ""
-        task_data.data["file_url"] = "file://" + task_file.file_storage_data
+
+        try:
+            task_data.data["file_url"] = STORE.get_file_url(
+                task_file.file_storage_data, external=True
+            )
+        except NotImplementedError:
+            TASK_LOGGER.warn("Trying to get local URL, as external is not implemented.")
+            task_data.data["file_url"] = STORE.get_file_url(
+                task_file.file_storage_data, external=False
+            )
+
         table_html = get_table_html(df)
         task_data.data["pandas_html"] = table_html
         task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
@@ -147,7 +157,19 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
                 "entity/list",  # TODO keep original data type
                 "text/csv",
             )
-            task_data.data["file_url"] = "file://" + task_file.file_storage_data
+
+            try:
+                task_data.data["file_url"] = STORE.get_file_url(
+                    task_file.file_storage_data, external=True
+                )
+            except NotImplementedError:
+                TASK_LOGGER.warn(
+                    "Trying to get local URL, as external is not implemented."
+                )
+                task_data.data["file_url"] = STORE.get_file_url(
+                    task_file.file_storage_data, external=False
+                )
+
             task_data.data["pandas_html"] = get_table_html(df)
             task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
                 {
