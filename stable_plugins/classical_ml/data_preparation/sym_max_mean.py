@@ -298,8 +298,9 @@ def calculation_task(self, db_id: int) -> str:
         mimetype = get_mimetype(entities_data)
         entities = []
         deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
+        attribute_metadata: dict[str, AttributeMetadata] | None = None
 
-        if mimetype == "text/csv":
+        if "X-Attribute-Metadata" in entities_data.headers:
             attribute_metadata_url = entities_data.headers["X-Attribute-Metadata"]
             attribute_metadata_list = open_url(attribute_metadata_url).json()
             attribute_metadata = {}
@@ -314,12 +315,14 @@ def calculation_task(self, db_id: int) -> str:
                 ent_attributes: tuple[str, ...] = ent._fields
                 ent_tuple = type(ent)
 
-                if deserializer is None:
+                if deserializer is None and attribute_metadata is not None:
                     deserializer = tuple_deserializer(
                         ent_attributes, attribute_metadata, tuple_=ent_tuple._make
                     )
 
-                ent = deserializer(ent)
+                if deserializer:
+                    ent = deserializer(ent)
+
                 entities.append(ent._asdict())
             else:
                 entities.append(ent)
