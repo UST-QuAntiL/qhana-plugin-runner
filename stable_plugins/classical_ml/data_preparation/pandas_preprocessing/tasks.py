@@ -27,9 +27,9 @@ from .schemas import (
     SecondInputParametersSchema,
 )
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.requests import retrieve_filename
+from qhana_plugin_runner.requests import retrieve_filename, open_url_as_file_like_simple
 
 from pandas import read_csv, read_json
 from .backend.checkbox_list import get_checkbox_list_dict
@@ -73,9 +73,11 @@ def first_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
     try:
-        df = read_json(file_url, orient="records")
+        with open_url_as_file_like_simple(file_url) as file_:
+            df = read_json(file_, orient="records")
     except:
-        df = read_csv(file_url)
+        with open_url_as_file_like_simple(file_url) as file_:
+            df = read_csv(file_)
 
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
@@ -89,9 +91,7 @@ def first_task(self, db_id: int) -> str:
         )
         task_data.data["original_file_name"] = retrieve_filename(file_url)
         task_data.data["info_str"] = ""
-        task_data.data["file_url"] = STORE.get_file_url(
-            task_file.file_storage_data, external=False
-        )
+        task_data.data["task_file_id"] = task_file.id
 
         table_html = get_table_html(df)
         task_data.data["pandas_html"] = table_html
@@ -126,13 +126,17 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
         task_data.parameters
     )
 
-    file_url: str = task_data.data["file_url"]
-    TASK_LOGGER.info(f"file_url: {file_url}")
+    task_file_id: int = task_data.data["task_file_id"]
+    TASK_LOGGER.info(f"task_file_id: {task_file_id}")
     preprocessing_enum = input_params.preprocessing_enum
 
     TASK_LOGGER.info(f"Loaded input parameters from db: {str(input_params)}")
 
-    df = read_csv(file_url)
+    task_file = TaskFile.get_by_id(task_file_id)
+
+    with STORE.open(task_file) as file_:
+        df = read_csv(file_)
+
     df = preprocessing_enum.preprocess_df(
         df, {k: v for k, v in input_params.__dict__.items() if k != "preprocessing_enum"}
     )
@@ -150,9 +154,7 @@ def preprocessing_task(self, db_id: int, step_id: int) -> str:
                 "entity/list",  # TODO keep original data type
                 "text/csv",
             )
-            task_data.data["file_url"] = STORE.get_file_url(
-                task_file.file_storage_data, external=False
-            )
+            task_data.data["task_file_id"] = task_file.id
 
             task_data.data["pandas_html"] = get_table_html(df)
             task_data.data["columns_and_rows_html"] = get_checkbox_list_dict(
