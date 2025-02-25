@@ -18,28 +18,33 @@ from zipfile import ZipFile
 
 import requests
 from celery.utils.log import get_task_logger
+from requests import session
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import tuple_serializer
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
-from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
-
-from requests import session
+from qhana_plugin_runner.storage import STORE
 
 from . import M4MLoaderPlugin
 from .muse_for_music_client import Muse4MusicClient
 from .schemas import InputParameters, InputParametersSchema
 from .util import (
-    opus_to_entity,
-    person_to_entity,
-    part_to_entity,
-    taxonomy_to_entity,
     OpusEntity,
-    PersonEntity,
     PartEntity,
+    PersonEntity,
+    SubpartEntity,
+    VoiceEntity,
     get_attribute_metadata,
+    opus_to_entity,
+    part_to_entity,
+    person_to_entity,
+    subpart_to_entity,
+    taxonomy_to_entity,
+    voice_to_entity,
+    voices_to_opus_citation_graph,
+    voices_to_voice_relation_graph,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -110,7 +115,10 @@ def import_data(self, db_id: int) -> str:
 
         parts = client.get_parts()
         serializer = tuple_serializer(PartEntity._fields, metadata)
-        serialized_parts = [serializer(part_to_entity(p)) for p in parts]
+        mapped = [part_to_entity(p) for p in parts]
+        serialized_parts = [serializer(p) for p in mapped]
+
+        part_id_to_opus_id = {p.ID: p.opus for p in mapped}
 
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(
@@ -120,7 +128,53 @@ def import_data(self, db_id: int) -> str:
                 db_id, output, "parts.csv", "entity/list", "text/csv"
             )
 
-        # TODO: subparts
+        subparts = client.get_subparts()
+        serializer = tuple_serializer(SubpartEntity._fields, metadata)
+        mapped = [subpart_to_entity(p, part_id_to_opus_id) for p in subparts]
+        serialized_subparts = [serializer(p) for p in mapped]
+
+        subpart_id_to_part_id = {sp.ID: sp.part for sp in mapped}
+
+        with SpooledTemporaryFile(mode="w") as output:
+            save_entities(
+                serialized_subparts, output, "text/csv", attributes=SubpartEntity._fields
+            )
+            STORE.persist_task_result(
+                db_id, output, "subparts.csv", "entity/list", "text/csv"
+            )
+
+        voices = []
+        for subpart in mapped:
+            voices.extend(client.get_voices(subpart.href))
+        serializer = tuple_serializer(VoiceEntity._fields, metadata)
+        mapped_voices = [
+            voice_to_entity(v, subpart_id_to_part_id, part_id_to_opus_id) for v in voices
+        ]
+        serialized_voices = [serializer(v) for v in mapped_voices]
+
+        with SpooledTemporaryFile(mode="w") as output:
+            save_entities(
+                serialized_voices, output, "text/csv", attributes=VoiceEntity._fields
+            )
+            STORE.persist_task_result(
+                db_id, output, "voices.csv", "entity/list", "text/csv"
+            )
+
+        voice_rel_graph = voices_to_voice_relation_graph(mapped_voices)
+        with SpooledTemporaryFile(mode="w") as output:
+            json.dump(voice_rel_graph, output)
+            STORE.persist_task_result(
+                db_id, output, "voice-relations.csv", "graph/directed", "application/json"
+            )
+
+        opus_cite_graph = voices_to_opus_citation_graph(mapped_voices)
+        with SpooledTemporaryFile(mode="w") as output:
+            json.dump(opus_cite_graph, output)
+            STORE.persist_task_result(
+                db_id, output, "citations.csv", "graph/directed", "application/json"
+            )
+
+        # TODO: full graph? (all entity relations as graph?)
 
         taxonomy_urls = client.get_taxonomies()
         tmp_zip_file = SpooledTemporaryFile(mode="wb")

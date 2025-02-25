@@ -138,8 +138,9 @@ This implies that user defined graph types are allowed, but to be future proof u
 
 The entities of the graph are stored in an attribute ``entities`` that can contain entity IDs or inline entity definitions.
 Relations are always stored inline in the ``relations`` attribute.
-Additionally an attribute ``ref-target`` can be specified on the graph to point to a file that contains the referenced entities.
+Additionally an attribute ``ref-target`` can be specified on the graph to point to a file (or a list of files) that contains the referenced entities.
 The ref target attribute should contain the file name of that file.
+The ``entities`` list of the graph itself is always considered a ``ref-target`` (i.e., to resolve inline entities).
 
 Like entities graphs can also contain additional attributes.
 In fact, leaving out the special ``entities`` and ``relations`` attributes graphs have the same features.
