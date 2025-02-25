@@ -16,7 +16,7 @@ from http import HTTPStatus
 from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict
+from typing import Mapping, Optional, List, Dict, Callable
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -46,6 +46,10 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import (
+    tuple_deserializer,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
@@ -57,7 +61,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sym-max-mean"
-__version__ = "v0.1.1"
+__version__ = "v0.1.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -73,7 +77,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types="application/json",
+        data_content_types=["application/json", "text/csv"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -122,7 +126,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
-                        content_type=["application/json"],
+                        content_type=["application/json", "text/csv"],
                         required=True,
                         parameter="entitiesUrl",
                     ),
@@ -293,9 +297,29 @@ def calculation_task(self, db_id: int) -> str:
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
         entities = []
+        deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
+
+        if mimetype == "text/csv":
+            attribute_metadata_url = entities_data.headers["X-Attribute-Metadata"]
+            attribute_metadata_list = open_url(attribute_metadata_url).json()
+            attribute_metadata = {}
+
+            for attr_meta in attribute_metadata_list:
+                attribute_metadata[attr_meta["ID"]] = AttributeMetadata.from_dict(
+                    attr_meta
+                )
 
         for ent in load_entities(entities_data, mimetype):
             if hasattr(ent, "_asdict"):  # is NamedTuple
+                ent_attributes: tuple[str, ...] = ent._fields
+                ent_tuple = type(ent)
+
+                if deserializer is None:
+                    deserializer = tuple_deserializer(
+                        ent_attributes, attribute_metadata, tuple_=ent_tuple._make
+                    )
+
+                ent = deserializer(ent)
                 entities.append(ent._asdict())
             else:
                 entities.append(ent)
