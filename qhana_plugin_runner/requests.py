@@ -171,3 +171,45 @@ def retrieve_filename(url_or_response: str | Response) -> str:
         return _retrieve_filename(url_or_response)
 
     raise TypeError("Expected input to be str or request.Response.")
+
+
+def retrieve_data_type(url_or_response: str | Response) -> Optional[str]:
+    """Return the data type from the response headers if available.
+
+    Args:
+        url_or_response (str | Response): a url or a response instance
+
+    Raises:
+        TypeError: if the input url or response type is not supported
+
+    Returns:
+        str|None: the data type
+    """
+    if isinstance(url_or_response, str):  # url_or_response is an url
+        with open_url(url_or_response, stream=True) as response:
+            return response.headers.get("X-Data-Type", None)
+    elif isinstance(url_or_response, Response):  # url_or_response is a response
+        return url_or_response.headers.get("X-Data-Type", None)
+
+    raise TypeError("Expected input to be str or request.Response.")
+
+
+def retrieve_attribute_metadata_url(url_or_response: str | Response) -> Optional[str]:
+    """Return the attribute metadata URL from the response headers if available.
+
+    Args:
+        url_or_response (str | Response): a url or a response instance
+
+    Raises:
+        TypeError: if the input url or response type is not supported
+
+    Returns:
+        str|None: the url to related attribute metadata
+    """
+    if isinstance(url_or_response, str):  # url_or_response is an url
+        with open_url(url_or_response, stream=True) as response:
+            return response.headers.get("X-Attribute-Metadata", None)
+    elif isinstance(url_or_response, Response):  # url_or_response is a response
+        return url_or_response.headers.get("X-Attribute-Metadata", None)
+
+    raise TypeError("Expected input to be str or request.Response.")
