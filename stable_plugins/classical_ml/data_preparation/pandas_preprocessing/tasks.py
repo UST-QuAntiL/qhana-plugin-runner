@@ -82,11 +82,10 @@ def first_task(self, db_id: int) -> str:
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         df.to_csv(output, index=False)
-        task_file = STORE.persist_task_result(
+        task_file = STORE.persist_task_temp_file(
             db_id,
             output,
             "original_file.csv",
-            "entity",  # TODO keep original data type
             "text/csv",
         )
         task_data.data["original_file_name"] = retrieve_filename(file_url)
