@@ -47,6 +47,7 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from qhana_plugin_runner.requests import retrieve_filename
 
 _plugin_name = "zip-merger"
 __version__ = "v0.2.0"
@@ -218,10 +219,16 @@ class ZipMerger(QHAnaPluginBase):
         return ZIP_MERGER_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "muid~=0.5.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    import muid
+
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(name=f"{ZipMerger.instance.identifier}.calculation_task", bind=True)
@@ -254,10 +261,16 @@ def calculation_task(self, db_id: int) -> str:
 
     merged_zip_file.close()
 
+    concat_filenames = retrieve_filename(zip1_url)
+    concat_filenames += retrieve_filename(zip2_url)
+    filenames_hash = get_readable_hash(concat_filenames)
+
+    info_str = f"_{filenames_hash}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "merged.zip",
+        f"merged{info_str}.zip",
         "*",
         "application/zip",
     )

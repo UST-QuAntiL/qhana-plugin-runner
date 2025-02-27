@@ -45,7 +45,6 @@ from .util.jinja_helpers import register_helpers
 from .util.plugins import register_plugins
 from .util.request_helpers import register_additional_schemas
 from .util.reverse_proxy_fix import apply_reverse_proxy_fix
-from .util.templates import register_templates
 
 # change this to change tha flask app name and the config env var prefix
 # must not contain any spaces!
@@ -57,7 +56,7 @@ def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
     return parse_toml("\n".join(file_like.readlines()))
 
 
-def create_app(test_config: Optional[Dict[str, Any]] = None):
+def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = False):
     """Flask app factory."""
 
     instance_folder_env_var = f"{ENV_VAR_PREFIX}_INSTANCE_FOLDER"
@@ -115,11 +114,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
                 folder for folder in os.environ["PLUGIN_FOLDERS"].split(":") if folder
             ]
 
-        if "TEMPLATE_FOLDERS" in os.environ:
-            config["TEMPLATE_FOLDERS"] = [
-                folder for folder in os.environ["TEMPLATE_FOLDERS"].split(":") if folder
-            ]
-
         # load database URI from env vars
         if "SQLALCHEMY_DATABASE_URI" in os.environ:
             config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLALCHEMY_DATABASE_URI"]
@@ -154,6 +148,14 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
         if len(config["URL_REWRITE_RULES"]) != len(url_map):
             pass  # TODO some rewrite rules were dismissed as invalid!
 
+    # fix psycopg2 database urls of old docker compose files
+    if (db_url := config.get("SQLALCHEMY_DATABASE_URI", "")).startswith(
+        "postgresql+psycopg2:"
+    ):
+        config["SQLALCHEMY_DATABASE_URI"] = db_url.replace(
+            "postgresql+psycopg2:", "postgresql+psycopg:", 1
+        )
+
     # End Loading config #################
 
     # Configure logging
@@ -174,7 +176,8 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
             default_logging_handler.setFormatter(formatter)
             default_logging_handler.setLevel(log_severity)
             root = getLogger()
-            root.addHandler(default_logging_handler)
+            if not silent_log:
+                root.addHandler(default_logging_handler)
             app.logger.removeHandler(default_logging_handler)
 
     logger: Logger = app.logger
@@ -222,9 +225,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None):
     # register plugins, AFTER registering the API!
     register_plugins(app)
     register_plugin_cli_blueprint(app)
-
-    # register templates
-    register_templates(app)
 
     # register file store after plugins to allow plugins to contribute file store implementations
     register_file_store(app)

@@ -118,7 +118,7 @@ def append_plugin_dependencies(
             f"# {plugin.name}@{plugin.version}\n{dependencies.strip()}\n\n\n"
         )
     except NotImplementedError:
-        logger.info("Plugin {plugin.name} @{plugin.version} defines no dependencies.")
+        logger.info(f"Plugin {plugin.name} @{plugin.version} defines no dependencies.")
 
 
 def register_plugin_cli_blueprint(app: Flask):

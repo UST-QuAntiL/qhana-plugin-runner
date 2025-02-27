@@ -37,6 +37,7 @@ class OneOfEnum(OneOf):
         choices (Iterable[str]): the names of the enum items that are valid choices (can be a subset of the whole enum; can include ``""``)
         labels (Optional[Iterable[str]]): the labels for the individual choices
         error (Optional[str]): Error message to raise in case of a validation error. Can be interpolated with ``{input}``, ``{choices}`` and ``{labels}``.
+        use_value (Optional[bool]): If true, the enum value is used for choices instead of the enum name. Use labels to provide meaningful labels in this case.
 
     Raises:
         ValueError: if the choices cannot be mapped to the given enum
@@ -49,17 +50,25 @@ class OneOfEnum(OneOf):
         labels: Optional[Iterable[str]],
         *,
         error: Optional[str],
+        use_value: bool = False,
     ):
         for choice in choices:
             if choice != "":
                 try:
-                    enum[choice]
+                    if use_value:
+                        enum(choice)
+                    else:
+                        enum[choice]
                 except KeyError as err:
                     raise ValueError(
-                        f"Choice {choice} is not a valid enum value of Enum {enum}!"
+                        f"Choice '{choice}' is not a valid enum value of Enum {enum}!"
                     ) from err
         super().__init__(choices=choices, labels=labels, error=error)
-        self.enum_choices: Set[Optional[Enum]] = {c for c in enum if c.name in choices}
+        self.enum_choices: Set[Optional[Enum]]
+        if use_value:
+            self.enum_choices = {c for c in enum if c.value in choices}
+        else:
+            self.enum_choices = {c for c in enum if c.name in choices}
         if "" in self.choices:
             self.enum_choices.add(None)
 
@@ -75,7 +84,7 @@ class EnumField(Field):
     #: Default error messages.
     default_error_messages = {"invalid": "Not a valid choice."}
 
-    def __init__(self, enum_type: Type[Enum], **kwargs):
+    def __init__(self, enum_type: Type[Enum], use_value: bool = False, **kwargs):
         metadata = kwargs.pop("metadata", {})
         enum_meta = OrderedDict({e.name: e.value for e in enum_type})
         options = metadata.get("options", {})
@@ -98,13 +107,19 @@ class EnumField(Field):
         super().__init__(metadata=metadata, **kwargs)
 
         self.enum_type: Type[Enum] = enum_type
+        self.use_value = use_value
 
-        choices, labels = zip(*enum_meta.items())
+        if use_value:
+            # switch the roles of name and value of the enum
+            labels, choices = zip(*enum_meta.items())
+        else:
+            choices, labels = zip(*enum_meta.items())
         validator = OneOfEnum(
             enum=enum_type,
             choices=choices,
             labels=labels,
             error=self.error_messages["invalid"],
+            use_value=use_value,
         )
         self.validators.insert(0, validator)
 
@@ -120,6 +135,8 @@ class EnumField(Field):
         if value == "":
             return None
         try:
+            if self.use_value:
+                return self.enum_type(value)
             return self.enum_type[value]
         except KeyError as error:
             raise self.make_error("invalid", input=value) from error

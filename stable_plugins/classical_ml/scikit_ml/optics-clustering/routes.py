@@ -55,7 +55,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Optics",
             description=Optics.instance.description,
-            name=Optics.instance.identifier,
+            name=Optics.instance.name,
             version=Optics.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
@@ -144,21 +144,15 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "optics-clustering_template.html",
                 name=Optics.instance.name,
                 version=Optics.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{Optics_BLP.name}.ProcessView"),
-                frontendjs=url_for(f"{Optics_BLP.name}.get_frontend_js"),
             )
         )
-
-
-@Optics_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @Optics_BLP.route("/process/")

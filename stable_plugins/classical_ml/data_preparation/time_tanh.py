@@ -51,13 +51,13 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "time-tanh"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -227,7 +227,7 @@ class TimeTanh(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Compares elements and returns similarity values."
-    tags = ["similarity-calculation"]
+    tags = ["preprocessing", "similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -322,10 +322,13 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    filename = retrieve_filename(entities_url)
+    info_str = f"_factor_{factor}_from_{filename}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "time_tanh.zip",
+        f"time_tanh{info_str}.zip",
         "custom/element-similarities",
         "application/zip",
     )

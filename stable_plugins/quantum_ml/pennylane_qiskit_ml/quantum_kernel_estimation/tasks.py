@@ -32,13 +32,18 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
 import numpy as np
+import muid
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def get_point(ent):
@@ -163,12 +168,20 @@ def calculation_task(self, db_id: int) -> str:
                 }
             )
 
+    concat_filenames = retrieve_filename(entity_points_url1)
+    concat_filenames += retrieve_filename(entity_points_url2)
+    filename_hash = get_readable_hash(concat_filenames)
+
+    kernel_name = str(kernel_enum.name).replace("kernel", "").strip("_")
+
+    info_str = f"_q-kernel_{kernel_name}_entanglement_{entanglement_pattern.name}_{filename_hash}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(kernel_json, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "kernel.json",
+            f"kernel{info_str}.json",
             "custom/kernel-matrix",
             "application/json",
         )
@@ -178,7 +191,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
+            f"representative_circuit{info_str}.qasm",
             "representative-circuit",
             "application/qasm",
         )

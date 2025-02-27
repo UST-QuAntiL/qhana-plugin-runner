@@ -54,7 +54,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Data Creation",
             description=DataCreator.instance.description,
-            name=DataCreator.instance.identifier,
+            name=DataCreator.instance.name,
             version=DataCreator.instance.version,
             type=PluginType.dataloader,
             entry_point=EntryPoint(
@@ -147,21 +147,15 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "data_creator_template.html",
                 name=DataCreator.instance.name,
                 version=DataCreator.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{DataCreator_BLP.name}.ProcessView"),
-                frontendjs=url_for(f"{DataCreator_BLP.name}.get_frontend_js"),
             )
         )
-
-
-@DataCreator_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @DataCreator_BLP.route("/process/")

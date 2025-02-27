@@ -174,7 +174,7 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "hybrid_ae_pkg_template.html",
                 name=HybridAutoencoderPlugin.instance.name,
                 version=HybridAutoencoderPlugin.instance.version,
                 schema=schema,
@@ -182,14 +182,8 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{HA_BLP.name}.HybridAutoencoderPennylaneAPI"),
-                frontendjs=url_for(f"{HA_BLP.name}.get_frontend_js"),
             )
         )
-
-
-@HA_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @HA_BLP.route("/process/pennylane/")

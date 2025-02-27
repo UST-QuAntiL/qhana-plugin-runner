@@ -247,7 +247,13 @@ def start_containers(c):
 
 @task
 def worker(
-    c, pool="solo", concurrency=1, dev=False, log_level="INFO", periodic_scheduler=False
+    c,
+    pool="threads",
+    concurrency=2,
+    dev=False,
+    log_level="INFO",
+    periodic_scheduler=False,
+    watch=False,
 ):
     """Run the celery worker, optionally starting the redis broker.
 
@@ -258,6 +264,7 @@ def worker(
         dev (bool, optional): If true the redis docker container will be started before the worker and stopped after the workers finished. Defaults to False.
         log_level (str, optional): The log level of the celery logger in the worker (DEBUG|INFO|WARNING|ERROR|CRITICAL|FATAL). Defaults to "INFO".
         periodic_scheduler (bool, optional): If true a celery beat scheduler will be started alongside the worker. This is needed for periodic tasks. Should only be set to True for one worker otherwise the periodic tasks get executed too often (see readme file).
+        watch (bool, optional): If True, watch for file changes and restart workers automatically. Defaults to False.
     """
     if dev:
         start_broker(c)
@@ -274,6 +281,19 @@ def worker(
         log_level.upper(),
         "-E",
     ]
+
+    if watch:
+        cmd = [
+            "watchmedo",
+            "auto-restart",
+            f"--directory=./{MODULE_NAME}",
+            "--pattern=*.py",
+            "--recursive",
+            "--debounce-interval=3",
+            "--kill-after=10",
+            "--no-restart-on-command-exit",
+            "--",
+        ] + cmd
 
     if periodic_scheduler:
         cmd += ["-B"]
@@ -656,7 +676,7 @@ def browse_doc(c):
     Args:
         c (Context): task context
     """
-    index_path = Path("./docs/_build/html/index.html")
+    index_path = Path("./docs/_build/index.html")
     if not index_path.exists():
         doc(c)
 
@@ -674,7 +694,7 @@ def doc_index(c, filter_=""):
         c (Context): task context
         filter_ (str, optional): an optional filter string. Defaults to "".
     """
-    inv_path = Path("./docs/_build/html/objects.inv")
+    inv_path = Path("./docs/_build/objects.inv")
     if not inv_path.exists():
         doc(c)
 
@@ -683,7 +703,7 @@ def doc_index(c, filter_=""):
 
     with c.cd(str(Path("./docs"))):
         output: Result = c.run(
-            join(["python", "-m", "sphinx.ext.intersphinx", "_build/html/objects.inv"]),
+            join(["python", "-m", "sphinx.ext.intersphinx", "_build/objects.inv"]),
             echo=True,
             hide="stdout",
         )

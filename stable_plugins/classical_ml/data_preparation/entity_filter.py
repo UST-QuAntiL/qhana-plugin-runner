@@ -19,6 +19,7 @@ from http import HTTPStatus
 from json import JSONEncoder, dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict, Generator, List, Mapping, Optional, Set, Union
+import re
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -53,13 +54,13 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     save_entities,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "entity-filter"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 INFINITY = -1
@@ -292,7 +293,7 @@ class EntityFilter(QHAnaPluginBase):
     description = (
         "Loads and filters entities from a file that contains a list of entities."
     )
-    tags = ["data-loading"]
+    tags = ["preprocessing", "filter", "sample"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -521,6 +522,9 @@ def entity_filter_task(self, db_id: int) -> str:
             attributes=attributes,
         )
 
+        filename = retrieve_filename(url_data)
+        info_str = f"_setting_{attribute_filter_strategy}_rows_{n_rows}_sampling_{n_sampled_rows}_from_{filename}"
+
         # Write to output file
         with SpooledTemporaryFile(mode="w") as output:
             save_entities(entities=output_entities, file_=output, mimetype=mimetype)
@@ -532,7 +536,7 @@ def entity_filter_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "filtered_entities" + file_type,
+                f"filtered_entities{info_str}" + file_type,
                 "entity_filter_output",
                 mimetype,
             )

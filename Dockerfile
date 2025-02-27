@@ -4,17 +4,14 @@ LABEL org.opencontainers.image.source="https://github.com/UST-QuAntiL/qhana-plug
 
 # install git and remove caches again in same layer
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends git build-essential cmake && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends git build-essential cmake libopenblas-dev && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 RUN useradd gunicorn
 
-
 ENV FLASK_APP=qhana_plugin_runner
 ENV PLUGIN_FOLDERS=/app/plugins:/app/extra-plugins:/app/git-plugins
-ENV TEMPLATE_FOLDERS=/app/templates
-
 
 # can be server or worker
 ENV CONTAINER_MODE=server
@@ -43,11 +40,11 @@ ADD https://raw.githubusercontent.com/UST-QuAntiL/docker-localhost-proxy/v0.3/Ca
 ADD https://raw.githubusercontent.com/UST-QuAntiL/docker-localhost-proxy/v0.3/start_proxy.sh start_proxy.sh
 RUN chmod +x start_proxy.sh
 
-RUN python -m pip install poetry gunicorn
+RUN python -m pip install poetry poetry-plugin-export gunicorn
 
 COPY --chown=gunicorn . /app
 
-RUN python -m poetry export --without-hashes --extras=psycopg2 --extras=PyMySQL --format=requirements.txt -o requirements.txt && python -m pip install -r requirements.txt
+RUN python -m poetry export --without-hashes --extras=psycopg --extras=PyMySQL --format=requirements.txt -o requirements.txt && python -m pip install -r requirements.txt
 
 VOLUME ["/app/instance"]
 ENV QHANA_PLUGIN_RUNNER_INSTANCE_FOLDER="/app/instance"

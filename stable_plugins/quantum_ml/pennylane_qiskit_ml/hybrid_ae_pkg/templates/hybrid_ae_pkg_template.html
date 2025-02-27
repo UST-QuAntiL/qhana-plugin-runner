@@ -1,0 +1,27 @@
+{% extends "simple_template.html" %}
+
+{% block script %}
+<script>
+    var ibmq_token = document.getElementById("ibmq_token").parentNode.parentNode;
+    var custom_backend = document.getElementById("custom_backend").parentNode.parentNode;
+
+    backend_type = document.getElementById("backend");
+
+    function backend_type_change() {
+        ibmq_token.style.display = 'none';
+        custom_backend.style.display = 'none';
+        if (backend_type.value.startsWith("ibmq")) {
+            ibmq_token.style.display = 'block';
+        } else if (backend_type.value === "custom_ibmq") {
+            ibmq_token.style.display = 'block';
+            custom_backend.style.display = 'block';
+        }
+    }
+
+    backend_type_change();
+
+    // react to changes
+    backend_type.addEventListener("change", backend_type_change);
+</script>
+{{ super() }}
+{% endblock script %}

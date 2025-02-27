@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qnn"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -28,15 +28,22 @@ QNN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="QNN plugin API",
+    template_folder="templates",
 )
 
 
 class QNN(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Classifies data with a dressed quantum or a classical neural network"
+    description = (
+        "Classifies data with a dressed quantum or a classical neural network.\n"
+        "A dressed quantum neural network has a classical neural network in front of and after the quantum network.\n"
+        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
+        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
+        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin."
+    )
 
-    tags = ["classification"]
+    tags = ["QML", "classification", "quantum", "classical", "neural-network"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -45,7 +52,7 @@ class QNN(QHAnaPluginBase):
         return QNN_BLP
 
     def get_requirements(self) -> str:
-        return "matplotlib~=3.5.1\nqiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\ntorch~=2.0.1"
+        return "matplotlib~=3.5.1\nqiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\ntorch~=2.0.1\nmuid~=0.5.3"
 
 
 try:

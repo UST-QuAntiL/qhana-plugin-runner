@@ -54,7 +54,7 @@ Start a redis instance in a docker container and start the worker process used f
 
 ```bash
 poetry run invoke start-broker
-poetry run invoke worker  # use strg+c to stop worker
+poetry run invoke worker --watch  # use strg+c to stop worker
 ```
 
 ### Plugin folders
@@ -79,7 +79,20 @@ There is a default launch configuration for vscode that should work on all platf
 To use the configuration copy `default-launch.json` to `.vscode/launch.json`.
 The `all` configuration starts the API and the worker process.
 For code changes both debugging sessions must be restarted as they do not autoreload code!
+To debug plugins that need concurrent celery workers, like the optimizer plugin, use the `default-concurrent-launch.json` configuration.
 
+### Debugging the worker with PyCharm
+
+1. Create a new "Run/Debug Configuration" of the type "Python Debug Server"
+2. Follow the instructions inside this config e.g.:
+   1. `pip install pydevd-pycharm~=241.18034.82`
+   2. add the following code somewhere before the lines you want to debug:
+   ```
+    import pydevd_pycharm
+    pydevd_pycharm.settrace('localhost', port=1234, stdoutToServer=True, stderrToServer=True)
+   ```
+3. Start the "Python Debug Server" config
+4. Start the worker
 
 ### Trying out the Plugin-Runner
 
@@ -342,6 +355,9 @@ Update the python source documentation
 poetry run sphinx-apidoc --separate --force -o docs/source . ./tasks.py docs plugins migrations
 rm docs/source/modules.rst  # delete modules file as this repository only contains one module
 ```
+
+Building pdf documentation locally requires the [`mermaid-cli`](https://github.com/mermaidjs/mermaid.cli) to generate images of the embedded mermaid diagrams.
+For more information please see <https://github.com/mgaitan/sphinxcontrib-mermaid>.
 
 
 ## Updating the Third-Party Licenses

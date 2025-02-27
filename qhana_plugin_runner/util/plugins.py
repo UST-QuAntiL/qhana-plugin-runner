@@ -19,7 +19,7 @@ from typing import ClassVar, Dict, List, Optional, Union
 
 from flask import Flask
 from flask.blueprints import Blueprint
-from packaging.version import Version, InvalidVersion
+from packaging.version import InvalidVersion, Version
 from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
 
@@ -196,7 +196,10 @@ def _try_load_plugin_package(app: Flask, plugin_package: Path):
         )
 
 
-def _load_plugins_from_folder(app: Flask, folder: Union[str, Path]):
+def _load_plugins_from_folder(
+    app: Flask,
+    folder: Union[str, Path],
+):
     """Load all plugins from a folder path.
 
     Every importable python module in the folder is considered a plugin and

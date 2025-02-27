@@ -27,9 +27,9 @@ from sqlalchemy.sql.expression import (
     select,
 )
 
-from .mutable_json import JSON_LIKE, MutableJSON
-from ..db import DB, DB_SIGNALS, REGISTRY
 from ...util.plugins import plugin_identifier
+from ..db import DB, DB_SIGNALS, REGISTRY
+from .mutable_json import JSON_LIKE, MutableJSON
 
 VIRTUAL_PLUGIN_CREATED = DB_SIGNALS.signal("virtual-plugin_created")
 VIRTUAL_PLUGIN_REMOVED = DB_SIGNALS.signal("virtual-plugin_removed")
@@ -268,6 +268,93 @@ class PluginState:
 class DataBlob:
     __tablename__ = "DataBlob"
 
-    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
     plugin_id: Mapped[str] = mapped_column(sql.String(550), primary_key=True)
+    key: Mapped[str] = mapped_column(sql.String(500), primary_key=True)
     value: Mapped[bytes] = mapped_column(sql.LargeBinary())
+
+    @classmethod
+    def get_item(cls, plugin_id: str, key: str) -> Optional["DataBlob"]:
+        """Get a full item record for a given key.
+
+        Args:
+            plugin_id (str): the plugin requesting the value (is matched exactly to plugin_id)
+            key (str): the key of the state to search for
+
+        Returns:
+            Optional[DataBlob]: the plugin state record
+        """
+        q: Select = select(cls)
+        q = q.filter(cls.plugin_id == plugin_id, cls.key == key)
+        result: Optional[DataBlob] = DB.session.execute(q).scalar_one_or_none()
+        return result
+
+    @classmethod
+    def get_value(cls, plugin_id: str, key: str, default: Any = ...) -> bytes:
+        """Get a value for a given key.
+
+        Args:
+            plugin_id (str): the plugin requesting the value (is matched exactly to plugin_id)
+            key (str): the key of the state to search for
+            default (Any, optional): a default value to return if the key was not present.
+
+        Raises:
+            KeyError: if the key was not found and no default value was provided
+
+        Returns:
+            bytes: the stored state value, or the default value
+        """
+        q: Select = select(cls)
+        q = q.filter(cls.plugin_id == plugin_id, cls.key == key)
+        result: Optional[DataBlob] = DB.session.execute(q).scalar_one_or_none()
+        if result:
+            return result.value
+        if default is not ...:  # use ellipsis as default as None could be user provided
+            return default  # user provided a default value
+
+        raise KeyError(f"Could not find the key {key} for the plugin id {plugin_id}!")
+
+    @classmethod
+    def set_value(
+        cls, plugin_id: str, key: str, value: bytes, commit: bool = False
+    ) -> Optional[bytes]:
+        """Set state for a given key.
+
+        Args:
+            plugin_id (str): the plugin to set the state for (with or without version)
+            key (str): the key to store state under
+            value (bytes): the state to persist
+            commit (bool, optional): if true the session will be comitted immediately. Defaults to False.
+
+        Returns:
+            bytes: the old value if any or None
+        """
+        existing = cls.get_item(plugin_id, key)
+
+        if existing:
+            old_value = existing.value
+            existing.value = value
+            DB.session.add(existing)
+        else:
+            old_value = None
+            new_item = DataBlob(plugin_id=plugin_id, key=key, value=value)
+            DB.session.add(new_item)
+
+        if commit:
+            DB.session.commit()
+
+        return old_value
+
+    @classmethod
+    def delete_value(cls, plugin_id: str, key: str, commit: bool = False):
+        """Delete state for a given key.
+
+        Args:
+            plugin_id (str): the plugin to set the state for (with or without version)
+            key (str): the key to store state under
+            commit (bool, optional): if true the session will be comitted immediately. Defaults to False.
+        """
+        existing = cls.get_item(plugin_id=plugin_id, key=key)
+        if existing:
+            DB.session.delete(existing)
+        if commit:
+            DB.session.commit()

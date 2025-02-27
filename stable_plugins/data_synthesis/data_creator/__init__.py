@@ -18,10 +18,11 @@ from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from pathlib import Path
 
 
 _plugin_name = "data-creator"
-__version__ = "v0.1.0"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -29,6 +30,7 @@ DataCreator_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Data Creator plugin API",
+    template_folder="templates",
 )
 
 
@@ -37,7 +39,7 @@ class DataCreator(QHAnaPluginBase):
     version = __version__
     description = "A plugin to create datasets."
 
-    tags = []
+    tags = ["data-loading", "data-synthesizing"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

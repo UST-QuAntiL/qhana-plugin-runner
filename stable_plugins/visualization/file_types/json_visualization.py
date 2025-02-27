@@ -48,7 +48,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "json-visualization"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -87,7 +87,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title=plugin.name,
             description=plugin.description,
-            name=plugin.identifier,
+            name=plugin.name,
             version=plugin.version,
             type=PluginType.visualization,
             entry_point=EntryPoint(
@@ -110,7 +110,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=[],
+            tags=plugin.tags,
         )
 
 
@@ -169,7 +169,9 @@ class MicroFrontend(MethodView):
 
 
 @JSON_BLP.route("/process/")
-class ProcessView(MethodView):
+class ProcessView(
+    MethodView
+):  # FIXME decide on a somewhat useful implementation for this (or remove completely!)
     """Start a long running processing task."""
 
     @JSON_BLP.arguments(JsonInputParametersSchema(unknown=EXCLUDE), location="form")
@@ -197,7 +199,7 @@ class JsonVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Visualizes JSON data."
-    tags = ["visualization"]
+    tags = ["visualization", "json"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

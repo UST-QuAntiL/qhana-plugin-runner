@@ -42,6 +42,9 @@ function registerMessageListener() {
             if (data != null && data.type === "plugin-url-response") {
                 onPluginUrlResponseMessage(data, window._qhana_microfrontend_state);
             }
+            if (data != null && data.type === "autofill-response") {
+                onAutoFillResponse(data, window._qhana_microfrontend_state);
+            }
         }
     });
 }
@@ -93,7 +96,6 @@ function onDataUrlResponseMessage(data) {
  * Handle a plugin-url-response message containing a plugin URL for a specific form input.
  *
  * @param {{type: 'plugin-url-response', inputKey: string, pluginUrl: string, pluginName?: string, pluginVersion?: string}} data 
- * @param {{lastHeight: number, heightUnchangedCount: number}} state 
  */
 function onPluginUrlResponseMessage(data) {
     var input = document.querySelector(`input#${data.inputKey}`);
@@ -111,6 +113,90 @@ function onPluginUrlResponseMessage(data) {
             }
         }
     }
+}
+
+/**
+ * Handle a autofill-response message containing encoded autofill data and the encoding used.
+ *
+ * @param {{type: 'autofill-response', value: string, encoding: string}} data 
+ */
+function onAutoFillResponse(data) {
+    let formData = {};
+    if (data.encoding === "application/json") {
+        formData = JSON.parse(data.value);
+    } else if (data.encoding === "application/x-www-form-urlencoded") {
+        const params = new URLSearchParams(data.value);
+        params.forEach((value, key) => {
+            if (formData[key] != null) {
+                const existing = formData[key]
+                if (Array.isArray(existing)) {
+                    existing.push(value);
+                } else {
+                    formData[key] = [existing, value];
+                }
+            } else {
+                formData[key] = value;
+            }
+        });
+    }
+    Object.keys(formData).forEach(key => {
+        const value = formData[key];
+        const input = document.querySelector(`input[name=${key}]:not([data-private],[type=password],[type=file]),textarea[name=${key}]:not([data-private]),select[name=${key}]`);
+        if (input == null) {
+            console.log(key, value);
+            return;
+        }
+        if (input.nodeName === "TEXTAREA") {
+            input.textContent = value;
+            input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
+            return;
+        }
+        if (input.nodeName === "SELECT") {
+            input.value = value;
+            input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
+            return;
+        }
+        if (input.type === "checkbox") {
+            if (value === "on" || value === "true" || value === true) {
+                input.checked = true;
+            } else {
+                input.checked = false;
+            }
+            input.dispatchEvent(new InputEvent("input", { data: input.checked, cancelable: false }));
+            input.dispatchEvent(new InputEvent("change", { data: input.checked, cancelable: false }));
+            return;
+        }
+        input.value = value;
+        input.dispatchEvent(new InputEvent("input", { data: value, cancelable: false }));
+        input.dispatchEvent(new InputEvent("change", { data: value, cancelable: false }));
+        if (input.getAttribute("data-input-type") === "data") {
+            const dataInputId = input.getAttribute("id");
+            if (dataInputId && value) {
+                window.requestIdleCallback(() =>
+                    sendMessage({
+                        type: "request-data-url-info",
+                        inputKey: dataInputId,
+                        dataUrl: value,
+                    })
+                );
+            }
+        };
+        if (input.getAttribute("data-input-type") === "plugin") {
+            const pluginInputId = input.getAttribute("id");
+            if (pluginInputId && value) {
+                window.requestIdleCallback(() =>
+                    sendMessage({
+                        type: "request-plugin-url-info",
+                        inputKey: pluginInputId,
+                        pluginUrl: value,
+                    })
+                );
+            }
+        }
+        // TODO update file metadata
+    })
 }
 
 /**
@@ -183,7 +269,7 @@ function notifyParentWindowOnLoad() {
 /**
  * Instrument embedded html forms to listen for submit events.
  */
-function instrumentForm() {
+function instrumentForm(hasParent) {
     const forms = document.querySelectorAll('form.qhana-form');
     forms.forEach(form => {
         const privateInputs = new Set(); // inputs that should be censored (e.g. password inputs)
@@ -205,7 +291,7 @@ function instrumentForm() {
             }
             var dataInputId = inputElement.getAttribute("id");
             var dataInputValue = inputElement.value;
-            if (dataInputId && dataInputValue) {
+            if (dataInputId && dataInputValue && hasParent) {
                 sendMessage({
                     type: "request-data-url-info",
                     inputKey: dataInputId,
@@ -216,7 +302,7 @@ function instrumentForm() {
         form.querySelectorAll('input[data-input-type=plugin]').forEach(inputElement => {
             var pluginInputId = inputElement.getAttribute("id");
             var pluginInputValue = inputElement.value;
-            if (pluginInputId && pluginInputValue) {
+            if (pluginInputId && pluginInputValue && hasParent) {
                 sendMessage({
                     type: "request-plugin-url-info",
                     inputKey: pluginInputId,
@@ -233,16 +319,18 @@ function instrumentForm() {
             } else {
                 contentTypes = contentTypes.split(/\s+/g);
             }
-            chooseButton.addEventListener("click", (event) => {
-                event.preventDefault();
-                sendMessage({
-                    type: "request-data-url",
-                    inputKey: inputId,
-                    acceptedInputType: dataType,
-                    acceptedContentTypes: contentTypes,
+            if (hasParent) {
+                chooseButton.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    sendMessage({
+                        type: "request-data-url",
+                        inputKey: inputId,
+                        acceptedInputType: dataType,
+                        acceptedContentTypes: contentTypes,
+                    });
                 });
-            });
-            chooseButton.removeAttribute("hidden");
+                chooseButton.removeAttribute("hidden");
+            }
         });
         form.querySelectorAll('button.qhana-choose-plugin-button').forEach(chooseButton => {
             var inputId = chooseButton.getAttribute("data-input-id");
@@ -265,11 +353,13 @@ function instrumentForm() {
             if (pluginVersion) {
                 requestMessage.pluginVersion = pluginVersion;
             }
-            chooseButton.addEventListener("click", (event) => {
-                event.preventDefault();
-                sendMessage(requestMessage);
-            });
-            chooseButton.removeAttribute("hidden");
+            if (hasParent) {
+                chooseButton.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    sendMessage(requestMessage);
+                });
+                chooseButton.removeAttribute("hidden");
+            }
         });
         form.addEventListener("submit", (event) => {
             onFormSubmit(event, dataInputs, privateInputs)
@@ -278,6 +368,12 @@ function instrumentForm() {
 }
 
 function onFormSubmit(event, dataInputs, privateInputs) {
+    if (window._qhana_microfrontend_state.formSubmitHandler != null) {
+        const eventHandled = window._qhana_microfrontend_state.formSubmitHandler(event, dataInputs, privateInputs);
+        if (eventHandled) {
+            return;
+        }
+    }
     const form = event.target;
     const submitter = event.submitter;
     let submitTarget = submitter.getAttribute("data-target") || form.getAttribute("data-target");
@@ -304,6 +400,11 @@ function onFormSubmit(event, dataInputs, privateInputs) {
             if (privateInputs.has(key)) {
                 // censor private values
                 processedFormData.append(key, '***');
+                return;
+            }
+            if (entry instanceof File) {
+                // add filename instead of file object
+                processedFormData.append(key, `Uploaded file: ${entry.name}`);
                 return;
             }
             // add all other values unchanged
@@ -397,8 +498,9 @@ if (window.top !== window.self) {
             lastHeight: 0,
             heightUnchangedCount: 0,
             preventSubmit: false,
+            formSubmitHandler: null,
         }
-        instrumentForm();
+        instrumentForm(true);
         registerMessageListener();
         notifyParentWindowOnLoad();
     }

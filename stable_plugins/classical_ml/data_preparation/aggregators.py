@@ -49,9 +49,11 @@ from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from qhana_plugin_runner.requests import retrieve_filename
+
 
 _plugin_name = "distance-aggregator"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -230,7 +232,7 @@ class Aggregator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Aggregates attribute distances to entity distances."
-    tags = ["aggregator"]
+    tags = ["preprocessing", "distance-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -328,12 +330,15 @@ def calculation_task(self, db_id: int) -> str:
             }
         )
 
+    filename = retrieve_filename(attribute_distances_url)
+    info_str = f"aggregator_{aggregator.name}_from_{filename}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_distances, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "entity_distances.json",
+            f"entity_distances_{info_str}.json",
             "custom/entity-distances",
             "application/json",
         )

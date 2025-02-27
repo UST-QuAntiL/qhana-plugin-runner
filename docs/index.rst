@@ -17,10 +17,10 @@ Welcome to QHAna-Plugin-Runner's documentation!
     readme
     plugins
     plugins-advanced
-    templates
+    plugin-types/index
     data-formats/index
     cli
-    plugin-overview
+    all-plugins
     adr/index
     source/qhana_plugin_runner
     changelog

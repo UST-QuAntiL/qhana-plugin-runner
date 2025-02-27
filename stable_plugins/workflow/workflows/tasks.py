@@ -13,6 +13,7 @@ from qhana_plugin_runner.db.models.virtual_plugins import (
     PluginState,
     VirtualPlugin,
 )
+from qhana_plugin_runner.tasks import TASK_STEPS_CHANGED
 
 from . import DeployWorkflow
 from .clients.camunda_client import CamundaClient, CamundaManagementClient
@@ -195,3 +196,6 @@ def process_input(self, db_id: int) -> None:
 
     task_data.clear_previous_step()
     task_data.save(commit=True)
+
+    app = current_app._get_current_object()
+    TASK_STEPS_CHANGED.send(app, task_id=db_id)

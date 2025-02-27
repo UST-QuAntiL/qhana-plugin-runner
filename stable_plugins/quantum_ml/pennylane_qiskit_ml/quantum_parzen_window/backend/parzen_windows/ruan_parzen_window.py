@@ -29,6 +29,7 @@ class RuanParzenWindow(ParzenWindow):
         train_data: np.ndarray,
         train_labels: np.ndarray,
         distance_threshold: float,
+        idx_wires: List[int],
         train_wires: List[int],
         label_wires: List[int],
         ancilla_wires: List[int],
@@ -54,17 +55,21 @@ class RuanParzenWindow(ParzenWindow):
         self.label_indices = self.init_labels(train_labels)
 
         self.unclean_wires = [] if unclean_wires is None else unclean_wires
+        self.idx_wires = idx_wires
         self.train_wires = train_wires
         self.label_wires = label_wires
         self.ancilla_wires = ancilla_wires
 
-        wire_types = ["train", "label", "ancilla", "unclean"]
+        wire_types = ["idx", "train", "label", "ancilla", "unclean"]
+        num_idx_wires = int(np.ceil(np.log2(self.train_data.shape[0])))
         num_wires = [
+            num_idx_wires,
             self.train_data.shape[1],
             max(1, ceil_log2(len(self.unique_labels))),
             ceil_log2(self.train_data.shape[1]) + 4,
         ]
         error_msgs = [
+            "the round up log2 of the number of points, i.e. ceil(log2(no. points)).",
             "the points' dimensionality.",
             "ceil(log2(no. of unique labels)) and greater or equal to 1.",
             "ceil(log2(the points' dimensionality)) + 4.",
@@ -86,11 +91,16 @@ class RuanParzenWindow(ParzenWindow):
         ]  # Any additional wires
 
         self.qam = QAM(
-            self.train_data,
-            self.train_wires,
+            np.array(
+                [
+                    int_to_bitlist(i, num_idx_wires)
+                    for i in range(self.train_data.shape[0])
+                ]
+            ),  # The indices
+            self.idx_wires,
             self.ancilla_wires,
-            additional_bits=self.label_indices,
-            additional_wires=self.label_wires,
+            additional_bits=np.concatenate((self.train_data, self.label_indices), axis=1),
+            additional_wires=self.train_wires + self.label_wires,
             unclean_wires=self.unclean_wires,
         )
 
@@ -178,9 +188,10 @@ class RuanParzenWindow(ParzenWindow):
     @staticmethod
     def get_necessary_wires(
         train_data: np.ndarray, train_labels: np.ndarray
-    ) -> Tuple[int, int, int]:
+    ) -> Tuple[int, int, int, int]:
         unique_labels = list(set(train_labels))
         return (
+            int(np.ceil(np.log2(train_data.shape[0]))),
             int(len(train_data[0])),
             max(1, ceil_log2(len(unique_labels))),
             ceil_log2(len(train_data[0])) + 4,

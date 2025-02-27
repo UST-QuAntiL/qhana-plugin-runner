@@ -14,16 +14,20 @@
 
 """Functions for opening files from external URLs."""
 
+import mimetypes
 from contextlib import contextmanager
 from io import BytesIO
+from pathlib import Path
 from re import Pattern
 from typing import Iterator, Optional, Tuple
+from urllib.parse import urlparse
 
 from flask import Flask
 from flask.globals import current_app
 from pyrfc6266 import requests_response_to_filename, secure_filename
 from requests import Session
 from requests.models import Response
+from werkzeug.http import parse_options_header
 
 REQUEST_SESSION = Session()
 
@@ -91,3 +95,51 @@ def open_url_as_file_like(
         yield filename, response.raw, content_type
     finally:
         response.close()
+
+
+def get_mimetype(response: Response, default=None) -> Optional[str]:
+    try:
+        return response.headers["Content-Type"]
+    except KeyError:
+        matches = mimetypes.MimeTypes().guess_type(url=response.url)
+        if matches:
+            return matches[0]
+    return default
+
+
+def _retrieve_filename(response: Response):
+    """
+    Given an url response it returns the name of the file
+    :param response: Response
+    :return: str
+    """
+    url = response.url
+    fname = None
+    if "Content-Disposition" in response.headers.keys():
+        for content_disp in parse_options_header(response.headers["Content-Disposition"]):
+            if isinstance(content_disp, dict) and "filename" in content_disp:
+                fname = content_disp["filename"]
+                break
+    if not fname:
+        fname = Path(urlparse(url).path).name
+    response.close()
+
+    # Remove file type endings
+    fname = Path(fname).stem
+
+    return fname
+
+
+def retrieve_filename(url_or_response: str | Response) -> str:
+    """
+    Given an url to a file or an url response, it returns the name of the file
+    :param url_or_response: str | Response
+    :return: str
+    """
+    if isinstance(url_or_response, str):  # url_or_response is an url
+        with open_url(url_or_response, stream=True) as response:
+            return _retrieve_filename(response)
+    elif isinstance(url_or_response, Response):  # url_or_response is a response
+        return _retrieve_filename(url_or_response)
+
+    raise TypeError("Expected input to be str or request.Response.")

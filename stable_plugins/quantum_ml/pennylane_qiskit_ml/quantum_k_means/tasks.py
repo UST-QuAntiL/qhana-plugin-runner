@@ -31,8 +31,8 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
-from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 
 import numpy as np
 
@@ -154,12 +154,18 @@ def calculation_task(self, db_id: int) -> str:
     for ent_id, idx in id_to_idx.items():
         entity_clusters.append({"ID": ent_id, "href": "", "cluster": int(clusters[idx])})
 
+    filename = retrieve_filename(entity_points_url)
+
+    info_str = (
+        f"_q-k-means_variant_{variant.name}_clusters_{clusters_cnt}_from_{filename}"
+    )
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_clusters, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "clusters.json",
+            f"clusters{info_str}.json",
             "custom/clusters",
             "application/json",
         )
@@ -175,7 +181,7 @@ def calculation_task(self, db_id: int) -> str:
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                f"plot{info_str}.html",
                 "plot",
                 "text/html",
             )
@@ -185,7 +191,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "representative_circuit.qasm",
+            f"representative_circuit{info_str}.qasm",
             "representative-circuit",
             "text/x-qasm",
         )

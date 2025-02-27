@@ -17,6 +17,9 @@
             },
             {
               "$ref": "#/components/messages/uiLoading"
+            },
+            {
+              "$ref": "#/components/messages/autofillRequest"
             }
           ]
         }
@@ -92,6 +95,9 @@
             },
             {
               "$ref": "#/components/messages/implementationsResponse"
+            },
+            {
+              "$ref": "#/components/messages/autofillResponse"
             }
           ]
         }
@@ -112,6 +118,13 @@
         "payload": {
           "type": "string",
           "const": "ui-loading"
+        }
+      },
+      "autofillRequest": {
+        "summary": "The plugin micro-frontend is requesting the application to send autofill form data. The application may respond with an autofill response message.",
+        "payload": {
+          "type": "string",
+          "const": "autofill-request"
         }
       },
       "preventSubmit": {
@@ -495,6 +508,29 @@
           "required": [
             "type",
             "implementations"
+          ]
+        }
+      },
+      "autofillResponse": {
+        "summary": "The response to a previously received autofillRequest message from the plugin. This message may also be sent without a request from the plugin (e.g. if the user triggers an autofill in the application).\nThe value contains the encoded autofill data. The encoding attribute contains the used encoding, i.e., mime-type, used to encode the value.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "autofill-response"
+            },
+            "value": {
+              "type": "string"
+            },
+            "encoding": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value",
+            "encoding"
           ]
         }
       }

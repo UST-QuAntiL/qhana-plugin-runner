@@ -53,13 +53,13 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "wu-palmer"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -75,7 +75,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types="application/json",
+        data_content_types=["text/csv", "application/json"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -109,7 +109,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Attributes",
-            "description": "Attributes for which the similarity shall be computed.",
+            "description": "List of attributes for which the similarity shall be computed. Separated by newlines.",
             "input_type": "textarea",
         },
     )
@@ -259,7 +259,7 @@ class WuPalmer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Compares elements and returns similarity values."
-    tags = ["similarity-calculation"]
+    tags = ["preprocessing", "similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -268,10 +268,16 @@ class WuPalmer(QHAnaPluginBase):
         return WU_PALMER_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "muid~=0.5.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    import muid
+
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
@@ -392,6 +398,9 @@ def add_similarities_for_entities(
     values1 = entity1[attribute]
     values2 = entity2[attribute]
 
+    if values1 == "" or values1 == [""] or values2 == "" or values2 == [""]:
+        return
+
     # extract taxonomy name from refTarget
     file_name: str = entities_metadata[attribute]["refTarget"].split(":")[1]
     tax_name: str = PurePath(file_name).stem
@@ -480,7 +489,14 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
     with open_url(entities_url) as entities_data:
-        entities = list(load_entities(entities_data, "application/json"))
+        mimetype = get_mimetype(entities_data)
+        entities = []
+
+        for ent in load_entities(entities_data, mimetype):
+            if hasattr(ent, "_asdict"):  # is NamedTuple
+                entities.append(ent._asdict())
+            else:
+                entities.append(ent)
 
     with open_url(entities_metadata_url) as entities_metadata_file:
         entities_metadata_list = list(
@@ -520,10 +536,18 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    concat_filenames = retrieve_filename(entities_url)
+    concat_filenames += retrieve_filename(entities_metadata_url)
+    concat_filenames += retrieve_filename(taxonomies_zip_url)
+    filenames_hash = get_readable_hash(concat_filenames)
+
+    info_str = "_with_root" if root_has_meaning_in_taxonomy else "_without_root"
+    info_str += f"_{filenames_hash}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "wu_palmer.zip",
+        f"wu_palmer{info_str}.zip",
         "custom/element-similarities",
         "application/zip",
     )

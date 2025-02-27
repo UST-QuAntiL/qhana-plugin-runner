@@ -56,7 +56,7 @@ class PluginsView(MethodView):
         return PluginMetadata(
             title="Max Cut",
             description=MaxCut.instance.description,
-            name=MaxCut.instance.identifier,
+            name=MaxCut.instance.name,
             version=MaxCut.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
@@ -147,21 +147,15 @@ class MicroFrontend(MethodView):
 
         return Response(
             render_template(
-                "simple_template.html",
+                "max_cut_template.html",
                 name=MaxCut.instance.name,
                 version=MaxCut.instance.version,
                 schema=schema,
                 values=data_dict,
                 errors=errors,
                 process=url_for(f"{MaxCut_BLP.name}.ProcessView"),
-                frontendjs=url_for(f"{MaxCut_BLP.name}.get_frontend_js"),
             )
         )
-
-
-@MaxCut_BLP.route("/ui/frontend_js/")
-def get_frontend_js():
-    return send_file(Path(__file__).parent / "frontend.js", mimetype="text/javascript")
 
 
 @MaxCut_BLP.route("/process/")
