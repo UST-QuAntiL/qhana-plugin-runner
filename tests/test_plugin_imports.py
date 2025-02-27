@@ -14,23 +14,11 @@
 
 """Tests enshuring that plugin imports will not cause any problems."""
 
-import re
 import ast
 import sys
 from collections import deque
 from pathlib import Path
 
-
-
-
-PLUGIN_FOLDERS = {
-    "stable_plugins",
-    "plugins",
-}
-
-IMPORT_PATH_REGEX = re.compile(r"^\s*(?:from|import)\s+(?P<path>[a-zA-Z_]\S+)(?:\s+|$)")
-
-"""
 # search for plugins in the following locations
 PLUGIN_LOCATIONS = [
     Path("./plugins"),
@@ -323,44 +311,3 @@ def test_relative_imports():
                     assert is_not_in_project_repo(
                         (module,)
                     ), f"Plugins must use relative imports! Found import '{module}[...]' in line {lineno} of file {file_}"
-"""
-
-"""Tests for bad import statements in plugins."""
-def test_plugin_imports():
-    base_path = Path(".").resolve()
-
-    bad_imports = []
-
-    bad_import_paths = tuple(f"{folder}." for folder in PLUGIN_FOLDERS)
-
-    for folder in PLUGIN_FOLDERS:
-        for file_ in base_path.rglob(f"{folder}/**/*.py"):
-            if not file_.exists() or file_.is_dir():
-                continue
-            relative_path = str(file_.relative_to(base_path))
-            content = file_.read_text()
-            lines = enumerate(content.splitlines(True))
-            absolute_imports = (
-                (i, match, line)
-                for i, line in lines
-                if (match := IMPORT_PATH_REGEX.match(line))
-            )
-            for line_nr, match, line in absolute_imports:
-                import_path = match.group("path")
-                if import_path in PLUGIN_FOLDERS or import_path.startswith(
-                    bad_import_paths
-                ):
-                    bad_imports.append(
-                        (relative_path, line_nr, import_path, line.rstrip("\n"))
-                    )
-
-    has_bad_imports = bool(bad_imports)
-
-    bad_imports_warning = "The following plugin files contain bad absolute imports!\n\n"
-
-    bad_imports_warning += "\n".join(
-        f'    {file_} L{line}: "{import_statement}"'
-        for file_, line, import_path, import_statement in bad_imports
-    )
-
-    assert not has_bad_imports, bad_imports_warning
