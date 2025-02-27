@@ -245,7 +245,7 @@ class PartEntity(NamedTuple):
     measure_start_ref_page: Optional[int]
     measure_end: Optional[int]
     measure_end_ref_page: Optional[int]
-    occurence_in_movement: Annotated[Optional[str], {"taxonomy": "AuftretenSatz"}]
+    occurence_in_movement: Annotated[List[str], {"taxonomy": "AuftretenSatz"}]
     formal_functions: Annotated[List[str], {"taxonomy": "FormaleFunktion"}]
     instrument_quantity_before: Annotated[
         Optional[str], {"taxonomy": "InstrumentierungEinbettungQuantitaet"}
