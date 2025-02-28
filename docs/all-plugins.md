@@ -81,9 +81,9 @@
     preprocessing
 
     quantum
-* - [MUSE4Music Loader (@v0.1.1)](#muse-for-music-loader)
+* - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
 
-    muse-for-music-loader@v0-1-1
+    muse-for-music-loader@v1-0-0
   - dataloader
   - MUSE4Music
 
@@ -313,9 +313,9 @@
     preprocessing
 
     similarity-calculation
-* - [Sym Max Mean attribute comparer (@v0.1.1)](#sym-max-mean)
+* - [Sym Max Mean attribute comparer (@v0.1.2)](#sym-max-mean)
 
-    sym-max-mean@v0-1-1
+    sym-max-mean@v0-1-2
   - processing
   - preprocessing
 
@@ -639,7 +639,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (muse-for-music-loader)=
-### MUSE4Music Loader (@v0.1.1)
+### MUSE4Music Loader (@v1.0.0)
 
 dataloader – MUSE4Music, data-loading\
 *Path:* {file}`stable_plugins/muse/muse_for_music/__init__.py`
@@ -1219,7 +1219,7 @@ Transforms similarities to distances.
 
 
 (sym-max-mean)=
-### Sym Max Mean attribute comparer (@v0.1.1)
+### Sym Max Mean attribute comparer (@v0.1.2)
 
 processing – preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/sym_max_mean.py`
@@ -1230,7 +1230,7 @@ Compares attributes and returns similarity values.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/list|application/json|✓|
+|entity/list|application/json, text/csv|✓|
 |custom/element-similarities|application/zip|✓|
 
 
