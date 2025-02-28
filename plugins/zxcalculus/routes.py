@@ -14,10 +14,12 @@
 
 import hashlib
 from http import HTTPStatus
-from typing import Mapping
+from typing import Mapping, Optional
+
 from celery import chain
-import celery
-from flask import abort, redirect, send_file
+from celery.result import AsyncResult
+from celery.exceptions import TimeoutError
+from flask import abort, redirect
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
@@ -35,8 +37,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import VIS_BLP, ZXCalculusVisualization
 from .schemas import ZXCalculusInputParametersSchema
@@ -155,7 +157,7 @@ def get_image(data: Mapping):
     optimized = data.get("optimized", None)
 
     # Data_Url needs to be provided, while optimized is always provided through the Micro frontend
-    if not data_url or optimized == None:
+    if not data_url or optimized is None:
         abort(HTTPStatus.BAD_REQUEST)
 
     # Two circuits are created with two different hashes
@@ -167,11 +169,15 @@ def get_image(data: Mapping):
         None,
     )
     if image is None:
-        if not (
-            task_id := PluginState.get_value(
-                ZXCalculusVisualization.instance.identifier, url_hash_norm, None
-            )
-        ):
+        task_id = PluginState.get_value(
+            ZXCalculusVisualization.instance.identifier, url_hash_norm, None
+        )
+        if task_id:
+            task_result: Optional[AsyncResult] = CELERY.AsyncResult(task_id)
+            if not task_result or task_result.failed():
+                task_id = None
+                task_result = None
+        if not task_id:
             # Add the generate_image from task.py as an async method
             task_result = generate_image.s(
                 data_url, url_hash_norm, url_hash_opt
@@ -184,6 +190,7 @@ def get_image(data: Mapping):
             )
         else:
             task_result = CELERY.AsyncResult(task_id)
+
         try:
             task_result.get(timeout=5)
             # Both images were created, retrieve the correct one
@@ -191,12 +198,12 @@ def get_image(data: Mapping):
                 ZXCalculusVisualization.instance.identifier,
                 url_hash_opt if optimized else url_hash_norm,
             )
-        except celery.exceptions.TimeoutError:
+        except TimeoutError:
             return Response("Circuit Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:
         abort(HTTPStatus.BAD_REQUEST, "Invalid data URL!")
     # Returns html to the micro frontend
-    return Response(image)
+    return Response(image, HTTPStatus.OK, {"Content-Type": "image/svg+xml"})
 
 
 @VIS_BLP.route("/process/")

@@ -3,29 +3,10 @@
 {% block head %}
 {{ super() }}
 <style>
-    #spinner {
-        display: inline-block;
-        width: 100px;
-        height: 100px;
-        border: 6px solid rgba(0, 0, 0, 0);
-        border-radius: 50%;
-        border-top-color: #673ab7;
-        animation: spin 1s linear infinite;
-        -webkit-animation: spin 1s linear infinite;
-    }
-
-    .container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-    }
-
-    @keyframes spin {
-        to {
-            -webkit-transform: rotate(360deg);
-        }
-    }
+.preview img {
+    width: 100%;
+    margin-block: 0.5rem;
+}
 </style>
 {% endblock head %}
 
@@ -43,134 +24,29 @@
     </details>
 </div>
 
-<div id="preview">
-    <div id="circuit-frame" style="width: 750px; height:0px;">
-        <iframe id="circuit-plot" type="text/html" style="border: none; width: 100%; height:100%;" display="none"></iframe>
-    </div>
-    <div id="circuit-frame-optimized" style="width: 750px; height:0px;">
-        <p>&nbsp;&nbsp;Optimized:</p>
-        <iframe id="circuit-plot-optimized" type="text/html" style="border: none; width: 100%; height:100%;" display="none"></iframe>
-    </div>
-    <div class="container">
-        <div id="spinner"></div>
-    </div>
+<div class="preview">
+    <img id="circuit-plot" alt="ZX-Calculus representation of the qasm circuit." hidden></img>
+    <img id="circuit-plot-optimized" alt="Optimized ZX-Calculus representation of the qasm circuit." hidden></img>
 </div>
 {% endblock content %}
 
 {% block script %}
 {{ super() }}
 <script>
-    // Timer is used when checking, if images are fully un-/loaded
-    const timer = ms => new Promise(res => setTimeout(res, ms));
+    function resetPreviews() {
+        const visOptions = document.querySelector('#visualization-options');
+        visOptions.setAttribute('open', '');
 
-    // Only called, when an image was successfully generated
-    async function onImageLoad(url, url_opt) {
-        let counter = 0
-        const frame = document.querySelector('#circuit-frame');
-        const frame_opt = document.querySelector('#circuit-frame-optimized');
         const plot = document.querySelector('#circuit-plot');
+        const plot_opt = document.querySelector('#circuit-plot-optimized');
+        plot.setAttribute('hidden', '');
+        plot.removeAttribute('src');
+        plot_opt.setAttribute('hidden', '');
+        plot_opt.removeAttribute('src');
 
-        // Images are created using mpld3, so this class will always be present
-        let plot_svg = plot.contentDocument.getElementsByClassName('mpld3-figure')[0];
-        plot.removeAttribute("src");
-        frame.style.display = '';
-        // Remove old html and wait for the Figure to unload
-        while(plot_svg !== undefined) {
-            await timer(50);
-            plot_svg = plot.contentDocument.getElementsByClassName('mpld3-figure')[0];
-            counter += 1;
-            if (counter === 100) {
-                onImageError();
-                return;
-            }
+        if (window._qhana_microfrontend_state) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
         }
-        // Set new URL and wait for it to load
-        plot.setAttribute("src", url);
-        plot_svg = plot.contentDocument.getElementsByClassName('mpld3-figure')[0];
-        while(plot_svg === undefined) {
-            await timer(50);
-            plot_svg = plot.contentDocument.getElementsByClassName('mpld3-figure')[0];
-            counter += 1;
-            if (counter === 100) {
-                onImageError();
-                return;
-            }
-        }
-        // Wait for Figure to fully load and provide a correct height
-        while(plot_svg.clientHeight === 0) {
-            await timer(50);
-            counter += 1;
-            if (counter === 100) {
-                onImageError();
-                return;
-            }
-        }
-
-        const plot_height = plot_svg.clientHeight + 20;
-        frame.style.setProperty("height", plot_height);
-        frame.style.setProperty("width", "100%");
-        frame.style.setProperty("border", "none");
-        let plot_opt_height = 0;
-        
-        // Show optimized image additionally
-        if (document.getElementById('optimized').checked) {
-            const plot_opt = document.querySelector('#circuit-plot-optimized');
-            let plot_svg_opt = plot_opt.contentDocument.getElementsByClassName('mpld3-figure')[0];
-            plot_opt.removeAttribute("src");
-            frame_opt.style.display = '';
-            // Remove old html and wait for the Figure to unload
-            while(plot_svg_opt !== undefined) {
-                await timer(50);
-                plot_svg_opt = plot_opt.contentDocument.getElementsByClassName('mpld3-figure')[0];
-                counter += 1;
-                if (counter === 100) {
-                    onImageError();
-                    return;
-                }
-            }
-            // Set new URL and wait for it to load
-            plot_opt.setAttribute("src", url_opt);
-            plot_svg_opt = plot_opt.contentDocument.getElementsByClassName('mpld3-figure')[0];
-            while(plot_svg_opt === undefined) {
-                await timer(50);
-                plot_svg_opt = plot_opt.contentDocument.getElementsByClassName('mpld3-figure')[0];
-                counter += 1;
-                if (counter === 100) {
-                    onImageError();
-                    return;
-                }
-            }
-            // Wait for Figure to fully load and provide a correct height
-            while(plot_svg_opt.clientHeight === 0) {
-                await timer(50);
-                counter += 1;
-                if (counter === 100) {
-                    onImageError();
-                    return;
-                }
-            }
-            plot_opt_height = plot_svg_opt.clientHeight + 20;
-            frame_opt.style.setProperty("height", plot_opt_height);
-            frame_opt.style.setProperty("width", "100%");
-            frame_opt.style.setProperty("border", "none");
-        }
-        const const_height = ((plot_opt_height === 0) ? 60 : 120);
-        sendMessage({ type: "ui-resize", height: plot_height + plot_opt_height + const_height });
-        document.querySelector('#spinner').style.display = 'none';
-        document.querySelector('#visualization-options').removeAttribute('open');
-    }
-
-    // Resets the iframe without an image
-    function onImageError() {
-        const frame = document.querySelector('#circuit-frame');
-        const frame_opt = document.querySelector('#circuit-frame-optimized');
-        frame.setAttribute('style', 'width: 100 %; height: 0 px; border: none;');
-        frame_opt.setAttribute('style', 'width: 100 %; height: 0 px; border: none;');
-        frame.style.display = 'none';
-        frame_opt.style.display = 'none';
-        document.querySelector('#spinner').style.display = 'none';
-        document.querySelector('#visualization-options').setAttribute('open', 'open');
-        sendMessage({ type: "ui-resize", height: 350 });
     }
 
     // Setup event listeners for the data Input, and for the optimize checkbox
@@ -178,70 +54,46 @@
         const entityInput = document.querySelector('input[name=data]');
         entityInput.addEventListener("input", (event) => updatePreview());
         const checkbox = document.getElementById('optimized');
-        checkbox.addEventListener("click", (e) => changeOptimize());
+        checkbox.addEventListener("click", (e) => updatePreview());
     }
 
-    async function updatePreview() {
+    async function updatePreview(first=false) {
         const dataUrl = document.querySelector('input[name=data]').value;
         if (dataUrl === "" || dataUrl === null) {
-            onImageError();
+            resetPreviews();
             return;
         }
-        document.querySelector('#spinner').style.display = '';
+
+        if (first) {
+            const visOptions = document.querySelector('#visualization-options');
+            visOptions.removeAttribute('open');
+        }
+
         // Optimized tags need to be in Python Boolean 
         const url = "{{ get_image_url }}?data=" + dataUrl + "&optimized=False";
         const url_opt = "{{ get_image_url }}?data=" + dataUrl + "&optimized=True";
-        // Always fetch the normal image
-        fetch(url).then(response => {
-            if (response.status === 200) {
-                // Only proceed, if no optimized image will be fetched
-                if (!document.getElementById('optimized').checked) onImageLoad(url, url_opt);
-            } else {
-                onImageError();
-                if (response.status === 202) {
-                    document.querySelector('#spinner').style.display = '';
-                    setTimeout(updatePreview, 5000);
-                    return;
-                }
-            }
-        }).catch(error => {
-            console.log(error);
-            onImageError();
-            return;
-        });
-        // Get optimized version as well
+
+        const plot = document.querySelector('#circuit-plot');
+        const plot_opt = document.querySelector('#circuit-plot-optimized');
+
+        plot.setAttribute("src", url);
+        plot.removeAttribute("hidden");
+    
+        // Show optimized image additionally
         if (document.getElementById('optimized').checked) {
-            fetch(url_opt).then(response => {
-                if (response.status === 200) {
-                    onImageLoad(url, url_opt)
-                } else {
-                    onImageError();
-                    if (response.status === 202) {
-                        document.querySelector('#spinner').style.display = '';
-                        setTimeout(updatePreview, 5000);
-                        return;
-                    }
-                }
-            }).catch(error => {
-                console.log(error);
-                onImageError();
-                return;
-            });
-        }
-    }
-
-    // Optimize was clicked, remove/enable the optimized frame and update Preview
-    function changeOptimize() {
-        const checkbox = document.getElementById('optimized');
-        if (checkbox.checked) {
-            document.getElementById('circuit-frame-optimized').style.display = '';
+            plot_opt.setAttribute("src", url_opt);
+            plot_opt.removeAttribute("hidden");
         } else {
-            document.getElementById('circuit-frame-optimized').style.display = 'none';
+            plot_opt.removeAttribute('src');
+            plot_opt.setAttribute('hidden', '');
         }
-        updatePreview();
+
+        if (window._qhana_microfrontend_state) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
     }
 
-    onImageError();
     setupEventListeners();
+    updatePreview(true);
 </script>
 {% endblock script %}
