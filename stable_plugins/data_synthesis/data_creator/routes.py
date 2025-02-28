@@ -139,6 +139,7 @@ class MicroFrontend(MethodView):
         default_values = {
             fields["noise"].data_key: 0.7,
             fields["turns"].data_key: 1.52,
+            fields["centers"].data_key: 4,
         }
 
         # overwrite default values with other values if possible
