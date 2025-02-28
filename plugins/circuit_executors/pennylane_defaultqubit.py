@@ -295,7 +295,7 @@ class PennylaneSimulator(QHAnaPluginBase):
         return PENNYLANE_BLP
 
     def get_requirements(self) -> str:
-        return """pennylane~=0.31"""
+        return """pennylane~=0.31\nqiskit_qasm3_import"""
 
 
 TASK_LOGGER = get_task_logger(__name__)

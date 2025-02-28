@@ -293,8 +293,7 @@ class MqtSimulator(QHAnaPluginBase):
         return MQT_BLP
 
     def get_requirements(self) -> str:
-        return """qiskit~=0.43
-    mqt.ddsim~=1.18"""
+        return """qiskit~=0.43\nmqt.ddsim~=1.18\nqiskit_qasm3_import"""
 
 
 TASK_LOGGER = get_task_logger(__name__)
