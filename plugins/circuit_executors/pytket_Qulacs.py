@@ -297,7 +297,7 @@ class Pytket_qulacsBackendSimulator(QHAnaPluginBase):
         return PYTKET_QULACSBACKEND_BLP
 
     def get_requirements(self) -> str:
-        return "pytket-qulacs~=0.29.0\nqiskit_qasm3_import"
+        return "pytket-qulacs~=0.29.0\nqiskit_qasm3_import\npytket<1.36"
 
 
 TASK_LOGGER = get_task_logger(__name__)
