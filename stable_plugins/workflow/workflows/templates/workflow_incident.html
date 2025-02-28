@@ -105,6 +105,8 @@
 
     var incidents = {{incidents | tojson}};
 
+    var workflow_xml = {{workflow_xml | tojson}};
+
     // viewer instance
     var bpmnViewer = new BpmnJS({
         container: '#canvas'
@@ -112,18 +114,21 @@
 
     // import diagram
     try {
-        bpmnViewer.importXML({{workflow_xml|tojson}}).then(() => {
-            // access viewer components
-            var canvas = bpmnViewer.get('canvas');
+        if (workflow_xml) {
+            bpmnViewer.importXML(workflow_xml).then(() => {
+                // access viewer components
+                var canvas = bpmnViewer.get('canvas');
 
-            canvas.zoom('fit-viewport');
+                canvas.zoom('fit-viewport');
 
-            incidents.forEach(incident => {
-                if (incident.activityId) {
-                    canvas.addMarker(incident.activityId, 'needs-discussion');
-                }
+                incidents.forEach(incident => {
+                    if (incident.activityId) {
+                        canvas.addMarker(incident.activityId, 'needs-discussion');
+                    }
+                });
             });
-        });
+        }
+        // TODO: show error message to user for else case...
     } catch (err) {
         console.error('could not import BPMN 2.0 diagram', err);
     }
