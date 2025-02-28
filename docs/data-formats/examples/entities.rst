@@ -11,7 +11,7 @@ The ``entity/*`` data type describes the most generic entity format.
 See :ref:`data-formats/data-model:entities` for more details.
 
 
-.. note:: The examples in this document can (and should) be replaced with shortened real world examples once they are available to make testing new plugins easier.
+.. todo:: The examples in this document can (and should) be replaced with shortened real world examples once they are available to make testing new plugins easier.
 
 Data Types
 ----------
@@ -126,6 +126,7 @@ entity/attribute-metadata
 
 The entities should be interpreted as attribute metadata entities describing properties of attributes of other entities.
 
+.. seealso:: :ref:`data-formats/data-loader-formats:attribute metadata`
 
 
 Content Types

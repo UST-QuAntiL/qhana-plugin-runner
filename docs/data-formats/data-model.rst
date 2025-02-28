@@ -85,6 +85,7 @@ CSV:
     ID,href,color
     paintA,example.com/paints/paintA,#8a2be2
 
+.. seealso:: :doc:`/data-formats/examples/entities`
 
 
 Relations
@@ -94,9 +95,11 @@ Relations can be used to model relations between entities without using entity a
 A relation is always directed and has a ``source`` and a ``target`` attribute.
 They contain the IDs of the source/target entities.
 
-Relations *do not* have an ID or a ``href`` attribute.
+Relations *do not* require an ID or a ``href`` attribute of their own.
+If no ID attribute is present, one can be computed from the source and target entity id.
+The computed relation ID should follow this format ``s_{source}-t_{target}``, where ``{source}`` and ``{target}`` are replaced with the source and target entity ID.
 
-Like entites relations can also have additional attributes.
+Like entites, relations can also have additional attributes.
 The same restrictions as for entity attributes apply.
 
 
@@ -119,6 +122,7 @@ CSV:
     source,target
     paintA,paintB
 
+.. seealso:: :doc:`/data-formats/examples/relations`
 
 
 Graphs
@@ -165,6 +169,7 @@ JSON:
         ]
     }
 
+.. seealso:: :doc:`/data-formats/examples/graphs`
 
 
 Executables
@@ -172,6 +177,7 @@ Executables
 
 Executables are executable artifacts, e.g., source code.
 
+.. seealso:: :doc:`/data-formats/examples/executables`
 
 
 Provenance
@@ -180,12 +186,15 @@ Provenance
 Provenance data follows the same rules as entities but allows nested datastructures.
 The provenance data type is used to describe the (future or past) execution of an executable artifact.
 
+.. seealso:: :doc:`/data-formats/examples/provenance`
 
 
 Custom Data Formats
 -------------------
 
 Custom data formats are completely free from any restrictions described for other data formats.
-However, they should be used sparingly as their reuseability is limited.
+However, they should be **used sparingly** as their reuseability is limited.
+
+.. seealso:: :doc:`/data-formats/examples/custom`
 
 
