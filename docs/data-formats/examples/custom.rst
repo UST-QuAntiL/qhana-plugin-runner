@@ -23,3 +23,80 @@ custom/kernel-matrix
 
 .. TODO:: fill in information about custom data types in use
 
+
+custom/clusters
+^^^^^^^^^^^^^^^
+
+.. TODO:: fill in information about custom data types in use
+
+
+custom/attribute-distances
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. TODO:: fill in information about custom data types in use
+
+.. TODO:: check if data type can be replaced by relation/distance
+
+
+custom/attribute-similarities
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. TODO:: fill in information about custom data types in use
+
+.. TODO:: check if data type can be replaced by relation/similarity
+
+
+custom/element-similarities
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. TODO:: fill in information about custom data types in use
+
+.. TODO:: check if data type can be replaced by relation/similarity
+
+
+custom/entity-distances
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. TODO:: fill in information about custom data types in use
+
+.. TODO:: check if data type can be replaced by relation/distance
+
+
+custom/nisq-analyzer-result
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. TODO:: fill in information about custom data types in use
+
+
+custom/pca-metadata
+^^^^^^^^^^^^^^^^^^^
+
+.. TODO:: fill in information about custom data types in use
+
+
+custom/plot
+^^^^^^^^^^^
+
+Custom data type for presentational plots (e.g., html output from pyplot).
+
+.. TODO:: maybe define new base data type for purely presentational data like plots, text, etc.
+
+
+custom/hello-world-output
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Custom data type for demo text output of the hello world plugins.
+
+
+Current Non-Standard Custom Types
+---------------------------------
+
+This is a list of custom types that are not using the ``custom/`` prefix.
+
+.. danger:: Do not use these types in new plugins!
+
+* ``representative-circuit/*`` should be replaced with ``executable/circuit`` and a data name starting with ``representative-circuit``.
+* ``plot/*`` should be replaced with ``custom/plot``
+* ``txt/*`` should be replaced with ``custom/text``
+* ``qnn-weights/*``
+* ``vqc-metadata/*``
