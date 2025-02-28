@@ -19,32 +19,33 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "scipy-minimizer-grad"
+_plugin_name = "cirq-simulator"
 __version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
-
-SCIPY_MINIMIZER_GRAD_BLP = SecurityBlueprint(
+CIRQ_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Scipy Minimizer with Gradient Plugin API.",
+    description="Circuit executor exposing the cirq simulators as backend.",
 )
 
 
-class ScipyMinimizerGrad(QHAnaPluginBase):
+class CirqSimulator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "This plugin provides an API to minimize a given objective function with scipy.optimize.minimize() with gradient support."
-    tags = ["optimization", "minimizer", "gradient"]
+    description = (
+        "Allows execution of quantum circuits using a simulator packaged with cirq."
+    )
+    tags = ["circuit-executor", "qc-simulator", "cirq", "qasm", "qasm-2"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return SCIPY_MINIMIZER_GRAD_BLP
+        return CIRQ_BLP
 
     def get_requirements(self) -> str:
-        return "scipy~=1.10"
+        return "cirq~=1.3"
 
 
 try:

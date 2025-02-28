@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2023 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import mimetypes
+import time
 from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
@@ -57,19 +58,19 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "qiskit-simulator"
+_plugin_name = "pennylane-simulator"
 __version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-QISKIT_BLP = SecurityBlueprint(
+PENNYLANE_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Circuit executor exposing the qiskit simulators as backend.",
 )
 
 
-class QiskitSimulatorParametersSchema(FrontendFormBaseSchema):
+class PennylaneSimulatorParametersSchema(FrontendFormBaseSchema):
     circuit = FileUrl(
         required=True,
         allow_none=False,
@@ -115,15 +116,15 @@ class QiskitSimulatorParametersSchema(FrontendFormBaseSchema):
     )
 
 
-@QISKIT_BLP.route("/")
+@PENNYLANE_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @QISKIT_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PENNYLANE_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @PENNYLANE_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
-        plugin = QiskitSimulator.instance
+        plugin = PennylaneSimulator.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
@@ -133,8 +134,8 @@ class PluginsView(MethodView):
             version=plugin.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{QISKIT_BLP.name}.ProcessView"),
-                ui_href=url_for(f"{QISKIT_BLP.name}.MicroFrontend"),
+                href=url_for(f"{PENNYLANE_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{PENNYLANE_BLP.name}.MicroFrontend"),
                 plugin_dependencies=[],
                 data_input=[
                     InputDataMetadata(
@@ -181,11 +182,11 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=QiskitSimulator.instance.tags,
+            tags=PennylaneSimulator.instance.tags,
         )
 
 
-@QISKIT_BLP.route("/ui/")
+@PENNYLANE_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the qiskit simulators plugin."""
 
@@ -193,43 +194,43 @@ class MicroFrontend(MethodView):
         "shots": 1024,
     }
 
-    @QISKIT_BLP.html_response(
+    @PENNYLANE_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the qiskit simulators plugin."
     )
-    @QISKIT_BLP.arguments(
-        QiskitSimulatorParametersSchema(
+    @PENNYLANE_BLP.arguments(
+        PennylaneSimulatorParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PENNYLANE_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         values: ChainMap[str, Any] = ChainMap(request.args.to_dict(), self.example_inputs)
         return self.render(values, errors, False)
 
-    @QISKIT_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the qiskit simulators plugin."
+    @PENNYLANE_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the pennylane simulators plugin."
     )
-    @QISKIT_BLP.arguments(
-        QiskitSimulatorParametersSchema(
+    @PENNYLANE_BLP.arguments(
+        PennylaneSimulatorParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PENNYLANE_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         values: ChainMap[str, Any] = ChainMap(request.form.to_dict(), self.example_inputs)
         return self.render(values, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
-        plugin = QiskitSimulator.instance
+        plugin = PennylaneSimulator.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-        schema = QiskitSimulatorParametersSchema()
+        schema = PennylaneSimulatorParametersSchema()
         return Response(
             render_template(
                 "simple_template.html",
@@ -239,24 +240,24 @@ class MicroFrontend(MethodView):
                 valid=valid,
                 values=data,
                 errors=errors,
-                process=url_for(f"{QISKIT_BLP.name}.ProcessView"),
+                process=url_for(f"{PENNYLANE_BLP.name}.ProcessView"),
                 help_text="",
                 example_values=url_for(
-                    f"{QISKIT_BLP.name}.MicroFrontend", **self.example_inputs
+                    f"{PENNYLANE_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
             )
         )
 
 
-@QISKIT_BLP.route("/process/")
+@PENNYLANE_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @QISKIT_BLP.arguments(
-        QiskitSimulatorParametersSchema(unknown=EXCLUDE), location="form"
+    @PENNYLANE_BLP.arguments(
+        PennylaneSimulatorParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @QISKIT_BLP.response(HTTPStatus.FOUND)
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PENNYLANE_BLP.response(HTTPStatus.FOUND)
+    @PENNYLANE_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the circuit execution task."""
         db_task = ProcessingTask(
@@ -279,116 +280,122 @@ class ProcessView(MethodView):
         )
 
 
-class QiskitSimulator(QHAnaPluginBase):
+class PennylaneSimulator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
         "Allows execution of quantum circuits using a simulator packaged with qiskit."
     )
-    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2", "qasm-3"]
+    tags = ["circuit-executor", "qc-simulator", "pennylane", "qasm", "qasm-2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return QISKIT_BLP
+        return PENNYLANE_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43"
+        return """pennylane~=0.35.0\nqiskit_qasm3_import"""
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QiskitError, QuantumCircuit, execute, Aer
-    from qiskit.qasm2 import loads as loads2
-    from qiskit.qasm3 import loads as loads3, QASM3ImporterError
-    from qiskit.result.result import ExperimentResult, Result
+def postprocess_counts(
+    counts: Dict[str, int], qiskit_circuit: "QuantumCircuit"
+) -> Dict[str, int]:
+    qubit_positions = {q: i for i, q in enumerate(qiskit_circuit.qubits)}
+    measurements = {}
 
-    backend_counts = Aer.get_backend("qasm_simulator")
-    backend_statevector = Aer.get_backend("statevector_simulator")
+    # TODO: this function misses bits that are not part of registers (only for qasm3)!
 
-    circuit: QuantumCircuit
+    for m in qiskit_circuit.get_instructions("measure"):
+        for qb, cb in zip(m.qubits, m.clbits):
+            measurements[cb] = qubit_positions[qb]
 
-    try:
-        circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
-        circuit = loads2(circuit_qasm)
+    def get_bit(count: str, bit) -> str:
+        qbit = measurements.get(bit, None)
+        if qbit is None:
+            return "0"
+        return count[qbit]
 
-    result_count: Result = execute(
-        circuit, backend_counts, shots=execution_options["shots"]
-    ).result()
-
-    if not result_count.success:
-        from qiskit.visualization.circuit.circuit_visualization import (
-            _text_circuit_drawer,
+    def map_count(count: str) -> str:
+        return " ".join(
+            "".join(get_bit(count, bit) for bit in reversed(reg))
+            for reg in reversed(qiskit_circuit.cregs)
         )
 
-        drawn_circuit = str(_text_circuit_drawer(circuit, encoding="utf-8"))
-        TASK_LOGGER.warning("Failed to simulate circuit.\n" + drawn_circuit)
-        raise ValueError("Circuit could not be simulated!", result_count)
+    return {map_count(k): v for k, v in counts.items()}
+
+
+def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
+    import pennylane as qml
+    from qiskit import QuantumCircuit
+    from qiskit.qasm2 import loads as loads2
+    from qiskit.qasm3 import QASM3ImporterError
+    from qiskit.qasm3 import loads as loads3
+
+    shots = execution_options["shots"]
+
+    metadata = {
+        "qpuType": "simulator",
+        "qpuVendor": "Xanadu Inc",
+        "shots": shots,
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "timeTakenCounts_nanosecond": 0,
+    }
+
+    qiskit_circuit: QuantumCircuit
+    try:
+        qiskit_circuit = loads3(circuit_qasm)
+    except QASM3ImporterError:
+        qiskit_circuit = loads2(circuit_qasm)
+    penny_circuit = qml.from_qiskit(qiskit_circuit)
+
+    if not qiskit_circuit.qubits or not qiskit_circuit.clbits:
+        # missing either qubits or classical bits
+        return metadata, {"": shots}, None
+    if not qiskit_circuit.get_instructions("measure"):
+        # missing measurement instructions
+        return metadata, {"": shots}, None
+
+    num_wires = len(qiskit_circuit.qubits)
+
+    # choose PennyLane quantum devices for counts and statevector simulations
+    circ = qml.device("default.qubit", wires=num_wires, shots=execution_options["shots"])
+    circ_statevector = qml.device("default.qubit", wires=num_wires, shots=None)
+
+    # Define a quantum node for counts results
+    @qml.qnode(circ)
+    def circuit():
+        penny_circuit(wires=range(num_wires))
+        qml.measure(1)
+        return qml.counts()
+
+    startime_counts = time.perf_counter_ns()
+    result_counts = circuit()
+    endtime_counts = time.perf_counter_ns()
 
     if execution_options.get("statevector"):
         # only execute if statevector result was requested in the first place
-        result_state: Optional[Result] = execute(circuit, backend_statevector).result()
-        if result_state and not result_state.success:
-            result_state = None
+        # Define a quantum node for statevector results
+        @qml.qnode(circ_statevector)
+        def state_vector_circuit():
+            penny_circuit(wires=range(num_wires))
+            return qml.state()
+
+        result_state = state_vector_circuit()
     else:
         result_state = None
 
-    experiment_result: ExperimentResult = result_count.results[0]
-    extra_metadata = result_count.metadata
+    metadata["timeTakenCounts_nanosecond"] = endtime_counts - startime_counts
 
-    time_taken = result_count.time_taken
-    time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
-    shots = experiment_result.shots
-    if isinstance(shots, tuple):
-        assert (
-            len(shots) == 2
-        ), "If untrue, check with qiskit documentation what has changed!"
-        shots = abs(shots[-1] - shots[0])
-    seed = experiment_result.seed_simulator
+    counts = postprocess_counts(dict(result_counts), qiskit_circuit)
 
-    metadata = {
-        # trace ids (specific to IBM qiskit jobs)
-        "jobId": result_count.job_id,
-        "qobjId": result_count.qobj_id,
-        # QPU/Simulator information
-        "qpuType": "simulator",
-        "qpuVendor": "IBM",
-        "qpuName": result_count.backend_name,
-        "qpuVersion": result_count.backend_version,
-        "seed": seed,  # only for simulators
-        "shots": shots,
-        # Time information
-        "date": result_count.date,
-        "timeTaken": time_taken,  # total job time
-        "timeTakenIdle": 0,  # idle/waiting time
-        "timeTakenQpu": time_taken,  # total qpu time
-        "timeTakenQpuPrepare": time_taken - time_taken_execute,
-        "timeTakenQpuExecute": time_taken_execute,
-    }
-
-    # If no measurements set shots to an empty key
-    if result_count.results[0].metadata["num_clbits"] == 0:
-        counts = {"": experiment_result.shots}
-    else:
-        try:
-            counts = result_count.get_counts()
-        except QiskitError:
-            counts = {"": experiment_result.shots}
-
-    state_vector: Optional[Any] = None
-    try:
-        state_vector = result_state.get_statevector() if result_state else None
-    except QiskitError:
-        pass
-
-    return metadata, dict(counts), state_vector
+    return metadata, counts, result_state
 
 
-@CELERY.task(name=f"{QiskitSimulator.instance.identifier}.demo_task", bind=True)
+@CELERY.task(name=f"{PennylaneSimulator.instance.identifier}.demo_task", bind=True)
 def execute_circuit(self, db_id: int) -> str:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -435,7 +442,7 @@ def execute_circuit(self, db_id: int) -> str:
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
     if isinstance(execution_options["statevector"], str):
-        execution_options["statevector"] = execution_options["statevector"] in (
+        execution_options["statevector"] = execution_options["ststevector"] in (
             "1",
             "yes",
             "Yes",
@@ -456,18 +463,29 @@ def execute_circuit(self, db_id: int) -> str:
             db_id, output, "result-trace.json", "provenance/trace", "application/json"
         )
 
-    with SpooledTemporaryFile(mode="w") as output:
-        counts["ID"] = experiment_id
-        dump(counts, output)
-        STORE.persist_task_result(
-            db_id, output, "result-counts.json", "entity/vector", "application/json"
-        )
+    if counts:
+        counts_ent = {key: int(value) for key, value in counts.items()}
+        counts_ent["ID"] = experiment_id
 
-    if state_vector:
+        with SpooledTemporaryFile(mode="w") as output:
+            dump(counts_ent, output)
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "result-counts.json",
+                "entity/vector",
+                "application/json",
+            )
+    else:
+        raise ValueError("Failed to simulate circuit. No counts are available.")
+
+    if state_vector is not None and any(state_vector):
+        str_vector = [str(x) for x in state_vector.tolist()]
+
         state_vector_ent = {"ID": experiment_id}
-        dim = len(state_vector)
+        dim = len(str_vector)
         key_len = len(str(dim))
-        for i, v in enumerate(state_vector):
+        for i, v in enumerate(str_vector):
             state_vector_ent[f"{i:0{key_len}}"] = repr(v)
         with SpooledTemporaryFile(mode="w") as output:
             dump(state_vector_ent, output)
@@ -485,8 +503,8 @@ def execute_circuit(self, db_id: int) -> str:
         "shots": metadata.get("shots", execution_options["shots"]),
         "qpuType": metadata["qpuType"],
         "qpuVendor": metadata["qpuVendor"],
-        "qpuName": metadata["qpuName"],
-        "qpuVersion": metadata["qpuVersion"],
+        "qpuName": metadata.get("qpuName", "default_value"),
+        "qpuVersion": metadata.get("qpuVersion", "default_version_value"),
     }
 
     if "seed" in metadata:
@@ -505,3 +523,10 @@ def execute_circuit(self, db_id: int) -> str:
         )
 
     return "Finished simulating circuit."
+
+
+try:
+    # import for type annotations
+    from qiskit import QuantumCircuit
+except ImportError:
+    pass

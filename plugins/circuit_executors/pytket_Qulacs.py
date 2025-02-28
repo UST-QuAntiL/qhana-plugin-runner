@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2023 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,13 @@
 # limitations under the License.
 
 import mimetypes
+import re
+import time
 from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Tuple, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
@@ -57,19 +59,19 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "qiskit-simulator"
-__version__ = "v1.0.1"
+_plugin_name = "pytket_qulacsBackend-simulator"
+__version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-QISKIT_BLP = SecurityBlueprint(
+PYTKET_QULACSBACKEND_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Circuit executor exposing the qiskit simulators as backend.",
+    description="Circuit executor exposing the pytket_qulacsBackend simulators as backend.",
 )
 
 
-class QiskitSimulatorParametersSchema(FrontendFormBaseSchema):
+class Pytket_qulacsBackendSimulatorParametersSchema(FrontendFormBaseSchema):
     circuit = FileUrl(
         required=True,
         allow_none=False,
@@ -115,15 +117,15 @@ class QiskitSimulatorParametersSchema(FrontendFormBaseSchema):
     )
 
 
-@QISKIT_BLP.route("/")
+@PYTKET_QULACSBACKEND_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @QISKIT_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PYTKET_QULACSBACKEND_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @PYTKET_QULACSBACKEND_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
-        plugin = QiskitSimulator.instance
+        plugin = Pytket_qulacsBackendSimulator.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
@@ -133,8 +135,8 @@ class PluginsView(MethodView):
             version=plugin.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{QISKIT_BLP.name}.ProcessView"),
-                ui_href=url_for(f"{QISKIT_BLP.name}.MicroFrontend"),
+                href=url_for(f"{PYTKET_QULACSBACKEND_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{PYTKET_QULACSBACKEND_BLP.name}.MicroFrontend"),
                 plugin_dependencies=[],
                 data_input=[
                     InputDataMetadata(
@@ -181,55 +183,57 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=QiskitSimulator.instance.tags,
+            tags=Pytket_qulacsBackendSimulator.instance.tags,
         )
 
 
-@QISKIT_BLP.route("/ui/")
+@PYTKET_QULACSBACKEND_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the qiskit simulators plugin."""
+    """Micro frontend for the pytket_qulacsBackend simulators plugin."""
 
     example_inputs: Dict[str, Any] = {
         "shots": 1024,
     }
 
-    @QISKIT_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the qiskit simulators plugin."
+    @PYTKET_QULACSBACKEND_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the pytket_qulacsBackend simulators plugin.",
     )
-    @QISKIT_BLP.arguments(
-        QiskitSimulatorParametersSchema(
+    @PYTKET_QULACSBACKEND_BLP.arguments(
+        Pytket_qulacsBackendSimulatorParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PYTKET_QULACSBACKEND_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         values: ChainMap[str, Any] = ChainMap(request.args.to_dict(), self.example_inputs)
         return self.render(values, errors, False)
 
-    @QISKIT_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the qiskit simulators plugin."
+    @PYTKET_QULACSBACKEND_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the pytket_qulacsBackend simulators plugin.",
     )
-    @QISKIT_BLP.arguments(
-        QiskitSimulatorParametersSchema(
+    @PYTKET_QULACSBACKEND_BLP.arguments(
+        Pytket_qulacsBackendSimulatorParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PYTKET_QULACSBACKEND_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         values: ChainMap[str, Any] = ChainMap(request.form.to_dict(), self.example_inputs)
         return self.render(values, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
-        plugin = QiskitSimulator.instance
+        plugin = Pytket_qulacsBackendSimulator.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-        schema = QiskitSimulatorParametersSchema()
+        schema = Pytket_qulacsBackendSimulatorParametersSchema()
         return Response(
             render_template(
                 "simple_template.html",
@@ -239,24 +243,25 @@ class MicroFrontend(MethodView):
                 valid=valid,
                 values=data,
                 errors=errors,
-                process=url_for(f"{QISKIT_BLP.name}.ProcessView"),
+                process=url_for(f"{PYTKET_QULACSBACKEND_BLP.name}.ProcessView"),
                 help_text="",
                 example_values=url_for(
-                    f"{QISKIT_BLP.name}.MicroFrontend", **self.example_inputs
+                    f"{PYTKET_QULACSBACKEND_BLP.name}.MicroFrontend",
+                    **self.example_inputs,
                 ),
             )
         )
 
 
-@QISKIT_BLP.route("/process/")
+@PYTKET_QULACSBACKEND_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @QISKIT_BLP.arguments(
-        QiskitSimulatorParametersSchema(unknown=EXCLUDE), location="form"
+    @PYTKET_QULACSBACKEND_BLP.arguments(
+        Pytket_qulacsBackendSimulatorParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @QISKIT_BLP.response(HTTPStatus.FOUND)
-    @QISKIT_BLP.require_jwt("jwt", optional=True)
+    @PYTKET_QULACSBACKEND_BLP.response(HTTPStatus.FOUND)
+    @PYTKET_QULACSBACKEND_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the circuit execution task."""
         db_task = ProcessingTask(
@@ -279,116 +284,143 @@ class ProcessView(MethodView):
         )
 
 
-class QiskitSimulator(QHAnaPluginBase):
+class Pytket_qulacsBackendSimulator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = (
-        "Allows execution of quantum circuits using a simulator packaged with qiskit."
-    )
-    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2", "qasm-3"]
+    description = "Allows execution of quantum circuits using a simulator packaged with pytket_qulacsBackend."
+    tags = ["circuit-executor", "qc-simulator", "pytket_qulacsBackend", "qasm", "qasm-2"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return QISKIT_BLP
+        return PYTKET_QULACSBACKEND_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43"
+        return "pytket-qulacs~=0.29.0\nqiskit_qasm3_import\npytket<1.36"
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QiskitError, QuantumCircuit, execute, Aer
-    from qiskit.qasm2 import loads as loads2
-    from qiskit.qasm3 import loads as loads3, QASM3ImporterError
-    from qiskit.result.result import ExperimentResult, Result
+def postprocess_counts(
+    counts: Dict[Tuple[int, ...], int], qubits_readout, c_registers, mapping
+) -> Dict[str, int]:
+    """Map the tuples in the count dictionary to qiskit style string results.
 
-    backend_counts = Aer.get_backend("qasm_simulator")
-    backend_statevector = Aer.get_backend("statevector_simulator")
+    Args:
+        counts (Dict[Tuple[int, ...], int]): the counts dictionary containing tuples of qbit measurements
+        qubits_readout (Dict[qubit, int]): the dictionary how the qubits are read out from the circuit
+        c_registers (List[BitRegister]): the classical registers in the order they appear in the result string
+        mapping (Dict[qubit, bit]): the mapping from qubits to classical bits
 
-    circuit: QuantumCircuit
+    Returns:
+        Dict[str, int]: the qiskit style counts dictionary
+    """
+    reversed_mapping = {}
+    for qb, b in mapping.items():
+        reversed_mapping[b] = qb
 
-    try:
-        circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
-        circuit = loads2(circuit_qasm)
+    # qubits that are not measured are not included in the result tuple, even if they are
+    # included in the qubit readout mapping!
+    # -> remove qubits that were not measured (by checking the mapping)
+    # -> keep the order of qubits from the readout mapping
+    used_qubits = sorted(
+        [q for q in qubits_readout if q in mapping], key=lambda q: qubits_readout[q]
+    )
+    qbit_to_int = {q: i for i, q in enumerate(used_qubits)}
 
-    result_count: Result = execute(
-        circuit, backend_counts, shots=execution_options["shots"]
-    ).result()
+    def get_result(count: Tuple[int, ...], bit) -> str:
+        qbit = reversed_mapping.get(bit, None)
+        if qbit is None:
+            return "0"
+        return str(count[qbit_to_int[qbit]])
 
-    if not result_count.success:
-        from qiskit.visualization.circuit.circuit_visualization import (
-            _text_circuit_drawer,
+    def map_result(count: Tuple[int, ...]):
+        return " ".join(
+            "".join(get_result(count, b) for b in reversed(reg)) for reg in c_registers
         )
 
-        drawn_circuit = str(_text_circuit_drawer(circuit, encoding="utf-8"))
-        TASK_LOGGER.warning("Failed to simulate circuit.\n" + drawn_circuit)
-        raise ValueError("Circuit could not be simulated!", result_count)
+    return {map_result(v): c for v, c in counts.items()}
+
+
+def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
+    from pytket.circuit import Circuit
+    from pytket.extensions.qulacs import QulacsBackend
+    from pytket.qasm import circuit_from_qasm_str
+
+    shots = execution_options["shots"]
+
+    metadata = {
+        "qpuType": "simulator",
+        "qpuVendor": "Quantinuum & Qulacs Team",
+        "qpuName": "QulacsBackend",
+        "qpuVersion": None,
+        "shots": "shots",
+        "timeTaken": 0,
+        "timeTakenIdle": 0,
+        "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+    }
+
+    startime = time.time()
+    # Convert circuit from qasm code
+    circ: Circuit = circuit_from_qasm_str(circuit_qasm)
+
+    def c_reg_pos(c_reg) -> int:
+        """Find the position of the classical register definition in the qasm string."""
+        # TODO: the regex may find definitions that were commented out...
+        match = re.search(f"creg\\s+{c_reg.name}\\[{c_reg.size}\\]\\s*;", circuit_qasm)
+        if match:
+            return match.start()
+        return len(circuit_qasm)
+
+    # sort classical registers by appeareance in the qasm definition
+    c_registers = sorted(circ.c_registers, key=c_reg_pos, reverse=True)
+
+    if not circ.qubit_to_bit_map:
+        return metadata, {"": shots}, None
+
+    backend = QulacsBackend()
+    # compiled circuit to be ready simulations with Backend
+    compiled_circuit = backend.get_compiled_circuit(circ)
+
+    startime_counts = time.perf_counter_ns()
+    handle = backend.process_circuit(
+        compiled_circuit, n_shots=execution_options["shots"]
+    )  # count simulation with time
+    result = backend.get_result(handle)
+    endtime_counts = time.perf_counter_ns()
+
+    # get result and transform counts to qiskit style counts
+    counts = dict(result.get_counts())
+    counts = postprocess_counts(
+        counts, circ.qubit_readout, c_registers, circ.qubit_to_bit_map
+    )
 
     if execution_options.get("statevector"):
         # only execute if statevector result was requested in the first place
-        result_state: Optional[Result] = execute(circuit, backend_statevector).result()
-        if result_state and not result_state.success:
-            result_state = None
+        statevector = backend.get_result(handle).get_state()
     else:
-        result_state = None
+        statevector = None
 
-    experiment_result: ExperimentResult = result_count.results[0]
-    extra_metadata = result_count.metadata
+    endtime = time.time()
 
-    time_taken = result_count.time_taken
-    time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
-    shots = experiment_result.shots
-    if isinstance(shots, tuple):
-        assert (
-            len(shots) == 2
-        ), "If untrue, check with qiskit documentation what has changed!"
-        shots = abs(shots[-1] - shots[0])
-    seed = experiment_result.seed_simulator
+    simulation_time = endtime - startime
 
-    metadata = {
-        # trace ids (specific to IBM qiskit jobs)
-        "jobId": result_count.job_id,
-        "qobjId": result_count.qobj_id,
-        # QPU/Simulator information
-        "qpuType": "simulator",
-        "qpuVendor": "IBM",
-        "qpuName": result_count.backend_name,
-        "qpuVersion": result_count.backend_version,
-        "seed": seed,  # only for simulators
-        "shots": shots,
-        # Time information
-        "date": result_count.date,
-        "timeTaken": time_taken,  # total job time
-        "timeTakenIdle": 0,  # idle/waiting time
-        "timeTakenQpu": time_taken,  # total qpu time
-        "timeTakenQpuPrepare": time_taken - time_taken_execute,
-        "timeTakenQpuExecute": time_taken_execute,
-    }
+    metadata.update(
+        {
+            "timeTaken": simulation_time,
+            "timeTakenQpu": simulation_time,
+            "timeTaken_Counts_nanosecond": endtime_counts - startime_counts,
+        }
+    )
 
-    # If no measurements set shots to an empty key
-    if result_count.results[0].metadata["num_clbits"] == 0:
-        counts = {"": experiment_result.shots}
-    else:
-        try:
-            counts = result_count.get_counts()
-        except QiskitError:
-            counts = {"": experiment_result.shots}
-
-    state_vector: Optional[Any] = None
-    try:
-        state_vector = result_state.get_statevector() if result_state else None
-    except QiskitError:
-        pass
-
-    return metadata, dict(counts), state_vector
+    return metadata, counts, statevector
 
 
-@CELERY.task(name=f"{QiskitSimulator.instance.identifier}.demo_task", bind=True)
+@CELERY.task(
+    name=f"{Pytket_qulacsBackendSimulator.instance.identifier}.demo_task", bind=True
+)
 def execute_circuit(self, db_id: int) -> str:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -435,7 +467,7 @@ def execute_circuit(self, db_id: int) -> str:
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
     if isinstance(execution_options["statevector"], str):
-        execution_options["statevector"] = execution_options["statevector"] in (
+        execution_options["statevector"] = execution_options["ststevector"] in (
             "1",
             "yes",
             "Yes",
@@ -456,14 +488,19 @@ def execute_circuit(self, db_id: int) -> str:
             db_id, output, "result-trace.json", "provenance/trace", "application/json"
         )
 
+    # FIXME check if bit order is consistent withother simulators!!!
+    counts_str_keys = {
+        "".join(str(b) for b in key): int(value) for key, value in counts.items()
+    }
+
     with SpooledTemporaryFile(mode="w") as output:
-        counts["ID"] = experiment_id
-        dump(counts, output)
+        counts_str_keys["ID"] = experiment_id
+        dump(counts_str_keys, output)
         STORE.persist_task_result(
             db_id, output, "result-counts.json", "entity/vector", "application/json"
         )
 
-    if state_vector:
+    if state_vector is not None and state_vector.any():
         state_vector_ent = {"ID": experiment_id}
         dim = len(state_vector)
         key_len = len(str(dim))
