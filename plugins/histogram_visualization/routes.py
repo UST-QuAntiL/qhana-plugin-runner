@@ -81,7 +81,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["visualization", "histogram"],
+            tags=plugin.tags,
         )
 
 

@@ -82,7 +82,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["visualization", "zxcalculus", "circuit"],
+            tags=plugin.tags,
         )
 
 
