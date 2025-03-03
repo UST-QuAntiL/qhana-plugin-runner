@@ -3,29 +3,12 @@
 {% block head %}
 {{ super() }}
 <style>
-    #spinner {
-        display: inline-block;
-        width: 100px;
-        height: 100px;
-        border: 6px solid rgba(0, 0, 0, 0);
-        border-radius: 50%;
-        border-top-color: #673ab7;
-        animation: spin 1s linear infinite;
-        -webkit-animation: spin 1s linear infinite;
-    }
-
-    .container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-    }
-
-    @keyframes spin {
-        to {
-            -webkit-transform: rotate(360deg);
-        }
-    }
+.cluster-preview {
+    width: 100%;
+    height: 75vw;
+    max-height: 95vmin;
+    overflow: hidden;
+}
 </style>
 {% endblock head %}
 
@@ -43,34 +26,20 @@
     </details>
 </div>
 
-<div id="cluster-frame" style="width: 750px; height:0px;">
-    <iframe id="cluster-plot" type="text/html" style="border: none; width: 100%; height: 100%;" display="none"></iframe>
-</div>
-<div class="container">
-    <div id="spinner"></div>
+<div class="cluster-preview">
 </div>
 {% endblock content %}
 
 {% block script %}
 {{ super() }}
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
-<script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 <script>
-    // Only called when a plot was succesfully generated
-    function onPlotLoad() {
-        setSize();      
-        document.querySelector('#spinner').style.display = 'none';
-        document.querySelector('#visualization-options').removeAttribute('open');
-    }
-
     // Resets the iframe without a plot
     function onPlotError() {
-        const frame = document.querySelector('#cluster-frame');
-        frame.setAttribute('style', 'border: none; width: 100 %; height: 0 px;');
-        sendMessage({ type: "ui-resize", height: 350});
-        document.querySelector('#cluster-plot').style.display = 'none';
-        document.querySelector('#spinner').style.display = 'none';
+        document.querySelector('.cluster-preview').innerHTML = '';
         document.querySelector('#visualization-options').setAttribute('open', 'open');
+        if (window._qhana_microfrontend_state) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
     }
 
     // Setup event listeners for the entityUrl and clustersUrl input fields
@@ -81,15 +50,6 @@
         clusterInput.addEventListener("input", (event) => updatePreview());
     }
 
-    // Frame is set to 2/3 of the width, as plotly doesn't provide a fitting height
-    function setSize() {
-        const frame = document.querySelector('#cluster-frame');
-        const frame_width = getMicrofrontendWidth() - 0.05 * getMicrofrontendWidth();
-        const frame_height = frame_width * 2 / 3;
-        frame.setAttribute('style', 'border: none; width: ' + frame_width + 'px; height: ' + frame_height + 'px;');
-        sendMessage({ type: "ui-resize", height: frame.clientHeight + 60 });
-    }
-
     async function updatePreview() {
         const entityUrl = document.querySelector('input[name=entityUrl]').value;
         const clustersUrl = document.querySelector('input[name=clustersUrl]').value;
@@ -98,20 +58,30 @@
             onPlotError();
             return;
         }
-        document.querySelector('#spinner').style.display = '';
+
         // clustersUrl is set to null when no clustersUrl is provided
-        const url = "{{ get_plot_url }}?entityUrl=" + entityUrl + "&clustersUrl=" + (clustersUrl === null ? "" : clustersUrl);
-        const preview = document.querySelector('#cluster-plot')
+        const params = new URLSearchParams();
+        params.set("entityUrl", entityUrl);
+        params.set("clustersUrl", clustersUrl ?? "");
+        const url = "{{ get_plot_url }}?" + params.toString();
+
+        const preview = document.querySelector('.cluster-preview');
         fetch(url).then(response => {
             if (response.status === 200) {
-                preview.style.display = '';
-                preview.setAttribute("src", url);
-                onPlotLoad();
+                return response.text().then(text => {
+                    var plotContent = document.createRange().createContextualFragment(text);
+                    preview.innerHTML = "";
+                    preview.append(plotContent);
+                    document.querySelector('#visualization-options').removeAttribute('open');
+                    if (window._qhana_microfrontend_state) {
+                        monitorHeightChanges(window._qhana_microfrontend_state);
+                    }
+                });
             } else {
-                onPlotError();
                 if (response.status === 202) {
-                    document.querySelector('#spinner').style.display = '';
                     setTimeout(updatePreview, 5000);
+                } else {
+                    onPlotError();
                 }
             }
         }).catch(error => {
@@ -120,7 +90,7 @@
         });
     }
 
-    onPlotError();
     setupEventListeners();
+    updatePreview();
 </script>
 {% endblock script %}

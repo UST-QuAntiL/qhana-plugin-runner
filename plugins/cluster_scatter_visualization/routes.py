@@ -15,8 +15,9 @@
 import hashlib
 from http import HTTPStatus
 from typing import Mapping
+
 from celery import chain
-import celery
+from celery.exceptions import TimeoutError
 from flask import abort, redirect
 from flask.globals import request
 from flask.helpers import url_for
@@ -35,8 +36,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import VIS_BLP, ClusterScatterVisualization
 from .schemas import ClusterScatterInputParametersSchema
@@ -86,7 +87,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["visualization", "cluster", "scatter"],
+            tags=plugin.tags,
         )
 
 
@@ -177,7 +178,7 @@ def get_plot(data: Mapping):
         ):
             # Add the generate_plot from task.py as an async method
             task_result = generate_plot.s(
-                entity_url, clusters_url, url_hash
+                entity_url, clusters_url, hash_=url_hash
             ).apply_async()
             PluginState.set_value(
                 ClusterScatterVisualization.instance.identifier,
@@ -193,7 +194,7 @@ def get_plot(data: Mapping):
             plot = DataBlob.get_value(
                 ClusterScatterVisualization.instance.identifier, url_hash
             )
-        except celery.exceptions.TimeoutError:
+        except TimeoutError:
             return Response("Plot not yet created!", HTTPStatus.ACCEPTED)
     if not plot:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
@@ -224,19 +225,11 @@ class ProcessView(MethodView):
 
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id,
-            entity_url=entity_url,
-            clusters_url=clusters_url,
-            hash=url_hash,
+            db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(
-            db_id=db_task.id,
-            entity_url=entity_url,
-            clusters_url=clusters_url,
-            hash=url_hash,
-        )
+        task.apply_async()
 
         db_task.save(commit=True)
 
