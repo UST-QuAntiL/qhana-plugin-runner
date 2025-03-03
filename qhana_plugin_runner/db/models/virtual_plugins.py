@@ -194,6 +194,10 @@ class PluginState:
 
     @classmethod
     def get_value(cls, plugin_id: str, key: str, default: Any = ...) -> JSON_LIKE:
+        print("cls = " + str(cls))
+        print("plugin_id = " + plugin_id)
+        print("key = " + key)
+        print("default = " + str(default))
         """Get a value for a given key.
 
         Args:

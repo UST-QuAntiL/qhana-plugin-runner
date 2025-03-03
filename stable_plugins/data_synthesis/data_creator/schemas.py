@@ -39,6 +39,7 @@ class InputParameters:
     num_test_points: int
     turns: float = None
     noise: float = None
+    centers: int = None
 
     def __str__(self):
         return str(self.__dict__.copy())
@@ -53,7 +54,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Dataset Type",
             "description": """Currently available dataset types are:
 - Two Spiral: Creates two spirals, spiraling out from the same point. Both spirals have a different label.
-- Checkerboard: Creates a 2x2 checkerboard pattern.""",
+- Checkerboard: Creates a 2x2 checkerboard pattern.
+- Blobs: Creates isotropic Gaussian blobs for clustering.
+- 3D Checkerboard: Creates a 3D 2x2x2 checkerboard pattern.
+- 3D Blobs: Creates 3D isotropic Gaussian blobs for clustering.""",
             "input_type": "select",
         },
     )
@@ -91,6 +95,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Turns",
             "description": "Determines the turns of the spiral dataset",
             "input_type": "text",
+        },
+    )
+    centers = ma.fields.Integer(
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "No. Centers",
+            "description": "Determines the number of Blobs",
+            "input_type": "number",
         },
     )
 

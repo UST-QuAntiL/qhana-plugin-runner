@@ -4,10 +4,18 @@
 <head>
     {% block head %}
     <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+    <style>
+        html {
+            scrollbar-gutter: stable;
+        }
+        .qhana-body {
+            height: fit-content;
+        }
+    </style>
     {% endblock head %}
 </head>
 
-<body>
+<body class="qhana-body">
     {% block content %}
     <div class="qhana-microfrontend">
         {% block help %}
