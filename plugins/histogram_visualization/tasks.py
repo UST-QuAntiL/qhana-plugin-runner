@@ -12,19 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from tempfile import SpooledTemporaryFile
+from typing import Tuple
+
 import muid
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from tempfile import SpooledTemporaryFile
 from celery.utils.log import get_task_logger
 from requests.exceptions import HTTPError
-from qhana_plugin_runner.requests import open_url
-from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
-from . import HistogramVisualization
 
+from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
+from qhana_plugin_runner.requests import open_url_as_file_like
+from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities, ensure_dict
+from qhana_plugin_runner.storage import STORE
+
+from . import HistogramVisualization
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -37,36 +40,33 @@ def get_readable_hash(s: str) -> str:
     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
-@CELERY.task(
-    name=f"{HistogramVisualization.instance.identifier}.generate_plot", bind=True
-)
-def generate_plot(self, data_url: str, hash: str) -> str:
+def get_diagram(data_url: str, full_html: bool) -> Tuple[str, str]:
+    """Get a rendered html diagram and the file name.
 
-    TASK_LOGGER.info(f"Generating histogram plot for data in {data_url}...")
-    # Check that data_url is correct
-    try:
-        with open_url(data_url) as url:
-            data = url.json()
-    except HTTPError:
-        TASK_LOGGER.error(f"Invalid Data URL: {data_url}")
-        DataBlob.set_value(
-            HistogramVisualization.instance.identifier,
-            hash,
-            "",
-        )
-        PluginState.delete_value(
-            HistogramVisualization.instance.identifier, hash, commit=True
-        )
-        return "Invalid Entity URL!"
+    Args:
+        data_url (str): the data to render
+        full_html (bool): if True, produce a standalone html page, else produce
+            an embeddable html snippet.
+
+    Returns:
+        Tuple[str, str]: html_content, filename
+    """
+    with open_url_as_file_like(data_url) as (name, file_, mimetype):
+        if mimetype is None:
+            raise ValueError("Could not determine mimetype.")
+        data = next(ensure_dict(load_entities(file_, mimetype=mimetype)))
 
     x_array = []
     y_array = []
 
     # X-Axis are the labels, Y-Axis the counts
-    for label in data:
-        if label != "ID":
-            x_array.append(label)
-            y_array.append(int(data[label]))
+    for label, value in data.items():
+        if label in ("ID", "href"):
+            continue
+        x_array.append(label)
+        if isinstance(value, str):
+            value = int(value)
+        y_array.append(value)
 
     df = pd.DataFrame(
         {
@@ -81,11 +81,31 @@ def generate_plot(self, data_url: str, hash: str) -> str:
     )
     fig.update_traces(showlegend=False)
 
-    html_bytes = str.encode(fig.to_html(full_html=True), encoding="utf-8")
+    return fig.to_html(full_html=full_html), name
 
-    DataBlob.set_value(HistogramVisualization.instance.identifier, hash, html_bytes)
+
+@CELERY.task(
+    name=f"{HistogramVisualization.instance.identifier}.generate_plot", bind=True
+)
+def generate_plot(self, data_url: str, hash_: str) -> str:
+
+    TASK_LOGGER.info(f"Generating histogram plot for data in {data_url}...")
+    # Check that data_url is correct
+    try:
+        diagram, _ = get_diagram(data_url, full_html=False)
+    except (HTTPError, ValueError):
+        TASK_LOGGER.error(f"Invalid Data URL: {data_url}")
+        DataBlob.set_value(HistogramVisualization.instance.identifier, hash_, b"")
+        PluginState.delete_value(
+            HistogramVisualization.instance.identifier, hash_, commit=True
+        )
+        return "Invalid Entity URL!"
+
+    html_bytes = diagram.encode(encoding="utf-8")
+
+    DataBlob.set_value(HistogramVisualization.instance.identifier, hash_, html_bytes)
     PluginState.delete_value(
-        HistogramVisualization.instance.identifier, hash, commit=True
+        HistogramVisualization.instance.identifier, hash_, commit=True
     )
 
     return "Created plot!"
@@ -98,25 +118,13 @@ def generate_plot(self, data_url: str, hash: str) -> str:
     retry_backoff=True,
     max_retries=None,
 )
-def process(self, db_id: str, data_url: str, hash: str) -> str:
-    if not (plot := DataBlob.get_value(HistogramVisualization.instance.identifier, hash)):
-        if not (
-            task_id := PluginState.get_value(
-                HistogramVisualization.instance.identifier, hash
-            )
-        ):
-            task_result = generate_plot.s(data_url, hash).apply_async()
-            PluginState.set_value(
-                HistogramVisualization.instance.identifier,
-                hash,
-                task_result.id,
-                commit=True,
-            )
-        raise PlotNotFinishedError()
+def process(self, db_id: str, data_url: str) -> str:
+    diagram, name = get_diagram(data_url, full_html=True)
+
     with SpooledTemporaryFile() as output:
-        output.write(plot)
+        output.write(diagram.encode(encoding="utf-8"))
         output.seek(0)
         STORE.persist_task_result(
-            db_id, output, f"plot_{hash}.html", "image/html", "text/html"
+            db_id, output, f"plot_{name}.html", "image/html", "text/html"
         )
     return "Created Plot!"

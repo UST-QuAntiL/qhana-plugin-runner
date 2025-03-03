@@ -3,29 +3,12 @@
 {% block head %}
 {{ super() }}
 <style>
-    #spinner {
-        display: inline-block;
-        width: 100px;
-        height: 100px;
-        border: 6px solid rgba(0, 0, 0, 0);
-        border-radius: 50%;
-        border-top-color: #673ab7;
-        animation: spin 1s linear infinite;
-        -webkit-animation: spin 1s linear infinite;
-    }
-
-    .container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-    }
-
-    @keyframes spin {
-        to {
-            -webkit-transform: rotate(360deg);
-        }
-    }
+.histogram-preview {
+    width: 100%;
+    height: 75vw;
+    max-height: 95vmin;
+    overflow: hidden;
+}
 </style>
 {% endblock head %}
 
@@ -43,47 +26,26 @@
     </details>
 </div>
 
-<div id="histogram-frame" style="width: 750px; height:0px;">
-    <iframe id="histogram-plot" type="text/html" style="border: none; width: 100%; height: 100%;" display="none"></iframe>
-</div>
-<div class="container">
-    <div id="spinner"></div>
+<div class="histogram-preview">
 </div>
 {% endblock content %}
 
 {% block script %}
 {{ super() }}
 <script>
-    // Only called when a plot was succesfully generated
-    function onPlotLoad() {
-        setSize();
-        document.querySelector('#spinner').style.display = 'none';
-        document.querySelector('#visualization-options').removeAttribute('open');
-    }
-
     // Resets the iframe without a plot
     function onPlotError() {
-        const frame = document.querySelector('#histogram-frame');
-        frame.setAttribute('style', 'border: none; width: 100 %; height: 0 px;');
-        sendMessage({ type: "ui-resize", height: 250});
-        document.querySelector('#histogram-plot').style.display = 'none';
-        document.querySelector('#spinner').style.display = 'none';
+        document.querySelector('.histogram-preview').innerHTML = '';
         document.querySelector('#visualization-options').setAttribute('open', 'open');
+        if (window._qhana_microfrontend_state) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
     }
 
     // Setup event listeners for the data_url
     function setupEventListeners() {
         const entityInput = document.querySelector('input[name=data]');
         entityInput.addEventListener("input", (event) => updatePreview());
-    }
-
-    // Frame is set to 2/3 of the width, as plotly doesn't provide a fitting height
-    function setSize() {
-        const frame = document.querySelector('#histogram-frame');
-        const frame_width = getMicrofrontendWidth() - 0.05 * getMicrofrontendWidth();
-        const frame_height = frame_width * 2 / 3;
-        frame.setAttribute('style', 'width: ' + frame_width + 'px; height: ' + frame_height + 'px;');
-        sendMessage({ type: "ui-resize", height: frame.clientHeight + 60 });
     }
 
     function updatePreview() {
@@ -93,19 +55,24 @@
             onPlotError();
             return;
         }
-        document.querySelector('#spinner').style.display = '';
-        const preview = document.querySelector('#histogram-plot');
+        const preview = document.querySelector('.histogram-preview');
         const url = "{{ get_plot_url }}?data=" + dataUrl;
         fetch(url).then(response => {
             if (response.status === 200) {
-                preview.style.display = '';
-                preview.setAttribute("src", url);
-                onPlotLoad();
+                return response.text().then(text => {
+                    var plotContent = document.createRange().createContextualFragment(text);
+                    preview.innerHTML = "";
+                    preview.append(plotContent);
+                    document.querySelector('#visualization-options').removeAttribute('open');
+                    if (window._qhana_microfrontend_state) {
+                        monitorHeightChanges(window._qhana_microfrontend_state);
+                    }
+                });
             } else {
-                onPlotError();
                 if (response.status === 202) {
-                    document.querySelector('#spinner').style.display = '';
                     setTimeout(updatePreview, 5000);
+                } else {
+                    onPlotError();
                 }
             }
         }).catch(error => {
@@ -114,7 +81,7 @@
         });
     }
 
-    onPlotError();
     setupEventListeners();
+    updatePreview();
 </script>
 {% endblock script %}
