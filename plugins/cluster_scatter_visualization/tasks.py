@@ -20,6 +20,7 @@ import muid
 import pandas as pd
 import plotly.express as px
 from celery.utils.log import get_task_logger
+from requests import HTTPError
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
@@ -157,9 +158,17 @@ def generate_plot(self, entity_url: str, clusters_url: Optional[str], hash_: str
     TASK_LOGGER.info(
         f"Generating plot for entites {entity_url} and clusters {clusters_url}..."
     )
-    diagram, _ = _get_plot(
-        entity_url=entity_url, clusters_url=clusters_url, full_html=False
-    )
+
+    try:
+        diagram, _ = _get_plot(
+            entity_url=entity_url, clusters_url=clusters_url, full_html=False
+        )
+    except HTTPError:
+        DataBlob.set_value(ClusterScatterVisualization.instance.identifier, hash_, b"")
+        PluginState.delete_value(
+            ClusterScatterVisualization.instance.identifier, hash_, commit=True
+        )
+        return "Invalid Entity URL!"
 
     # Html needs to be saved as bytes, so it can be stored in a DataBlob
     html_bytes = diagram.encode(encoding="utf-8")
