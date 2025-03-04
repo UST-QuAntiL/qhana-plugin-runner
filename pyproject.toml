@@ -32,7 +32,7 @@ blinker = "^1.6.2"
 urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
 
 [tool.poetry.group.dev.dependencies]
-black = ">=24.1.1,<24.2.0"
+black = ">=25.1.0,<25.2.0"
 flake8 = "^3.9.2"
 pytest = "^6.2.4"
 flake8-docstrings = "^1.6.0"

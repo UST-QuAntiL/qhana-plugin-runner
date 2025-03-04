@@ -89,7 +89,7 @@ def open_url_as_file_like(
     else:
         filename = secure_filename(requests_response_to_filename(response))
 
-    content_type: Optional[str] = response.headers.get("content-type")
+    content_type: Optional[str] = get_mimetype(response)
 
     try:
         yield filename, response.raw, content_type

@@ -241,7 +241,7 @@ def _get_deserializer(meta: Optional[AttributeMetadata]) -> Callable[[str], Any]
 
 
 def parse_attribute_metadata(
-    metadata_entities: Iterable[Union[Dict[str, Any]]]
+    metadata_entities: Iterable[Union[Dict[str, Any]]],
 ) -> Dict[str, AttributeMetadata]:
     """Parse a list or stream of entities into an attribute metadata dict mapping from attribute name to ``AttributeMetadata`` instance."""
     attribute_metadata = {}

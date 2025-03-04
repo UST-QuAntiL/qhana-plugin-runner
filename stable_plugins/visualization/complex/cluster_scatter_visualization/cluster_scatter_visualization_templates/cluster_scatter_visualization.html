@@ -1,0 +1,96 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+.cluster-preview {
+    width: 100%;
+    height: 75vw;
+    max-height: 95vmin;
+    overflow: hidden;
+}
+</style>
+{% endblock head %}
+
+{% block content %}
+<div class="qhana-microfrontend">
+    <details id="visualization-options" open>
+        <summary>Visualization Options</summary>
+        {% call forms.render_form(target="microfrontend") %}
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend") }}
+            {{ forms.submit("submit", action=process) }}
+        </div>
+        {% endcall %}
+    </details>
+</div>
+
+<div class="cluster-preview">
+</div>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+<script>
+    // Resets the iframe without a plot
+    function onPlotError() {
+        document.querySelector('.cluster-preview').innerHTML = '';
+        document.querySelector('#visualization-options').setAttribute('open', 'open');
+        if (window._qhana_microfrontend_state) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    // Setup event listeners for the entityUrl and clustersUrl input fields
+    function setupEventListeners() {
+        const entityInput = document.querySelector('input[name=entityUrl]');
+        entityInput.addEventListener("input", (event) => updatePreview());
+        const clusterInput = document.querySelector('input[name=clustersUrl]');
+        clusterInput.addEventListener("input", (event) => updatePreview());
+    }
+
+    async function updatePreview() {
+        const entityUrl = document.querySelector('input[name=entityUrl]').value;
+        const clustersUrl = document.querySelector('input[name=clustersUrl]').value;
+        // Only an entity Url is required to generate a plot
+        if (entityUrl === "" || entityUrl === null) {
+            onPlotError();
+            return;
+        }
+
+        // clustersUrl is set to null when no clustersUrl is provided
+        const params = new URLSearchParams();
+        params.set("entityUrl", entityUrl);
+        params.set("clustersUrl", clustersUrl ?? "");
+        const url = "{{ get_plot_url }}?" + params.toString();
+
+        const preview = document.querySelector('.cluster-preview');
+        fetch(url).then(response => {
+            if (response.status === 200) {
+                return response.text().then(text => {
+                    var plotContent = document.createRange().createContextualFragment(text);
+                    preview.innerHTML = "";
+                    preview.append(plotContent);
+                    document.querySelector('#visualization-options').removeAttribute('open');
+                    if (window._qhana_microfrontend_state) {
+                        monitorHeightChanges(window._qhana_microfrontend_state);
+                    }
+                });
+            } else {
+                if (response.status === 202) {
+                    setTimeout(updatePreview, 5000);
+                } else {
+                    onPlotError();
+                }
+            }
+        }).catch(error => {
+            console.log(error);
+            onPlotError();
+        });
+    }
+
+    setupEventListeners();
+    updatePreview();
+</script>
+{% endblock script %}
