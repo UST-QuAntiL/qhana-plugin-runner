@@ -14,10 +14,10 @@
 
 import hashlib
 from http import HTTPStatus
-import json
 from typing import Mapping
+
 from celery import chain
-import celery
+from celery.exceptions import TimeoutError
 from flask import abort, redirect
 from flask.globals import request
 from flask.helpers import url_for
@@ -36,8 +36,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import VIS_BLP, ConfusionMatrixVisualization
 from .schemas import ConfusionMatrixInputParametersSchema
@@ -87,7 +87,7 @@ class PluginsView(MethodView):
                     )
                 ],
             ),
-            tags=["visualization", "cluster", "confusion-matrix"],
+            tags=plugin.tags,
         )
 
 
@@ -165,11 +165,8 @@ def get_table(data: Mapping):
     if not clusters_url1 or not clusters_url2:
         abort(HTTPStatus.BAD_REQUEST)
     url_hash = hashlib.sha256(
-        (clusters_url1 + clusters_url2 + str(optimize)).encode("utf-8")
+        f"{clusters_url1}\n{clusters_url2}\n{optimize}".encode("utf-8")
     ).hexdigest()
-    table = DataBlob.get_value(
-        ConfusionMatrixVisualization.instance.identifier, url_hash, None
-    )
     table = DataBlob.get_value(
         ConfusionMatrixVisualization.instance.identifier, url_hash, None
     )
@@ -197,25 +194,13 @@ def get_table(data: Mapping):
             table = DataBlob.get_value(
                 ConfusionMatrixVisualization.instance.identifier, url_hash
             )
-        except celery.exceptions.TimeoutError:
+        except TimeoutError:
             return Response("Table not yet created!", HTTPStatus.ACCEPTED)
     if not table:
-        abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
+        abort(HTTPStatus.BAD_REQUEST, message="Invalid circuit URL!")
 
-    # Data is sligtly changed when it is saved, so it needs to be adjusted a bit
-    table = str.encode(
-        table.decode().replace("array(", "").replace(")", ""), encoding="utf-8"
-    )
-    table_dict = json.loads(table)
-    # Create a response for the micro frontend using the table.html template
     return Response(
-        render_template(
-            "table.html",
-            confusion_matrix=table_dict["confusion_matrix"],
-            label_list=table_dict["label_list"],
-            wrong_ids=table_dict["wrong_ids"],
-            permutation=table_dict["permutation"],
-        )
+        table, HTTPStatus.OK, headers={"Content-Type": "text/html; charset=utf-8"}
     )
 
 
@@ -237,7 +222,7 @@ class ProcessView(MethodView):
         if optimize is None:
             optimize = False
         url_hash = hashlib.sha256(
-            (clusters_url1 + clusters_url2 + str(optimize)).encode("utf-8")
+            f"{clusters_url1}\n{clusters_url2}\n{optimize}".encode("utf-8")
         ).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
@@ -247,17 +232,11 @@ class ProcessView(MethodView):
             clusters_url1=clusters_url1,
             clusters_url2=clusters_url2,
             optimize=optimize,
-            hash=url_hash,
+            hash_=url_hash,
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
-        task.apply_async(
-            db_id=db_task.id,
-            clusters_url1=clusters_url1,
-            clusters_url2=clusters_url2,
-            optimize=optimize,
-            hash=url_hash,
-        )
+        task.apply_async()
 
         db_task.save(commit=True)
 
