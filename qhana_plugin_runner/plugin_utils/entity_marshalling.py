@@ -179,7 +179,7 @@ register_dialect("default", DefaultDialect)
 
 
 def ensure_dict(
-    items: Iterable[Union[Dict[str, Any], NamedTuple]]
+    items: Iterable[Union[Dict[str, Any], NamedTuple]],
 ) -> Generator[Dict[str, Any], None, None]:
     """Ensure that all entities in an iterable are dicts.
 
