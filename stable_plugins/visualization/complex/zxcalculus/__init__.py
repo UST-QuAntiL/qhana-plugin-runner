@@ -22,7 +22,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "zxcalculus"
-__version__ = "v1.0.0"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
