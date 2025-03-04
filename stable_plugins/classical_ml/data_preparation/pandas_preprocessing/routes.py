@@ -302,7 +302,7 @@ class FinalProcessView(MethodView):
 
         # all tasks need to know about db id to load the db entry
         task: chain = preprocessing_task.s(
-            db_id=db_task.id, step_id=step_id
+            db_id=db_task.id, step_id=step_id, final=True
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))

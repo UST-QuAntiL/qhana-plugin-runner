@@ -19,7 +19,7 @@ from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
 from re import Pattern
-from typing import Iterator, Optional, Tuple
+from typing import Iterator, Optional, Tuple, BinaryIO
 from urllib.parse import urlparse
 
 from flask import Flask
@@ -97,6 +97,34 @@ def open_url_as_file_like(
         response.close()
 
 
+@contextmanager
+def open_url_as_file_like_simple(
+    url: str, raise_on_error_status=True, stream=True, **kwargs
+) -> Iterator[BinaryIO]:
+    """Open an url with requests to be used as a ile like object.
+
+    This method should be used as a context manager, i.e., inside a with block,
+    and returns a file_like object.
+
+    This method uses :py:func:`open_url`.
+
+    The ``file_like``object may be a ``urllib3.response.HTTPResponse`` object
+    or another object with a ``read`` method depending on the used url adapter.
+
+    Example:
+
+    >>> with open_url_as_file_like_simple(url) as file_like:
+    >>>     print(file_like.read(128))
+    """
+    response = open_url(url, raise_on_error_status, stream=stream, **kwargs)
+    response.raw.decode_content = True
+
+    try:
+        yield response.raw
+    finally:
+        response.close()
+
+
 def get_mimetype(response: Response, default=None) -> Optional[str]:
     try:
         return response.headers["Content-Type"]
@@ -141,5 +169,47 @@ def retrieve_filename(url_or_response: str | Response) -> str:
             return _retrieve_filename(response)
     elif isinstance(url_or_response, Response):  # url_or_response is a response
         return _retrieve_filename(url_or_response)
+
+    raise TypeError("Expected input to be str or request.Response.")
+
+
+def retrieve_data_type(url_or_response: str | Response) -> Optional[str]:
+    """Return the data type from the response headers if available.
+
+    Args:
+        url_or_response (str | Response): a url or a response instance
+
+    Raises:
+        TypeError: if the input url or response type is not supported
+
+    Returns:
+        str|None: the data type
+    """
+    if isinstance(url_or_response, str):  # url_or_response is an url
+        with open_url(url_or_response, stream=True) as response:
+            return response.headers.get("X-Data-Type", None)
+    elif isinstance(url_or_response, Response):  # url_or_response is a response
+        return url_or_response.headers.get("X-Data-Type", None)
+
+    raise TypeError("Expected input to be str or request.Response.")
+
+
+def retrieve_attribute_metadata_url(url_or_response: str | Response) -> Optional[str]:
+    """Return the attribute metadata URL from the response headers if available.
+
+    Args:
+        url_or_response (str | Response): a url or a response instance
+
+    Raises:
+        TypeError: if the input url or response type is not supported
+
+    Returns:
+        str|None: the url to related attribute metadata
+    """
+    if isinstance(url_or_response, str):  # url_or_response is an url
+        with open_url(url_or_response, stream=True) as response:
+            return response.headers.get("X-Attribute-Metadata", None)
+    elif isinstance(url_or_response, Response):  # url_or_response is a response
+        return url_or_response.headers.get("X-Attribute-Metadata", None)
 
     raise TypeError("Expected input to be str or request.Response.")

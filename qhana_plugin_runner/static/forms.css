@@ -39,6 +39,10 @@
     color: red;
 }
 
+.selected-file-name {
+    overflow-wrap: break-word;
+}
+
 code.example {
     padding-block: 0.1rem;
     padding-inline: 0.2rem;
