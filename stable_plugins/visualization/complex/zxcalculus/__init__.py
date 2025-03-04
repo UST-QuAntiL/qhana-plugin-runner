@@ -48,7 +48,7 @@ class ZXCalculusVisualization(QHAnaPluginBase):
         + " This circuit is optimized using the automatic optimization method provided by the pyzx package,"
         + " and will be displayed below the original circuit"
     )
-    tags = ["visualization", "zxcalculus", "circuit"]
+    tags = ["visualization", "zxcalculus", "circuit", "non-default"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

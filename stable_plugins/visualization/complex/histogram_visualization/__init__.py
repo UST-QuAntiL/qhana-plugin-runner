@@ -42,7 +42,7 @@ class HistogramVisualization(QHAnaPluginBase):
         "A visualization plugin for creating Historgrams using the counts of different labels."
         + "The labels are shown on the x Axis and the counts on the y Axis."
     )
-    tags = ["visualization", "histogram"]
+    tags = ["visualization", "histogram", "non-default"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
