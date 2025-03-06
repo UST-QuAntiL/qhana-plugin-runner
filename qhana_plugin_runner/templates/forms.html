@@ -18,7 +18,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
 {% set error=errors.get(form_key) %}
 {% set input_type=get_input_type(field) %}
 <div class="{{form_field_class}}">
-  <label class="{{form_label_class}}" for="{{form_key}}">{{field.metadata.get("label", form_key)}}</label>
+  <label class="{{form_label_class}}" for="{{key}}">{{field.metadata.get("label", form_key)}}</label>
 
   <div class="qhana-input-wrapper">
     {% if input_type == 'textarea' %}
@@ -54,9 +54,9 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
 
 
     {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
-    <button class="qhana-choose-file-button" data-input-id="{{key}}" hidden {{ field_attr('data-input',
-      field.metadata.get('data_input_type')) }} {{
-      field_attr('data-content-type',space_delimited_list(field.metadata.get('data_content_types'))) }}>
+    <button class="qhana-choose-file-button" data-input-id="{{key}}" role="button" hidden
+      {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
+      {{field_attr('data-content-type',space_delimited_list(field.metadata.get('data_content_types'))) }}>
       choose file
     </button>
     {% endif %}
