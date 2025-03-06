@@ -229,7 +229,7 @@ function sendMessage(message) {
  * @param {{lastHeight: number, heightUnchangedCount: number}} state 
  */
 function monitorHeightChanges(state) {
-    var newHeight = notifyParentWindowOnHeightChange(state.height);
+    var newHeight = notifyParentWindowOnHeightChange(state.height, state.targetHeight);
     if (state.height === newHeight) {
         if (state.heightUnchangedCount > 60) { // allow for 60*50ms for height to settle
             return;
@@ -246,12 +246,17 @@ function monitorHeightChanges(state) {
  * Measure the current height and inform the parent window if the height has changed compared to `lastHeight`.
  *
  * @param {number} lastHeight the last measured height returned by this method (default: 0)
+ * @param {number|'full'|undefined} targetHeight the target height of this iframe (default: undefined)
  * @returns the current measured height
  */
-function notifyParentWindowOnHeightChange(lastHeight = 0) {
+function notifyParentWindowOnHeightChange(lastHeight = 0, targetHeight = undefined) {
     var height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+    var message = { type: "ui-resize", height: height };
+    if (targetHeight != null) {
+        message.targetHeight = targetHeight;
+    }
     if (height !== lastHeight) {
-        sendMessage({ type: "ui-resize", height: height });
+        sendMessage(message);
     }
     return height;
 }
