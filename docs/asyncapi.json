@@ -49,6 +49,9 @@
               "$ref": "#/components/messages/requestDataUrlInfo"
             },
             {
+              "$ref": "#/components/messages/requestRelatedDataUrl"
+            },
+            {
               "$ref": "#/components/messages/requestPluginUrl"
             },
             {
@@ -311,6 +314,53 @@
             "type",
             "inputKey",
             "dataUrl"
+          ]
+        }
+      },
+      "requestRelatedDataUrl": {
+        "summary": "The plugin requests a data URL matching the accepted data and content types for a specific data input that is related to the given data. The plugin host may display a data selection dialog or similar to the user if more than one match is found and the `userInteraction` field is true. (Response: 'data-url-response')",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "request-related-data-url"
+            },
+            "inputKey": {
+              "type": "string"
+            },
+            "dataUrl": {
+              "type": "string",
+              "format": "url"
+            },
+            "relation": {
+              "enum": [
+                "any",
+                "pre",
+                "post",
+                "exact"
+              ]
+            },
+            "includeSelf": {
+              "type": "boolean"
+            },
+            "acceptedInputType": {
+              "type": "string",
+              "pattern": "([-\\w.]+|\\*)/([-\\w.]+(\\+[-\\w.]+)?|\\*)"
+            },
+            "acceptedContentType": {
+              "type": "string",
+              "pattern": "([-\\w.]+|\\*)/([-\\w.]+(\\+[-\\w.]+)?|\\*)"
+            },
+            "userInteraction": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "inputKey",
+            "dataUrl",
+            "relation"
           ]
         }
       },
