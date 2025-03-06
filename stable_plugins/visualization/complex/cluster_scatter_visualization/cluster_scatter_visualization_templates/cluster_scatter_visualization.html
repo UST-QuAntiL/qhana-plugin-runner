@@ -42,17 +42,81 @@
         }
     }
 
+    function chooseRelatedData(event) {
+        event.preventDefault();
+        const button = event.target;
+        let relatedData;
+        if (button.dataset.inputId === "entity_url") {
+            relatedData = document.querySelector('input[name=clustersUrl]').value;
+        } else if (button.dataset.inputId === "clusters_url") {
+            relatedData = document.querySelector('input[name=entityUrl]').value;
+        } else {
+            return;
+        }
+        if (!relatedData) {
+            return;
+        }
+        sendMessage({
+            type: "request-related-data-url",
+            dataUrl: relatedData,
+            inputKey: button.dataset.inputId,
+            relation: button.dataset.relation,
+            acceptedInputType: button.dataset.dataType,
+            userInteraction: true,
+        });
+    }
+
     // Setup event listeners for the entityUrl and clustersUrl input fields
     function setupEventListeners() {
         const entityInput = document.querySelector('input[name=entityUrl]');
         entityInput.addEventListener("input", (event) => updatePreview());
         const clusterInput = document.querySelector('input[name=clustersUrl]');
         clusterInput.addEventListener("input", (event) => updatePreview());
+
+        // setup extra choose buttons:
+        const chooseRelPointsBtn = document.createElement("button");
+        chooseRelPointsBtn.textContent = "choose related";
+        chooseRelPointsBtn.setAttribute("id", "choose-rel-points");
+        chooseRelPointsBtn.classList.add("qhana-choose-file-button");
+        chooseRelPointsBtn.dataset.inputId = "entity_url";
+        chooseRelPointsBtn.dataset.relation = "pre";
+        chooseRelPointsBtn.dataset.dataType = "entity/vector";
+        chooseRelPointsBtn.setAttribute("disabled", "");
+        chooseRelPointsBtn.setAttribute("role", "button");
+        chooseRelPointsBtn.addEventListener("click", chooseRelatedData);
+        entityInput.parentElement.appendChild(chooseRelPointsBtn);
+
+        const chooseRelLabelsBtn = document.createElement("button");
+        chooseRelLabelsBtn.textContent = "choose related";
+        chooseRelLabelsBtn.setAttribute("id", "choose-rel-labels");
+        chooseRelLabelsBtn.classList.add("qhana-choose-file-button");
+        chooseRelLabelsBtn.dataset.inputId = "clusters_url";
+        chooseRelLabelsBtn.dataset.relation = "post";
+        chooseRelLabelsBtn.dataset.dataType = "entity/label";
+        chooseRelLabelsBtn.setAttribute("disabled", "");
+        chooseRelLabelsBtn.setAttribute("role", "button");
+        chooseRelLabelsBtn.addEventListener("click", chooseRelatedData);
+        clusterInput.parentElement.appendChild(chooseRelLabelsBtn);
     }
 
     async function updatePreview() {
         const entityUrl = document.querySelector('input[name=entityUrl]').value;
         const clustersUrl = document.querySelector('input[name=clustersUrl]').value;
+
+        const chooseRelEntity = document.querySelector("#choose-rel-points");
+        const chooseRelLabels = document.querySelector("#choose-rel-labels");
+
+        if (entityUrl) {
+            chooseRelLabels.removeAttribute("disabled");
+        } else {
+            chooseRelLabels.setAttribute("disabled", "");
+        }
+        if (clustersUrl) {
+            chooseRelEntity.removeAttribute("disabled");
+        } else {
+            chooseRelEntity.setAttribute("disabled", "");
+        }
+
         // Only an entity Url is required to generate a plot
         if (entityUrl === "" || entityUrl === null) {
             onPlotError();
