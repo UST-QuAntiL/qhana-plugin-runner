@@ -91,6 +91,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Entities Attribute Metadata URL",
             "description": "URL to a file with the attribute metadata for the entities.",
             "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "post",
         },
     )
     taxonomies_zip_url = FileUrl(
@@ -102,6 +104,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Taxonomies URL",
             "description": "URL to zip file with taxonomies.",
             "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "pre",
         },
     )
     attributes = ma.fields.String(
