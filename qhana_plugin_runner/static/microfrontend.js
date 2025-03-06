@@ -181,6 +181,9 @@ function onAutoFillResponse(data) {
                         dataUrl: value,
                     })
                 );
+                document.querySelectorAll(`button.qhana-choose-file-button.related[data-related-input-id="${dataInputId}"]`).forEach(button => {
+                    button.removeAttribute("disabled");
+                });
             }
         };
         if (input.getAttribute("data-input-type") === "plugin") {
@@ -306,6 +309,23 @@ function instrumentForm(hasParent) {
                     inputKey: dataInputId,
                     dataUrl: dataInputValue,
                 });
+                document.querySelectorAll(`button.qhana-choose-file-button.related[data-related-input-id="${dataInputId}"]`).forEach(button => {
+                    button.removeAttribute("disabled");
+                });
+            }
+            if (dataInputId && hasParent) {
+                inputElement.addEventListener("change", () => {
+                    var buttons = document.querySelectorAll(`button.qhana-choose-file-button.related[data-related-input-id="${dataInputId}"]`);
+                    if (inputElement.value) {
+                        buttons.forEach(button => {
+                            button.removeAttribute("disabled");
+                        });
+                    } else {
+                        buttons.forEach(button => {
+                            button.setAttribute("disabled", "");
+                        });
+                    }
+                }, { passive: true });
             }
         });
         form.querySelectorAll('input[data-input-type=plugin]').forEach(inputElement => {
@@ -319,7 +339,7 @@ function instrumentForm(hasParent) {
                 });
             }
         });
-        form.querySelectorAll('button.qhana-choose-file-button').forEach(chooseButton => {
+        form.querySelectorAll('button.qhana-choose-file-button:not(.related)').forEach(chooseButton => {
             var inputId = chooseButton.getAttribute("data-input-id");
             var dataType = chooseButton.getAttribute("data-input") ?? "*";
             var contentTypes = chooseButton.getAttribute("data-content-type");
@@ -337,6 +357,44 @@ function instrumentForm(hasParent) {
                         acceptedInputType: dataType,
                         acceptedContentTypes: contentTypes,
                     });
+                });
+                chooseButton.removeAttribute("hidden");
+            }
+        });
+        form.querySelectorAll('button.qhana-choose-file-button.related').forEach(chooseButton => {
+            var inputId = chooseButton.dataset.inputId;
+            var relatedInputId = chooseButton.dataset.relatedInputId;
+            var relation = chooseButton.dataset.relation;
+            var includeSelf = chooseButton.dataset.includeSelf;
+            var dataType = chooseButton.dataset.input ?? null;
+            var contentType = chooseButton.dataset.contentType ?? null;
+            if (contentType != null && /\s+/g.test(contentType)) {
+                contentType = null;  // multiple content types => do not restrict content type
+            }
+            if (hasParent) {
+                chooseButton.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    var relatedUrl = document.querySelector(`input#${relatedInputId}`)?.value;
+                    if (!relatedUrl) {
+                        return;
+                    }
+                    var message = {
+                        type: "request-related-data-url",
+                        inputKey: inputId,
+                        dataUrl: relatedUrl,
+                        relation: relation,
+                        userInteraction: true,
+                    };
+                    if (includeSelf) {
+                        message.includeSelf = true;
+                    }
+                    if (dataType) {
+                        message.acceptedInputType = dataType;
+                    }
+                    if (contentType) {
+                        acceptedContentType = contentType;
+                    }
+                    sendMessage(message);
                 });
                 chooseButton.removeAttribute("hidden");
             }

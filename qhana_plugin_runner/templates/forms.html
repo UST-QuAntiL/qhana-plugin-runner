@@ -56,8 +56,17 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
     <button class="qhana-choose-file-button" data-input-id="{{key}}" role="button" hidden
       {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
-      {{field_attr('data-content-type',space_delimited_list(field.metadata.get('data_content_types'))) }}>
+      {{ field_attr('data-content-type', space_delimited_list(field.metadata.get('data_content_types'))) }}>
       choose file
+    </button>
+    {% endif %}
+    {% if field.metadata.get('related_to') and field.metadata.get('relation') %}
+    <button class="qhana-choose-file-button related" data-input-id="{{key}}" data-related-input-id="{{field.metadata['related_to']}}"
+      data-relation="{{field.metadata['relation']}}" role="button" disabled hidden
+      {{ field_attr('data-include-self', field.metadata.get('related_include_self')) }}
+      {{ field_attr('data-input', field.metadata.get('data_input_type')) }}
+      {{ field_attr('data-content-type', space_delimited_list(field.metadata.get('data_content_types'))) }}>
+      choose related
     </button>
     {% endif %}
     {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}
