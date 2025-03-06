@@ -55,7 +55,7 @@ class ConfusionMatrixVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nscipy~=1.10.1\nnumpy~=1.13"
+        return "pylatexenc~=2.10\nscipy~=1.10\nnumpy~=1.13"
 
 
 try:
