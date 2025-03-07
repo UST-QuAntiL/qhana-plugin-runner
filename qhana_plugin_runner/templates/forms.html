@@ -91,6 +91,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     {% if field.metadata.get('data_input_type') or field.metadata.get('data_content_types') %}
     <p class="selected-file-hint" data-input-id="{{key}}" aria-live="off" hidden>
       Selected File: <span class="selected-file-name" data-input-id="{{key}}"></span>
+      <button class="qhana-show-preview-button" data-input-id="{{key}}" role="button" hidden>show preview</button>
     </p>
     {% endif %}
     {% if field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') %}

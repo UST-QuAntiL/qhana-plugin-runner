@@ -399,6 +399,23 @@ function instrumentForm(hasParent) {
                 chooseButton.removeAttribute("hidden");
             }
         });
+        form.querySelectorAll('button.qhana-show-preview-button').forEach(previewButton => {
+            var inputId = previewButton.dataset.inputId;
+            if (hasParent) {
+                previewButton.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    var dataUrl = document.querySelector(`input#${inputId}`)?.value;
+                    if (!dataUrl) {
+                        return;
+                    }
+                    sendMessage({
+                        type: "request-data-preview",
+                        dataUrl: dataUrl,
+                    });
+                });
+                previewButton.removeAttribute("hidden");
+            }
+        });
         form.querySelectorAll('button.qhana-choose-plugin-button').forEach(chooseButton => {
             var inputId = chooseButton.getAttribute("data-input-id");
             var pluginName = chooseButton.getAttribute("data-plugin-name") ?? null;
