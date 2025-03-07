@@ -49,6 +49,9 @@
               "$ref": "#/components/messages/requestDataUrlInfo"
             },
             {
+              "$ref": "#/components/messages/requestDataPreview"
+            },
+            {
               "$ref": "#/components/messages/requestRelatedDataUrl"
             },
             {
@@ -313,6 +316,26 @@
           "required": [
             "type",
             "inputKey",
+            "dataUrl"
+          ]
+        }
+      },
+      "requestDataPreview": {
+        "summary": "The plugin requests that a preview of the data is presented to the user. The plugin host should show a preview of the requested data.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "request-data-preview"
+            },
+            "dataUrl": {
+              "type": "string",
+              "format": "url"
+            }
+          },
+          "required": [
+            "type",
             "dataUrl"
           ]
         }
