@@ -92,7 +92,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Element similarities URL",
             "description": "URL to a zip file with the element similarities for the entities.",
-            "input_type": "text",
+            "input_type": "text",  #
+            "related_to": "entities_url",
+            "relation": "post",
         },
     )
     attributes = ma.fields.String(
