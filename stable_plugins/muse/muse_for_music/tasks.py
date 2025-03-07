@@ -145,7 +145,7 @@ def import_data(self, db_id: int) -> str:
 
         voices = []
         for subpart in mapped:
-            voices.extend(client.get_voices(subpart.href))
+            voices.extend(client.get_voices(subpart.api_href))
         serializer = tuple_serializer(VoiceEntity._fields, metadata)
         mapped_voices = [
             voice_to_entity(v, subpart_id_to_part_id, part_id_to_opus_id) for v in voices

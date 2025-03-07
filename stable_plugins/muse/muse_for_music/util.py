@@ -171,6 +171,7 @@ def person_to_entity(entity):
 class OpusEntity(NamedTuple):
     ID: str
     href: str
+    api_href: str
     opus_name: str
     original_name: str
     composer: Annotated[str, {"ref_target": "people.csv"}]
@@ -213,8 +214,11 @@ def opus_to_entity(entity):
     if entity.keys() < OPUS_FIELDS:
         raise ValueError("Given Entity does not match the shape of opus entities!")
 
+    ui_href = href.replace("/api/", "/").removesuffix("/")
+
     return OpusEntity(
         id_,
+        ui_href,
         href,
         opus_name=_extract(entity, "name"),
         original_name=_extract(entity, "original_name"),
@@ -237,6 +241,7 @@ def opus_to_entity(entity):
 class PartEntity(NamedTuple):
     ID: str
     href: str
+    api_href: str
     part_name: str
     opus: Annotated[str, {"ref_target": "opuses.csv"}]
     movement: Optional[int]
@@ -297,8 +302,11 @@ def part_to_entity(entity: Dict):
     if entity.keys() < PART_FIELDS:
         raise ValueError("Given Entity does not match the shape of part entities!")
 
+    ui_href = href.replace("/api/", "/").removesuffix("/")
+
     return PartEntity(
         id_,
+        ui_href,
         href,
         part_name=_extract(entity, "name"),
         opus=f'o_{_extract(entity, "opus_id", "int")}',
@@ -407,6 +415,7 @@ def part_to_entity(entity: Dict):
 class SubpartEntity(NamedTuple):
     ID: str
     href: str
+    api_href: str
     subpart_label: str
     part: Annotated[str, {"ref_target": "parts.csv"}]
     opus: Annotated[str, {"ref_target": "opuses.csv"}]
@@ -459,12 +468,15 @@ def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
     if entity.keys() < SUBPART_FIELDS:
         raise ValueError("Given Entity does not match the shape of subpart entities!")
 
+    ui_href = href.replace("/api/", "/").removesuffix("/")
+
     part_id = f'p_{_extract(entity, "part_id", "int")}'
     dynamic_markings = entity.get("dynamic", {}).get("dynamic_markings", [])
     harmonic_centers = entity.get("harmonics", {}).get("harmonic_centers", [])
 
     return SubpartEntity(
         id_,
+        ui_href,
         href,
         subpart_label=_extract(entity, "label"),
         part=part_id,
@@ -533,6 +545,7 @@ def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
 class VoiceEntity(NamedTuple):
     ID: str
     href: str
+    api_href: str
     name: str
     subpart: Annotated[str, {"ref_target": "subparts.csv"}]
     part: Annotated[str, {"ref_target": "parts.csv"}]
@@ -623,6 +636,8 @@ def voice_to_entity(
     if entity.keys() < VOICE_FIELDS:
         raise ValueError("Given Entity does not match the shape of voice entities!")
 
+    ui_href = href.replace("/api/", "/").removesuffix("/")
+
     subpart_id = f'sp_{_extract(entity, "subpart_id", "int")}'
     part_id = subpart_id_to_part_id[subpart_id]
 
@@ -641,6 +656,7 @@ def voice_to_entity(
 
     return VoiceEntity(
         id_,
+        ui_href,
         href,
         name=_extract(entity, "name"),
         subpart=subpart_id,
