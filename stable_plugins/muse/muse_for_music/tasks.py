@@ -164,14 +164,18 @@ def import_data(self, db_id: int) -> str:
         with SpooledTemporaryFile(mode="w") as output:
             json.dump(voice_rel_graph, output)
             STORE.persist_task_result(
-                db_id, output, "voice-relations.csv", "graph/directed", "application/json"
+                db_id,
+                output,
+                "voice-relations.json",
+                "graph/directed",
+                "application/json",
             )
 
         opus_cite_graph = voices_to_opus_citation_graph(mapped_voices)
         with SpooledTemporaryFile(mode="w") as output:
             json.dump(opus_cite_graph, output)
             STORE.persist_task_result(
-                db_id, output, "citations.csv", "graph/directed", "application/json"
+                db_id, output, "citations.json", "graph/directed", "application/json"
             )
 
         # TODO: full graph? (all entity relations as graph?)
