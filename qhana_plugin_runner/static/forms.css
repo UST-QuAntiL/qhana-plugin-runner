@@ -60,3 +60,7 @@ code.example {
     stroke-miterlimit: 10;
     stroke-dashoffset: 0;
 }
+
+textarea {
+    field-sizing: content;
+}
