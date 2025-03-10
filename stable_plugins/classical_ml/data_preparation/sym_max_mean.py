@@ -259,7 +259,7 @@ def _get_sim(elem_sims: Dict, val1, val2) -> float:
     if (val1, val2) in elem_sims:
         return elem_sims[(val1, val2)]["similarity"]
     elif (val2, val1) in elem_sims:
-        return elem_sims[(val2, val2)]["similarity"]
+        return elem_sims[(val2, val1)]["similarity"]
     else:
         raise ValueError(
             "No element similarity value found for " + str(val1) + " and " + str(val2)
