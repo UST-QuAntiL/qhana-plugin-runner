@@ -78,16 +78,6 @@ class StatePreparationParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    # preparation_method = ma.fields.Integer(
-    #     required=True,
-    #     allow_none=None,
-    #     metadata={
-    #         "label": "Method",
-    #         "description": "BASIS_ENCODING = 1    ANGLE_ENCODING = 2    ARBITRARY_STATE = 3",
-    #         "input_type": "number",
-    #     },
-    # )
-
 
     data_values = CSVList(
         required=False,
@@ -95,28 +85,38 @@ class StatePreparationParametersSchema(FrontendFormBaseSchema):
         element_type=ma.fields.String,
         metadata={
             "label": "Data",
-            "description": "Data to be encoded; comma seperated.",
+            "description": "Data to be encoded; comma separated.",
             "input_type": "textarea",
         },
     )
-    number_of_qbits = ma.fields.Integer(
+    digits_before_decimal = ma.fields.Integer(
         required=False,
         allow_none=True,
         metadata={
-            "label": "Number of Qubits",
-            "description": "Number of qubits for the state preparation.",
+            "label": "Digits Before Decimal",
+            "description": "Number of digits before the decimal point.",
             "input_type": "number",
         },
     )
-    most_significant_value = ma.fields.Integer(
+    digits_after_decimal = ma.fields.Integer(
         required=False,
         allow_none=True,
         metadata={
-            "label": "Value of most significant bit",
-            "description": "The value of the most significant bit",
+            "label": "Digits After Decimal",
+            "description": "Number of digits after the decimal point.",
             "input_type": "number",
         },
     )
+
+    encode_sign = ma.fields.Bool(
+        required=False,
+        missing=False,
+        metadata={
+            "label": "Encode Sign",
+            "description": "Use the first bit to encode positive/negative values.",
+        },
+    )
+
 
     append_measurement = ma.fields.Bool(
         required=False,
@@ -155,7 +155,6 @@ class PluginsView(MethodView):
                         data_type="executable/circuit",
                         content_type=["text/x-qasm"],
                         required=True,
-                        name="state_preparation.qasm",
                     ),
                 ],
             ),
@@ -171,7 +170,8 @@ class MicroFrontend(MethodView):
         "inputStr": "Sample input string.",
         "method": METHODENUM.BASIS_ENCODING,
         "data_values": "0,1,0,1",
-        "number_of_qbits": 2,
+        "digits_before_decimal": 2,
+        "digits_after_decimal": 2,
     }
 
     @STATE_PREPARATION_BLP.html_response(
@@ -286,49 +286,53 @@ def prepare_task(self, db_id: int) -> str:
     
     method: Optional[int] = StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("preparation_method", None)
     data_values: Optional[str] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("data_values", None)
-    number_of_qbits: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("number_of_qbits", None)
-    most_significant_value: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("most_significant_value", None)
+    digits_before_decimal: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("digits_before_decimal", None)
+    digits_after_decimal: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("digits_after_decimal", None)
+    encode_sign: Optional[bool] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("encode_sign", None)
     append_measurement: Optional[bool] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("append_measurement", None)
 
-    TASK_LOGGER.info(f"Loaded input parameters from db: data_values='{data_values}', number_of_qbits='{number_of_qbits}', most_significant_value='{most_significant_value}', append_measurement='{append_measurement}'")
 
+    TASK_LOGGER.info(f"Loaded input parameters from db: data_values='{data_values}', digits_before_decimal='{digits_before_decimal}', digits_after_decimal='{digits_after_decimal}', encode_sign='{encode_sign}', append_measurement='{append_measurement}'")
 
-
-    #TODO instead get number of digits before and after decimal point from input directly
     if method == METHODENUM.BASIS_ENCODING:
         if len(data_values) != 1:
             raise ValueError("Basis encoding requires exactly one data value!")
-        value=data_values[0]
+        value = data_values[0]
 
-        if (most_significant_value & (most_significant_value - 1)) != 0:
-            raise ValueError("The most significant bit's value must be a power of 2!")
         try:
-            value = int(value)
+            value = float(value)
         except ValueError:
-            try:
-                value = float(value)
-            except ValueError:
-                raise ValueError("The data value for basis encoding must be a number!")
-        
-        if value < 0 or value >= 2*most_significant_value:
-            raise ValueError(f"The data value for basis encoding must be in the range [0,{2*most_significant_value})!")
-        
-        bit_list=[]
-        for i in range(number_of_qbits):
-            cur_bit_value=most_significant_value/(2**i)
-            if value >= cur_bit_value:
-                value -= cur_bit_value
-                bit_list.append(1)
-            else:
-                bit_list.append(0)
-            
+            raise ValueError("The data value for basis encoding must be a number!")
 
-        qc = QuantumCircuit(number_of_qbits)
+        
+        if encode_sign:
+            if value < 0:
+                value = -value
+                sign_bit = '1'
+            else:
+                sign_bit = '0'
+        else:
+            if value < 0:
+                raise ValueError("Negative values are not allowed without sign encoding!")
+            sign_bit = ''
+
+
+        integer_part = int(value)
+        if integer_part > 2 ** digits_before_decimal - 1:
+            raise ValueError(f"Integer part {integer_part} is too large for {digits_before_decimal} bits!")
+        fractional_part = value - integer_part
+
+
+        integer_bits = bin(integer_part)[2:].zfill(digits_before_decimal)
+        fractional_bits = bin(int(fractional_part * (2 ** digits_after_decimal)))[2:].zfill(digits_after_decimal)
+
+        bit_list = sign_bit + integer_bits + fractional_bits
+
+        qc = QuantumCircuit(len(bit_list))
         for i, bit in enumerate(reversed(bit_list)):
-            if bit == 1:
+            if bit == '1':
                 qc.x(i)
 
-        
     elif method == METHODENUM.ANGLE_ENCODING:
         try:
             data_values = [float(x) for x in data_values]
