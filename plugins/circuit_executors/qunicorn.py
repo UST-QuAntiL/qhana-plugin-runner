@@ -313,13 +313,12 @@ class QunicornPlugin(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 def register_deployment(circuit: str) -> int:
-    global _count
-    _count += 1
+
 
     is_qasm2 = "OPENQASM 2.0;" in circuit
 
     data = {
-        "name": f"QasmTestsuite Deployment ({_count})",
+        "name": f"QasmTestsuite Deployment ()",
         "programs": [
             {
                 "quantumCircuit": circuit,
@@ -333,13 +332,11 @@ def register_deployment(circuit: str) -> int:
     return response.json()["id"]
 
 def run_job(deployment_id: int) -> int:
-    global _count
-    _count += 1
 
     data: dict = dict(QunicornPluginParametersSchema.executionOptions)
     data.update(
         {
-            "name": f"QasmTestsuite Job ({_count})",
+            "name": f"QasmTestsuite Job ()",
             "providerName": QUNICORN_PROVIDER,
             "deviceName": QUNICORN_DEVICE,
             "token": QUNICORN_TOKEN,
