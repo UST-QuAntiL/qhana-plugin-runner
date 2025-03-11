@@ -18,7 +18,7 @@ from io import StringIO
 from json import dumps, loads
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict, Tuple
+from typing import Mapping, Optional, List, Dict, Tuple, Callable
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -48,6 +48,10 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import (
+    tuple_deserializer,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
@@ -393,7 +397,7 @@ def add_similarities_for_entities(
     entity1: Dict[str, any],
     entity2: Dict[str, any],
     attribute: str,
-    entities_metadata: Dict,
+    entities_metadata: dict[str, AttributeMetadata],
     wu_palmer_cache: WuPalmerCache,
 ):
     if attribute not in entity1 or attribute not in entity2:
@@ -402,12 +406,15 @@ def add_similarities_for_entities(
     values1 = entity1[attribute]
     values2 = entity2[attribute]
 
-    if values1 == "" or values1 == [""] or values2 == "" or values2 == [""]:
-        return
-
     # extract taxonomy name from refTarget
-    file_name: str = entities_metadata[attribute]["refTarget"].split(":")[1]
+    file_name: str = entities_metadata[attribute].ref_target.split(":")[1]
     tax_name: str = PurePath(file_name).stem
+
+    if isinstance(values1, set):
+        values1 = list(values1)
+
+    if isinstance(values2, set):
+        values2 = list(values2)
 
     if not isinstance(values1, list):
         values1 = [values1]
@@ -417,8 +424,8 @@ def add_similarities_for_entities(
 
     for val1 in values1:
         for val2 in values2:
-            if val1 is None or val2 is None:
-                sim = None
+            if val1 is None or val1 == "" or val2 is None or val2 == "":
+                continue
             else:
                 # sorting the values reduces cache misses and is possible because Wu-Palmer is commutative
                 sorted_val1, sorted_val2 = sorted((val1, val2))
@@ -490,6 +497,16 @@ def calculation_task(self, db_id: int) -> str:
         attributes,
         root_has_meaning_in_taxonomy,
     ) = load_input_parameters(db_id)
+    deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
+
+    with open_url(entities_metadata_url) as entities_metadata_file:
+        entities_metadata_list = list(
+            load_entities(entities_metadata_file, "application/json")
+        )
+        entities_metadata = {
+            element["ID"]: AttributeMetadata.from_dict(element)
+            for element in entities_metadata_list
+        }
 
     # load data from file
     with open_url(entities_url) as entities_data:
@@ -498,15 +515,18 @@ def calculation_task(self, db_id: int) -> str:
 
         for ent in load_entities(entities_data, mimetype):
             if hasattr(ent, "_asdict"):  # is NamedTuple
+                ent_attributes: tuple[str, ...] = ent._fields
+                ent_tuple = type(ent)
+
+                if deserializer is None:
+                    deserializer = tuple_deserializer(
+                        ent_attributes, entities_metadata, tuple_=ent_tuple._make
+                    )
+
+                ent = deserializer(ent)
                 entities.append(ent._asdict())
             else:
                 entities.append(ent)
-
-    with open_url(entities_metadata_url) as entities_metadata_file:
-        entities_metadata_list = list(
-            load_entities(entities_metadata_file, "application/json")
-        )
-        entities_metadata = {element["ID"]: element for element in entities_metadata_list}
 
     taxonomies = {}
 
