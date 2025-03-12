@@ -266,7 +266,7 @@ def ansatz_task(self, db_id: int) -> str:
 
 
     TASK_LOGGER.info(f"Loaded input parameters from db:  entanglement='{entanglement}', num_qubits='{num_qubits}', num_layers='{num_layers}', append_measurement='{append_measurement}'")
-    ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers)
+    ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
 
     if append_measurement:
         ansatz.measure_all()
