@@ -264,7 +264,7 @@ class QasmVisualization(QHAnaPluginBase):
         return QASM_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nqiskit~=0.43"
+        return "pylatexenc~=2.10\nqiskit~=1.3.2\nmatplotlib~=3.7.2"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -273,6 +273,7 @@ TASK_LOGGER = get_task_logger(__name__)
 @CELERY.task(name=f"{QasmVisualization.instance.identifier}.generate_image", bind=True)
 def generate_image(self, url: str, hash: str) -> str:
     from qiskit import QuantumCircuit
+    from qiskit_qasm3_import import parse
     import matplotlib
 
     matplotlib.use("SVG")
@@ -291,7 +292,7 @@ def generate_image(self, url: str, hash: str) -> str:
         PluginState.delete_value(QasmVisualization.instance.identifier, hash, commit=True)
         return "Invalid circuit URL!"
 
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+    circuit = parse(circuit_qasm)
     fig = circuit.draw(output="mpl", interactive=False)
     figfile = BytesIO()
     fig.savefig(figfile, format="svg")
