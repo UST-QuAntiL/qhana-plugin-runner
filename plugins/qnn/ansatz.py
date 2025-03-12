@@ -66,8 +66,23 @@ class ENTANGLEMENT(Enum):
     FULL = "full"
     CIRCULAR = "circular"
 
+class ANSATZMETHOD(Enum):
+    REAL_AMPLITUDES = "real_amplitudes"
+    EFFICIENT_SU2 = "efficient_su2"
+
+
 
 class AnsatzParametersSchema(FrontendFormBaseSchema):
+    ansatzmethod = EnumField(
+        ANSATZMETHOD,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Ansatz Method",
+            "description": "Select the ansatz method.",
+            "input_type": "select",
+        },
+    )
     entanglement = EnumField(
         ENTANGLEMENT,
         required=True,
@@ -249,7 +264,7 @@ TASK_LOGGER = get_task_logger(__name__)
 @CELERY.task(name=f"{Ansatz.instance.identifier}.ansatz_task", bind=True)
 def ansatz_task(self, db_id: int) -> str:
     from qiskit import qasm3
-    from qiskit.circuit.library import RealAmplitudes
+    from qiskit.circuit.library import RealAmplitudes, EfficientSU2
 
     TASK_LOGGER.info(f"Starting new prepare task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -259,19 +274,30 @@ def ansatz_task(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
     
+    ansatzmethod: Optional[str] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("ansatzmethod", None)
     entanglement: Optional[str] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("entanglement", None)
     num_qubits: Optional[int] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("num_qubits", None)
     num_layers: Optional[int] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("num_layers", None)
     append_measurement: Optional[bool] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("append_measurement", None)
 
 
-    TASK_LOGGER.info(f"Loaded input parameters from db:  entanglement='{entanglement}', num_qubits='{num_qubits}', num_layers='{num_layers}', append_measurement='{append_measurement}'")
-    ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
+    TASK_LOGGER.info(f"Loaded input parameters from db: ansatzmethod='{ansatzmethod}', entanglement='{entanglement}', num_qubits='{num_qubits}', num_layers='{num_layers}', append_measurement='{append_measurement}'")
 
-    if append_measurement:
-        ansatz.measure_all()
+    if ansatzmethod == ANSATZMETHOD.REAL_AMPLITUDES:
+        ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
 
-    qasm_str = qasm3.dumps(ansatz)
+        if append_measurement:
+            ansatz.measure_all()
+
+        qasm_str = qasm3.dumps(ansatz)
+    
+    elif ansatzmethod == ANSATZMETHOD.EFFICIENT_SU2:
+        ansatz = EfficientSU2(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
+
+        if append_measurement:
+            ansatz.measure_all()
+
+        qasm_str = qasm3.dumps(ansatz)
 
     with SpooledTemporaryFile(mode="w") as output:
         output.write(qasm_str)
