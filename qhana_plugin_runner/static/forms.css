@@ -39,6 +39,10 @@
     color: red;
 }
 
+.selected-file-name {
+    overflow-wrap: break-word;
+}
+
 code.example {
     padding-block: 0.1rem;
     padding-inline: 0.2rem;
@@ -55,4 +59,8 @@ code.example {
     color: rgb(0, 247, 0);
     stroke-miterlimit: 10;
     stroke-dashoffset: 0;
+}
+
+textarea {
+    field-sizing: content;
 }

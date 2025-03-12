@@ -165,20 +165,22 @@ def default_serialize(value: Any) -> str:
 
 
 def serialize_multi(
-    value: Iterable[Any], serialize: Callable[[Any], str], separator: str = ";"
+    value: Optional[Iterable[Any]], serialize: Callable[[Any], str], separator: str = ";"
 ) -> str:
     """Serialize a list or set of values into a string.
 
     Each value is serialized with the ``serializer`` and the values are joined with the ``separator``.
 
     Args:
-        value (Iterable[Any]): the list or set of values to serialize
+        value (Iterable[Any]|None): the list or set of values to serialize
         serialize (Callable[[Any], str]): the serializer to use for single values
         separator (str, optional): the seperator to use between values. Must not be part of the serialized values! Defaults to ";".
 
     Returns:
         str: the string of serialized items.
     """
+    if value is None:
+        return ""
     return separator.join(serialize(val) for val in value)
 
 
@@ -239,7 +241,7 @@ def _get_deserializer(meta: Optional[AttributeMetadata]) -> Callable[[str], Any]
 
 
 def parse_attribute_metadata(
-    metadata_entities: Iterable[Union[Dict[str, Any]]]
+    metadata_entities: Iterable[Union[Dict[str, Any]]],
 ) -> Dict[str, AttributeMetadata]:
     """Parse a list or stream of entities into an attribute metadata dict mapping from attribute name to ``AttributeMetadata`` instance."""
     attribute_metadata = {}

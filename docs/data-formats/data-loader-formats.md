@@ -11,6 +11,7 @@ Entities can be serialized in two different formats (JSON or CSV).
 The names of attributes **must** be unique for all attributes from the same data loader.
 
 ```{note}
+
 The plugin runner provides utilities to read and write the entities from file formats specified here.
 The utilities can be found in the module {py:mod}`qhana_plugin_runner.plugin_utils.entity_marshalling`.
 ```
@@ -18,10 +19,17 @@ The utilities can be found in the module {py:mod}`qhana_plugin_runner.plugin_uti
 The examples here use the following entities:
 
 ```{csv-table}
+
 ID,href,color
 paintA,example.com/paints/paintA,#8a2be2
 paintB,example.com/paints/paintA,#e9322d
 ```
+
+```{seealso}
+
+{doc}`/data-formats/examples/entities`
+```
+
 
 ### Entities ({mimetype}`text/csv`)
 
@@ -36,6 +44,7 @@ Example:
 
 
 ```{code-block} text
+
 ID,href,color
 paintA,example.com/paints/paintA,#8a2be2
 paintB,example.com/paints/paintA,#e9322d
@@ -51,6 +60,7 @@ Files using the {mimetype}`application/json` mimetype must only contain one vali
 Example {mimetype}`application/json`:
 
 ```{code-block} json
+
 [
     {"ID": "paintA","href": "example.com/paints/paintA","color": "#8a2be2"},
     {"ID": "paintB","href": "example.com/paints/paintB","color": "#e9322d"}
@@ -62,6 +72,11 @@ Example {mimetype}`application/X-lines+json`:
 ```{code-block} json
 {"ID": "paintA","href": "example.com/paints/paintA","color": "#8a2be2"}
 {"ID": "paintB","href": "example.com/paints/paintB","color": "#e9322d"}
+```
+
+```{seealso}
+
+{doc}`/data-formats/examples/entities`
 ```
 
 
@@ -134,11 +149,12 @@ color,Color,the color of the paint,string
 File Type Tag: `graph/*`
 
 Taxonomies and other entity structures that form a graph should be serialized as a graph.
-Formats like CSV are unsuitable to serialize graphs as they would need at least two files, one for the entities and one for the relations.
+Formats like CSV are unsuitable to serialize graphs as they would need at least two files, one for the {ref}`entities <data-formats/data-model:entities>` and one for the {ref}`relations <data-formats/data-model:relations>`.
 
 ### Graph ({mimetype}`text/json`)
 
 ```{code-block} json
+
 {
     "GRAPH_ID": "graphA",
     "type": "tree",
@@ -151,4 +167,9 @@ Formats like CSV are unsuitable to serialize graphs as they would need at least 
         {"source": "paintA", "target": "paintB"}
     ]
 }
+```
+
+```{seealso}
+
+{doc}`/data-formats/examples/graphs`
 ```

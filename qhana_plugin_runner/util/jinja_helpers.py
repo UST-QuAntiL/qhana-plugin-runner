@@ -84,7 +84,7 @@ def marshmallow_validators_to_field_attrs(field: fields.Field) -> str:
 
 
 def space_delimited_list(
-    items: Union[Sequence[Union[str, float, int, bool, None]], str, float, int, bool]
+    items: Union[Sequence[Union[str, float, int, bool, None]], str, float, int, bool],
 ) -> Optional[str]:
     if not isinstance(items, (list, tuple)):
         if items is None:

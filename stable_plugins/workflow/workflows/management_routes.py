@@ -51,7 +51,7 @@ class WorkflowIncidentWithDate(WorkflowIncident):
 
 
 def add_deployed_info(
-    process_definition: Union[Dict[str, Any], Sequence[Dict[str, Any]]]
+    process_definition: Union[Dict[str, Any], Sequence[Dict[str, Any]]],
 ):
     if isinstance(process_definition, dict):
         plugin_url = url_for(
@@ -99,7 +99,7 @@ class WfManagementView(MethodView):
                 data_input=[],
                 data_output=[],
             ),
-            tags=["workflow", "bpmn", "camunda-engine"],
+            tags=WorkflowManagement.instance.tags,
         )
 
 

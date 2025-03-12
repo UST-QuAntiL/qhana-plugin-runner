@@ -44,7 +44,7 @@ class ScipyMinimizerGrad(QHAnaPluginBase):
         return SCIPY_MINIMIZER_GRAD_BLP
 
     def get_requirements(self) -> str:
-        return "scipy~=1.10.1"
+        return "scipy~=1.10"
 
 
 try:

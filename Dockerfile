@@ -40,7 +40,7 @@ ADD https://raw.githubusercontent.com/UST-QuAntiL/docker-localhost-proxy/v0.3/Ca
 ADD https://raw.githubusercontent.com/UST-QuAntiL/docker-localhost-proxy/v0.3/start_proxy.sh start_proxy.sh
 RUN chmod +x start_proxy.sh
 
-RUN python -m pip install poetry gunicorn
+RUN python -m pip install poetry poetry-plugin-export gunicorn
 
 COPY --chown=gunicorn . /app
 

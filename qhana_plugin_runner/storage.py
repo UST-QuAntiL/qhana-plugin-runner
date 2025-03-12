@@ -17,12 +17,23 @@
 from pathlib import Path
 from secrets import token_urlsafe
 from shutil import copyfileobj
-from typing import IO, BinaryIO, ClassVar, Dict, Optional, TextIO, Type, Union
+from typing import (
+    IO,
+    BinaryIO,
+    ClassVar,
+    Dict,
+    Optional,
+    TextIO,
+    Type,
+    Union,
+    ContextManager,
+)
 
 from flask.app import Flask
 from flask.helpers import url_for
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.requests import open_url, open_url_as_file_like_simple
 
 
 class FileStoreInterface:
@@ -121,6 +132,13 @@ class FileStoreInterface:
 
         Returns:
             str: the URL to the file
+        """
+        raise NotImplementedError()
+
+    def open(self, file_info: TaskFile) -> ContextManager[BinaryIO]:
+        """Returns a context manager for a file-like object for reading the contents of a task file.
+        :param file_info: the information of the task file
+        :return: context manager for a file-like object
         """
         raise NotImplementedError()
 
@@ -265,6 +283,9 @@ class FileStore(FileStoreInterface):
     def get_task_file_url(self, file_info: TaskFile, external: bool = True) -> str:
         return self.get_file_url(file_info.file_storage_data, external=external)
 
+    def open(self, file_info: TaskFile) -> ContextManager[BinaryIO]:
+        return open_url_as_file_like_simple(self.get_task_file_url(file_info))
+
 
 class LocalFileStore(FileStore, name="local_filesystem"):
     """A file store implementation using the local file system."""
@@ -345,6 +366,9 @@ class LocalFileStore(FileStore, name="local_filesystem"):
             **{"file-id": file_info.security_tag},
             _external=True,
         )
+
+    def open(self, file_info: TaskFile) -> ContextManager[BinaryIO]:
+        return open(file_info.file_storage_data, mode="rb")
 
 
 class UrlFileStore(FileStore, name="url_file_store"):
@@ -519,6 +543,16 @@ class FileStoreRegistry(FileStoreInterface):
         if storage_provider is None:
             raise NotImplementedError()
         return self._stores[storage_provider].get_task_file_url(file_info, external)
+
+    def open(self, file_info: TaskFile) -> ContextManager[BinaryIO]:
+        storage_provider = (
+            file_info.storage_provider
+            if file_info.storage_provider
+            else self._default_store
+        )
+        if storage_provider is None:
+            raise NotImplementedError()
+        return self._stores[storage_provider].open(file_info)
 
 
 # The file store registry that should be imported and used

@@ -9,17 +9,17 @@ Currently, quantum circuit always refers to circuits for **gate based** quantum 
 
 Required Tags:
 
-| Tag                   | Description |
-|-----------------------|-------------|
-| `circuit-executor`    | The identifying tag for plugins implementing this interface.     |
+| Tag                | Description                                                  |
+|--------------------|--------------------------------------------------------------|
+| `circuit-executor` | The identifying tag for plugins implementing this interface. |
 
 Optional Tags:
 
-| Tag               | Description |
-|:------------------|:------------|
-| `qc-simulator`    | If present, the plugin uses a quantum computing simulator.      |
-| `qiskit`          | A tag specifying the (main) SDK being used by the plugin.      |
-| `qasm` `qasm-2`   | The language that this plugin can understand. The tag `qasm` (for OpenQASM) should always be accompanied by the specific version of qasm supported.     |
+| Tag             | Description                                                                                                                                         |
+|:----------------|:----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `qc-simulator`  | If present, the plugin uses a quantum computing simulator.                                                                                          |
+| `qiskit`        | A tag specifying the (main) SDK being used by the plugin.                                                                                           |
+| `qasm` `qasm-2` | The language that this plugin can understand. The tag `qasm` (for OpenQASM) should always be accompanied by the specific version of qasm supported. |
 
 
 
@@ -62,9 +62,10 @@ Circuit executor plugins can have two types of data (i.e. file based) inputs:
     Unknown execution options must be ignored.
     Execution options that are specific to specific plugins should have unique names.
 
-    | Attribute | Description                                      |
-    |:----------|:-------------------------------------------------|
-    | `shots`   | The number of shots to run the circuit.          |
+    | Attribute     | Description                                     |
+    |:--------------|:------------------------------------------------|
+    | `shots`       | The number of shots to run the circuit.         |
+    | `statevector` | If true, request additional statevector result. |
 
 
 Circuit executor plugins can have two types of direct parameter inputs:
@@ -104,12 +105,12 @@ Circuit executor plugins must have the following required data outputs:
     For simulators (or for the transpiling step) which can use a fixed seed to create fully reproducible results, this seed should be included in the execution options.
     Options set by the user in the starting step should be output as is, with some exceptions:
 
-    | Attribute         | Description |
-    |:------------------|:------------|
-    | `start-session`   | This flag should never be output in the execution options.           |
-    | `api-token`       | Passwords, etc. should never be output in the execution options.     |
-    | `username`        | Passwords, etc. should never be output in the execution options.     |
-    | `password`        | Passwords, etc. should never be output in the execution options.     |
+    | Attribute       | Description                                                      |
+    |:----------------|:-----------------------------------------------------------------|
+    | `start-session` | This flag should never be output in the execution options.       |
+    | `api-token`     | Passwords, etc. should never be output in the execution options. |
+    | `username`      | Passwords, etc. should never be output in the execution options. |
+    | `password`      | Passwords, etc. should never be output in the execution options. |
 
 
 If available, circuit executors can optionally output different representations of the results:

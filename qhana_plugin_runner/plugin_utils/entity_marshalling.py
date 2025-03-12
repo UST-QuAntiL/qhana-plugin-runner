@@ -179,7 +179,7 @@ register_dialect("default", DefaultDialect)
 
 
 def ensure_dict(
-    items: Iterable[Union[Dict[str, Any], NamedTuple]]
+    items: Iterable[Union[Dict[str, Any], NamedTuple]],
 ) -> Generator[Dict[str, Any], None, None]:
     """Ensure that all entities in an iterable are dicts.
 
@@ -248,7 +248,7 @@ def _str_to_nr(value: Optional[str], strict: bool = False) -> Union[float, int, 
 def ensure_array(
     items: Iterable[Union[Dict[str, Any], NamedTuple]], strict: bool = False
 ) -> Generator[ArrayEntity, None, None]:
-    """Convert entities from a "entity/vector" or "entity/numberic" format into array entities.
+    """Convert entities from a "entity/vector" or "entity/numeric" format into array entities.
 
     This method tries to convert all string values to numbers.
     Missing values (`None`) are left as is by default.
@@ -258,7 +258,8 @@ def ensure_array(
 
     Args:
         items (Iterable[Dict[str, Any]|NamedTuple]): the input entitiy stream/iterable
-        strict (bool, optional): if True any value that cannot be converted to a number raises an exception. Defaults to False.
+        strict (bool, optional): if True any value that cannot be converted to a number
+            raises an exception. Defaults to False.
 
     Yields:
         Generator[ArrayEntity, None, None]: the output iterable

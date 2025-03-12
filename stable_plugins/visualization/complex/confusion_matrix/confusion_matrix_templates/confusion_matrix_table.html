@@ -1,0 +1,36 @@
+<table>
+    <!-- All columns are equal width, except for the actual label column, which is 5% of the width -->
+    <colgroup>
+        <col style="width: 5%;">
+        {% for i in range(confusion_matrix|count + 1) %}
+            <col style="width: {{ 95/(confusion_matrix|count + 1) }}%;">
+        {% endfor %}
+    </colgroup>
+    <!-- Set up no border for top left and Predicted Label spanning all labels -->
+    <tr>
+        <td rowspan="2" style="border: none;"></td>
+        <td style="border: none;"></td>
+        <th colspan={{ confusion_matrix|count }}>Predicted Label</th>
+    </tr>
+    <!-- Wrong ids in top left and correct labels from label_list horizontally -->
+    <tr>
+        <td>Wrong: {{ wrong_ids }}</td>
+        {%- for predicted in label_list -%}
+            <th>{{predicted}}{% if permutation[predicted] != predicted %} → {{permutation[predicted]}}{% endif %}</th>
+        {%- endfor -%}
+    </tr>
+
+    {%- for i in range(confusion_matrix|count) -%}
+        <tr>
+            <!-- Very first column is actual label vertically -->
+            {% if i == 0 %}
+                <th style="writing-mode: vertical-lr;" rowspan={{ confusion_matrix|count }}>Actual Label</th>
+            {% endif %}
+            <th>{{label_list[i]}}</th>
+            {%- for j in range(confusion_matrix[i]|count) -%}
+                <td class="{% if i == j %}correct-prediction{% endif %}">{{ confusion_matrix[i][j] }}</td>
+            {%- endfor -%}
+        </tr>
+    {%- endfor -%}
+
+</table>

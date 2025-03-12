@@ -63,7 +63,7 @@ from qhana_plugin_runner.tasks import (
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "circuit-demo"
-__version__ = "v1.0.0"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -96,11 +96,22 @@ class CircuitDemoParametersSchema(FrontendFormBaseSchema):
             "label": "Select Circuit Executor Plugin",
         },
     )
+    statevector = fields.Bool(
+        required=False,
+        missing=False,
+        metadata={
+            "label": "Request statevector",
+        },
+    )
 
 
 class WebhookParams(MaBaseSchema):
     source = fields.URL()
     event = fields.String()
+
+
+class ExecutionOptionsParams(MaBaseSchema):
+    statevector = fields.Bool(missing=False)
 
 
 @CIRCUIT_BLP.route("/")
@@ -229,8 +240,13 @@ class ProcessView(MethodView):
             bell_state=state.value,
             _external=True,
         )
+
+        statevector: bool = arguments.get("statevector", False)
+
         options_url = url_for(
-            f"{CIRCUIT_BLP.name}.{ExecutionOptionsView.__name__}", _external=True
+            f"{CIRCUIT_BLP.name}.{ExecutionOptionsView.__name__}",
+            statevector=statevector,
+            _external=True,
         )
         db_task = ProcessingTask(
             task_name=circuit_demo_task.name,
@@ -306,10 +322,11 @@ class ContinueProcessView(MethodView):
 class ExecutionOptionsView(MethodView):
     """Get the execution options."""
 
-    def get(self):
+    @CIRCUIT_BLP.arguments(ExecutionOptionsParams(), location="query", as_kwargs=True)
+    def get(self, statevector: bool = False):
         """Get the requested execution options."""
 
-        return jsonify({"ID": "1", "shots": 2048, "statevector": False})
+        return jsonify({"ID": "1", "shots": 2048, "statevector": statevector})
 
 
 @CIRCUIT_BLP.route("/circuit/<string:bell_state>/")
@@ -395,7 +412,7 @@ class CircuitDemo(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "A demo plugin implementing circuits for the bell states and executing them using a circuit executor."
-    tags = ["circuit-demo", "demo"]
+    tags = ["circuit-demo", "demo", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -597,7 +614,7 @@ def circuit_demo_result_task(self, db_id: int) -> str:
     outputs = task_data.data.get("result", {}).get("outputs", [])
 
     for out in outputs:
-        if out.get("name", "").startswith("result-counts"):
+        if out.get("name", "").startswith(("result-counts", "result-statevector")):
             name = out.get("name", "")
             url = out.get("href", "")
             data_type = out.get("dataType", "")

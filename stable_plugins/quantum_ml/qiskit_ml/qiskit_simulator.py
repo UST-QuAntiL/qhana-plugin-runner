@@ -13,10 +13,11 @@
 # limitations under the License.
 
 import mimetypes
+from collections import ChainMap
 from http import HTTPStatus
 from json import dump, dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, ChainMap, Dict, Mapping, Optional, Union, cast
+from typing import Any, Dict, Mapping, Optional, Union, cast
 from uuid import uuid4
 
 import marshmallow as ma
@@ -57,7 +58,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qiskit-simulator"
-__version__ = "v0.3.0"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -101,6 +102,15 @@ class QiskitSimulatorParametersSchema(FrontendFormBaseSchema):
             "label": "Shots",
             "description": "The number of shots to simulate. If execution options are specified they will override this setting!",
             "input_type": "number",
+        },
+    )
+    statevector = ma.fields.Bool(
+        required=False,
+        allow_none=True,
+        load_default=False,
+        metadata={
+            "label": "Include Statevector",
+            "description": "Include a statevector result.",
         },
     )
 
@@ -275,7 +285,7 @@ class QiskitSimulator(QHAnaPluginBase):
     description = (
         "Allows execution of quantum circuits using a simulator packaged with qiskit."
     )
-    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2"]
+    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -291,23 +301,46 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QiskitError, QuantumCircuit, execute
+    from qiskit import QiskitError, QuantumCircuit, execute, Aer
+    from qiskit.qasm2 import loads as loads2
+    from qiskit.qasm3 import loads as loads3, QASM3ImporterError
     from qiskit.result.result import ExperimentResult, Result
-    from qiskit_aer import StatevectorSimulator
 
-    backend = StatevectorSimulator()  # TODO noise model?
+    backend_counts = Aer.get_backend("qasm_simulator")
+    backend_statevector = Aer.get_backend("statevector_simulator")
 
-    circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
+    circuit: QuantumCircuit
 
-    result: Result = execute(circuit, backend, shots=execution_options["shots"]).result()
-    if not result.success:
-        # TODO better error
-        raise ValueError("Circuit could not be simulated!", result)
+    try:
+        circuit = loads3(circuit_qasm)
+    except QASM3ImporterError:
+        circuit = loads2(circuit_qasm)
 
-    experiment_result: ExperimentResult = result.results[0]
-    extra_metadata = result.metadata
+    result_count: Result = execute(
+        circuit, backend_counts, shots=execution_options["shots"]
+    ).result()
 
-    time_taken = result.time_taken
+    if not result_count.success:
+        from qiskit.visualization.circuit.circuit_visualization import (
+            _text_circuit_drawer,
+        )
+
+        drawn_circuit = str(_text_circuit_drawer(circuit, encoding="utf-8"))
+        TASK_LOGGER.warning("Failed to simulate circuit.\n" + drawn_circuit)
+        raise ValueError("Circuit could not be simulated!", result_count)
+
+    if execution_options.get("statevector"):
+        # only execute if statevector result was requested in the first place
+        result_state: Optional[Result] = execute(circuit, backend_statevector).result()
+        if result_state and not result_state.success:
+            result_state = None
+    else:
+        result_state = None
+
+    experiment_result: ExperimentResult = result_count.results[0]
+    extra_metadata = result_count.metadata
+
+    time_taken = result_count.time_taken
     time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
     shots = experiment_result.shots
     if isinstance(shots, tuple):
@@ -319,17 +352,17 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     metadata = {
         # trace ids (specific to IBM qiskit jobs)
-        "jobId": result.job_id,
-        "qobjId": result.qobj_id,
+        "jobId": result_count.job_id,
+        "qobjId": result_count.qobj_id,
         # QPU/Simulator information
         "qpuType": "simulator",
         "qpuVendor": "IBM",
-        "qpuName": result.backend_name,
-        "qpuVersion": result.backend_version,
+        "qpuName": result_count.backend_name,
+        "qpuVersion": result_count.backend_version,
         "seed": seed,  # only for simulators
         "shots": shots,
         # Time information
-        "date": result.date,
+        "date": result_count.date,
         "timeTaken": time_taken,  # total job time
         "timeTakenIdle": 0,  # idle/waiting time
         "timeTakenQpu": time_taken,  # total qpu time
@@ -337,11 +370,18 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "timeTakenQpuExecute": time_taken_execute,
     }
 
-    counts = result.get_counts()
+    # If no measurements set shots to an empty key
+    if result_count.results[0].metadata["num_clbits"] == 0:
+        counts = {"": experiment_result.shots}
+    else:
+        try:
+            counts = result_count.get_counts()
+        except QiskitError:
+            counts = {"": experiment_result.shots}
 
     state_vector: Optional[Any] = None
     try:
-        state_vector = result.get_statevector()
+        state_vector = result_state.get_statevector() if result_state else None
     except QiskitError:
         pass
 
@@ -370,6 +410,7 @@ def execute_circuit(self, db_id: int) -> str:
 
     execution_options: Dict[str, Any] = {
         "shots": task_options.get("shots", 1),
+        "statevector": bool(task_options.get("statevector")),
     }
 
     if execution_options_url:
@@ -393,6 +434,16 @@ def execute_circuit(self, db_id: int) -> str:
 
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
+    if isinstance(execution_options["statevector"], str):
+        execution_options["statevector"] = execution_options["statevector"] in (
+            "1",
+            "yes",
+            "Yes",
+            "YES",
+            "true",
+            "True",
+            "TRUE",
+        )
 
     metadata, counts, state_vector = simulate_circuit(circuit_qasm, execution_options)
 
