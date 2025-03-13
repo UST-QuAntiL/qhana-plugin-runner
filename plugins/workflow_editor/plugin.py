@@ -2,6 +2,7 @@ from time import time
 from typing import ClassVar, Optional
 
 from flask import Blueprint, Flask
+from kombu.exceptions import ConnectionError
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
@@ -49,12 +50,23 @@ class WorkflowEditor(QHAnaPluginBase):
         config = get_config_from_app(self.app)
         saved_config = PluginState.get_value(self.name, CONFIG_KEY, None)
         assert saved_config is None or isinstance(saved_config, dict)
-        if saved_config is None or saved_config.get("_updated", 0) < (time() - 3600):
+        last_updated = saved_config.get("_updated", 0) if saved_config else 0
+        now = time()
+        assert isinstance(last_updated, (int, float))
+        if last_updated < (now - 3600):
             saved_config = get_config_from_registry(self.app)
             if saved_config:
                 saved_config["_updated"] = time()
                 PluginState.set_value(self.name, CONFIG_KEY, saved_config, commit=True)
-        # FIXME: if updated is a little old, update config in background
+            else:
+                PluginState.delete_value(self.name, CONFIG_KEY)
+        elif last_updated < (now - 60):
+            try:
+                update_config.apply_async(expires=30, retry=False)
+            except NameError:
+                pass  # called too early, name not yet defined
+            except ConnectionError:
+                pass  # redis is not available, do nothing
         config.update(saved_config)
 
         return postprocess_config(config)
@@ -64,3 +76,6 @@ class WorkflowEditor(QHAnaPluginBase):
             self._blueprint = WF_EDITOR_BLP
             return WF_EDITOR_BLP
         return self._blueprint
+
+
+from .tasks import update_config
