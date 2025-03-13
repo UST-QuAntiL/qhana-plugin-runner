@@ -1,9 +1,19 @@
+from time import time
 from typing import ClassVar, Optional
 
 from flask import Blueprint, Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
+from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+
+from .config import (
+    CONFIG_KEY,
+    get_config_from_app,
+    get_config_from_registry,
+    load_config_from_env,
+    postprocess_config,
+)
 
 _name = "workflow-editor"
 _version = "v0.1.0"
@@ -29,6 +39,25 @@ class WorkflowEditor(QHAnaPluginBase):
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
+
+    def init_app(self, app: Flask):
+        super().init_app(app)
+        load_config_from_env(app)
+
+    def get_config(self) -> dict:
+        # load default config from app config
+        config = get_config_from_app(self.app)
+        saved_config = PluginState.get_value(self.name, CONFIG_KEY, None)
+        assert saved_config is None or isinstance(saved_config, dict)
+        if saved_config is None or saved_config.get("_updated", 0) < (time() - 3600):
+            saved_config = get_config_from_registry(self.app)
+            if saved_config:
+                saved_config["_updated"] = time()
+                PluginState.set_value(self.name, CONFIG_KEY, saved_config, commit=True)
+        # FIXME: if updated is a little old, update config in background
+        config.update(saved_config)
+
+        return postprocess_config(config)
 
     def get_api_blueprint(self):
         if not self._blueprint:

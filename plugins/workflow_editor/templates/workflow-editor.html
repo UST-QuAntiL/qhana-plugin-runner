@@ -10,14 +10,19 @@
     }
 
     .content {
-        width: 100vw;
-        height: 100vh;
-        display: relative;
+        width: 100%;
+        height: calc(100vh - 1rem);
+        padding-block: 0.5rem;
+        position: relative;
         background-color: white;
         color: black;
     }
 </style>
 
+<script>
+    // register a beforeunload listener first to prevent unloading message
+    window.addEventListener("beforeunload", (event) => {event.stopImmediatePropagation();}, {capture: true});
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/ace.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/mode-xml.min.js"></script>
 <script src="{{wf_editor_js}}"></script>
@@ -50,7 +55,6 @@
     editor.setTheme("ace/theme/textmate");
 
     const modeler = document.getElementById("main-wf-modeler");
-    console.log({ modeler });
     
     fetch('http://localhost:5005/plugins')
         .then(response => response.json())
@@ -66,70 +70,69 @@
         {
             name: "dataflow",
             config: {
-                configurationsEndpoint: "{{dataflowEndpoint}}"
+                configurationsEndpoint: "{{DATAFLOW_ENDPOINT}}"
             }
         },
         {
             name: "quantme",
             config: {
-                transformationFrameworkEndpoint: "{{transformationFrameworkEndpoint}}",
-                nisqAnalyzerEndpoint: "{{nisqAnalyzerEndpoint}}",
-                nisqAnalyzerUiEndpoint: "{{nisqAnalyzerUiEndpoint}}",
-                qprovEndpoint: "{{qprovEndpoint}}",
-                scriptSplitterEndpoint: "{{scriptSplitterEndpoint}}",
-                scriptSplitterThreshold: "{{scriptSplitterThreshold}}",
-                qiskitRuntimeHandlerEndpoint: "{{qiskitRuntimeHandlerEndpoint}}",
-                awsRuntimeHandlerEndpoint: "{{awsRuntimeHandlerEndpoint}}"
+                transformationFrameworkEndpoint: "{{TRANSFORMATION_FRAMEWORK_ENDPOINT}}",
+                nisqAnalyzerEndpoint: "{{NISQ_ANALYZER_ENDPOINT}}",
+                nisqAnalyzerUiEndpoint: "{{NISQ_ANALYZER_UI_ENDPOINT}}",
+                qprovEndpoint: "{{QPROV_ENDPOINT}}",
+                scriptSplitterEndpoint: "{{SCRIPT_SPLITTER_ENDPOINT}}",
+                scriptSplitterThreshold: "{{SCRIPT_SPLITTER_THRESHOLD}}",
+                qiskitRuntimeHandlerEndpoint: "{{QISKIT_RUNTIME_HANDLER_ENDPOINT}}",
+                awsRuntimeHandlerEndpoint: "{{AWS_RUNTIME_HANDLER_ENDPOINT}}"
             }
         },
-        {
-            name: "planqk"
-        },
+        // {
+        //     name: "planqk"
+        // },
         {
             name: "qhana",
             config: {
-                qhanaPluginRegistryURL: "{{qhanaPluginRegistryURL|safe}}"
+                qhanaPluginRegistryURL: "{{PLUGIN_REGISTRY_URL}}"
             }
         },
         {
             name: "pattern",
             config: {
-                patternAtlasEndpoint: "{{patternAtlasEndpoint}}",
-                patternAtlasUIEndpoint: "{{patternAtlasUIEndpoint}}",
-                qcAtlasEndpoint: "{{qcAtlasEndpoint}}"
+                patternAtlasEndpoint: "{{PATTERN_ATLAS_ENDPOINT}}",
+                patternAtlasUIEndpoint: "{{PATTERN_ATLAS_UI_ENDPOINT}}",
+                qcAtlasEndpoint: "{{QC_ATLAS_ENDPOINT}}"
             }
         },
         {
             name: "opentosca", 
             config: {
-                opentoscaEndpoint: "{{opentoscaEndpoint}}",
-                wineryEndpoint: "{{wineryEndpoint}}"
+                opentoscaEndpoint: "{{OPENTOSCA_ENDPOINT}}",
+                wineryEndpoint: "{{WINERY_ENDPOINT}}"
             }
         },
         {
             name: "editor",
             config: {
-                camundaEndpoint: "{{camundaEndpoint}}",
-                fileName: "{{fileName}}",
-                transformedWorkflowHandler: "{{transformedWorkflowHandler}}",
-                autoSaveFileOption: "{{autoSaveFileOption}}",
-                fileFormat: "{{fileFormat}}",
-                autoSaveIntervalSize: "{{autoSaveIntervalSize}}",
-                githubToken: "{{githubToken}}",
-                githubRepositoryName: "{{githubRepositoryName}}",
-                githubUsername: "{{githubUsername}}",
-                githubRepositoryPath: "{{githubRepositoryPath}}",
-                uploadGithubRepositoryName: "{{uploadGithubRepositoryName}}",
-                uploadGithubRepositoryOwner: "{{uploadGithubRepositoryOwner}}",
-                uploadGithubRepositoryPath: "{{uploadGithubRepositoryPath}}",
-                uploadFileName: "{{uploadFileName}}",
-                uploadBranchName: "{{uploadBranchName}}",
+                camundaEndpoint: "{{CAMUNDA_ENDPOINT}}",
+                fileName: "{{FILE_NAME}}",
+                transformedWorkflowHandler: "{{TRANSFORMED_WORKFLOW_HANDLER}}",
+                autoSaveFileOption: "{{AUTO_SAVE_FILE_OPTION}}",
+                fileFormat: "{{FILE_FORMAT}}",
+                autoSaveIntervalSize: "{{AUTO_SAVE_INTERVAL_SIZE}}",
+                githubToken: "{{GITHUB_TOKEN}}",
+                githubRepositoryName: "{{GITHUB_REPOSITORY_NAME}}",
+                githubUsername: "{{GITHUB_USERNAME}}",
+                githubRepositoryPath: "{{GITHUB_REPOSITORY_PATH}}",
+                uploadGithubRepositoryName: "{{UPLOAD_GITHUB_REPOSITORY_NAME}}",
+                uploadGithubRepositoryOwner: "{{UPLOAD_GITHUB_REPOSITORY_OWNER}}",
+                uploadGithubRepositoryPath: "{{UPLOAD_GITHUB_REPOSITORY_PATH}}",
+                uploadFileName: "{{UPLOAD_FILE_NAME}}",
+                uploadBranchName: "{{UPLOAD_BRANCH_NAME}}",
             }
         }
     ];
 
-    console.log("Plugin Configurations: ", modeler.pluginConfigs);
-    console.log("QHAna Plugins: ", modeler.qhanaPlugins);
+    console.log("WF Editor: ", modeler);
 </script>
 
 {% endblock script %}
