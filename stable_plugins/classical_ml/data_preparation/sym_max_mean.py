@@ -354,6 +354,8 @@ def calculation_task(self, db_id: int) -> str:
 
                 if ent_attr1 is None or ent_attr2 is None:
                     sym_max_mean = None  # TODO: add handling of missing values
+                elif len(ent_attr1) == 0 or len(ent_attr2) == 0:
+                    sym_max_mean = None
                 else:
                     if isinstance(ent_attr1, set):
                         ent_attr1 = list(ent_attr1)
@@ -367,44 +369,41 @@ def calculation_task(self, db_id: int) -> str:
                     if not isinstance(ent_attr2, list):
                         ent_attr2 = [ent_attr2]
 
-                    if len(ent_attr1) == 0 or len(ent_attr2) == 0:
-                        sym_max_mean = 0
-                    else:
-                        # calculate Sym Max Mean
+                    # calculate Sym Max Mean
 
-                        sum1 = 0.0
-                        sum2 = 0.0
+                    sum1 = 0.0
+                    sum2 = 0.0
 
-                        for a in ent_attr1:
-                            # get maximum similarity
-                            max_sim = 0.0
-
-                            for b in ent_attr2:
-                                sim = _get_sim(elem_sims, a, b)
-
-                                if sim > max_sim:
-                                    max_sim = sim
-
-                            sum1 += max_sim
-
-                        # calculate the average of the maximum similarities
-                        avg1 = sum1 / len(ent_attr1)
+                    for a in ent_attr1:
+                        # get maximum similarity
+                        max_sim = 0.0
 
                         for b in ent_attr2:
-                            max_sim = 0.0
+                            sim = _get_sim(elem_sims, a, b)
 
-                            for a in ent_attr1:
-                                sim = _get_sim(elem_sims, b, a)
+                            if sim > max_sim:
+                                max_sim = sim
 
-                                if sim > max_sim:
-                                    max_sim = sim
+                        sum1 += max_sim
 
-                            sum2 += max_sim
+                    # calculate the average of the maximum similarities
+                    avg1 = sum1 / len(ent_attr1)
 
-                        # calculate the average of the maximum similarities
-                        avg2 = sum2 / len(ent_attr2)
+                    for b in ent_attr2:
+                        max_sim = 0.0
 
-                        sym_max_mean = (avg1 + avg2) / 2.0
+                        for a in ent_attr1:
+                            sim = _get_sim(elem_sims, b, a)
+
+                            if sim > max_sim:
+                                max_sim = sim
+
+                        sum2 += max_sim
+
+                    # calculate the average of the maximum similarities
+                    avg2 = sum2 / len(ent_attr2)
+
+                    sym_max_mean = (avg1 + avg2) / 2.0
 
                 attribute_similarities.append(
                     {
