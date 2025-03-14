@@ -354,8 +354,10 @@ def calculation_task(self, db_id: int) -> str:
 
                 if ent_attr1 is None or ent_attr2 is None:
                     sym_max_mean = None  # TODO: add handling of missing values
-                elif len(ent_attr1) == 0 or len(ent_attr2) == 0:
+                elif len(ent_attr1) == 0 and len(ent_attr2) == 0:
                     sym_max_mean = None
+                elif len(ent_attr1) == 0 or len(ent_attr2) == 0:
+                    sym_max_mean = 0
                 else:
                     if isinstance(ent_attr1, set):
                         ent_attr1 = list(ent_attr1)
