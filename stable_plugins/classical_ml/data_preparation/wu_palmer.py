@@ -55,6 +55,7 @@ from qhana_plugin_runner.plugin_utils.attributes import (
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
+    EntityTupleMixin,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
@@ -515,7 +516,7 @@ def calculation_task(self, db_id: int) -> str:
         entities = []
 
         for ent in load_entities(entities_data, mimetype):
-            if hasattr(ent, "_asdict"):  # is NamedTuple
+            if isinstance(ent, EntityTupleMixin):  # is NamedTuple
                 if deserializer is None:
                     ent_attributes: tuple[str, ...] = ent._fields
                     ent_tuple = type(ent)
@@ -524,7 +525,7 @@ def calculation_task(self, db_id: int) -> str:
                     )
 
                 ent = deserializer(ent)
-                entities.append(ent._asdict())
+                entities.append(ent.as_dict())
             else:
                 entities.append(ent)
 
