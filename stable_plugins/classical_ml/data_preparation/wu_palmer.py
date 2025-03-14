@@ -518,7 +518,7 @@ def calculation_task(self, db_id: int) -> str:
         for ent in load_entities(entities_data, mimetype):
             if isinstance(ent, EntityTupleMixin):  # is NamedTuple
                 if deserializer is None:
-                    ent_attributes: tuple[str, ...] = ent._fields
+                    ent_attributes: tuple[str, ...] = type(ent).entity_attributes
                     ent_tuple = type(ent)
                     deserializer = tuple_deserializer(
                         ent_attributes, entities_metadata, tuple_=ent_tuple._make
