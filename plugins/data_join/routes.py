@@ -58,7 +58,7 @@ class PluginRootView(MethodView):
             version=plugin.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{JOIN_BLP.name}.ProcessView"),
+                href=url_for(f"{JOIN_BLP.name}.LoadBaseView"),
                 ui_href=url_for(f"{JOIN_BLP.name}.MicroFrontend"),
                 plugin_dependencies=[],
                 data_input=[],
