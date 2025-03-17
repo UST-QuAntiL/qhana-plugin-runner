@@ -28,6 +28,7 @@ JOIN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Data Join plugin API.",
+    template_folder="templates",
 )
 
 
