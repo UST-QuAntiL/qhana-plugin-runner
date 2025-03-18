@@ -71,14 +71,22 @@ class AggregatorsEnum(Enum):
     min = "Min"
 
 
+class MissingDataHandling(Enum):
+    ignore = "ignore"
+    mean = "mean"
+    max = "max"
+
+
 class InputParameters:
     def __init__(
         self,
         attribute_distances_url: str,
         aggregator: AggregatorsEnum,
+        missing_data_handling: MissingDataHandling,
     ):
         self.attribute_distances_url = attribute_distances_url
         self.aggregator = aggregator
+        self.missing_data_handling = missing_data_handling
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -100,6 +108,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Aggregator",
             "description": "Aggregator that shall be used to aggregate the attribute distances to a single distance value.",
+            "input_type": "select",
+        },
+    )
+    missing_data_handling = EnumField(
+        MissingDataHandling,
+        required=True,
+        metadata={
+            "label": "Missing data handling",
+            "description": "Defines how a missing attribute distance should be handled.",
             "input_type": "select",
         },
     )
@@ -267,6 +284,10 @@ def calculation_task(self, db_id: int) -> str:
     )
     aggregator = input_params.aggregator
     TASK_LOGGER.info(f"Loaded input parameters from db: aggregator='{aggregator}'")
+    missing_data_handling = input_params.missing_data_handling
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: missing_data_handling='{missing_data_handling}'"
+    )
 
     # load data from file
 
@@ -276,7 +297,55 @@ def calculation_task(self, db_id: int) -> str:
         # removes .json from file name to get the name of the attribute
         attr_name = file_name[:-5]
 
-        attribute_distances[attr_name] = json.load(file)
+        loaded_distances = json.load(file)
+
+        if missing_data_handling == MissingDataHandling.ignore:
+            # removes elements with None distance
+            loaded_distances = [
+                dist for dist in loaded_distances if dist["distance"] is not None
+            ]  # FIXME: handle all distances being None
+        elif missing_data_handling == MissingDataHandling.mean:
+            distances = [
+                dist["distance"]
+                for dist in loaded_distances
+                if dist["distance"] is not None
+            ]  # FIXME: handle all distances being None
+            mean_distance = sum(distances) / len(distances)
+
+            # replaces None distances with the mean distance
+            new_list = []
+
+            for dist in loaded_distances:
+                if dist["distance"] is None:
+                    dist["distance"] = mean_distance
+
+                new_list.append(dist)
+
+            loaded_distances = new_list
+        elif missing_data_handling == MissingDataHandling.max:
+            distances = [
+                dist["distance"]
+                for dist in loaded_distances
+                if dist["distance"] is not None
+            ]  # FIXME: handle all distances being None
+            max_distance = max(distances)
+
+            # replaces None distances with the max distance
+            new_list = []
+
+            for dist in loaded_distances:
+                if dist["distance"] is None:
+                    dist["distance"] = max_distance
+
+                new_list.append(dist)
+
+            loaded_distances = new_list
+        else:
+            raise NotImplementedError(
+                f"Unknown missing_data_handling '{missing_data_handling}'"
+            )
+
+        attribute_distances[attr_name] = loaded_distances
 
     entity_distance_lists = {}
 
