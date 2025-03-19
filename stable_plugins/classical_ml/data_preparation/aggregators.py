@@ -301,6 +301,10 @@ def calculation_task(self, db_id: int) -> str:
         attr_name = file_name[:-5]
 
         loaded_distances = json.load(file)
+        # FIXME: handle all distances being None
+        distances_without_none: list[float] = [
+            dist["distance"] for dist in loaded_distances if dist["distance"] is not None
+        ]
 
         if missing_data_handling == MissingDataHandling.ignore:
             # removes elements with None distance
@@ -308,41 +312,17 @@ def calculation_task(self, db_id: int) -> str:
                 dist for dist in loaded_distances if dist["distance"] is not None
             ]  # FIXME: handle all distances being None
         elif missing_data_handling == MissingDataHandling.mean:
-            distances = [
-                dist["distance"]
-                for dist in loaded_distances
-                if dist["distance"] is not None
-            ]  # FIXME: handle all distances being None
-            mean_distance = sum(distances) / len(distances)
-
+            mean_distance = sum(distances_without_none) / len(distances_without_none)
             # replaces None distances with the mean distance
-            new_list = []
-
             for dist in loaded_distances:
                 if dist["distance"] is None:
                     dist["distance"] = mean_distance
-
-                new_list.append(dist)
-
-            loaded_distances = new_list
         elif missing_data_handling == MissingDataHandling.max:
-            distances = [
-                dist["distance"]
-                for dist in loaded_distances
-                if dist["distance"] is not None
-            ]  # FIXME: handle all distances being None
-            max_distance = max(distances)
-
+            max_distance = max(distances_without_none)
             # replaces None distances with the max distance
-            new_list = []
-
             for dist in loaded_distances:
                 if dist["distance"] is None:
                     dist["distance"] = max_distance
-
-                new_list.append(dist)
-
-            loaded_distances = new_list
         else:
             raise NotImplementedError(
                 f"Unknown missing_data_handling '{missing_data_handling}'"
