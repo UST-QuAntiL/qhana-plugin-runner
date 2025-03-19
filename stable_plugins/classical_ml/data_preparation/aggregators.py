@@ -116,7 +116,10 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         metadata={
             "label": "Missing data handling",
-            "description": "Defines how a missing attribute distance should be handled.",
+            "description": """Defines how a missing attribute distance should be handled.
+- ignore: null values are removed and only the not null values are used for the aggregation
+- mean: null values are replaced by the mean distance of the respective attribute
+- max: null values are replaced by the maximum distance of the respective attribute""",
             "input_type": "select",
         },
     )
