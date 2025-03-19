@@ -261,7 +261,7 @@ def _get_sim(elem_sims: Dict, val1, val2) -> float:
     elif (val2, val1) in elem_sims:
         return elem_sims[(val2, val1)]["similarity"]
     else:
-        return 0.0
+        return 0.0  # handles missing elements in lists
 
 
 @CELERY.task(name=f"{SymMaxMean.instance.identifier}.calculation_task", bind=True)
