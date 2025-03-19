@@ -301,7 +301,6 @@ def calculation_task(self, db_id: int) -> str:
         attr_name = file_name[:-5]
 
         loaded_distances = json.load(file)
-        # FIXME: handle all distances being None
         distances_without_none: list[float] = [
             dist["distance"] for dist in loaded_distances if dist["distance"] is not None
         ]
@@ -310,14 +309,24 @@ def calculation_task(self, db_id: int) -> str:
             # removes elements with None distance
             loaded_distances = [
                 dist for dist in loaded_distances if dist["distance"] is not None
-            ]  # FIXME: handle all distances being None
+            ]
         elif missing_data_handling == MissingDataHandling.mean:
+            if len(distances_without_none) == 0:
+                raise ValueError(
+                    f"every distance for attribute {attr_name} is None, therefore the mean cannot be calculated"
+                )
+
             mean_distance = sum(distances_without_none) / len(distances_without_none)
             # replaces None distances with the mean distance
             for dist in loaded_distances:
                 if dist["distance"] is None:
                     dist["distance"] = mean_distance
         elif missing_data_handling == MissingDataHandling.max:
+            if len(distances_without_none) == 0:
+                raise ValueError(
+                    f"every distance for attribute {attr_name} is None, therefore the maximum cannot be calculated"
+                )
+
             max_distance = max(distances_without_none)
             # replaces None distances with the max distance
             for dist in loaded_distances:
@@ -347,6 +356,14 @@ def calculation_task(self, db_id: int) -> str:
         ent_dist = 0.0
         dist_list = [ent["distance"] for ent in ent_dist_list]
 
+        ent_1_id = ent_dist_list[0]["entity_1_ID"]
+        ent_2_id = ent_dist_list[0]["entity_2_ID"]
+
+        if len(dist_list) == 0:
+            raise ValueError(
+                f"There are no distances for the entity pair {ent_1_id} and {ent_2_id}"
+            )
+
         if aggregator == AggregatorsEnum.mean:
             for dist in dist_list:
                 ent_dist += dist
@@ -368,9 +385,6 @@ def calculation_task(self, db_id: int) -> str:
             ent_dist = min(dist_list)
         else:
             raise ValueError("Unknown aggregator")
-
-        ent_1_id = ent_dist_list[0]["entity_1_ID"]
-        ent_2_id = ent_dist_list[0]["entity_2_ID"]
 
         entity_distances.append(
             {
