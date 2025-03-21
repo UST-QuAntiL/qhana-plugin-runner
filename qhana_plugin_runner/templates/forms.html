@@ -11,7 +11,7 @@
 {%- endmacro %}
 
 
-{% macro render_fields(schema, values=dict(), errors=dict(), form_field_class="qhana-form-field",
+{% macro render_fields(schema, values=dict(), errors=dict(), extras=dict(), form_field_class="qhana-form-field",
 form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
 {% for key, field in schema.fields.items() %}
 {% set form_key=field.data_key %}
@@ -26,7 +26,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
       field.required else '' }}>{{values.get(form_key, '')}}</textarea>
     {% elif input_type == "select" %}
     <select class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off">
-      {% for name, value in field.metadata.get("options", {}).items() %}
+      {% for name, value in field.metadata.get("options", extras.get(key, {}).get("options", {}) if extras else {}).items() %}
       <option value="{{ name }}" {% if name==values.get(form_key) %}selected{% endif %}>{{ value }}</option>
       {% endfor %}
     </select>
@@ -34,7 +34,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     <input class="{{form_input_class}}" type="text" name="{{form_key}}" id="{{key}}" autocomplete="off"
       aria-describedby="{{key}}-description" {{required if field.required else '' }} {{ get_validation_attrs(field) }}
       list="{{key}}-datalist" {{ field_value(input_type, values.get(form_key)) }}>
-    {% set datalist=get_datalist_from_schema(schema, key) %}
+    {% set datalist=get_datalist_from_schema(schema, key, extras) %}
     {% if datalist %}
     <datalist id="{{key}}-datalist">
       {% for value in datalist %}
@@ -43,11 +43,20 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     </datalist>
     {% endif %}
     {% elif input_type %}
+    {% set datalist=get_datalist_from_schema(schema, key, extras) %}
     <input class="{{form_input_class}}" type="{{input_type}}" name="{{form_key}}" id="{{key}}" autocomplete="off"
       aria-describedby="{{key}}-description" {{ 'data-input-type=data' if field.metadata.get('data_input_type') or
       field.metadata.get('data_content_types') else '' }} {{ 'data-input-type=plugin' if
       field.metadata.get('plugin_tags') or field.metadata.get('plugin_name') else '' }} {{ field_value(input_type,
-      values.get(form_key)) }} {{ 'required' if field.required else '' }} {{ get_validation_attrs(field) }}>
+      values.get(form_key)) }} {{ 'required' if field.required else '' }} {{ get_validation_attrs(field) }}
+      {% if datalist %}list="{{key}}-datalist"{% endif %}>
+      {%- if datalist -%}
+      <datalist id="{{key}}-datalist">
+        {% for value in datalist %}
+        <option value="{{ value }}">
+          {% endfor %}
+      </datalist>
+      {%- endif -%}
     {% else %}
     <p class="qhana-unsupported-form-field">Unsupported field {{field}}!</p>
     {% endif %}
