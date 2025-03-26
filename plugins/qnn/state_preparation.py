@@ -355,12 +355,16 @@ def prepare_task(self, db_id: int) -> str:
             data_values = [complex(x) for x in data_values]
         except ValueError:
             raise ValueError("Data values must be complex numbers!")
-        qc=StatePreparationQiskit(data_values)
+        gate=StatePreparationQiskit(data_values)
+        qc = QuantumCircuit(gate.num_qubits)
+        qc.append(gate, range(gate.num_qubits))
     else:
         raise NotImplementedError(f"Method {method} not implemented!")
     
     if append_measurement:
         qc.measure_all()
+    #neccessary as qasm does not support complex numbers
+    qc=qc.decompose()
     qasm_str=qasm3.dumps(qc)
         
 
