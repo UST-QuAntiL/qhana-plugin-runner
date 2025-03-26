@@ -56,8 +56,8 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "qiskit-simulator"
-__version__ = "v0.3.0"
+_plugin_name = "qiskit-simulator-qasm-3"
+__version__ = "v0.3.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -275,7 +275,7 @@ class QiskitSimulator(QHAnaPluginBase):
     description = (
         "Allows execution of quantum circuits using a simulator packaged with qiskit."
     )
-    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-2"]
+    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
