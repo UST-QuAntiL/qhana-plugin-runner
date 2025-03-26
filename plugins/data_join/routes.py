@@ -17,8 +17,9 @@ from json import dumps
 from typing import Mapping
 
 from celery.canvas import chain
+from celery.utils.log import get_task_logger
 from flask import abort, redirect
-from flask.globals import request
+from flask.globals import request, current_app
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -34,7 +35,12 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import (
+    save_task_error,
+    save_task_result,
+    add_step,
+    TASK_STEPS_CHANGED,
+)
 
 from . import JOIN_BLP, DataJoin
 from .schemas import (
@@ -43,7 +49,9 @@ from .schemas import (
     DataJoinFinishJoinParametersSchema,
     DataJoinJoinParametersSchema,
 )
-from .tasks import add_data_to_join, load_base
+from .tasks import add_data_to_join, load_base, join_data
+
+TASK_LOGGER = get_task_logger(__name__)
 
 
 @JOIN_BLP.route("/")
@@ -65,7 +73,7 @@ class PluginRootView(MethodView):
             type=PluginType.processing,
             entry_point=EntryPoint(
                 href=url_for(f"{JOIN_BLP.name}.{LoadBaseView.__name__}"),
-                ui_href=url_for(f"{JOIN_BLP.name}.{MicroFrontendBase.__name__}"),
+                ui_href=url_for(f"{JOIN_BLP.name}.{LoadBaseMicroFrontend.__name__}"),
                 plugin_dependencies=[],
                 data_input=[
                     InputDataMetadata(
@@ -88,7 +96,7 @@ class PluginRootView(MethodView):
 
 
 @JOIN_BLP.route("/ui/")
-class MicroFrontendBase(MethodView):
+class LoadBaseMicroFrontend(MethodView):
     """Micro frontend for the data join plugin."""
 
     @JOIN_BLP.html_response(
@@ -137,13 +145,15 @@ class MicroFrontendBase(MethodView):
                 errors=errors,
                 process=url_for(f"{JOIN_BLP.name}.{LoadBaseView.__name__}"),
                 help_text="First select the entities as base you want to join other data to. In a second step select the data you want to join to the base.",
-                example_values=url_for(f"{JOIN_BLP.name}.{MicroFrontendBase.__name__}"),
+                example_values=url_for(
+                    f"{JOIN_BLP.name}.{LoadBaseMicroFrontend.__name__}"
+                ),
             )
         )
 
 
-@JOIN_BLP.route("/<int:db_id>/join-ui/")
-class MicroFrontendJoin(MethodView):
+@JOIN_BLP.route("/<int:db_id>/<step_id>/add-join-ui/")
+class AddJoinMicroFrontend(MethodView):
     """Micro frontend for the data join substep of the data join plugin."""
 
     @JOIN_BLP.html_response(
@@ -157,9 +167,9 @@ class MicroFrontendJoin(MethodView):
         required=False,
     )
     @JOIN_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, db_id: int):
+    def get(self, errors, db_id: int, step_id: str):
         """Return the micro frontend."""
-        return self.render(request.args, errors, False, db_id)
+        return self.render(request.args, errors, False, db_id, step_id)
 
     @JOIN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the data join plugin."
@@ -172,11 +182,11 @@ class MicroFrontendJoin(MethodView):
         required=False,
     )
     @JOIN_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, db_id: int):
+    def post(self, errors, db_id: int, step_id: int):
         """Return the micro frontend with prerendered inputs."""
-        return self.render(request.form, errors, not errors, db_id)
+        return self.render(request.form, errors, not errors, db_id, step_id)
 
-    def render(self, data: Mapping, errors: dict, valid: bool, db_id: int):
+    def render(self, data: Mapping, errors: dict, valid: bool, db_id: int, step_id: int):
         plugin = DataJoin.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -207,7 +217,10 @@ class MicroFrontendJoin(MethodView):
         joins = task_data.data.get("joins", [])
         joins = [{}]  # FIXME: remove
         if joins:
-            done = url_for(f"{JOIN_BLP.name}.{FinishJoinsView.__name__}", db_id=db_id)
+            done = url_for(
+                f"{JOIN_BLP.name}.{FinishJoinsView.__name__}",
+                db_id=db_id,
+            )
         else:
             done = None
 
@@ -222,14 +235,18 @@ class MicroFrontendJoin(MethodView):
                 valid=valid,
                 values=data,
                 errors=errors,
-                process=url_for(f"{JOIN_BLP.name}.{AddJoinView.__name__}", db_id=db_id),
+                process=url_for(
+                    f"{JOIN_BLP.name}.{AddJoinView.__name__}",
+                    db_id=db_id,
+                    step_id=step_id,
+                ),
                 done=done,
             )
         )
 
 
 @JOIN_BLP.route("/<int:db_id>/attribute-selection-ui/")
-class MicroFrontendAttributeSelection(MethodView):
+class AttributeSelectionMicroFrontend(MethodView):
     """Micro frontend for the attribute selection substep of the data join plugin."""
 
     @JOIN_BLP.html_response(
@@ -327,20 +344,34 @@ class LoadBaseView(MethodView):
         db_task = ProcessingTask(task_name=load_base.name, parameters=dumps(arguments))
         db_task.save(commit=True)
 
+        # next step
+        step_id = "Add join"
+        href = url_for(
+            f"{JOIN_BLP.name}.{AddJoinView.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+        ui_href = url_for(
+            f"{JOIN_BLP.name}.{AddJoinMicroFrontend.__name__}",
+            db_id=db_task.id,
+            step_id=step_id,
+            _external=True,
+        )
+
         # all tasks need to know about db id to load the db entry
-        task: chain = load_base.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = load_base.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
-
-        db_task.save(commit=True)
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 
-@JOIN_BLP.route("/<int:db_id>/join/")
+@JOIN_BLP.route("/<int:db_id>/add-join/")
 class AddJoinView(MethodView):
     """Add entities that will be joined to the base."""
 
@@ -349,14 +380,47 @@ class AddJoinView(MethodView):
     @JOIN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Add entities that will be joined to the base."""
-        # FIXME implement
+        db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
+
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        # next step
+        step_id = "Add-join"
+        href = url_for(
+            f"{JOIN_BLP.name}.{FinishJoinsView.__name__}",
+            db_id=db_task.id,
+            step_id=step_id,
+            _external=True,
+        )
+        ui_href = url_for(
+            f"{JOIN_BLP.name}.{AddJoinMicroFrontend.__name__}",
+            db_id=db_task.id,
+            step_id=step_id,
+            _external=True,
+        )
+
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = add_data_to_join.s(
+            db_id=db_task.id, entity_url="", join_attr="ID"  # FIXME
+        ) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
 
 
-@JOIN_BLP.route("/<int:db_id>/join/")
+@JOIN_BLP.route("/<int:db_id>/finish-join/")
 class FinishJoinsView(MethodView):
     """Finish selecting joins and proceed to attribute selection."""
 
@@ -367,7 +431,49 @@ class FinishJoinsView(MethodView):
     @JOIN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Finish selecting joins and proceed to attribute selection."""
-        # FIXME implement
+        db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
+
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.parameters = DataJoinFinishJoinParametersSchema().dumps(arguments)
+
+        # next step
+        next_step_id = "Select-attributes"
+        href = url_for(
+            f"{JOIN_BLP.name}.{AttributeSelectionView.__name__}",
+            db_id=db_task.id,
+            step_id=next_step_id,
+            _external=True,
+        )
+        ui_href = url_for(
+            f"{JOIN_BLP.name}.{AttributeSelectionMicroFrontend.__name__}",
+            db_id=db_task.id,
+            step_id=next_step_id,
+            _external=True,
+        )
+
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = add_data_to_join.s(
+            db_id=db_task.id, entity_url="", join_attr="ID"  # FIXME
+        ) | add_step.s(
+            db_id=db_task.id,
+            step_id=next_step_id,
+            href=href,
+            ui_href=ui_href,
+            prog_value=50,
+        )
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
@@ -385,8 +491,28 @@ class AttributeSelectionView(MethodView):
     @JOIN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         """Select the attributes to keep for the joined output."""
-        # FIXME implement
-        print("\n\n", arguments, "\n\n")
+        db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
+
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.parameters = DataJoinFinishJoinParametersSchema().dumps(arguments)
+
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+
+        # all tasks need to know about db id to load the db entry
+        task: chain = join_data.s(
+            db_id=db_task.id, entity_url="", join_attr=""  # FIXME
+        ) | save_task_result.s(db_id=db_task.id)
+        # save errors to db
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
 
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER

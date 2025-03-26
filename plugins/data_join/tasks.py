@@ -41,14 +41,12 @@ def load_base(self, db_id: int) -> str:
     params = loads(task_data.parameters)
 
     data = task_data.data
-    if not data:
-        data = {}
-        task_data.data = data
+    assert data is not None
     assert isinstance(data, dict)
 
     # TODO replace dummy data with actual implementation
     data["base"] = {
-        "data": params["data"],
+        "url": params["base"],
         "attribute_metadata": "metadata-url",
         "name": "BASE_Entities.json",
         "data_type": "entity/list",
@@ -103,7 +101,11 @@ def add_data_to_join(self, db_id: int, entity_url: str, join_attr: str):
 
     # FIXME start a new substep
 
+    return "Finished adding data to join!"
+
 
 @CELERY.task(name=f"{DataJoin.instance.identifier}.join_data", bind=True)
 def join_data(self, db_id: int, entity_url: str, join_attr: str):
     pass  # FIXME join data to base and save entities
+
+    return "Finished joining data!"
