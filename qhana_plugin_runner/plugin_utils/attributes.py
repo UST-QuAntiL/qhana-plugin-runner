@@ -118,7 +118,7 @@ def parse_bool(value: Union[str, bool]) -> bool:
 
 def parse_optional_value(value: str, deserialize: Callable[[str], Any]) -> Any:
     """Serialize optional values with the given serializer."""
-    if value == "":
+    if value == "" or value is None:
         return None
     return deserialize(value)
 
@@ -127,7 +127,7 @@ T = TypeVar("T")
 
 
 def parse_multi(
-    value: str,
+    value: Union[str, Sequence[str]],
     deserialize: Callable[[str], Any],
     separator: str = ";",
     collection: Type[T] = list,
@@ -145,7 +145,12 @@ def parse_multi(
     """
     if value == "":
         return collection()
-    return collection(deserialize(val) for val in value.split(separator))
+    if isinstance(value, str):
+        return collection(deserialize(val) for val in value.split(separator))
+    if isinstance(value, Sequence):
+        # allow parsing data that is already nested in a sequence
+        return collection(deserialize(val) for val in value)
+    raise ValueError(f"Value '{value}' could not be parsed.")
 
 
 def default_serialize(value: Any) -> str:
