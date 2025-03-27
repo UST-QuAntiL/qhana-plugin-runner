@@ -16,6 +16,7 @@ from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 
+from requests.exceptions import ConnectionError
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
@@ -39,14 +40,13 @@ from . import DataJoin
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def _get_file_metadata(entity_url: str) -> tuple[dict, list[str]]:
+def _get_file_metadata(entity_url: str) -> dict:
     with open_url(entity_url) as response:
         first_entity = next(
             ensure_dict(
                 load_entities(response, get_mimetype(response)),
             )
         )
-        attributes = list(first_entity.keys())
 
         metadata = {
             "data": entity_url,
@@ -54,9 +54,10 @@ def _get_file_metadata(entity_url: str) -> tuple[dict, list[str]]:
             "name": retrieve_filename(response),
             "data_type": retrieve_data_type(response),
             "content_type": get_mimetype(response),
+            "attributes": list(first_entity.keys()),
         }
 
-        return metadata, attributes
+        return metadata
 
 
 @CELERY.task(name=f"{DataJoin.instance.identifier}.load_base", bind=True)
@@ -76,9 +77,14 @@ def load_base(self, db_id: int) -> str:
     assert isinstance(data, dict)
 
     base_data_url = params["base"]
-    data["base"], data["attributes"] = _get_file_metadata(base_data_url)
+    metadata = _get_file_metadata(base_data_url)
+    data["attributes"] = metadata.pop("attributes")
+    data["base"] = metadata
 
     task_data.save(commit=True)
+
+    if not data["attributes"]:
+        raise ValueError("Base entities doe not have any attributes!")
 
     return "Loaded metadata from base data finished."
 
@@ -105,22 +111,24 @@ def add_data_to_join(self, db_id: int, entity_url: str, join_attr: str):
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    file_metadata, _ = _get_file_metadata(entity_url)
-    file_metadata["join_attr"] = join_attr
+    try:
+        file_metadata, _ = _get_file_metadata(entity_url)
+        file_metadata["join_attr"] = join_attr
 
-    joins = data.setdefault("joins", [])
-    assert isinstance(joins, list)
-    joins.append(file_metadata)
+        joins = data.setdefault("joins", [])
+        assert isinstance(joins, list)
+        joins.append(file_metadata)
 
-    task_data.save(commit=True)
-
-    # FIXME start a new substep
+        task_data.save(commit=True)
+    except ConnectionError:
+        return f"Could not load entities from {entity_url}!"
+    # TODO catch more errors gracefully?
 
     return "Finished adding data to join!"
 
 
 @CELERY.task(name=f"{DataJoin.instance.identifier}.join_data", bind=True)
-def join_data(self, db_id: int, entity_url: str, join_attr: str):
+def join_data(self, db_id: int):
     pass  # FIXME join data to base and save entities
 
     return "Finished joining data!"

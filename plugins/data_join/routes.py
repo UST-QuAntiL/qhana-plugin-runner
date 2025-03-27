@@ -16,10 +16,10 @@ from http import HTTPStatus
 from json import dumps
 from typing import Mapping
 
-from celery.canvas import chain
+from celery.canvas import Signature, chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
-from flask.globals import request, current_app
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -36,10 +36,10 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    add_step,
     save_task_error,
     save_task_result,
-    add_step,
-    TASK_STEPS_CHANGED,
 )
 
 from . import JOIN_BLP, DataJoin
@@ -49,7 +49,7 @@ from .schemas import (
     DataJoinFinishJoinParametersSchema,
     DataJoinJoinParametersSchema,
 )
-from .tasks import add_data_to_join, load_base, join_data
+from .tasks import add_data_to_join, join_data, load_base
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -195,17 +195,13 @@ class AddJoinMicroFrontend(MethodView):
             load_base.name,
             add_data_to_join.name,
         ):
-            # abort(HTTPStatus.NOT_FOUND)
-            pass  # FIXME
+            abort(HTTPStatus.NOT_FOUND)
 
         assert isinstance(task_data.data, dict)
         attributes = task_data.data.get("attributes", [])
         assert isinstance(attributes, (list, tuple))
 
-        # FIXME remove
-        attributes = ["ID", "href", "name", "year", "reference_id", "something"]
-
-        data_dict = {"join": "", "attribute": "ID"}
+        data_dict = {"join": "", "attribute": attributes[0]}
         data_dict.update(data)
 
         if data_dict["attribute"] not in attributes:
@@ -215,7 +211,6 @@ class AddJoinMicroFrontend(MethodView):
             )
 
         joins = task_data.data.get("joins", [])
-        joins = [{}]  # FIXME: remove
         if joins:
             done = url_for(
                 f"{JOIN_BLP.name}.{FinishJoinsView.__name__}",
@@ -288,26 +283,21 @@ class AttributeSelectionMicroFrontend(MethodView):
             load_base.name,
             add_data_to_join.name,
         ):
-            # abort(HTTPStatus.NOT_FOUND)
-            pass  # FIXME
+            abort(HTTPStatus.NOT_FOUND)
 
         assert isinstance(task_data.data, dict)
         attributes = task_data.data.get("attributes", [])
         assert isinstance(attributes, (list, tuple))
         base = task_data.data.get("base")
-        # assert isinstance(base, dict)
+        assert isinstance(base, dict)
         joins = task_data.data.get("joins", [])
         assert isinstance(joins, (list, tuple))
 
-        # FIXME remove
-        attributes = ["ID", "href", "name", "year", "reference_id", "something"]
-        base = {"name": "BASE Entities.json"}
-        joins = [
-            {
-                "name": "JOIN Entities.csv",
-                "attributes": ["ID", "href", "foo", "bar", "year"],
-            }
-        ]
+        if not joins:
+            abort(
+                HTTPStatus.NOT_FOUND,
+                "Task has not yet reached the attribute selection step!",
+            )
 
         data_dict = {}
         data_dict.update(data)
@@ -345,7 +335,7 @@ class LoadBaseView(MethodView):
         db_task.save(commit=True)
 
         # next step
-        step_id = "Add join"
+        step_id = "add-join"
         href = url_for(
             f"{JOIN_BLP.name}.{AddJoinView.__name__}",
             db_id=db_task.id,
@@ -360,7 +350,13 @@ class LoadBaseView(MethodView):
 
         # all tasks need to know about db id to load the db entry
         task: chain = load_base.s(db_id=db_task.id) | add_step.s(
-            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
+            db_id=db_task.id,
+            step_id=step_id,
+            href=href,
+            ui_href=ui_href,
+            prog_value=1,  # include this step
+            prog_target=3,  # select base + select 1 join + select attributes = 3
+            prog_unit="",  # unitless counter
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
@@ -382,17 +378,18 @@ class AddJoinView(MethodView):
         """Add entities that will be joined to the base."""
         db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
 
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+        if not db_task or db_task.task_name not in (
+            load_base.name,
+            add_data_to_join.name,
+        ):
+            abort(HTTPStatus.NOT_FOUND)
 
         # next step
-        step_id = "Add-join"
+        previous_steps = len(db_task.steps)
+        step_id = f"add-join-{previous_steps + 1}"
         href = url_for(
             f"{JOIN_BLP.name}.{FinishJoinsView.__name__}",
             db_id=db_task.id,
-            step_id=step_id,
             _external=True,
         )
         ui_href = url_for(
@@ -402,14 +399,29 @@ class AddJoinView(MethodView):
             _external=True,
         )
 
+        nr_of_joins = len(db_task.data.get("joins", []))
+
+        allwoed_attrs = db_task.data.get("attributes", [])
+        if arguments["attribute"] not in allwoed_attrs:
+            abort(HTTPStatus.BAD_REQUEST, "Cannot join to a nonexistent attribute!")
+
         db_task.clear_previous_step()
+        db_task.task_name = add_data_to_join.name
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = add_data_to_join.s(
-            db_id=db_task.id, entity_url="", join_attr="ID"  # FIXME
+        task: chain = add_data_to_join.s(  # TODO: call this synchronously? or inline code
+            db_id=db_task.id,
+            entity_url=arguments["join"],
+            join_attr=arguments["attribute"],
         ) | add_step.s(
-            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
+            db_id=db_task.id,
+            step_id=step_id,
+            href=href,
+            ui_href=ui_href,
+            prog_value=nr_of_joins + 1,  # include base step in counts
+            prog_target=nr_of_joins + 2,  # always require an extra step
+            prog_unit="",  # unit less counter
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
@@ -430,19 +442,24 @@ class FinishJoinsView(MethodView):
     @JOIN_BLP.response(HTTPStatus.SEE_OTHER)
     @JOIN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
-        # FIXME: remove add_data_to_join, add step without add_step task
         """Finish selecting joins and proceed to attribute selection."""
         db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
 
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+        if not db_task or db_task.task_name == add_data_to_join.name:
+            abort(HTTPStatus.NOT_FOUND)
+
+        nr_of_joins = len(db_task.data.get("joins", []))
+
+        if nr_of_joins == 0:
+            abort(
+                HTTPStatus.NOT_FOUND,
+                "Cannot finish joins until at least one entity to join is selected.",
+            )
 
         db_task.parameters = DataJoinFinishJoinParametersSchema().dumps(arguments)
 
         # next step
-        next_step_id = "Select-attributes"
+        next_step_id = "select-attributes"
         href = url_for(
             f"{JOIN_BLP.name}.{AttributeSelectionView.__name__}",
             db_id=db_task.id,
@@ -462,15 +479,15 @@ class FinishJoinsView(MethodView):
         app = current_app._get_current_object()
         TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
-        # all tasks need to know about db id to load the db entry
-        task: chain = add_data_to_join.s(
-            db_id=db_task.id, entity_url="", join_attr="ID"  # FIXME
-        ) | add_step.s(
+        task: Signature = add_step.s(
+            task_log="Selecting attributes for final output.",
             db_id=db_task.id,
             step_id=next_step_id,
             href=href,
             ui_href=ui_href,
-            prog_value=50,
+            prog_value=nr_of_joins + 1,
+            prog_target=nr_of_joins + 2,
+            prog_unit="",  # unit less counter
         )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
@@ -494,23 +511,28 @@ class AttributeSelectionView(MethodView):
         """Select the attributes to keep for the joined output."""
         db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
 
-        if db_task is None:
-            msg = f"Could not load task data with id {db_id} to read parameters!"
-            TASK_LOGGER.error(msg)
-            raise KeyError(msg)
+        if not db_task or db_task.task_name == add_data_to_join.name:
+            abort(HTTPStatus.NOT_FOUND)
+
+        nr_of_joins = len(db_task.data.get("joins", []))
+
+        if nr_of_joins == 0:
+            abort(
+                HTTPStatus.NOT_FOUND,
+                "Cannot finish joins until at least one entity to join is selected.",
+            )
 
         db_task.parameters = DataJoinFinishJoinParametersSchema().dumps(arguments)
 
         db_task.clear_previous_step()
+        db_task.task_name = join_data.name
         db_task.save(commit=True)
 
         app = current_app._get_current_object()
         TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = join_data.s(
-            db_id=db_task.id, entity_url="", join_attr=""  # FIXME
-        ) | save_task_result.s(db_id=db_task.id)
+        task: chain = join_data.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
