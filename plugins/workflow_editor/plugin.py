@@ -3,6 +3,7 @@ from typing import ClassVar, Optional
 
 from flask import Blueprint, Flask
 from kombu.exceptions import ConnectionError
+from requests.exceptions import ConnectionError as RequestsConnectionError
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
@@ -54,7 +55,10 @@ class WorkflowEditor(QHAnaPluginBase):
         now = time()
         assert isinstance(last_updated, (int, float))
         if last_updated < (now - 3600):
-            saved_config = get_config_from_registry(self.app)
+            try:
+                saved_config = get_config_from_registry(self.app)
+            except RequestsConnectionError:
+                saved_config = None
             if saved_config:
                 saved_config["_updated"] = time()
                 PluginState.set_value(self.name, CONFIG_KEY, saved_config, commit=True)
@@ -67,7 +71,8 @@ class WorkflowEditor(QHAnaPluginBase):
                 pass  # called too early, name not yet defined
             except ConnectionError:
                 pass  # redis is not available, do nothing
-        config.update(saved_config)
+        if saved_config:
+            config.update(saved_config)
 
         return postprocess_config(config)
 

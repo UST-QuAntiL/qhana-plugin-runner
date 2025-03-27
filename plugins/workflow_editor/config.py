@@ -139,6 +139,7 @@ def get_config_from_registry(app: Optional[Flask]):
             value = client.fetch_by_api_link(env_link)
             if value:
                 config[env_var] = value.data["value"]
+
     return config
 
 
