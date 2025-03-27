@@ -430,6 +430,7 @@ class FinishJoinsView(MethodView):
     @JOIN_BLP.response(HTTPStatus.SEE_OTHER)
     @JOIN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
+        # FIXME: remove add_data_to_join, add step without add_step task
         """Finish selecting joins and proceed to attribute selection."""
         db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
 
