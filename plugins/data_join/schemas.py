@@ -13,8 +13,8 @@
 # limitations under the Licens
 
 import marshmallow as ma
-from werkzeug.datastructures import MultiDict
 from webargs.multidictproxy import MultiDictProxy
+from werkzeug.datastructures import MultiDict
 
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
@@ -62,10 +62,15 @@ class DataJoinAttrSelectParametersSchema(FrontendFormBaseSchema):
     base = ma.fields.List(ma.fields.String(), default=tuple())
 
     @ma.validates_schema(pass_original=True)
-    def validate_numbers(self, data, original_data, **kwargs):
+    def validate_entries(self, data, original_data, **kwargs):
         errors = {}
         for key in original_data:
-            if key == "base" or key.startswith("join_"):
+            if key == "base":
+                if "ID" not in data["base"]:
+                    errors["base"] = [
+                        "The 'ID' attribute of the join 'base' must always be selected!"
+                    ]
+            if key.startswith("join_"):
                 continue
             errors[key] = [
                 f"Unexpected field '{key}', only 'base' and 'join_[0-9]+' are allowed."
@@ -74,7 +79,7 @@ class DataJoinAttrSelectParametersSchema(FrontendFormBaseSchema):
             raise ma.ValidationError(errors)
 
     @ma.post_load(pass_original=True)
-    def add_baz_to_bar(self, data, original_data, **kwargs):
+    def add_dynamic_entries(self, data, original_data, **kwargs):
         if isinstance(original_data, (MultiDict, MultiDictProxy)):
             items = original_data.lists()
         else:

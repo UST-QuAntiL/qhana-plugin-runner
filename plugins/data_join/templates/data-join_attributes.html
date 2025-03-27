@@ -8,7 +8,7 @@
     <fieldset>
         <legend>Base {{base.name}}</legend>
         {%- for attr in base_attrs -%}
-        <label><input type="checkbox" name="base" value="{{attr}}" checked> {{attr}}</label>
+        <label><input type="checkbox" name="base" value="{{attr}}" checked {% if attr == "ID" %}disabled{% endif %}> {{attr}}</label>
         {%- endfor -%}
     </fieldset>
     {%- for data in joins -%}
