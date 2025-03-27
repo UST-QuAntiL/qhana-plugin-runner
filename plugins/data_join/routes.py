@@ -299,6 +299,14 @@ class AttributeSelectionMicroFrontend(MethodView):
                 "Task has not yet reached the attribute selection step!",
             )
 
+        if data:
+            for i in range(len(joins)):
+                key = f"join_{i}"
+                if not data.get(key):
+                    errors.setdefault(key, []).append(
+                        "At least one attribute must be selected for each entity to join!"
+                    )
+
         data_dict = {}
         data_dict.update(data)
 
@@ -519,8 +527,16 @@ class AttributeSelectionView(MethodView):
         if nr_of_joins == 0:
             abort(
                 HTTPStatus.NOT_FOUND,
-                "Cannot finish joins until at least one entity to join is selected.",
+                message="Cannot finish joins until at least one entity to join is selected.",
             )
+
+        for i in range(nr_of_joins):
+            key = f"join_{i}"
+            if not arguments.get(key):
+                abort(
+                    HTTPStatus.BAD_REQUEST,
+                    message="At least one attribute must be selected for each entity to join!",
+                )
 
         db_task.parameters = DataJoinFinishJoinParametersSchema().dumps(arguments)
 
