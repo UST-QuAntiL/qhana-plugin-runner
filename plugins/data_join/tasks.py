@@ -228,7 +228,7 @@ def _determine_datatype(
 ):
     data_types: set[str] = set()
 
-    if set(used_attributes.values()) > {"ID", "href"}:
+    if set(used_attributes["base"].values()) > {"ID", "href"}:
         data_types.add(base_metadata["data_type"])
 
     for i, join in enumerate(join_metadata):
@@ -288,8 +288,8 @@ def join_data(self, db_id: int):  # noqa: C901
         assert isinstance(join, dict)
         attrs_to_keep = params[f"join_{i+1}"]
         final_attributes, join_replacements, new_vector_attrs = _extract_final_attrs(
-            params["base"],
             attrs_to_keep,
+            join["attributes"],
             final_attributes,
             _is_vector_type(join.get("data_type")),
         )
@@ -311,7 +311,10 @@ def join_data(self, db_id: int):  # noqa: C901
 
     # process base metadata
     for attr, final_attr in replacements.items():
-        metadata_dict = base_metadata[attr].to_dict()
+        base_attr_metadata = base_metadata.get(attr)
+        if not base_attr_metadata:
+            continue
+        metadata_dict = base_attr_metadata.to_dict()
         metadata_dict["ID"] = final_attr  # rename attribute for final attr metadata
         final_attr_metadata.append(metadata_dict)
 
@@ -330,7 +333,7 @@ def join_data(self, db_id: int):  # noqa: C901
                 value = entity[attr]
                 join_map.setdefault(value, set()).add(id_)
 
-    for i, join in joins:
+    for i, join in enumerate(joins):
         join_attrs = join["attributes"]
         join_metadata = _load_attribute_metadata(join)
 
@@ -355,48 +358,47 @@ def join_data(self, db_id: int):  # noqa: C901
                     for attr, final_attr in replacements.items():
                         base_entity[final_attr] = entity[attr]
 
-        with SpooledTemporaryFile(mode="w") as output:
-            save_entities(
-                final_attr_metadata,
-                output,
-                "application/json",
-            )
-            STORE.persist_task_result(
-                db_id,
-                output,
-                "attribute_metadata.json",
-                "entity/attribute-metadata",
-                "application/json",
-            )
-
-        final_attr_metadata_dict = {
-            m["ID"]: AttributeMetadata.from_dict(m) for m in final_attr_metadata
-        }
-        final_entities_serializer = dict_serializer(
-            final_attributes, final_attr_metadata_dict
+    # save output ##############################################################
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(
+            final_attr_metadata,
+            output,
+            "application/json",
+        )
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "attribute_metadata.json",
+            "entity/attribute-metadata",
+            "application/json",
         )
 
-        final_filename = base["name"]
-        final_content_type = base["content_type"]
-        final_data_type = _determine_datatype(base, joins, attr_replacements)
-        if (
-            final_data_type == "entity/stream"
-            and final_content_type == "application/json"
-        ):
-            final_data_type = "entity/list"
+    final_attr_metadata_dict = {
+        m["ID"]: AttributeMetadata.from_dict(m) for m in final_attr_metadata
+    }
+    final_entities_serializer = dict_serializer(
+        final_attributes, final_attr_metadata_dict
+    )
 
-        with SpooledTemporaryFile(mode="w") as output:
-            save_entities(
-                (final_entities_serializer(e) for e in joined_entities.values()),
-                output,
-                final_content_type,
-            )
-            STORE.persist_task_result(
-                db_id,
-                output,
-                final_filename,
-                final_data_type,
-                final_content_type,
-            )
+    final_filename = base["name"]
+    final_content_type = base["content_type"]
+    final_data_type = _determine_datatype(base, joins, attr_replacements)
+    if final_data_type == "entity/stream" and final_content_type == "application/json":
+        final_data_type = "entity/list"
+
+    with SpooledTemporaryFile(mode="w") as output:
+        save_entities(
+            (final_entities_serializer(e) for e in joined_entities.values()),
+            output,
+            final_content_type,
+            attributes=final_attributes,
+        )
+        STORE.persist_task_result(
+            db_id,
+            output,
+            final_filename,
+            final_data_type,
+            final_content_type,
+        )
 
     return "Finished joining data!"

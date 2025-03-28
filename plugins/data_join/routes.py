@@ -547,7 +547,6 @@ class AttributeSelectionView(MethodView):
                 )
 
         db_task.parameters = dumps(arguments)
-        assert db_task.parameters != "{}"
 
         db_task.clear_previous_step()
         db_task.task_name = join_data.name
