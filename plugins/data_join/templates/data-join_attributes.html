@@ -1,22 +1,34 @@
 {% extends "simple_template.html" %}
-
+{% block head %}
+    {{ super() }}
+    <style>
+        .attribute-selection {
+            display: flex;
+            flex-wrap: wrap;
+            row-gap: 0.5rem;
+            column-gap: 1.2rem;
+        }
+    </style>
+{% endblock head %}
 
 {% block content %}
 <div class="qhana-microfrontend">
     <p>Select the attributes to keep for the final output:</p>
     {% call forms.render_form(target="microfrontend") %}
-    <fieldset>
+    <fieldset class="attribute-selection">
         <legend>Base {{base.name}}</legend>
+        <input type="checkbox" name="base" value="ID" checked hidden>
         {%- for attr in base_attrs -%}
-        <label><input type="checkbox" name="base" value="{{attr}}" checked {% if attr == "ID" %}disabled{% endif %}> {{attr}}</label>
+        <label class="attribute-checkbox"><input type="checkbox" name="base" value="{{attr}}" {% if attr == "ID" or not values.base or attr in values.base %}checked{% endif %} {% if attr == "ID" %}disabled{% endif %}> {{attr}}</label>
         {%- endfor -%}
     </fieldset>
     {%- for data in joins -%}
     {%- set join_index = loop.index -%}
-    <fieldset>
+    {%- set join_key = "join_" + (join_index|string) -%}
+    <fieldset class="attribute-selection">
         <legend>{{join_index}} – {{data.name}}</legend>
         {%- for attr in data.attributes -%}
-        <label><input type="checkbox" name="join_{{join_index}}" value="{{attr}}" {% if attr != "ID" and attr != "href" %}checked{% endif %}> {{attr}}</label>
+        <label class="attribute-checkbox"><input type="checkbox" name="{{join_key}}" value="{{attr}}" {% if (not values[join_key] and attr != "ID" and attr != "href") or attr in values[join_key] %}checked{% endif %}> {{attr}}</label>
         {%- endfor -%}
     </fieldset>
     {%- endfor -%}

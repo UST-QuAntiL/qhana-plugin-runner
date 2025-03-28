@@ -70,6 +70,7 @@ class DataJoinAttrSelectParametersSchema(FrontendFormBaseSchema):
                     errors["base"] = [
                         "The 'ID' attribute of the join 'base' must always be selected!"
                     ]
+                continue
             if key.startswith("join_"):
                 continue
             errors[key] = [

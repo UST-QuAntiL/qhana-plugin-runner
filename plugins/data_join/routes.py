@@ -18,13 +18,16 @@ from typing import Mapping
 
 from celery.canvas import Signature, chain
 from celery.utils.log import get_task_logger
-from flask import abort, redirect
+from flask import redirect
 from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from flask.wrappers import Response
+from flask_smorest import abort
 from marshmallow import EXCLUDE
+from webargs.multidictproxy import MultiDictProxy
+from werkzeug.datastructures import MultiDict
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -296,7 +299,7 @@ class AttributeSelectionMicroFrontend(MethodView):
         if not joins:
             abort(
                 HTTPStatus.NOT_FOUND,
-                "Task has not yet reached the attribute selection step!",
+                mesage="Task has not yet reached the attribute selection step!",
             )
 
         if data:
@@ -308,7 +311,12 @@ class AttributeSelectionMicroFrontend(MethodView):
                     )
 
         data_dict = {}
-        data_dict.update(data)
+
+        if isinstance(data, (MultiDict, MultiDictProxy)):
+            for attr, values in data.lists():
+                data_dict[attr] = values
+        else:
+            data_dict.update(data)
 
         schema = DataJoinJoinParametersSchema()
         return Response(
@@ -318,7 +326,7 @@ class AttributeSelectionMicroFrontend(MethodView):
                 version=plugin.version,
                 schema=schema,
                 valid=valid,
-                values=data,
+                values=data_dict,
                 errors=errors,
                 process=url_for(
                     f"{JOIN_BLP.name}.{AttributeSelectionView.__name__}", db_id=db_id
@@ -411,7 +419,9 @@ class AddJoinView(MethodView):
 
         allwoed_attrs = db_task.data.get("attributes", [])
         if arguments["attribute"] not in allwoed_attrs:
-            abort(HTTPStatus.BAD_REQUEST, "Cannot join to a nonexistent attribute!")
+            abort(
+                HTTPStatus.BAD_REQUEST, message="Cannot join to a nonexistent attribute!"
+            )
 
         db_task.clear_previous_step()
         db_task.task_name = add_data_to_join.name
@@ -453,7 +463,7 @@ class FinishJoinsView(MethodView):
         """Finish selecting joins and proceed to attribute selection."""
         db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
 
-        if not db_task or db_task.task_name == add_data_to_join.name:
+        if not db_task or db_task.task_name != add_data_to_join.name:
             abort(HTTPStatus.NOT_FOUND)
 
         nr_of_joins = len(db_task.data.get("joins", []))
@@ -461,7 +471,7 @@ class FinishJoinsView(MethodView):
         if nr_of_joins == 0:
             abort(
                 HTTPStatus.NOT_FOUND,
-                "Cannot finish joins until at least one entity to join is selected.",
+                message="Cannot finish joins until at least one entity to join is selected.",
             )
 
         db_task.parameters = DataJoinFinishJoinParametersSchema().dumps(arguments)
@@ -471,13 +481,11 @@ class FinishJoinsView(MethodView):
         href = url_for(
             f"{JOIN_BLP.name}.{AttributeSelectionView.__name__}",
             db_id=db_task.id,
-            step_id=next_step_id,
             _external=True,
         )
         ui_href = url_for(
             f"{JOIN_BLP.name}.{AttributeSelectionMicroFrontend.__name__}",
             db_id=db_task.id,
-            step_id=next_step_id,
             _external=True,
         )
 
@@ -519,7 +527,7 @@ class AttributeSelectionView(MethodView):
         """Select the attributes to keep for the joined output."""
         db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
 
-        if not db_task or db_task.task_name == add_data_to_join.name:
+        if not db_task or db_task.task_name != add_data_to_join.name:
             abort(HTTPStatus.NOT_FOUND)
 
         nr_of_joins = len(db_task.data.get("joins", []))
@@ -531,14 +539,15 @@ class AttributeSelectionView(MethodView):
             )
 
         for i in range(nr_of_joins):
-            key = f"join_{i}"
+            key = f"join_{i+1}"
             if not arguments.get(key):
                 abort(
                     HTTPStatus.BAD_REQUEST,
                     message="At least one attribute must be selected for each entity to join!",
                 )
 
-        db_task.parameters = DataJoinFinishJoinParametersSchema().dumps(arguments)
+        db_task.parameters = dumps(arguments)
+        assert db_task.parameters != "{}"
 
         db_task.clear_previous_step()
         db_task.task_name = join_data.name
