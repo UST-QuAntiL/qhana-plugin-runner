@@ -341,7 +341,12 @@ def join_data(self, db_id: int):  # noqa: C901
 
         # process joined metadata
         for attr, final_attr in replacements.items():
-            metadata_dict = join_metadata[attr].to_dict()
+            join_attr_metadata = join_metadata.get(attr)
+
+            if not join_attr_metadata:
+                continue
+
+            metadata_dict = join_attr_metadata.to_dict()
             metadata_dict["ID"] = final_attr  # rename attribute for final attr metadata
             final_attr_metadata.append(metadata_dict)
 
@@ -359,19 +364,20 @@ def join_data(self, db_id: int):  # noqa: C901
                         base_entity[final_attr] = entity[attr]
 
     # save output ##############################################################
-    with SpooledTemporaryFile(mode="w") as output:
-        save_entities(
-            final_attr_metadata,
-            output,
-            "application/json",
-        )
-        STORE.persist_task_result(
-            db_id,
-            output,
-            "attribute_metadata.json",
-            "entity/attribute-metadata",
-            "application/json",
-        )
+    if len(final_attr_metadata) > 0:
+        with SpooledTemporaryFile(mode="w") as output:
+            save_entities(
+                final_attr_metadata,
+                output,
+                "application/json",
+            )
+            STORE.persist_task_result(
+                db_id,
+                output,
+                "attribute_metadata.json",
+                "entity/attribute-metadata",
+                "application/json",
+            )
 
     final_attr_metadata_dict = {
         m["ID"]: AttributeMetadata.from_dict(m) for m in final_attr_metadata
