@@ -20,6 +20,13 @@ from qhana_plugin_runner import db
 from qhana_plugin_runner.storage import STORE
 from typing import Mapping, Optional, cast, Dict, Union
 
+# Adding optimizer to loop
+from enum import Enum
+from qhana_plugin_runner.api.extra_fields import EnumField
+from scipy.optimize import minimize
+import numpy.typing as npt
+
+
 import numpy as np
 from qiskit import QuantumCircuit, qasm3
 from qiskit.qasm3 import dumps
@@ -72,6 +79,7 @@ from qhana_plugin_runner.tasks import (
     save_task_error,
     save_task_result,
 )
+
 _plugin_name = "loop"
 __version__ = "v0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
@@ -82,11 +90,26 @@ LOOP_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Loop plugin to orchestrate.",
     template_folder="loop_templates",
-
 )
 
 
+class OPTIMIZERENUM(Enum):
+    SPSA = "SPSA (Simultaneous Perturbation Stochastic Approximation)"
+    COBYLA = "COBYLA (Constrained Optimization BY Linear Approximation)"
+
+
 class LoopParametersSchema(FrontendFormBaseSchema):
+    optimizer = EnumField(
+        OPTIMIZERENUM,
+        required=False,
+        allow_none=False,
+        metadata={
+            "label": "Optimizer",
+            "description": "Select optimizer.",
+            "input_type": "select",
+        },
+    )
+
     executor = PluginUrl(
         required=True,
         plugin_tags=["circuit-executor", "qasm-3"],
@@ -118,7 +141,7 @@ class LoopParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    
+
     statevector = fields.Bool(
         required=False,
         missing=False,
@@ -127,12 +150,15 @@ class LoopParametersSchema(FrontendFormBaseSchema):
         },
     )
 
+
 class WebhookParams(MaBaseSchema):
     source = fields.URL()
     event = fields.String()
 
+
 class ExecutionOptionsParams(MaBaseSchema):
     statevector = fields.Bool(missing=False)
+
 
 @LOOP_BLP.route("/")
 class PluginsView(MethodView):
@@ -174,7 +200,6 @@ class PluginsView(MethodView):
                         required=True,
                         parameter="ansatz",
                     ),
-                    
                 ],
                 data_output=[
                     OutputDataMetadata(
@@ -265,7 +290,7 @@ class ProcessView(MethodView):
     @LOOP_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the loop task."""
-        
+
         statevector: bool = arguments.get("statevector", False)
 
         options_url = url_for(
@@ -282,9 +307,9 @@ class ProcessView(MethodView):
         DB.session.flush()
 
         circuit_url = url_for(
-                    f"{LOOP_BLP.name}.{CircuitView.__name__}",
-                    db_id=db_task.id,
-                    _external=True,
+            f"{LOOP_BLP.name}.{CircuitView.__name__}",
+            db_id=db_task.id,
+            _external=True,
         )
 
         continue_url = url_for(
@@ -300,6 +325,18 @@ class ProcessView(MethodView):
         }
         db_task.save(commit=True)
 
+        optimizer: int = arguments.get("optimizer", False)
+
+        # TODO adapt to work well with flask
+        # TODO get Nr. of ansatz parameters
+        # this will later optimize the ansatz
+        if optimizer == OPTIMIZERENUM.COBYLA:
+            result = minimize(
+                fun=get_cost_function(),
+                method="COBYLA",
+                x0=[np.random.random() for _ in range(nr_parameters)]  # NOTE another value range could perform better
+            )
+
         # all tasks need to know about db id to load the db entry
         task = execute_circuit.s(db_id=db_task.id)
         # save errors to db
@@ -313,7 +350,6 @@ class ProcessView(MethodView):
         )
 
 
-   
 @LOOP_BLP.route("/continue/<int:db_id>/")
 class ContinueProcessView(MethodView):
     """Restart long running task that was blocked by an ongoing plugin computation."""
@@ -352,6 +388,7 @@ class ContinueProcessView(MethodView):
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )
 
+
 @LOOP_BLP.route("/options/")
 class ExecutionOptionsView(MethodView):
     """Get the execution options."""
@@ -379,6 +416,7 @@ class Loop(QHAnaPluginBase):
     def get_requirements(self) -> str:
         return "qiskit~=1.3.2\nnumpy"
 
+
 @LOOP_BLP.route("/circuit/<int:db_id>")
 class CircuitView(MethodView):
     """Get the combined circuit."""
@@ -395,19 +433,45 @@ class CircuitView(MethodView):
         )
 
 
-def combine_circuit(db_id:int) -> str:
+# NOTE maybe a new type state_vector would be better
+def get_cost_function(
+    # ansatz: qasam_url, ansatz_plugin_url??  # TODO decide
+    target_state_vector: npt.NDArray[np.complex128],
+) -> callable[[list[float]], [float]]:
+    """
+    Returns the cost/loss function taking single argument, i.e. (ansatz) parameters, which will be
+    minimized during optimization.
+    """
+    pass
 
+    def cost_function(params: list[float]) -> float:
+        # TODO parametrize ansatz and pass to optimizer
+        # later iterate over list of inputs
+
+        # FIXME
+        # result_state_vector = call_qiskit_simulator(circuit)
+
+        # Fidelity = |<target_state_vector|result_state_vector>|^2
+        # NOTE way to access statevector value might have changed
+        fidelity = (
+            np.abs(np.matrix(result_state_vector.data) @ np.matrix(target_state_vector).T)
+            ** 2
+        )
+
+        return 1 - fidelity
+
+
+def combine_circuit(db_id: int) -> str:
 
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     params = LoopParametersSchema().loads(task_data.parameters or "{}")
     state_url: Optional[str] = params.get("state", None)
     ansatz_url: Optional[str] = params.get("ansatz", None)
-  
+
     ansatz_qasm: str
     with open_url(ansatz_url) as quasm_response:
         ansatz_qasm = quasm_response.text
         ansatz_circuit = parse(ansatz_qasm)
-
 
     state_qasm: str
     with open_url(state_url) as quasm_response:
@@ -415,15 +479,18 @@ def combine_circuit(db_id:int) -> str:
         state_circuit = parse(state_qasm)
 
     if state_qasm is None or ansatz_qasm is None:
-        raise ValueError(
-                "Cannot execute a quantum circuit without a circuit specified."
-            )    
+        raise ValueError("Cannot execute a quantum circuit without a circuit specified.")
 
     total_qubits = max(ansatz_circuit.num_qubits, state_circuit.num_qubits)
     total_clbits = max(ansatz_circuit.num_clbits, state_circuit.num_clbits)
     combined_circuit = QuantumCircuit(total_qubits, total_clbits)
     combined_circuit.compose(state_circuit, inplace=True)
-    combined_circuit.compose(ansatz_circuit, qubits=range(total_qubits), clbits=range(total_clbits), inplace=True)
+    combined_circuit.compose(
+        ansatz_circuit,
+        qubits=range(total_qubits),
+        clbits=range(total_clbits),
+        inplace=True,
+    )
 
     num_params = combined_circuit.num_parameters
     initial_guess = np.random.uniform(0, np.pi, num_params)
@@ -437,6 +504,8 @@ def combine_circuit(db_id:int) -> str:
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
 @CELERY.task(name=f"{Loop.instance.identifier}.execute_circuit", bind=True)
 def execute_circuit(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting the optmizing loop with db id '{db_id}'")
@@ -446,7 +515,7 @@ def execute_circuit(self, db_id: int) -> str:
         msg = f"Could not load task data with id {db_id} to read parameters!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
-        
+
     task_options: Dict[str, Union[str, int]] = loads(task_data.parameters or "{}")
 
     executor: Optional[str] = cast(str, task_options["executor"])
@@ -458,7 +527,6 @@ def execute_circuit(self, db_id: int) -> str:
         raise ValueError(
             "Cannot execute a quantum circuit without a circuit executor plugin specified."
         )
-    
 
     endpoint = get_plugin_endpoint(executor)
 
@@ -502,6 +570,7 @@ def execute_circuit(self, db_id: int) -> str:
             )
         )
 
+
 def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
     last_step = None
     if task_data.steps:
@@ -544,9 +613,7 @@ def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
     return None
 
 
-@CELERY.task(
-    name=f"{Loop.instance.identifier}.check_executor_result_task", bind=True
-)
+@CELERY.task(name=f"{Loop.instance.identifier}.check_executor_result_task", bind=True)
 def check_executor_result_task(self, db_id: int, event_type: Optional[str]):
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -604,9 +671,7 @@ def check_executor_result_task(self, db_id: int, event_type: Optional[str]):
         raise ValueError(f"Unknown task status {status}!")
 
 
-@CELERY.task(
-    name=f"{Loop.instance.identifier}.circuit_result_task", bind=True
-)
+@CELERY.task(name=f"{Loop.instance.identifier}.circuit_result_task", bind=True)
 def circuit_result_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Saving circuit demo task results with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
