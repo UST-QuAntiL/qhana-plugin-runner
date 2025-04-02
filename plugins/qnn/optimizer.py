@@ -250,8 +250,7 @@ class Optimizer(QHAnaPluginBase):
         return OPTIMIZER_BLP
 
     def get_requirements(self) -> str:
-        # return "qiskit~=1.3.2\nnumpy"
-        return "scipy"
+        return "qiskit~=1.3.2\nnumpy"
 
 
 TASK_LOGGER = get_task_logger(__name__)

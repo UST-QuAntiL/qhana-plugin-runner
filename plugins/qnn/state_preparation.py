@@ -60,11 +60,11 @@ STATE_PREPARATION_BLP = SecurityBlueprint(
     template_folder="state_preparation_templates",
 )
 
-
 class METHODENUM(Enum):
     BASIS_ENCODING = "Basis Encoding"
     ANGLE_ENCODING = "Angle Encoding"
     ARBITRARY_STATE = "Arbitrary State"
+    
 
 
 class StatePreparationParametersSchema(FrontendFormBaseSchema):
@@ -117,12 +117,13 @@ class StatePreparationParametersSchema(FrontendFormBaseSchema):
         },
     )
 
+
     append_measurement = ma.fields.Bool(
         required=False,
         missing=False,
         metadata={
             "label": "Measurement",
-            "description": "Append a measurement to the circuit.",
+            "description" : "Append a measurement to the circuit.",
         },
     )
 
@@ -230,23 +231,16 @@ class MicroFrontend(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @STATE_PREPARATION_BLP.arguments(
-        StatePreparationParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @STATE_PREPARATION_BLP.arguments(StatePreparationParametersSchema(unknown=EXCLUDE), location="form")
     @STATE_PREPARATION_BLP.response(HTTPStatus.SEE_OTHER)
     @STATE_PREPARATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the demo task."""
-        db_task = ProcessingTask(
-            task_name=prepare_task.name,
-            parameters=StatePreparationParametersSchema().dumps(arguments),
-        )
+        db_task = ProcessingTask(task_name=prepare_task.name, parameters=StatePreparationParametersSchema().dumps(arguments))
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = prepare_task.s(db_id=db_task.id) | save_task_result.s(
-            db_id=db_task.id
-        )
+        task: chain = prepare_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -261,9 +255,7 @@ class ProcessView(MethodView):
 class StatePreparation(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = (
-        "Tests the connection of all components by printing some text (UPDATED!)."
-    )
+    description = "Tests the connection of all components by printing some text (UPDATED!)."
     tags = ["state-preparation", "demo"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -271,13 +263,12 @@ class StatePreparation(QHAnaPluginBase):
 
     def get_api_blueprint(self):
         return STATE_PREPARATION_BLP
-
+    
     def get_requirements(self) -> str:
         return "qiskit~=1.3.2\nnumpy"
 
 
 TASK_LOGGER = get_task_logger(__name__)
-
 
 @CELERY.task(name=f"{StatePreparation.instance.identifier}.prepare_task", bind=True)
 def prepare_task(self, db_id: int) -> str:
@@ -292,41 +283,16 @@ def prepare_task(self, db_id: int) -> str:
         msg = f"Could not load task data with id {db_id} to read parameters!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
+    
+    method: Optional[int] = StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("preparation_method", None)
+    data_values: Optional[str] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("data_values", None)
+    digits_before_decimal: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("digits_before_decimal", None)
+    digits_after_decimal: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("digits_after_decimal", None)
+    encode_sign: Optional[bool] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("encode_sign", None)
+    append_measurement: Optional[bool] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("append_measurement", None)
 
-    method: Optional[int] = (
-        StatePreparationParametersSchema()
-        .loads(task_data.parameters or "{}")
-        .get("preparation_method", None)
-    )
-    data_values: Optional[str] = (
-        StatePreparationParametersSchema()
-        .loads(task_data.parameters or "{}")
-        .get("data_values", None)
-    )
-    digits_before_decimal: Optional[int] = (
-        StatePreparationParametersSchema()
-        .loads(task_data.parameters or "{}")
-        .get("digits_before_decimal", None)
-    )
-    digits_after_decimal: Optional[int] = (
-        StatePreparationParametersSchema()
-        .loads(task_data.parameters or "{}")
-        .get("digits_after_decimal", None)
-    )
-    encode_sign: Optional[bool] = (
-        StatePreparationParametersSchema()
-        .loads(task_data.parameters or "{}")
-        .get("encode_sign", None)
-    )
-    append_measurement: Optional[bool] = (
-        StatePreparationParametersSchema()
-        .loads(task_data.parameters or "{}")
-        .get("append_measurement", None)
-    )
 
-    TASK_LOGGER.info(
-        f"Loaded input parameters from db: data_values='{data_values}', digits_before_decimal='{digits_before_decimal}', digits_after_decimal='{digits_after_decimal}', encode_sign='{encode_sign}', append_measurement='{append_measurement}'"
-    )
+    TASK_LOGGER.info(f"Loaded input parameters from db: data_values='{data_values}', digits_before_decimal='{digits_before_decimal}', digits_after_decimal='{digits_after_decimal}', encode_sign='{encode_sign}', append_measurement='{append_measurement}'")
 
     if method == METHODENUM.BASIS_ENCODING:
         if len(data_values) != 1:
@@ -338,34 +304,33 @@ def prepare_task(self, db_id: int) -> str:
         except ValueError:
             raise ValueError("The data value for basis encoding must be a number!")
 
+        
         if encode_sign:
             if value < 0:
                 value = -value
-                sign_bit = "1"
+                sign_bit = '1'
             else:
-                sign_bit = "0"
+                sign_bit = '0'
         else:
             if value < 0:
                 raise ValueError("Negative values are not allowed without sign encoding!")
-            sign_bit = ""
+            sign_bit = ''
+
 
         integer_part = int(value)
-        if integer_part > 2**digits_before_decimal - 1:
-            raise ValueError(
-                f"Integer part {integer_part} is too large for {digits_before_decimal} bits!"
-            )
+        if integer_part > 2 ** digits_before_decimal - 1:
+            raise ValueError(f"Integer part {integer_part} is too large for {digits_before_decimal} bits!")
         fractional_part = value - integer_part
 
+
         integer_bits = bin(integer_part)[2:].zfill(digits_before_decimal)
-        fractional_bits = bin(int(fractional_part * (2**digits_after_decimal)))[
-            2:
-        ].zfill(digits_after_decimal)
+        fractional_bits = bin(int(fractional_part * (2 ** digits_after_decimal)))[2:].zfill(digits_after_decimal)
 
         bit_list = sign_bit + integer_bits + fractional_bits
 
         qc = QuantumCircuit(len(bit_list))
         for i, bit in enumerate(reversed(bit_list)):
-            if bit == "1":
+            if bit == '1':
                 qc.x(i)
 
     elif method == METHODENUM.ANGLE_ENCODING:
@@ -373,35 +338,36 @@ def prepare_task(self, db_id: int) -> str:
             data_values = [float(x) for x in data_values]
         except ValueError:
             raise ValueError("Data values must be numbers!")
-
+        
         xmin = min(data_values)
         xmax = max(data_values)
         if (xmax - xmin) == 0:
             raise ValueError("Data values must not be all the same!")
-        normalized_values = [
-            1 / 2 * np.pi * (x - xmin) / (xmax - xmin) for x in data_values
-        ]
+        normalized_values = [1/2 * np.pi * (x - xmin) / (xmax - xmin) for x in data_values]
 
         qc = QuantumCircuit(len(data_values))
         for i, value in enumerate(normalized_values):
-            qc.ry(2 * value, i)
+            qc.ry(2*value, i)
 
+        
     elif method == METHODENUM.ARBITRARY_STATE:
         try:
             data_values = [complex(x) for x in data_values]
         except ValueError:
             raise ValueError("Data values must be complex numbers!")
-        gate = StatePreparationQiskit(data_values)
+        gate=StatePreparationQiskit(data_values)
         qc = QuantumCircuit(gate.num_qubits)
         qc.append(gate, range(gate.num_qubits))
     else:
         raise NotImplementedError(f"Method {method} not implemented!")
-
+    
     if append_measurement:
         qc.measure_all()
-    # neccessary as qasm does not support complex numbers
-    qc = qc.decompose()
-    qasm_str = qasm3.dumps(qc)
+    #neccessary as qasm does not support complex numbers
+    qc=qc.decompose()
+    qasm_str=qasm3.dumps(qc)
+        
+
 
     with SpooledTemporaryFile(mode="w") as output:
         output.write(qasm_str)

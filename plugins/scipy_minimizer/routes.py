@@ -95,7 +95,6 @@ class MinimizerSetupMicroFrontend(MethodView):
 
     example_inputs = {
         "method": MinimizerEnum.nelder_mead,
-        "callback": "https://www.test.de"
     }
 
     @SCIPY_MINIMIZER_BLP.html_response(
@@ -117,7 +116,6 @@ class MinimizerSetupMicroFrontend(MethodView):
     @SCIPY_MINIMIZER_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, callback: CallbackUrl):
         """Return the micro frontend."""
-        print("reached get")
         return self.render(request.args, errors, callback)
 
     @SCIPY_MINIMIZER_BLP.html_response(
@@ -142,7 +140,6 @@ class MinimizerSetupMicroFrontend(MethodView):
         return self.render(request.form, errors, callback)
 
     def render(self, data: Mapping, errors: dict, callback: CallbackUrl):
-        print("test!!!")
         schema = MinimizerSetupTaskInputSchema()
         callback_schema = CallbackUrlSchema()
 

@@ -27,7 +27,7 @@ class CallbackUrl:
 
 
 class CallbackUrlSchema(MaBaseSchema):
-    callback = ma.fields.URL(required=True, allow_none=True)
+    callback = ma.fields.URL(required=True, allow_none=False)
 
     @ma.post_load
     def make_object(self, data, **kwargs):
@@ -60,8 +60,8 @@ class MinimizerSetupTaskInputData:
 class MinimizerSetupTaskInputSchema(FrontendFormBaseSchema):
     method = EnumField(
         MinimizerEnum,
-        required=False,
-        allow_none=True,
+        required=True,
+        allow_none=False,
         metadata={
             "label": "Minimization Method",
             "description": "The method used for minimization.",
@@ -76,7 +76,7 @@ class MinimizerSetupTaskInputSchema(FrontendFormBaseSchema):
 
 class MinimizeSchema(FrontendFormBaseSchema):
     objective_function = ma.fields.URL(
-        required=False,
+        required=True,
         allow_none=False,
         metadata={
             "label": "Objective Function Task Result URL",
