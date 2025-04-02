@@ -20,6 +20,11 @@ from qhana_plugin_runner import db
 from qhana_plugin_runner.storage import STORE
 from typing import Mapping, Optional, cast, Dict, Union
 
+import numpy as np
+from qiskit import QuantumCircuit, qasm3
+from qiskit.qasm3 import dumps
+from qiskit_qasm3_import import parse
+
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, jsonify, redirect
@@ -391,9 +396,7 @@ class CircuitView(MethodView):
 
 
 def combine_circuit(db_id:int) -> str:
-    from qiskit import QuantumCircuit, qasm3
-    from qiskit.qasm3 import dumps
-    from qiskit_qasm3_import import parse
+
 
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     params = LoopParametersSchema().loads(task_data.parameters or "{}")
@@ -404,6 +407,7 @@ def combine_circuit(db_id:int) -> str:
     with open_url(ansatz_url) as quasm_response:
         ansatz_qasm = quasm_response.text
         ansatz_circuit = parse(ansatz_qasm)
+
 
     state_qasm: str
     with open_url(state_url) as quasm_response:
@@ -417,18 +421,17 @@ def combine_circuit(db_id:int) -> str:
 
     total_qubits = max(ansatz_circuit.num_qubits, state_circuit.num_qubits)
     total_clbits = max(ansatz_circuit.num_clbits, state_circuit.num_clbits)
-
     combined_circuit = QuantumCircuit(total_qubits, total_clbits)
     combined_circuit.compose(state_circuit, inplace=True)
     combined_circuit.compose(ansatz_circuit, qubits=range(total_qubits), clbits=range(total_clbits), inplace=True)
 
-    # TODO bind parameteres to value
-    combined_qasm3 = qasm3.dumps(state_circuit)
-    # combined_qasm3 = qasm3.dumps(combined_circuit)
+    num_params = combined_circuit.num_parameters
+    initial_guess = np.random.uniform(0, np.pi, num_params)
+    param_dict = dict(zip(combined_circuit.parameters, initial_guess))
+    bound_circuit = combined_circuit.assign_parameters(param_dict)
 
+    combined_qasm3 = qasm3.dumps(bound_circuit)
     combined_qasm3_cleaned = dedent(combined_qasm3).lstrip()
-
-    print(f"{combined_circuit}")
 
     return combined_qasm3_cleaned
 
