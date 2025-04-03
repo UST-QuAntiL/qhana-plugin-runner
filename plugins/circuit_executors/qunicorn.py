@@ -376,7 +376,7 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
     result_url = urljoin(QUNICORN_URL, f"/jobs/{job_id}")
 
     for i in range(100):
-        response = requests.get(result_url, timeout=0.3)
+        response = requests.get(result_url, timeout=0.5)
         response.raise_for_status()
         result = response.json()
         if result["state"] == "FINISHED":
@@ -384,51 +384,60 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
         elif result["state"] in ("ERROR", "CANCELED"):
             print(result["results"])
             raise ValueError(f"Qunicorn job ended with a Failure! ({result_url})")
-        sleep(0.1)
+    print(result)
+
+    if result["state"] == "FINISHED":
+        counts = None
+        probabilities = None
+        no_count = None
+        no_prob = None
+        registers = None
+        counts_format = "bin"
+        for output in result["results"]:
+            if output["resultType"] == "COUNTS":
+                counts = output["data"]
+                metadata = output["metadata"]
+                if metadata.get("format") in ("bin", "hex"):
+                    counts_format = metadata["format"]
+                if counts_format == "hex":
+                    registers = [r["size"] for r in metadata["registers"]]
+            if output["resultType"] == "PROBABILITIES":
+                probabilities = output["data"]
+                metadata_prob = output["metadata"]
+                if metadata_prob.get("format") in ("bin", "hex"):
+                    prob_format = metadata_prob["format"]
+                if counts_format == "hex":
+                    registers = [r["size"] for r in metadata_prob["registers"]]
+        if counts:
+            counts = {
+                ensure_binary(k, counts_format, registers): v for k, v in counts.items()
+            }
+            if set(counts.keys()) == {""}:
+                no_count = True
+                counts_keys = {}  # no counts
+
+            # return counts
+        if probabilities:
+            probabilities = {
+                ensure_binary(k, prob_format, registers): v
+                for k, v in probabilities.items()
+            }
+            if set(probabilities.keys()) == {""}:
+                no_prob = True
+                prob_keys = {}
+
+        if no_count and no_prob:
+            return counts_keys, prob_keys
+        elif counts and probabilities:
+            return counts, probabilities
+        else:
+            raise ValueError(f"Did not produce any counts! ({result_url})")
+
+    elif result["state"] in ("ERROR", "CANCELED"):
+        print(result["results"])
+        raise ValueError(f"Qunicorn job ended with a Failure! ({result_url})")
     else:
         raise ValueError(f"Qunicorn job timed out producing a result! ({result_url})")
-
-    counts = None
-    registers = None
-    counts_format = "bin"
-    for output in result["results"]:
-        if output["resultType"] == "COUNTS":
-            counts = output["data"]
-            metadata = output["metadata"]
-            if metadata.get("format") in ("bin", "hex"):
-                counts_format = metadata["format"]
-            if counts_format == "hex":
-                registers = [r["size"] for r in metadata["registers"]]
-        if output["resultType"] == "PROBABILITIES":
-            probabilities = output["data"]
-            metadata_prob = output["metadata"]
-            if metadata_prob.get("format") in ("bin", "hex"):
-                prob_format = metadata_prob["format"]
-            if counts_format == "hex":
-                registers = [r["size"] for r in metadata_prob["registers"]]
-    if counts:
-        counts = {
-            ensure_binary(k, counts_format, registers): v for k, v in counts.items()
-        }
-        if set(counts.keys()) == {""}:
-            no_count = True
-            counts_keys = {}  # no counts
-
-        # return counts
-    if probabilities:
-        probabilities = {
-            ensure_binary(k, prob_format, registers): v for k, v in probabilities.items()
-        }
-        if set(probabilities.keys()) == {""}:
-            no_prob = True
-            prob_keys = {}
-
-    if no_count and no_prob:
-        return counts_keys, prob_keys
-    elif counts and probabilities:
-        return counts, probabilities
-    else:
-        raise ValueError(f"Did not produce any counts! ({result_url})")
 
 
 def bin_to_hex(binary_str):
@@ -452,7 +461,7 @@ def state_from_prob(probabilities):
         i = int(bin_to_hex(key))
         value = probabilities[key]
         statevector[i] = np.sqrt(value)
-    return statevector
+    return np.array(statevector)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
