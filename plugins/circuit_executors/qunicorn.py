@@ -74,12 +74,10 @@ QUNICORN_PROVIDER = environ.get("QUNICORN_PROVIDER", "IBM")
 QUNICORN_DEVICE = environ.get("QUNICORN_DEVICE", "aer_simulator")
 QUNICORN_TOKEN = environ.get("QUNICORN_TOKEN", "")
 
-EXECUTION_OPTIONS = {"shots": 1024}
-
-QUNICORN = SecurityBlueprint(
+QUNICORN_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Circuit executor exposing the qiskit simulators as backend.",  # ???
+    description="Circuit executor executing jobs on qunicorn.",
 )
 
 
@@ -129,12 +127,12 @@ class QunicornPluginParametersSchema(FrontendFormBaseSchema):
     )
 
 
-@QUNICORN.route("/")
+@QUNICORN_BLP.route("/")
 class PluginsView(MethodView):
     """Plugins collection resource."""
 
-    @QUNICORN.response(HTTPStatus.OK, PluginMetadataSchema())
-    @QUNICORN.require_jwt("jwt", optional=True)
+    @QUNICORN_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @QUNICORN_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Endpoint returning the plugin metadata."""
         plugin = QunicornPlugin.instance
@@ -147,8 +145,8 @@ class PluginsView(MethodView):
             version=plugin.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{QUNICORN.name}.ProcessView"),
-                ui_href=url_for(f"{QUNICORN.name}.MicroFrontend"),
+                href=url_for(f"{QUNICORN_BLP.name}.ProcessView"),
+                ui_href=url_for(f"{QUNICORN_BLP.name}.MicroFrontend"),
                 plugin_dependencies=[],
                 data_input=[
                     InputDataMetadata(
@@ -199,7 +197,7 @@ class PluginsView(MethodView):
         )
 
 
-@QUNICORN.route("/ui/")
+@QUNICORN_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the qunicorn plugin."""
 
@@ -207,33 +205,33 @@ class MicroFrontend(MethodView):
         "shots": 1024,
     }
 
-    @QUNICORN.html_response(
+    @QUNICORN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the qunicorn plugin."
     )
-    @QUNICORN.arguments(
+    @QUNICORN_BLP.arguments(
         QunicornPluginParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @QUNICORN.require_jwt("jwt", optional=True)
+    @QUNICORN_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         """Return the micro frontend."""
         values: ChainMap[str, Any] = ChainMap(request.args.to_dict(), self.example_inputs)
         return self.render(values, errors, False)
 
-    @QUNICORN.html_response(
+    @QUNICORN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the qunicorn plugin."
     )
-    @QUNICORN.arguments(
+    @QUNICORN_BLP.arguments(
         QunicornPluginParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @QUNICORN.require_jwt("jwt", optional=True)
+    @QUNICORN_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         values: ChainMap[str, Any] = ChainMap(request.form.to_dict(), self.example_inputs)
@@ -253,22 +251,24 @@ class MicroFrontend(MethodView):
                 valid=valid,
                 values=data,
                 errors=errors,
-                process=url_for(f"{QUNICORN.name}.ProcessView"),
+                process=url_for(f"{QUNICORN_BLP.name}.ProcessView"),
                 help_text="",
                 example_values=url_for(
-                    f"{QUNICORN.name}.MicroFrontend", **self.example_inputs
+                    f"{QUNICORN_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
             )
         )
 
 
-@QUNICORN.route("/process/")
+@QUNICORN_BLP.route("/process/")
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @QUNICORN.arguments(QunicornPluginParametersSchema(unknown=EXCLUDE), location="form")
-    @QUNICORN.response(HTTPStatus.FOUND)
-    @QUNICORN.require_jwt("jwt", optional=True)
+    @QUNICORN_BLP.arguments(
+        QunicornPluginParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @QUNICORN_BLP.response(HTTPStatus.FOUND)
+    @QUNICORN_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Start the circuit execution task."""
         db_task = ProcessingTask(
@@ -301,24 +301,25 @@ class QunicornPlugin(QHAnaPluginBase):
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return QUNICORN
+        return QUNICORN_BLP
 
-    def get_requirements(self) -> str:
-        return """pennylane~=0.35.0\nqiskit_qasm3_import"""  # ?????
+
+#    def get_requirements(self) -> str:
+#        return """pennylane~=0.35.0\nqiskit_qasm3_import"""
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def register_deployment(circuit: str) -> int:
+def register_deployment(circuit_qasm: str) -> int:
 
-    is_qasm2 = "OPENQASM 2.0;" in circuit
+    is_qasm2 = "OPENQASM 2.0;" in circuit_qasm
 
     data = {
-        "name": f"QasmTestsuite Deployment ()",
+        "name": "QasmTestsuite Deployment Qhana",
         "programs": [
             {
-                "quantumCircuit": circuit,
+                "quantumCircuit": circuit_qasm,
                 "assemblerLanguage": "QASM2" if is_qasm2 else "QASM3",
             }
         ],
@@ -330,9 +331,8 @@ def register_deployment(circuit: str) -> int:
 
 
 def run_job(deployment_id: int) -> int:
-    count = 1
     data = {
-        "name": f"QasmTestSuite Job ({count})",
+        "name": "QasmTestSuite Job Qhana",
         "providerName": QUNICORN_PROVIDER,
         "deviceName": QUNICORN_DEVICE,
         "shots": 1024,
@@ -367,9 +367,9 @@ def ensure_binary(result: str, counts_format: str, registers: Optional[list[int]
     return result
 
 
-def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
+def run_qunicorn_circuit(circuit_qasm: str) -> Mapping[str, int]:
 
-    deployment_id = register_deployment(circuit)
+    deployment_id = register_deployment(circuit_qasm)
 
     job_id = run_job(deployment_id)
 
@@ -382,10 +382,7 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
         if result["state"] == "FINISHED":
             break
         elif result["state"] in ("ERROR", "CANCELED"):
-            print(result["results"])
             raise ValueError(f"Qunicorn job ended with a Failure! ({result_url})")
-    print(result)
-
     if result["state"] == "FINISHED":
         counts = None
         probabilities = None
@@ -414,9 +411,8 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
             }
             if set(counts.keys()) == {""}:
                 no_count = True
-                counts_keys = {}  # no counts
+                counts_keys = {}
 
-            # return counts
         if probabilities:
             probabilities = {
                 ensure_binary(k, prob_format, registers): v
@@ -434,7 +430,6 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
             raise ValueError(f"Did not produce any counts! ({result_url})")
 
     elif result["state"] in ("ERROR", "CANCELED"):
-        print(result["results"])
         raise ValueError(f"Qunicorn job ended with a Failure! ({result_url})")
     else:
         raise ValueError(f"Qunicorn job timed out producing a result! ({result_url})")
@@ -456,12 +451,11 @@ def state_from_prob(probabilities):
     binary_key = list(probabilities.keys())[0]
     len_statevector = 2 ** len(binary_key)
     statevector = np.zeros(len_statevector, dtype=complex)
-    statevector = list(statevector)
     for key in probabilities.keys():
         i = int(bin_to_hex(key))
         value = probabilities[key]
         statevector[i] = np.sqrt(value)
-    return np.array(statevector)
+    return statevector
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
