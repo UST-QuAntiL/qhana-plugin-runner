@@ -64,21 +64,22 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qunicorn-plugin"
-__version__ = "v1.0.1"                                                                #???
+__version__ = "v1.0.1"  # ???
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
-QUNICORN_URL = environ.get("QUNICORN_URL", "http://localhost:5005/")
+QUNICORN_URL = environ.get("QUNICORN_URL", "http://localhost:5001/")
 
 QUNICORN_PROVIDER = environ.get("QUNICORN_PROVIDER", "IBM")
 QUNICORN_DEVICE = environ.get("QUNICORN_DEVICE", "aer_simulator")
 QUNICORN_TOKEN = environ.get("QUNICORN_TOKEN", "")
 
+EXECUTION_OPTIONS = {"shots": 1024}
 
 QUNICORN = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Circuit executor exposing the qiskit simulators as backend.",       #???
+    description="Circuit executor exposing the qiskit simulators as backend.",  # ???
 )
 
 
@@ -265,9 +266,7 @@ class MicroFrontend(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @QUNICORN.arguments(
-        QunicornPluginParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @QUNICORN.arguments(QunicornPluginParametersSchema(unknown=EXCLUDE), location="form")
     @QUNICORN.response(HTTPStatus.FOUND)
     @QUNICORN.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -295,9 +294,7 @@ class ProcessView(MethodView):
 class QunicornPlugin(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = (
-        "Allows execution of quantum circuits using the qunicorn package."
-    )
+    description = "Allows execution of quantum circuits using the qunicorn package."
     tags = ["circuit-executor", "qc-simulator", "qunicorn", "qasm", "qasm-2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -307,13 +304,13 @@ class QunicornPlugin(QHAnaPluginBase):
         return QUNICORN
 
     def get_requirements(self) -> str:
-        return """pennylane~=0.35.0\nqiskit_qasm3_import"""                             #?????
+        return """pennylane~=0.35.0\nqiskit_qasm3_import"""  # ?????
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
-def register_deployment(circuit: str) -> int:
 
+def register_deployment(circuit: str) -> int:
 
     is_qasm2 = "OPENQASM 2.0;" in circuit
 
@@ -331,19 +328,18 @@ def register_deployment(circuit: str) -> int:
     response.raise_for_status()
     return response.json()["id"]
 
-def run_job(deployment_id: int) -> int:
 
-    data: dict = dict(QunicornPluginParametersSchema.executionOptions)
-    data.update(
-        {
-            "name": f"QasmTestsuite Job ()",
-            "providerName": QUNICORN_PROVIDER,
-            "deviceName": QUNICORN_DEVICE,
-            "token": QUNICORN_TOKEN,
-            "type": "RUNNER",
-            "deploymentId": deployment_id,
-        }
-    )
+def run_job(deployment_id: int) -> int:
+    count = 1
+    data = {
+        "name": f"QasmTestSuite Job ({count})",
+        "providerName": QUNICORN_PROVIDER,
+        "deviceName": QUNICORN_DEVICE,
+        "shots": 1024,
+        "token": QUNICORN_TOKEN,
+        "type": "RUNNER",
+        "deploymentId": deployment_id,
+    }
     deployments_url = urljoin(QUNICORN_URL, "/jobs/")
     response = requests.post(deployments_url, json=data)
     try:
@@ -351,6 +347,7 @@ def run_job(deployment_id: int) -> int:
     except RequestException as err:
         raise ValueError(response.text) from err
     return response.json()["id"]
+
 
 def ensure_binary(result: str, counts_format: str, registers: Optional[list[int]]) -> str:
     if counts_format == "bin":
@@ -364,9 +361,11 @@ def ensure_binary(result: str, counts_format: str, registers: Optional[list[int]
                 "Number of registers in counts string does not match number of registers from metadata!"
             )
         return " ".join(
-            f"000{int(val, 16):b}"[-size:] for val, size in zip(register_counts, registers)
+            f"000{int(val, 16):b}"[-size:]
+            for val, size in zip(register_counts, registers)
         )
     return result
+
 
 def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
 
@@ -407,7 +406,7 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
                 prob_format = metadata_prob["format"]
             if counts_format == "hex":
                 registers = [r["size"] for r in metadata_prob["registers"]]
-    if counts :
+    if counts:
         counts = {
             ensure_binary(k, counts_format, registers): v for k, v in counts.items()
         }
@@ -415,8 +414,8 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
             no_count = True
             counts_keys = {}  # no counts
 
-        #return counts
-    if probabilities :
+        # return counts
+    if probabilities:
         probabilities = {
             ensure_binary(k, prob_format, registers): v for k, v in probabilities.items()
         }
@@ -431,27 +430,29 @@ def run_qunicorn_circuit(circuit: str) -> Mapping[str, int]:
     else:
         raise ValueError(f"Did not produce any counts! ({result_url})")
 
+
 def bin_to_hex(binary_str):
     decimal = int(binary_str, 2)
     hex_value = hex(decimal)[2:]
     hex_value = hex_value.upper()
     return hex_value
 
-def state_from_prob(probabilities):
-  """
-  calculate statevector from probabilities as qunicorn only returns counts and probabilities
-  """
-  import numpy as np
-  binary_key = list(probabilities.keys())[0]
-  len_statevector = 2**len(binary_key)
-  statevector = np.zeros(len_statevector, dtype=complex)
-  statevector = list(statevector)
-  for key in probabilities.keys():
-    i = int(bin_to_hex(key))
-    value = probabilities[key]
-    statevector[i] = np.sqrt(value)
-  return statevector
 
+def state_from_prob(probabilities):
+    """
+    calculate statevector from probabilities as qunicorn only returns counts and probabilities
+    """
+    import numpy as np
+
+    binary_key = list(probabilities.keys())[0]
+    len_statevector = 2 ** len(binary_key)
+    statevector = np.zeros(len_statevector, dtype=complex)
+    statevector = list(statevector)
+    for key in probabilities.keys():
+        i = int(bin_to_hex(key))
+        value = probabilities[key]
+        statevector[i] = np.sqrt(value)
+    return statevector
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
@@ -465,7 +466,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenCounts_nanosecond": 0,
     }
-    
+
     startime_counts = time.perf_counter_ns()
     counts, probabilities = run_qunicorn_circuit(circuit_qasm)
     endtime_counts = time.perf_counter_ns()
