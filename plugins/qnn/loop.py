@@ -22,10 +22,10 @@ from typing import Mapping, Optional, cast, Dict, Union
 
 # Adding optimizer to loop
 from enum import Enum
-from qhana_plugin_runner.api.extra_fields import EnumField
+from qhana_plugin_runner.api.extra_fields import EnumField, CSVList
 from scipy.optimize import minimize
 import numpy.typing as npt
-
+from collections.abc import Callable
 
 import numpy as np
 from qiskit import QuantumCircuit, qasm3
@@ -150,6 +150,18 @@ class LoopParametersSchema(FrontendFormBaseSchema):
         },
     )
 
+    # TODO check if there is a better way to handle complex vectors
+    target_statevector = CSVList(
+        required=False,
+        allow_none=True,
+        element_type=fields.String,
+        metadata={
+            "label": "Target Statevector",
+            "description": "State vector that the ansatz should produce. Different vector values alternating real and complex part comma separated: 'real, complex, real, complex, ...'",
+            "input_type": "textarea",
+        },
+    )
+
 
 class WebhookParams(MaBaseSchema):
     source = fields.URL()
@@ -187,6 +199,7 @@ class PluginsView(MethodView):
                         tags=["circuit-executor", "qasm-3"],
                     ),
                 ],
+                # TODO add optimizer and target state vector
                 data_input=[
                     InputDataMetadata(
                         data_type="executable/circuit",
@@ -291,6 +304,15 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Start the loop task."""
 
+        # FIXME for some reason optimize_ansatz.name cannot be found
+        db_task = ProcessingTask(
+            task_name=optimize_ansatz.name,
+            parameters=LoopParametersSchema().dumps(arguments),
+        )
+        # TODO check if both are actually required
+        db_task.save()
+        DB.session.flush()
+
         statevector: bool = arguments.get("statevector", False)
 
         options_url = url_for(
@@ -299,19 +321,7 @@ class ProcessView(MethodView):
             _external=True,
         )
 
-        db_task = ProcessingTask(
-            task_name=execute_circuit.name,
-            parameters=LoopParametersSchema().dumps(arguments),
-        )
-        db_task.save()
-        DB.session.flush()
-
-        circuit_url = url_for(
-            f"{LOOP_BLP.name}.{CircuitView.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
-
+        # I guess this needs chaning too to handle the minimize result later
         continue_url = url_for(
             f"{LOOP_BLP.name}.{ContinueProcessView.__name__}",
             db_id=db_task.id,
@@ -319,26 +329,17 @@ class ProcessView(MethodView):
         )
 
         db_task.data = {
-            "circuit_url": circuit_url,
+            # "circuit_url": circuit_url,
             "options_url": options_url,
             "continue_url": continue_url,
         }
+
         db_task.save(commit=True)
 
-        optimizer: int = arguments.get("optimizer", False)
-
-        # TODO adapt to work well with flask
-        # TODO get Nr. of ansatz parameters
-        # this will later optimize the ansatz
-        if optimizer == OPTIMIZERENUM.COBYLA:
-            result = minimize(
-                fun=get_cost_function(),
-                method="COBYLA",
-                x0=[np.random.random() for _ in range(nr_parameters)]  # NOTE another value range could perform better
-            )
-
+        # NOTE Execution of ProcessingTask starts here (?)
         # all tasks need to know about db id to load the db entry
-        task = execute_circuit.s(db_id=db_task.id)
+        task = optimize_ansatz.s(db_id=db_task.id)
+
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -362,7 +363,7 @@ class ContinueProcessView(MethodView):
         if task_data is None:
             abort(HTTPStatus.NOT_FOUND)
 
-        if task_data.task_name != execute_circuit.name:
+        if task_data.task_name != optimize_ansatz.name:
             # processing task is from another plugin, cannot resume
             abort(HTTPStatus.NOT_FOUND)
 
@@ -418,51 +419,104 @@ class Loop(QHAnaPluginBase):
 
 
 @LOOP_BLP.route("/circuit/<int:db_id>")
-class CircuitView(MethodView):
-    """Get the combined circuit."""
+class PrepareCircuitView(MethodView):
+    """Get the circuit as string in a Response."""
 
-    def get(self, db_id: str):
+    # NOTE maybe db_id should be str
+    def get(self, db_id: int, circuit: QuantumCircuit) -> Response:
         """Get the requested circuit."""
 
-        combined_qasm3 = combine_circuit(db_id)
+        qasm3_string = circuit_to_qasm3_string(circuit)
 
         return Response(
-            combined_qasm3,
+            qasm3_string,
             HTTPStatus.OK,
             mimetype="text/x-qasm",
         )
 
 
-# NOTE maybe a new type state_vector would be better
+# NOTE maybe a new type statevector would be better
 def get_cost_function(
     # ansatz: qasam_url, ansatz_plugin_url??  # TODO decide
-    target_state_vector: npt.NDArray[np.complex128],
-) -> callable[[list[float]], [float]]:
+    db_id: int,
+    circuit: QuantumCircuit,
+    # target_statevector: npt.NDArray[np.complex128],
+) -> Callable[[npt.NDArray[np.float64]], float]:
     """
     Returns the cost/loss function taking single argument, i.e. (ansatz) parameters, which will be
     minimized during optimization.
     """
-    pass
+    # TODO find out how to log/where logs are
+    TASK_LOGGER.info("Get cost function successfully called.")
+    print("Get cost function successfully called.")
 
-    def cost_function(params: list[float]) -> float:
-        # TODO parametrize ansatz and pass to optimizer
+    # NOTE maybe not accessing task_data here and instead passing everything would be nicer
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    task_options: Dict[str, Union[str, int]] = loads(task_data.parameters or "{}")
+    executor: Optional[str] = cast(str, task_options["executor"])
+
+    # I think this check is unnecessary as executor field can't be empty?
+    # Otherwise I feel like this should be checked generally at a dedicated place
+    # - Lukas
+    if executor is None:
+        task_data.add_task_log_entry(
+            "No executor plugin specified, aborting task.", commit=True
+        )
+        raise ValueError(
+            "Cannot execute a quantum circuit without a circuit executor plugin specified."
+        )
+
+    endpoint = get_plugin_endpoint(executor)
+    options_url = task_data.data["options_url"]
+
+    # This can probably be done smoother
+    t_sv_float = np.array(task_data.data["target_statevector"]).astype(np.float128)
+    target_statevector = np.empty(int(len(t_sv_float) / 2), dtype=np.complex128)
+    target_statevector.real = t_sv_float[0::2]
+    target_statevector.imag = t_sv_float[1::2]
+
+    def cost_function(params: npt.NDArray[np.float64]) -> float:
         # later iterate over list of inputs
 
-        # FIXME
-        # result_state_vector = call_qiskit_simulator(circuit)
+        TASK_LOGGER.info("Cost function successfully called.")
+        parametrized_circuit = circuit.assign_parameters(params)
 
-        # Fidelity = |<target_state_vector|result_state_vector>|^2
+        circuit_url = url_for(
+            f"{LOOP_BLP.name}.{PrepareCircuitView.__name__}",
+            db_id=db_id,
+            circuit=parametrized_circuit,
+            _external=True,
+        )
+
+        result_url = call_plugin_endpoint(
+            endpoint, {"circuit": circuit_url, "executionOptions": options_url}
+        )
+
+        # Not sure you can access the url just like that
+        qasm_result = parse(result_url)
+
+        print(qasm_result)
+
+        # FIXME
+        result_statevector = qasm_result.data()["statevector"]
+
+        # Fidelity = |<target_statevector|result_statevector>|^2
         # NOTE way to access statevector value might have changed
         fidelity = (
-            np.abs(np.matrix(result_state_vector.data) @ np.matrix(target_state_vector).T)
-            ** 2
+            np.abs(np.matrix(result_statevector) @ np.matrix(target_statevector).T) ** 2
         )
 
         return 1 - fidelity
 
+    return cost_function
 
-def combine_circuit(db_id: int) -> str:
 
+def combine_circuit(db_id: int) -> QuantumCircuit:
+    """
+    This function gets the ID of an optimze_ansatz ProcessingTask and combines Viewthe in the task.data
+    linked qasm code for encoding the input data and the actual ansatz. It then returns the
+    combined qasm circuit.
+    """
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     params = LoopParametersSchema().loads(task_data.parameters or "{}")
     state_url: Optional[str] = params.get("state", None)
@@ -492,22 +546,20 @@ def combine_circuit(db_id: int) -> str:
         inplace=True,
     )
 
-    num_params = combined_circuit.num_parameters
-    initial_guess = np.random.uniform(0, np.pi, num_params)
-    param_dict = dict(zip(combined_circuit.parameters, initial_guess))
-    bound_circuit = combined_circuit.assign_parameters(param_dict)
+    return combined_circuit
 
-    combined_qasm3 = qasm3.dumps(bound_circuit)
+
+def circuit_to_qasm3_string(circuit: QuantumCircuit) -> str:
+    combined_qasm3 = qasm3.dumps(circuit)
     combined_qasm3_cleaned = dedent(combined_qasm3).lstrip()
-
     return combined_qasm3_cleaned
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{Loop.instance.identifier}.execute_circuit", bind=True)
-def execute_circuit(self, db_id: int) -> str:
+@CELERY.task(name=f"{Loop.instance.identifier}.optimize_ansatz", bind=True)
+def optimize_ansatz(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting the optmizing loop with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -518,60 +570,65 @@ def execute_circuit(self, db_id: int) -> str:
 
     task_options: Dict[str, Union[str, int]] = loads(task_data.parameters or "{}")
 
-    executor: Optional[str] = cast(str, task_options["executor"])
+    optimizer: Optional[int] = task_options["optimizer"]
 
-    if executor is None:
-        task_data.add_task_log_entry(
-            "No executor plugin specified, aborting task.", commit=True
+    # Combine state prep and ansatz
+    combined_circuit = combine_circuit(db_id=db_id)
+    # print(combined_circuit)
+
+    num_params = combined_circuit.num_parameters
+    # print("Number of parameters:", num_params)
+    TASK_LOGGER.info(f"Number of parameters: {num_params}")
+
+    initial_guess = np.random.uniform(
+        0, np.pi, num_params
+    )  # NOTE another value range could perform better
+    TASK_LOGGER.info(f"Initial guess: {initial_guess}")
+
+    # TODO adapt to work well with flask
+    if optimizer == OPTIMIZERENUM.COBYLA:
+        result = minimize(
+            fun=get_cost_function(db_id, combined_circuit),
+            method="COBYLA",
+            x0=initial_guess,
         )
-        raise ValueError(
-            "Cannot execute a quantum circuit without a circuit executor plugin specified."
-        )
 
-    endpoint = get_plugin_endpoint(executor)
+    # TODO do something with the result
 
-    # TODO lokale function def optimzer parameter
-    # optimizer wird hier gecallt (EVTL. seperater cerlery task aber vrmtl. nicht)
-
-    circuit_url = task_data.data["circuit_url"]
-    options_url = task_data.data["options_url"]
     continue_url = task_data.data["continue_url"]
 
-    TASK_LOGGER.info(
-        f"Loaded combined circuit from input: circuit='{circuit_url}'; executor='{executor}'"
-    )
+    # task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
+    # task_data.data["result_url"] = result_url
+    # task_data.save(commit=True)
 
-    result_url = call_plugin_endpoint(
-        endpoint, {"circuit": circuit_url, "executionOptions": options_url}
-    )
+    # NOTE not sure if subscribing to some endpoint is required here, but if yes I guess
+    # the endpoint should then return the result of the minimization not the result of the
+    # executor
 
-    task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
-    task_data.data["result_url"] = result_url
-    task_data.save(commit=True)
-
-    subscribed = subscribe(
-        result_url=result_url, webhook_url=continue_url, events=["steps", "status"]
-    )
-    task_data.data["subscribed"] = subscribed
-    if subscribed:
-        task_data.add_task_log_entry("Subscribed to events from external task.")
-    else:
-        task_data.add_task_log_entry("Event subscription failed!")
+    # subscribed = subscribe(
+    #     result_url=result_url, webhook_url=continue_url, events=["steps", "status"]
+    # )
+    # task_data.data["subscribed"] = subscribed
+    # if subscribed:
+    #     task_data.add_task_log_entry("Subscribed to events from external task.")
+    # else:
+    #     task_data.add_task_log_entry("Event subscription failed!")
 
     task_data.save(commit=True)
 
     app = current_app._get_current_object()
     TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
 
-    if not subscribed:
-        return self.replace(
-            monitor_result.s(
-                result_url=result_url, webhook_url=continue_url, monitor="all"
-            )
-        )
+    # if not subscribed:
+    #     return self.replace(
+    #         monitor_result.s(
+    #             result_url=result_url, webhook_url=continue_url, monitor="all"
+    #         )
+    #     )
 
 
 def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
+    # TODO figure out what this function is needed for
     last_step = None
     if task_data.steps:
         last_step = task_data.steps[-1]
