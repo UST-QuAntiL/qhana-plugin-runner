@@ -26,6 +26,7 @@ from qhana_plugin_runner.api.extra_fields import EnumField, CSVList
 from scipy.optimize import minimize
 import numpy.typing as npt
 from collections.abc import Callable
+from requests import get
 
 import numpy as np
 from qiskit import QuantumCircuit, qasm3
@@ -323,6 +324,14 @@ class ProcessView(MethodView):
             _external=True,
         )
 
+        db_task.data = {"circuit_string": "circuit goes here"}
+
+        circuit_url = url_for(
+            f"{LOOP_BLP.name}.{PrepareCircuitView.__name__}",
+            db_id=db_task.id,
+            _external=True,
+        )
+
         # I guess this needs chaning too to handle the minimize result later
         continue_url = url_for(
             f"{LOOP_BLP.name}.{ContinueProcessView.__name__}",
@@ -330,11 +339,11 @@ class ProcessView(MethodView):
             _external=True,
         )
 
-        db_task.data = {
-            # "circuit_url": circuit_url,
-            "options_url": options_url,
-            "continue_url": continue_url,
-        }
+        db_task.data["options_url"] = options_url
+        db_task.data["continue_url"] = continue_url
+        db_task.data["circuit_url"] = circuit_url
+
+        print("circuit_url", circuit_url)
 
         db_task.save(commit=True)
 
@@ -490,27 +499,29 @@ def get_cost_function(
         task_data.data["circuit_string"] = circuit_to_qasm3_string(parametrized_circuit)
         task_data.save(commit=True)
 
-        circuit_url = url_for(
-            f"{LOOP_BLP.name}.{PrepareCircuitView.__name__}",
-            db_id=db_id,
-            _external=True,
-        )
+        circuit_url = task_data.data["circuit_url"]
 
         print("Succesfully built circuit_url", circuit_url)
-
-        # qasm3_string = circuit_to_qasm3_string(parametrized_circuit)
-
-        # circuit_url = Response(
-        #     qasm3_string,
-        #     HTTPStatus.OK,
-        #     mimetype="text/x-qasm",
-        # )
 
         result_url = call_plugin_endpoint(
             endpoint, {"circuit": circuit_url, "executionOptions": options_url}
         )
 
+        from time import sleep
+
+        pending = True
+
+        # TODO make this more pretty and robust - see check_executor_result_task()
+        while pending:
+            sleep(1)
+            result = loads(get(result_url).text)
+            if result["status"] == "SUCCESS":
+                print(get(result_url).text)
+                # TODO get statevector url call it and get statevector...
+                pending = False
+
         # Not sure you can access the url just like that
+        # NOTE need request to get result
         # qasm_result = parse(result_url)
 
         # print(qasm_result)
@@ -612,15 +623,9 @@ def optimize_ansatz(self, db_id: int) -> str:
 
     cost_fun = get_cost_function(db_id, combined_circuit)
 
-    OPTIMIZERENUM.COBYLA
-
     # TODO adapt to work well with flask
-    print("Chosen optimizer", optimizer)
-    print("Chosen optimizer type", type(optimizer))
-    print("Optimizerenum type", type(OPTIMIZERENUM.COBYLA))
-    print(OPTIMIZERENUM.COBYLA)
     if optimizer == OPTIMIZERENUM.COBYLA:
-        print("COBYLA read")
+        print("Starting optimization using COBYLA...")
         result = minimize(
             fun=cost_fun,
             method="COBYLA",
@@ -629,10 +634,6 @@ def optimize_ansatz(self, db_id: int) -> str:
         )
 
         print("Minimizer result:", result)
-    else:
-        print("COBYLA skipped")
-
-    print("went over minimizer")
 
     # TODO do something with the result
 
