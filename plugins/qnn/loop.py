@@ -313,6 +313,8 @@ class ProcessView(MethodView):
         db_task.save()
         DB.session.flush()
 
+        print(OPTIMIZERENUM.COBYLA)
+
         statevector: bool = arguments.get("statevector", False)
 
         options_url = url_for(
@@ -423,13 +425,12 @@ class PrepareCircuitView(MethodView):
     """Get the circuit as string in a Response."""
 
     # NOTE maybe db_id should be str
-    def get(self, db_id: int, circuit: QuantumCircuit) -> Response:
+    def get(self, db_id: int) -> Response:
         """Get the requested circuit."""
-
-        qasm3_string = circuit_to_qasm3_string(circuit)
+        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
         return Response(
-            qasm3_string,
+            task_data.data["circuit_string"],
             HTTPStatus.OK,
             mimetype="text/x-qasm",
         )
@@ -448,11 +449,13 @@ def get_cost_function(
     """
     # TODO find out how to log/where logs are
     TASK_LOGGER.info("Get cost function successfully called.")
-    print("Get cost function successfully called.")
+    print("Print: Get cost function successfully called.")
 
     # NOTE maybe not accessing task_data here and instead passing everything would be nicer
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-    task_options: Dict[str, Union[str, int]] = loads(task_data.parameters or "{}")
+    task_options: Dict[str, Union[str, int]] = LoopParametersSchema().loads(
+        task_data.parameters or "{}"
+    )
     executor: Optional[str] = cast(str, task_options["executor"])
 
     # I think this check is unnecessary as executor field can't be empty?
@@ -468,43 +471,60 @@ def get_cost_function(
 
     endpoint = get_plugin_endpoint(executor)
     options_url = task_data.data["options_url"]
+    print("Options URL", options_url)
 
     # This can probably be done smoother
-    t_sv_float = np.array(task_data.data["target_statevector"]).astype(np.float128)
+    t_sv_float = np.array(task_options["target_statevector"]).astype(np.float128)
     target_statevector = np.empty(int(len(t_sv_float) / 2), dtype=np.complex128)
     target_statevector.real = t_sv_float[0::2]
     target_statevector.imag = t_sv_float[1::2]
+    TASK_LOGGER.debug("target_statevector", target_statevector)
 
     def cost_function(params: npt.NDArray[np.float64]) -> float:
         # later iterate over list of inputs
 
         TASK_LOGGER.info("Cost function successfully called.")
+        print("COST function successfully called.")
         parametrized_circuit = circuit.assign_parameters(params)
+
+        task_data.data["circuit_string"] = circuit_to_qasm3_string(parametrized_circuit)
+        task_data.save(commit=True)
 
         circuit_url = url_for(
             f"{LOOP_BLP.name}.{PrepareCircuitView.__name__}",
             db_id=db_id,
-            circuit=parametrized_circuit,
             _external=True,
         )
+
+        print("Succesfully built circuit_url", circuit_url)
+
+        # qasm3_string = circuit_to_qasm3_string(parametrized_circuit)
+
+        # circuit_url = Response(
+        #     qasm3_string,
+        #     HTTPStatus.OK,
+        #     mimetype="text/x-qasm",
+        # )
 
         result_url = call_plugin_endpoint(
             endpoint, {"circuit": circuit_url, "executionOptions": options_url}
         )
 
         # Not sure you can access the url just like that
-        qasm_result = parse(result_url)
+        # qasm_result = parse(result_url)
 
-        print(qasm_result)
+        # print(qasm_result)
 
-        # FIXME
-        result_statevector = qasm_result.data()["statevector"]
+        # # FIXME
+        # result_statevector = qasm_result.data()["statevector"]
 
         # Fidelity = |<target_statevector|result_statevector>|^2
         # NOTE way to access statevector value might have changed
-        fidelity = (
-            np.abs(np.matrix(result_statevector) @ np.matrix(target_statevector).T) ** 2
-        )
+        # fidelity = (
+        #     np.abs(np.matrix(result_statevector) @ np.matrix(target_statevector).T) ** 2
+        # )
+
+        fidelity = 0.5
 
         return 1 - fidelity
 
@@ -568,7 +588,12 @@ def optimize_ansatz(self, db_id: int) -> str:
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
 
-    task_options: Dict[str, Union[str, int]] = loads(task_data.parameters or "{}")
+    task_options: Dict[str, Union[str, int]] = LoopParametersSchema().loads(
+        task_data.parameters or "{}"
+    )
+    print(task_options)
+
+    print("td", task_data)
 
     optimizer: Optional[int] = task_options["optimizer"]
 
@@ -585,13 +610,29 @@ def optimize_ansatz(self, db_id: int) -> str:
     )  # NOTE another value range could perform better
     TASK_LOGGER.info(f"Initial guess: {initial_guess}")
 
+    cost_fun = get_cost_function(db_id, combined_circuit)
+
+    OPTIMIZERENUM.COBYLA
+
     # TODO adapt to work well with flask
+    print("Chosen optimizer", optimizer)
+    print("Chosen optimizer type", type(optimizer))
+    print("Optimizerenum type", type(OPTIMIZERENUM.COBYLA))
+    print(OPTIMIZERENUM.COBYLA)
     if optimizer == OPTIMIZERENUM.COBYLA:
+        print("COBYLA read")
         result = minimize(
-            fun=get_cost_function(db_id, combined_circuit),
+            fun=cost_fun,
             method="COBYLA",
             x0=initial_guess,
+            options={"maxiter": 1},
         )
+
+        print("Minimizer result:", result)
+    else:
+        print("COBYLA skipped")
+
+    print("went over minimizer")
 
     # TODO do something with the result
 
