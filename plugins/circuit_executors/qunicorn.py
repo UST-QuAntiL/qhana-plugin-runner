@@ -67,9 +67,8 @@ _plugin_name = "qunicorn-plugin"
 __version__ = "v1.0.1"  # ???
 _identifier = plugin_identifier(_plugin_name, __version__)
 
-
+# standard qunicorn options for job submission
 QUNICORN_URL = environ.get("QUNICORN_URL", "http://localhost:5001/")
-
 QUNICORN_PROVIDER = environ.get("QUNICORN_PROVIDER", "IBM")
 QUNICORN_DEVICE = environ.get("QUNICORN_DEVICE", "aer_simulator")
 QUNICORN_TOKEN = environ.get("QUNICORN_TOKEN", "")
@@ -201,9 +200,7 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the qunicorn plugin."""
 
-    example_inputs: Dict[str, Any] = {
-        "shots": 1024,
-    }
+    example_inputs: Dict[str, Any] = {"shots": 1024}
 
     @QUNICORN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the qunicorn plugin."
@@ -304,14 +301,12 @@ class QunicornPlugin(QHAnaPluginBase):
         return QUNICORN_BLP
 
 
-#    def get_requirements(self) -> str:
-#        return """pennylane~=0.35.0\nqiskit_qasm3_import"""
-
-
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def register_deployment(circuit_qasm: str) -> int:
+def register_deployment(
+    circuit_qasm: str, execution_options: Dict[str, Union[str, int]]
+) -> int:
 
     is_qasm2 = "OPENQASM 2.0;" in circuit_qasm
 
@@ -330,13 +325,13 @@ def register_deployment(circuit_qasm: str) -> int:
     return response.json()["id"]
 
 
-def run_job(deployment_id: int) -> int:
+def run_job(deployment_id: int, execution_options: Dict[str, Union[str, int]]) -> int:
     data = {
         "name": "QasmTestSuite Job Qhana",
-        "providerName": QUNICORN_PROVIDER,
-        "deviceName": QUNICORN_DEVICE,
-        "shots": 1024,
-        "token": QUNICORN_TOKEN,
+        "providerName": execution_options["provider"],
+        "deviceName": execution_options["device"],
+        "shots": execution_options["shots"],
+        "token": execution_options["token"],
         "type": "RUNNER",
         "deploymentId": deployment_id,
     }
@@ -367,11 +362,13 @@ def ensure_binary(result: str, counts_format: str, registers: Optional[list[int]
     return result
 
 
-def run_qunicorn_circuit(circuit_qasm: str) -> Mapping[str, int]:
+def run_qunicorn_circuit(
+    circuit_qasm: str, execution_options: Dict[str, Union[str, int]]
+) -> Mapping[str, int]:
 
     deployment_id = register_deployment(circuit_qasm)
 
-    job_id = run_job(deployment_id)
+    job_id = run_job(deployment_id, execution_options)
 
     result_url = urljoin(QUNICORN_URL, f"/jobs/{job_id}")
 
@@ -435,7 +432,7 @@ def run_qunicorn_circuit(circuit_qasm: str) -> Mapping[str, int]:
         raise ValueError(f"Qunicorn job timed out producing a result! ({result_url})")
 
 
-def bin_to_hex(binary_str):
+def bin_to_hex(binary_str: str):
     decimal = int(binary_str, 2)
     hex_value = hex(decimal)[2:]
     hex_value = hex_value.upper()
@@ -471,7 +468,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     }
 
     startime_counts = time.perf_counter_ns()
-    counts, probabilities = run_qunicorn_circuit(circuit_qasm)
+    counts, probabilities = run_qunicorn_circuit(circuit_qasm, execution_options)
     endtime_counts = time.perf_counter_ns()
     metadata["timeTakenCounts_nanosecond"] = endtime_counts - startime_counts
 
@@ -526,7 +523,12 @@ def execute_circuit(self, db_id: int) -> str:
                 "loaded execution options: " + dumps(options), commit=True
             )
             execution_options.update(options)
-
+    if "provider" not in execution_options:
+        execution_options["provider"] = QUNICORN_PROVIDER
+    if "device" not in execution_options:
+        execution_options["device"] = QUNICORN_DEVICE
+    if "token" not in execution_options:
+        execution_options["token"] = QUNICORN_TOKEN
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
     if isinstance(execution_options["statevector"], str):
