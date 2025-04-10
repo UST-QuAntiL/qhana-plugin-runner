@@ -304,9 +304,7 @@ class QunicornPlugin(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def register_deployment(
-    circuit_qasm: str, execution_options: Dict[str, Union[str, int]]
-) -> int:
+def register_deployment(circuit_qasm: str) -> int:
 
     is_qasm2 = "OPENQASM 2.0;" in circuit_qasm
 
