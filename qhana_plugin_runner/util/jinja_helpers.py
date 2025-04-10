@@ -93,9 +93,15 @@ def space_delimited_list(
     return " ".join(str(i) for i in items)
 
 
-def get_datalist_from_schema(schema: FrontendFormBaseSchema, key: str) -> Optional[list]:
+def get_datalist_from_schema(
+    schema: FrontendFormBaseSchema, key: str, extras: Optional[dict] = None
+) -> Optional[list]:
     """Get datalist for a field from schema or schema.datalists dict. If not found, return None."""
     datalist = schema.fields[key].metadata.get("datalist", None)
+    if datalist:
+        return datalist
+    if extras:
+        datalist = extras.get(key, {}).get("datalist", None)
     if datalist:
         return datalist
     if hasattr(schema, "datalists") and isinstance(schema.datalists, dict):
