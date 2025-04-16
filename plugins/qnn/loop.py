@@ -27,6 +27,7 @@ from scipy.optimize import minimize
 import numpy.typing as npt
 from collections.abc import Callable
 from requests import get
+from time import sleep
 
 import numpy as np
 from qiskit import QuantumCircuit, qasm3
@@ -482,7 +483,7 @@ def get_cost_function(
     options_url = task_data.data["options_url"]
     print("Options URL", options_url)
 
-    # This can probably be done smoother
+    # TODO, accep list of list [[real,imaginary],[r,i],...]
     t_sv_float = np.array(task_options["target_statevector"]).astype(np.float128)
     target_statevector = np.empty(int(len(t_sv_float) / 2), dtype=np.complex128)
     target_statevector.real = t_sv_float[0::2]
@@ -507,35 +508,52 @@ def get_cost_function(
             endpoint, {"circuit": circuit_url, "executionOptions": options_url}
         )
 
-        from time import sleep
-
         pending = True
 
         # TODO make this more pretty and robust - see check_executor_result_task()
+        # count = 0
         while pending:
-            sleep(1)
+            sleep(0.05)  # NOTE might not be ideal depening on system
             result = loads(get(result_url).text)
             if result["status"] == "SUCCESS":
-                print(get(result_url).text)
+                stv_url = result["outputs"][2]["href"]
+                # print("statevector url:", stv_url)
+                statevector_dict = loads(get(stv_url).text)
+
+                # TODO figure out how to access logstream
+                # TASK_LOGGER.info("statevector_dict:", statevector_dict)
+
+                _ = statevector_dict.pop("ID")
+                # print("statevector_id", statevector_id)
+
+                # this check is probably unneccesary
+                if len(statevector_dict) % 2 != 0:
+                    raise ValueError(
+                        "The returned statevector is missing an imaginary number (legnth is uneven)."
+                    )
+                elif len(statevector_dict) != len(target_statevector):
+                    raise ValueError(
+                        "Size of target statevector does not match the size of ansatz statevector."
+                    )
+
+                statevector = np.empty(len(statevector_dict), dtype=np.complex128)
+                for i in range(len(statevector_dict)):
+                    statevector[i] = complex(statevector_dict[str(i)])
+
+                # print("statevector:", statevector)
+
                 # TODO get statevector url call it and get statevector...
                 pending = False
+            elif result["status"] == "FAILURE":
+                # TODO handle this, i.e make sure it shows properly in UI
+                raise Exception(f"Executing circuit failed with response: {result}")
 
-        # Not sure you can access the url just like that
-        # NOTE need request to get result
-        # qasm_result = parse(result_url)
+            # count +=1
 
-        # print(qasm_result)
+        # print("nr. of waiting loops:", count)
 
-        # # FIXME
-        # result_statevector = qasm_result.data()["statevector"]
-
-        # Fidelity = |<target_statevector|result_statevector>|^2
-        # NOTE way to access statevector value might have changed
-        # fidelity = (
-        #     np.abs(np.matrix(result_statevector) @ np.matrix(target_statevector).T) ** 2
-        # )
-
-        fidelity = 0.5
+        # Fidelity = |<result_statevector|target_statevector>|^2
+        fidelity = np.abs(np.matrix(statevector) @ np.matrix(target_statevector).T) ** 2
 
         return 1 - fidelity
 
@@ -630,14 +648,17 @@ def optimize_ansatz(self, db_id: int) -> str:
             fun=cost_fun,
             method="COBYLA",
             x0=initial_guess,
-            options={"maxiter": 1},
+            # options={"maxiter": 1},  # NOTE for quick results during debugging
         )
 
         print("Minimizer result:", result)
+    elif optimizer == OPTIMIZERENUM.SPSA:
+        # TODO
+        pass
 
     # TODO do something with the result
 
-    continue_url = task_data.data["continue_url"]
+    # continue_url = task_data.data["continue_url"]
 
     # task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
     # task_data.data["result_url"] = result_url
