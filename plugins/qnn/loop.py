@@ -152,14 +152,13 @@ class LoopParametersSchema(FrontendFormBaseSchema):
         },
     )
 
-    # TODO check if there is a better way to handle complex vectors
-    target_statevector = CSVList(
+    target_statevector = fields.String(
         required=False,
         allow_none=True,
         element_type=fields.String,
         metadata={
             "label": "Target Statevector",
-            "description": "State vector that the ansatz should produce. Different vector values alternating real and complex part comma separated: 'real, complex, real, complex, ...'",
+            "description": "State vector that the ansatz should produce. Differen values expected as list of list [[real, imag], [real, imag], ...]",
             "input_type": "textarea",
         },
     )
@@ -483,11 +482,11 @@ def get_cost_function(
     options_url = task_data.data["options_url"]
     print("Options URL", options_url)
 
-    # TODO, accep list of list [[real,imaginary],[r,i],...]
-    t_sv_float = np.array(task_options["target_statevector"]).astype(np.float128)
-    target_statevector = np.empty(int(len(t_sv_float) / 2), dtype=np.complex128)
-    target_statevector.real = t_sv_float[0::2]
-    target_statevector.imag = t_sv_float[1::2]
+    target_statevector = np.array(
+        [complex(real, imag) for real, imag in eval(task_options["target_statevector"])],
+        dtype=np.complex128,
+    )
+
     TASK_LOGGER.debug("target_statevector", target_statevector)
 
     def cost_function(params: npt.NDArray[np.float64]) -> float:
