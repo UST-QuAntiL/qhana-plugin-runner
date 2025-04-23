@@ -19,6 +19,7 @@ from tempfile import SpooledTemporaryFile
 from qhana_plugin_runner import db
 from qhana_plugin_runner.storage import STORE
 from typing import Mapping, Optional, cast, Dict, Union
+import json
 
 # Adding optimizer to loop
 from enum import Enum
@@ -332,15 +333,7 @@ class ProcessView(MethodView):
             _external=True,
         )
 
-        # I guess this needs chaning too to handle the minimize result later
-        continue_url = url_for(
-            f"{LOOP_BLP.name}.{ContinueProcessView.__name__}",
-            db_id=db_task.id,
-            _external=True,
-        )
-
         db_task.data["options_url"] = options_url
-        db_task.data["continue_url"] = continue_url
         db_task.data["circuit_url"] = circuit_url
 
         print("circuit_url", circuit_url)
@@ -640,6 +633,7 @@ def optimize_ansatz(self, db_id: int) -> str:
 
     cost_fun = get_cost_function(db_id, combined_circuit)
 
+    results = []
     # TODO adapt to work well with flask
     if optimizer == OPTIMIZERENUM.COBYLA:
         print("Starting optimization using COBYLA...")
@@ -649,32 +643,17 @@ def optimize_ansatz(self, db_id: int) -> str:
             x0=initial_guess,
             # options={"maxiter": 1},  # NOTE for quick results during debugging
         )
+        results.append(result)
 
         print("Minimizer result:", result)
     elif optimizer == OPTIMIZERENUM.SPSA:
         # TODO
         pass
 
-    # TODO do something with the result
+    x_values = [res.x.tolist() for res in results]
+    x_json = json.dumps(x_values, indent=2)
 
-    # continue_url = task_data.data["continue_url"]
-
-    # task_data.add_task_log_entry(f"Awaiting circuit execution result at {result_url}")
-    # task_data.data["result_url"] = result_url
-    # task_data.save(commit=True)
-
-    # NOTE not sure if subscribing to some endpoint is required here, but if yes I guess
-    # the endpoint should then return the result of the minimization not the result of the
-    # executor
-
-    # subscribed = subscribe(
-    #     result_url=result_url, webhook_url=continue_url, events=["steps", "status"]
-    # )
-    # task_data.data["subscribed"] = subscribed
-    # if subscribed:
-    #     task_data.add_task_log_entry("Subscribed to events from external task.")
-    # else:
-    #     task_data.add_task_log_entry("Event subscription failed!")
+    task_data.data["results"] = x_json
 
     task_data.save(commit=True)
 
@@ -684,114 +663,6 @@ def optimize_ansatz(self, db_id: int) -> str:
     return self.replace(
         circuit_result_task.si(db_id=db_id) | save_task_result.s(db_id=db_id)
     )
-
-    # if not subscribed:
-    #     return self.replace(
-    #         monitor_result.s(
-    #             result_url=result_url, webhook_url=continue_url, monitor="all"
-    #         )
-    #     )
-
-
-def add_new_substep(task_data: ProcessingTask, steps: list) -> Optional[int]:
-    # TODO figure out what this function is needed for
-    last_step = None
-    if task_data.steps:
-        last_step = task_data.steps[-1]
-    current_step = steps[-1] if steps else None
-    if current_step:
-        step_id = current_step.get("stepId")
-        if step_id:
-            step_id = f"executor.{step_id}"
-        else:
-            step_id = f"executor.{len(steps)}"
-
-        if not current_step.get("cleared", False):
-            if (
-                last_step
-                and not last_step.cleared
-                and last_step.step_id == step_id
-                and last_step.href == current_step["href"]
-            ):
-                # new step and last step are identical, assume duplicate request and do nothing
-                return None
-            external_step_id = step_id if step_id else len(steps) - 1
-            task_data.clear_previous_step()
-            task_data.add_next_step(
-                href=current_step["href"],
-                ui_href=current_step["uiHref"],
-                step_id=step_id,
-                commit=True,
-            )
-
-            app = current_app._get_current_object()
-            TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
-
-            return external_step_id
-        elif current_step.get("cleared", False) and task_data.has_uncleared_step:
-            if last_step and last_step.step_id == step_id:
-                task_data.clear_previous_step(commit=True)
-                app = current_app._get_current_object()
-                TASK_STEPS_CHANGED.send(app, task_id=task_data.id)
-    return None
-
-
-@CELERY.task(name=f"{Loop.instance.identifier}.check_executor_result_task", bind=True)
-def check_executor_result_task(self, db_id: int, event_type: Optional[str]):
-    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-
-    if task_data is None:
-        msg = f"Could not load task data with id {db_id} to save results!"
-        TASK_LOGGER.error(msg)
-        raise KeyError(msg)
-
-    result_url = task_data.data.get("result_url")
-    continue_url = task_data.data["continue_url"]
-    subscribed = task_data.data["subscribed"]
-
-    if result_url is None:
-        raise ValueError(f"No result URL present in task data with id {db_id}")
-
-    status, result = get_task_result_no_wait(result_url)
-
-    if status == "FAILURE":
-        if "--- Circuit Executor Log ---" not in task_data.task_log:
-            task_data.add_task_log_entry(
-                f"--- Circuit Executor Log ---\n{result.get('log', '')}\n--- END ---\n",
-                commit=True,
-            )
-        raise ValueError("Circuit executor failed to execute the circuit!")
-    elif status == "PENDING" and event_type != "status":
-        steps = result.get("steps", [])
-        external_step_id = add_new_substep(task_data, steps)
-        if external_step_id and not subscribed:
-            return self.replace(
-                # wait for external substep to clear
-                monitor_external_substep.s(
-                    result_url=result_url,
-                    webhook_url=continue_url,
-                    substep=external_step_id,
-                )
-            )
-        elif not subscribed:
-            return self.replace(
-                # wait for external substep or status change
-                monitor_result.s(
-                    result_url=result_url, webhook_url=continue_url, monitor="all"
-                )
-            )
-    elif status == "SUCCESS" and event_type == "status":
-        if "result" in task_data.data:
-            return  # already checking for result, prevent duplicate task scheduling!
-
-        task_data.data["result"] = result
-        task_data.save(commit=True)
-
-        return self.replace(
-            circuit_result_task.si(db_id=db_id) | save_task_result.s(db_id=db_id)
-        )
-    else:
-        raise ValueError(f"Unknown task status {status}!")
 
 
 @CELERY.task(name=f"{Loop.instance.identifier}.circuit_result_task", bind=True)
@@ -818,24 +689,19 @@ def circuit_result_task(self, db_id: int) -> str:
                     "text/x-qasm",
                 )
 
+    results = task_data.data.get("results")
+
+    with SpooledTemporaryFile(mode="w") as output:
+        output.write(results)
+        STORE.persist_task_result(
+            db_id,
+            output,
+            "circuit.qasm",
+            "executable/circuit",
+            "text/x-qasm",
+        )
+
     return "Success"
 
-    # NOTE keep?
-    outputs = task_data.data.get("result", {}).get("outputs", [])
-
-    for out in outputs:
-        if out.get("name", "").startswith(("result-counts", "result-statevector")):
-            name = out.get("name", "")
-            url = out.get("href", "")
-            data_type = out.get("dataType", "")
-            content_type = out.get("contentType", "")
-            STORE.persist_task_result(
-                db_id,
-                url,
-                name,
-                data_type,
-                content_type,
-                storage_provider="url_file_store",
-            )
 
     return "Successfully saved circuit executor task result!"
