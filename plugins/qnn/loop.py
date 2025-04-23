@@ -682,6 +682,10 @@ def optimize_ansatz(self, db_id: int) -> str:
     app = current_app._get_current_object()
     TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
 
+    return self.replace(
+        circuit_result_task.si(db_id=db_id) | save_task_result.s(db_id=db_id)
+    )
+
     # if not subscribed:
     #     return self.replace(
     #         monitor_result.s(
@@ -815,6 +819,9 @@ def circuit_result_task(self, db_id: int) -> str:
                     "text/x-qasm",
                 )
 
+    return "Success"
+
+    # NOTE keep?
     outputs = task_data.data.get("result", {}).get("outputs", [])
 
     for out in outputs:
