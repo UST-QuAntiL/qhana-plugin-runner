@@ -24,7 +24,6 @@ from uuid import uuid4
 from urllib.parse import urljoin
 import requests
 from requests import RequestException
-from time import sleep
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -613,8 +612,8 @@ def execute_circuit(self, db_id: int) -> str:
     return "Finished simulating circuit."
 
 
-try:
-    # import for type annotations
-    from qiskit import QuantumCircuit
-except ImportError:
-    pass
+# try:
+#     # import for type annotations
+#     from qiskit import QuantumCircuit
+# except ImportError:
+#     pass
