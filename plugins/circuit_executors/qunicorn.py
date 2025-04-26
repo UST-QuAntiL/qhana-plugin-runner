@@ -329,7 +329,7 @@ def run_job(deployment_id: int, execution_options: Dict[str, Union[str, int]]) -
         "deviceName": execution_options["device"],
         "shots": execution_options["shots"],
         "token": execution_options["token"],
-        "type": "RUNNER",
+        "type": execution_options["type"],
         "deploymentId": deployment_id,
     }
     deployments_url = urljoin(QUNICORN_URL, "/jobs/")
@@ -526,6 +526,8 @@ def execute_circuit(self, db_id: int) -> str:
         execution_options["device"] = QUNICORN_DEVICE
     if "token" not in execution_options:
         execution_options["token"] = QUNICORN_TOKEN
+    if "type" not in execution_options:
+        execution_options["type"] = "RUNNER"
     if isinstance(execution_options["shots"], str):
         execution_options["shots"] = int(execution_options["shots"])
     if isinstance(execution_options["statevector"], str):
