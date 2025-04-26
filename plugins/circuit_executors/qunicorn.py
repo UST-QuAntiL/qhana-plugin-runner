@@ -103,6 +103,26 @@ class QunicornPluginParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    provider = ma.fields.String(
+        required=False,
+        allow_none=True,
+        load_default=None,
+        metadata={
+            "label": "Provider",
+            "description": "The provider on which the circuit is executed. If execution options are specified they will override this setting",
+            "input_type": "text",
+        },
+    )
+    device = ma.fields.String(
+        required=False,
+        allow_none=True,
+        load_default=None,
+        metadata={
+            "label": "Device",
+            "description": "The device on which the circuit is executed. If execution options are specified they will override this setting",
+            "input_type": "text",
+        },
+    )
     shots = ma.fields.Integer(
         required=False,
         allow_none=True,
@@ -199,7 +219,11 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the qunicorn plugin."""
 
-    example_inputs: Dict[str, Any] = {"shots": 1024}
+    example_inputs: Dict[str, Any] = {
+        "provider": "IBM",
+        "device": "aer_simulator",
+        "shots": 1024,
+    }
 
     @QUNICORN_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the qunicorn plugin."
@@ -455,10 +479,14 @@ def state_from_prob(probabilities):
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
 
     shots = execution_options["shots"]
+    provider = execution_options["provider"]
+    device = execution_options["device"]
 
     metadata = {
         "qpuType": "simulator",
         "qpuVendor": "Xanadu Inc",
+        "provider": provider,
+        "device": device,
         "shots": shots,
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenCounts_nanosecond": 0,
@@ -498,6 +526,8 @@ def execute_circuit(self, db_id: int) -> str:
     )
 
     execution_options: Dict[str, Any] = {
+        "provider": task_options.get("provider"),
+        "device": task_options.get("device"),
         "shots": task_options.get("shots", 1),
         "statevector": bool(task_options.get("statevector")),
     }
