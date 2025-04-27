@@ -24,6 +24,7 @@ from uuid import uuid4
 from urllib.parse import urljoin
 import requests
 from requests import RequestException
+from time import sleep
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -412,6 +413,7 @@ def run_qunicorn_circuit(
             break
         elif result["state"] in ("ERROR", "CANCELED"):
             raise ValueError(f"Qunicorn job ended with a Failure! ({result_url})")
+        sleep(1)
     if result["state"] == "FINISHED":
         counts = None
         probabilities = None
