@@ -123,6 +123,16 @@ class QunicornPluginParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
+    token = ma.fields.String(
+        required=False,
+        allow_none=True,
+        load_default=None,
+        metadata={
+            "label": "Token",
+            "description": "The API token for the provider and device specified. If execution options are specified they will override this setting",
+            "input_type": "text",
+        },
+    )
     shots = ma.fields.Integer(
         required=False,
         allow_none=True,
@@ -222,6 +232,7 @@ class MicroFrontend(MethodView):
     example_inputs: Dict[str, Any] = {
         "provider": "IBM",
         "device": "aer_simulator",
+        "token": "",
         "shots": 1024,
     }
 
@@ -481,12 +492,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     shots = execution_options["shots"]
     provider = execution_options["provider"]
     device = execution_options["device"]
+    token = execution_options["token"]
 
     metadata = {
         "qpuType": "simulator",
         "qpuVendor": "Xanadu Inc",
         "provider": provider,
         "device": device,
+        "token": token,
         "shots": shots,
         "date": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "timeTakenCounts_nanosecond": 0,
@@ -528,6 +541,7 @@ def execute_circuit(self, db_id: int) -> str:
     execution_options: Dict[str, Any] = {
         "provider": task_options.get("provider"),
         "device": task_options.get("device"),
+        "token": task_options.get("token"),
         "shots": task_options.get("shots", 1),
         "statevector": bool(task_options.get("statevector")),
     }
