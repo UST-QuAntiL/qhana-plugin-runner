@@ -324,12 +324,13 @@ def prepare_task(self, db_id: int) -> str:
 
 
         integer_bits = bin(integer_part)[2:].zfill(digits_before_decimal)
-        fractional_bits = bin(int(fractional_part * (2 ** digits_after_decimal)))[2:].zfill(digits_after_decimal)
+        fractional_bits = bin(int(fractional_part * (2 ** digits_after_decimal)))[2:]
+        fractional_bits = fractional_bits.ljust(digits_after_decimal, '0')
 
         bit_list = sign_bit + integer_bits + fractional_bits
 
         qc = QuantumCircuit(len(bit_list))
-        for i, bit in enumerate(reversed(bit_list)):
+        for i, bit in enumerate(bit_list):
             if bit == '1':
                 qc.x(i)
 
