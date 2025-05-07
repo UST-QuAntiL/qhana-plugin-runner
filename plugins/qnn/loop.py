@@ -355,45 +355,6 @@ class ProcessView(MethodView):
         )
 
 
-@LOOP_BLP.route("/continue/<int:db_id>/")
-class ContinueProcessView(MethodView):
-    """Restart long running task that was blocked by an ongoing plugin computation."""
-
-    @LOOP_BLP.arguments(WebhookParams(partial=True), location="query")
-    @LOOP_BLP.response(HTTPStatus.NO_CONTENT)
-    def post(self, params: dict, db_id: int):
-        """Check for updates in plugin computation and resume processing."""
-        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-        if task_data is None:
-            abort(HTTPStatus.NOT_FOUND)
-
-        if task_data.task_name != optimize_ansatz.name:
-            # processing task is from another plugin, cannot resume
-            abort(HTTPStatus.NOT_FOUND)
-
-        if not isinstance(task_data.data, dict):
-            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-
-        event_source = params.get("source", None)
-        event_type = params.get("event", None)
-
-        result_url = task_data.data.get("result_url")
-
-        if event_source != result_url:
-            abort(HTTPStatus.NOT_FOUND)
-
-        if not result_url or task_data.is_finished:
-            abort(HTTPStatus.NOT_FOUND)
-
-        task = check_executor_result_task.s(db_id=db_id, event_type=event_type)
-        task.link_error(save_task_error.s(db_id=db_id))
-        task.apply_async()
-
-        return redirect(
-            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
-        )
-
-
 @LOOP_BLP.route("/options/")
 class ExecutionOptionsView(MethodView):
     """Get the execution options."""
