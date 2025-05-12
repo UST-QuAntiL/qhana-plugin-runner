@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# TODO remove unused imports
 from http import HTTPStatus
 from textwrap import dedent
 from json import loads
@@ -23,12 +24,13 @@ import json
 
 # Adding optimizer to loop
 from enum import Enum
-from qhana_plugin_runner.api.extra_fields import EnumField, CSVList
+from qhana_plugin_runner.api.extra_fields import EnumField
 from scipy.optimize import minimize
 import numpy.typing as npt
 from collections.abc import Callable
 from requests import get
 from time import sleep
+import spsa
 
 import numpy as np
 from qiskit import QuantumCircuit, qasm3
@@ -160,6 +162,20 @@ class LoopParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Target Statevector",
             "description": "State vector that the ansatz should produce. Differen values expected as list of list [[real, imag], [real, imag], ...]",
+            "input_type": "textarea",
+        },
+    )
+
+    # NOTE I think using fields.Int directly would be nicer, but I could not get it to work even
+    # though I defined a default value and set required=False, QHana UI complained about a missing
+    # field if left empty
+    spsa_iterations = fields.String(
+        required=False,
+        allow_none=True,
+        element_type=fields.String,
+        metadata={
+            "label": "Number of SPSA iterations",
+            "description": "Explicitly set the number of iterartions SPSA should run for during minimization, if no value is provided minimization is run for 200 iterations by default",
             "input_type": "textarea",
         },
     )
@@ -380,7 +396,7 @@ class Loop(QHAnaPluginBase):
 
     # scipy einbinden
     def get_requirements(self) -> str:
-        return "qiskit~=1.3.2\nnumpy"
+        return "qiskit~=1.3.2\nnumpy\nspsa"
 
 
 @LOOP_BLP.route("/circuit/<int:db_id>")
@@ -399,20 +415,15 @@ class PrepareCircuitView(MethodView):
         )
 
 
-# NOTE maybe a new type statevector would be better
 def get_cost_function(
-    # ansatz: qasam_url, ansatz_plugin_url??  # TODO decide
     db_id: int,
     circuit: QuantumCircuit,
-    # target_statevector: npt.NDArray[np.complex128],
 ) -> Callable[[npt.NDArray[np.float64]], float]:
     """
     Returns the cost/loss function taking single argument, i.e. (ansatz) parameters, which will be
     minimized during optimization.
     """
-    # TODO find out how to log/where logs are
     TASK_LOGGER.info("Get cost function successfully called.")
-    print("Print: Get cost function successfully called.")
 
     # NOTE maybe not accessing task_data here and instead passing everything would be nicer
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -446,16 +457,18 @@ def get_cost_function(
     def cost_function(params: npt.NDArray[np.float64]) -> float:
         # later iterate over list of inputs
 
-        TASK_LOGGER.info("Cost function successfully called.")
-        print("COST function successfully called.")
-        parametrized_circuit = circuit.assign_parameters(params)
+        # TODO decide if adding a counter for SPSA is desired
+        # global c
+        # c += 1
+        # print(c)
 
+        TASK_LOGGER.info("Cost function successfully called.")
+        parametrized_circuit = circuit.assign_parameters(params)
+        print(params)
         task_data.data["circuit_string"] = circuit_to_qasm3_string(parametrized_circuit)
         task_data.save(commit=True)
 
         circuit_url = task_data.data["circuit_url"]
-
-        print("Succesfully built circuit_url", circuit_url)
 
         result_url = call_plugin_endpoint(
             endpoint, {"circuit": circuit_url, "executionOptions": options_url}
@@ -464,17 +477,14 @@ def get_cost_function(
         pending = True
 
         # TODO make this more pretty and robust - see check_executor_result_task()
-        # count = 0
         while pending:
             sleep(0.05)  # NOTE might not be ideal depening on system
             result = loads(get(result_url).text)
             if result["status"] == "SUCCESS":
                 stv_url = result["outputs"][2]["href"]
-                # print("statevector url:", stv_url)
                 statevector_dict = loads(get(stv_url).text)
 
-                # TODO figure out how to access logstream
-                # TASK_LOGGER.info("statevector_dict:", statevector_dict)
+                TASK_LOGGER.info(f"statevector_dict: {statevector_dict}")
 
                 _ = statevector_dict.pop("ID")
                 # print("statevector_id", statevector_id)
@@ -495,20 +505,21 @@ def get_cost_function(
 
                 # print("statevector:", statevector)
 
-                # TODO get statevector url call it and get statevector...
                 pending = False
             elif result["status"] == "FAILURE":
                 # TODO handle this, i.e make sure it shows properly in UI
                 raise Exception(f"Executing circuit failed with response: {result}")
 
-            # count +=1
-
-        # print("nr. of waiting loops:", count)
+        print("statevector", statevector)
+        print("target statevector", target_statevector)
 
         # Fidelity = |<result_statevector|target_statevector>|^2
         fidelity = np.abs(np.matrix(statevector) @ np.matrix(target_statevector).T) ** 2
 
-        return 1 - fidelity
+        print(f"Fidelity: {fidelity[0, 0]}")
+        print(f"Loss: {1 - fidelity[0, 0]}")
+
+        return 1 - fidelity[0, 0]
 
     return cost_function
 
@@ -573,18 +584,16 @@ def optimize_ansatz(self, db_id: int) -> str:
     task_options: Dict[str, Union[str, int]] = LoopParametersSchema().loads(
         task_data.parameters or "{}"
     )
-    print(task_options)
 
-    print("td", task_data)
+    # print(task_options)
+    # print("td", task_data)
 
     optimizer: Optional[int] = task_options["optimizer"]
 
     # Combine state prep and ansatz
     combined_circuit = combine_circuit(db_id=db_id)
-    # print(combined_circuit)
 
     num_params = combined_circuit.num_parameters
-    # print("Number of parameters:", num_params)
     TASK_LOGGER.info(f"Number of parameters: {num_params}")
 
     initial_guess = np.random.uniform(
@@ -594,8 +603,6 @@ def optimize_ansatz(self, db_id: int) -> str:
 
     cost_fun = get_cost_function(db_id, combined_circuit)
 
-    results = []
-    # TODO adapt to work well with flask
     if optimizer == OPTIMIZERENUM.COBYLA:
         print("Starting optimization using COBYLA...")
         result = minimize(
@@ -604,18 +611,35 @@ def optimize_ansatz(self, db_id: int) -> str:
             x0=initial_guess,
             # options={"maxiter": 1},  # NOTE for quick results during debugging
         )
-        results.append(result)
 
         print("Minimizer result:", result)
+
     elif optimizer == OPTIMIZERENUM.SPSA:
-        # TODO
-        pass
+        if task_options["spsa_iterations"] == "":
+            spsa_iterations = 200
+        else:
+            try:
+                spsa_iterations = eval(task_options["spsa_iterations"])
 
-    x_values = [res.x.tolist() for res in results]
-    x_json = json.dumps(x_values, indent=2)
+                # SPSA uses operator.index() to make sure submitted format is (turned to) int anyway
+                # -> maybe remove this check
+                if type(spsa_iterations) is not int:
+                    raise ValueError
+            except Exception as e:
+                # TODO (Philipp) properly end task
+                return "Failure, provided number of iterations not parasable, please provide a valid integer."
 
-    task_data.data["results"] = x_json
+        # NOTE spsa.minimize() calls the cost_fun multiple times during minimization (for determing
+        # things like learning rate) even if iterations are set to 1
+        result = spsa.minimize(cost_fun, initial_guess, iterations=spsa_iterations)
+        print(f"Result is {result} found with {spsa_iterations} iterations.")
 
+        # Put result in to a dict like scipy does, s.t. the result handling works for both methods
+        # NOTE maybe adding some more information analog to scipy.optimize.OptimizeResult would be nice
+        result = {"x": result}
+
+    # Turn result (i.e. best parameters) to JSON and save
+    task_data.data["results"] = json.dumps(result["x"].tolist(), indent=2)
     task_data.save(commit=True)
 
     app = current_app._get_current_object()
@@ -638,6 +662,7 @@ def circuit_result_task(self, db_id: int) -> str:
 
     circuit_url = task_data.data.get("circuit_url")
 
+    # FIXME turn this to something else than qasm? Visualisation fails in UI right now
     if circuit_url and isinstance(circuit_url, str):
         with open_url(circuit_url) as circuit_response:
             with SpooledTemporaryFile(mode="w") as output:
@@ -661,8 +686,5 @@ def circuit_result_task(self, db_id: int) -> str:
             "executable/circuit",
             "text/x-qasm",
         )
-
-    return "Success"
-
 
     return "Successfully saved circuit executor task result!"
