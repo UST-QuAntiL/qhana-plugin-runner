@@ -19,6 +19,28 @@ test_data = [
         OPENQASM 2.0;
         include \"qelib1.inc\";
         qreg q[2];
+        h q[1];
+        """,
+        ],
+        "dimHX": 1,
+        "dimHR": 1,
+        "qubit_intervals": [None, None],
+        "expected": True,
+    },
+    {
+        "id": 10,
+        "qasmfilecontents": [
+            """
+        OPENQASM 2.0;
+        include \"qelib1.inc\";
+        qreg q[2];
+        h q[0];
+        cx q[0], q[1];
+        """,
+            """
+        OPENQASM 2.0;
+        include \"qelib1.inc\";
+        qreg q[2];
         """,
         ],
         "dimHX": 1,

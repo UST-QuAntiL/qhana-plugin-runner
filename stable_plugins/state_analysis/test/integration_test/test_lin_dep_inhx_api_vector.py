@@ -7,6 +7,16 @@ from .vectorFormatter import format_complex_vectors
 
 test_data = [
     {
+        "id": 23,
+        "vectors": [
+            [0.7071067811865475, 0.0, 0.0, 0.7071067811865475],
+            [0.7071067811865475, 0.0, 0.7071067811865475, 0.0],
+        ],
+        "dimHX": 1,
+        "dimHR": 1,
+        "expected": True,
+    },
+    {
         "id": 0,
         "vectors": [[1, 0, 1, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]],
         "dimHX": 2,
