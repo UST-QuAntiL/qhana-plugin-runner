@@ -103,7 +103,7 @@ def get_plugin_information(plugin_description_file):
             'Second Plugin (@v2.0.0)': ...
         }
     """
-    with open(plugin_description_file, "r") as file:
+    with open(plugin_description_file, "r", encoding='utf-8') as file:
         raw_data = "".join(file.readlines())
 
     # Extracting the input, output information for each plugin
