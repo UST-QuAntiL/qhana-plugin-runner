@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "swaptest_quantum_orthogonality"
 __version__ = "v0.0.1"
-__description__ = "Determines whether two classical state vectors are orthogonal using a quantum algorithm, followed by classical post-processing. A plugin that checks if two classical state vectors are orthogonal using a quantum algorithm and classical post-processing for verification."
+__description__ = "Determines whether two quantum states are orthogonal using a quantum algorithm, followed by classical post-processing."
 __template_folder__ = "quantum_state_templates"
 __tags__ = ["quantum-state-analysis", "orthogonality", "quantum-algorithm", "qasm"]
 
