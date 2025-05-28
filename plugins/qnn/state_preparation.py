@@ -79,13 +79,14 @@ class StatePreparationParametersSchema(FrontendFormBaseSchema):
         },
     )
 
-    data_values = CSVList(
+
+    data_values = ma.fields.String(
         required=False,
         allow_none=True,
         element_type=ma.fields.String,
         metadata={
             "label": "Data",
-            "description": "Data to be encoded; comma separated.",
+            "description": "Single value, or list; for complex numbers use [[real, imag], [real, imag], ...]",
             "input_type": "textarea",
         },
     )
@@ -235,7 +236,7 @@ class ProcessView(MethodView):
     @STATE_PREPARATION_BLP.response(HTTPStatus.SEE_OTHER)
     @STATE_PREPARATION_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        """Start the demo task."""
+        """Start the state_preparation task."""
         db_task = ProcessingTask(task_name=prepare_task.name, parameters=StatePreparationParametersSchema().dumps(arguments))
         db_task.save(commit=True)
 
@@ -255,8 +256,8 @@ class ProcessView(MethodView):
 class StatePreparation(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Tests the connection of all components by printing some text (UPDATED!)."
-    tags = ["state-preparation", "demo"]
+    description = "Plugin for state preparation in quantum circuits."
+    tags = ["state-preparation", "qiskit", "qasm", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -294,6 +295,14 @@ def prepare_task(self, db_id: int) -> str:
 
     TASK_LOGGER.info(f"Loaded input parameters from db: data_values='{data_values}', digits_before_decimal='{digits_before_decimal}', digits_after_decimal='{digits_after_decimal}', encode_sign='{encode_sign}', append_measurement='{append_measurement}'")
 
+    #add brackets if not present
+    if not data_values[0] == "[":
+        data_values = "[" + data_values + "]"
+    #convert string input to list
+    try: data_values = eval(data_values)
+    except Exception as e:
+        TASK_LOGGER.error(f"Could not parse data values '{data_values}'! Error: {e}")
+        raise ValueError(f"Could not parse data values '{data_values}'! Error: {e}")
     if method == METHODENUM.BASIS_ENCODING:
         if len(data_values) != 1:
             raise ValueError("Basis encoding requires exactly one data value!")
@@ -353,19 +362,19 @@ def prepare_task(self, db_id: int) -> str:
         
     elif method == METHODENUM.ARBITRARY_STATE:
         try:
-            data_values = [complex(x) for x in data_values]
+            data_values = [complex(real, imag) for real, imag  in data_values]
         except ValueError:
             raise ValueError("Data values must be complex numbers!")
         gate=StatePreparationQiskit(data_values)
         qc = QuantumCircuit(gate.num_qubits)
         qc.append(gate, range(gate.num_qubits))
+        #neccessary for arbitrary state as qasm does not support complex numbers
+        qc = qc.decompose()
     else:
         raise NotImplementedError(f"Method {method} not implemented!")
     
     if append_measurement:
         qc.measure_all()
-    #neccessary as qasm does not support complex numbers
-    qc=qc.decompose()
     qasm_str=qasm3.dumps(qc)
         
 

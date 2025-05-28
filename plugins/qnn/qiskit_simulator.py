@@ -297,9 +297,10 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from qiskit.quantum_info import Statevector
     from qiskit_qasm3_import import parse
 
-    backend=GenericBackendV2(10)
+
 
     circuit = parse(circuit_qasm)
+    backend=GenericBackendV2(circuit.num_qubits)
 
     transpiled_circuit = transpile(circuit, backend)
     result: Result = backend.run(transpiled_circuit, shots=execution_options["shots"]).result()

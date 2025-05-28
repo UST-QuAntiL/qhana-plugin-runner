@@ -246,8 +246,8 @@ class ProcessView(MethodView):
 class Ansatz(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Tests the connection of all components by printing some text (UPDATED!)."
-    tags = ["ansatz", "demo"]
+    description = "QNN Ansatz plugin for generating quantum circuits."
+    tags = ["ansatz", "qc-simulator", "qiskit", "qasm", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -256,7 +256,7 @@ class Ansatz(QHAnaPluginBase):
         return ANSATZ_BLP
     
     def get_requirements(self) -> str:
-        return "qiskit~=1.3.2\nnumpy"
+        return "qiskit~=1.3.2"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -288,7 +288,7 @@ def ansatz_task(self, db_id: int) -> str:
 
         if append_measurement:
             ansatz.measure_all()
-
+        ansatz=ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
     
     elif ansatzmethod == ANSATZMETHOD.EFFICIENT_SU2:
@@ -296,7 +296,7 @@ def ansatz_task(self, db_id: int) -> str:
 
         if append_measurement:
             ansatz.measure_all()
-
+        ansatz=ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
 
     with SpooledTemporaryFile(mode="w") as output:
