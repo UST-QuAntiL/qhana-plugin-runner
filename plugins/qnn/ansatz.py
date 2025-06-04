@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from json import dumps, loads
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 from enum import Enum
@@ -46,7 +45,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from qhana_plugin_runner.api.extra_fields import EnumField, CSVList
+from qhana_plugin_runner.api.extra_fields import EnumField
 
 _plugin_name = "ansatz"
 __version__ = "v0.2.0"
@@ -60,16 +59,17 @@ ANSATZ_BLP = SecurityBlueprint(
     template_folder="ansatz_templates",
 )
 
+
 class ENTANGLEMENT(Enum):
     REVERSE_LINEAR = "reverse_linear"
     LINEAR = "linear"
     FULL = "full"
     CIRCULAR = "circular"
 
+
 class ANSATZMETHOD(Enum):
     REAL_AMPLITUDES = "real_amplitudes"
     EFFICIENT_SU2 = "efficient_su2"
-
 
 
 class AnsatzParametersSchema(FrontendFormBaseSchema):
@@ -102,12 +102,12 @@ class AnsatzParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
     )
-    num_layers = ma.fields.Integer(
+    num_repetitions = ma.fields.Integer(
         required=True,
         allow_none=False,
         metadata={
-            "label": "Number of Layers",
-            "description": "Number of layers for the ansatz.",
+            "label": "Number of Repetitions",
+            "description": "Number of Repetitions for the ansatz.",
             "input_type": "number",
         },
     )
@@ -151,10 +151,7 @@ class PluginsView(MethodView):
 class MicroFrontend(MethodView):
     """Micro frontend for the ansatz plugin."""
 
-    example_inputs = {
-        "entanglement": ENTANGLEMENT.LINEAR,
-        "num_qubits": 3,
-    }
+    example_inputs = {}
 
     @ANSATZ_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the ansatz plugin."
@@ -201,7 +198,7 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{ANSATZ_BLP.name}.ProcessView"),
-                help_text="This is an example help text with basic **Markdown** support.",
+                help_text="",
                 example_values=url_for(
                     f"{ANSATZ_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
@@ -217,12 +214,17 @@ class ProcessView(MethodView):
     @ANSATZ_BLP.response(HTTPStatus.SEE_OTHER)
     @ANSATZ_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        """Start the demo task."""
-        db_task = ProcessingTask(task_name=ansatz_task.name, parameters=AnsatzParametersSchema().dumps(arguments))
+        """Start the ansatz task."""
+        db_task = ProcessingTask(
+            task_name=ansatz_task.name,
+            parameters=AnsatzParametersSchema().dumps(arguments),
+        )
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = ansatz_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id)
+        task: chain = ansatz_task.s(db_id=db_task.id) | save_task_result.s(
+            db_id=db_task.id
+        )
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
@@ -238,19 +240,20 @@ class Ansatz(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "QNN Ansatz plugin for generating quantum circuits."
-    tags = ["ansatz", "qc-simulator", "qiskit", "qasm", "qasm-3"]
+    tags = ["ansatz", "qnn", "qiskit-1.3.2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
         return ANSATZ_BLP
-    
+
     def get_requirements(self) -> str:
         return "qiskit~=1.3.2"
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
 
 @CELERY.task(name=f"{Ansatz.instance.identifier}.ansatz_task", bind=True)
 def ansatz_task(self, db_id: int) -> str:
@@ -264,25 +267,52 @@ def ansatz_task(self, db_id: int) -> str:
         msg = f"Could not load task data with id {db_id} to read parameters!"
         TASK_LOGGER.error(msg)
         raise KeyError(msg)
-    
-    ansatzmethod: Optional[str] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("ansatzmethod", None)
-    entanglement: Optional[str] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("entanglement", None)
-    num_qubits: Optional[int] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("num_qubits", None)
-    num_layers: Optional[int] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("num_layers", None)
 
+    ansatzmethod: Optional[str] = (
+        AnsatzParametersSchema()
+        .loads(task_data.parameters or "{}")
+        .get("ansatzmethod", None)
+    )
+    entanglement: Optional[str] = (
+        AnsatzParametersSchema()
+        .loads(task_data.parameters or "{}")
+        .get("entanglement", None)
+    )
+    num_qubits: Optional[int] = (
+        AnsatzParametersSchema()
+        .loads(task_data.parameters or "{}")
+        .get("num_qubits", None)
+    )
+    num_repetitions: Optional[int] = (
+        AnsatzParametersSchema()
+        .loads(task_data.parameters or "{}")
+        .get("num_repetitions", None)
+    )
 
-    TASK_LOGGER.info(f"Loaded input parameters from db: ansatzmethod='{ansatzmethod}', entanglement='{entanglement}', num_qubits='{num_qubits}', num_layers='{num_layers}'")
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: ansatzmethod='{ansatzmethod}', entanglement='{entanglement}', num_qubits='{num_qubits}', num_repetitions='{num_repetitions}'"
+    )
 
     if ansatzmethod == ANSATZMETHOD.REAL_AMPLITUDES:
-        ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
-        #decompose not necessary, but allows for visualization in qhana
-        ansatz=ansatz.decompose()
+        ansatz = RealAmplitudes(
+            num_qubits=num_qubits,
+            entanglement=entanglement.value,
+            reps=num_repetitions,
+            parameter_prefix="p",
+        )
+        # decompose not necessary, but allows for visualization in qhana
+        ansatz = ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
-    
+
     elif ansatzmethod == ANSATZMETHOD.EFFICIENT_SU2:
-        ansatz = EfficientSU2(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
-        #decompose not necessary, but allows for visualization in qhana
-        ansatz=ansatz.decompose()
+        ansatz = EfficientSU2(
+            num_qubits=num_qubits,
+            entanglement=entanglement.value,
+            reps=num_repetitions,
+            parameter_prefix="p",
+        )
+        # decompose not necessary, but allows for visualization in qhana
+        ansatz = ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
 
     with SpooledTemporaryFile(mode="w") as output:
