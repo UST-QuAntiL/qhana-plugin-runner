@@ -16,6 +16,7 @@ from http import HTTPStatus
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 from enum import Enum
+from typing import Any, ChainMap
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -93,7 +94,7 @@ class StatePreparationParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Digits Before Decimal",
-            "description": "Number of digits before the decimal point.",
+            "description": "Number of digits before the decimal point (only needed for Basis Encoding).",
             "input_type": "number",
         },
     )
@@ -102,7 +103,7 @@ class StatePreparationParametersSchema(FrontendFormBaseSchema):
         allow_none=True,
         metadata={
             "label": "Digits After Decimal",
-            "description": "Number of digits after the decimal point.",
+            "description": "Number of digits after the decimal point (only needed for Basis Encoding).",
             "input_type": "number",
         },
     )
@@ -157,6 +158,11 @@ class MicroFrontend(MethodView):
 
     example_inputs = {}
 
+    default_inputs = {        
+        "digitsBeforeDecimal": 0,
+        "digitsAfterDecimal": 0,
+    }
+
     @STATE_PREPARATION_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the state preparation plugin."
     )
@@ -169,8 +175,8 @@ class MicroFrontend(MethodView):
     )
     @STATE_PREPARATION_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
-        """Return the micro frontend."""
-        return self.render(request.args, errors, False)
+        values: ChainMap[str, Any] = ChainMap(request.args.to_dict(), self.default_inputs)
+        return self.render(values, errors, False)
 
     @STATE_PREPARATION_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the state preparation plugin."
