@@ -246,7 +246,7 @@ class StatePreparation(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Plugin for state preparation in quantum circuits."
-    tags = ["state-preparation", "encoding", "qiskit-1.3.2", "qasm-3"]
+    tags = ["state-preparation", "encoding", "qnn", "qiskit-1.3.2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
