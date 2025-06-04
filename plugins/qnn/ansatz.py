@@ -49,7 +49,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.api.extra_fields import EnumField, CSVList
 
 _plugin_name = "ansatz"
-__version__ = "v0.1"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -275,10 +275,14 @@ def ansatz_task(self, db_id: int) -> str:
 
     if ansatzmethod == ANSATZMETHOD.REAL_AMPLITUDES:
         ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
+        #decompose not necessary, but allows for visualization in qhana
+        ansatz=ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
     
     elif ansatzmethod == ANSATZMETHOD.EFFICIENT_SU2:
         ansatz = EfficientSU2(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
+        #decompose not necessary, but allows for visualization in qhana
+        ansatz=ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
 
     with SpooledTemporaryFile(mode="w") as output:
