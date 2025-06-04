@@ -250,7 +250,7 @@ class QasmVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Visualizes QASM data."
-    tags = ["visualization", "qasm"]
+    tags = ["visualization", "qasm-3", "qiskit-1.3.2"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -272,7 +272,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{QasmVisualization.instance.identifier}.generate_image", bind=True)
 def generate_image(self, url: str, hash: str) -> str:
-    from qiskit import QuantumCircuit
     from qiskit_qasm3_import import parse
     import matplotlib
 
