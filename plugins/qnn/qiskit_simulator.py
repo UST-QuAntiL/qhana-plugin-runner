@@ -275,7 +275,7 @@ class QiskitSimulator(QHAnaPluginBase):
     description = (
         "Allows execution of quantum circuits using a simulator packaged with qiskit."
     )
-    tags = ["circuit-executor", "qc-simulator", "qiskit", "qasm", "qasm-3"]
+    tags = ["circuit-executor", "qc-simulator", "qiskit-1.3.2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -297,13 +297,13 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from qiskit.quantum_info import Statevector
     from qiskit_qasm3_import import parse
 
-
-
     circuit = parse(circuit_qasm)
-    backend=GenericBackendV2(circuit.num_qubits)
+    backend = GenericBackendV2(circuit.num_qubits)
 
     transpiled_circuit = transpile(circuit, backend)
-    result: Result = backend.run(transpiled_circuit, shots=execution_options["shots"]).result()
+    result: Result = backend.run(
+        transpiled_circuit, shots=execution_options["shots"]
+    ).result()
     if not result.success:
         # TODO better error
         raise ValueError("Circuit could not be simulated!", result)
@@ -330,7 +330,9 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         "qpuVendor": "IBM",
         "qpuName": result.backend_name,
         "qpuVersion": result.backend_version,
-        "seed": int(seed),  # only for simulators; used to be int32 -> not json serializable
+        "seed": int(
+            seed
+        ),  # only for simulators; used to be int32 -> not json serializable
         "shots": shots,
         # Time information
         "date": result.date,
@@ -346,7 +348,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     state_vector: Optional[Any] = None
     try:
         circuit.remove_final_measurements()
-        state_vector =  Statevector.from_instruction(circuit)
+        state_vector = Statevector.from_instruction(circuit)
 
     except KeyError:
         pass
