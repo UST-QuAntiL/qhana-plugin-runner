@@ -119,14 +119,6 @@ class StatePreparationParametersSchema(FrontendFormBaseSchema):
     )
 
 
-    append_measurement = ma.fields.Bool(
-        required=False,
-        missing=False,
-        metadata={
-            "label": "Measurement",
-            "description" : "Append a measurement to the circuit.",
-        },
-    )
 
 
 @STATE_PREPARATION_BLP.route("/")
@@ -290,10 +282,9 @@ def prepare_task(self, db_id: int) -> str:
     digits_before_decimal: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("digits_before_decimal", None)
     digits_after_decimal: Optional[int] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("digits_after_decimal", None)
     encode_sign: Optional[bool] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("encode_sign", None)
-    append_measurement: Optional[bool] =  StatePreparationParametersSchema().loads(task_data.parameters or "{}").get("append_measurement", None)
 
 
-    TASK_LOGGER.info(f"Loaded input parameters from db: data_values='{data_values}', digits_before_decimal='{digits_before_decimal}', digits_after_decimal='{digits_after_decimal}', encode_sign='{encode_sign}', append_measurement='{append_measurement}'")
+    TASK_LOGGER.info(f"Loaded input parameters from db: data_values='{data_values}', digits_before_decimal='{digits_before_decimal}', digits_after_decimal='{digits_after_decimal}', encode_sign='{encode_sign}'")
 
     #add brackets if not present
     if not data_values[0] == "[":
@@ -368,13 +359,11 @@ def prepare_task(self, db_id: int) -> str:
         gate=StatePreparationQiskit(data_values)
         qc = QuantumCircuit(gate.num_qubits)
         qc.append(gate, range(gate.num_qubits))
-        #neccessary for arbitrary state as qasm does not support complex numbers
+        #neccessary for arbitrary state as qasm import does not support complex numbers
         qc = qc.decompose()
     else:
         raise NotImplementedError(f"Method {method} not implemented!")
     
-    if append_measurement:
-        qc.measure_all()
     qasm_str=qasm3.dumps(qc)
         
 

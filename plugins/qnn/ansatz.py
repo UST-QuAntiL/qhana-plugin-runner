@@ -111,14 +111,6 @@ class AnsatzParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
     )
-    append_measurement = ma.fields.Bool(
-        required=False,
-        missing=False,
-        metadata={
-            "label": "Measurement",
-            "description": "Append a measurement to the circuit.",
-        },
-    )
 
 
 @ANSATZ_BLP.route("/")
@@ -162,7 +154,6 @@ class MicroFrontend(MethodView):
     example_inputs = {
         "entanglement": ENTANGLEMENT.LINEAR,
         "num_qubits": 3,
-        "append_measurement": True,
     }
 
     @ANSATZ_BLP.html_response(
@@ -278,25 +269,16 @@ def ansatz_task(self, db_id: int) -> str:
     entanglement: Optional[str] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("entanglement", None)
     num_qubits: Optional[int] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("num_qubits", None)
     num_layers: Optional[int] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("num_layers", None)
-    append_measurement: Optional[bool] = AnsatzParametersSchema().loads(task_data.parameters or "{}").get("append_measurement", None)
 
 
-    TASK_LOGGER.info(f"Loaded input parameters from db: ansatzmethod='{ansatzmethod}', entanglement='{entanglement}', num_qubits='{num_qubits}', num_layers='{num_layers}', append_measurement='{append_measurement}'")
+    TASK_LOGGER.info(f"Loaded input parameters from db: ansatzmethod='{ansatzmethod}', entanglement='{entanglement}', num_qubits='{num_qubits}', num_layers='{num_layers}'")
 
     if ansatzmethod == ANSATZMETHOD.REAL_AMPLITUDES:
         ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
-
-        if append_measurement:
-            ansatz.measure_all()
-        ansatz=ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
     
     elif ansatzmethod == ANSATZMETHOD.EFFICIENT_SU2:
         ansatz = EfficientSU2(num_qubits=num_qubits, entanglement=entanglement.value,reps=num_layers,parameter_prefix='p')
-
-        if append_measurement:
-            ansatz.measure_all()
-        ansatz=ansatz.decompose()
         qasm_str = qasm3.dumps(ansatz)
 
     with SpooledTemporaryFile(mode="w") as output:
