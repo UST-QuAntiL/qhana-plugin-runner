@@ -17,7 +17,6 @@ from http import HTTPStatus
 from textwrap import dedent
 from json import loads
 from tempfile import SpooledTemporaryFile
-from qhana_plugin_runner import db
 from qhana_plugin_runner.storage import STORE
 from typing import Mapping, Optional, cast, Dict, Union
 import json
@@ -25,19 +24,10 @@ import json
 # Adding optimizer to loop
 from enum import Enum
 from qhana_plugin_runner.api.extra_fields import EnumField
-from scipy.optimize import minimize
-import numpy.typing as npt
 from collections.abc import Callable
 from requests import get
 from time import sleep
-import spsa
 
-import numpy as np
-from qiskit import QuantumCircuit, qasm3
-from qiskit.qasm3 import dumps
-from qiskit_qasm3_import import parse
-
-from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, jsonify, redirect
 from flask.app import Flask
@@ -61,10 +51,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 from qhana_plugin_runner.plugin_utils.interop import (
     call_plugin_endpoint,
     get_plugin_endpoint,
-    get_task_result_no_wait,
-    monitor_external_substep,
-    monitor_result,
-    subscribe,
 )
 
 from qhana_plugin_runner.api.util import (
@@ -80,13 +66,12 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.tasks import (
     TASK_DETAILS_CHANGED,
-    TASK_STEPS_CHANGED,
     save_task_error,
     save_task_result,
 )
 
 _plugin_name = "loop"
-__version__ = "v0.1"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -147,13 +132,13 @@ class LoopParametersSchema(FrontendFormBaseSchema):
         },
     )
 
-    statevector = fields.Bool(
-        required=False,
-        missing=False,
-        metadata={
-            "label": "Request statevector",
-        },
-    )
+    # statevector = fields.Bool(
+    #     required=False,
+    #     missing=False,
+    #     metadata={
+    #         "label": "Request statevector",
+    #     },
+    # )
 
     target_statevector = fields.String(
         required=False,
@@ -175,7 +160,7 @@ class LoopParametersSchema(FrontendFormBaseSchema):
         element_type=fields.String,
         metadata={
             "label": "Number of SPSA iterations",
-            "description": "Explicitly set the number of iterartions SPSA should run for during minimization, if no value is provided minimization is run for 200 iterations by default",
+            "description": "Explicitly set the number of iterartions SPSA should run for during minimization, if no value is provided minimization is run for 1000 iterations by default",
             "input_type": "textarea",
         },
     )
@@ -253,11 +238,9 @@ class PluginsView(MethodView):
 
 @LOOP_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the state preparation plugin."""
+    """Micro frontend for the loop plugin."""
 
-    example_inputs = {
-        "inputStr": "Sample input string.",
-    }
+    example_inputs = {}
 
     @LOOP_BLP.html_response(
         HTTPStatus.OK, description="Micro frontend of the loop plugin."
@@ -322,16 +305,12 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Start the loop task."""
 
-        # FIXME for some reason optimize_ansatz.name cannot be found
         db_task = ProcessingTask(
             task_name=optimize_ansatz.name,
             parameters=LoopParametersSchema().dumps(arguments),
         )
-        # TODO check if both are actually required
         db_task.save()
         DB.session.flush()
-
-        print(OPTIMIZERENUM.COBYLA)
 
         statevector: bool = arguments.get("statevector", False)
 
@@ -356,7 +335,6 @@ class ProcessView(MethodView):
 
         db_task.save(commit=True)
 
-        # NOTE Execution of ProcessingTask starts here (?)
         # all tasks need to know about db id to load the db entry
         task = optimize_ansatz.s(db_id=db_task.id)
 
@@ -386,7 +364,7 @@ class Loop(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Orchestrates the optimization Loop."
-    tags = ["Loop", "Orchestrattion"]
+    tags = ["optimizer", "qnn", "qnn-training", "qiskit-1.3.2", "qasm-3"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -394,16 +372,14 @@ class Loop(QHAnaPluginBase):
     def get_api_blueprint(self):
         return LOOP_BLP
 
-    # scipy einbinden
     def get_requirements(self) -> str:
-        return "qiskit~=1.3.2\nnumpy\nspsa"
+        return "qiskit~=1.3.2\nnumpy\nspsa\nscipy"
 
 
 @LOOP_BLP.route("/circuit/<int:db_id>")
 class PrepareCircuitView(MethodView):
     """Get the circuit as string in a Response."""
 
-    # NOTE maybe db_id should be str
     def get(self, db_id: int) -> Response:
         """Get the requested circuit."""
         task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -417,12 +393,14 @@ class PrepareCircuitView(MethodView):
 
 def get_cost_function(
     db_id: int,
-    circuit: QuantumCircuit,
-) -> Callable[[npt.NDArray[np.float64]], float]:
+    circuit,
+) -> Callable:
     """
     Returns the cost/loss function taking single argument, i.e. (ansatz) parameters, which will be
     minimized during optimization.
     """
+    import numpy as np
+
     TASK_LOGGER.info("Get cost function successfully called.")
 
     # NOTE maybe not accessing task_data here and instead passing everything would be nicer
@@ -454,14 +432,8 @@ def get_cost_function(
 
     TASK_LOGGER.debug("target_statevector", target_statevector)
 
-    def cost_function(params: npt.NDArray[np.float64]) -> float:
+    def cost_function(params) -> float:
         # later iterate over list of inputs
-
-        # TODO decide if adding a counter for SPSA is desired
-        # global c
-        # c += 1
-        # print(c)
-
         TASK_LOGGER.info("Cost function successfully called.")
         parametrized_circuit = circuit.assign_parameters(params)
         print(params)
@@ -487,7 +459,6 @@ def get_cost_function(
                 TASK_LOGGER.info(f"statevector_dict: {statevector_dict}")
 
                 _ = statevector_dict.pop("ID")
-                # print("statevector_id", statevector_id)
 
                 # this check is probably unneccesary
                 if len(statevector_dict) % 2 != 0:
@@ -503,33 +474,31 @@ def get_cost_function(
                 for i in range(len(statevector_dict)):
                     statevector[i] = complex(statevector_dict[str(i)])
 
-                # print("statevector:", statevector)
-
                 pending = False
             elif result["status"] == "FAILURE":
                 # TODO handle this, i.e make sure it shows properly in UI
                 raise Exception(f"Executing circuit failed with response: {result}")
 
-        print("statevector", statevector)
-        print("target statevector", target_statevector)
-
         # Fidelity = |<result_statevector|target_statevector>|^2
         fidelity = np.abs(np.matrix(statevector) @ np.matrix(target_statevector).T) ** 2
 
-        print(f"Fidelity: {fidelity[0, 0]}")
-        print(f"Loss: {1 - fidelity[0, 0]}")
+        TASK_LOGGER.info(f"Fidelity: {fidelity[0, 0]}")
+        TASK_LOGGER.info(f"Loss: {1 - fidelity[0, 0]}")
 
         return 1 - fidelity[0, 0]
 
     return cost_function
 
 
-def combine_circuit(db_id: int) -> QuantumCircuit:
+def combine_circuit(db_id: int):
     """
     This function gets the ID of an optimze_ansatz ProcessingTask and combines Viewthe in the task.data
     linked qasm code for encoding the input data and the actual ansatz. It then returns the
     combined qasm circuit.
     """
+    from qiskit import QuantumCircuit
+    from qiskit_qasm3_import import parse
+
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     params = LoopParametersSchema().loads(task_data.parameters or "{}")
     state_url: Optional[str] = params.get("state", None)
@@ -562,7 +531,9 @@ def combine_circuit(db_id: int) -> QuantumCircuit:
     return combined_circuit
 
 
-def circuit_to_qasm3_string(circuit: QuantumCircuit) -> str:
+def circuit_to_qasm3_string(circuit) -> str:
+    from qiskit import qasm3
+
     combined_qasm3 = qasm3.dumps(circuit)
     combined_qasm3_cleaned = dedent(combined_qasm3).lstrip()
     return combined_qasm3_cleaned
@@ -573,6 +544,10 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{Loop.instance.identifier}.optimize_ansatz", bind=True)
 def optimize_ansatz(self, db_id: int) -> str:
+    from scipy.optimize import minimize
+    import spsa
+    import numpy as np
+
     TASK_LOGGER.info(f"Starting the optmizing loop with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
@@ -584,9 +559,6 @@ def optimize_ansatz(self, db_id: int) -> str:
     task_options: Dict[str, Union[str, int]] = LoopParametersSchema().loads(
         task_data.parameters or "{}"
     )
-
-    # print(task_options)
-    # print("td", task_data)
 
     optimizer: Optional[int] = task_options["optimizer"]
 
@@ -616,7 +588,7 @@ def optimize_ansatz(self, db_id: int) -> str:
 
     elif optimizer == OPTIMIZERENUM.SPSA:
         if task_options["spsa_iterations"] == "":
-            spsa_iterations = 200
+            spsa_iterations = 1000
         else:
             try:
                 spsa_iterations = eval(task_options["spsa_iterations"])
@@ -662,7 +634,6 @@ def circuit_result_task(self, db_id: int) -> str:
 
     circuit_url = task_data.data.get("circuit_url")
 
-    # FIXME turn this to something else than qasm? Visualisation fails in UI right now
     if circuit_url and isinstance(circuit_url, str):
         with open_url(circuit_url) as circuit_response:
             with SpooledTemporaryFile(mode="w") as output:
@@ -682,9 +653,9 @@ def circuit_result_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "circuit.qasm",
-            "executable/circuit",
-            "text/x-qasm",
+            "params.json",
+            "custom/optimizer_result",
+            "text/json",
         )
 
     return "Successfully saved circuit executor task result!"
