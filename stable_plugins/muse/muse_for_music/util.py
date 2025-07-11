@@ -672,7 +672,7 @@ def voice_to_entity(
         if v.get("related_voice", {}).get("id", -1) >= 0
     ]
 
-    intervall_vector_str = (_extract(entity, "intervall_vector"),)
+    intervall_vector_str = _extract(entity, "intervall_vector")
 
     intervall_vector: Optional[List[int]] = None
 
