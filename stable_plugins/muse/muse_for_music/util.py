@@ -117,12 +117,12 @@ def _extract(  # noqa: C901
         return value
     if type == "int":
         assert isinstance(value, int) or value is None
-        if value < 0:
+        if value is None or value < 0:
             return None
         return value
     if type == "float":
         assert isinstance(value, (int, float)) or value is None
-        if value < 0:
+        if value is None or value < 0:
             return None
         return value
     if type == "entity":
@@ -672,7 +672,7 @@ def voice_to_entity(
         if v.get("related_voice", {}).get("id", -1) >= 0
     ]
 
-    intervall_vector_str = (_extract(entity, "intervallik"),)
+    intervall_vector_str = (_extract(entity, "intervall_vector"),)
 
     intervall_vector: Optional[List[int]] = None
 
