@@ -314,7 +314,9 @@ def calculation_task(self, db_id: int) -> str:
             sim = sim_entity["similarity"]
             dist = None
 
-            if transformer == TransformersEnum.linear_inverse:
+            if sim is None:
+                dist = None
+            elif transformer == TransformersEnum.linear_inverse:
                 dist = 1.0 - sim
             elif transformer == TransformersEnum.exponential_inverse:
                 dist = math.exp(-sim)

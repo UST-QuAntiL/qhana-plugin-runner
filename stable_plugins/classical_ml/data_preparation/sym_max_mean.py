@@ -261,9 +261,7 @@ def _get_sim(elem_sims: Dict, val1, val2) -> float:
     elif (val2, val1) in elem_sims:
         return elem_sims[(val2, val1)]["similarity"]
     else:
-        raise ValueError(
-            "No element similarity value found for " + str(val1) + " and " + str(val2)
-        )
+        return 0.0  # handles missing elements in lists
 
 
 @CELERY.task(name=f"{SymMaxMean.instance.identifier}.calculation_task", bind=True)
@@ -356,7 +354,17 @@ def calculation_task(self, db_id: int) -> str:
 
                 if ent_attr1 is None or ent_attr2 is None:
                     sym_max_mean = None  # TODO: add handling of missing values
+                elif len(ent_attr1) == 0 and len(ent_attr2) == 0:
+                    sym_max_mean = None
+                elif len(ent_attr1) == 0 or len(ent_attr2) == 0:
+                    sym_max_mean = 0
                 else:
+                    if isinstance(ent_attr1, set):
+                        ent_attr1 = list(ent_attr1)
+
+                    if isinstance(ent_attr2, set):
+                        ent_attr2 = list(ent_attr2)
+
                     if not isinstance(ent_attr1, list):
                         ent_attr1 = [ent_attr1]
 

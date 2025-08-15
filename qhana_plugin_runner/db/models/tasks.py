@@ -20,9 +20,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import sqltypes as sql
 from sqlalchemy.sql.expression import delete, distinct, or_, select
 from sqlalchemy.sql.schema import ForeignKey
+from sqlalchemy_json import NestedMutableDict
 
 from ..db import DB, REGISTRY
-from .mutable_json import JSON_LIKE, MutableJSON
+from .mutable_json import JSON_LIKE, MutableJSON, NestedMutable
 
 
 @REGISTRY.mapped_as_dataclass
@@ -83,7 +84,9 @@ class ProcessingTask:
 
     parameters: Mapped[str] = mapped_column(sql.Text(), default="")
 
-    data: Mapped[JSON_LIKE] = mapped_column(MutableJSON, default_factory=dict)
+    data: Mapped[JSON_LIKE] = mapped_column(
+        MutableJSON, default_factory=NestedMutableDict
+    )
 
     multi_step: Mapped[bool] = mapped_column(sql.Boolean(), default=False)
 

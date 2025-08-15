@@ -36,7 +36,7 @@
         {% endif %}
         {% endblock help %}
         {% call forms.render_form(target="microfrontend") %}
-        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        {{ forms.render_fields(schema, values=values, errors=errors, extras=(schema_extras if schema_extras else dict())) }}
         <div class="qhana-form-buttons">
             {{ forms.submit("validate", target="microfrontend")}}
             {{ forms.submit("submit", action=process)}}

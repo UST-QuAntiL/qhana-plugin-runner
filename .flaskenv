@@ -6,5 +6,8 @@ FLASK_DEBUG=true # set to production if in production!
 # configure default port
 FLASK_RUN_PORT=5005
 
+# set UTF-8 encoding for file operations (to avoid cp1252 issues on Windows)
+PYTHONUTF8=1
+
 # plugin folders that should be loaded by default
 PLUGIN_FOLDERS=./plugins:./plugins/circuit_executors:./stable_plugins/classical_ml/data_preparation:./stable_plugins/classical_ml/scikit_ml:./stable_plugins/data_synthesis:./stable_plugins/demo:./stable_plugins/file_utils:./stable_plugins/infrastructure:./stable_plugins/muse:./stable_plugins/nisq_analyzer:./stable_plugins/quantum_ml/max_cut:./stable_plugins/quantum_ml/pennylane_qiskit_ml:./stable_plugins/quantum_ml/qiskit_ml:./stable_plugins/visualization/complex:./stable_plugins/visualization/file_types:./stable_plugins/workflow
