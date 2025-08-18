@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from json import JSONDecodeError, loads
 from typing import (
     Annotated,
     Any,
@@ -95,7 +96,7 @@ def tax_item_to_id(item, tax_id: str):
 def _extract(  # noqa: C901
     obj,
     attr: str,
-    type: Literal["str", "int", "entity", "taxItem"] = "str",
+    type: Literal["str", "int", "float", "entity", "taxItem"] = "str",
     taxonomy: Optional[str] = None,
 ) -> Any:
     if "." in attr:
@@ -116,7 +117,12 @@ def _extract(  # noqa: C901
         return value
     if type == "int":
         assert isinstance(value, int) or value is None
-        if value < 0:
+        if value is None or value < 0:
+            return None
+        return value
+    if type == "float":
+        assert isinstance(value, (int, float)) or value is None
+        if value is None or value < 0:
             return None
         return value
     if type == "entity":
@@ -250,6 +256,7 @@ class PartEntity(NamedTuple):
     measure_start_ref_page: Optional[int]
     measure_end: Optional[int]
     measure_end_ref_page: Optional[int]
+    omissions: Optional[str]
     occurence_in_movement: Annotated[List[str], {"taxonomy": "AuftretenSatz"}]
     formal_functions: Annotated[List[str], {"taxonomy": "FormaleFunktion"}]
     instrument_quantity_before: Annotated[
@@ -293,6 +300,7 @@ PART_FIELDS = {
     "dynamic_context",
     "tempo_context",
     "dramaturgic_context",
+    "omissions",
 }
 
 
@@ -316,6 +324,7 @@ def part_to_entity(entity: Dict):
         measure_start_ref_page=_extract(entity, "measure_start.from_page", "int"),
         measure_end=_extract(entity, "measure_end.measure", "int"),
         measure_end_ref_page=_extract(entity, "measure_end.from_page", "int"),
+        omissions=_extract(entity, "omissions"),
         occurence_in_movement=_extract(
             entity, "occurence_in_movement", "taxItem", "AuftretenSatz"
         ),
@@ -420,6 +429,7 @@ class SubpartEntity(NamedTuple):
     part: Annotated[str, {"ref_target": "parts.csv"}]
     opus: Annotated[str, {"ref_target": "opuses.csv"}]
     is_tutti: bool
+    measures: Optional[str]
     occurence_in_part: Annotated[Optional[str], {"taxonomy": "AuftretenWerkausschnitt"}]
     share_of_part: Annotated[Optional[str], {"taxonomy": "Anteil"}]
     instrumentation: Annotated[List[str], {"taxonomy": "Instrument"}]
@@ -431,10 +441,12 @@ class SubpartEntity(NamedTuple):
     ]
     dynamic_changes: Annotated[List[str], {"taxonomy": "LautstaerkeEntwicklung"}]
     degree_of_dissonance: Annotated[Optional[str], {"taxonomy": "Dissonanzgrad"}]
-    dissonances: Annotated[List[str], {"taxonomy": "Dissonanzen"}]
+    numeric_degree_of_dissonance: Annotated[Optional[float], {"min": 0, "max": 100}]
     chords: Annotated[List[str], {"taxonomy": "Akkord"}]
     harmonic_complexity: Annotated[Optional[str], {"taxonomy": "HarmonischeKomplexitaet"}]
+    numeric_harmonic_complexity: Annotated[Optional[float], {"min": 0, "max": 100}]
     harmonic_density: Annotated[Optional[str], {"taxonomy": "HarmonischeDichte"}]
+    numeric_harmonic_density: Annotated[Optional[float], {"min": 0, "max": 100}]
     harmonic_phenomenons: Annotated[List[str], {"taxonomy": "HarmonischePhaenomene"}]
     harmonic_changes: Annotated[List[str], {"taxonomy": "HarmonischeEntwicklung"}]
     harmonische_function: Annotated[
@@ -459,6 +471,7 @@ SUBPART_FIELDS = {
     "tempo",
     "dynamic",
     "harmonics",
+    "measures",
 }
 
 
@@ -482,6 +495,7 @@ def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
         part=part_id,
         opus=part_id_to_opus_id[part_id],
         is_tutti=bool(entity.get("is_tutti")),
+        measures=_extract(entity, "measures"),
         occurence_in_part=_extract(
             entity, "occurence_in_part", "taxItem", "AuftretenWerkausschnitt"
         ),
@@ -504,13 +518,21 @@ def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
         degree_of_dissonance=_extract(
             entity, "harmonics.degree_of_dissonance", "taxItem", "Dissonanzgrad"
         ),
-        dissonances=_extract(entity, "harmonics.dissonances", "taxItem", "Dissonanzen"),
+        numeric_degree_of_dissonance=_extract(
+            entity, "harmonics.numeric_degree_of_dissonance", "float"
+        ),
         chords=_extract(entity, "harmonics.chords", "taxItem", "Akkord"),
         harmonic_complexity=_extract(
             entity, "harmonics.harmonic_complexity", "taxItem", "HarmonischeKomplexitaet"
         ),
+        numeric_harmonic_complexity=_extract(
+            entity, "harmonics.numeric_harmonic_complexity", "float"
+        ),
         harmonic_density=_extract(
             entity, "harmonics.harmonic_density", "taxItem", "HarmonischeDichte"
+        ),
+        numeric_harmonic_density=_extract(
+            entity, "harmonics.numeric_harmonic_density", "float"
         ),
         harmonic_phenomenons=_extract(
             entity, "harmonics.harmonic_phenomenons", "taxItem", "HarmonischePhaenomene"
@@ -550,10 +572,6 @@ class VoiceEntity(NamedTuple):
     subpart: Annotated[str, {"ref_target": "subparts.csv"}]
     part: Annotated[str, {"ref_target": "parts.csv"}]
     opus: Annotated[str, {"ref_target": "opuses.csv"}]
-    measure_start: Optional[int]
-    measure_start_ref_page: Optional[int]
-    measure_end: Optional[int]
-    measure_end_ref_page: Optional[int]
     instrumentation: Annotated[List[str], {"taxonomy": "Instrument"}]
     has_melody: bool
     musicial_function: Annotated[List[str], {"taxonomy": "MusikalischeFunktion"}]
@@ -566,6 +584,7 @@ class VoiceEntity(NamedTuple):
     ornaments: Annotated[List[str], {"taxonomy": "Verzierung"}]
     melody_form: Annotated[Optional[str], {"taxonomy": "Melodieform"}]
     intervallik: Annotated[List[str], {"taxonomy": "Intervallik"}]
+    intervall_vector: Optional[List[int]]
     highest_pitch: Annotated[Optional[str], {"taxonomy": "Grundton"}]
     highest_octave: Annotated[Optional[str], {"taxonomy": "Oktave"}]
     lowest_pitch: Annotated[Optional[str], {"taxonomy": "Grundton"}]
@@ -621,10 +640,9 @@ VOICE_FIELDS = {
     "ornaments",
     "melody_form",
     "intervallik",
+    "intervall_vector",
     "citations",
     "related_voices",
-    "measure_start",
-    "measure_end",
 }
 
 
@@ -654,6 +672,19 @@ def voice_to_entity(
         if v.get("related_voice", {}).get("id", -1) >= 0
     ]
 
+    intervall_vector_str = _extract(entity, "intervall_vector")
+
+    intervall_vector: Optional[List[int]] = None
+
+    if intervall_vector_str and isinstance(intervall_vector_str, str):
+        intervall_vector_str = intervall_vector_str.strip()
+        try:
+            tmp = loads(intervall_vector_str)
+            if isinstance(tmp, (list, tuple)) and all(isinstance(i, int) for i in tmp):
+                intervall_vector = tmp  # type: ignore
+        except JSONDecodeError:
+            pass
+
     return VoiceEntity(
         id_,
         ui_href,
@@ -662,10 +693,6 @@ def voice_to_entity(
         subpart=subpart_id,
         part=part_id,
         opus=part_id_to_opus_id[part_id],
-        measure_start=_extract(entity, "measure_start.measure", "int"),
-        measure_start_ref_page=_extract(entity, "measure_start.from_page", "int"),
-        measure_end=_extract(entity, "measure_end.measure", "int"),
-        measure_end_ref_page=_extract(entity, "measure_end.from_page", "int"),
         instrumentation=_extract(entity, "instrumentation", "taxItem", "Instrument"),
         has_melody=bool(entity.get("has_melody", False)),
         musicial_function=_extract(
@@ -684,6 +711,7 @@ def voice_to_entity(
         ornaments=_extract(entity, "ornaments", "taxItem", "Verzierung"),
         melody_form=_extract(entity, "melody_form", "taxItem", "Melodieform"),
         intervallik=_extract(entity, "intervallik", "taxItem", "Intervallik"),
+        intervall_vector=intervall_vector,
         highest_pitch=_extract(entity, "ambitus.highest_pitch", "taxItem", "Grundton"),
         highest_octave=_extract(entity, "ambitus.highest_octave", "taxItem", "Oktave"),
         lowest_pitch=_extract(entity, "ambitus.lowest_pitch", "taxItem", "Grundton"),
