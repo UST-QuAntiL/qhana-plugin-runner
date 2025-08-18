@@ -9,9 +9,9 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@planqk/quantum-workflow-modeler": "^1.5.2"
+    "@planqk/quantum-workflow-modeler": "^1.5.6"
   },
   "devDependencies": {
-    "esbuild": "0.19.7"
+    "esbuild": "^0.25.2"
   }
 }

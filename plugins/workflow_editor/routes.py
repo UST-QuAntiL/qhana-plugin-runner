@@ -1,8 +1,12 @@
+from datetime import datetime, timezone
 from http import HTTPStatus
 from importlib import resources
+from io import BytesIO
 from typing import Mapping
-from flask import current_app
-from flask import render_template
+from uuid import uuid4
+from xml.etree import ElementTree
+
+from flask import current_app, render_template
 from flask.globals import request
 from flask.helpers import url_for
 from flask.views import MethodView
@@ -17,9 +21,12 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
+from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 
 from . import assets
+from .config import WF_STATE_KEY
 from .plugin import WF_EDITOR_BLP, WorkflowEditor
+from .schemas import WorkflowSaveParamsSchema, WorkflowSchema
 
 
 class WorkflowEditorSchema(FrontendFormBaseSchema):
@@ -111,6 +118,7 @@ class WFEditorFrontend(MethodView):
                 wf_editor_js=url_for(
                     f"{WF_EDITOR_BLP.name}.{WorkflowEditorJavaScript.__name__}"
                 ),
+                wf_list_url=url_for(f"{WF_EDITOR_BLP.name}.{WorkflowListView.__name__}"),
                 **config,
             )
         )
@@ -157,3 +165,124 @@ class WorkflowEditorJavaScriptMap(MethodView):
         if script:
             return script.read_text()
         abort(HTTPStatus.NOT_FOUND)
+
+
+@WF_EDITOR_BLP.route("/workflows/")
+class WorkflowListView(MethodView):
+    """List all saved workflows."""
+
+    @WF_EDITOR_BLP.response(HTTPStatus.OK, WorkflowSchema(many=True))
+    @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
+    def get(self):
+        plugin = WorkflowEditor.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+
+        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY)
+        if workflows is None:
+            workflows = []
+        # TODO: find better workaround for date (de-)serialization (e.g., with custom ma field)
+        workflows = [unparse_datetime(w) for w in workflows]
+        return workflows
+
+    @WF_EDITOR_BLP.arguments(WorkflowSaveParamsSchema(), location="query", as_kwargs=True)
+    @WF_EDITOR_BLP.response(HTTPStatus.OK, WorkflowSchema())
+    @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
+    def post(self, autosave):
+        plugin = WorkflowEditor.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+        if request.content_length > 100_000_000:
+            abort(HTTPStatus.BAD_REQUEST, "Request body is too big!")
+        bpmn = request.get_data(as_text=True)
+        id_, name, version = extract_wf_properties(bpmn)
+        workflow = {
+            "id": id_,
+            "version": version,
+            "name": name,
+            "date": datetime.now(timezone.utc).isoformat(sep="T"),
+            "autosave": autosave,
+            "workflow_id": str(uuid4()),
+        }
+        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY)
+        if workflows is None:
+            workflows = []
+        DataBlob.set_value(
+            plugin.name, workflow["workflow_id"], bpmn.encode(encoding="utf-8")
+        )
+        PluginState.set_value(
+            plugin.name, WF_STATE_KEY, [workflow] + workflows, commit=True
+        )
+
+        # TODO: start a cleanup task to reduce the autosaves to the last 3 saves
+        # of the newest version for each workflow.
+
+        return unparse_datetime(workflow)
+
+
+def unparse_datetime(workflow: dict):
+    return {
+        "id": workflow["id"],
+        "version": workflow["version"],
+        "name": workflow["name"],
+        "date": datetime.fromisoformat(workflow["date"]),
+        "autosave": workflow["autosave"],
+        "workflow_id": workflow["workflow_id"],
+    }
+
+
+@WF_EDITOR_BLP.route("/workflows/<string:wf_id>/")
+class WorkflowView(MethodView):
+    """Get a specific workflow file."""
+
+    @WF_EDITOR_BLP.response(HTTPStatus.OK, content_type="application/bpmn+xml")
+    @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
+    def get(self, wf_id: str):
+        plugin = WorkflowEditor.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+
+        bpmn = DataBlob.get_value(plugin.name, wf_id, default=None)
+        if bpmn is None:
+            print("\n\n", wf_id, bpmn, "saad", "\n\n")
+            abort(HTTPStatus.NOT_FOUND, "BAAD")
+
+        return Response(bpmn, status=HTTPStatus.OK, content_type="application/bpmn+xml")
+
+    @WF_EDITOR_BLP.response(HTTPStatus.OK)
+    @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
+    def delete(self, wf_id: str):
+        plugin = WorkflowEditor.instance
+        if plugin is None:
+            abort(HTTPStatus.INTERNAL_SERVER_ERROR)
+
+        DataBlob.delete_value(plugin.name, wf_id)
+
+        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY)
+        if workflows is None:
+            workflows = []
+        filtered_workflows = [w for w in workflows if w["workflow_id"] != wf_id]
+
+        PluginState.set_value(plugin.name, WF_STATE_KEY, filtered_workflows, commit=True)
+
+
+def extract_wf_properties(bpmn: str):
+    id_ = "unknown"
+    name = id_
+    version = "0"
+    for _event, node in ElementTree.iterparse(
+        BytesIO(bpmn.encode(encoding="utf-8")), ["start"]
+    ):
+        if node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}definitions":
+            continue
+        if (
+            node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}process"
+            or node.tag.endswith("process")
+        ):
+            id_ = node.attrib["id"]
+            name = node.attrib.get("name", id_)
+            version = node.attrib.get(
+                "{http://camunda.org/schema/1.0/bpmn}versionTag", version
+            )
+        break
+    return id_, name, version

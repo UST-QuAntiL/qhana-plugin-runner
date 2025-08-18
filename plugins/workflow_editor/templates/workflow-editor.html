@@ -17,6 +17,24 @@
         background-color: white;
         color: black;
     }
+
+    .workflow-list {
+        max-height: 70vh;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        margin-block-end: 1rem;
+    }
+
+    .workflow-title {
+        font-weight: 600;
+        font-size: 120%;
+        margin-block: 0.1em;
+    }
+
+    .workflow-subtitle {
+        margin-block: 0.1em;
+    }
+
 </style>
 
 <script>
@@ -32,6 +50,21 @@
 {% block content %}
 <div class="content" id="modeler-container">
     <quantum-workflow-modeler id="main-wf-modeler"></quantum-workflow-modeler>
+
+    <dialog id="openWF" closedby="any" autofocus>
+        <h2>Open Workflow</h2>
+        <form method="dialog">
+            <label for="openWFinput">Open Workflow from local filesystem:</label>
+            <input type="file" name="workflow" id="openWFinput" accept="bpmn" required>
+            <button type="submit" value="openLocal">Open selected workflow</button>
+        </form>
+        <h3>Load Saved Workflow</h3>
+        <form method="dialog" id="openExisting">
+            <div class="workflow-list">
+            </div>
+            <button class="cancel-dialog" type="submit" value="cancel">Close dialog</button>
+        </form>
+    </dialog>
 </div>
 <div id="editor_wrap" style="display: none">
     <div id="editor_dragbar"></div>
@@ -55,16 +88,117 @@
     editor.setTheme("ace/theme/textmate");
 
     const modeler = document.getElementById("main-wf-modeler");
-    
-    fetch('http://localhost:5005/plugins')
-        .then(response => response.json())
-        .then(data => {
-            modeler.qhanaPlugins = data;
-            console.log("Fetched QHAna Plugins:", modeler.qhanaPlugins);
-        })
-        .catch(error => {
-            console.error("Error fetching QHAna plugins:", error);
+
+    function getRootElement() {
+        return temp1.bpmnjsModeler.get("elementRegistry").find(e => e.type==="bpmn:Process" && e.parent == null);
+         //.businessObject.versionTag = "6"
+         //.businessObject.name = "6"
+         //.businessObject.id = "6"
+         // const modeling = temp1.bpmnjsModeler.get("modeling")
+         // modeling.updateProperties(rootProcess, {versionTag: "7"})
+    }
+
+    /**
+     * Handle file open request events.
+     *
+     * @param {CustomEvent} event
+     */
+    function onFileOpenRequest(event) {
+        event.preventDefault();
+        const dialogElement = document.querySelector("dialog#openWF");
+        const url = "{{wf_list_url}}";
+        fetch(url).then(response => response.json()).then(result => {
+            const container = document.querySelector("form#openExisting .workflow-list");
+            
+            const newChildren = result.map(workflow => {
+                const outer = document.createElement("div");
+                const title = document.createElement("p");
+                title.classList.add("workflow-title");
+                title.textContent = `${workflow["name"]} – ${workflow["id"]}@${workflow["version"]}`;
+                const subtitle = document.createElement("p");
+                subtitle.classList.add("workflow-subtitle");
+                subtitle.textContent = workflow["date"] + (workflow["autosave"] ? " – autosave" : "");
+                const button = document.createElement("button");
+                button.setAttribute("value", `load:${workflow["workflowId"]}`);
+                button.setAttribute("type", "submit");
+                button.textContent = `Load ${workflow["name"]}`;
+                outer.appendChild(title);
+                outer.appendChild(subtitle);
+                outer.appendChild(button);
+                return outer;
+            });
+
+            container.replaceChildren(...newChildren);
         });
+        dialogElement.showModal();
+    }
+
+    function onOpenDialogClosed(event) {
+        const localWFInput = event.target.querySelector("input#openWFinput");
+        if (event.target.returnValue === "openLocal") {
+            if (localWFInput.files.length === 1) {
+                modeler.loadWorkflowFile(localWFInput.files[0]);
+            }
+        }
+        localWFInput.value = "";
+        if (event.target.returnValue === "cancel") {
+            return;
+        }
+        if (event.target.returnValue.startsWith("load:")) {
+            const workflow_id = event.target.returnValue.substring(5);
+            const base_url = "{{wf_list_url}}";
+            const url = `${base_url}${workflow_id}/`
+            fetch(url).then(response => {
+                if (response.status === 200) {
+                    return response.text();
+                } else {
+                    throw Error("Could not load BPMN!");
+                }
+            }).then(bpmn => modeler.loadWorkflowDiagram(bpmn));
+        }
+    }
+
+    /**
+     * Handle before save events.
+     *
+     * @param {CustomEvent} event
+     */
+    function onBeforeSave(event) {
+        event.preventDefault();
+        const isAutoSave = event.detail.autoSave;
+        const bpmn = event.detail.workflow;
+        
+        const url = "{{wf_list_url}}";
+        fetch(
+            `${url}?autosave=${isAutoSave ? 'true' : 'false'}`, 
+            {method: "post", keepalive: true, body: bpmn, headers: {content_type: "application/bpmn+xml"}}
+        );
+    }
+
+    /**
+     * Handle before deploy events.
+     *
+     * @param {CustomEvent} event
+     */
+    function onBeforeDeploy(event) {
+        event.preventDefault();
+    }
+
+    /**
+     * Handle transform events.
+     *
+     * @param {CustomEvent} event
+     */
+    function onTransform(event) {
+        event.preventDefault();
+    }
+
+    modeler.addEventListener("quantum-workflow-request-open", onFileOpenRequest);
+    modeler.addEventListener("quantum-workflow-before-save", onBeforeSave);
+    modeler.addEventListener("quantum-workflow-before-deploy", onBeforeDeploy);
+    modeler.addEventListener("quantum-workflow-transformed", onTransform);
+
+    document.querySelector("dialog#openWF").addEventListener("close", onOpenDialogClosed)
 
     modeler.pluginConfigs = [
         {
