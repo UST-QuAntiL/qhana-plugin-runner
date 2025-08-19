@@ -212,6 +212,24 @@
      */
     function onTransform(event) {
         event.preventDefault();
+
+        // save old pre transformation workflow as autosave snapshot
+        const oldWorkflow = modeler.bpmnjsModeler.xml;
+        const url = "{{wf_list_url}}";
+        fetch(
+            `${url}?autosave=true`, 
+            {method: "post", keepalive: true, body: oldWorkflow, headers: {content_type: "application/bpmn+xml"}}
+        );
+
+        const newWorkflow = event.detail.workflow;
+        const parsedWorkflow = (new DOMParser()).parseFromString(newWorkflow, "application/xml");
+        const processElement = parsedWorkflow.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/MODEL", "process")[0];
+
+        // rename workflow to include a "transformed" prefix
+        processElement.setAttribute("name", processElement.getAttribute("name") + "_transformed");
+        const renamedWorkflow = (new XMLSerializer()).serializeToString(parsedWorkflow);
+
+        modeler.loadWorkflowDiagram(renamedWorkflow);        
     }
 
     modeler.addEventListener("quantum-workflow-request-open", onFileOpenRequest);
