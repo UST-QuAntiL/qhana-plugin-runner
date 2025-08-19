@@ -19,7 +19,7 @@
     }
 
     .workflow-list {
-        max-height: 70vh;
+        max-height: 50vh;
         overflow-y: auto;
         scrollbar-gutter: stable;
         margin-block-end: 1rem;
@@ -35,7 +35,7 @@
     }
 
     .workflow-item:not(:nth-child(1)) {
-        border-top: 1px solid var(--border, gray);
+        border-top: 1px solid var(--border-color, gray);
     }
 
     .workflow-title {
@@ -64,7 +64,7 @@
 <div class="content" id="modeler-container">
     <quantum-workflow-modeler id="main-wf-modeler"></quantum-workflow-modeler>
 
-    <dialog id="openWF" closedby="any" autofocus>
+    <dialog class="card mat-mdc-card color-scheme-card" id="openWF" closedby="any" autofocus>
         <h2>Open Workflow</h2>
         <form method="dialog" clas="qhana-form">
             <div class="qhana-form-field">
