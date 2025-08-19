@@ -25,6 +25,19 @@
         margin-block-end: 1rem;
     }
 
+    .workflow-item {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .workflow-item:not(:nth-child(1)) {
+        border-top: 1px solid var(--border, gray);
+    }
+
     .workflow-title {
         font-weight: 600;
         font-size: 120%;
@@ -53,16 +66,20 @@
 
     <dialog id="openWF" closedby="any" autofocus>
         <h2>Open Workflow</h2>
-        <form method="dialog">
-            <label for="openWFinput">Open Workflow from local filesystem:</label>
-            <input type="file" name="workflow" id="openWFinput" accept="bpmn" required>
-            <button type="submit" value="openLocal">Open selected workflow</button>
+        <form method="dialog" clas="qhana-form">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="openWFinput">Open Workflow from local filesystem:</label>
+                <div class="qhana-input-wrapper">
+                    <input class="qhana-form-input" type="file" name="workflow" id="openWFinput" accept="bpmn" required>
+                    <button class="qhana-form-submit" type="submit" value="openLocal">Open selected workflow</button>
+                </div>
+            </div>
         </form>
         <h3>Load Saved Workflow</h3>
-        <form method="dialog" id="openExisting">
+        <form method="dialog" id="openExisting" clas="qhana-form">
             <div class="workflow-list">
             </div>
-            <button class="cancel-dialog" type="submit" value="cancel">Close dialog</button>
+            <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
         </form>
     </dialog>
 </div>
@@ -112,6 +129,8 @@
             
             const newChildren = result.map(workflow => {
                 const outer = document.createElement("div");
+                outer.classList.add("workflow-item")
+                const inner = document.createElement("div");
                 const title = document.createElement("p");
                 title.classList.add("workflow-title");
                 title.textContent = `${workflow["name"]} – ${workflow["id"]}@${workflow["version"]}`;
@@ -121,9 +140,11 @@
                 const button = document.createElement("button");
                 button.setAttribute("value", `load:${workflow["workflowId"]}`);
                 button.setAttribute("type", "submit");
+                button.classList.add("qhana-form-submit");
                 button.textContent = `Load ${workflow["name"]}`;
-                outer.appendChild(title);
-                outer.appendChild(subtitle);
+                inner.appendChild(title);
+                inner.appendChild(subtitle);
+                outer.appendChild(inner);
                 outer.appendChild(button);
                 return outer;
             });
