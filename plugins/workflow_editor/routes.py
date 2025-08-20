@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from importlib import resources
 from io import BytesIO
-from typing import Mapping
+from typing import Literal, Mapping
 from uuid import uuid4
 from xml.etree import ElementTree
 
@@ -188,7 +188,7 @@ class WorkflowListView(MethodView):
     @WF_EDITOR_BLP.arguments(WorkflowSaveParamsSchema(), location="query", as_kwargs=True)
     @WF_EDITOR_BLP.response(HTTPStatus.OK, WorkflowSchema())
     @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
-    def post(self, autosave):
+    def post(self, autosave: bool = False, deploy: Literal["", "plugin", "workflow"] = ""):
         plugin = WorkflowEditor.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -213,6 +213,11 @@ class WorkflowListView(MethodView):
         PluginState.set_value(
             plugin.name, WF_STATE_KEY, [workflow] + workflows, commit=True
         )
+
+        if deploy:
+            # TODO: deploy workflow to camunda and maybe to QHAna
+            # (i.e., using the existing workflow management plugins)
+            pass
 
         # TODO: start a cleanup task to reduce the autosaves to the last 3 saves
         # of the newest version for each workflow.

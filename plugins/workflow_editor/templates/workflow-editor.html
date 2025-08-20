@@ -82,6 +82,15 @@
             <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
         </form>
     </dialog>
+
+    <dialog class="card mat-mdc-card color-scheme-card" id="deployWF" closedby="any">
+        <h2>Deploy Workflow</h2>
+        <form method="dialog" clas="qhana-form">
+            <button class="qhana-form-submit" type="submit" value="cancel" autofocus>Cancel</button>
+            <button class="qhana-form-submit" type="submit" value="deployPlugin">Deploy as Plugin</button>
+            <button class="qhana-form-submit" type="submit" value="deployWorkflow">Deploy as Workflow</button>
+        </form>
+    </dialog>
 </div>
 <div id="editor_wrap" style="display: none">
     <div id="editor_dragbar"></div>
@@ -113,6 +122,16 @@
          //.businessObject.id = "6"
          // const modeling = temp1.bpmnjsModeler.get("modeling")
          // modeling.updateProperties(rootProcess, {versionTag: "7"})
+    }
+
+    function getCurrentBpmn() {
+        // workaround for inconsistent xml attribute
+        const xmlObject = modeler.bpmnjsModeler.xml;
+        if (xmlObject.xml != null) {
+            // if attribute contained an object wrapping the actual xml content
+            return xmlObject.xml;
+        }
+        return xmlObject;
     }
 
     /**
@@ -191,7 +210,7 @@
         
         const url = "{{wf_list_url}}";
         fetch(
-            `${url}?autosave=${isAutoSave ? 'true' : 'false'}`, 
+            `${url}?autosave=${isAutoSave ? 'true' : 'false'}`,
             {method: "post", keepalive: true, body: bpmn, headers: {content_type: "application/bpmn+xml"}}
         );
     }
@@ -203,6 +222,30 @@
      */
     function onBeforeDeploy(event) {
         event.preventDefault();
+        const dialogElement = document.querySelector("dialog#deployWF");
+        dialogElement.showModal();
+    }
+
+    function onDeployDialogClosed(event) {
+        const dialogResult = event.target.returnValue;
+        if (dialogResult === "cancel") {
+            return;
+        }
+        const url = "{{wf_list_url}}";
+        const bpmn = getCurrentBpmn();
+        console.log(bpmn)
+        if (dialogResult === "deployWorkflow") {
+            fetch(
+                `${url}?autosave=false&deploy=workflow`,
+                {method: "post", keepalive: true, body: bpmn, headers: {content_type: "application/bpmn+xml"}}
+            );
+        }
+        if (dialogResult === "deployPlugin") {
+            fetch(
+                `${url}?autosave=false&deploy=plugin`,
+                {method: "post", keepalive: true, body: bpmn, headers: {content_type: "application/bpmn+xml"}}
+            );
+        }
     }
 
     /**
@@ -214,7 +257,7 @@
         event.preventDefault();
 
         // save old pre transformation workflow as autosave snapshot
-        const oldWorkflow = modeler.bpmnjsModeler.xml;
+        const oldWorkflow = getCurrentBpmn();
         const url = "{{wf_list_url}}";
         fetch(
             `${url}?autosave=true`, 
@@ -238,6 +281,7 @@
     modeler.addEventListener("quantum-workflow-transformed", onTransform);
 
     document.querySelector("dialog#openWF").addEventListener("close", onOpenDialogClosed)
+    document.querySelector("dialog#deployWF").addEventListener("close", onDeployDialogClosed)
 
     modeler.pluginConfigs = [
         {

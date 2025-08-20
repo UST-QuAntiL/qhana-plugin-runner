@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
-from typing import Dict, Optional, Union
-
 import marshmallow as ma
+from marshmallow.validate import OneOf
 
 from qhana_plugin_runner.api.util import MaBaseSchema
 
@@ -34,4 +32,11 @@ class WorkflowSchema(MaBaseSchema):
 class WorkflowSaveParamsSchema(MaBaseSchema):
     autosave = ma.fields.Bool(
         required=False, missing=False, description="Set this to true for autosaves."
+    )
+    deploy = ma.fields.String(
+        required=False, missing="", validate=OneOf(choices=("", "workflow", "plugin")),
+        description=(
+            "Set to 'plugin' to save and deploy workflow as a QHAna plugin. "
+            "Set to 'workflow' to save and deploy workflow to camunda only."
+        )
     )
