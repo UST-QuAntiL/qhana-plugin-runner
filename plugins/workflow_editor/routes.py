@@ -27,6 +27,7 @@ from . import assets
 from .config import WF_STATE_KEY
 from .plugin import WF_EDITOR_BLP, WorkflowEditor
 from .schemas import WorkflowSaveParamsSchema, WorkflowSchema
+from .tasks import deploy_workflow
 
 
 class WorkflowEditorSchema(FrontendFormBaseSchema):
@@ -196,28 +197,28 @@ class WorkflowListView(MethodView):
             abort(HTTPStatus.BAD_REQUEST, "Request body is too big!")
         bpmn = request.get_data(as_text=True)
         id_, name, version = extract_wf_properties(bpmn)
+        wf_id = str(uuid4())
         workflow = {
             "id": id_,
             "version": version,
             "name": name,
             "date": datetime.now(timezone.utc).isoformat(sep="T"),
             "autosave": autosave,
-            "workflow_id": str(uuid4()),
+            "workflow_id": wf_id,
         }
         workflows = PluginState.get_value(plugin.name, WF_STATE_KEY)
         if workflows is None:
             workflows = []
         DataBlob.set_value(
-            plugin.name, workflow["workflow_id"], bpmn.encode(encoding="utf-8")
+            plugin.name, wf_id, bpmn.encode(encoding="utf-8")
         )
         PluginState.set_value(
             plugin.name, WF_STATE_KEY, [workflow] + workflows, commit=True
         )
 
         if deploy:
-            # TODO: deploy workflow to camunda and maybe to QHAna
-            # (i.e., using the existing workflow management plugins)
-            pass
+            workflow_url = url_for(WorkflowView.__name__, wf_id=wf_id)
+            deploy_workflow.s(workflow_url, deploy_as=deploy).apply_async()
 
         # TODO: start a cleanup task to reduce the autosaves to the last 3 saves
         # of the newest version for each workflow.
