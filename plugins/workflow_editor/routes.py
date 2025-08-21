@@ -13,6 +13,7 @@ from flask_smorest import abort
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
+    ApiLink,
     EntryPoint,
     PluginMetadata,
     PluginMetadataSchema,
@@ -64,6 +65,14 @@ class PluginRootView(MethodView):
                 data_output=[],
             ),
             tags=WorkflowEditor.instance.tags,
+            links=[
+                ApiLink(
+                    "workflows",
+                    url_for(
+                        f"{WF_EDITOR_BLP.name}.{WorkflowListView.__name__}", _external=True
+                    )
+                )
+            ]
         )
 
 
