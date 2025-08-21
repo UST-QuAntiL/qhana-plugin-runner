@@ -12,6 +12,7 @@ from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
 from marshmallow import INCLUDE
+from requests import request
 from requests.exceptions import HTTPError, RequestException
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -20,6 +21,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
+from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import (
@@ -121,6 +123,19 @@ class MicroFrontend(MethodView):
             process_definitions = []
             camunda_online = False
 
+        try:
+            workflows_url = None
+            with PLUGIN_REGISTRY_CLIENT as client:
+                workflow_editor_plugin = client.search_by_rel(
+                    "plugin", {"name": "workflow-editor"}, allow_collection_resource=False
+                )
+                if workflow_editor_plugin:
+                    workflows_url = workflow_editor_plugin.data["href"].rstrip("/") + "/workflows/"
+                    saved_workflows = request("get", workflows_url).json()
+        except RequestException:
+            saved_workflows = []
+
+
         add_deployed_info(process_definitions)
 
         potential_plugins = {w["pluginHref"] for w in process_definitions}
@@ -139,6 +154,8 @@ class MicroFrontend(MethodView):
                 plugins_wo_workflow=plugins_wo_workflow,
                 undeployEndpoint=f"{WORKFLOW_MGMNT_BLP.name}.{UndeployPluginView.__name__}",
                 camunda_online=camunda_online,  # TODO use this information in the template
+                saved_workflows_url=workflows_url,
+                saved_workflows=saved_workflows,
             )
         )
 
