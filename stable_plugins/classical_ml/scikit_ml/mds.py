@@ -46,13 +46,13 @@ from qhana_plugin_runner.api.util import (
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "mds"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -277,7 +277,7 @@ class MDS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Converts distance values (distance matrix) to points in a space."
-    tags = ["dist-to-points"]
+    tags = ["preprocessing", "distance-calculation", "feature-engineering", "embedding"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -366,12 +366,16 @@ def calculation_task(self, db_id: int) -> str:
 
         entity_points.append(new_entity_point)
 
+    metric_name = str(metric.name).removesuffix("_mds")
+    filename = retrieve_filename(entity_distances_url)
+    info_str = f"_mds_dim_{dimensions}_metric_{metric_name}_from_{filename}"
+
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(entity_points, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "entity_points.json",
+            f"entity_points{info_str}.json",
             "entity/vector",
             "application/json",
         )

@@ -16,33 +16,38 @@ from http import HTTPStatus
 from typing import Mapping, Optional
 
 from celery.canvas import chain
-from flask import Response, redirect, Markup
-from flask.globals import request
+from celery.utils.log import get_task_logger
+from flask import Markup, Response, redirect
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
-from . import PDPreprocessing_BLP, PDPreprocessing
+from qhana_plugin_runner.api.plugin_schemas import (
+    DataMetadata,
+    EntryPoint,
+    InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+)
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    add_step,
+    save_task_error,
+    save_task_result,
+)
+
+from . import PDPreprocessing, PDPreprocessing_BLP
+from .backend.pandas_preprocessing import HowEnum
 from .schemas import (
     FirstInputParametersSchema,
     SecondInputParametersSchema,
     TaskResponseSchema,
 )
-from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata,
-    EntryPoint,
-    PluginMetadata,
-    PluginMetadataSchema,
-    PluginType,
-    InputDataMetadata,
-)
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import add_step, save_task_error, save_task_result
-
 from .tasks import first_task, preprocessing_task
-
-from celery.utils.log import get_task_logger
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -68,9 +73,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="*",
-                        content_type=[
-                            "text/csv",
-                        ],
+                        content_type=["text/csv", "application/json"],
                         required=True,
                         parameter="fileUrl",
                     ),
@@ -240,7 +243,7 @@ class SecondMicroFrontend(MethodView):
         fields = schema.fields
         # define default values
         default_values = {
-            fields["threshold"].data_key: 0,
+            fields["how"].data_key: HowEnum.any,
         }
 
         # overwrite default values with other values if possible
@@ -294,9 +297,12 @@ class FinalProcessView(MethodView):
         db_task.clear_previous_step()
         db_task.save(commit=True)
 
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
+
         # all tasks need to know about db id to load the db entry
         task: chain = preprocessing_task.s(
-            db_id=db_task.id, step_id=step_id
+            db_id=db_task.id, step_id=step_id, final=True
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
@@ -343,6 +349,9 @@ class SecondProcessView(MethodView):
 
         db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
         # all tasks need to know about db id to load the db entry
         task: chain = preprocessing_task.s(

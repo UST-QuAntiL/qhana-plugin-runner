@@ -228,13 +228,14 @@ def second_task(self, db_id: int) -> str:
 
     # Output data
     if params["save_table"]:
+        info_str = "custom_query" if params["custom_query"] else params["table_name"]
         if df is not None:
             with SpooledTemporaryFile(mode="w") as output:
                 df.to_csv(output, index=False)
                 STORE.persist_task_result(
                     db_id,
                     output,
-                    "entities.csv",
+                    f"entities_sql-loader_{info_str}.csv",
                     "entity",
                     "text/csv",
                 )

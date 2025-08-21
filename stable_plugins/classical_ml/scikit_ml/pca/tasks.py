@@ -16,7 +16,6 @@ from tempfile import SpooledTemporaryFile
 
 from typing import Optional, List
 
-from json import loads
 from celery.utils.log import get_task_logger
 
 from . import PCA
@@ -28,7 +27,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     ensure_dict,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
 from .pca_output import pca_to_output, get_output_dimensionality
@@ -144,41 +143,60 @@ def get_pca(input_params: dict):
     # Result can't have dim <= 0. If this is entered, set to None.
     # If set to None all PCA types will compute as many components as possible
     # Exception for normal PCA we set n_components to 'mle', which automatically will choose the number of dimensions.
+    entities_file_name = retrieve_filename(input_params["entity_points_url"])
 
     if pca_type == PCATypeEnum.normal:
-        return PCA(
-            n_components=input_params["dimensions"],
-            svd_solver=input_params["solver"].value,
-            tol=input_params["tol"],
-            iterated_power=input_params["iterated_power"],
+        return (
+            PCA(
+                n_components=input_params["dimensions"],
+                svd_solver=input_params["solver"].value,
+                tol=input_params["tol"],
+                iterated_power=input_params["iterated_power"],
+            ),
+            f"_pca_type_normal_dim_{input_params['dimensions']}_solver_{input_params['solver'].value}_from_{entities_file_name}",
         )
     elif pca_type == PCATypeEnum.incremental:
-        return IncrementalPCA(
-            n_components=input_params["dimensions"],
-            batch_size=input_params["batch_size"],
+        return (
+            IncrementalPCA(
+                n_components=input_params["dimensions"],
+                batch_size=input_params["batch_size"],
+            ),
+            f"_pca_type_incremental_dim_{input_params['dimensions']}_batch_size_{input_params['batch_size']}_from_{entities_file_name}",
         )
     elif pca_type == PCATypeEnum.sparse:
-        return SparsePCA(
-            n_components=input_params["dimensions"],
-            alpha=input_params["sparsity_alpha"],
-            ridge_alpha=input_params["ridge_alpha"],
-            max_iter=input_params["max_itr"],
-            tol=input_params["tol"],
+        return (
+            SparsePCA(
+                n_components=input_params["dimensions"],
+                alpha=input_params["sparsity_alpha"],
+                ridge_alpha=input_params["ridge_alpha"],
+                max_iter=input_params["max_itr"],
+                tol=input_params["tol"],
+            ),
+            f"_pca_type_sparse_dim_{input_params['dimensions']}_from_{entities_file_name}",
         )
     elif pca_type == PCATypeEnum.kernel:
         eigen_solver = input_params["solver"].value
         if eigen_solver == "full":
             eigen_solver = "dense"
 
-        return KernelPCA(
-            n_components=input_params["dimensions"],
-            kernel=input_params["kernel"].value,
-            degree=input_params["degree"],
-            gamma=input_params["kernel_gamma"],
-            coef0=input_params["kernel_coef"],
-            eigen_solver=eigen_solver,
-            tol=input_params["tol"],
-            iterated_power=input_params["iterated_power"],
+        if input_params["kernel"].value == "precomputed":
+            kernel_filename = retrieve_filename(input_params["kernel_url"])
+            kernel_file = f"_{kernel_filename}"
+        else:
+            kernel_file = ""
+
+        return (
+            KernelPCA(
+                n_components=input_params["dimensions"],
+                kernel=input_params["kernel"].value,
+                degree=input_params["degree"],
+                gamma=input_params["kernel_gamma"],
+                coef0=input_params["kernel_coef"],
+                eigen_solver=eigen_solver,
+                tol=input_params["tol"],
+                iterated_power=input_params["iterated_power"],
+            ),
+            f"_pca_type_kernel_dim_{input_params['dimensions']}_kernel_{input_params['kernel'].value}{kernel_file}_solver_{eigen_solver}_from_{entities_file_name}",
         )
     raise ValueError(f"PCA with type {pca_type} not implemented!")
 
@@ -390,7 +408,13 @@ def plot_data(entity_points, dim_attributes, only_first_100):
 
 
 def save_outputs(
-    db_id, pca_output, entity_points, attributes, entity_points_for_plot, dim_attributes
+    db_id,
+    pca_output,
+    entity_points,
+    attributes,
+    entity_points_for_plot,
+    dim_attributes,
+    info_str,
 ):
     """
     Saves the plugin's output into files. This includes a plot of the transformed data, the pca's parameters and
@@ -413,7 +437,7 @@ def save_outputs(
             STORE.persist_task_result(
                 db_id,
                 output,
-                "plot.html",
+                f"plot{info_str}.html",
                 "custom/plot",
                 "text/html",
             )
@@ -423,7 +447,7 @@ def save_outputs(
         STORE.persist_task_result(
             db_id,
             output,
-            "pca_metadata.json",
+            f"pca_metadata{info_str}.json",
             "custom/pca-metadata",
             "application/json",
         )
@@ -434,7 +458,7 @@ def save_outputs(
         STORE.persist_task_result(
             db_id,
             output,
-            "transformed_entity_points.csv",
+            f"transformed_entity_points{info_str}.csv",
             "entity/vector",
             "text/csv",
         )
@@ -488,7 +512,7 @@ def calculation_task(self, db_id: int) -> str:
     kernel_url = input_params["kernel_url"]
 
     # Compute pca
-    pca = get_pca(input_params)
+    pca, info_str = get_pca(input_params)
 
     # Since incremental pca uses batches, we want to load in the data in batches
     if input_params["pca_type"] == PCATypeEnum.incremental.value:
@@ -524,6 +548,7 @@ def calculation_task(self, db_id: int) -> str:
         attributes,
         entity_points_for_plot,
         dim_attributes,
+        info_str,
     )
 
     return "Result stored in file"

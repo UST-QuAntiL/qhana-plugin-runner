@@ -1,0 +1,160 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+.cluster-preview {
+    width: 100%;
+    height: 75vw;
+    max-height: 95vmin;
+    overflow: hidden;
+}
+</style>
+{% endblock head %}
+
+{% block content %}
+<div class="qhana-microfrontend">
+    <details id="visualization-options" open>
+        <summary>Visualization Options</summary>
+        {% call forms.render_form(target="microfrontend") %}
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend") }}
+            {{ forms.submit("submit", action=process) }}
+        </div>
+        {% endcall %}
+    </details>
+</div>
+
+<div class="cluster-preview">
+</div>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+<script>
+    // Resets the iframe without a plot
+    function onPlotError() {
+        document.querySelector('.cluster-preview').innerHTML = '';
+        document.querySelector('#visualization-options').setAttribute('open', 'open');
+        if (window._qhana_microfrontend_state) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    function chooseRelatedData(event) {
+        event.preventDefault();
+        const button = event.target;
+        let relatedData;
+        if (button.dataset.inputId === "entity_url") {
+            relatedData = document.querySelector('input[name=clustersUrl]').value;
+        } else if (button.dataset.inputId === "clusters_url") {
+            relatedData = document.querySelector('input[name=entityUrl]').value;
+        } else {
+            return;
+        }
+        if (!relatedData) {
+            return;
+        }
+        sendMessage({
+            type: "request-related-data-url",
+            dataUrl: relatedData,
+            inputKey: button.dataset.inputId,
+            relation: button.dataset.relation,
+            acceptedInputType: button.dataset.dataType,
+            userInteraction: true,
+        });
+    }
+
+    // Setup event listeners for the entityUrl and clustersUrl input fields
+    function setupEventListeners() {
+        const entityInput = document.querySelector('input[name=entityUrl]');
+        entityInput.addEventListener("input", (event) => updatePreview());
+        const clusterInput = document.querySelector('input[name=clustersUrl]');
+        clusterInput.addEventListener("input", (event) => updatePreview());
+
+        // setup extra choose buttons:
+        const chooseRelPointsBtn = document.createElement("button");
+        chooseRelPointsBtn.textContent = "choose related";
+        chooseRelPointsBtn.setAttribute("id", "choose-rel-points");
+        chooseRelPointsBtn.classList.add("qhana-choose-file-button");
+        chooseRelPointsBtn.dataset.inputId = "entity_url";
+        chooseRelPointsBtn.dataset.relation = "pre";
+        chooseRelPointsBtn.dataset.dataType = "entity/vector";
+        chooseRelPointsBtn.setAttribute("disabled", "");
+        chooseRelPointsBtn.setAttribute("role", "button");
+        chooseRelPointsBtn.addEventListener("click", chooseRelatedData);
+        entityInput.parentElement.appendChild(chooseRelPointsBtn);
+
+        const chooseRelLabelsBtn = document.createElement("button");
+        chooseRelLabelsBtn.textContent = "choose related";
+        chooseRelLabelsBtn.setAttribute("id", "choose-rel-labels");
+        chooseRelLabelsBtn.classList.add("qhana-choose-file-button");
+        chooseRelLabelsBtn.dataset.inputId = "clusters_url";
+        chooseRelLabelsBtn.dataset.relation = "post";
+        chooseRelLabelsBtn.dataset.dataType = "entity/label";
+        chooseRelLabelsBtn.setAttribute("disabled", "");
+        chooseRelLabelsBtn.setAttribute("role", "button");
+        chooseRelLabelsBtn.addEventListener("click", chooseRelatedData);
+        clusterInput.parentElement.appendChild(chooseRelLabelsBtn);
+    }
+
+    async function updatePreview() {
+        const entityUrl = document.querySelector('input[name=entityUrl]').value;
+        const clustersUrl = document.querySelector('input[name=clustersUrl]').value;
+
+        const chooseRelEntity = document.querySelector("#choose-rel-points");
+        const chooseRelLabels = document.querySelector("#choose-rel-labels");
+
+        if (entityUrl) {
+            chooseRelLabels.removeAttribute("disabled");
+        } else {
+            chooseRelLabels.setAttribute("disabled", "");
+        }
+        if (clustersUrl) {
+            chooseRelEntity.removeAttribute("disabled");
+        } else {
+            chooseRelEntity.setAttribute("disabled", "");
+        }
+
+        // Only an entity Url is required to generate a plot
+        if (entityUrl === "" || entityUrl === null) {
+            onPlotError();
+            return;
+        }
+
+        // clustersUrl is set to null when no clustersUrl is provided
+        const params = new URLSearchParams();
+        params.set("entityUrl", entityUrl);
+        params.set("clustersUrl", clustersUrl ?? "");
+        const url = "{{ get_plot_url }}?" + params.toString();
+
+        const preview = document.querySelector('.cluster-preview');
+        fetch(url).then(response => {
+            if (response.status === 200) {
+                return response.text().then(text => {
+                    var plotContent = document.createRange().createContextualFragment(text);
+                    preview.innerHTML = "";
+                    preview.append(plotContent);
+                    document.querySelector('#visualization-options').removeAttribute('open');
+                    if (window._qhana_microfrontend_state) {
+                        monitorHeightChanges(window._qhana_microfrontend_state);
+                    }
+                });
+            } else {
+                if (response.status === 202) {
+                    setTimeout(updatePreview, 5000);
+                } else {
+                    onPlotError();
+                }
+            }
+        }).catch(error => {
+            console.log(error);
+            onPlotError();
+        });
+    }
+
+    setupEventListeners();
+    updatePreview();
+</script>
+{% endblock script %}

@@ -18,7 +18,7 @@ from io import StringIO
 from json import dumps, loads
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict, Tuple
+from typing import Mapping, Optional, List, Dict, Tuple, Callable
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -48,18 +48,23 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import (
+    tuple_deserializer,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
+    EntityTupleMixin,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "wu-palmer"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -75,7 +80,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types="application/json",
+        data_content_types=["text/csv", "application/json"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -91,6 +96,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Entities Attribute Metadata URL",
             "description": "URL to a file with the attribute metadata for the entities.",
             "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "post",
         },
     )
     taxonomies_zip_url = FileUrl(
@@ -102,6 +109,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Taxonomies URL",
             "description": "URL to zip file with taxonomies.",
             "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "pre",
         },
     )
     attributes = ma.fields.String(
@@ -109,7 +118,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Attributes",
-            "description": "Attributes for which the similarity shall be computed.",
+            "description": "List of attributes for which the similarity shall be computed. Separated by newlines.",
             "input_type": "textarea",
         },
     )
@@ -259,7 +268,7 @@ class WuPalmer(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Compares elements and returns similarity values."
-    tags = ["similarity-calculation"]
+    tags = ["preprocessing", "similarity-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -268,10 +277,16 @@ class WuPalmer(QHAnaPluginBase):
         return WU_PALMER_BLP
 
     def get_requirements(self) -> str:
-        return ""
+        return "muid~=0.5.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    import muid
+
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
@@ -383,7 +398,7 @@ def add_similarities_for_entities(
     entity1: Dict[str, any],
     entity2: Dict[str, any],
     attribute: str,
-    entities_metadata: Dict,
+    entities_metadata: dict[str, AttributeMetadata],
     wu_palmer_cache: WuPalmerCache,
 ):
     if attribute not in entity1 or attribute not in entity2:
@@ -393,8 +408,14 @@ def add_similarities_for_entities(
     values2 = entity2[attribute]
 
     # extract taxonomy name from refTarget
-    file_name: str = entities_metadata[attribute]["refTarget"].split(":")[1]
+    file_name: str = entities_metadata[attribute].ref_target.split(":")[1]
     tax_name: str = PurePath(file_name).stem
+
+    if isinstance(values1, set):
+        values1 = list(values1)
+
+    if isinstance(values2, set):
+        values2 = list(values2)
 
     if not isinstance(values1, list):
         values1 = [values1]
@@ -403,15 +424,16 @@ def add_similarities_for_entities(
         values2 = [values2]
 
     for val1 in values1:
+        if not val1:
+            continue
+
         for val2 in values2:
-            if val1 is None or val2 is None:
-                sim = None
-            else:
-                # sorting the values reduces cache misses and is possible because Wu-Palmer is commutative
-                sorted_val1, sorted_val2 = sorted((val1, val2))
-                sim = wu_palmer_cache.calculate_similarity(
-                    tax_name, sorted_val1, sorted_val2
-                )
+            if not val2:
+                continue
+
+            # sorting the values reduces cache misses and is possible because Wu-Palmer is commutative
+            sorted_val1, sorted_val2 = sorted((val1, val2))
+            sim = wu_palmer_cache.calculate_similarity(tax_name, sorted_val1, sorted_val2)
 
             similarities[(val1, val2)] = {
                 "source": val1,
@@ -477,16 +499,35 @@ def calculation_task(self, db_id: int) -> str:
         attributes,
         root_has_meaning_in_taxonomy,
     ) = load_input_parameters(db_id)
-
-    # load data from file
-    with open_url(entities_url) as entities_data:
-        entities = list(load_entities(entities_data, "application/json"))
+    deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
 
     with open_url(entities_metadata_url) as entities_metadata_file:
         entities_metadata_list = list(
-            load_entities(entities_metadata_file, "application/json")
+            load_entities(entities_metadata_file, get_mimetype(entities_metadata_file))
         )
-        entities_metadata = {element["ID"]: element for element in entities_metadata_list}
+        entities_metadata = {
+            element["ID"]: AttributeMetadata.from_dict(element)
+            for element in entities_metadata_list
+        }
+
+    # load data from file
+    with open_url(entities_url) as entities_data:
+        mimetype = get_mimetype(entities_data)
+        entities = []
+
+        for ent in load_entities(entities_data, mimetype):
+            if isinstance(ent, EntityTupleMixin):  # is NamedTuple
+                if deserializer is None:
+                    ent_attributes: tuple[str, ...] = type(ent).entity_attributes
+                    ent_tuple = type(ent)
+                    deserializer = tuple_deserializer(
+                        ent_attributes, entities_metadata, tuple_=ent_tuple._make
+                    )
+
+                ent = deserializer(ent)
+                entities.append(ent.as_dict())
+            else:
+                entities.append(ent)
 
     taxonomies = {}
 
@@ -520,10 +561,18 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
+    concat_filenames = retrieve_filename(entities_url)
+    concat_filenames += retrieve_filename(entities_metadata_url)
+    concat_filenames += retrieve_filename(taxonomies_zip_url)
+    filenames_hash = get_readable_hash(concat_filenames)
+
+    info_str = "_with_root" if root_has_meaning_in_taxonomy else "_without_root"
+    info_str += f"_{filenames_hash}"
+
     STORE.persist_task_result(
         db_id,
         tmp_zip_file,
-        "wu_palmer.zip",
+        f"wu_palmer{info_str}.zip",
         "custom/element-similarities",
         "application/zip",
     )

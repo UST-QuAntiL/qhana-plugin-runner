@@ -4,10 +4,18 @@
 <head>
     {% block head %}
     <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='forms.css')}}" media="screen" />
+    <style>
+        html {
+            scrollbar-gutter: stable;
+        }
+        .qhana-body {
+            height: fit-content;
+        }
+    </style>
     {% endblock head %}
 </head>
 
-<body>
+<body class="qhana-body">
     {% block content %}
     <div class="qhana-microfrontend">
         {% block help %}
@@ -28,7 +36,7 @@
         {% endif %}
         {% endblock help %}
         {% call forms.render_form(target="microfrontend") %}
-        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        {{ forms.render_fields(schema, values=values, errors=errors, extras=(schema_extras if schema_extras else dict())) }}
         <div class="qhana-form-buttons">
             {{ forms.submit("validate", target="microfrontend")}}
             {{ forms.submit("submit", action=process)}}
@@ -45,14 +53,6 @@
     {% endblock content %}
 
     {% block script %}
-
-    <!-- FIXME remove the javascript block and frontentjs in favor of calling super in the template! (requires refactoring existing plugins!) -->
-    {% block javascript %}
-    {% if frontendjs %}
-        <script src={{frontendjs}}></script>
-    {% endif %}
-    {% endblock %}
-
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
     {% endblock script %}
 

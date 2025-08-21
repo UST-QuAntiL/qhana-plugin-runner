@@ -81,13 +81,15 @@ def calculation_task(self, db_id: int) -> str:
         {"ID": ID, "href": "", "label": label} for ID, label in zip(test_id, test_labels)
     ]
 
+    info_str = f"_data-creator_type_{dataset_type.name}"
+
     # Output data
     with SpooledTemporaryFile(mode="w") as output:
         save_entities(train_data, output, "application/json")
         STORE.persist_task_result(
             db_id,
             output,
-            "train_data.json",
+            f"train_data{info_str}_amount_{len(train_data)}.json",
             "entity/vector",
             "application/json",
         )
@@ -97,7 +99,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "train_labels.json",
+            f"train_labels{info_str}_amount_{len(train_labels)}.json",
             "entity/label",
             "application/json",
         )
@@ -107,7 +109,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "test_data.json",
+            f"test_data{info_str}_amount_{len(test_data)}.json",
             "entity/vector",
             "application/json",
         )
@@ -117,7 +119,7 @@ def calculation_task(self, db_id: int) -> str:
         STORE.persist_task_result(
             db_id,
             output,
-            "test_labels.json",
+            f"test_labels{info_str}_amount_{len(test_labels)}.json",
             "entity/label",
             "application/json",
         )

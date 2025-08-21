@@ -11,7 +11,7 @@ The ``entity/*`` data type describes the most generic entity format.
 See :ref:`data-formats/data-model:entities` for more details.
 
 
-.. note:: The examples in this document can (and should) be replaced with shortened real world examples once they are available to make testing new plugins easier.
+.. todo:: The examples in this document can (and should) be replaced with shortened real world examples once they are available to make testing new plugins easier.
 
 Data Types
 ----------
@@ -62,6 +62,29 @@ Example:
     entB,0.5,1,3
 
 
+entity/shaped_vector
+^^^^^^^^^^^^^^^^^^^^
+
+Similar as ``enitity/vector``, with the addition that each vector has a shape.
+The dimensions may not start with ``shape`` and be ordered lexicographically if order is important and the serialization format may not preserve attribute order (e.g. JSON).
+The shapes must start with ``shape`` and be ordered lexicographically if order is important and the serialization format may not preserve attribute order (e.g. JSON).
+
+Example:
+
+.. code-block:: text
+
+    ID,shape0,shape1,dim0,dim1,dim3,dim4
+    entA,2,2,0.5,1,0.7,5
+    entB,2,2,3,0.5,1,3
+
+.. code-block:: python
+    shaped_vector["entA"]       # [[0.5, 1], [0.7, 5]]
+    shaped_vector["entA"][0][0] # 0.5
+    shaped_vector["entA"][0][1] # 1
+    shaped_vector["entA"][1][0] # 0.7
+    shaped_vector["entA"][1][1] # 5
+
+
 entity/matrix
 ^^^^^^^^^^^^^
 
@@ -103,6 +126,7 @@ entity/attribute-metadata
 
 The entities should be interpreted as attribute metadata entities describing properties of attributes of other entities.
 
+.. seealso:: :ref:`data-formats/data-loader-formats:attribute metadata`
 
 
 Content Types

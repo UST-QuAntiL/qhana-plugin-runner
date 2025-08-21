@@ -14,6 +14,7 @@
 
 from enum import Enum
 from typing import List, Tuple
+from sklearn.datasets import make_blobs
 
 import numpy as np
 
@@ -21,6 +22,9 @@ import numpy as np
 class DataTypeEnum(Enum):
     two_spirals = "Two Spirals"
     checkerboard = "Checkerboard"
+    blobs = "Blobs"
+    checkerboard_3d = "3D Checkerboard"
+    blobs_3d = "3D Blobs"
 
     def get_data(
         self, num_train_points: int, num_test_points: int, **kwargs
@@ -28,8 +32,14 @@ class DataTypeEnum(Enum):
         """Returns specified dataset"""
         if self == DataTypeEnum.two_spirals:
             data, labels = twospirals(num_train_points + num_test_points, **kwargs)
-        if self == DataTypeEnum.checkerboard:
+        elif self == DataTypeEnum.checkerboard:
             data, labels = checkerboard(num_train_points + num_test_points, **kwargs)
+        elif self == DataTypeEnum.blobs:
+            data, labels = blobs(num_train_points + num_test_points, **kwargs)
+        elif self == DataTypeEnum.checkerboard_3d:
+            data, labels = checkerboard_3d(num_train_points + num_test_points, **kwargs)
+        elif self == DataTypeEnum.blobs_3d:
+            data, labels = blobs_3d(num_train_points + num_test_points, **kwargs)
         else:
             raise NotImplementedError
         indices = np.arange(len(data))
@@ -68,3 +78,44 @@ def checkerboard(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         y += 0.2 if y > 0 else -0.2
         rand_points[i] = x, y
     return rand_points, labels
+
+
+# Creates Gaussian blobs for clusering using sckit-learns make_blobs
+def blobs(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+    """Returns the Blobs dataset."""
+    x, y = make_blobs(
+        n_samples=n_points,
+        centers=centers,
+        n_features=2,
+    )
+
+    return x, y
+
+
+# Creates a 3D 2x2x2 checkerboard pattern
+def checkerboard_3d(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+    """Returns the 3D checkerboard dataset."""
+    rand_points = (np.random.rand(n_points, 3) * 2) - 1
+    labels = np.zeros(n_points).astype(int)
+
+    for i, (x, y, z) in enumerate(rand_points):
+        # label by quadrant
+        labels[i] = int(not ((x < 0 and y < 0) or (x >= 0 and y >= 0)) != (z < 0))
+        # push away from both axes
+        x += 0.2 if x > 0 else -0.2
+        y += 0.2 if y > 0 else -0.2
+        z += 0.2 if z > 0 else -0.2
+        rand_points[i] = x, y, z
+    return rand_points, labels
+
+
+# Creates 3D Gaussian blobs for clusering using sckit-learns make_blobs
+def blobs_3d(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+    """Returns the 3D Blobs dataset."""
+    x, y = make_blobs(
+        n_samples=n_points,
+        centers=centers,
+        n_features=3,
+    )
+
+    return x, y

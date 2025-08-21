@@ -53,7 +53,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 
 _plugin_name = "qasm-visualization"
-__version__ = "v0.2.0"
+__version__ = "v0.3.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -110,12 +110,12 @@ class PluginsView(MethodView):
                 data_output=[
                     DataMetadata(
                         data_type="*",
-                        content_type=["image/png"],
+                        content_type=["image/svg+xml"],
                         required=True,
                     )
                 ],
             ),
-            tags=["visualization", "qasm"],
+            tags=plugin.tags,
         )
 
 
@@ -213,7 +213,7 @@ def get_circuit_image(data: Mapping):
             return Response("Image not yet created!", HTTPStatus.ACCEPTED)
     if not image:
         abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
-    return send_file(BytesIO(image), mimetype="image/png")
+    return send_file(BytesIO(image), mimetype="image/svg+xml")
 
 
 @QASM_BLP.route("/process/")
@@ -250,7 +250,7 @@ class QasmVisualization(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "Visualizes QASM data."
-    tags = ["visualization"]
+    tags = ["visualization", "qasm"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -273,6 +273,9 @@ TASK_LOGGER = get_task_logger(__name__)
 @CELERY.task(name=f"{QasmVisualization.instance.identifier}.generate_image", bind=True)
 def generate_image(self, url: str, hash: str) -> str:
     from qiskit import QuantumCircuit
+    import matplotlib
+
+    matplotlib.use("SVG")
 
     TASK_LOGGER.info(f"Generating image for circuit {url}...")
     try:
@@ -289,9 +292,9 @@ def generate_image(self, url: str, hash: str) -> str:
         return "Invalid circuit URL!"
 
     circuit = QuantumCircuit.from_qasm_str(circuit_qasm)
-    fig = circuit.draw(output="mpl")
+    fig = circuit.draw(output="mpl", interactive=False)
     figfile = BytesIO()
-    fig.savefig(figfile, format="png")
+    fig.savefig(figfile, format="svg")
     figfile.seek(0)
     DataBlob.set_value(QasmVisualization.instance.identifier, hash, figfile.getvalue())
     TASK_LOGGER.info(f"Stored image of circuit {circuit.name}.")
@@ -324,6 +327,6 @@ def process(self, db_id: str, url: str, hash: str) -> str:
         output.write(image)
         output.seek(0)
         STORE.persist_task_result(
-            db_id, output, f"circuit_{hash}.png", "image/png", "image/png"
+            db_id, output, f"circuit_{hash}.svg", "image/svg", "image/svg+xml"
         )
     return "Created image of circuit!"

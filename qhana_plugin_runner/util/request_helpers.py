@@ -14,7 +14,7 @@
 
 """Adapters to load ``file://`` and ``data:`` URLs with :py:mod:`requests`"""
 
-from base64 import b64decode
+from base64 import urlsafe_b64decode
 from http import HTTPStatus
 from io import BytesIO
 import mimetypes
@@ -58,6 +58,7 @@ class FileAdapter(BaseAdapter):
 
         if resp.status_code is None:  # if no error
             try:
+                resp.encoding = "utf-8"
                 file_object = file_path.open(mode="rb")  # read binary
                 resp.raw = file_object
 
@@ -116,7 +117,7 @@ class DataAdapter(BaseAdapter):
         resp.url = request.url
 
         if is_base64:
-            body = b64decode(data)
+            body = urlsafe_b64decode(data)
         else:
             body = unquote_to_bytes(data)
         resp.status_code = HTTPStatus.OK

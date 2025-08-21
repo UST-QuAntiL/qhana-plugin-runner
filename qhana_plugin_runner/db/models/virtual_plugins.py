@@ -27,9 +27,9 @@ from sqlalchemy.sql.expression import (
     select,
 )
 
-from .mutable_json import JSON_LIKE, MutableJSON
-from ..db import DB, DB_SIGNALS, REGISTRY
 from ...util.plugins import plugin_identifier
+from ..db import DB, DB_SIGNALS, REGISTRY
+from .mutable_json import JSON_LIKE, MutableJSON
 
 VIRTUAL_PLUGIN_CREATED = DB_SIGNALS.signal("virtual-plugin_created")
 VIRTUAL_PLUGIN_REMOVED = DB_SIGNALS.signal("virtual-plugin_removed")
@@ -301,7 +301,7 @@ class DataBlob:
             KeyError: if the key was not found and no default value was provided
 
         Returns:
-            bytes: the stored state value
+            bytes: the stored state value, or the default value
         """
         q: Select = select(cls)
         q = q.filter(cls.plugin_id == plugin_id, cls.key == key)
@@ -316,7 +316,7 @@ class DataBlob:
     @classmethod
     def set_value(
         cls, plugin_id: str, key: str, value: bytes, commit: bool = False
-    ) -> bytes:
+    ) -> Optional[bytes]:
         """Set state for a given key.
 
         Args:

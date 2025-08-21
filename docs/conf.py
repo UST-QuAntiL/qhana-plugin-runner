@@ -36,6 +36,14 @@ from tomlkit import parse
 
 ON_READTHEDOCS = environ.get("READTHEDOCS") == "True"
 
+# Define the canonical URL if you are using a custom domain on Read the Docs
+html_baseurl = environ.get("READTHEDOCS_CANONICAL_URL", "")
+# Tell Jinja2 templates the build is running on Read the Docs
+if environ.get("READTHEDOCS", "") == "True":
+    if "html_context" not in globals():
+        html_context = {}
+    html_context["READTHEDOCS"] = True
+
 # -- Project information -----------------------------------------------------
 
 current_path = Path(".").absolute()
@@ -99,6 +107,16 @@ with api_spec_path.open() as api_spec:
     api_title = info.get("title")
     version = info.get("version")
 
+# -- update plugin documentation ---------------------------------------------
+
+plugin_doc_command = ["python", "docs/plugin_autodoc.py"]
+
+if not ON_READTHEDOCS:
+    plugin_doc_command = ["poetry", "run"] + plugin_doc_command
+
+subprocess.run(plugin_doc_command, cwd=project_root, env=flask_environ)
+
+
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -113,9 +131,9 @@ extensions = [
 autosectionlabel_prefix_document = False
 autosectionlabel_maxdepth = None
 
-intersphinx_mapping: Optional[
-    Dict[str, Tuple[str, Union[Optional[str], Tuple[str]]]]
-] = None
+intersphinx_mapping: Optional[Dict[str, Tuple[str, Union[Optional[str], Tuple[str]]]]] = (
+    None
+)
 intersphinx_timeout = 30
 
 source_suffix = {
@@ -178,6 +196,10 @@ if sphinx_config.get("enable-graphviz", False):
         graphviz_dot = config.get("dot", "dot")
         graphviz_dot_args = config.get("dot-args", [])
         graphviz_output_format = config.get("output-format", "png")
+
+# enable mermaid diagrams
+if sphinx_config.get("enable-mermaid", False):
+    extensions.append("sphinxcontrib.mermaid")
 
 # enable sphinx napoleon
 if sphinx_config.get("enable-napoleon", False):
@@ -268,6 +290,18 @@ if _md_extensions and isinstance(_md_extensions, list):
 _md_substitutions = _myst_options.get("substitutions", None)
 if _md_substitutions and isinstance(_md_substitutions, dict):
     myst_substitutions = _md_substitutions
+
+# mermaid configuration
+_mermaid_options = sphinx_config.get("mermaid", {})
+
+if "d3_zoom" in _mermaid_options:
+    mermaid_d3_zoom = _mermaid_options["d3_zoom"]
+if "init_js" in _mermaid_options:
+    mermaid_init_js = _mermaid_options["init_js"]
+if "params" in _mermaid_options:
+    mermaid_params = _mermaid_options["params"]
+else:
+    mermaid_params = ["-p", "puppeteer-config.json"]
 
 
 # -- Extra Files -------------------------------------------------------------

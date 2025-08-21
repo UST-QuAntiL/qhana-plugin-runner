@@ -13,16 +13,17 @@
 # limitations under the License.
 
 from datetime import datetime
-from typing import List, Optional, Sequence, Union
+from typing import List, NamedTuple, Optional, Sequence, Union
 
 from sqlalchemy.ext.orderinglist import OrderingList, ordering_list
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import sqltypes as sql
-from sqlalchemy.sql.expression import select
+from sqlalchemy.sql.expression import delete, distinct, or_, select
 from sqlalchemy.sql.schema import ForeignKey
+from sqlalchemy_json import NestedMutableDict
 
-from .mutable_json import JSON_LIKE, MutableJSON
 from ..db import DB, REGISTRY
+from .mutable_json import JSON_LIKE, MutableJSON, NestedMutable
 
 
 @REGISTRY.mapped_as_dataclass
@@ -83,11 +84,13 @@ class ProcessingTask:
 
     parameters: Mapped[str] = mapped_column(sql.Text(), default="")
 
-    data: Mapped[JSON_LIKE] = mapped_column(MutableJSON, default_factory=dict)
+    data: Mapped[JSON_LIKE] = mapped_column(
+        MutableJSON, default_factory=NestedMutableDict
+    )
 
     multi_step: Mapped[bool] = mapped_column(sql.Boolean(), default=False)
 
-    steps: Mapped[OrderingList] = relationship(
+    steps: Mapped[OrderingList["Step"]] = relationship(
         "Step",
         order_by="Step.number",
         collection_class=ordering_list("number"),
@@ -110,6 +113,17 @@ class ProcessingTask:
 
     outputs: Mapped[List["TaskFile"]] = relationship(
         "TaskFile", back_populates="task", lazy="select", default_factory=list
+    )
+
+    links: Mapped[List["TaskLink"]] = relationship(
+        "TaskLink", back_populates="task", lazy="selectin", default_factory=list
+    )
+
+    subscriptions: Mapped[List["TaskUpdateSubscription"]] = relationship(
+        "TaskUpdateSubscription",
+        back_populates="task",
+        lazy="select",
+        default_factory=list,
     )
 
     @property
@@ -139,6 +153,10 @@ class ProcessingTask:
             else:
                 return "UNKNOWN"
         return "PENDING"
+
+    @property
+    def has_uncleared_step(self) -> bool:
+        return any(not step.cleared for step in self.steps)
 
     def clear_previous_step(self, commit: bool = False):
         """Set ``"cleared"`` of previous step to ``true`` if available. Note: call before calling add_next_step."""
@@ -210,6 +228,101 @@ class ProcessingTask:
     def get_by_id(cls, id_: int) -> Optional["ProcessingTask"]:
         """Get the object instance by the object id from the database. (None if not found)"""
         return DB.session.execute(select(cls).filter_by(id=id_)).scalar_one_or_none()
+
+
+@REGISTRY.mapped_as_dataclass
+class TaskLink:
+    """Links that get exposed in the task result.
+
+    Use these links to expose additional endpoints relevant for plugin-to-plugin
+    interaction that depends on the current task context.
+    """
+
+    __tablename__ = "TaskLink"
+
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    task: Mapped[ProcessingTask] = relationship(
+        "ProcessingTask", back_populates="links", lazy="selectin"
+    )
+    type: Mapped[str] = mapped_column(sql.String(64))
+    href: Mapped[str] = mapped_column(sql.String(500))
+    task_id: Mapped[Optional[int]] = mapped_column(
+        sql.INTEGER(),
+        ForeignKey(ProcessingTask.id),
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+
+class WebhookRef(NamedTuple):
+    webhook_href: str
+    task_href: str
+
+
+@REGISTRY.mapped_as_dataclass
+class TaskUpdateSubscription:
+    """Table for webhook subscriptions to task updates."""
+
+    __tablename__ = "TaskUpdateSubscription"
+
+    id: Mapped[int] = mapped_column(sql.INTEGER(), primary_key=True, init=False)
+    task: Mapped[ProcessingTask] = relationship(
+        "ProcessingTask", back_populates="subscriptions", lazy="selectin"
+    )
+    webhook_href: Mapped[str] = mapped_column(sql.String(500))
+    task_href: Mapped[str] = mapped_column(sql.String(500))
+    event_type: Mapped[Optional[str]] = mapped_column(
+        sql.String(64), nullable=True, default=None
+    )
+    task_id: Mapped[Optional[int]] = mapped_column(
+        sql.INTEGER(),
+        ForeignKey(ProcessingTask.id),
+        default=None,
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+    @classmethod
+    def get_by_task_and_event(
+        cls, task: Union[int, ProcessingTask], event: Optional[str] = None
+    ) -> List[WebhookRef]:
+        """Get all webhooks for a task matching the given event type. ('None' matches all types.)"""
+        q = select(cls.webhook_href, cls.task_href).distinct()
+        if isinstance(task, ProcessingTask):
+            q = q.filter_by(task=task)
+        else:
+            q = q.filter_by(task_id=task)
+        if event is not None:
+            q = q.filter(or_(cls.event_type == None, cls.event_type == event))
+        return [WebhookRef(*r) for r in DB.session.execute(q).all()]
+
+    @classmethod
+    def get_by_task_and_subscriber(
+        cls,
+        task: Union[int, ProcessingTask],
+        webhook_href: str,
+        event: Union[str, None] = ...,
+    ) -> List["TaskUpdateSubscription"]:
+        """Get all webhooks for a task matching the given event type. ('None' matches all types.)"""
+        q = select(cls).filter_by(webhook_href=webhook_href)
+        if isinstance(task, ProcessingTask):
+            q = q.filter_by(task=task)
+        else:
+            q = q.filter_by(task_id=task)
+        if event is None:
+            q = q.filter(cls.event_type == None)
+        elif event is not ...:
+            q = q.filter(cls.event_type == event)
+        return DB.session.execute(q).scalars().all()
+
+    def save(self, commit: bool = False):
+        """Add this object to the current session and optionally commit the session to persist all objects in the session."""
+        DB.session.add(self)
+        if commit:
+            DB.session.commit()
 
 
 @REGISTRY.mapped_as_dataclass

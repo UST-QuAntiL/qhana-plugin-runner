@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "max_cut"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -29,6 +29,7 @@ MaxCut_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
     description="Max Cut plugin API",
+    template_folder="templates",
 )
 
 
@@ -37,7 +38,7 @@ class MaxCut(QHAnaPluginBase):
     version = __version__
     description = "Clusters data with the max cut algorithm"
 
-    tags = []
+    tags = ["QML", "clustering", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -46,7 +47,7 @@ class MaxCut(QHAnaPluginBase):
         return MaxCut_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\nqiskit-optimization~=0.5.0\ngit+https://github.com/pandrey-fr/maxcut.git@7ab0cf4a8131333ef6e67f23c4e43c190837c315\nplotly~=5.6.0\npandas~=1.5.0\nnetworkx~=2.8"
+        return "qiskit~=0.43\nqiskit-optimization~=0.5.0\ngit+https://github.com/pandrey-fr/maxcut.git@7ab0cf4a8131333ef6e67f23c4e43c190837c315\nplotly~=5.18.0\npandas~=1.5.0\nnetworkx~=2.8"
 
 
 try:

@@ -1,4 +1,4 @@
-# Repeating Steps in Multi-Step Plugins
+# Repeating Steps in Multi-Step Plugins [undecided]
 
 * Status: [proposed]
 * Deciders: [Fabian Bühler]

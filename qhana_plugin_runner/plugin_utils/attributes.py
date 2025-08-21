@@ -118,7 +118,7 @@ def parse_bool(value: Union[str, bool]) -> bool:
 
 def parse_optional_value(value: str, deserialize: Callable[[str], Any]) -> Any:
     """Serialize optional values with the given serializer."""
-    if value == "":
+    if value == "" or value is None:
         return None
     return deserialize(value)
 
@@ -127,7 +127,7 @@ T = TypeVar("T")
 
 
 def parse_multi(
-    value: str,
+    value: Union[str, Sequence[str]],
     deserialize: Callable[[str], Any],
     separator: str = ";",
     collection: Type[T] = list,
@@ -145,7 +145,12 @@ def parse_multi(
     """
     if value == "":
         return collection()
-    return collection(deserialize(val) for val in value.split(separator))
+    if isinstance(value, str):
+        return collection(deserialize(val) for val in value.split(separator))
+    if isinstance(value, Sequence):
+        # allow parsing data that is already nested in a sequence
+        return collection(deserialize(val) for val in value)
+    raise ValueError(f"Value '{value}' could not be parsed.")
 
 
 def default_serialize(value: Any) -> str:
@@ -165,20 +170,22 @@ def default_serialize(value: Any) -> str:
 
 
 def serialize_multi(
-    value: Iterable[Any], serialize: Callable[[Any], str], separator: str = ";"
+    value: Optional[Iterable[Any]], serialize: Callable[[Any], str], separator: str = ";"
 ) -> str:
     """Serialize a list or set of values into a string.
 
     Each value is serialized with the ``serializer`` and the values are joined with the ``separator``.
 
     Args:
-        value (Iterable[Any]): the list or set of values to serialize
+        value (Iterable[Any]|None): the list or set of values to serialize
         serialize (Callable[[Any], str]): the serializer to use for single values
         separator (str, optional): the seperator to use between values. Must not be part of the serialized values! Defaults to ";".
 
     Returns:
         str: the string of serialized items.
     """
+    if value is None:
+        return ""
     return separator.join(serialize(val) for val in value)
 
 
@@ -239,7 +246,7 @@ def _get_deserializer(meta: Optional[AttributeMetadata]) -> Callable[[str], Any]
 
 
 def parse_attribute_metadata(
-    metadata_entities: Iterable[Union[Dict[str, Any]]]
+    metadata_entities: Iterable[Union[Dict[str, Any]]],
 ) -> Dict[str, AttributeMetadata]:
     """Parse a list or stream of entities into an attribute metadata dict mapping from attribute name to ``AttributeMetadata`` instance."""
     attribute_metadata = {}

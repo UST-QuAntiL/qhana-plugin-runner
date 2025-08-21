@@ -14,7 +14,7 @@ services:
       CONCURRENCY: 2
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
-      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
+      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg://user:password@postgres:5432/default_db"
       CAMUNDA_API_URL: "http://localhost:5018/engine-rest"
       PLUGIN_RUNNER_URLS: "http://localhost:5005"
       LOCALHOST_PROXY_PORTS: ":9090 :5005 :5018"
@@ -51,7 +51,7 @@ services:
       CONCURRENCY: 16
       BROKER_URL: redis://redis:6379
       RESULT_BACKEND: redis://redis:6379
-      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
+      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg://user:password@postgres:5432/default_db"
       CAMUNDA_API_URL: "http://localhost:5018/engine-rest"
       PLUGIN_RUNNER_URLS: "http://localhost:5005"
       PERIODIC_SCHEDULER: "True"
