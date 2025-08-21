@@ -471,8 +471,8 @@ def get_cost_function(
                     )
 
                 statevector = np.empty(len(statevector_dict), dtype=np.complex128)
-                for i in range(len(statevector_dict)):
-                    statevector[i] = complex(statevector_dict[str(i)])
+                for k, v in statevector_dict.items():
+                    statevector[int(k)] = complex(v)
 
                 pending = False
             elif result["status"] == "FAILURE":
