@@ -71,14 +71,22 @@ class AggregatorsEnum(Enum):
     min = "Min"
 
 
+class MissingDataHandling(Enum):
+    ignore = "ignore"
+    mean = "mean"
+    max = "max"
+
+
 class InputParameters:
     def __init__(
         self,
         attribute_distances_url: str,
         aggregator: AggregatorsEnum,
+        missing_data_handling: MissingDataHandling,
     ):
         self.attribute_distances_url = attribute_distances_url
         self.aggregator = aggregator
+        self.missing_data_handling = missing_data_handling
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -100,6 +108,18 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Aggregator",
             "description": "Aggregator that shall be used to aggregate the attribute distances to a single distance value.",
+            "input_type": "select",
+        },
+    )
+    missing_data_handling = EnumField(
+        MissingDataHandling,
+        required=True,
+        metadata={
+            "label": "Missing data handling",
+            "description": """Defines how a missing attribute distance should be handled.
+- ignore: null values are removed and only the not null values are used for the aggregation
+- mean: null values are replaced by the mean distance of the respective attribute
+- max: null values are replaced by the maximum distance of the respective attribute""",
             "input_type": "select",
         },
     )
@@ -267,6 +287,10 @@ def calculation_task(self, db_id: int) -> str:
     )
     aggregator = input_params.aggregator
     TASK_LOGGER.info(f"Loaded input parameters from db: aggregator='{aggregator}'")
+    missing_data_handling = input_params.missing_data_handling
+    TASK_LOGGER.info(
+        f"Loaded input parameters from db: missing_data_handling='{missing_data_handling}'"
+    )
 
     # load data from file
 
@@ -276,7 +300,44 @@ def calculation_task(self, db_id: int) -> str:
         # removes .json from file name to get the name of the attribute
         attr_name = file_name[:-5]
 
-        attribute_distances[attr_name] = json.load(file)
+        loaded_distances = json.load(file)
+        distances_without_none: list[float] = [
+            dist["distance"] for dist in loaded_distances if dist["distance"] is not None
+        ]
+
+        if missing_data_handling == MissingDataHandling.ignore:
+            # removes elements with None distance
+            loaded_distances = [
+                dist for dist in loaded_distances if dist["distance"] is not None
+            ]
+        elif missing_data_handling == MissingDataHandling.mean:
+            if len(distances_without_none) == 0:
+                raise ValueError(
+                    f"every distance for attribute {attr_name} is None, therefore the mean cannot be calculated"
+                )
+
+            mean_distance = sum(distances_without_none) / len(distances_without_none)
+            # replaces None distances with the mean distance
+            for dist in loaded_distances:
+                if dist["distance"] is None:
+                    dist["distance"] = mean_distance
+        elif missing_data_handling == MissingDataHandling.max:
+            if len(distances_without_none) == 0:
+                raise ValueError(
+                    f"every distance for attribute {attr_name} is None, therefore the maximum cannot be calculated"
+                )
+
+            max_distance = max(distances_without_none)
+            # replaces None distances with the max distance
+            for dist in loaded_distances:
+                if dist["distance"] is None:
+                    dist["distance"] = max_distance
+        else:
+            raise NotImplementedError(
+                f"Unknown missing_data_handling '{missing_data_handling}'"
+            )
+
+        attribute_distances[attr_name] = loaded_distances
 
     entity_distance_lists = {}
 
@@ -294,6 +355,14 @@ def calculation_task(self, db_id: int) -> str:
     for ent_dist_list in entity_distance_lists.values():
         ent_dist = 0.0
         dist_list = [ent["distance"] for ent in ent_dist_list]
+
+        ent_1_id = ent_dist_list[0]["entity_1_ID"]
+        ent_2_id = ent_dist_list[0]["entity_2_ID"]
+
+        if len(dist_list) == 0:
+            raise ValueError(
+                f"There are no distances for the entity pair {ent_1_id} and {ent_2_id}"
+            )
 
         if aggregator == AggregatorsEnum.mean:
             for dist in dist_list:
@@ -316,9 +385,6 @@ def calculation_task(self, db_id: int) -> str:
             ent_dist = min(dist_list)
         else:
             raise ValueError("Unknown aggregator")
-
-        ent_1_id = ent_dist_list[0]["entity_1_ID"]
-        ent_2_id = ent_dist_list[0]["entity_2_ID"]
 
         entity_distances.append(
             {

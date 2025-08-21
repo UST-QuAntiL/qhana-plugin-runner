@@ -18,7 +18,7 @@ from io import StringIO
 from json import dumps, loads
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict, Tuple
+from typing import Mapping, Optional, List, Dict, Tuple, Callable
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -48,9 +48,14 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import (
+    tuple_deserializer,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
+    EntityTupleMixin,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
@@ -91,6 +96,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Entities Attribute Metadata URL",
             "description": "URL to a file with the attribute metadata for the entities.",
             "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "post",
         },
     )
     taxonomies_zip_url = FileUrl(
@@ -102,6 +109,8 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Taxonomies URL",
             "description": "URL to zip file with taxonomies.",
             "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "pre",
         },
     )
     attributes = ma.fields.String(
@@ -389,7 +398,7 @@ def add_similarities_for_entities(
     entity1: Dict[str, any],
     entity2: Dict[str, any],
     attribute: str,
-    entities_metadata: Dict,
+    entities_metadata: dict[str, AttributeMetadata],
     wu_palmer_cache: WuPalmerCache,
 ):
     if attribute not in entity1 or attribute not in entity2:
@@ -398,12 +407,15 @@ def add_similarities_for_entities(
     values1 = entity1[attribute]
     values2 = entity2[attribute]
 
-    if values1 == "" or values1 == [""] or values2 == "" or values2 == [""]:
-        return
-
     # extract taxonomy name from refTarget
-    file_name: str = entities_metadata[attribute]["refTarget"].split(":")[1]
+    file_name: str = entities_metadata[attribute].ref_target.split(":")[1]
     tax_name: str = PurePath(file_name).stem
+
+    if isinstance(values1, set):
+        values1 = list(values1)
+
+    if isinstance(values2, set):
+        values2 = list(values2)
 
     if not isinstance(values1, list):
         values1 = [values1]
@@ -412,15 +424,16 @@ def add_similarities_for_entities(
         values2 = [values2]
 
     for val1 in values1:
+        if not val1:
+            continue
+
         for val2 in values2:
-            if val1 is None or val2 is None:
-                sim = None
-            else:
-                # sorting the values reduces cache misses and is possible because Wu-Palmer is commutative
-                sorted_val1, sorted_val2 = sorted((val1, val2))
-                sim = wu_palmer_cache.calculate_similarity(
-                    tax_name, sorted_val1, sorted_val2
-                )
+            if not val2:
+                continue
+
+            # sorting the values reduces cache misses and is possible because Wu-Palmer is commutative
+            sorted_val1, sorted_val2 = sorted((val1, val2))
+            sim = wu_palmer_cache.calculate_similarity(tax_name, sorted_val1, sorted_val2)
 
             similarities[(val1, val2)] = {
                 "source": val1,
@@ -486,6 +499,16 @@ def calculation_task(self, db_id: int) -> str:
         attributes,
         root_has_meaning_in_taxonomy,
     ) = load_input_parameters(db_id)
+    deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
+
+    with open_url(entities_metadata_url) as entities_metadata_file:
+        entities_metadata_list = list(
+            load_entities(entities_metadata_file, get_mimetype(entities_metadata_file))
+        )
+        entities_metadata = {
+            element["ID"]: AttributeMetadata.from_dict(element)
+            for element in entities_metadata_list
+        }
 
     # load data from file
     with open_url(entities_url) as entities_data:
@@ -493,16 +516,18 @@ def calculation_task(self, db_id: int) -> str:
         entities = []
 
         for ent in load_entities(entities_data, mimetype):
-            if hasattr(ent, "_asdict"):  # is NamedTuple
-                entities.append(ent._asdict())
+            if isinstance(ent, EntityTupleMixin):  # is NamedTuple
+                if deserializer is None:
+                    ent_attributes: tuple[str, ...] = type(ent).entity_attributes
+                    ent_tuple = type(ent)
+                    deserializer = tuple_deserializer(
+                        ent_attributes, entities_metadata, tuple_=ent_tuple._make
+                    )
+
+                ent = deserializer(ent)
+                entities.append(ent.as_dict())
             else:
                 entities.append(ent)
-
-    with open_url(entities_metadata_url) as entities_metadata_file:
-        entities_metadata_list = list(
-            load_entities(entities_metadata_file, "application/json")
-        )
-        entities_metadata = {element["ID"]: element for element in entities_metadata_list}
 
     taxonomies = {}
 

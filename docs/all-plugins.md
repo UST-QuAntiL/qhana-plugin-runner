@@ -15,6 +15,19 @@
   - distance-calculation
 
     preprocessing
+* - [AmazonBraket_LocalSimulator (@v1.0.0)](#AmazonBraket_LocalSimulator)
+
+    AmazonBraket_LocalSimulator@v1-0-0
+  - processing
+  - braket_local
+
+    circuit-executor
+
+    qasm
+
+    qasm-3
+
+    qc-simulator
 * - [Classical k Means (@v0.1.1)](#classical-k-means)
 
     classical-k-means@v0-1-1
@@ -33,11 +46,24 @@
     classical
 
     clustering
-* - [Cluster Visualization (@v0.3.0)](#cluster-visualization)
+* - [Clustered Scatter Plot Visualization (@v1.0.0)](#Clustered Scatter Plot Visualization)
 
-    cluster-visualization@v0-3-0
+    Clustered Scatter Plot Visualization@v1-0-0
   - visualization
+  - cluster
+
+    scatter
+
+    visualization
+* - [Confusion Matrix Visualization (@v1.0.0)](#Confusion Matrix Visualization)
+
+    Confusion Matrix Visualization@v1-0-0
   - visualization
+  - cluster
+
+    confusion-matrix
+
+    visualization
 * - [Costume loader (@v0.2.1)](#costume-loader)
 
     costume-loader@v0-2-1
@@ -45,9 +71,9 @@
   - MUSE
 
     data-loading
-* - [Data Creation (@v0.2.2)](#data-creator)
+* - [Data Creation (@v0.2.3)](#data-creator)
 
-    data-creator@v0-2-2
+    data-creator@v0-2-3
   - dataloader
   - data-loading
 
@@ -70,6 +96,15 @@
     preprocessing
 
     sample
+* - [Histogram Visualization (@v1.0.1)](#Histogram Visualization)
+
+    Histogram Visualization@v1-0-1
+  - visualization
+  - histogram
+
+    non-default
+
+    visualization
 * - [Hybrid Autoencoder (@v0.2.1)](#hybrid-autoencoder)
 
     hybrid-autoencoder@v0-2-1
@@ -81,9 +116,9 @@
     preprocessing
 
     quantum
-* - [MUSE4Music Loader (@v0.1.1)](#muse-for-music-loader)
+* - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
 
-    muse-for-music-loader@v0-1-1
+    muse-for-music-loader@v1-0-0
   - dataloader
   - MUSE4Music
 
@@ -313,9 +348,9 @@
     preprocessing
 
     similarity-calculation
-* - [Sym Max Mean attribute comparer (@v0.1.1)](#sym-max-mean)
+* - [Sym Max Mean attribute comparer (@v0.1.2)](#sym-max-mean)
 
-    sym-max-mean@v0-1-1
+    sym-max-mean@v0-1-2
   - processing
   - preprocessing
 
@@ -343,6 +378,17 @@
   - preprocessing
 
     similarity-calculation
+* - [ZX-Calculus Visualization (@v1.0.1)](#ZX-Calculus Visualization)
+
+    ZX-Calculus Visualization@v1-0-1
+  - visualization
+  - circuit
+
+    non-default
+
+    visualization
+
+    zxcalculus
 * - [Zip merger (@v0.2.0)](#zip-merger)
 
     zip-merger@v0-2-0
@@ -399,6 +445,21 @@
   - json
 
     visualization
+* - [mqt-simulator (@v1.0.1)](#mqt-simulator)
+
+    mqt-simulator@v1-0-1
+  - processing
+  - circuit-executor
+
+    mqt
+
+    qasm
+
+    qasm-2
+
+    qasm-3
+
+    qc-simulator
 * - [neural-network (@v1.0.1)](#neural-network@v1-0-1)
 
     neural-network@v1-0-1
@@ -419,6 +480,34 @@
     nisq-analyzer@v0-2-0
   - processing
   - nisq-analyzer
+* - [pennylane-simulator (@v1.0.1)](#pennylane-simulator)
+
+    pennylane-simulator@v1-0-1
+  - processing
+  - circuit-executor
+
+    pennylane
+
+    qasm
+
+    qasm-2
+
+    qasm-3
+
+    qc-simulator
+* - [pytket_qulacsBackend-simulator (@v1.0.0)](#pytket_qulacsBackend-simulator)
+
+    pytket_qulacsBackend-simulator@v1-0-0
+  - processing
+  - circuit-executor
+
+    pytket_qulacsBackend
+
+    qasm
+
+    qasm-2
+
+    qc-simulator
 * - [qasm-visualization (@v0.3.1)](#qasm-visualization)
 
     qasm-visualization@v0-3-1
@@ -426,15 +515,17 @@
   - qasm
 
     visualization
-* - [qiskit-simulator (@v0.3.0)](#qiskit-simulator)
+* - [qiskit-simulator (@v1.0.1)](#qiskit-simulator)
 
-    qiskit-simulator@v0-3-0
+    qiskit-simulator@v1-0-1
   - processing
   - circuit-executor
 
     qasm
 
     qasm-2
+
+    qasm-3
 
     qc-simulator
 
@@ -451,13 +542,13 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `camunda-engine`, `circuit-demo`, `circuit-executor`, `classical`, `classification`, `clustering`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `json`, `kernel`, `manual`, `mapping`, `mariadb`, `minimizer`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `objective-function`, `one-hot-encoding`, `optimization`, `postgresql`, `preprocessing`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantum`, `rest`, `sample`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `histogram`, `json`, `kernel`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
 
-**Input formats:** `application/X-lines+json`, `application/json`, `application/zip`, `text/csv`, `text/x-qasm`\
+**Input formats:** `application/X-lines+json`, `application/csv`, `application/json`, `application/zip`, `text/csv`, `text/x-qasm`\
 **Output formats:** `*/*`, `application/csv`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
 
-**Input datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`\
-**Output datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `txt/*`, `vqc-metadata/*`
+**Input datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/element-similarities`, `custom/entity-distances`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`\
+**Output datatypes:** `*/*`, `circuit/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
 
 ## Plugins
 
@@ -481,6 +572,32 @@ Aggregates attribute distances to entity distances.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |custom/entity-distances|application/zip|✓|
+
+
+(AmazonBraket_LocalSimulator)=
+### AmazonBraket_LocalSimulator (@v1.0.0)
+
+processing – braket_local, circuit-executor, qasm, qasm-3, qc-simulator\
+*Path:* {file}`plugins/circuit_executors/braket_local.py`
+
+Allows execution of quantum circuits using a simulator packaged with braket_local.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/json|✓|
+|entity/vector|application/json|╳|
+|provenance/trace|application/json|✓|
+|provenance/execution-options|application/json|✓|
 
 
 (classical-k-means)=
@@ -531,20 +648,50 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |plot/*|text/html|╳|
 
 
-(cluster-visualization)=
-### Cluster Visualization (@v0.3.0)
+(Clustered Scatter Plot Visualization)=
+### Clustered Scatter Plot Visualization (@v1.0.0)
 
-visualization – visualization\
-*Path:* {file}`stable_plugins/visualization/complex/cluster_visualization.py`
+visualization – cluster, scatter, visualization\
+*Path:* {file}`stable_plugins/visualization/complex/cluster_scatter_visualization/__init__.py`
 
-Plots points with cluster information.
+A visualization plugin that creates a scatter plot using the provided data. When an Entity Point URL is provided, a simple scatter plot will be created.To include clustering, provide an appropriate Cluster URL. All plots are interactive and created using plotly. Supports 2D and 3D data visualization.
 
 **Inputs:**
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/*|application/json|✓|
-|custom/clusters|application/json|✓|
+|entity/vector|application/json, application/csv|✓|
+|entity/label|application/json, application/csv|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|image/html|text/html|✓|
+
+
+(Confusion Matrix Visualization)=
+### Confusion Matrix Visualization (@v1.0.0)
+
+visualization – cluster, confusion-matrix, visualization\
+*Path:* {file}`stable_plugins/visualization/complex/confusion_matrix/__init__.py`
+
+A visualization plugin that creates a confusion matrix using the provided data. Accepts two cluster URLs as inputs and outputs an HTML table showing the matrix. If desired the matrix can be optimized, trying to maximize the amount of true positives, by reordering the columns. The new column order will be shown at the bottom.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/label|application/json|✓|
+|entity/label|application/json|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|table/html|text/html|✓|
 
 
 (costume-loader)=
@@ -565,7 +712,7 @@ Loads all the costumes or base elements from the MUSE database.
 
 
 (data-creator)=
-### Data Creation (@v0.2.2)
+### Data Creation (@v0.2.3)
 
 dataloader – data-loading, data-synthesizing\
 *Path:* {file}`stable_plugins/data_synthesis/data_creator/__init__.py`
@@ -612,6 +759,28 @@ Loads and filters entities from a file that contains a list of entities.
 |entity/list|application/json, text/csv|✓|
 
 
+(Histogram Visualization)=
+### Histogram Visualization (@v1.0.1)
+
+visualization – histogram, non-default, visualization\
+*Path:* {file}`stable_plugins/visualization/complex/histogram_visualization/__init__.py`
+
+A visualization plugin for creating Historgrams using the counts of different labels.The labels are shown on the x Axis and the counts on the y Axis.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/vector|application/json|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|image/html|text/html|✓|
+
+
 (hybrid-autoencoder)=
 ### Hybrid Autoencoder (@v0.2.1)
 
@@ -639,7 +808,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (muse-for-music-loader)=
-### MUSE4Music Loader (@v0.1.1)
+### MUSE4Music Loader (@v1.0.0)
 
 dataloader – MUSE4Music, data-loading\
 *Path:* {file}`stable_plugins/muse/muse_for_music/__init__.py`
@@ -1219,7 +1388,7 @@ Transforms similarities to distances.
 
 
 (sym-max-mean)=
-### Sym Max Mean attribute comparer (@v0.1.1)
+### Sym Max Mean attribute comparer (@v0.1.2)
 
 processing – preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/sym_max_mean.py`
@@ -1230,7 +1399,7 @@ Compares attributes and returns similarity values.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/list|application/json|✓|
+|entity/list|application/json, text/csv|✓|
 |custom/element-similarities|application/zip|✓|
 
 
@@ -1293,6 +1462,28 @@ Compares elements and returns similarity values.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |custom/element-similarities|application/zip|✓|
+
+
+(ZX-Calculus Visualization)=
+### ZX-Calculus Visualization (@v1.0.1)
+
+visualization – circuit, non-default, visualization, zxcalculus\
+*Path:* {file}`stable_plugins/visualization/complex/zxcalculus/__init__.py`
+
+A visualization plugin that visualizes a provided OpenQASM circuit in the ZX-Calculus. When a QASM Circuit URL is provided, a circuit in the ZX-Calculus will be created. When the Optimize Checkbox is checked, an additional circuit is generated. This circuit is optimized using the automatic optimization method provided by the pyzx package, and will be displayed below the original circuit
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|circuit/*|text/html|✓|
 
 
 (zip-merger)=
@@ -1431,6 +1622,32 @@ Visualizes JSON data.
 |custom/hello-world-output|text/html|✓|
 
 
+(mqt-simulator)=
+### mqt-simulator (@v1.0.1)
+
+processing – circuit-executor, mqt, qasm, qasm-2, qasm-3, qc-simulator\
+*Path:* {file}`plugins/circuit_executors/mqt_simulator.py`
+
+Allows execution of quantum circuits using a simulator packaged with mqt.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/json|✓|
+|entity/vector|application/json|╳|
+|provenance/trace|application/json|✓|
+|provenance/execution-options|application/json|✓|
+
+
 (neural-network@v1-0-1)=
 ### neural-network (@v1.0.1)
 
@@ -1461,6 +1678,58 @@ Provides the NISQ Analyzer UI.
 |custom/nisq-analyzer-result|application/json|✓|
 
 
+(pennylane-simulator)=
+### pennylane-simulator (@v1.0.1)
+
+processing – circuit-executor, pennylane, qasm, qasm-2, qasm-3, qc-simulator\
+*Path:* {file}`plugins/circuit_executors/pennylane_defaultqubit.py`
+
+Allows execution of quantum circuits using a simulator packaged with qiskit.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/json|✓|
+|entity/vector|application/json|╳|
+|provenance/trace|application/json|✓|
+|provenance/execution-options|application/json|✓|
+
+
+(pytket_qulacsBackend-simulator)=
+### pytket_qulacsBackend-simulator (@v1.0.0)
+
+processing – circuit-executor, pytket_qulacsBackend, qasm, qasm-2, qc-simulator\
+*Path:* {file}`plugins/circuit_executors/pytket_Qulacs.py`
+
+Allows execution of quantum circuits using a simulator packaged with pytket_qulacsBackend.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/json|✓|
+|entity/vector|application/json|╳|
+|provenance/trace|application/json|✓|
+|provenance/execution-options|application/json|✓|
+
+
 (qasm-visualization)=
 ### qasm-visualization (@v0.3.1)
 
@@ -1484,9 +1753,9 @@ Visualizes QASM data.
 
 
 (qiskit-simulator)=
-### qiskit-simulator (@v0.3.0)
+### qiskit-simulator (@v1.0.1)
 
-processing – circuit-executor, qasm, qasm-2, qc-simulator, qiskit\
+processing – circuit-executor, qasm, qasm-2, qasm-3, qc-simulator, qiskit\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/qiskit_simulator.py`
 
 Allows execution of quantum circuits using a simulator packaged with qiskit.

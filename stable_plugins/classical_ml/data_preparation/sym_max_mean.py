@@ -16,7 +16,7 @@ from http import HTTPStatus
 from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict
+from typing import Mapping, Optional, List, Dict, Callable
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -46,6 +46,10 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import (
+    tuple_deserializer,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
     load_entities,
@@ -57,7 +61,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sym-max-mean"
-__version__ = "v0.1.1"
+__version__ = "v0.1.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -73,7 +77,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types="application/json",
+        data_content_types=["application/json", "text/csv"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -88,7 +92,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Element similarities URL",
             "description": "URL to a zip file with the element similarities for the entities.",
-            "input_type": "text",
+            "input_type": "text",  #
+            "related_to": "entities_url",
+            "relation": "post",
         },
     )
     attributes = ma.fields.String(
@@ -122,7 +128,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
-                        content_type=["application/json"],
+                        content_type=["application/json", "text/csv"],
                         required=True,
                         parameter="entitiesUrl",
                     ),
@@ -253,11 +259,9 @@ def _get_sim(elem_sims: Dict, val1, val2) -> float:
     if (val1, val2) in elem_sims:
         return elem_sims[(val1, val2)]["similarity"]
     elif (val2, val1) in elem_sims:
-        return elem_sims[(val2, val2)]["similarity"]
+        return elem_sims[(val2, val1)]["similarity"]
     else:
-        raise ValueError(
-            "No element similarity value found for " + str(val1) + " and " + str(val2)
-        )
+        return 0.0  # handles missing elements in lists
 
 
 @CELERY.task(name=f"{SymMaxMean.instance.identifier}.calculation_task", bind=True)
@@ -293,9 +297,32 @@ def calculation_task(self, db_id: int) -> str:
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
         entities = []
+        deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
+        attribute_metadata: dict[str, AttributeMetadata] | None = None
+
+        if "X-Attribute-Metadata" in entities_data.headers:
+            attribute_metadata_url = entities_data.headers["X-Attribute-Metadata"]
+            attribute_metadata_list = open_url(attribute_metadata_url).json()
+            attribute_metadata = {}
+
+            for attr_meta in attribute_metadata_list:
+                attribute_metadata[attr_meta["ID"]] = AttributeMetadata.from_dict(
+                    attr_meta
+                )
 
         for ent in load_entities(entities_data, mimetype):
             if hasattr(ent, "_asdict"):  # is NamedTuple
+                ent_attributes: tuple[str, ...] = ent._fields
+                ent_tuple = type(ent)
+
+                if deserializer is None and attribute_metadata is not None:
+                    deserializer = tuple_deserializer(
+                        ent_attributes, attribute_metadata, tuple_=ent_tuple._make
+                    )
+
+                if deserializer:
+                    ent = deserializer(ent)
+
                 entities.append(ent._asdict())
             else:
                 entities.append(ent)
@@ -327,7 +354,17 @@ def calculation_task(self, db_id: int) -> str:
 
                 if ent_attr1 is None or ent_attr2 is None:
                     sym_max_mean = None  # TODO: add handling of missing values
+                elif len(ent_attr1) == 0 and len(ent_attr2) == 0:
+                    sym_max_mean = None
+                elif len(ent_attr1) == 0 or len(ent_attr2) == 0:
+                    sym_max_mean = 0
                 else:
+                    if isinstance(ent_attr1, set):
+                        ent_attr1 = list(ent_attr1)
+
+                    if isinstance(ent_attr2, set):
+                        ent_attr2 = list(ent_attr2)
+
                     if not isinstance(ent_attr1, list):
                         ent_attr1 = [ent_attr1]
 

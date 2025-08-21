@@ -1,0 +1,103 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .matrix-preview table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        color: var(--text, black);
+    }
+    .matrix-preview th, .matrix-preview td {
+        text-align: center;
+        border: 1px solid var(--border-color, black);
+        vertical-align: middle;
+        word-wrap: break-word;
+    }
+    .matrix-preview .correct-prediction {
+        font-weight: bolder;
+        background-color: oklch(from var(--background, white) l 0.2 130);
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<div class="qhana-microfrontend">
+    <details id="visualization-options" open>
+        <summary>Visualization Options</summary>
+        {% call forms.render_form(target="microfrontend") %}
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend") }}
+            {{ forms.submit("submit", action=process) }}
+        </div>
+        {% endcall %}
+    </details>
+</div>
+
+<div class="matrix-preview"></div>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+<script>
+    function onTableError() {
+        document.querySelector('.matrix-preview').innerHTML = '';
+        document.querySelector('#visualization-options').setAttribute('open', 'open');
+        if (window._qhana_microfrontend_state) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    // Setup event listeners for the clustersUrl 1 and 2, and for the checkbox
+    function setupEventListeners() {
+        const entityInput = document.querySelector('input[name=clustersUrl1]');
+        entityInput.addEventListener("input", (event) => updatePreview());
+        const clusterInput = document.querySelector('input[name=clustersUrl2]');
+        clusterInput.addEventListener("input", (event) => updatePreview());
+        const optimizeBox = document.querySelector('input[name=optimize]');
+        optimizeBox.addEventListener("input", (event) => updatePreview());
+    }
+
+    async function updatePreview() {
+        const clustersUrl1 = document.querySelector('input[name=clustersUrl1]').value;
+        const clustersUrl2 = document.querySelector('input[name=clustersUrl2]').value;
+        // Converts Javascript boolean to a boolean readable by python
+        const optimize = document.querySelector('input[name=optimize]').checked ? "True" : "False";
+        // Both clustersUrls are required
+        if (clustersUrl1 === "" || clustersUrl1 === null || clustersUrl2 === "" || clustersUrl2 === null) {
+            onTableError();
+            return;
+        }
+        const params = new URLSearchParams();
+        params.set("clustersUrl1", clustersUrl1);
+        params.set("clustersUrl2", clustersUrl2);
+        params.set("optimize", optimize);
+        const url = "{{ get_table_url }}?" + params.toString();
+        fetch(url).then(response => {
+            if (response.status === 200) {
+                return response.text().then(text => {
+                    document.querySelector('.matrix-preview').innerHTML = text;
+                    document.querySelector('#visualization-options').removeAttribute('open');
+                    if (window._qhana_microfrontend_state) {
+                        monitorHeightChanges(window._qhana_microfrontend_state);
+                    }
+                });
+            } else {
+                onTableError();
+                if (response.status === 202) {
+                    document.querySelector('#spinner').style.display = '';
+                    setTimeout(updatePreview, 5000);
+                }
+            }
+        }).catch(error => {
+            console.log(error);
+            onTableError();
+        });
+    }
+
+    setupEventListeners();
+    updatePreview();
+</script>
+{% endblock script %}
