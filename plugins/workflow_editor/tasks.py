@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
-from qhana_plugin_runner.registry_client import PluginRegistryClient
+from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
 from . import plugin
 from .config import CONFIG_KEY, get_config_from_registry
@@ -40,7 +40,7 @@ def update_config(self):
 )
 def deploy_workflow(self, workflow_url: str, workflow_id, deploy_as: Literal["plugin", "workflow"] = "plugin"):
     if deploy_as == "plugin":
-        with PluginRegistryClient(current_app) as client:
+        with PLUGIN_REGISTRY_CLIENT as client:
             deploy_workflow_plugin = client.search_by_rel(
                 "plugin", {"name": "deploy-workflow"}, allow_collection_resource=False
             )
