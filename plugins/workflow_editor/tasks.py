@@ -1,16 +1,18 @@
 from time import time
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
 from requests import request
+from werkzeug.utils import secure_filename
 
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.virtual_plugins import PluginState
+from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 from qhana_plugin_runner.registry_client import PluginRegistryClient
 
 from . import plugin
 from .config import CONFIG_KEY, get_config_from_registry
+from .util import extract_wf_properties
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -36,7 +38,7 @@ def update_config(self):
     bind=True,
     ignore_result=True,
 )
-def deploy_workflow(self, workflow_url: str, deploy_as: Literal["plugin", "workflow"] = "plugin"):
+def deploy_workflow(self, workflow_url: str, workflow_id, deploy_as: Literal["plugin", "workflow"] = "plugin"):
     if deploy_as == "plugin":
         with PluginRegistryClient(current_app) as client:
             deploy_workflow_plugin = client.search_by_rel(
@@ -48,8 +50,30 @@ def deploy_workflow(self, workflow_url: str, deploy_as: Literal["plugin", "workf
         deployment_url = deploy_workflow_plugin.data["entryPoint"]["href"]
         request("post", deployment_url, data={"workflow": workflow_url}, timeout=30)
     elif deploy_as == "workflow":
-        # TODO: deploy workflow to camunda and maybe to QHAna
-        # (i.e., using the existing workflow management plugins)
-        pass
+        plugin_instance = plugin.WorkflowEditor.instance
+        if not plugin_instance:
+            return  # TODO: log an error??
 
+        config = plugin_instance.get_config()
+
+        camunda_endpoint = config["CAMUNDA_ENDPOINT"]
+        worker_id = config["camunda_worker_id"]
+
+        bpmn = DataBlob.get_value(plugin_instance.name, workflow_id, default=None)
+        if not bpmn:
+            return  # TODO: log an error??
+
+        id_, name, _ = extract_wf_properties(bpmn=bpmn)
+
+        request(
+            "post",
+            url=f"{camunda_endpoint}/deployment/create",
+            params={
+                "deployment-name": id_,
+                "enable-duplicate-filtering": "true",
+                "deployment-source": worker_id,
+            },
+            files={id_: (secure_filename(name + ".bpmn"), bpmn, "application/xml")},
+            timeout=30,
+        )
 

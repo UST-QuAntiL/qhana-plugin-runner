@@ -1,6 +1,7 @@
 from os import environ
 from typing import Optional
 from urllib.parse import urljoin
+from uuid import uuid4
 
 from flask import Flask
 
@@ -100,6 +101,10 @@ def get_config_from_app(app: Optional[Flask]) -> dict:
         "UPLOAD_GITHUB_REPOPATH": "qrms",
         "UPLOAD_FILE_NAME": "quantum-workflow-model",
         "UPLOAD_BRANCH_NAME": "",
+        "camunda_worker_id": app.config.get(
+            "CAMUNDA_WORKER_ID",
+            environ.get("CAMUNDA_WORKER_ID", str(uuid4())),
+        )
     }
     if not app:
         return config

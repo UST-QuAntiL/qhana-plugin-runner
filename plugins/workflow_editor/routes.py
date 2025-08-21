@@ -1,10 +1,8 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
 from importlib import resources
-from io import BytesIO
 from typing import Literal, Mapping
 from uuid import uuid4
-from xml.etree import ElementTree
 
 from flask import current_app, render_template
 from flask.globals import request
@@ -28,6 +26,7 @@ from .config import WF_STATE_KEY
 from .plugin import WF_EDITOR_BLP, WorkflowEditor
 from .schemas import WorkflowSaveParamsSchema, WorkflowSchema
 from .tasks import deploy_workflow
+from .util import extract_wf_properties
 
 
 class WorkflowEditorSchema(FrontendFormBaseSchema):
@@ -217,8 +216,8 @@ class WorkflowListView(MethodView):
         )
 
         if deploy:
-            workflow_url = url_for(WorkflowView.__name__, wf_id=wf_id)
-            deploy_workflow.s(workflow_url, deploy_as=deploy).apply_async()
+            workflow_url = url_for(WorkflowView.__name__, wf_id=wf_id, _external=True)
+            deploy_workflow.s(workflow_url, wf_id, deploy_as=deploy).apply_async()
 
         # TODO: start a cleanup task to reduce the autosaves to the last 3 saves
         # of the newest version for each workflow.
@@ -271,24 +270,3 @@ class WorkflowView(MethodView):
 
         PluginState.set_value(plugin.name, WF_STATE_KEY, filtered_workflows, commit=True)
 
-
-def extract_wf_properties(bpmn: str):
-    id_ = "unknown"
-    name = id_
-    version = "0"
-    for _event, node in ElementTree.iterparse(
-        BytesIO(bpmn.encode(encoding="utf-8")), ["start"]
-    ):
-        if node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}definitions":
-            continue
-        if (
-            node.tag == "{http://www.omg.org/spec/BPMN/20100524/MODEL}process"
-            or node.tag.endswith("process")
-        ):
-            id_ = node.attrib["id"]
-            name = node.attrib.get("name", id_)
-            version = node.attrib.get(
-                "{http://camunda.org/schema/1.0/bpmn}versionTag", version
-            )
-        break
-    return id_, name, version
