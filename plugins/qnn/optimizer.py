@@ -208,9 +208,7 @@ class MicroFrontend(MethodView):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @OPTIMIZER_BLP.arguments(
-        OptimizerParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @OPTIMIZER_BLP.arguments(OptimizerParametersSchema(unknown=EXCLUDE), location="form")
     @OPTIMIZER_BLP.response(HTTPStatus.SEE_OTHER)
     @OPTIMIZER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -289,7 +287,7 @@ def prepare_task(self, db_id: int) -> str:
     TASK_LOGGER.info(
         f"Loaded input parameters from db: params='{params}', cost_function_result='{cost_function_result}'"
     )
-    
+
     return "just testing"
 
     # # Stuff required for every method

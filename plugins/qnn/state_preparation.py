@@ -158,7 +158,7 @@ class MicroFrontend(MethodView):
 
     example_inputs = {}
 
-    default_inputs = {        
+    default_inputs = {
         "digitsBeforeDecimal": 0,
         "digitsAfterDecimal": 0,
     }
