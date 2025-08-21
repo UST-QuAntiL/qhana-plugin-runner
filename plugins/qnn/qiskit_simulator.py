@@ -424,7 +424,7 @@ def execute_circuit(self, db_id: int) -> str:
         dim = len(state_vector)
         key_len = len(str(dim))
         for i, v in enumerate(state_vector):
-            state_vector_ent[f"{i:0{key_len}}"] = repr(v)
+            state_vector_ent[f"{i:0{key_len}}"] = repr(complex(v))
         with SpooledTemporaryFile(mode="w") as output:
             dump(state_vector_ent, output)
             STORE.persist_task_result(
