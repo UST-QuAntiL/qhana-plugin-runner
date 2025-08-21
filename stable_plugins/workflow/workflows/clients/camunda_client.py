@@ -34,6 +34,8 @@ def extract_id_and_name(bpmn_url: str):
 
 
 class CamundaManagementClient:
+    # http://localhost:8080/swaggerui/
+
     def __init__(self, config: WorkflowPluginConfig, timeout: float | None = None):
         self.camunda_endpoint = config["camunda_base_url"].rstrip("/")
         self.worker_id = config["worker_id"]
