@@ -69,10 +69,11 @@ class PluginRootView(MethodView):
                 ApiLink(
                     "workflows",
                     url_for(
-                        f"{WF_EDITOR_BLP.name}.{WorkflowListView.__name__}", _external=True
-                    )
+                        f"{WF_EDITOR_BLP.name}.{WorkflowListView.__name__}",
+                        _external=True,
+                    ),
                 )
-            ]
+            ],
         )
 
 
@@ -187,7 +188,7 @@ class WorkflowListView(MethodView):
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
 
-        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY)
+        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY, [])
         if workflows is None:
             workflows = []
         # TODO: find better workaround for date (de-)serialization (e.g., with custom ma field)
@@ -197,7 +198,9 @@ class WorkflowListView(MethodView):
     @WF_EDITOR_BLP.arguments(WorkflowSaveParamsSchema(), location="query", as_kwargs=True)
     @WF_EDITOR_BLP.response(HTTPStatus.OK, WorkflowSchema())
     @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
-    def post(self, autosave: bool = False, deploy: Literal["", "plugin", "workflow"] = ""):
+    def post(
+        self, autosave: bool = False, deploy: Literal["", "plugin", "workflow"] = ""
+    ):
         plugin = WorkflowEditor.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -214,18 +217,20 @@ class WorkflowListView(MethodView):
             "autosave": autosave,
             "workflow_id": wf_id,
         }
-        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY)
+        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY, [])
         if workflows is None:
             workflows = []
-        DataBlob.set_value(
-            plugin.name, wf_id, bpmn.encode(encoding="utf-8")
-        )
+        DataBlob.set_value(plugin.name, wf_id, bpmn.encode(encoding="utf-8"))
         PluginState.set_value(
             plugin.name, WF_STATE_KEY, [workflow] + workflows, commit=True
         )
 
         if deploy:
-            workflow_url = url_for(WorkflowView.__name__, wf_id=wf_id, _external=True)
+            workflow_url = url_for(
+                f"{WF_EDITOR_BLP.name}.{WorkflowView.__name__}",
+                wf_id=wf_id,
+                _external=True,
+            )
             deploy_workflow.s(workflow_url, wf_id, deploy_as=deploy).apply_async()
 
         # TODO: start a cleanup task to reduce the autosaves to the last 3 saves
@@ -278,4 +283,3 @@ class WorkflowView(MethodView):
         filtered_workflows = [w for w in workflows if w["workflow_id"] != wf_id]
 
         PluginState.set_value(plugin.name, WF_STATE_KEY, filtered_workflows, commit=True)
-
