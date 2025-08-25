@@ -38,7 +38,12 @@ def update_config(self):
     bind=True,
     ignore_result=True,
 )
-def deploy_workflow(self, workflow_url: str, workflow_id, deploy_as: Literal["plugin", "workflow"] = "plugin"):
+def deploy_workflow(
+    self,
+    workflow_url: str,
+    workflow_id,
+    deploy_as: Literal["plugin", "workflow"] = "plugin",
+):
     if deploy_as == "plugin":
         with PLUGIN_REGISTRY_CLIENT as client:
             deploy_workflow_plugin = client.search_by_rel(
@@ -76,4 +81,3 @@ def deploy_workflow(self, workflow_url: str, workflow_id, deploy_as: Literal["pl
             files={id_: (secure_filename(name + ".bpmn"), bpmn, "application/xml")},
             timeout=30,
         )
-

@@ -104,7 +104,7 @@ def get_config_from_app(app: Optional[Flask]) -> dict:
         "camunda_worker_id": app.config.get(
             "CAMUNDA_WORKER_ID",
             environ.get("CAMUNDA_WORKER_ID", str(uuid4())),
-        )
+        ),
     }
     if not app:
         return config

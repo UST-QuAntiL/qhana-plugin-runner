@@ -54,7 +54,9 @@ class QParzenWindow(QHAnaPluginBase):
         return QParzenWindow_BLP
 
     def get_requirements(self) -> str:
-        return "pennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\nmuid~=0.5.3"
+        return (
+            "pennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\nmuid~=0.5.3"
+        )
 
 
 try:

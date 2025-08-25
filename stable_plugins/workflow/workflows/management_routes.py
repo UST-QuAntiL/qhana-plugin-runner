@@ -130,11 +130,12 @@ class MicroFrontend(MethodView):
                     "plugin", {"name": "workflow-editor"}, allow_collection_resource=False
                 )
                 if workflow_editor_plugin:
-                    workflows_url = workflow_editor_plugin.data["href"].rstrip("/") + "/workflows/"
+                    workflows_url = (
+                        workflow_editor_plugin.data["href"].rstrip("/") + "/workflows/"
+                    )
                     saved_workflows = request("get", workflows_url).json()
         except RequestException:
             saved_workflows = []
-
 
         add_deployed_info(process_definitions)
 
