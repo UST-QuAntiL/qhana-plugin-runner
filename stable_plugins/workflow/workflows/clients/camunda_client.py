@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 
 import requests
 from requests.exceptions import HTTPError
+from werkzeug.utils import secure_filename
 
 from qhana_plugin_runner.requests import open_url_as_file_like
 
@@ -50,8 +51,12 @@ class CamundaManagementClient:
             raise ValueError("No BPMN File specified!")
         id_, name = extract_id_and_name(bpmn_url)
         with open_url_as_file_like(bpmn_url) as (filename, bpmn, content_type):
-            file_ = (filename, bpmn, content_type) if content_type else (filename, bpmn)
-
+            sec_file_name = secure_filename(filename + ".bpmn")
+            file_ = (
+                (sec_file_name, bpmn, content_type)
+                if content_type
+                else (sec_file_name, bpmn)
+            )
             response = requests.post(
                 url=f"{self.camunda_endpoint}/deployment/create",
                 params={
