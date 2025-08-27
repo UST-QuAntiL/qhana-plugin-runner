@@ -66,7 +66,7 @@
 
     <dialog class="card mat-mdc-card color-scheme-card" id="openWF" closedby="any" autofocus>
         <h2>Open Workflow</h2>
-        <form method="dialog" clas="qhana-form">
+        <form method="dialog" class="qhana-form">
             <div class="qhana-form-field">
                 <label class="qhana-form-label" for="openWFinput">Open Workflow from local filesystem:</label>
                 <div class="qhana-input-wrapper">
@@ -76,7 +76,7 @@
             </div>
         </form>
         <h3>Load Saved Workflow</h3>
-        <form method="dialog" id="openExisting" clas="qhana-form">
+        <form method="dialog" id="openExisting" class="qhana-form">
             <div class="workflow-list">
             </div>
             <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
@@ -85,7 +85,7 @@
 
     <dialog class="card mat-mdc-card color-scheme-card" id="deployWF" closedby="any">
         <h2>Deploy Workflow</h2>
-        <form method="dialog" clas="qhana-form">
+        <form method="dialog" class="qhana-form">
             <button class="qhana-form-submit" type="submit" value="cancel" autofocus>Cancel</button>
             <button class="qhana-form-submit" type="submit" value="deployPlugin">Deploy as Plugin</button>
             <button class="qhana-form-submit" type="submit" value="deployWorkflow">Deploy as Workflow</button>
@@ -155,7 +155,8 @@
                 title.textContent = `${workflow["name"]} – ${workflow["id"]}@${workflow["version"]}`;
                 const subtitle = document.createElement("p");
                 subtitle.classList.add("workflow-subtitle");
-                subtitle.textContent = workflow["date"] + (workflow["autosave"] ? " – autosave" : "");
+                const date = new Date(workflow["date"])
+                subtitle.textContent = date.toLocaleString() + (workflow["autosave"] ? " – autosave" : "");
                 const button = document.createElement("button");
                 button.setAttribute("value", `load:${workflow["workflowId"]}`);
                 button.setAttribute("type", "submit");
