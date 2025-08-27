@@ -26,7 +26,7 @@ from . import assets
 from .config import WF_STATE_KEY
 from .plugin import WF_EDITOR_BLP, WorkflowEditor
 from .schemas import WorkflowSaveParamsSchema, WorkflowSchema
-from .tasks import deploy_workflow
+from .tasks import deploy_workflow, cleanup_autosaved_workflows
 from .util import extract_wf_properties
 
 
@@ -233,8 +233,7 @@ class WorkflowListView(MethodView):
             )
             deploy_workflow.s(workflow_url, wf_id, deploy_as=deploy).apply_async()
 
-        # TODO: start a cleanup task to reduce the autosaves to the last 3 saves
-        # of the newest version for each workflow.
+        cleanup_autosaved_workflows.s(plugin.name).apply_async()
 
         return unparse_datetime(workflow)
 

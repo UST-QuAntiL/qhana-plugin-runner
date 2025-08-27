@@ -1,3 +1,4 @@
+from collections import defaultdict
 from time import time
 from typing import Literal, Optional
 
@@ -11,7 +12,7 @@ from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
 from . import plugin
-from .config import CONFIG_KEY, get_config_from_registry
+from .config import CONFIG_KEY, get_config_from_registry, WF_STATE_KEY
 from .util import extract_wf_properties
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -81,3 +82,36 @@ def deploy_workflow(
             files={id_: (secure_filename(name + ".bpmn"), bpmn, "application/xml")},
             timeout=30,
         )
+
+
+@CELERY.task()
+def cleanup_autosaved_workflows(plugin_name: str):
+    """
+    Removes autosaved workflows, so that only the latest three are kept for each workflow.
+
+    Args:
+        plugin_name:
+
+    Returns:
+
+    """
+    saved_workflows = PluginState.get_value(plugin_name, WF_STATE_KEY)
+    autosave_count = defaultdict(int)
+    cleaned_list = []
+
+    for wf in saved_workflows:
+        if wf.get("autosave") is False:
+            cleaned_list.append(wf)
+            continue
+
+        wf_name = wf.get("id")
+        wf_id = wf.get("workflow_id")
+
+        if autosave_count[wf_name] >= 3:
+            TASK_LOGGER.info(f"Deleting autosaved workflow of {wf_name} with id {wf_id}")
+            DataBlob.delete_value(plugin_name, wf_id)
+        else:
+            autosave_count[wf_name] += 1
+            cleaned_list.append(wf)
+
+    PluginState.set_value(plugin_name, WF_STATE_KEY, cleaned_list, commit=True)
