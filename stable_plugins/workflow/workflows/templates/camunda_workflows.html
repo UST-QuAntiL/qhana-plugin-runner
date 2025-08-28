@@ -6,7 +6,7 @@
                 display: flex;
                 flex-direction: column;
             }
-            h3 {
+            h1,h2,h3,h4,h5,h6 {
                 padding-inline: 1rem;
             }
             .workflow {
@@ -34,9 +34,13 @@
     </head>
 
     <body>
-        <h3>Camunda Workflows</h3>
+        <h1>Camunda Workflows</h1>
+        {% if not camunda_online %}
+        <p>Camunda Workflow Engine could not be reached!</p>
+        {% endif %}
+
         {% for workflow in workflows %}
-            <div class="workflow">
+        <div class="workflow">
                 <dl>
                     <dt>Name</dt>
                     <dd>{{workflow["name"]}}</dd>
@@ -86,6 +90,30 @@
             </div>
         
         {% endfor %}
+
+        {% if saved_workflows_url %}
+        <h1 style="margin-block-start: 3rem;">Saved Workflows of the Workflow Editor</h1>
+
+        {% for workflow in saved_workflows %}
+            <div class="workflow">
+                <dl>
+                    <dt>Name</dt>
+                    <dd>{{workflow.name}} ({{workflow.id}})</dd>
+                    <dt>version</dt>
+                    <dd>{{workflow.version}}</dd>
+                    <dt>date</dt>
+                    <dd>{{workflow.date}}</dd>
+                    <dt>autosave</dt>
+                    <dd>{{workflow.autosave}}</dd>
+                </dl>
+                <form class="qhana-form qhana-deployment-form" action="{{saved_workflows_url}}{{workflow.workflowId}}/">
+                    <button class="qhana-form-submit" type="submit" method="DELETE">Delete</button>
+                </form>
+            </div>
+        
+        {% endfor %}
+        
+        {% endif %}
 
 {% macro submit(text, action=None, target="api", method=None, class="qhana-form-submit") -%}
 <button class="{{class}}" type="submit" data-target="{{target}}" {{field_attr('formaction', action)}}

@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 
 import requests
 from requests.exceptions import HTTPError
+from werkzeug.utils import secure_filename
 
 from qhana_plugin_runner.requests import open_url_as_file_like
 
@@ -34,6 +35,8 @@ def extract_id_and_name(bpmn_url: str):
 
 
 class CamundaManagementClient:
+    # http://localhost:8080/swaggerui/
+
     def __init__(self, config: WorkflowPluginConfig, timeout: float | None = None):
         self.camunda_endpoint = config["camunda_base_url"].rstrip("/")
         self.worker_id = config["worker_id"]
@@ -48,8 +51,13 @@ class CamundaManagementClient:
             raise ValueError("No BPMN File specified!")
         id_, name = extract_id_and_name(bpmn_url)
         with open_url_as_file_like(bpmn_url) as (filename, bpmn, content_type):
-            file_ = (filename, bpmn, content_type) if content_type else (filename, bpmn)
-
+            stripped_filename = filename.removesuffix(".bpmn").removesuffix(".xml")
+            sec_file_name = secure_filename(stripped_filename + ".bpmn")
+            file_ = (
+                (sec_file_name, bpmn, content_type)
+                if content_type
+                else (sec_file_name, bpmn)
+            )
             response = requests.post(
                 url=f"{self.camunda_endpoint}/deployment/create",
                 params={
