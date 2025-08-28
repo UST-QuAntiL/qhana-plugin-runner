@@ -3,7 +3,7 @@ import logging
 import re
 from typing import List, Mapping, Optional, Sequence
 from xml.etree import ElementTree
-from typing import TypedDict, Dict, Literal, Any, Generic, TypeVar
+from typing import Dict, Literal, Any, Generic, TypeVar
 
 import requests
 from requests.exceptions import HTTPError
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class CamundaVariable(TypedDict, Generic[T]):
+class CamundaVariable(Generic[T]):
     value: T
     type: Literal["Object", "Array", "String", "Number", "Boolean"]
     valueInfo: Dict[str, str]
@@ -216,7 +216,9 @@ class CamundaClient:
         response.raise_for_status()
         return response.json()["count"]
 
-    def get_external_tasks(self, limit: Optional[int] = None, topic: Optional[str] = None):
+    def get_external_tasks(
+        self, limit: Optional[int] = None, topic: Optional[str] = None
+    ):
         """Get unlocked external tasks from the task queue.
 
         Args:
@@ -444,7 +446,9 @@ class CamundaClient:
 
         return {k: v for k, v in instance_variables.items() if k in form_variables}
 
-    def get_task_local_variables(self, external_task_execution_id: str) -> Dict[str, CamundaVariable[Any]]:
+    def get_task_local_variables(
+        self, external_task_execution_id: str
+    ) -> Dict[str, CamundaVariable[Any]]:
         """
         Gets all local variables of an external task
         :param external_task_execution_id: The execution_id of the external task
@@ -457,7 +461,9 @@ class CamundaClient:
         response.raise_for_status()
         return response.json()
 
-    def get_global_variable(self, name: str, process_instance_id: str) -> Dict[str, CamundaVariable[Any]]:
+    def get_global_variable(
+        self, name: str, process_instance_id: str
+    ) -> Dict[str, CamundaVariable[Any]]:
         """
         Retrieves the global variable for a given name
         :param name: The global variable name
