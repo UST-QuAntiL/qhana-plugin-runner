@@ -35,7 +35,9 @@ config = DeployWorkflow.instance.config
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def execute_task_legacy(external_task: ExternalTask, camunda_client: CamundaClient, watcher):
+def execute_task_legacy(
+    external_task: ExternalTask, camunda_client: CamundaClient, watcher
+):
     if external_task.execution_id is None:
         raise BadTaskDefinitionError(
             message=f"External task {external_task} has no execution id!"
@@ -56,7 +58,9 @@ def execute_task_legacy(external_task: ExternalTask, camunda_client: CamundaClie
     instance_task.apply_async()
 
 
-def execute_task(external_task: ExternalTask, camunda_client: CamundaClient, config: WorkflowConfig):
+def execute_task(
+    external_task: ExternalTask, camunda_client: CamundaClient, config: WorkflowConfig
+):
     if external_task.execution_id is None:
         raise BadTaskDefinitionError(
             message=f"External task {external_task} has no execution id!"
@@ -87,7 +91,10 @@ def execute_task(external_task: ExternalTask, camunda_client: CamundaClient, con
             raise BadTaskDefinitionError(
                 message=f"The {config['step_variable']} variable of external task {external_task} has an invalid value of '{qhana_var_value}', expected a dict."
             )
-        if not all(isinstance(qhana_var_value.get(key), a) for key, a in QHAnaStepData.__annotations__.items()):
+        if not all(
+            isinstance(qhana_var_value.get(key), a)
+            for key, a in QHAnaStepData.__annotations__.items()
+        ):
             raise BadTaskDefinitionError(
                 message=f"The {config['step_variable']} variable of external task {external_task} has an invalid value of '{qhana_var_value}', expected a dict of with the form of {QHAnaStepData.__annotations__}."
             )
@@ -110,7 +117,7 @@ def execute_task(external_task: ExternalTask, camunda_client: CamundaClient, con
             external_task_id=external_task.id,
             execution_id=external_task.execution_id,
             process_instance_id=external_task.process_instance_id,
-            step_data=qhana_var_value
+            step_data=qhana_var_value,
         )
 
     instance_task.link_error(process_workflow_error.s(external_task_id=external_task.id))
@@ -148,7 +155,9 @@ def camunda_task_watcher():
             f"Waiting on {locked_task_count} external tasks, fetching <= {max_tasks} new tasks."
         )
         if disable_legacy:
-            external_tasks = camunda_client.get_external_tasks(limit=max_tasks, topic=qhana_task_topic)
+            external_tasks = camunda_client.get_external_tasks(
+                limit=max_tasks, topic=qhana_task_topic
+            )
         else:
             external_tasks = camunda_client.get_external_tasks(limit=max_tasks)
         TASK_LOGGER.info(f"Received {len(external_tasks)} tasks.")

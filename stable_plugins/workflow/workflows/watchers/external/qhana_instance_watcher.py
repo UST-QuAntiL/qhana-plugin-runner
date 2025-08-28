@@ -189,7 +189,9 @@ def qhana_step_watcher(
         workflow_local_variables = camunda_client.get_task_local_variables(execution_id)
 
         if step_var not in workflow_local_variables:
-            raise BadTaskDefinitionError(message=f"Missing task step variable '{step_var}'.")
+            raise BadTaskDefinitionError(
+                message=f"Missing task step variable '{step_var}'."
+            )
 
         step: dict = workflow_local_variables[step_var]["value"]
     else:
