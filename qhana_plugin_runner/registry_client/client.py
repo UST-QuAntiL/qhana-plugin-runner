@@ -13,13 +13,15 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from logging import Logger
 from time import time
+from logging import Logger
 from typing import Any, Dict, Literal, Optional, Sequence, Union
+from contextlib import AbstractContextManager
+from itertools import chain
 
 from flask import Flask
 from flask.globals import current_app
-from requests import request
+from requests import request, Session
 
 from .types import ApiLink, ApiResponse, match_api_link
 from ..util.logging import get_logger
@@ -29,18 +31,41 @@ _API_RESPONSE_MIN_KEYS = {"data", "links"}
 _REGISTRY_CLIENT_LOGGER = "registry_client"
 
 
-class PluginRegistryClient:
+class PluginRegistryClient(AbstractContextManager):
     """A minimal client for the qhana plugin registry."""
 
-    def __init__(self, app: Optional[Flask] = None) -> None:
+    def __init__(self, app: Optional[Flask] = None, timeout=5) -> None:
         self._cache: Dict[str, ApiResponse] = {}
         self._last_cache_clear = time()
         self._plugin_registry_url: Optional[str] = None
+        self._session: Optional[Session] = None
+        self._session_cache: Optional[Dict[str, ApiResponse]] = None
+        self._timeout = timeout
+        self._logger: Optional[Logger] = None
         if app is not None:
             self.init_app(app)
 
     def init_app(self, app: Flask):
         self._plugin_registry_url = app.config.get("PLUGIN_REGISTRY_URL", None)
+        self._logger = get_logger(app, _REGISTRY_CLIENT_LOGGER)
+
+    def __enter__(self):
+        if self._session:
+            raise ValueError(
+                "Cannot use the same client as a nested context manager while it is already used as a context manager!"
+            )
+        self._session_cache = {}
+        self._session = Session()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if not self._session:
+            return False
+        self._session_cache = None
+        session = self._session
+        self._session = None
+        session.close()
+        return False
 
     @property
     def ready(self) -> bool:
@@ -56,12 +81,21 @@ class PluginRegistryClient:
         Args:
             response (ApiResponse): the response to cache
         """
-        self_link = response.data["self"]
-        if match_api_link(self_link, {"api"}):
-            cachable_response = ApiResponse(
-                data=response.data, links=response.links, keyed_links=response.keyed_links
-            )
-            self._cache[self_link["href"]] = cachable_response
+        session_cache = self._session_cache
+        for resp in chain(
+            [response], response.embedded.values() if response.embedded else []
+        ):
+            self_link = resp.data["self"]
+            if match_api_link(self_link, {"api"}):
+                cachable_response = ApiResponse(
+                    data=resp.data, links=resp.links, keyed_links=resp.keyed_links
+                )
+                self._cache[self_link["href"]] = cachable_response
+            elif session_cache is not None:
+                cachable_response = ApiResponse(
+                    data=resp.data, links=resp.links, keyed_links=resp.keyed_links
+                )
+                session_cache[self_link["href"]] = cachable_response
 
     def _fetch_by_url(
         self,
@@ -92,15 +126,22 @@ class PluginRegistryClient:
             self._cache = {}
 
         if not query_params:
-            cached = self._cache.get(url, None)
+            cached = self._session_cache.get(url, None) if self._session_cache else None
+            if cached is None:
+                cached = self._cache.get(url, None)
             if cached is not None:
                 return cached
 
-        if current_app:
-            get_logger(current_app, _REGISTRY_CLIENT_LOGGER).debug(
-                f"Requesting URL '{url}' with query params {query_params}"
-            )
-        response = request(method, url, params=query_params, data=body, json=json)
+        if self._logger:
+            self._logger.debug(f"Requesting URL '{url}' with query params {query_params}")
+
+        if self._session:
+            r = self._session.request
+        else:
+            r = request
+        response = r(
+            method, url, params=query_params, data=body, json=json, timeout=self._timeout
+        )
 
         if response.status_code == HTTPStatus.NO_CONTENT:
             return ApiResponse(
@@ -164,7 +205,7 @@ class PluginRegistryClient:
             link["href"], query_params=query_params, body=body, json=json, method=method
         )
 
-    def search_by_rel(
+    def search_by_rel(  # noqa: C901
         self,
         rel: Union[str, Sequence[str]],
         query_params: Optional[dict] = None,
@@ -245,7 +286,10 @@ class PluginRegistryClient:
         for api_link in base.get_links_by_rel("api"):
             new_base = self.fetch_by_api_link(api_link, query_params=query_params)
             final_result = self.search_by_rel(
-                rel, query_params, allow_collection_resource, base=new_base
+                rel,
+                query_params,
+                allow_collection_resource=allow_collection_resource,
+                base=new_base,
             )
             if final_result is not None:
                 return final_result

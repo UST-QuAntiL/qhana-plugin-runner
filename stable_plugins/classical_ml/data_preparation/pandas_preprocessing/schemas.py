@@ -12,25 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from marshmallow import post_load, validate
-import marshmallow as ma
-from qhana_plugin_runner.api.util import (
-    FrontendFormBaseSchema,
-    MaBaseSchema,
-    FileUrl,
-)
-from qhana_plugin_runner.api import EnumField
-
 from dataclasses import dataclass
+
+import marshmallow as ma
+from marshmallow import post_load, validate
+
+from qhana_plugin_runner.api import EnumField
+from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema, MaBaseSchema
+
 from .backend.pandas_preprocessing import (
-    PreprocessingEnum,
     AxisEnum,
+    CaseEnum,
     KeepEnum,
     PositionEnum,
-    CaseEnum,
+    HowEnum,
+    PreprocessingEnum,
 )
-
-from celery.utils.log import get_task_logger
 
 
 class TaskResponseSchema(MaBaseSchema):
@@ -52,7 +49,7 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="*",
-        data_content_types="text/csv",
+        data_content_types=["text/csv", "application/json"],
         metadata={
             "label": "File URL",
             "description": "The file must be a csv file.",
@@ -69,7 +66,7 @@ class FirstInputParametersSchema(FrontendFormBaseSchema):
 class SecondInputParameters:
     preprocessing_enum: PreprocessingEnum
     axis: AxisEnum
-    threshold: int
+    how: HowEnum
     subset: str
     fill_value: str
     keep: KeepEnum
@@ -119,15 +116,15 @@ class SecondInputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    threshold = ma.fields.Integer(
+    how = EnumField(
+        HowEnum,
         required=True,
         allow_none=False,
         metadata={
-            "label": "Threshold",
-            "description": "Requires that many non-NA values. Cannot be combined with how. If left empty, then all values may not be NA.",
-            "input_type": "number",
+            "label": "How",
+            "description": "Select when a row / column is dropped. Any: if any NA is present, it will be dropped. All: if all values are NA, it will be dropped.",
+            "input_type": "select",
         },
-        validate=validate.Range(min=0, min_inclusive=True),
     )
     subset = ma.fields.String(
         required=False,

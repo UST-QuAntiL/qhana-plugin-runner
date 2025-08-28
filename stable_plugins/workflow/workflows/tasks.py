@@ -181,6 +181,7 @@ def process_input(self, db_id: int) -> None:
 
     input_params: dict = json.loads(task_data.parameters)
     human_task_id = task_data.data["human_task_id"]
+    assert isinstance(human_task_id, str)
 
     # Client
     camunda_client = CamundaClient(config)
@@ -192,7 +193,17 @@ def process_input(self, db_id: int) -> None:
         for key, val in input_params.items()
     }
 
-    camunda_client.complete_human_task(human_task_id, variables)
+    status = camunda_client.get_human_task_status(human_task_id)
+
+    if status in ("PENDING", None):
+        # only attempt to complete tasks that are still pending/untaken
+        camunda_client.complete_human_task(human_task_id, variables)
+    if status == "ERROR":
+        task_data.add_task_log_entry(
+            f"Task with ID '{human_task_id}' could not be completed because of an unknown error!"
+        )
+
+    task_data.data.pop("external_form_key", None)
 
     task_data.clear_previous_step()
     task_data.save(commit=True)

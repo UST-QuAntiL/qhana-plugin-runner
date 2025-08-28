@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "quantum-cnn"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -38,7 +38,7 @@ class QCNN(QHAnaPluginBase):
     version = __version__
     description = "Labels data with the help of a quantum convolutional neural network"
 
-    tags = []
+    tags = ["QML", "classification", "quantum", "neural-network"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -47,7 +47,7 @@ class QCNN(QHAnaPluginBase):
         return QCNN_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\ntorch~=2.0.1\nplotly~=5.18.0\npandas~=1.5.0"
+        return "qiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\ntorch~=2.0.1\nplotly~=5.18.0\npandas~=1.5.0"
 
 
 try:

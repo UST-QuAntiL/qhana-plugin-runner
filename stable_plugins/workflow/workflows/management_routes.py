@@ -12,6 +12,7 @@ from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
 from marshmallow import INCLUDE
+from requests import request
 from requests.exceptions import HTTPError, RequestException
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -20,6 +21,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginType,
 )
+from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import (
@@ -51,7 +53,7 @@ class WorkflowIncidentWithDate(WorkflowIncident):
 
 
 def add_deployed_info(
-    process_definition: Union[Dict[str, Any], Sequence[Dict[str, Any]]]
+    process_definition: Union[Dict[str, Any], Sequence[Dict[str, Any]]],
 ):
     if isinstance(process_definition, dict):
         plugin_url = url_for(
@@ -99,7 +101,7 @@ class WfManagementView(MethodView):
                 data_input=[],
                 data_output=[],
             ),
-            tags=["workflow", "bpmn", "camunda-engine"],
+            tags=WorkflowManagement.instance.tags,
         )
 
 
@@ -121,6 +123,20 @@ class MicroFrontend(MethodView):
             process_definitions = []
             camunda_online = False
 
+        try:
+            workflows_url = None
+            with PLUGIN_REGISTRY_CLIENT as client:
+                workflow_editor_plugin = client.search_by_rel(
+                    "plugin", {"name": "workflow-editor"}, allow_collection_resource=False
+                )
+                if workflow_editor_plugin:
+                    workflows_url = (
+                        workflow_editor_plugin.data["href"].rstrip("/") + "/workflows/"
+                    )
+                    saved_workflows = request("get", workflows_url).json()
+        except RequestException:
+            saved_workflows = []
+
         add_deployed_info(process_definitions)
 
         potential_plugins = {w["pluginHref"] for w in process_definitions}
@@ -139,6 +155,8 @@ class MicroFrontend(MethodView):
                 plugins_wo_workflow=plugins_wo_workflow,
                 undeployEndpoint=f"{WORKFLOW_MGMNT_BLP.name}.{UndeployPluginView.__name__}",
                 camunda_online=camunda_online,  # TODO use this information in the template
+                saved_workflows_url=workflows_url,
+                saved_workflows=saved_workflows,
             )
         )
 
@@ -387,9 +405,16 @@ class VirtualPluginUi(MethodView):
 
     def render(self, data: Mapping, process_definition_id: str, errors: dict):
         camunda = CamundaManagementClient(config)
-        process_xml: str = camunda.get_process_definition_xml(
-            definition_id=process_definition_id
-        )
+
+        try:
+            process_xml: str = camunda.get_process_definition_xml(
+                definition_id=process_definition_id
+            )
+        except RequestException:
+            current_app.logger.warning(
+                "Could not load workflow process definition.", exc_info=True
+            )
+            process_xml = ""
 
         plugin_url = url_for(
             f"{WORKFLOW_MGMNT_BLP.name}.{VirtualPluginView.__name__}",
@@ -532,9 +557,15 @@ class IncidentsFrontend(MethodView):
         assert isinstance(process_instance_id, str)
 
         camunda = CamundaManagementClient(config)
-        process_xml: str = camunda.get_process_definition_xml(
-            definition_id=process_definition_id
-        )
+        try:
+            process_xml: str = camunda.get_process_definition_xml(
+                definition_id=process_definition_id
+            )
+        except RequestException:
+            current_app.logger.warning(
+                "Could not load workflow process definition.", exc_info=True
+            )
+            process_xml = ""
 
         camunda_client = CamundaClient(config=config)
 
@@ -692,9 +723,28 @@ class HumanTaskFrontend(MethodView):
         assert isinstance(process_instance_id, str)
 
         camunda = CamundaManagementClient(config)
-        process_xml: str = camunda.get_process_definition_xml(
-            definition_id=process_definition_id
-        )
+        try:
+            process_xml: str = camunda.get_process_definition_xml(
+                definition_id=process_definition_id
+            )
+        except RequestException:
+            current_app.logger.warning(
+                "Could not load workflow process definition.", exc_info=True
+            )
+            process_xml = ""
+
+        external_form: Optional[str] = None
+
+        form_key = db_task.data.get("external_form_key", "")
+        assert isinstance(form_key, str)
+
+        if form_key.startswith("embedded:"):
+            try:
+                external_form = camunda.get_deployed_task_form(
+                    db_task.data.get("human_task_id", "")
+                )
+            except Exception:
+                external_form = "ERROR loading external form. Try again later."
 
         form_params: Dict[str, dict] = {}
 
@@ -721,8 +771,10 @@ class HumanTaskFrontend(MethodView):
 
         return Response(
             render_template(
-                "workflow_human_task.html",  # FIXME update template to not use iframe!
+                "workflow_human_task.html",
                 workflow_xml=process_xml,
+                camunda_url=config["camunda_base_url"],
+                active_task_id=db_task.data.get("human_task_id", ""),
                 human_task_id=db_task.data.get("human_task_definition_key", ""),
                 name=WorkflowManagement.instance.name,
                 version=WorkflowManagement.instance.version,
@@ -733,6 +785,7 @@ class HumanTaskFrontend(MethodView):
                 process=url_for(
                     f"{WORKFLOW_MGMNT_BLP.name}.HumanTaskProcessView", db_id=db_id
                 ),
+                external_form=external_form,
             )
         )
 

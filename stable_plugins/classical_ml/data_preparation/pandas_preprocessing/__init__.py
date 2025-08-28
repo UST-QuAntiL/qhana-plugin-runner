@@ -21,7 +21,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 
 _plugin_name = "pandas-preprocessing"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -38,7 +38,7 @@ class PDPreprocessing(QHAnaPluginBase):
     version = __version__
     description = "Uses pandas preprocessing methods, to preprocess csv files."
 
-    tags = []
+    tags = ["preprocessing", "data-cleaning"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "quantum-kernel-estimation"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -45,7 +45,7 @@ class QKE(QHAnaPluginBase):
         "[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)\n"
         "[1] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
     )
-    tags = ["kernel", "mapping"]
+    tags = ["QML", "quantum", "kernel", "mapping"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -54,7 +54,7 @@ class QKE(QHAnaPluginBase):
         return QKE_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\nmuid~=0.5.3"
+        return "qiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\nmuid~=0.5.3"
 
 
 try:

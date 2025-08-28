@@ -309,7 +309,23 @@ def check_task_status(self, url: str, external_task_id: str, last_step_count=0):
                 ]
             }
         }
-        camunda_client.complete_task(external_task_id, external_task_result)
+        try:
+            camunda_client.complete_task(external_task_id, external_task_result)
+        except HTTPError as err:
+            if err.response.status_code == 500:
+                # Camunda probably had error OptimisticLockingException: ENGINE-03005
+                TASK_LOGGER.info("Retrying completing Camunda task")
+                return self.retry(
+                    countdown=5,
+                    max_retries=5,
+                    exc=ResultError(message="Could not complete task due to an error."),
+                )
+            else:
+                TASK_LOGGER.error(
+                    "Camunda task could not be completed due to HTTPError", exc_info=True
+                )
+                raise ResultError("Camunda task could not be completed due to HTTPError")
+
         return  # exit without retry
 
     elif qhana_instance_status == "FAILURE":

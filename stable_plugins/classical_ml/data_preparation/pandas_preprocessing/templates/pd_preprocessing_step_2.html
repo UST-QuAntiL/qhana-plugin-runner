@@ -87,7 +87,7 @@
         const column_val = document.getElementById("column");
 
         const axis_dis = axis_val.parentNode.parentNode;
-        const threshold_dis = document.getElementById("threshold").parentNode.parentNode;
+        const how_dis = document.getElementById("how").parentNode.parentNode;
         const subset_dis = subset_val.parentNode.parentNode;
         const fill_value_dis = document.getElementById("fill_value").parentNode.parentNode;
         const keep_dis = document.getElementById("keep").parentNode.parentNode;
@@ -207,7 +207,7 @@
 
         function preprocessing_enum_change() {
             axis_dis.style.display = "none";
-            threshold_dis.style.display = "none";
+            how_dis.style.display = "none";
             subset_dis.style.display = "none";
             fill_value_dis.style.display = "none";
             keep_dis.style.display = "none";
@@ -225,7 +225,7 @@
 
             if (preprocessing_enum_value.value === "drop_na") {
                 axis_dis.style.display = "block";
-                threshold_dis.style.display = "block";
+                how_dis.style.display = "block";
                 subset_dis.style.display = "block";
                 change_parameter(subset_dis, null, "Labels along other axis to consider, e.g. if you are dropping rows these would be a list of columns to include.");
                 axis_change();

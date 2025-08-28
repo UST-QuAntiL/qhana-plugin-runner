@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "pca"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -45,7 +45,7 @@ class PCA(QHAnaPluginBase):
         "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
     )
     version = __version__
-    tags = ["dimension-reduction"]
+    tags = ["preprocessing", "feature-engineering"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

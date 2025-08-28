@@ -11,7 +11,7 @@ from .config import WorkflowPluginConfig, get_config
 TASK_LOGGER = get_task_logger(__name__)
 
 _plugin_name = "deploy-workflow"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 WORKFLOWS_BLP = SecurityBlueprint(

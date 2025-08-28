@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "quantum-parzen-window"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -45,7 +45,7 @@ class QParzenWindow(QHAnaPluginBase):
         "Source:\n"
         "[0] [Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest Neighbors Classification Based on the Metric of Hamming Distance. Int J Theor Phys 56, 3496–3507 (2017).](https://doi.org/10.1007/s10773-017-3514-4)\n"
     )
-    tags = ["parzen-window", "supervised-learning", "quantum"]
+    tags = ["QML", "classification", "supervised-learning", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -54,7 +54,9 @@ class QParzenWindow(QHAnaPluginBase):
         return QParzenWindow_BLP
 
     def get_requirements(self) -> str:
-        return "pennylane~=0.30\npennylane-qiskit~=0.30\nscikit-learn~=1.1\nmuid~=0.5.3"
+        return (
+            "pennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\nmuid~=0.5.3"
+        )
 
 
 try:

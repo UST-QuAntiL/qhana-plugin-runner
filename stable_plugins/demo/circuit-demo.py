@@ -63,7 +63,7 @@ from qhana_plugin_runner.tasks import (
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "circuit-demo"
-__version__ = "v1.0.0"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -412,7 +412,7 @@ class CircuitDemo(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = "A demo plugin implementing circuits for the bell states and executing them using a circuit executor."
-    tags = ["circuit-demo", "demo"]
+    tags = ["circuit-demo", "demo", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)

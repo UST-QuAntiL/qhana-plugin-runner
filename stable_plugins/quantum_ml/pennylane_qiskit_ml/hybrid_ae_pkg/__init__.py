@@ -19,7 +19,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "hybrid-autoencoder"
-__version__ = "v0.2.0"
+__version__ = "v0.2.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -39,7 +39,7 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
         "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
         "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
     )
-    tags = ["dimensionality-reduction"]
+    tags = ["QML", "preprocessing", "feature-engineering", "quantum"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -48,7 +48,7 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
         return HA_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane~=0.30\npennylane-qiskit~=0.30\ntorch~=2.0.1\nmuid~=0.5.3"
+        return "qiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\ntorch~=2.0.1\nmuid~=0.5.3"
 
 
 try:
