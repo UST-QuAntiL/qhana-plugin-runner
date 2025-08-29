@@ -3,6 +3,7 @@ from datetime import datetime
 from http import HTTPStatus
 from typing import Any, Dict, Mapping, Optional, Sequence, Union, cast
 
+import requests
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import redirect, render_template
@@ -12,7 +13,6 @@ from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
 from marshmallow import INCLUDE
-from requests import request
 from requests.exceptions import HTTPError, RequestException
 
 from qhana_plugin_runner.api.plugin_schemas import (
@@ -133,7 +133,7 @@ class MicroFrontend(MethodView):
                     workflows_url = (
                         workflow_editor_plugin.data["href"].rstrip("/") + "/workflows/"
                     )
-                    saved_workflows = request("get", workflows_url).json()
+                    saved_workflows = requests.request("get", workflows_url).json()
         except RequestException:
             saved_workflows = []
 

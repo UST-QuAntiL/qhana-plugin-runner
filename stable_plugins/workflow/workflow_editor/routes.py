@@ -11,6 +11,7 @@ from flask.views import MethodView
 from flask.wrappers import Response
 from flask_smorest import abort
 from marshmallow import EXCLUDE
+from werkzeug.utils import secure_filename
 
 from qhana_plugin_runner.api.plugin_schemas import (
     ApiLink,
@@ -26,7 +27,7 @@ from . import assets
 from .config import WF_STATE_KEY
 from .plugin import WF_EDITOR_BLP, WorkflowEditor
 from .schemas import WorkflowSaveParamsSchema, WorkflowSchema
-from .tasks import deploy_workflow, cleanup_autosaved_workflows
+from .tasks import cleanup_autosaved_workflows, deploy_workflow
 from .util import extract_wf_properties
 
 
@@ -262,10 +263,22 @@ class WorkflowView(MethodView):
 
         bpmn = DataBlob.get_value(plugin.name, wf_id, default=None)
         if bpmn is None:
-            print("\n\n", wf_id, bpmn, "saad", "\n\n")
-            abort(HTTPStatus.NOT_FOUND, "BAAD")
+            abort(HTTPStatus.NOT_FOUND, f"Found no workflow with id {wf_id}.")
 
-        return Response(bpmn, status=HTTPStatus.OK, content_type="application/bpmn+xml")
+        workflows = PluginState.get_value(plugin.name, WF_STATE_KEY, [])
+        workflow_name = f"{secure_filename(wf_id)}.bpmn"
+        for w in workflows:
+            if w.get("workflow_id") == wf_id:
+                workflow_name = secure_filename(w["name"]) + ".bpmn"
+
+        headers = {"Content-Disposition": f'attachment; filename="{workflow_name}"'}
+
+        return Response(
+            bpmn,
+            status=HTTPStatus.OK,
+            content_type="application/bpmn+xml",
+            headers=headers,
+        )
 
     @WF_EDITOR_BLP.response(HTTPStatus.OK)
     @WF_EDITOR_BLP.require_jwt("jwt", optional=True)

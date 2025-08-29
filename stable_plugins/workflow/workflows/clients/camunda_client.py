@@ -3,6 +3,7 @@ import logging
 import re
 from typing import List, Mapping, Optional, Sequence
 from xml.etree import ElementTree
+from typing import Dict, Literal, Any, Generic, TypeVar
 
 import requests
 from requests.exceptions import HTTPError
@@ -15,6 +16,14 @@ from ..datatypes.camunda_datatypes import ExternalTask, HumanTask, WorkflowIncid
 from ..exceptions import WorkflowDeploymentError
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+class CamundaVariable(Generic[T]):
+    value: T
+    type: Literal["Object", "Array", "String", "Number", "Boolean"]
+    valueInfo: Dict[str, str]
 
 
 def extract_id_and_name(bpmn_url: str):
@@ -207,11 +216,14 @@ class CamundaClient:
         response.raise_for_status()
         return response.json()["count"]
 
-    def get_external_tasks(self, limit: Optional[int] = None):
+    def get_external_tasks(
+        self, limit: Optional[int] = None, topic: Optional[str] = None
+    ):
         """Get unlocked external tasks from the task queue.
 
         Args:
             limit (Optional[int], optional): limit the number of unlocked external tasks to fetch. If set at most limit external tasks will be returned. Defaults to None.
+            topic (Optional[str], optional): limit the tasks to a specific topic.
 
         Raises:
             ValueError: the limits have illegal values
@@ -221,6 +233,8 @@ class CamundaClient:
             if limit < 1:
                 raise ValueError("The limit must not be smaller than 1!")
             params["maxResults"] = str(limit)
+        if topic:
+            params["topicName"] = topic
         response = requests.get(
             f"{self.base_url}/external-task",
             params=params,
@@ -432,7 +446,9 @@ class CamundaClient:
 
         return {k: v for k, v in instance_variables.items() if k in form_variables}
 
-    def get_task_local_variables(self, external_task_execution_id: str):
+    def get_task_local_variables(
+        self, external_task_execution_id: str
+    ) -> Dict[str, CamundaVariable[Any]]:
         """
         Gets all local variables of an external task
         :param external_task_execution_id: The execution_id of the external task
@@ -445,7 +461,9 @@ class CamundaClient:
         response.raise_for_status()
         return response.json()
 
-    def get_global_variable(self, name: str, process_instance_id: str):
+    def get_global_variable(
+        self, name: str, process_instance_id: str
+    ) -> Dict[str, CamundaVariable[Any]]:
         """
         Retrieves the global variable for a given name
         :param name: The global variable name

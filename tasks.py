@@ -231,6 +231,9 @@ def start_camunda(c, port=None):
     if not dot_env_path.exists():
         dot_env_path.touch()
     set_key(dot_env_path, "CAMUNDA_CONTAINER_ID", result_container_id)
+    print("\nUseful Links:")
+    print(f"http://localhost:{port}/")
+    print(f"http://localhost:{port}/swaggerui/")
 
 
 @task(stop_broker, stop_camunda)
