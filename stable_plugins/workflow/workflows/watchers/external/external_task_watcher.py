@@ -65,7 +65,7 @@ def execute_task(
         raise BadTaskDefinitionError(
             message=f"External task {external_task} has no execution id!"
         )
-    variables = camunda_client.get_task_local_variables(external_task.id)
+    variables = camunda_client.get_task_local_variables(external_task.execution_id)
     qhana_vars = {config["plugin_variable"], config["step_variable"]} - variables.keys()
     if len(qhana_vars) > 1:
         raise BadTaskDefinitionError(
