@@ -28,6 +28,7 @@ SERVICE_CONFIG_VARS = {
     "AWS_RUNTIME_HANDLER_ENDPOINT": "aws-runtime-handler",
     "TRANSFORMATION_FRAMEWORK_ENDPOINT": "transformation-framework",
     "CAMUNDA_ENDPOINT": "camunda",
+    "QHANA_BACKEND": "qhana-backend",
 }
 
 WORKFLOW_CONFIG_VARS = (
