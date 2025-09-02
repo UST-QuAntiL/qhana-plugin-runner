@@ -45,6 +45,9 @@ function registerMessageListener() {
             if (data != null && data.type === "autofill-response") {
                 onAutoFillResponse(data, window._qhana_microfrontend_state);
             }
+            if (data != null && data.type === "plugin-context") {
+                onPluginContextUpdate(data, window._qhana_microfrontend_state);
+            }
         }
     });
 }
@@ -200,6 +203,29 @@ function onAutoFillResponse(data) {
         }
         // TODO update file metadata
     })
+}
+
+/**
+ * Handle a aplugin-context message containing information about the context of the plugin UI.
+ *
+ * @param {{type: 'plugin-context', experimentId?: string, location?: string}} data 
+ * @param {{pluginContext?: {experimentId?: string, location?: string, [props: string]: unknown}}} state 
+ */
+function onPluginContextUpdate(data, state) {
+    const newContext = { ...data };
+    delete newContext.type;
+    state.pluginContext = newContext;
+}
+
+/**
+ * Get the current plugin context.
+ * 
+ * @returns {{experimentId?: string, location?: string, [props: string]: unknown}}
+ */
+function getPluginContext() {
+    const context = {};
+    Object.assign(context, window._qhana_microfrontend_state?.pluginContext ?? {});
+    return context;
 }
 
 /**

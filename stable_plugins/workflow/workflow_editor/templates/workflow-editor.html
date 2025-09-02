@@ -79,6 +79,15 @@
         <form method="dialog" id="openExisting" class="qhana-form">
             <div class="workflow-list">
             </div>
+        </form>
+        <div id="experimentWorkflows">
+            <h3>Load Workflow from current Experiment</h3>
+            <form method="dialog" id="openExisting" class="qhana-form">
+                <div class="workflow-list">
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="qhana-form">
             <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
         </form>
     </dialog>
@@ -171,6 +180,48 @@
 
             container.replaceChildren(...newChildren);
         });
+        const experimentWorkflowsWrapper = document.querySelector("#experimentWorkflows");
+        const experimentId = getPluginContext().experimentId;
+        if (experimentId) {
+            const params = new URLSearchParams();
+            params.set("data-type", "executable/workflow");
+            params.set("item-count", "100");
+            params.set("sort", "-1");
+            const experimentDataUrl = new URL(`/experiments/${experimentId}/data/?${params.toString()}`, "{{QHANA_BACKEND}}");
+            fetch(experimentDataUrl).then(response => response.json()).then(result => {
+                if (result.items.length <= 0) {
+                    experimentWorkflowsWrapper.setAttribute("hidden", "hidden");
+                }
+                const container = experimentWorkflowsWrapper.querySelector(".workflow-list");
+
+                const newChildren = result.items.map(workflow => {
+                    const outer = document.createElement("div");
+                    outer.classList.add("workflow-item")
+                    const inner = document.createElement("div");
+                    const title = document.createElement("p");
+                    title.classList.add("workflow-title");
+                    title.textContent = `${workflow["name"]}`;
+                    const subtitle = document.createElement("p");
+                    subtitle.classList.add("workflow-subtitle");
+                    subtitle.textContent = `version ${workflow["version"]}`;
+                    const button = document.createElement("button");
+                    button.setAttribute("value", `load-url:${workflow["download"]}`);
+                    button.setAttribute("type", "submit");
+                    button.classList.add("qhana-form-submit");
+                    button.textContent = `Load ${workflow["name"]}`;
+                    inner.appendChild(title);
+                    inner.appendChild(subtitle);
+                    outer.appendChild(inner);
+                    outer.appendChild(button);
+                    return outer;
+                });
+
+                container.replaceChildren(...newChildren);
+                experimentWorkflowsWrapper.removeAttribute("hidden");
+            });
+        } else {
+            experimentWorkflowsWrapper.setAttribute("hidden", "hidden");
+        }
         dialogElement.showModal();
     }
 
@@ -189,6 +240,16 @@
             const workflow_id = event.target.returnValue.substring(5);
             const base_url = "{{wf_list_url}}";
             const url = `${base_url}${workflow_id}/`
+            fetch(url).then(response => {
+                if (response.status === 200) {
+                    return response.text();
+                } else {
+                    throw Error("Could not load BPMN!");
+                }
+            }).then(bpmn => modeler.loadWorkflowDiagram(bpmn));
+        }
+        if (event.target.returnValue.startsWith("load-url:")) {
+            const url = event.target.returnValue.substring(9);
             fetch(url).then(response => {
                 if (response.status === 200) {
                     return response.text();
