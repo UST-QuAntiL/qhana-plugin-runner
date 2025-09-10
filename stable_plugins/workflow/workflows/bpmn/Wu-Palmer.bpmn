@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:process id="Process_1" name="Wu-Palmer_transformed" isExecutable="true">
+    <bpmn2:startEvent id="StartEvent_1">
+      <bpmn2:outgoing>Flow_0te61yd</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    <bpmn2:sequenceFlow id="Flow_0l241fn" sourceRef="Activity_0zibg0y" targetRef="Activity_021owtd" />
+    <bpmn2:serviceTask id="Activity_0zibg0y" name="Costume loader" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.costumeType">
+            <camunda:map>
+              <camunda:entry key="costumeType">plain</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dbHost">
+            <camunda:map>
+              <camunda:entry key="dbHost">plain</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dbUser">
+            <camunda:map>
+              <camunda:entry key="dbUser">plain</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dbPassword">
+            <camunda:map>
+              <camunda:entry key="dbPassword">plain</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dbDatabase">
+            <camunda:map>
+              <camunda:entry key="dbDatabase">plain</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">costume-loader</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Costume loader</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Loads all the costumes or base elements from the MUSE database.</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.costumes">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_1uqs69e</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0l241fn</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:serviceTask id="Activity_021owtd" name="Wu Palmer similarities" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">wu-palmer</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Wu Palmer similarities</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Compares elements and returns similarity values.</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.entitiesUrl">
+            <camunda:map>
+              <camunda:entry key="qoutput.costumes">dataType: entity/list</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.entitiesMetadataUrl">
+            <camunda:map>
+              <camunda:entry key="qoutput.costumes">dataType: entity/attribute-metadata</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.taxonomiesZipUrl">
+            <camunda:map>
+              <camunda:entry key="qoutput.costumes">dataType: graph/taxonomy</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:inputParameter name="qinput.attributes">
+            <camunda:map>
+              <camunda:entry key="attributes">plain</camunda:entry>
+            </camunda:map>
+          </camunda:inputParameter>
+          <camunda:outputParameter name="return.qoutput.wu_palmer">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0l241fn</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_1bi2u1v</bpmn2:outgoing>
+    </bpmn2:serviceTask>
+    <bpmn2:sequenceFlow id="Flow_0te61yd" sourceRef="StartEvent_1" targetRef="Activity_0v09yel" />
+    <bpmn2:sequenceFlow id="Flow_1uqs69e" sourceRef="Activity_0v09yel" targetRef="Activity_0zibg0y" />
+    <bpmn2:scriptTask id="Activity_0v09yel" name="Add constant inputs">
+      <bpmn2:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="costumeType">WITHOUT_BASE_ELEMENTS</camunda:outputParameter>
+          <camunda:outputParameter name="dbHost">localhost:1234</camunda:outputParameter>
+          <camunda:outputParameter name="dbUser">test</camunda:outputParameter>
+          <camunda:outputParameter name="dbPassword">test</camunda:outputParameter>
+          <camunda:outputParameter name="dbDatabase">KostuemRepo</camunda:outputParameter>
+          <camunda:outputParameter name="attributes">dominanteFarbe
+dominanterZustand
+dominanteCharaktereigenschaft
+dominanterAlterseindruck
+genre</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0te61yd</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_1uqs69e</bpmn2:outgoing>
+      <bpmn2:script></bpmn2:script>
+    </bpmn2:scriptTask>
+    <bpmn2:endEvent id="Event_0xqcz5t">
+      <bpmn2:incoming>Flow_1bi2u1v</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="Flow_1bi2u1v" sourceRef="Activity_021owtd" targetRef="Event_0xqcz5t" />
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="Activity_1cjicth_di" bpmnElement="Activity_0zibg0y">
+        <dc:Bounds x="86" y="0" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_17wlnze_di" bpmnElement="Activity_021owtd">
+        <dc:Bounds x="236" y="0" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="-178" y="22" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_146pewa_di" bpmnElement="Activity_0v09yel">
+        <dc:Bounds x="-90" y="0" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0xqcz5t_di" bpmnElement="Event_0xqcz5t">
+        <dc:Bounds x="392" y="22" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0l241fn_di" bpmnElement="Flow_0l241fn">
+        <di:waypoint x="186" y="40" />
+        <di:waypoint x="236" y="40" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0te61yd_di" bpmnElement="Flow_0te61yd">
+        <di:waypoint x="-142" y="40" />
+        <di:waypoint x="-90" y="40" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1uqs69e_di" bpmnElement="Flow_1uqs69e">
+        <di:waypoint x="10" y="40" />
+        <di:waypoint x="86" y="40" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1bi2u1v_di" bpmnElement="Flow_1bi2u1v">
+        <di:waypoint x="336" y="40" />
+        <di:waypoint x="392" y="40" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

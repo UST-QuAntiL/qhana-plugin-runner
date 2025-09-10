@@ -104,6 +104,9 @@
             },
             {
               "$ref": "#/components/messages/autofillResponse"
+            },
+            {
+              "$ref": "#/components/messages/pluginContext"
             }
           ]
         }
@@ -604,6 +607,36 @@
             "type",
             "value",
             "encoding"
+          ]
+        }
+      },
+      "pluginContext": {
+        "summary": "Additional context that may be sent to the plugin once loaded.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "plugin-context"
+            },
+            "experimentId": {
+              "type": "string",
+              "description": "The experiment ID as used in the QHAna backend."
+            },
+            "location": {
+              "type": "string",
+              "description": "The location the plugin UI is embedded in.",
+              "examples": [
+                "navigation",
+                "workspace",
+                "experiment-navigation",
+                "timeline-step",
+                "data-preview"
+              ]
+            }
+          },
+          "required": [
+            "type"
           ]
         }
       }

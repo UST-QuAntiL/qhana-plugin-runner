@@ -19,11 +19,12 @@ class FormInputConfig(TypedDict):
 
 class WorkflowConfig(TypedDict):
     workflow_error_prefix: str
-    plugin_task_topic: str
-    plugin_variable: str
     legacy_plugin_task_topic_prefix: str
-    step_task_topic: str
     legacy_step_topic_prefix: str
+    disable_legacy_support: bool
+    qhana_task_topic: str
+    plugin_variable: str
+    plugin_version_variable: str
     step_variable: str
     task_input_variable_prefix: str
     task_output_variable_prefix: str
@@ -109,12 +110,13 @@ def get_config(app: Flask | None = None) -> WorkflowPluginConfig:
 
     workflow_conf: WorkflowConfig = {
         "workflow_error_prefix": "qhana",
+        "disable_legacy_support": False,
         "legacy_plugin_task_topic_prefix": "plugin",
         "legacy_step_topic_prefix": "plugin-step",
-        "plugin_task_topic": "qhana-plugin-task",
-        "step_task_topic": "qhana-plugin-step-task",
-        "plugin_variable": "qhana-plugin",
-        "step_variable": "qhana-plugin-step",
+        "qhana_task_topic": "qhana-task",
+        "plugin_variable": "qhanaPlugin",
+        "plugin_version_variable": "qhanaPluginVersion",
+        "step_variable": "qhanaPluginStep",
         "task_output_variable_prefix": "qoutput",
         "task_input_variable_prefix": "qinput",
         "prefix_separator": ".",
