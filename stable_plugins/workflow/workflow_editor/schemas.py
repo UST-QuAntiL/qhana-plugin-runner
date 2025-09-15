@@ -36,9 +36,10 @@ class WorkflowSaveParamsSchema(MaBaseSchema):
     deploy = ma.fields.String(
         required=False,
         missing="",
-        validate=OneOf(choices=("", "workflow", "plugin")),
+        validate=OneOf(choices=("", "workflow", "plugin", "ui-template")),
         description=(
             "Set to 'plugin' to save and deploy workflow as a QHAna plugin. "
-            "Set to 'workflow' to save and deploy workflow to camunda only."
+            "Set to 'workflow' to save and deploy workflow to camunda only. "
+            "Set to 'ui-template' to turn the wokflow into a UI Templatefor QHAna."
         ),
     )

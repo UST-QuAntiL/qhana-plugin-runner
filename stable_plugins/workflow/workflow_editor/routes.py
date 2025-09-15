@@ -200,7 +200,9 @@ class WorkflowListView(MethodView):
     @WF_EDITOR_BLP.response(HTTPStatus.OK, WorkflowSchema())
     @WF_EDITOR_BLP.require_jwt("jwt", optional=True)
     def post(
-        self, autosave: bool = False, deploy: Literal["", "plugin", "workflow"] = ""
+        self,
+        autosave: bool = False,
+        deploy: Literal["", "plugin", "workflow", "ui-template"] = "",
     ):
         plugin = WorkflowEditor.instance
         if plugin is None:

@@ -12,7 +12,12 @@ from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
 from . import plugin
-from .config import CONFIG_KEY, get_config_from_registry, WF_STATE_KEY
+from .config import CONFIG_KEY, WF_STATE_KEY, get_config_from_registry
+from .parser import (
+    ad_hoc_group_to_template_tab,
+    get_ad_hoc_tree,
+    split_ui_template_workflow,
+)
 from .util import extract_wf_properties
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -43,7 +48,7 @@ def deploy_workflow(
     self,
     workflow_url: str,
     workflow_id,
-    deploy_as: Literal["plugin", "workflow"] = "plugin",
+    deploy_as: Literal["plugin", "workflow", "ui-template"] = "plugin",
 ):
     if deploy_as == "plugin":
         with PLUGIN_REGISTRY_CLIENT as client:
@@ -82,6 +87,30 @@ def deploy_workflow(
             files={id_: (secure_filename(name + ".bpmn"), bpmn, "application/xml")},
             timeout=30,
         )
+    elif deploy_as == "ui-template":
+        plugin_instance = plugin.WorkflowEditor.instance
+        if not plugin_instance:
+            return  # TODO: log an error??
+
+        bpmn = DataBlob.get_value(plugin_instance.name, workflow_id, default=None)
+        if not bpmn:
+            return  # TODO: log an error??
+
+        bpmn, *child_workflows = split_ui_template_workflow(bpmn)
+
+        if child_workflows:
+            # TODO implement!
+            raise NotImplementedError(
+                "Deploying extracted worflows as plugins is not implemented yet."
+            )
+
+        ad_hoc_tree = get_ad_hoc_tree()
+
+        # TODO deploy template
+        for group in ad_hoc_tree:
+            ui_template_tab = ad_hoc_group_to_template_tab(group)
+
+        raise NotImplementedError()
 
 
 @CELERY.task()
