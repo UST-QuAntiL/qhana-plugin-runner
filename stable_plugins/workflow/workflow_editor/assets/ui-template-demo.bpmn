@@ -13,12 +13,12 @@
       </bpmn2:extensionElements>
       <bpmn2:incoming>Flow_1o3tflh</bpmn2:incoming>
       <bpmn2:outgoing>Flow_1hewdoz</bpmn2:outgoing>
-      <qhana:qHAnaServiceTask id="Activity_0ijica6" name="Data Creation" qhanaIdentifier="data-creator" qhanaVersion="v0.2.3" qhanaName="Data Creation" qhanaDescription="A plugin to create datasets." selectedConfigurationId="data-creator">
+      <qhana:qHAnaServiceTask id="Activity_0ijica6" name="Data Creation" qhanaIdentifier="data-creator" qhanaVersion="" qhanaName="Data Creation" qhanaDescription="A plugin to create datasets." selectedConfigurationId="data-creator">
         <bpmn2:extensionElements>
           <camunda:inputOutput />
         </bpmn2:extensionElements>
       </qhana:qHAnaServiceTask>
-      <qhana:qHAnaServiceTask id="Activity_0cplvzy" name="data-join" qhanaIdentifier="data-join" qhanaVersion="v1.0.0" qhanaName="data-join" qhanaDescription="Join data from multiple entity files." selectedConfigurationId="data-join">
+      <qhana:qHAnaServiceTask id="Activity_0cplvzy" name="data-join" qhanaIdentifier="data-join" qhanaVersion="" qhanaName="data-join" qhanaDescription="Join data from multiple entity files." selectedConfigurationId="data-join">
         <bpmn2:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="qinput.input_0">

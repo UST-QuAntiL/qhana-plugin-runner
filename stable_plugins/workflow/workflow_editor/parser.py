@@ -145,9 +145,10 @@ class ParsedWorkflow:
 
 @dataclass()
 class UiTemplateTaskGroup:
-    element: ActivityLike
+    element: ActivityLike | GateLike
     outgoing: List["UiTemplateTaskGroup"] = field(default_factory=list)
     children: List["UiTemplateTaskGroup"] = field(default_factory=list)
+    plugin_filter: Optional[dict] = None
 
     @property
     def id_(self) -> str:
@@ -169,6 +170,8 @@ class UiTemplateTaskGroup:
             outgoing = f", → {len(self.outgoing)}: "
             outgoing += " ".join(g.id_ for g in self.outgoing)
         text = f"{self.name} ({self.id_}{outgoing})"
+        if self.plugin_filter:
+            text += f"\n> {self.plugin_filter}"
         if self.children:
             text += "\n"
             text += indent("\n".join(str(c) for c in self.children), "    ")
@@ -264,6 +267,7 @@ def _extract_groups(  # noqa: C901
                 current_group = groups_by_id[element.id_]
             else:
                 current_group = UiTemplateTaskGroup(element)
+                _fill_plugin_filter(current_group)
                 groups_by_id[element.id_] = current_group
                 groups_flat.append(current_group)
             if predecessor:
@@ -283,6 +287,33 @@ def _extract_groups(  # noqa: C901
             )
 
     return groups_flat
+
+
+def _fill_plugin_filter(group: UiTemplateTaskGroup):
+    if not isinstance(group.element, ActivityLike):
+        return
+    if group.element.type_ != BPMN.adHocSubProcess:
+        return
+    children = group.element.children
+
+    plugin_filter = {"or": []}
+
+    for child in children:
+        assert isinstance(child, ActivityLike)
+        assert child.type_ in (QHANA.serviceTask, BPMN.serviceTask)
+        match child.xml.attrib:
+            case {"qhanaIdentifier": identifier, "qhanaVersion": version} if (
+                identifier.strip() and version.strip()
+            ):
+                plugin_filter["or"].append({"id": f"{identifier}@{version}"})
+            case {"qhanaIdentifier": identifier} if identifier.strip():
+                plugin_filter["or"].append({"id": identifier})
+            case {"qhanaName": name} if name.strip():
+                plugin_filter["or"].append({"name": name})
+            case _:
+                print(child.xml.attrib)
+
+    group.plugin_filter = plugin_filter
 
 
 def ad_hoc_group_to_template_tab(goup: UiTemplateTaskGroup):
