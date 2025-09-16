@@ -1,47 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:qhana="https://github.com/qhana" xmlns:dataflow="https://github.com/data/transformation" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
-  <bpmn2:process id="demo_process_a" name="UI Template Test A_transformed" isExecutable="true" camunda:versionTag="1">
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:process id="demo_process_a" name="UI Template Test A_transformed" isExecutable="false" camunda:versionTag="2">
     <bpmn2:sequenceFlow id="Flow_1o3tflh" sourceRef="Event_0lvt0l1" targetRef="Activity_1tx3uir" />
     <bpmn2:startEvent id="Event_0lvt0l1">
       <bpmn2:outgoing>Flow_1o3tflh</bpmn2:outgoing>
     </bpmn2:startEvent>
-    <bpmn2:adHocSubProcess id="Activity_1tx3uir" name="Preprocessing">
-      <bpmn2:extensionElements>
-        <camunda:properties>
-          <camunda:property name="icon" value="gear" />
-        </camunda:properties>
-      </bpmn2:extensionElements>
-      <bpmn2:incoming>Flow_1o3tflh</bpmn2:incoming>
-      <bpmn2:outgoing>Flow_1hewdoz</bpmn2:outgoing>
-      <qhana:qHAnaServiceTask id="Activity_0ijica6" name="Data Creation" qhanaIdentifier="data-creator" qhanaVersion="" qhanaName="Data Creation" qhanaDescription="A plugin to create datasets." selectedConfigurationId="data-creator">
-        <bpmn2:extensionElements>
-          <camunda:inputOutput />
-        </bpmn2:extensionElements>
-      </qhana:qHAnaServiceTask>
-      <qhana:qHAnaServiceTask id="Activity_0cplvzy" name="data-join" qhanaIdentifier="data-join" qhanaVersion="" qhanaName="data-join" qhanaDescription="Join data from multiple entity files." selectedConfigurationId="data-join">
-        <bpmn2:extensionElements>
-          <camunda:inputOutput>
-            <camunda:inputParameter name="qinput.input_0">
-              <camunda:map>
-                <camunda:entry key="value" />
-                <camunda:entry key="dataType">entity/*</camunda:entry>
-                <camunda:entry key="required">"true"</camunda:entry>
-                <camunda:entry key="parameter">base</camunda:entry>
-                <camunda:entry key="contentType">["text/csv","application/json"]</camunda:entry>
-              </camunda:map>
-            </camunda:inputParameter>
-            <camunda:outputParameter name="data-join_output">${result}</camunda:outputParameter>
-          </camunda:inputOutput>
-        </bpmn2:extensionElements>
-        <bpmn2:dataOutputAssociation id="DataOutputAssociation_19lm258">
-          <bpmn2:targetRef>DataMapObject_127smsi</bpmn2:targetRef>
-        </bpmn2:dataOutputAssociation>
-      </qhana:qHAnaServiceTask>
-      <dataflow:dataMapObject id="DataMapObject_127smsi" name="data-join_output" dataObjectRef="DataObject_0m4uqvv">
-        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
-      </dataflow:dataMapObject>
-      <bpmn2:dataObject id="DataObject_0m4uqvv" />
-    </bpmn2:adHocSubProcess>
     <bpmn2:sequenceFlow id="Flow_1hewdoz" sourceRef="Activity_1tx3uir" targetRef="Gateway_1swwknq" />
     <bpmn2:parallelGateway id="Gateway_1swwknq">
       <bpmn2:incoming>Flow_1hewdoz</bpmn2:incoming>
@@ -49,49 +12,7 @@
       <bpmn2:outgoing>Flow_1qg6eac</bpmn2:outgoing>
     </bpmn2:parallelGateway>
     <bpmn2:sequenceFlow id="Flow_0r33mm2" sourceRef="Gateway_1swwknq" targetRef="Activity_1d54zbf" />
-    <bpmn2:adHocSubProcess id="Activity_1d54zbf" name="Hello World">
-      <bpmn2:extensionElements>
-        <camunda:properties>
-          <camunda:property name="icon" value="user" />
-        </camunda:properties>
-      </bpmn2:extensionElements>
-      <bpmn2:incoming>Flow_0r33mm2</bpmn2:incoming>
-      <bpmn2:outgoing>Flow_0exyavr</bpmn2:outgoing>
-      <qhana:qHAnaServiceTask id="Activity_1brxgqt" name="hello-world" qhanaIdentifier="hello-world" qhanaVersion="v0.2.1" qhanaName="hello-world" qhanaDescription="Tests the connection of all components by printing some text." selectedConfigurationId="hello-world">
-        <bpmn2:extensionElements>
-          <camunda:inputOutput>
-            <camunda:outputParameter name="hello-world_output">${result}</camunda:outputParameter>
-          </camunda:inputOutput>
-        </bpmn2:extensionElements>
-        <bpmn2:dataOutputAssociation id="DataOutputAssociation_1ewpyoo">
-          <bpmn2:targetRef>DataMapObject_0473gqd</bpmn2:targetRef>
-        </bpmn2:dataOutputAssociation>
-      </qhana:qHAnaServiceTask>
-      <dataflow:dataMapObject id="DataMapObject_0473gqd" name="hello-world_output" dataObjectRef="DataObject_0y5oy7t">
-        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
-      </dataflow:dataMapObject>
-      <bpmn2:dataObject id="DataObject_0y5oy7t" />
-    </bpmn2:adHocSubProcess>
     <bpmn2:sequenceFlow id="Flow_1qg6eac" sourceRef="Gateway_1swwknq" targetRef="Activity_01ra8h5" />
-    <bpmn2:adHocSubProcess id="Activity_01ra8h5" name="Run Circuit">
-      <bpmn2:incoming>Flow_1qg6eac</bpmn2:incoming>
-      <bpmn2:outgoing>Flow_0gkje2f</bpmn2:outgoing>
-      <qhana:qHAnaServiceTask id="Activity_02452g6" name="circuit-demo" qhanaIdentifier="circuit-demo" qhanaVersion="v1.0.1" qhanaName="circuit-demo" qhanaDescription="A demo plugin implementing circuits for the bell states and executing them using a circuit executor." selectedConfigurationId="circuit-demo">
-        <bpmn2:extensionElements>
-          <camunda:inputOutput>
-            <camunda:outputParameter name="circuit-demo_output">${result}</camunda:outputParameter>
-          </camunda:inputOutput>
-        </bpmn2:extensionElements>
-        <bpmn2:dataOutputAssociation id="DataOutputAssociation_07jygmf">
-          <bpmn2:targetRef>DataMapObject_1cbin3j</bpmn2:targetRef>
-        </bpmn2:dataOutputAssociation>
-      </qhana:qHAnaServiceTask>
-      <dataflow:dataMapObject id="DataMapObject_1cbin3j" name="circuit-demo_output" dataObjectRef="DataObject_1twia6v">
-        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
-        <dataflow:keyValueEntry name="qoutput.output_1" value="${output}" />
-      </dataflow:dataMapObject>
-      <bpmn2:dataObject id="DataObject_1twia6v" />
-    </bpmn2:adHocSubProcess>
     <bpmn2:sequenceFlow id="Flow_0exyavr" sourceRef="Activity_1d54zbf" targetRef="Activity_17x79qw" />
     <bpmn2:subProcess id="Activity_17x79qw" name="Encoding">
       <bpmn2:incoming>Flow_0exyavr</bpmn2:incoming>
@@ -106,10 +27,29 @@
         <bpmn2:outgoing>Flow_0acfwk2</bpmn2:outgoing>
       </bpmn2:exclusiveGateway>
       <bpmn2:sequenceFlow id="Flow_1oojth0" sourceRef="Event_1c575hp" targetRef="Gateway_0y8kls3" />
+      <bpmn2:sequenceFlow id="Flow_0acfwk2" sourceRef="Gateway_0y8kls3" targetRef="Activity_1uvtkfm" />
+      <bpmn2:exclusiveGateway id="Gateway_0hkz3j2">
+        <bpmn2:incoming>Flow_1xi7htk</bpmn2:incoming>
+        <bpmn2:incoming>Flow_1ekrrz0</bpmn2:incoming>
+        <bpmn2:outgoing>Flow_0u799cf</bpmn2:outgoing>
+      </bpmn2:exclusiveGateway>
+      <bpmn2:sequenceFlow id="Flow_1xi7htk" sourceRef="Activity_0fidcut" targetRef="Gateway_0hkz3j2" />
+      <bpmn2:sequenceFlow id="Flow_1ekrrz0" sourceRef="Activity_1uvtkfm" targetRef="Gateway_0hkz3j2" />
+      <bpmn2:endEvent id="Event_1xxbase">
+        <bpmn2:incoming>Flow_0u799cf</bpmn2:incoming>
+      </bpmn2:endEvent>
+      <bpmn2:sequenceFlow id="Flow_0u799cf" sourceRef="Gateway_0hkz3j2" targetRef="Event_1xxbase" />
       <bpmn2:adHocSubProcess id="Activity_0fidcut" name="Encoding A">
         <bpmn2:incoming>Flow_1fkufd8</bpmn2:incoming>
         <bpmn2:outgoing>Flow_1xi7htk</bpmn2:outgoing>
-        <qhana:qHAnaServiceTask id="Activity_1c86evo" name="One-Hot Encoding" qhanaIdentifier="one-hot-encoding" qhanaVersion="v0.2.1" qhanaName="One-Hot Encoding" qhanaDescription="Converts Data to One-Hot Encodings" selectedConfigurationId="one-hot-encoding">
+        <bpmn2:dataObjectReference id="DataMapObject_1orkfqu" name="One-Hot_Encoding_output" dataObjectRef="DataObject_1itmvad">
+          <bpmn2:documentation>
+ 
+ Replaced DataMapObject, represents the following data: 
+{"qoutput.output_0":"${output}"}</bpmn2:documentation>
+        </bpmn2:dataObjectReference>
+        <bpmn2:dataObject id="DataObject_1itmvad" />
+        <bpmn2:serviceTask id="Activity_1c86evo" name="One-Hot Encoding" camunda:type="external" camunda:topic="qhana-task">
           <bpmn2:extensionElements>
             <camunda:inputOutput>
               <camunda:inputParameter name="qinput.input_0">
@@ -139,23 +79,29 @@
                   <camunda:entry key="contentType">["application/json"]</camunda:entry>
                 </camunda:map>
               </camunda:inputParameter>
+              <camunda:inputParameter name="qhanaPlugin">one-hot-encoding</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaName">One-Hot Encoding</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaDescription">Converts Data to One-Hot Encodings</camunda:inputParameter>
               <camunda:outputParameter name="One-Hot_Encoding_output">${result}</camunda:outputParameter>
             </camunda:inputOutput>
           </bpmn2:extensionElements>
           <bpmn2:dataOutputAssociation id="DataOutputAssociation_0qz2jje">
             <bpmn2:targetRef>DataMapObject_1orkfqu</bpmn2:targetRef>
           </bpmn2:dataOutputAssociation>
-        </qhana:qHAnaServiceTask>
-        <dataflow:dataMapObject id="DataMapObject_1orkfqu" name="One-Hot_Encoding_output" dataObjectRef="DataObject_0gever4">
-          <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
-        </dataflow:dataMapObject>
-        <bpmn2:dataObject id="DataObject_0gever4" />
+        </bpmn2:serviceTask>
       </bpmn2:adHocSubProcess>
-      <bpmn2:sequenceFlow id="Flow_0acfwk2" sourceRef="Gateway_0y8kls3" targetRef="Activity_1uvtkfm" />
       <bpmn2:adHocSubProcess id="Activity_1uvtkfm" name="Encoding B">
         <bpmn2:incoming>Flow_0acfwk2</bpmn2:incoming>
         <bpmn2:outgoing>Flow_1ekrrz0</bpmn2:outgoing>
-        <qhana:qHAnaServiceTask id="Activity_1wgb0ms" name="Multidimensional Scaling (MDS)" qhanaIdentifier="mds" qhanaVersion="v0.2.1" qhanaName="Multidimensional Scaling (MDS)" qhanaDescription="Converts distance values (distance matrix) to points in a space." selectedConfigurationId="mds">
+        <bpmn2:dataObjectReference id="DataMapObject_1vvywk9" name="Multidimensional_Scaling_(MDS)_output" dataObjectRef="DataObject_1hmqheq">
+          <bpmn2:documentation>
+ 
+ Replaced DataMapObject, represents the following data: 
+{"qoutput.output_0":"${output}"}</bpmn2:documentation>
+        </bpmn2:dataObjectReference>
+        <bpmn2:dataObject id="DataObject_1hmqheq" />
+        <bpmn2:serviceTask id="Activity_1wgb0ms" name="Multidimensional Scaling (MDS)" camunda:type="external" camunda:topic="qhana-task">
           <bpmn2:extensionElements>
             <camunda:inputOutput>
               <camunda:inputParameter name="qinput.input_0">
@@ -167,29 +113,18 @@
                   <camunda:entry key="contentType">["application/json"]</camunda:entry>
                 </camunda:map>
               </camunda:inputParameter>
+              <camunda:inputParameter name="qhanaPlugin">mds</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaName">Multidimensional Scaling (MDS)</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaDescription">Converts distance values (distance matrix) to points in a space.</camunda:inputParameter>
               <camunda:outputParameter name="Multidimensional_Scaling_(MDS)_output">${result}</camunda:outputParameter>
             </camunda:inputOutput>
           </bpmn2:extensionElements>
           <bpmn2:dataOutputAssociation id="DataOutputAssociation_1evew1r">
             <bpmn2:targetRef>DataMapObject_1vvywk9</bpmn2:targetRef>
           </bpmn2:dataOutputAssociation>
-        </qhana:qHAnaServiceTask>
-        <dataflow:dataMapObject id="DataMapObject_1vvywk9" name="Multidimensional_Scaling_(MDS)_output" dataObjectRef="DataObject_0xgp8ou">
-          <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
-        </dataflow:dataMapObject>
-        <bpmn2:dataObject id="DataObject_0xgp8ou" />
+        </bpmn2:serviceTask>
       </bpmn2:adHocSubProcess>
-      <bpmn2:exclusiveGateway id="Gateway_0hkz3j2">
-        <bpmn2:incoming>Flow_1xi7htk</bpmn2:incoming>
-        <bpmn2:incoming>Flow_1ekrrz0</bpmn2:incoming>
-        <bpmn2:outgoing>Flow_0u799cf</bpmn2:outgoing>
-      </bpmn2:exclusiveGateway>
-      <bpmn2:sequenceFlow id="Flow_1xi7htk" sourceRef="Activity_0fidcut" targetRef="Gateway_0hkz3j2" />
-      <bpmn2:sequenceFlow id="Flow_1ekrrz0" sourceRef="Activity_1uvtkfm" targetRef="Gateway_0hkz3j2" />
-      <bpmn2:endEvent id="Event_1xxbase">
-        <bpmn2:incoming>Flow_0u799cf</bpmn2:incoming>
-      </bpmn2:endEvent>
-      <bpmn2:sequenceFlow id="Flow_0u799cf" sourceRef="Gateway_0hkz3j2" targetRef="Event_1xxbase" />
     </bpmn2:subProcess>
     <bpmn2:sequenceFlow id="Flow_1qtpnre" sourceRef="Activity_17x79qw" targetRef="Gateway_0lxzxw9" />
     <bpmn2:parallelGateway id="Gateway_0lxzxw9">
@@ -202,192 +137,283 @@
       <bpmn2:incoming>Flow_1jbhgw8</bpmn2:incoming>
     </bpmn2:endEvent>
     <bpmn2:sequenceFlow id="Flow_1jbhgw8" sourceRef="Gateway_0lxzxw9" targetRef="Event_05d5s13" />
+    <bpmn2:adHocSubProcess id="Activity_1tx3uir" name="Preprocessing">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="gear" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_1o3tflh</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_1hewdoz</bpmn2:outgoing>
+      <bpmn2:dataObjectReference id="DataMapObject_127smsi" name="data-join_output" dataObjectRef="DataObject_0pzf5pg">
+        <bpmn2:documentation>
+ 
+ Replaced DataMapObject, represents the following data: 
+{"qoutput.output_0":"${output}"}</bpmn2:documentation>
+      </bpmn2:dataObjectReference>
+      <bpmn2:dataObject id="DataObject_0pzf5pg" />
+      <bpmn2:serviceTask id="Activity_0ijica6" name="Data Creation" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn2:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">data-creator</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion" />
+            <camunda:inputParameter name="qhanaName">Data Creation</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaDescription">A plugin to create datasets.</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn2:extensionElements>
+      </bpmn2:serviceTask>
+      <bpmn2:serviceTask id="Activity_0cplvzy" name="data-join" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn2:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qinput.input_0">
+              <camunda:map>
+                <camunda:entry key="value" />
+                <camunda:entry key="dataType">entity/*</camunda:entry>
+                <camunda:entry key="required">"true"</camunda:entry>
+                <camunda:entry key="parameter">base</camunda:entry>
+                <camunda:entry key="contentType">["text/csv","application/json"]</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPlugin">data-join</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion" />
+            <camunda:inputParameter name="qhanaName">data-join</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaDescription">Join data from multiple entity files.</camunda:inputParameter>
+            <camunda:outputParameter name="data-join_output">${result}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn2:extensionElements>
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_19lm258">
+          <bpmn2:targetRef>DataMapObject_127smsi</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </bpmn2:serviceTask>
+    </bpmn2:adHocSubProcess>
+    <bpmn2:adHocSubProcess id="Activity_1d54zbf" name="Hello World">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="user" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0r33mm2</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0exyavr</bpmn2:outgoing>
+      <bpmn2:dataObjectReference id="DataMapObject_0473gqd" name="hello-world_output" dataObjectRef="DataObject_0j7b02g">
+        <bpmn2:documentation>
+ 
+ Replaced DataMapObject, represents the following data: 
+{"qoutput.output_0":"${output}"}</bpmn2:documentation>
+      </bpmn2:dataObjectReference>
+      <bpmn2:dataObject id="DataObject_0j7b02g" />
+      <bpmn2:serviceTask id="Activity_1brxgqt" name="hello-world" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn2:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">hello-world</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaDescription">Tests the connection of all components by printing some text.</camunda:inputParameter>
+            <camunda:outputParameter name="hello-world_output">${result}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn2:extensionElements>
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_1ewpyoo">
+          <bpmn2:targetRef>DataMapObject_0473gqd</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </bpmn2:serviceTask>
+    </bpmn2:adHocSubProcess>
+    <bpmn2:adHocSubProcess id="Activity_01ra8h5" name="Run Circuit">
+      <bpmn2:incoming>Flow_1qg6eac</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0gkje2f</bpmn2:outgoing>
+      <bpmn2:dataObjectReference id="DataMapObject_1cbin3j" name="circuit-demo_output" dataObjectRef="DataObject_10ay5nl">
+        <bpmn2:documentation>
+ 
+ Replaced DataMapObject, represents the following data: 
+{"qoutput.output_0":"${output}","qoutput.output_1":"${output}"}</bpmn2:documentation>
+      </bpmn2:dataObjectReference>
+      <bpmn2:dataObject id="DataObject_10ay5nl" />
+      <bpmn2:serviceTask id="Activity_02452g6" name="circuit-demo" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn2:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">circuit-demo</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion">v1.0.1</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">circuit-demo</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaDescription">A demo plugin implementing circuits for the bell states and executing them using a circuit executor.</camunda:inputParameter>
+            <camunda:outputParameter name="circuit-demo_output">${result}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn2:extensionElements>
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_07jygmf">
+          <bpmn2:targetRef>DataMapObject_1cbin3j</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </bpmn2:serviceTask>
+    </bpmn2:adHocSubProcess>
   </bpmn2:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="demo_process_a">
       <bpmndi:BPMNShape id="Event_0lvt0l1_di" bpmnElement="Event_0lvt0l1">
-        <dc:Bounds x="0" y="202" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_07mj28k_di" bpmnElement="Activity_1tx3uir" isExpanded="true">
-        <dc:Bounds x="86" y="70" width="350" height="300" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_09kb8my_di" bpmnElement="Activity_0ijica6">
-        <dc:Bounds x="131" y="142" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_13t7uk1_di" bpmnElement="Activity_0cplvzy">
-        <dc:Bounds x="281" y="142" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="DataMapObject_127smsi_di" bpmnElement="DataMapObject_127smsi">
-        <dc:Bounds x="313" y="257" width="36" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="291" y="314" width="80" height="14" />
-        </bpmndi:BPMNLabel>
+        <dc:Bounds x="0" y="307" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_0uqgib7_di" bpmnElement="Gateway_1swwknq">
-        <dc:Bounds x="486" y="195" width="50" height="50" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1mktxbe_di" bpmnElement="Activity_1d54zbf" isExpanded="true">
-        <dc:Bounds x="586" y="135" width="230" height="170" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1uuhruw_di" bpmnElement="Activity_1brxgqt">
-        <dc:Bounds x="616" y="185" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="DataMapObject_0473gqd_di" bpmnElement="DataMapObject_0473gqd">
-        <dc:Bounds x="748" y="200" width="36" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="735" y="257" width="63" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1pxjytc_di" bpmnElement="Activity_01ra8h5" isExpanded="true">
-        <dc:Bounds x="1117" y="490" width="350" height="158" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1kmcvwl_di" bpmnElement="Activity_02452g6">
-        <dc:Bounds x="1137" y="520" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="DataMapObject_1cbin3j_di" bpmnElement="DataMapObject_1cbin3j">
-        <dc:Bounds x="1279" y="535" width="36" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1265" y="592" width="65" height="27" />
-        </bpmndi:BPMNLabel>
+        <dc:Bounds x="366" y="300" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_18aofq2_di" bpmnElement="Activity_17x79qw" isExpanded="true">
-        <dc:Bounds x="866" y="0" width="852" height="440" />
+        <dc:Bounds x="746" y="80" width="832" height="440" />
         <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_1c575hp_di" bpmnElement="Event_1c575hp">
-        <dc:Bounds x="966" y="107" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_0y8kls3_di" bpmnElement="Gateway_0y8kls3" isMarkerVisible="true">
-        <dc:Bounds x="1052" y="100" width="50" height="50" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1lp5f09_di" bpmnElement="Activity_0fidcut" isExpanded="true">
-        <dc:Bounds x="1152" y="50" width="350" height="150" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_06axtk3_di" bpmnElement="Activity_1c86evo">
-        <dc:Bounds x="1172" y="70" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="DataMapObject_1orkfqu_di" bpmnElement="DataMapObject_1orkfqu">
-        <dc:Bounds x="1334" y="85" width="36" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1308" y="142" width="88" height="40" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_1ivh272_di" bpmnElement="Activity_1uvtkfm" isExpanded="true">
-        <dc:Bounds x="1152" y="250" width="350" height="180" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Activity_17vbcul_di" bpmnElement="Activity_1wgb0ms">
-        <dc:Bounds x="1172" y="300" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="DataMapObject_1vvywk9_di" bpmnElement="DataMapObject_1vvywk9">
-        <dc:Bounds x="1384" y="315" width="36" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1359" y="372" width="87" height="40" />
-        </bpmndi:BPMNLabel>
+        <dc:Bounds x="1032" y="205" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_0hkz3j2_di" bpmnElement="Gateway_0hkz3j2" isMarkerVisible="true">
-        <dc:Bounds x="1552" y="100" width="50" height="50" />
+        <dc:Bounds x="1412" y="205" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_1xxbase_di" bpmnElement="Event_1xxbase">
-        <dc:Bounds x="1652" y="107" width="36" height="36" />
+        <dc:Bounds x="1512" y="212" width="36" height="36" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1c575hp_di" bpmnElement="Event_1c575hp">
+        <dc:Bounds x="852" y="212" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0asebqz_di" bpmnElement="Activity_0fidcut" isExpanded="true">
+        <dc:Bounds x="1130" y="120" width="232" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0m9q6g7_di" bpmnElement="Activity_1c86evo">
+        <dc:Bounds x="1150" y="150" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectReference_1emp92v_di" bpmnElement="DataMapObject_1orkfqu">
+        <dc:Bounds x="1282" y="185" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1256" y="242" width="88" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_0qz2jje_di" bpmnElement="DataOutputAssociation_0qz2jje">
+        <di:waypoint x="1250" y="200" />
+        <di:waypoint x="1282" y="206" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Activity_1eilkgc_di" bpmnElement="Activity_1uvtkfm" isExpanded="true">
+        <dc:Bounds x="1130" y="310" width="232" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1qmtq0y_di" bpmnElement="Activity_1wgb0ms">
+        <dc:Bounds x="1150" y="340" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectReference_19bp5ze_di" bpmnElement="DataMapObject_1vvywk9">
+        <dc:Bounds x="1282" y="395" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1257" y="452" width="87" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1evew1r_di" bpmnElement="DataOutputAssociation_1evew1r">
+        <di:waypoint x="1250" y="400" />
+        <di:waypoint x="1282" y="413" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1fkufd8_di" bpmnElement="Flow_1fkufd8">
-        <di:waypoint x="1102" y="125" />
-        <di:waypoint x="1152" y="125" />
+        <di:waypoint x="1082" y="230" />
+        <di:waypoint x="1130" y="230" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1oojth0_di" bpmnElement="Flow_1oojth0">
-        <di:waypoint x="1002" y="125" />
-        <di:waypoint x="1052" y="125" />
+        <di:waypoint x="888" y="230" />
+        <di:waypoint x="1032" y="230" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0acfwk2_di" bpmnElement="Flow_0acfwk2">
-        <di:waypoint x="1077" y="150" />
-        <di:waypoint x="1077" y="340" />
-        <di:waypoint x="1152" y="340" />
+        <di:waypoint x="1057" y="255" />
+        <di:waypoint x="1057" y="405" />
+        <di:waypoint x="1130" y="405" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1xi7htk_di" bpmnElement="Flow_1xi7htk">
-        <di:waypoint x="1502" y="125" />
-        <di:waypoint x="1552" y="125" />
+        <di:waypoint x="1362" y="230" />
+        <di:waypoint x="1412" y="230" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1ekrrz0_di" bpmnElement="Flow_1ekrrz0">
-        <di:waypoint x="1502" y="340" />
-        <di:waypoint x="1577" y="340" />
-        <di:waypoint x="1577" y="150" />
+        <di:waypoint x="1362" y="405" />
+        <di:waypoint x="1437" y="405" />
+        <di:waypoint x="1437" y="255" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0u799cf_di" bpmnElement="Flow_0u799cf">
-        <di:waypoint x="1602" y="125" />
-        <di:waypoint x="1652" y="125" />
+        <di:waypoint x="1462" y="230" />
+        <di:waypoint x="1512" y="230" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Gateway_1qju4cp_di" bpmnElement="Gateway_0lxzxw9">
-        <dc:Bounds x="1768" y="195" width="50" height="50" />
+        <dc:Bounds x="1628" y="300" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_05d5s13_di" bpmnElement="Event_05d5s13">
-        <dc:Bounds x="1868" y="202" width="36" height="36" />
+        <dc:Bounds x="1728" y="307" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_1o3tflh_di" bpmnElement="Flow_1o3tflh">
-        <di:waypoint x="36" y="220" />
-        <di:waypoint x="86" y="220" />
-      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Activity_0adipiq_di" bpmnElement="Activity_1tx3uir" isExpanded="true">
+        <dc:Bounds x="86" y="135" width="230" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_14pn8q1_di" bpmnElement="Activity_0ijica6">
+        <dc:Bounds x="150" y="195" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1utimey_di" bpmnElement="Activity_0cplvzy">
+        <dc:Bounds x="150" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectReference_1wbq3jz_di" bpmnElement="DataMapObject_127smsi">
+        <dc:Bounds x="182" y="405" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="462" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="DataOutputAssociation_19lm258_di" bpmnElement="DataOutputAssociation_19lm258">
-        <di:waypoint x="331" y="222" />
-        <di:waypoint x="331" y="257" />
+        <di:waypoint x="200" y="370" />
+        <di:waypoint x="200" y="405" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Activity_192q5sp_di" bpmnElement="Activity_1d54zbf" isExpanded="true">
+        <dc:Bounds x="466" y="200" width="230" height="250" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectReference_17tmllm_di" bpmnElement="DataMapObject_0473gqd">
+        <dc:Bounds x="598" y="390" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="585" y="447" width="63" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0arzy24_di" bpmnElement="Activity_1brxgqt">
+        <dc:Bounds x="566" y="260" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1ewpyoo_di" bpmnElement="DataOutputAssociation_1ewpyoo">
+        <di:waypoint x="616" y="340" />
+        <di:waypoint x="616" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Activity_029hpnp_di" bpmnElement="Activity_01ra8h5" isExpanded="true">
+        <dc:Bounds x="466" y="550" width="320" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectReference_1actdoi_di" bpmnElement="DataMapObject_1cbin3j">
+        <dc:Bounds x="711" y="595" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="697" y="652" width="65" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0zn83dx_di" bpmnElement="Activity_02452g6">
+        <dc:Bounds x="539" y="580" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_07jygmf_di" bpmnElement="DataOutputAssociation_07jygmf">
+        <di:waypoint x="639" y="620" />
+        <di:waypoint x="711" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1o3tflh_di" bpmnElement="Flow_1o3tflh">
+        <di:waypoint x="36" y="325" />
+        <di:waypoint x="86" y="325" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1hewdoz_di" bpmnElement="Flow_1hewdoz">
-        <di:waypoint x="436" y="220" />
-        <di:waypoint x="486" y="220" />
+        <di:waypoint x="316" y="325" />
+        <di:waypoint x="366" y="325" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0r33mm2_di" bpmnElement="Flow_0r33mm2">
-        <di:waypoint x="536" y="220" />
-        <di:waypoint x="586" y="220" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="DataOutputAssociation_1ewpyoo_di" bpmnElement="DataOutputAssociation_1ewpyoo">
-        <di:waypoint x="716" y="225" />
-        <di:waypoint x="748" y="225" />
+        <di:waypoint x="416" y="325" />
+        <di:waypoint x="466" y="325" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1qg6eac_di" bpmnElement="Flow_1qg6eac">
-        <di:waypoint x="511" y="245" />
-        <di:waypoint x="561" y="569" />
-        <di:waypoint x="701" y="569" />
-        <di:waypoint x="841" y="569" />
-        <di:waypoint x="1117" y="569" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="DataOutputAssociation_07jygmf_di" bpmnElement="DataOutputAssociation_07jygmf">
-        <di:waypoint x="1237" y="560" />
-        <di:waypoint x="1279" y="560" />
+        <di:waypoint x="388" y="347" />
+        <di:waypoint x="388" y="636" />
+        <di:waypoint x="466" y="636" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0exyavr_di" bpmnElement="Flow_0exyavr">
-        <di:waypoint x="816" y="220" />
-        <di:waypoint x="866" y="220" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="DataOutputAssociation_0qz2jje_di" bpmnElement="DataOutputAssociation_0qz2jje">
-        <di:waypoint x="1272" y="110" />
-        <di:waypoint x="1334" y="110" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="DataOutputAssociation_1evew1r_di" bpmnElement="DataOutputAssociation_1evew1r">
-        <di:waypoint x="1272" y="340" />
-        <di:waypoint x="1384" y="340" />
+        <di:waypoint x="696" y="325" />
+        <di:waypoint x="746" y="325" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1qtpnre_di" bpmnElement="Flow_1qtpnre">
-        <di:waypoint x="1718" y="220" />
-        <di:waypoint x="1768" y="220" />
+        <di:waypoint x="1578" y="325" />
+        <di:waypoint x="1628" y="325" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0gkje2f_di" bpmnElement="Flow_0gkje2f">
-        <di:waypoint x="1467" y="569" />
-        <di:waypoint x="1793" y="569" />
-        <di:waypoint x="1793" y="245" />
+        <di:waypoint x="786" y="636" />
+        <di:waypoint x="1653" y="636" />
+        <di:waypoint x="1653" y="350" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1jbhgw8_di" bpmnElement="Flow_1jbhgw8">
-        <di:waypoint x="1818" y="220" />
-        <di:waypoint x="1868" y="220" />
+        <di:waypoint x="1678" y="325" />
+        <di:waypoint x="1728" y="325" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
