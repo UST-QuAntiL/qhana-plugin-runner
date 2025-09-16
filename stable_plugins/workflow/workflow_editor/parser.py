@@ -29,6 +29,7 @@ IGNORED_TAGS = {
     f"{BPMN_NS}text",
     f"{BPMN_NS}extensionElements",
     f"{BPMN_NS}dataObject",
+    f"{BPMN_NS}dataObjectReference",
     f"{BPMN_NS}dataOutputAssociation",
     f"{BPMN_NS}targetRef",
     f"{BPMN_NS}map",
@@ -301,7 +302,16 @@ def _fill_plugin_filter(group: UiTemplateTaskGroup):
     for child in children:
         assert isinstance(child, ActivityLike)
         assert child.type_ in (QHANA.serviceTask, BPMN.serviceTask)
-        match child.xml.attrib:
+
+        attributes = {}
+        attributes.update(child.xml.attrib)
+
+        for i in child.xml.findall(
+            ".//{http://camunda.org/schema/1.0/bpmn}inputParameter"
+        ):
+            if i.attrib.get("name", "").startswith("qhana"):
+                attributes[i.attrib["name"]] = i.text.strip() if i.text else ""
+        match attributes:
             case {"qhanaIdentifier": identifier, "qhanaVersion": version} if (
                 identifier.strip() and version.strip()
             ):
@@ -311,7 +321,7 @@ def _fill_plugin_filter(group: UiTemplateTaskGroup):
             case {"qhanaName": name} if name.strip():
                 plugin_filter["or"].append({"name": name})
             case _:
-                print(child.xml.attrib)
+                print(child.xml.attrib, attributes)
 
     group.plugin_filter = plugin_filter
 
@@ -429,7 +439,8 @@ if __name__ == "__main__":  # TODO remove later
     from pathlib import Path
 
     bpmn = Path(
-        "stable_plugins/workflow/workflow_editor/assets/ui-template-demo.bpmn"
+        # "stable_plugins/workflow/workflow_editor/assets/ui-template-demo.bpmn"
+        "stable_plugins/workflow/workflow_editor/assets/ui-template-demo-transformed.bpmn"
     ).read_text()
 
     groups = get_ad_hoc_tree(bpmn)
