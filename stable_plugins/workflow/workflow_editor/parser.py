@@ -1,5 +1,6 @@
 from collections import deque
 from dataclasses import dataclass, field
+from json import dumps
 from textwrap import indent
 from types import SimpleNamespace
 from typing import Dict, List, Literal, Optional, Sequence, Set, Tuple, TypeAlias, Union
@@ -165,6 +166,10 @@ class UiTemplateTaskGroup:
             return "Gate " + self.element.type_.removeprefix(BPMN_NS)
         return self.element.xml.attrib.get("name", self.element.id_)
 
+    @property
+    def description(self) -> str:
+        return ""  # FIXME extract from element
+
     def __str__(self) -> str:
         outgoing = ""
         if self.outgoing:
@@ -326,8 +331,46 @@ def _fill_plugin_filter(group: UiTemplateTaskGroup):
     group.plugin_filter = plugin_filter
 
 
-def ad_hoc_group_to_template_tab(goup: UiTemplateTaskGroup):
-    pass
+def tree_to_template_tabs(
+    groups: Sequence[UiTemplateTaskGroup],
+    path: Sequence[str] = tuple(),
+    base_location: str = "experiment_navigation",
+):
+    tabs = []
+
+    location = base_location
+    if path:
+        location += "." + ".".join(path)
+
+    for i, group in enumerate(groups):
+        suffix = " →" if group.outgoing else ""
+
+        group_key = ""
+        if group.children:
+            group_key = f"{i}"
+
+        plugin_filter = ""
+        if group.plugin_filter and not group.children:
+            plugin_filter = dumps(group.plugin_filter)
+
+        tab = {
+            "name": f"{i}. {group.name}{suffix}",
+            "description": group.description,
+            "icon": "",  # TODO, better icons? specified in WF?
+            "location": location,
+            "sortKey": i,
+            "groupKey": group_key,
+            "filterString": plugin_filter,
+        }
+        tabs.append(tab)
+
+        if group.children:
+            tabs.extend(
+                tree_to_template_tabs(
+                    group.children, path=(*path, group_key), base_location=base_location
+                )
+            )
+    return tabs
 
 
 def _parse_bpmn(bpmn: str):
@@ -447,3 +490,6 @@ if __name__ == "__main__":  # TODO remove later
 
     for g in groups:
         print(g)
+
+    for t in tree_to_template_tabs(groups):
+        print(t)

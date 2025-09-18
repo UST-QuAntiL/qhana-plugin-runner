@@ -13,11 +13,7 @@ from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
 from . import plugin
 from .config import CONFIG_KEY, WF_STATE_KEY, get_config_from_registry
-from .parser import (
-    ad_hoc_group_to_template_tab,
-    get_ad_hoc_tree,
-    split_ui_template_workflow,
-)
+from .parser import get_ad_hoc_tree, split_ui_template_workflow, tree_to_template_tabs
 from .util import extract_wf_properties
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -88,29 +84,56 @@ def deploy_workflow(
             timeout=30,
         )
     elif deploy_as == "ui-template":
-        plugin_instance = plugin.WorkflowEditor.instance
-        if not plugin_instance:
-            return  # TODO: log an error??
+        _deploy_as_ui_template(workflow_id)
 
-        bpmn = DataBlob.get_value(plugin_instance.name, workflow_id, default=None)
-        if not bpmn:
-            return  # TODO: log an error??
 
-        bpmn, *child_workflows = split_ui_template_workflow(bpmn)
+def _deploy_as_ui_template(workflow_id):
+    plugin_instance = plugin.WorkflowEditor.instance
+    if not plugin_instance:
+        return  # TODO: log an error??
 
-        if child_workflows:
-            # TODO implement!
-            raise NotImplementedError(
-                "Deploying extracted worflows as plugins is not implemented yet."
-            )
+    bpmn = DataBlob.get_value(plugin_instance.name, workflow_id, default=None)
+    if not bpmn:
+        return  # TODO: log an error??
 
-        ad_hoc_tree = get_ad_hoc_tree()
+    bpmn, *child_workflows = split_ui_template_workflow(bpmn)
 
-        # TODO deploy template
-        for group in ad_hoc_tree:
-            ui_template_tab = ad_hoc_group_to_template_tab(group)
+    if child_workflows:
+        # TODO implement!
+        raise NotImplementedError(
+            "Deploying extracted worflows as plugins is not implemented yet."
+        )
 
-        raise NotImplementedError()
+    _, name, _ = extract_wf_properties(bpmn=bpmn)
+    ad_hoc_tree = get_ad_hoc_tree()
+
+    template_data = {
+        "name": name,
+        "description": f"UI Template generated from the '{name}' workflow.",
+        "tags": ["workflow", "generated"],
+    }
+    ui_template_tabs = tree_to_template_tabs(ad_hoc_tree)
+
+    with PLUGIN_REGISTRY_CLIENT as client:
+        response = client.search_by_rel("ui-template")
+        if not response:
+            return  # TODO log error
+
+        create_links = response.get_links_by_rel("create", "ui-template")
+        create_ui_template_link = create_links[0] if create_links else None
+        if not create_ui_template_link:
+            return  # TODO log error
+
+        template_response = client.fetch_by_api_link(
+            create_ui_template_link, json=template_data
+        )
+        create_links = template_response.get_links_by_rel("create", "ui-template-tab")
+        create_tab_link = create_links[0] if create_links else None
+        if not create_tab_link:
+            return  # TODO log error
+
+        for tab in ui_template_tabs:
+            client.fetch_by_api_link(create_tab_link, json=tab)
 
 
 @CELERY.task()
