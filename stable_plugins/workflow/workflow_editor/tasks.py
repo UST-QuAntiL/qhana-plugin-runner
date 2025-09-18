@@ -96,7 +96,7 @@ def _deploy_as_ui_template(workflow_id):
     if not bpmn:
         return  # TODO: log an error??
 
-    bpmn, *child_workflows = split_ui_template_workflow(bpmn)
+    bpmn, child_workflows = split_ui_template_workflow(bpmn.decode(encoding="utf-8"))
 
     if child_workflows:
         # TODO implement!
@@ -105,7 +105,7 @@ def _deploy_as_ui_template(workflow_id):
         )
 
     _, name, _ = extract_wf_properties(bpmn=bpmn)
-    ad_hoc_tree = get_ad_hoc_tree()
+    ad_hoc_tree = get_ad_hoc_tree(bpmn=bpmn)
 
     template_data = {
         "name": name,
@@ -124,16 +124,20 @@ def _deploy_as_ui_template(workflow_id):
         if not create_ui_template_link:
             return  # TODO log error
 
-        template_response = client.fetch_by_api_link(
+        created_response = client.fetch_by_api_link(
             create_ui_template_link, json=template_data
         )
+        assert created_response
+        template_response = client.fetch_by_api_link(created_response.data["new"])
+        assert template_response
         create_links = template_response.get_links_by_rel("create", "ui-template-tab")
         create_tab_link = create_links[0] if create_links else None
         if not create_tab_link:
             return  # TODO log error
 
         for tab in ui_template_tabs:
-            client.fetch_by_api_link(create_tab_link, json=tab)
+            r = client.fetch_by_api_link(create_tab_link, json=tab)
+            assert r
 
 
 @CELERY.task()

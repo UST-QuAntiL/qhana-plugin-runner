@@ -184,14 +184,14 @@ class UiTemplateTaskGroup:
         return text
 
 
-def split_ui_template_workflow(bpmn: str) -> tuple[str, ...]:
+def split_ui_template_workflow(bpmn: str) -> tuple[str, tuple[str, ...]]:
     # root = ElementTree.fromstring(bpmn)
 
     # TODO split workflow into a main workflow containing only ad-hoc task groups for the UI template
     # and 0 or more executable workflows that need to be deployed as plugins.
     # The main workflow should have an ad-hoc group with the plugin as placeholder for the extracted executable parts.
 
-    return bpmn
+    return bpmn, tuple()
 
 
 def get_ad_hoc_tree(bpmn: str) -> Sequence[UiTemplateTaskGroup]:
@@ -334,7 +334,7 @@ def _fill_plugin_filter(group: UiTemplateTaskGroup):
 def tree_to_template_tabs(
     groups: Sequence[UiTemplateTaskGroup],
     path: Sequence[str] = tuple(),
-    base_location: str = "experiment_navigation",
+    base_location: str = "experiment-navigation",
 ):
     tabs = []
 
@@ -347,14 +347,14 @@ def tree_to_template_tabs(
 
         group_key = ""
         if group.children:
-            group_key = f"{i}"
+            group_key = f"{i+1}"
 
         plugin_filter = ""
         if group.plugin_filter and not group.children:
             plugin_filter = dumps(group.plugin_filter)
 
         tab = {
-            "name": f"{i}. {group.name}{suffix}",
+            "name": f"{i+1}. {group.name}{suffix}",
             "description": group.description,
             "icon": "",  # TODO, better icons? specified in WF?
             "location": location,
