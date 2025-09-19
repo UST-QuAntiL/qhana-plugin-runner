@@ -207,9 +207,10 @@ def _extract_groups(  # noqa: C901
         Tuple[EventLike | ActivityLike | GateLike, Optional[UiTemplateTaskGroup]]
     ]
     # the stack is used when elements on the same level in the BPMN graph
-    # should be rendered as children to the current group (i.e., elements betweenan OR gate)
+    # should be rendered as children to the current group (i.e., elements between an OR gate)
+    # Each tuple includes the number of outgoing connections from the left bracket to validate correct branching
     queue_stack: list[
-        Tuple[UiTemplateTaskGroup, List[UiTemplateTaskGroup], element_queue]
+        Tuple[UiTemplateTaskGroup, List[UiTemplateTaskGroup], element_queue, int]
     ] = []
     queue: element_queue = deque([(start, None)])
     while queue:
@@ -226,8 +227,18 @@ def _extract_groups(  # noqa: C901
             found_match = False
             if queue_stack and len(element.incoming) >= 1 and len(element.outgoing) == 1:
                 # right bracket gate
-                parent_group = queue_stack[-1][0]
+                parent_group, _, _, left_bracket_outgoing_count = queue_stack[-1]
                 if parent_group.element.type_ == element.type_:
+                    # Validate that incoming connections match outgoing connections from left bracket
+                    right_bracket_incoming_count = len(element.incoming)
+                    if left_bracket_outgoing_count != right_bracket_incoming_count:
+                        raise ValueError(
+                            f"Connection count mismatch for {element.type_} gate pair: "
+                            f"left bracket (id: {parent_group.element.id_}) has {left_bracket_outgoing_count} "
+                            f"outgoing connections, but right bracket (id: {element.id_}) has "
+                            f"{right_bracket_incoming_count} incoming connections"
+                        )
+
                     if queue:
                         # there are still elements in the queue,
                         # cannot mark right bracket as processed until
@@ -236,7 +247,7 @@ def _extract_groups(  # noqa: C901
                         continue
                     else:
                         # go one level up
-                        current_group, groups_flat, queue = queue_stack.pop()
+                        current_group, groups_flat, queue, _ = queue_stack.pop()
                         found_match = True
             if (
                 len(element.outgoing) >= 1
@@ -246,15 +257,20 @@ def _extract_groups(  # noqa: C901
                 # left bracket gate
                 assert (
                     element.id_ not in groups_by_id
-                ), "left bracket gates canonly have one input flow"
+                ), "left bracket gates can only have one input flow"
                 current_group = UiTemplateTaskGroup(element)
                 groups_by_id[element.id_] = current_group
                 groups_flat.append(current_group)
                 if predecessor:
                     predecessor.outgoing.append(current_group)
 
+                # Store the number of outgoing connections from this left bracket
+                left_bracket_outgoing_count = len(element.outgoing)
+
                 # go one layer deeper
-                queue_stack.append((current_group, groups_flat, queue))
+                queue_stack.append(
+                    (current_group, groups_flat, queue, left_bracket_outgoing_count)
+                )
                 groups_flat = current_group.children
                 queue = deque()
                 current_group = None
@@ -440,7 +456,7 @@ if __name__ == "__main__":  # TODO remove later
 
     bpmn = Path(
         # "stable_plugins/workflow/workflow_editor/assets/ui-template-demo.bpmn"
-        "stable_plugins/workflow/workflow_editor/assets/ui-template-demo-transformed.bpmn"
+        "assets/ui-template-demo.bpmn"
     ).read_text()
 
     groups = get_ad_hoc_tree(bpmn)
