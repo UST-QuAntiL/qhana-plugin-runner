@@ -249,6 +249,20 @@ def _extract_groups(  # noqa: C901
                         # go one level up
                         current_group, groups_flat, queue, _ = queue_stack.pop()
                         found_match = True
+
+            # Check for right bracket without matching left bracket
+            if (
+                len(element.incoming) >= 1
+                and len(element.outgoing) == 1
+                and not found_match
+                and not queue_stack
+            ):
+                # This is a potential right bracket, but there's no left bracket on the stack
+                raise ValueError(
+                    f"Found right bracket gate (id: {element.id_}, type: {element.type_}) "
+                    f"without a matching left bracket which indicated a loop which is currently not supported."
+                )
+
             if (
                 len(element.outgoing) >= 1
                 and len(element.incoming) == 1
@@ -456,7 +470,7 @@ if __name__ == "__main__":  # TODO remove later
 
     bpmn = Path(
         # "stable_plugins/workflow/workflow_editor/assets/ui-template-demo.bpmn"
-        "assets/ui-template-demo.bpmn"
+        "assets/ui-template-demo-loop.bpmn"
     ).read_text()
 
     groups = get_ad_hoc_tree(bpmn)
