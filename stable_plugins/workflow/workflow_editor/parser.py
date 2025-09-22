@@ -119,6 +119,24 @@ class GateLike:
 
         return False
 
+    def incoming_forward_connections_count(self) -> int:
+        count = 0
+
+        for connection in self.incoming:
+            if not connection.is_backward:
+                count += 1
+
+        return count
+
+    def outgoing_forward_connections_count(self) -> int:
+        count = 0
+
+        for connection in self.outgoing:
+            if not connection.is_backward:
+                count += 1
+
+        return count
+
 
 @dataclass()
 class EventLike:
@@ -246,12 +264,18 @@ def _extract_groups(  # noqa: C901
                 len(element.incoming) == 1 or len(element.outgoing) == 1
             ), "complex gates are not supported"
             found_match = False
-            if queue_stack and len(element.incoming) >= 1 and len(element.outgoing) == 1:
+            if (
+                queue_stack
+                and element.incoming_forward_connections_count() >= 1
+                and element.outgoing_forward_connections_count() == 1
+            ):
                 # right bracket gate
                 parent_group, _, _, left_bracket_outgoing_count = queue_stack[-1]
                 if parent_group.element.type_ == element.type_:
                     # Validate that incoming connections match outgoing connections from left bracket
-                    right_bracket_incoming_count = len(element.incoming)
+                    right_bracket_incoming_count = (
+                        element.incoming_forward_connections_count()
+                    )
                     if left_bracket_outgoing_count != right_bracket_incoming_count:
                         raise ValueError(
                             f"Connection count mismatch for {element.type_} gate pair: "
@@ -271,22 +295,9 @@ def _extract_groups(  # noqa: C901
                         current_group, groups_flat, queue, _ = queue_stack.pop()
                         found_match = True
 
-            # Check for right bracket without matching left bracket
             if (
-                len(element.incoming) >= 1
-                and len(element.outgoing) == 1
-                and not found_match
-                and not queue_stack
-            ):
-                # This is a potential right bracket, but there's no left bracket on the stack
-                raise ValueError(
-                    f"Found right bracket gate (id: {element.id_}, type: {element.type_}) "
-                    f"without a matching left bracket which indicated a loop which is currently not supported."
-                )
-
-            if (
-                len(element.outgoing) >= 1
-                and len(element.incoming) == 1
+                element.outgoing_forward_connections_count() >= 1
+                and element.incoming_forward_connections_count() == 1
                 and not found_match
             ):
                 # left bracket gate
@@ -300,7 +311,7 @@ def _extract_groups(  # noqa: C901
                     predecessor.outgoing.append(current_group)
 
                 # Store the number of outgoing connections from this left bracket
-                left_bracket_outgoing_count = len(element.outgoing)
+                left_bracket_outgoing_count = element.outgoing_forward_connections_count()
 
                 # go one layer deeper
                 queue_stack.append(
@@ -325,7 +336,11 @@ def _extract_groups(  # noqa: C901
             if predecessor:
                 predecessor.outgoing.append(current_group)
         for flow in element.outgoing:
-            if flow.target is not None and flow.target.id_ not in visited:
+            if (
+                flow.target is not None
+                and not flow.is_backward
+                and flow.target.id_ not in visited
+            ):
                 if not isinstance(flow.target, EventLike):
                     queue.appendleft((flow.target, current_group))
         if isinstance(element, (EventLike, GateLike)):
