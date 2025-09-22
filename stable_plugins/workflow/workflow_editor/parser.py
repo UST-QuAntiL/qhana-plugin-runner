@@ -99,6 +99,26 @@ class GateLike:
     incoming: Sequence["FlowLike"] = tuple()
     outgoing: Sequence["FlowLike"] = tuple()
 
+    def is_loop_start(self) -> bool:
+        """
+        Returns: true if this gate is the first node in a loop
+        """
+        for connection in self.incoming:
+            if connection.is_backward:
+                return True
+
+        return False
+
+    def is_loop_end(self) -> bool:
+        """
+        Returns: true if this gate is the last node in a loop
+        """
+        for connection in self.outgoing:
+            if connection.is_backward:
+                return True
+
+        return False
+
 
 @dataclass()
 class EventLike:
@@ -120,6 +140,7 @@ class FlowLike:
     target: Optional[Union[ActivityLike, GateLike, EventLike]] = field(
         default=None, repr=False
     )
+    is_backward: bool = False
 
 
 @dataclass()
@@ -446,7 +467,7 @@ def _parse_bpmn(bpmn: str):
             case _:
                 print(flow.xml.attrib)
 
-    # postrpocess start events
+    # postprocess start events
     for parent_id, start_event in start_events.items():
         parent = parsed.activities[parent_id]
         assert parent.type_ == BPMN.subProcess
@@ -461,6 +482,29 @@ def _parse_bpmn(bpmn: str):
                     assert child.parent is None
                     child.parent = activity
                     activity.children = (*activity.children, child)
+
+    # set is_backward properties for the flows
+    visited = {}  # node id: depth
+    to_be_processed: list[tuple[ActivityLike | EventLike | GateLike, int]] = [
+        (parsed.start_event, 0)
+    ]  # (node, depth)
+
+    while len(to_be_processed) > 0:
+        current_node, current_depth = to_be_processed.pop(0)
+        visited[current_node.id_] = current_depth
+
+        for outgoing in current_node.outgoing:
+            if outgoing.target.id_ in visited:  # this criterion is not enough
+                if visited[outgoing.target.id_] < current_depth:
+                    outgoing.is_backward = True
+                else:
+                    outgoing.is_backward = False
+            else:
+                outgoing.is_backward = False
+                to_be_processed.append((outgoing.target, current_depth + 1))
+
+        if isinstance(current_node, ActivityLike) and current_node.start_event:
+            to_be_processed.append((current_node.start_event, current_depth + 1))
 
     return parsed
 

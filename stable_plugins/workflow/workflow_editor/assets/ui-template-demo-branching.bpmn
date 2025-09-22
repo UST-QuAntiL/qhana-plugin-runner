@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:qhana="https://github.com/qhana" xmlns:dataflow="https://github.com/data/transformation" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn2:process id="demo_process_a" name="UI Template Test A Branching" isExecutable="false" camunda:versionTag="1">
+    <bpmn2:startEvent id="Event_0lvt0l1">
+      <bpmn2:outgoing>Flow_06fyeok</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    <bpmn2:adHocSubProcess id="Activity_1d54zbf" name="Hello World">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="user" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_06fyeok</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0exyavr</bpmn2:outgoing>
+      <qhana:qHAnaServiceTask id="Activity_1brxgqt" name="hello-world" qhanaIdentifier="hello-world" qhanaVersion="v0.2.1" qhanaName="hello-world" qhanaDescription="Tests the connection of all components by printing some text." selectedConfigurationId="hello-world">
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_1ewpyoo">
+          <bpmn2:targetRef>DataMapObject_0473gqd</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </qhana:qHAnaServiceTask>
+      <dataflow:dataMapObject id="DataMapObject_0473gqd" name="hello-world_output" dataObjectRef="DataObject_0y5oy7t">
+        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
+      </dataflow:dataMapObject>
+      <bpmn2:dataObject id="DataObject_0y5oy7t" />
+    </bpmn2:adHocSubProcess>
+    <bpmn2:sequenceFlow id="Flow_0exyavr" sourceRef="Activity_1d54zbf" targetRef="Gateway_0wkt673" />
+    <bpmn2:endEvent id="Event_05d5s13">
+      <bpmn2:incoming>Flow_0bxu8g3</bpmn2:incoming>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="Flow_06fyeok" sourceRef="Event_0lvt0l1" targetRef="Activity_1d54zbf" />
+    <bpmn2:exclusiveGateway id="Gateway_0wkt673">
+      <bpmn2:incoming>Flow_0exyavr</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0rcot2z</bpmn2:outgoing>
+      <bpmn2:outgoing>Flow_1u2wy56</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:sequenceFlow id="Flow_0rcot2z" sourceRef="Gateway_0wkt673" targetRef="Activity_0rzvst7" />
+    <bpmn2:adHocSubProcess id="Activity_01hhu6f" name="Hello World">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="user" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_1u2wy56</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0hhvwov</bpmn2:outgoing>
+      <qhana:qHAnaServiceTask id="Activity_080zant" name="hello-world" qhanaIdentifier="hello-world" qhanaVersion="v0.2.1" qhanaName="hello-world" qhanaDescription="Tests the connection of all components by printing some text.">
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_0esi6jj">
+          <bpmn2:targetRef>DataMapObject_0oz89bg</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </qhana:qHAnaServiceTask>
+      <dataflow:dataMapObject id="DataMapObject_0oz89bg" name="hello-world_output" dataObjectRef="DataObject_0urci45">
+        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
+      </dataflow:dataMapObject>
+      <bpmn2:dataObject id="DataObject_0urci45" />
+    </bpmn2:adHocSubProcess>
+    <bpmn2:sequenceFlow id="Flow_1u2wy56" sourceRef="Gateway_0wkt673" targetRef="Activity_01hhu6f" />
+    <bpmn2:exclusiveGateway id="Gateway_0xepxnq">
+      <bpmn2:incoming>Flow_093n9fj</bpmn2:incoming>
+      <bpmn2:incoming>Flow_06erqpu</bpmn2:incoming>
+      <bpmn2:incoming>Flow_0k3r574</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0bxu8g3</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:sequenceFlow id="Flow_0bxu8g3" sourceRef="Gateway_0xepxnq" targetRef="Event_05d5s13" />
+    <bpmn2:sequenceFlow id="Flow_0hhvwov" sourceRef="Activity_01hhu6f" targetRef="Gateway_01kai76" />
+    <bpmn2:adHocSubProcess id="Activity_0rzvst7" name="Hello World">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="user" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0rcot2z</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0jed40x</bpmn2:outgoing>
+      <qhana:qHAnaServiceTask id="Activity_1sgqh0i" name="hello-world" qhanaIdentifier="hello-world" qhanaVersion="v0.2.1" qhanaName="hello-world" qhanaDescription="Tests the connection of all components by printing some text.">
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_19gfyc4">
+          <bpmn2:targetRef>DataMapObject_15w95r8</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </qhana:qHAnaServiceTask>
+      <dataflow:dataMapObject id="DataMapObject_15w95r8" name="hello-world_output" dataObjectRef="DataObject_0vaguce">
+        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
+      </dataflow:dataMapObject>
+      <bpmn2:dataObject id="DataObject_0vaguce" />
+    </bpmn2:adHocSubProcess>
+    <bpmn2:adHocSubProcess id="Activity_1oqbedc" name="Hello World">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="user" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0jed40x</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_093n9fj</bpmn2:outgoing>
+      <qhana:qHAnaServiceTask id="Activity_0mh2w4x" name="hello-world" qhanaIdentifier="hello-world" qhanaVersion="v0.2.1" qhanaName="hello-world" qhanaDescription="Tests the connection of all components by printing some text.">
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_101r82m">
+          <bpmn2:targetRef>DataMapObject_0qnr9cp</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </qhana:qHAnaServiceTask>
+      <dataflow:dataMapObject id="DataMapObject_0qnr9cp" name="hello-world_output" dataObjectRef="DataObject_0hvnzm2">
+        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
+      </dataflow:dataMapObject>
+      <bpmn2:dataObject id="DataObject_0hvnzm2" />
+    </bpmn2:adHocSubProcess>
+    <bpmn2:sequenceFlow id="Flow_0jed40x" sourceRef="Activity_0rzvst7" targetRef="Activity_1oqbedc" />
+    <bpmn2:sequenceFlow id="Flow_093n9fj" sourceRef="Activity_1oqbedc" targetRef="Gateway_0xepxnq" />
+    <bpmn2:exclusiveGateway id="Gateway_01kai76">
+      <bpmn2:incoming>Flow_0hhvwov</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_178zl01</bpmn2:outgoing>
+      <bpmn2:outgoing>Flow_0w2zpiu</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    <bpmn2:sequenceFlow id="Flow_178zl01" sourceRef="Gateway_01kai76" targetRef="Activity_1ib8ark" />
+    <bpmn2:adHocSubProcess id="Activity_0brsfwt" name="Hello World">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="user" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_0w2zpiu</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_0k3r574</bpmn2:outgoing>
+      <qhana:qHAnaServiceTask id="Activity_15svf0v" name="hello-world" qhanaIdentifier="hello-world" qhanaVersion="v0.2.1" qhanaName="hello-world" qhanaDescription="Tests the connection of all components by printing some text.">
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_0z9blyz">
+          <bpmn2:targetRef>DataMapObject_0tfpkfe</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </qhana:qHAnaServiceTask>
+      <dataflow:dataMapObject id="DataMapObject_0tfpkfe" name="hello-world_output" dataObjectRef="DataObject_1wefjvy">
+        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
+      </dataflow:dataMapObject>
+      <bpmn2:dataObject id="DataObject_1wefjvy" />
+    </bpmn2:adHocSubProcess>
+    <bpmn2:adHocSubProcess id="Activity_1ib8ark" name="Hello World">
+      <bpmn2:extensionElements>
+        <camunda:properties>
+          <camunda:property name="icon" value="user" />
+        </camunda:properties>
+      </bpmn2:extensionElements>
+      <bpmn2:incoming>Flow_178zl01</bpmn2:incoming>
+      <bpmn2:outgoing>Flow_06erqpu</bpmn2:outgoing>
+      <qhana:qHAnaServiceTask id="Activity_0sqghmz" name="hello-world" qhanaIdentifier="hello-world" qhanaVersion="v0.2.1" qhanaName="hello-world" qhanaDescription="Tests the connection of all components by printing some text.">
+        <bpmn2:dataOutputAssociation id="DataOutputAssociation_0b7c1v4">
+          <bpmn2:targetRef>DataMapObject_0yqszwt</bpmn2:targetRef>
+        </bpmn2:dataOutputAssociation>
+      </qhana:qHAnaServiceTask>
+      <dataflow:dataMapObject id="DataMapObject_0yqszwt" name="hello-world_output" dataObjectRef="DataObject_0c5fhnf">
+        <dataflow:keyValueEntry name="qoutput.output_0" value="${output}" />
+      </dataflow:dataMapObject>
+      <bpmn2:dataObject id="DataObject_0c5fhnf" />
+    </bpmn2:adHocSubProcess>
+    <bpmn2:sequenceFlow id="Flow_0w2zpiu" sourceRef="Gateway_01kai76" targetRef="Activity_0brsfwt" />
+    <bpmn2:sequenceFlow id="Flow_06erqpu" sourceRef="Activity_1ib8ark" targetRef="Gateway_0xepxnq" />
+    <bpmn2:sequenceFlow id="Flow_0k3r574" sourceRef="Activity_0brsfwt" targetRef="Gateway_0xepxnq" />
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="demo_process_a">
+      <bpmndi:BPMNShape id="Event_0lvt0l1_di" bpmnElement="Event_0lvt0l1">
+        <dc:Bounds x="192" y="142" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1mktxbe_di" bpmnElement="Activity_1d54zbf" isExpanded="true">
+        <dc:Bounds x="450" y="75" width="230" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1uuhruw_di" bpmnElement="Activity_1brxgqt">
+        <dc:Bounds x="480" y="125" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataMapObject_0473gqd_di" bpmnElement="DataMapObject_0473gqd">
+        <dc:Bounds x="612" y="140" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="586" y="197" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_05d5s13_di" bpmnElement="Event_05d5s13">
+        <dc:Bounds x="1672" y="142" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0wkt673_di" bpmnElement="Gateway_0wkt673" isMarkerVisible="true">
+        <dc:Bounds x="745" y="135" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1c0ki6y" bpmnElement="Activity_01hhu6f" isExpanded="true">
+        <dc:Bounds x="820" y="-110" width="230" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0yvkvmb" bpmnElement="Activity_080zant">
+        <dc:Bounds x="850" y="-60" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1ahmqn2" bpmnElement="DataMapObject_0oz89bg">
+        <dc:Bounds x="982" y="-45" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="956" y="12" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0xepxnq_di" bpmnElement="Gateway_0xepxnq" isMarkerVisible="true">
+        <dc:Bounds x="1435" y="135" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_04vwq85" bpmnElement="Activity_0rzvst7" isExpanded="true">
+        <dc:Bounds x="860" y="260" width="230" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_024bvwg" bpmnElement="Activity_1sgqh0i">
+        <dc:Bounds x="890" y="310" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1xsql7u" bpmnElement="DataMapObject_15w95r8">
+        <dc:Bounds x="1022" y="325" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="996" y="382" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1xrkv3e" bpmnElement="Activity_1oqbedc" isExpanded="true">
+        <dc:Bounds x="1180" y="260" width="230" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0r8m2i9" bpmnElement="Activity_0mh2w4x">
+        <dc:Bounds x="1210" y="310" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_124m4rj" bpmnElement="DataMapObject_0qnr9cp">
+        <dc:Bounds x="1342" y="325" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1316" y="382" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_01kai76_di" bpmnElement="Gateway_01kai76" isMarkerVisible="true">
+        <dc:Bounds x="1095" y="-50" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_13357jp" bpmnElement="Activity_0brsfwt" isExpanded="true">
+        <dc:Bounds x="1190" y="-250" width="230" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1lta3w4" bpmnElement="Activity_15svf0v">
+        <dc:Bounds x="1220" y="-200" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_0zt3s2g" bpmnElement="DataMapObject_0tfpkfe">
+        <dc:Bounds x="1352" y="-185" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1326" y="-128" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1vcx4uq" bpmnElement="Activity_1ib8ark" isExpanded="true">
+        <dc:Bounds x="1190" y="-50" width="230" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1vdkolg" bpmnElement="Activity_0sqghmz">
+        <dc:Bounds x="1220" y="0" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1xzwo2l" bpmnElement="DataMapObject_0yqszwt">
+        <dc:Bounds x="1352" y="15" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1326" y="72" width="90" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1ewpyoo_di" bpmnElement="DataOutputAssociation_1ewpyoo">
+        <di:waypoint x="580" y="165" />
+        <di:waypoint x="612" y="165" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0exyavr_di" bpmnElement="Flow_0exyavr">
+        <di:waypoint x="680" y="160" />
+        <di:waypoint x="745" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06fyeok_di" bpmnElement="Flow_06fyeok">
+        <di:waypoint x="228" y="160" />
+        <di:waypoint x="450" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0rcot2z_di" bpmnElement="Flow_0rcot2z">
+        <di:waypoint x="770" y="185" />
+        <di:waypoint x="770" y="360" />
+        <di:waypoint x="860" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_1fkobzx" bpmnElement="DataOutputAssociation_0esi6jj">
+        <di:waypoint x="950" y="-20" />
+        <di:waypoint x="982" y="-20" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1u2wy56_di" bpmnElement="Flow_1u2wy56">
+        <di:waypoint x="770" y="135" />
+        <di:waypoint x="770" y="-25" />
+        <di:waypoint x="820" y="-25" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0bxu8g3_di" bpmnElement="Flow_0bxu8g3">
+        <di:waypoint x="1485" y="160" />
+        <di:waypoint x="1672" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0hhvwov_di" bpmnElement="Flow_0hhvwov">
+        <di:waypoint x="1050" y="-25" />
+        <di:waypoint x="1095" y="-25" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_1cw784y" bpmnElement="DataOutputAssociation_19gfyc4">
+        <di:waypoint x="990" y="350" />
+        <di:waypoint x="1022" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_0r891lo" bpmnElement="DataOutputAssociation_101r82m">
+        <di:waypoint x="1310" y="350" />
+        <di:waypoint x="1342" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jed40x_di" bpmnElement="Flow_0jed40x">
+        <di:waypoint x="1090" y="345" />
+        <di:waypoint x="1180" y="345" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_093n9fj_di" bpmnElement="Flow_093n9fj">
+        <di:waypoint x="1410" y="345" />
+        <di:waypoint x="1460" y="345" />
+        <di:waypoint x="1460" y="185" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_178zl01_di" bpmnElement="Flow_178zl01">
+        <di:waypoint x="1145" y="-25" />
+        <di:waypoint x="1190" y="-25" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_0wcism0" bpmnElement="DataOutputAssociation_0z9blyz">
+        <di:waypoint x="1320" y="-160" />
+        <di:waypoint x="1352" y="-160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_1xf6zcx" bpmnElement="DataOutputAssociation_0b7c1v4">
+        <di:waypoint x="1320" y="40" />
+        <di:waypoint x="1352" y="40" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0w2zpiu_di" bpmnElement="Flow_0w2zpiu">
+        <di:waypoint x="1120" y="-50" />
+        <di:waypoint x="1120" y="-165" />
+        <di:waypoint x="1190" y="-165" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06erqpu_di" bpmnElement="Flow_06erqpu">
+        <di:waypoint x="1420" y="20" />
+        <di:waypoint x="1460" y="20" />
+        <di:waypoint x="1460" y="135" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0k3r574_di" bpmnElement="Flow_0k3r574">
+        <di:waypoint x="1420" y="-165" />
+        <di:waypoint x="1460" y="-165" />
+        <di:waypoint x="1460" y="135" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>
