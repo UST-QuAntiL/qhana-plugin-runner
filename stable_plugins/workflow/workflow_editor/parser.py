@@ -189,6 +189,7 @@ class UiTemplateTaskGroup:
     outgoing: List["UiTemplateTaskGroup"] = field(default_factory=list)
     children: List["UiTemplateTaskGroup"] = field(default_factory=list)
     plugin_filter: Optional[dict] = None
+    is_loop: bool = False
 
     @property
     def id_(self) -> str:
@@ -197,7 +198,12 @@ class UiTemplateTaskGroup:
     @property
     def name(self) -> str:
         if isinstance(self.element, GateLike):
-            if self.element.type_ == BPMN.exclusiveGateway:
+            if self.is_loop:
+                if self.element.type_ == BPMN.exclusiveGateway:
+                    return "Loop"
+                else:
+                    raise ValueError("Loop must be an XOR gateway.")
+            elif self.element.type_ == BPMN.exclusiveGateway:
                 return "XOR"
             elif self.element.type_ == BPMN.parallelGateway:
                 return "AND"
@@ -312,6 +318,10 @@ def _extract_groups(  # noqa: C901
 
                 # Store the number of outgoing connections from this left bracket
                 left_bracket_outgoing_count = element.outgoing_forward_connections_count()
+
+                # set loop marker in task group
+                if element.is_loop_start():
+                    current_group.is_loop = True
 
                 # go one layer deeper
                 queue_stack.append(
@@ -512,6 +522,16 @@ def _parse_bpmn(bpmn: str):
             if outgoing.target.id_ in visited:  # this criterion is not enough
                 if visited[outgoing.target.id_] < current_depth:
                     outgoing.is_backward = True
+
+                    if isinstance(current_node, GateLike):
+                        if current_node.type_ != BPMN.exclusiveGateway:
+                            raise ValueError(
+                                "Elements with backward connections must be XOR gateways"
+                            )
+                    else:
+                        raise ValueError(
+                            "Elements with backward connections must be XOR gateways."
+                        )
                 else:
                     outgoing.is_backward = False
             else:
@@ -529,7 +549,7 @@ if __name__ == "__main__":  # TODO remove later
 
     bpmn = Path(
         # "stable_plugins/workflow/workflow_editor/assets/ui-template-demo.bpmn"
-        "assets/ui-template-demo-loop.bpmn"
+        "assets/ui-template-demo-nested-loop.bpmn"
     ).read_text()
 
     groups = get_ad_hoc_tree(bpmn)
