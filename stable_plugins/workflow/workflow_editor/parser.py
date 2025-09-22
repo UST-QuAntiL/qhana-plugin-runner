@@ -100,6 +100,44 @@ class GateLike:
     incoming: Sequence["FlowLike"] = tuple()
     outgoing: Sequence["FlowLike"] = tuple()
 
+    def is_loop_start(self) -> bool:
+        """
+        Returns: true if this gate is the first node in a loop
+        """
+        for connection in self.incoming:
+            if connection.is_backward:
+                return True
+
+        return False
+
+    def is_loop_end(self) -> bool:
+        """
+        Returns: true if this gate is the last node in a loop
+        """
+        for connection in self.outgoing:
+            if connection.is_backward:
+                return True
+
+        return False
+
+    def incoming_forward_connections_count(self) -> int:
+        count = 0
+
+        for connection in self.incoming:
+            if not connection.is_backward:
+                count += 1
+
+        return count
+
+    def outgoing_forward_connections_count(self) -> int:
+        count = 0
+
+        for connection in self.outgoing:
+            if not connection.is_backward:
+                count += 1
+
+        return count
+
 
 @dataclass()
 class EventLike:
@@ -121,6 +159,7 @@ class FlowLike:
     target: Optional[Union[ActivityLike, GateLike, EventLike]] = field(
         default=None, repr=False
     )
+    is_backward: bool = False
 
 
 @dataclass()
@@ -151,6 +190,7 @@ class UiTemplateTaskGroup:
     outgoing: List["UiTemplateTaskGroup"] = field(default_factory=list)
     children: List["UiTemplateTaskGroup"] = field(default_factory=list)
     plugin_filter: Optional[dict] = None
+    is_loop: bool = False
 
     @property
     def id_(self) -> str:
@@ -159,7 +199,12 @@ class UiTemplateTaskGroup:
     @property
     def name(self) -> str:
         if isinstance(self.element, GateLike):
-            if self.element.type_ == BPMN.exclusiveGateway:
+            if self.is_loop:
+                if self.element.type_ == BPMN.exclusiveGateway:
+                    return "Loop"
+                else:
+                    raise ValueError("Loop must be an XOR gateway.")
+            elif self.element.type_ == BPMN.exclusiveGateway:
                 return "XOR"
             elif self.element.type_ == BPMN.parallelGateway:
                 return "AND"
@@ -212,9 +257,10 @@ def _extract_groups(  # noqa: C901
         Tuple[EventLike | ActivityLike | GateLike, Optional[UiTemplateTaskGroup]]
     ]
     # the stack is used when elements on the same level in the BPMN graph
-    # should be rendered as children to the current group (i.e., elements betweenan OR gate)
+    # should be rendered as children to the current group (i.e., elements between an OR gate)
+    # Each tuple includes the number of outgoing connections from the left bracket to validate correct branching
     queue_stack: list[
-        Tuple[UiTemplateTaskGroup, List[UiTemplateTaskGroup], element_queue]
+        Tuple[UiTemplateTaskGroup, List[UiTemplateTaskGroup], element_queue, int]
     ] = []
     queue: element_queue = deque([(start, None)])
     while queue:
@@ -229,10 +275,26 @@ def _extract_groups(  # noqa: C901
                 len(element.incoming) == 1 or len(element.outgoing) == 1
             ), "complex gates are not supported"
             found_match = False
-            if queue_stack and len(element.incoming) >= 1 and len(element.outgoing) == 1:
+            if (
+                queue_stack
+                and element.incoming_forward_connections_count() >= 1
+                and element.outgoing_forward_connections_count() == 1
+            ):
                 # right bracket gate
-                parent_group = queue_stack[-1][0]
+                parent_group, _, _, left_bracket_outgoing_count = queue_stack[-1]
                 if parent_group.element.type_ == element.type_:
+                    # Validate that incoming connections match outgoing connections from left bracket
+                    right_bracket_incoming_count = (
+                        element.incoming_forward_connections_count()
+                    )
+                    if left_bracket_outgoing_count != right_bracket_incoming_count:
+                        raise ValueError(
+                            f"Connection count mismatch for {element.type_} gate pair: "
+                            f"left bracket (id: {parent_group.element.id_}) has {left_bracket_outgoing_count} "
+                            f"outgoing connections, but right bracket (id: {element.id_}) has "
+                            f"{right_bracket_incoming_count} incoming connections"
+                        )
+
                     if queue:
                         # there are still elements in the queue,
                         # cannot mark right bracket as processed until
@@ -241,25 +303,35 @@ def _extract_groups(  # noqa: C901
                         continue
                     else:
                         # go one level up
-                        current_group, groups_flat, queue = queue_stack.pop()
+                        current_group, groups_flat, queue, _ = queue_stack.pop()
                         found_match = True
+
             if (
-                len(element.outgoing) >= 1
-                and len(element.incoming) == 1
+                element.outgoing_forward_connections_count() >= 1
+                and element.incoming_forward_connections_count() == 1
                 and not found_match
             ):
                 # left bracket gate
                 assert (
                     element.id_ not in groups_by_id
-                ), "left bracket gates canonly have one input flow"
+                ), "left bracket gates can only have one input flow"
                 current_group = UiTemplateTaskGroup(element)
                 groups_by_id[element.id_] = current_group
                 groups_flat.append(current_group)
                 if predecessor:
                     predecessor.outgoing.append(current_group)
 
+                # Store the number of outgoing connections from this left bracket
+                left_bracket_outgoing_count = element.outgoing_forward_connections_count()
+
+                # set loop marker in task group
+                if element.is_loop_start():
+                    current_group.is_loop = True
+
                 # go one layer deeper
-                queue_stack.append((current_group, groups_flat, queue))
+                queue_stack.append(
+                    (current_group, groups_flat, queue, left_bracket_outgoing_count)
+                )
                 groups_flat = current_group.children
                 queue = deque()
                 current_group = None
@@ -279,7 +351,11 @@ def _extract_groups(  # noqa: C901
             if predecessor:
                 predecessor.outgoing.append(current_group)
         for flow in element.outgoing:
-            if flow.target is not None and flow.target.id_ not in visited:
+            if (
+                flow.target is not None
+                and not flow.is_backward
+                and flow.target.id_ not in visited
+            ):
                 if not isinstance(flow.target, EventLike):
                     queue.appendleft((flow.target, current_group))
         if isinstance(element, (EventLike, GateLike)):
@@ -459,7 +535,7 @@ def _parse_bpmn(bpmn: str):
             case _:
                 print(flow.xml.attrib)
 
-    # postrpocess start events
+    # postprocess start events
     for parent_id, start_event in start_events.items():
         parent = parsed.activities[parent_id]
         assert parent.type_ == BPMN.subProcess
@@ -475,6 +551,39 @@ def _parse_bpmn(bpmn: str):
                     child.parent = activity
                     activity.children = (*activity.children, child)
 
+    # set is_backward properties for the flows
+    visited = {}  # node id: depth
+    to_be_processed: list[tuple[ActivityLike | EventLike | GateLike, int]] = [
+        (parsed.start_event, 0)
+    ]  # (node, depth)
+
+    while len(to_be_processed) > 0:
+        current_node, current_depth = to_be_processed.pop(0)
+        visited[current_node.id_] = current_depth
+
+        for outgoing in current_node.outgoing:
+            if outgoing.target.id_ in visited:  # this criterion is not enough
+                if visited[outgoing.target.id_] < current_depth:
+                    outgoing.is_backward = True
+
+                    if isinstance(current_node, GateLike):
+                        if current_node.type_ != BPMN.exclusiveGateway:
+                            raise ValueError(
+                                "Elements with backward connections must be XOR gateways"
+                            )
+                    else:
+                        raise ValueError(
+                            "Elements with backward connections must be XOR gateways."
+                        )
+                else:
+                    outgoing.is_backward = False
+            else:
+                outgoing.is_backward = False
+                to_be_processed.append((outgoing.target, current_depth + 1))
+
+        if isinstance(current_node, ActivityLike) and current_node.start_event:
+            to_be_processed.append((current_node.start_event, current_depth + 1))
+
     return parsed
 
 
@@ -483,7 +592,7 @@ if __name__ == "__main__":  # TODO remove later
 
     bpmn = Path(
         # "stable_plugins/workflow/workflow_editor/assets/ui-template-demo.bpmn"
-        "stable_plugins/workflow/workflow_editor/assets/ui-template-demo-transformed.bpmn"
+        "assets/ui-template-demo-nested-loop.bpmn"
     ).read_text()
 
     groups = get_ad_hoc_tree(bpmn)
