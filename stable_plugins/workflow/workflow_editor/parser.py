@@ -429,10 +429,15 @@ def tree_to_template_tabs(
         if group.plugin_filter and not group.children:
             plugin_filter = dumps(group.plugin_filter)
 
+        icon = ""
+
+        if group.is_loop:
+            icon = "loop"
+
         tab = {
             "name": f"{i+1}. {group.name}{suffix}",
             "description": group.description,
-            "icon": "",  # TODO, better icons? specified in WF?
+            "icon": icon,  # TODO, better icons? specified in WF?
             "location": location,
             "sortKey": i,
             "groupKey": group_key,
