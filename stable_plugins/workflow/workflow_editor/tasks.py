@@ -70,7 +70,7 @@ def deploy_workflow(
         if not bpmn:
             return  # TODO: log an error??
 
-        id_, name, _ = extract_wf_properties(bpmn=bpmn)
+        id_, name, _ = extract_wf_properties(bpmn=bpmn.decode("utf-8"))
 
         request(
             "post",
