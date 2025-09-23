@@ -245,7 +245,7 @@ def _compact_tree(groups: Sequence[UiTemplateTaskGroup]) -> list[UiTemplateTaskG
         if group.children:
             group.children = _compact_tree(group.children)
 
-        # Check if this group should be merged with its single XOR gate child
+        # Check if this group should be merged with its single gate child
         should_merge = (
             isinstance(group.element, GateLike)
             and group.is_loop
