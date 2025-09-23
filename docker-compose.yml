@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   qhana-plugin-runner:
     build: .
@@ -19,34 +17,26 @@ services:
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg://user:password@postgres:5432/default_db"
       CAMUNDA_API_URL: "http://localhost:5018/engine-rest"
       PLUGIN_RUNNER_URLS: "http://localhost:5005"
-      PLUGIN_REGISTRY_URL: "http://registry:8080/api"
       LOCALHOST_PROXY_PORTS: ":9090 :5005 :5018"
       WAIT_HOSTS: redis:6379, postgres:5432
-
   redis:
     image: "redis:latest"
     ports:
       - "6379:6379"
-
   postgres:
     image: "postgres:latest"
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: user
       POSTGRES_DB: default_db
-
   postgres-registry:
     image: "postgres:latest"
     environment:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: user
       POSTGRES_DB: default_db
-
   muse-db:
     image: ghcr.io/ust-quantil/mini-muse:main
-
   worker:
     build: .
     image: qhana-plugin-runner
@@ -69,15 +59,12 @@ services:
       WAIT_HOSTS: redis:6379, postgres:5432, camunda:8080
       WAIT_TIMEOUT: 300
       WAIT_SLEEP_INTERVAL: 5
-      PLUGIN_REGISTRY_URL: "http://registry:8080/api"
-
+      PLUGIN_REGISTRY_URL: "http://localhost:5006"
   backend:
     image: ghcr.io/ust-quantil/qhana-backend:main
     profiles:
       - with_backend
       - with_ui
-    depends_on:
-      - postgres
     volumes:
       - experiments:/app/data
     extra_hosts:
@@ -85,17 +72,14 @@ services:
     environment:
       LOCALHOST_PROXY_PORTS: ":5005"
       QHANA_HOST: http://localhost:9090
-      DATABASE_URL: "postgresql://user:password@postgres:5432/default_db"
-      SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres:5432/default_db"
     ports:
-      - "9090:9090"
-  # ======= UPDATED UI: local build instead of image =======
+      - 9090:9090
   ui:
-    build: ../qhana-ui
+    image: ghcr.io/ust-quantil/qhana-ui:main
     profiles:
       - with_ui
     ports:
-      - "4200:80"
+      - 8080:8080
     environment:
       PLUGIN_REGISTRY_PROTOCOL: "http:"
       PLUGIN_REGISTRY_HOSTNAME: localhost
@@ -103,7 +87,6 @@ services:
       PLUGIN_REGISTRY_PATH: /api/
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
   registry:
     image: ghcr.io/ust-quantil/qhana-plugin-registry:main
     ports:
@@ -118,7 +101,6 @@ services:
       SQLALCHEMY_DATABASE_URI: "postgresql+psycopg2://user:password@postgres-registry:5432/default_db"
       INITIAL_PLUGIN_SEEDS: "http://localhost:5005"
       PRECONFIGURED_SERVICES: '[{"serviceId": "qhana-backend", "name": "Backend", "url": "http://localhost:9090"}]'
-
   registry-worker:
     image: ghcr.io/ust-quantil/qhana-plugin-registry:main
     ports:
@@ -135,12 +117,10 @@ services:
       LOCALHOST_PROXY_PORTS: ":5005"
       PLUGIN_DISCOVERY_INTERVAL: 60
       PERIODIC_SCHEDULER: true
-
   camunda:
     image: ghcr.io/ust-quantil/docker-camunda-bpm-platform:next
     ports:
       - "5018:8080"
-
 volumes:
   instance:
   experiments:

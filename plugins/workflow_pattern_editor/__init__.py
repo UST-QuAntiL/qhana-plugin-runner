@@ -1,1 +1,0 @@
-"""Workflow Pattern Editor Plugin"""
