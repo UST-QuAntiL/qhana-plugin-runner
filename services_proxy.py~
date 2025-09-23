@@ -1,0 +1,59 @@
+from flask import Flask, request, jsonify, Response
+import requests
+import json
+
+app = Flask(__name__)
+
+# Backend URL (the Java backend)
+BACKEND_URL = "http://localhost:9090"
+
+# In-memory storage for services
+services_store = {
+    "qhana-backend": {
+        "serviceId": "qhana-backend", 
+        "name": "QHAna Backend", 
+        "url": "http://localhost:9090"
+    }
+}
+
+@app.route('/services', methods=['GET'])
+def get_services():
+    return jsonify(list(services_store.values()))
+
+@app.route('/services', methods=['POST'])
+def add_service():
+    try:
+        data = request.get_json()
+        service_id = data.get('serviceId')
+        if not service_id:
+            return jsonify({"error": "serviceId is required"}), 400
+        services_store[service_id] = data
+        return jsonify(data), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+# Proxy all other requests to the Java backend
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+def proxy(path):
+    try:
+        url = f"{BACKEND_URL}/{path}"
+        response = requests.request(
+            method=request.method,
+            url=url,
+            headers={h[0]: h[1] for h in request.headers if h[0] != 'Host'},
+            data=request.get_data(),
+            params=request.args,
+            timeout=30
+        )
+        return Response(
+            response.content,
+            status=response.status_code,
+            headers=[(h[0], h[1]) for h in response.headers.items()]
+        )
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Backend request failed: {str(e)}"}), 502
+
+if __name__ == '__main__':
+    print("Starting QHana Backend Proxy with /services endpoint")
+    app.run(host='0.0.0.0', port=9091)
