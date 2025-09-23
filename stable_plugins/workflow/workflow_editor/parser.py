@@ -199,15 +199,10 @@ class UiTemplateTaskGroup:
     @property
     def name(self) -> str:
         if isinstance(self.element, GateLike):
-            if self.is_loop:
-                if self.element.type_ == BPMN.exclusiveGateway:
-                    return "Loop"
-                else:
-                    raise ValueError("Loop must be an XOR gateway.")
-            elif self.element.type_ == BPMN.exclusiveGateway:
-                return "XOR"
+            if self.element.type_ == BPMN.exclusiveGateway:
+                return "Loop XOR" if self.is_loop else "XOR"
             elif self.element.type_ == BPMN.parallelGateway:
-                return "AND"
+                return "Loop AND" if self.is_loop else "AND"
             return "Gate " + self.element.type_.removeprefix(BPMN_NS)
         return self.element.xml.attrib.get("name", self.element.id_)
 
@@ -239,9 +234,51 @@ def split_ui_template_workflow(bpmn: str) -> tuple[str, tuple[str, ...]]:
     return bpmn, tuple()
 
 
+def _compact_tree(groups: Sequence[UiTemplateTaskGroup]) -> list[UiTemplateTaskGroup]:
+    """
+    This function merges loop elements that only have a single gate as child with that child.
+    """
+    compacted = []
+
+    for group in groups:
+        # Recursively compact children first
+        if group.children:
+            group.children = _compact_tree(group.children)
+
+        # Check if this group should be merged with its single XOR gate child
+        should_merge = (
+            isinstance(group.element, GateLike)
+            and group.is_loop
+            and len(group.children) == 1
+            and isinstance(group.children[0].element, GateLike)
+        )
+
+        if should_merge:
+            # Merge this loop group with its single XOR gate child
+            child = group.children[0]
+
+            # Create a new merged group that combines properties
+            merged_group = UiTemplateTaskGroup(
+                element=child.element,
+                outgoing=group.outgoing,  # Use parent's outgoing connections
+                children=child.children,  # Use child's children
+                plugin_filter=child.plugin_filter,
+                is_loop=True,  # Preserve the loop property from parent
+            )
+
+            compacted.append(merged_group)
+        else:
+            compacted.append(group)
+
+    return compacted
+
+
 def get_ad_hoc_tree(bpmn: str) -> Sequence[UiTemplateTaskGroup]:
     parsed = _parse_bpmn(bpmn)
-    return _extract_groups(parsed, parsed.start_event)
+    groups = _extract_groups(parsed, parsed.start_event)
+    compacted = _compact_tree(groups)
+
+    return compacted
 
 
 def _extract_groups(  # noqa: C901
