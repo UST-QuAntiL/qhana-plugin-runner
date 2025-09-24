@@ -254,7 +254,7 @@ def _compact_tree(groups: Sequence[UiTemplateTaskGroup]) -> list[UiTemplateTaskG
         )
 
         if should_merge:
-            # Merge this loop group with its single XOR gate child
+            # Merge this loop group with its single gate child
             child = group.children[0]
 
             # Create a new merged group that combines properties
