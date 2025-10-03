@@ -90,7 +90,7 @@ class AnyInputSchema(FrontendFormBaseSchema):
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
-                "input_type": "text",
+                "input_type": "textarea",
             },
         )
         self.__setattr__(key, self.inputs[key])
@@ -143,17 +143,16 @@ class AnyInputSchema(FrontendFormBaseSchema):
         self.__setattr__(key, self.inputs[key])
 
     def add_file_url_field(self, val: Dict, key: str):
-        data_input_type, data_content_types = (
-            val["value"][
-                len(self.prefix_file_url) + len(self.prefix_delimiter) : len(val["value"])
-            ]
-        ).split(",")
+        rest = val["value"][
+            len(self.prefix_file_url) + len(self.prefix_delimiter) : len(val["value"])
+        ]
+        data_input_type, *data_content_types = rest.split(",")
         self.inputs[key] = FileUrl(
             required=True,
             allow_none=False,
             data_key=key,
-            data_input_type=data_input_type,
-            data_content_types=data_content_types,
+            data_input_type=data_input_type.strip(),
+            data_content_types=[t.strip() for t in data_content_types if t.strip()],
             metadata={
                 "label": f"{key}",
                 "description": f"Workflow Input {key}",
