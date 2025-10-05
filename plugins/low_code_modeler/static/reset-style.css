@@ -1,8 +1,0 @@
-/* reset colors, because they seem to leak through from the main qhana
-   ui and this causes issues (i.e. white text on white background) when
-   the browser is set to dark mode */
-
-:root {
-    --text: unset !important;
-    background-color: white;
-}
