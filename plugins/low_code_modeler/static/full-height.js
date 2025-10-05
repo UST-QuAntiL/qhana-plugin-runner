@@ -1,6 +1,8 @@
 {
-    const state = window._qhana_microfrontend_state;
-    if (state) {
-	state.targetHeight = "full";
+    function forceFullHeight() {
+	window._qhana_microfrontend_state.targetHeight = "full"
+	notifyParentWindowOnHeightChange(null, "full")
     }
+    setTimeout(forceFullHeight, 1000)
+    setTimeout(forceFullHeight)
 }
