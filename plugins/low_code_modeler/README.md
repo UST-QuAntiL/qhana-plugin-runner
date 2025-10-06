@@ -8,7 +8,7 @@ please run them from inside this directory, unless otherwise specified.
 3. `git checkout -- static/workarounds.js`
 4. `pnpm install` (from inside the low-code-modeler repo)
 5. `pnpm run build --outDir <path to qhana-plugin-runner>/plugins/low_code_modeler/static` (from inside the low-code-modeler repo)
-6. `sed -i '/<\/script>/a <script defer src="/static/microfrontend.js"></script><script defer src="workarounds.js"></script>' static/index.html`
+6. `sed -i '/<\/script>/a <script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>' static/index.html`
 7. `git add static`
 
 This should be fixed by `workarounds.js`, but you may need to clear the

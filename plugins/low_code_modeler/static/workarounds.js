@@ -23,10 +23,15 @@
 	    console.log("css load request from the ui has been ignored!", data, state)
 	}
     }
-    // apply workarounds in 1000ms
-    setTimeout(applyWorkarounds, 1000)
-    // apply workarounds in the next event cycle
-    setTimeout(applyWorkarounds)
-    // apply workarounds now
-    applyWorkarounds()
+
+    // apply workarounds the first time a message is recived
+    // because this event listener is registered before microfrontend.js is executed, this one should be executed first
+
+    let isFirstMessage = true
+    window.addEventListener("message", (event) => {
+	if (!isFirstMessage)
+	    return
+	isFirstMessage = false
+	applyWorkarounds()
+    })
 }
