@@ -24,13 +24,13 @@ services:
     ports:
       - "6379:6379"
   postgres:
-    image: "postgres:latest"
+    image: "postgres:16"
     environment:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: user
       POSTGRES_DB: default_db
   postgres-registry:
-    image: "postgres:latest"
+    image: "postgres:16"
     environment:
       POSTGRES_PASSWORD: password
       POSTGRES_USER: user
