@@ -43,37 +43,6 @@ class UI(MethodView):
     def get(self, path):
         return send_from_directory(f"{LCM_BLP.root_path}/static", path)
 
-    @LCM_BLP.response(HTTPStatus.OK)
-    @LCM_BLP.require_jwt("jwt", optional=True)
-    def post(self):
-        return Response(
-            """
-        <script>
-            /**
-            * Send a message to the parent window.
-            *
-            * @param {string|object} message the data attribute of the created message event
-            */
-            function sendMessage(message) {
-                var targetWindow = window.opener || window.parent;
-                if (targetWindow) {
-                    targetWindow.postMessage(message, "*");
-                } else {
-                    console.warn("Failed to message parent window. Is this page loaded outside of an iframe?");
-                }
-            }
-                sendMessage("ui-loaded");
-        </script>
-        <style>
-            :root {
-                color: red;
-                font-size: 32px;
-            }
-        </style>
-        POST
-        """
-        )
-
 
 @LCM_BLP.route("/process/")
 class Process(MethodView):
