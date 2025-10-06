@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script defer src="/static/microfrontend.js"></script><script src="../../../workarounds.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="../../../styles.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="../../../assets/c3983ee999b61eac77ecdbab901f7afdf26fdbbeec14d24d89e2cd432f9014b9.css" media="screen" />
+    <title>Distributed Application – Pattern Atlas</title>
+
+    <style>
+        .pattern-header {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding-inline: 1rem;
+        }
+        .pattern-icon {
+            height: 12rem;
+            max-height: 12rem;
+            max-width: 18rem;
+        }
+        .pattern-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin-block: 1rem;
+        }
+        .pattern-header-content > h2 {
+            font-size: 2rem;
+            margin-block: 0px;
+        }
+        p > em {
+            font-weight: 700;
+        }
+        .pattern-content {
+            display: flex;
+            flex-direction: column;
+            margin: 1rem;
+            gap: 1rem;
+        }
+        .content-block {
+            padding: 1rem;
+            border-radius: 0.3rem;
+            box-shadow: 1px 1px 5px 1px rgba(0,0,0,0.1);
+        }
+        .content-block img {
+            display: block;
+        }
+        .content-block > summary {
+            display: inline-block;
+            cursor: pointer;
+        }
+        .content-block > summary[aria-disabled="true"] {
+            color: gray;
+        }
+        .content-block h3 {
+            margin-block-start: 0px;
+            margin-block-end: 0px;
+        }
+        .content-block[open] h3 {
+            margin-block-end: 0.5rem;
+        }
+        .pattern-relations {
+            display: grid;
+            grid-template-columns: 1fr 7rem 1fr;
+            column-gap: 0.5rem;
+            row-gap: 0.2rem;
+            margin-block: 0.5rem;
+        }
+        .pattern-relations .source {
+            grid-column: 1;
+        }
+        .pattern-relations .relation {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            text-align: center;
+        }
+        .relation-label {
+            padding-inline: 1rem;
+            text-wrap: balance;
+        }
+        .arrow {
+            margin-top: -0.5rem;
+            height: 1rem;
+            background-color: black;
+            clip-path: polygon(0 0.4rem, 100% 0.4rem, 100% 0.6rem, 0 0.6rem);
+        }
+        .arrow.right {
+            clip-path: polygon(0 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem, 0 0.6rem);
+        }
+        .arrow.left {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, 100% 0.4rem, 100% 0.6rem, 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .arrow.left.right {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem , 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .pattern-relations .target {
+            grid-column: 3;
+        }
+        .relation-description {
+            display: flex;
+            grid-column: 1 / 4;
+            margin-block-end: 0.5rem;
+        }
+        .pattern-small {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            align-items: center;
+            justify-content: stretch;
+            padding: 0.3rem;
+            border-radius: 0.3rem;
+            border-color: #ccc;
+            border-style: solid;
+            border-width: 1px;
+            
+        }
+        .pattern-icon-small {
+            height: 3rem;
+            max-height: 3rem;
+        }
+        .pattern-name-small {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="../../../assets/93e89c6331691cd0ae7a3764a661cdc1ba0806c872c7bbe46217d9c9251d4b2d.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <script defer src="../../../assets/9873f82d610bfeabc1d683ec1b3125472783c2d984a9ee657950f3dd99395476.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="../../../assets/d98a28de6bb7931fb4d06846cc3aab5425f6474aab255e054ef5400f112fcc5e.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+</head>
+
+<body><div class="titlebar">
+        <a class="home" href="../../../">Pattern Atlas</a>
+    </div><div class="split-content">
+        <nav class="sidebar">
+            <p>Pattern Language</p>
+            <a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b">Cloud Computing Patterns</a>
+            <p>Patterns</p><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/0145a85e-3b00-4e64-9e20-bdaf77d2fc86">Application Component Proxy</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/d53673f0-fc52-48c8-8893-f8f244cf6ee3">At-least-once Delivery</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/d8c99d65-8950-4b83-aa1d-549a88e28339">Batch Processing Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/407ae0d5-e5be-4151-900b-041ed5dfcdbe">Blob Storage</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/e6106e4d-46a4-4557-8c2d-009ff7159464">Block Storage</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b6436fe2-9e3f-49ac-9e09-5cce86e480e1">Community Cloud</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/e35d735c-f724-4946-aad9-7fa520d5a843">Compliant Data Replication</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/e4e0fe4d-8757-4253-95de-a6f13ea66f30">Content Distribution Network</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b7602673-7825-48e2-829e-b9df269071fc">Continuously Changing Workload</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/94331ad5-4f67-4183-8fbe-55fe9c542789">Data Abstractor</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b228d692-009d-4122-b617-1a3799a68766">Data Access Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/da3a0878-df45-4eb1-857e-82e5ae055683">Dedicated Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/467cae27-d8be-4509-af26-64ed0a809028">Distributed Application</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/ce95634f-69e0-4f97-a9b6-10bc8364849f">Elastic Infrastructure</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/bace6e02-1e3f-4ddc-9e9a-eb04933fa226">Elastic Load Balancer</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/a81eb2c5-84ce-4a14-8242-e9ce19532423">Elastic Platform</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/801d44ab-fc18-4cc0-8e10-49f2e73b229a">Elastic Queue</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/15da23b4-5ad5-44ff-8936-140dd98935df">Elasticity Management Process</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/4710c428-a004-4da1-98a8-58205e051ec2">Elasticity Manager</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/10a46ac6-1420-41ad-9d3a-ab244d959062">Environment-based Availability</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/81dba31f-e19a-4a8b-a07f-e1561fc2ce06">Eventual Consistency</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/4d153210-05d9-43f0-8560-3c3bd722d8bd">Exactly-once Delivery</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/2ee3eb24-165d-46d5-976c-9eb052a1912b">Execution Environment</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/f675060d-34cd-4af7-abb7-864a8b9adef6">Feature Flag Management Process</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/34b02438-ceaf-4177-9a3e-74f907cfd63d">Hybrid Application Functions</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/678a2e5a-697f-4416-afe6-fd18bc935bdc">Hybrid Backend</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/2fb586fd-9982-4f4e-987b-17909069e10e">Hybrid Backup</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/61130a8b-68ad-4281-80ad-a62d44bc4090">Hybrid Cloud</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/10edf46a-113f-4688-9af6-75494b950fbf">Hybrid Data</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/d6db370c-42eb-414b-80b7-af50c14fb7e4">Hybrid Development Environment</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/d6d9a4e5-0944-4360-8af9-77d6f780716e">Hybrid Multimedia Web Application</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/a7bc398e-972a-481f-8c63-b4c5a1b946d9">Hybrid Processing</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/000904c1-aa91-498b-88da-d6cb014931df">Hybrid User Interface</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/e6e239af-3d3a-4dfb-8c84-cbe268ca90d4">Hypervisor</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/5d7a8af7-94fb-4c63-958c-403d845d4107">Idempotent Processor</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/3baad63c-42d2-46cb-b7a5-ab394b4e012c">Infrastructure as a Service (IaaS)</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/e22b33bc-b5cf-4a61-a8e9-dd204c48857b">Integration Provider</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/ecb7d0a0-72d0-44c3-90dd-5b9af536ebca">Key-Value Storage</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/55f886b3-4fe0-4bc8-8bde-d0b7004a70ee">Loose Coupling</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/9bcced52-edb3-44a2-a86d-43499ea61289">Managed Configuration</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/cbc6fe12-4a7d-4de5-b709-b20dd0cacbbf">Map Reduce</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/a6e349c7-d5c0-42a7-bd78-21e4b2738fa7">Message Mover</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/c12b3086-5fa4-4140-915b-330fbffdfc43">Message-oriented Middleware</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/da2bd135-4ba2-4b98-bb77-c60607402094">Multi-Component Image</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/7c8849ee-26ad-4910-b798-902367e617d6">Node-based Availability</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/9b50b4bf-4b5c-4d52-a7d3-1b0e6a0f53f9">Once-in-a-lifetime Workload</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/7f488cff-525f-4e50-a6c6-219b4ab4854d">Periodic Workload</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/d285eda8-41ee-4ba2-879d-52acec6a1416">Platform as a Service (PaaS)</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b8e826e0-dc07-4515-ae10-87b402e3d52c">Private Cloud</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/0b5ba218-dcb1-4841-a517-b6010b8a2951">Processing Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/50d0b397-d2df-4797-8975-d2526c8cdd63">Provider Adapter</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/358bf776-378f-465e-a9e6-e8a1c7716825">Public Cloud</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/0a4ffca5-3b28-4897-9842-295f9bb6bea8">Relational Database</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/3d6ef3c9-28dd-4d2f-b006-e3427e24c0b0">Resiliency Management Process</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/1dafcbc7-f048-4867-ad7f-2d0b40e096e1">Restricted Data Access Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/45fdc628-1914-4b2c-92c4-38f7be3c622a">Shared Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/68a4bbc9-2535-4cfc-a4f4-b149adfb674a">Software as a Service (SaaS)</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/599e5d49-ede8-489b-bb72-3e41c288ae89">Standby Pooling Process</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b86f6da4-3c9e-4146-8161-9c806b50b923">Stateful Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/7d2e969e-c266-4a83-85a5-5a07d528c6ef">Stateless Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/7116be12-b724-456f-ac3d-0a1ab6e85b9a">Static Workload</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/f69638dc-6844-415c-a679-d3982c691f38">Strict Consistency</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/5190eb38-48a2-41ee-b85e-dbb3c609ed30">Tenant-isolated Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/47e05a38-2201-49f2-80e6-17d618ed260f">Three-Tier Cloud Application</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/80d829b6-d1ed-40a3-95ea-7e0b34de8eba">Timeout-based Delivery</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/cd686d46-c77f-4c35-8016-f9819282f8a5">Timeout-based Message Processor</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/3a1fb1cd-1078-4616-b603-a22c8f9449b2">Transaction-based Delivery</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b9484449-18bd-4667-a9e5-1f6bf66d442d">Transaction-based Processor</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/f53f1daa-1eda-4fd9-966f-3f14c107930a">Two-Tier Cloud Application</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/35de7456-fced-4c23-bca5-8777984bf731">Unpredictable Workload</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/155933df-9d41-4b2d-bdf8-11291fb7084c">Update Transition Process</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/6d763f90-d7d4-4d58-a82c-09bb68ac6b82">User Interface Component</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/386a4d90-1a3d-427c-96a6-6f1a433daae6">Virtual Networking</a><a href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/3b090377-8703-4cf7-9ce8-a432dce76335">Watchdog</a></nav>
+        <main>
+            <h1 class="page-head">Cloud Computing Patterns</h1>
+            <div class="pattern-header">
+                <img class="pattern-icon" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                <div class="pattern-header-content">
+                    <h2>Distributed Application</h2>
+                    <p><em>Aliases:</em> –</p>
+                    <p><em>Tags:</em> </p>
+                    <p><em>©</em> –</p>
+                </div>
+            </div>
+            <div class="pattern-content">
+                <details class="content-block" open>
+                    <summary ><h3>Intent</h3></summary>
+                    <p>A cloud application divides provided functionality among multiple application components that can be scaled out independently.</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Context</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Forces</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" >
+                    <summary aria-disabled=true><h3>Solution</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Result</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Examples</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Related Patterns</h3></summary>
+                    
+                    <div class="pattern-relations"><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/dbb3d433d0e2d8e5c68e7b1845562fcbb40c74d05f502e4c8c1706c769a3fbae.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b6436fe2-9e3f-49ac-9e09-5cce86e480e1">Community Cloud</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/f6ae8fe600118827f3ed7dfbf4f3d3cae52e64724442f003321fb797ff2160ee.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/ce95634f-69e0-4f97-a9b6-10bc8364849f">Elastic Infrastructure</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/5cc8d3bfd4e250d975816596fc237397f17ae4be347e0430a2c9f1262ba3430c.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/61130a8b-68ad-4281-80ad-a62d44bc4090">Hybrid Cloud</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/c8ba615dac78df23a307c0b4fe33bb1da9072812c4bfb526864207c182617a02.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/b8e826e0-dc07-4515-ae10-87b402e3d52c">Private Cloud</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/72641a7632cee8615445e6c03aa27d1d35304804fe01bd40589282e2f8a53d99.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/358bf776-378f-465e-a9e6-e8a1c7716825">Public Cloud</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/66e6cb3e691c1d48aae5aa710744370247f852f03c52ad29efa1647f6d8f2a43.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/155933df-9d41-4b2d-bdf8-11291fb7084c">Update Transition Process</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/ca3d029e1b2b798ab86d59975cb263be5423f8042b11f1543605ef51b66f46a6.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/3b090377-8703-4cf7-9ce8-a432dce76335">Watchdog</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/35e63efeb5eeb75a1acb0fbbbdc45ebc04a2fe78d294a8190437186e15581f30.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/0145a85e-3b00-4e64-9e20-bdaf77d2fc86">Application Component Proxy</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/5a634026ccfd1e0aa58c8ca38ddab8a772ea2350f99d178f3a46dbb2892b235f.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/a81eb2c5-84ce-4a14-8242-e9ce19532423">Elastic Platform</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/b26ac02538f4ca2398845d788539608c5c65023396ba8f567d2271ba0b598b2f.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/55f886b3-4fe0-4bc8-8bde-d0b7004a70ee">Loose Coupling</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/176f1f2ca87e1dc8b82daae29ff40f37f73bc5758b85418e72a25b5bb0bf6ddf.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/efdc1625-6445-4662-a37e-5f1fd37a542b/68a4bbc9-2535-4cfc-a4f4-b149adfb674a">Software as a Service (SaaS)</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/2582f91bef2c5485e3246234116af8c317409a858bc8d558c633ed7c09f1b47b.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Distributed Application</p>
+                            
+                        </div></div>
+                </details>
+                <details class="content-block" >
+                    <summary aria-disabled=true><h3>Known Uses</h3></summary>
+                    <p>–</p>
+                </details>
+                
+            </div>
+        </main>
+    </div></body>
+
+</html>

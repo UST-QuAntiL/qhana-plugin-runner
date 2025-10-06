@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script defer src="/static/microfrontend.js"></script><script src="../../../workarounds.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="../../../styles.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="../../../assets/c3983ee999b61eac77ecdbab901f7afdf26fdbbeec14d24d89e2cd432f9014b9.css" media="screen" />
+    <title>Readout Error Mitigation – Pattern Atlas</title>
+
+    <style>
+        .pattern-header {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding-inline: 1rem;
+        }
+        .pattern-icon {
+            height: 12rem;
+            max-height: 12rem;
+            max-width: 18rem;
+        }
+        .pattern-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin-block: 1rem;
+        }
+        .pattern-header-content > h2 {
+            font-size: 2rem;
+            margin-block: 0px;
+        }
+        p > em {
+            font-weight: 700;
+        }
+        .pattern-content {
+            display: flex;
+            flex-direction: column;
+            margin: 1rem;
+            gap: 1rem;
+        }
+        .content-block {
+            padding: 1rem;
+            border-radius: 0.3rem;
+            box-shadow: 1px 1px 5px 1px rgba(0,0,0,0.1);
+        }
+        .content-block img {
+            display: block;
+        }
+        .content-block > summary {
+            display: inline-block;
+            cursor: pointer;
+        }
+        .content-block > summary[aria-disabled="true"] {
+            color: gray;
+        }
+        .content-block h3 {
+            margin-block-start: 0px;
+            margin-block-end: 0px;
+        }
+        .content-block[open] h3 {
+            margin-block-end: 0.5rem;
+        }
+        .pattern-relations {
+            display: grid;
+            grid-template-columns: 1fr 7rem 1fr;
+            column-gap: 0.5rem;
+            row-gap: 0.2rem;
+            margin-block: 0.5rem;
+        }
+        .pattern-relations .source {
+            grid-column: 1;
+        }
+        .pattern-relations .relation {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            text-align: center;
+        }
+        .relation-label {
+            padding-inline: 1rem;
+            text-wrap: balance;
+        }
+        .arrow {
+            margin-top: -0.5rem;
+            height: 1rem;
+            background-color: black;
+            clip-path: polygon(0 0.4rem, 100% 0.4rem, 100% 0.6rem, 0 0.6rem);
+        }
+        .arrow.right {
+            clip-path: polygon(0 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem, 0 0.6rem);
+        }
+        .arrow.left {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, 100% 0.4rem, 100% 0.6rem, 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .arrow.left.right {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem , 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .pattern-relations .target {
+            grid-column: 3;
+        }
+        .relation-description {
+            display: flex;
+            grid-column: 1 / 4;
+            margin-block-end: 0.5rem;
+        }
+        .pattern-small {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            align-items: center;
+            justify-content: stretch;
+            padding: 0.3rem;
+            border-radius: 0.3rem;
+            border-color: #ccc;
+            border-style: solid;
+            border-width: 1px;
+            
+        }
+        .pattern-icon-small {
+            height: 3rem;
+            max-height: 3rem;
+        }
+        .pattern-name-small {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="../../../assets/93e89c6331691cd0ae7a3764a661cdc1ba0806c872c7bbe46217d9c9251d4b2d.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <script defer src="../../../assets/9873f82d610bfeabc1d683ec1b3125472783c2d984a9ee657950f3dd99395476.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="../../../assets/d98a28de6bb7931fb4d06846cc3aab5425f6474aab255e054ef5400f112fcc5e.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+</head>
+
+<body><div class="titlebar">
+        <a class="home" href="../../../">Pattern Atlas</a>
+    </div><div class="split-content">
+        <nav class="sidebar">
+            <p>Pattern Language</p>
+            <a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d">Quantum Computing Patterns</a>
+            <p>Patterns</p><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/c450e0ce-c55f-4b72-afe9-e9e2c7e4c091">Ad-hoc Hybrid Code Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b657ea73-63c0-4800-a69d-a91925e19ac6">Alternating Operator Ansatz (AOA)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/96b4d28a-a5ce-4c96-85df-d42587b13c57">Amplitude Amplification</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/502147ec-45fa-403f-8f52-e196b3359399">Amplitude Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/e595558d-bfea-4b82-9f47-a38a2097b245">Angle Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/bcd4c7a1-3c92-4f8c-a530-72b8b95d3750">Basis Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d3f6b18a-c8c1-4010-b750-b71d95eb5f5e">Biased Initial State</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b92daa20-265c-4276-b138-3aa5a7bbc37f">Chained Optimization</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3d9bca6e-5fca-40c5-b005-8a794958f3aa">Circuit Cutting</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/8fcca2dc-fca0-47cf-9bd4-038cd2fe8fb8">Classical-Quantum Interface</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3d1f3991-df47-4d42-8f9a-e6dcf4e3ccec">Creating Entanglement</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/88d3e6f5-c75f-42aa-b665-2ba79746222e">Dynamic Circuit</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/1a5e3708-da39-4356-ab3f-115264da6390">Error Correction</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3f3fabf0-7fa7-4b43-a74a-46a7ac2c55ee">Function Table</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/7821a1f9-02a0-4833-a048-3bf184b1c6fe">Gate Cut</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b6788c99-24f5-496b-a30c-fc0dd7bb3e96">Gate Error Mitigation</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b8c2dca0-563a-432d-adfd-8bd15ef0dfb8">Grover</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/37e64e06-9c2a-4c54-aa18-ddcf67f48a6a">Hadamard Test</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/4074490a-4236-49ed-83d1-625ce58e2dbd">Hybrid Module</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/312bc9d3-26c0-40ae-b90b-56effd136c0d">Initialization</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/45d09c54-3f4a-453b-885d-2772443c8d72">Matrix Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/ae3d4ca7-9503-463a-b0fc-eabed85b83e0">Mid-Circuit Measurement</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/1cc7e9d6-ab37-412e-8afa-604a25de296e">Oracle</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3f3d5582-1af9-4a23-93f5-5d0474b2b42c">Orchestrated Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/c6560c51-d2e3-4595-b9c3-b609c75c0b82">Phase Shift</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/1c95912a-128b-44e7-b2d4-930f7ba11060">Post-Selective Measurement</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/8c893b97-5980-4c81-870a-1cb4917dc33f">Pre-Trained Feature Extractor</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/9af072e8-875b-4e7d-980a-98cc6e0e7fd6">Pre-deployed Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/70adfd6f-0648-47cf-88ff-0212b882a262">Prioritized Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/60736854-6eb4-47b5-9619-2370825a34e9">Quantum Application Archive</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/456d4450-9ba7-4e43-8cb7-03ae01936fc4">Quantum Application Testing</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/da93f915-7f4c-49df-99d0-80d91f26a337">Quantum Approximate Optimization Algorithm (QAOA)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/482714a7-8409-4165-93fe-72b02c2ae99c">Quantum Associative Memory (QuAM)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/aa90de15-b7e3-45a7-bb48-f0a5b8b2c479">Quantum Circuit Translator</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/cc3731cf-ecbb-490f-b996-525c8f60d8a9">Quantum Classification</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/7294c3f2-cb67-492a-8a16-c7384eb9bac2">Quantum Clustering</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/12d260d0-08e3-483e-900e-fbe21db10cac">Quantum Fourier Transformation</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/0ad210d4-18ad-4803-ba6b-536af0fab317">Quantum Hardware Selection</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/5479acf4-0588-49af-a6a9-4956b7ee32af">Quantum Kernel Estimator (QKE)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/424c803a-aefb-4b54-8e45-d177fedac893">Quantum Module</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d5cda8c9-f39b-474a-9032-c17131884975">Quantum Module Template</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/726ead05-e582-4704-904b-6ce2174399d8">Quantum Neural Network (QNN)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/a4ea9f6c-5b0a-4beb-a056-8b261d96ba80">Quantum Phase Estimation (QPE)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d9c57511-1101-4707-99bf-36f43a12cb13">Quantum Random Access Memory (QRAM) Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/dd15032b-ce2b-40b6-80ac-97623255b531">Quantum-Classic Split</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/ed3af509-904e-4732-8113-215d65a7d53d">Readout Error Mitigation</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/fd2bb9f3-b04a-4645-a2d0-ffa4d986db83">SWAP Test</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/4437fb83-34c0-47a8-8c6f-1272a76b76bb">Schmidt Decomposition</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/ddd64fb6-b324-45eb-8e21-8193dc311841">Speedup via Verifying</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/5850c6ab-5c87-4331-8439-73692a403228">Standalone Circuit Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d4f7c247-e2bb-4301-ad06-f758fa58f2dc">Uncompute</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/59389814-01e0-4422-8012-a298940064aa">Unified Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b2eadd28-6cb8-407d-a4c4-bfb9eab44c2a">Unified Observability</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/2229a430-fe92-4411-9d72-d10dd1d8da14">Uniform Superposition</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/f417a855-4d52-4a30-b88a-e34a7eaebe86">Variational Parameter Transfer</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/bc795a9b-7977-4e01-b513-f9f5aba38aa7">Variational Quantum Algorithm (VQA)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/27a5d147-a323-4c6a-84ef-45d80cae923d">Variational Quantum Eigensolver (VQE)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3ea9e187-e91b-4852-84eb-b35b5c480892">Warm Start</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/28c99b35-98ce-4bfe-bb6d-94a65207258a">Wire Cut</a></nav>
+        <main>
+            <h1 class="page-head">Quantum Computing Patterns</h1>
+            <div class="pattern-header">
+                <img class="pattern-icon" src="../../../assets/de2b0ac7bac8e9626e469e22827ff3a1792a991adb0c3834198a22896eaa4099.png" aria-hidden="true">
+                <div class="pattern-header-content">
+                    <h2>Readout Error Mitigation</h2>
+                    <p><em>Aliases:</em> –</p>
+                    <p><em>Tags:</em> augmentation</p>
+                    <p><em>©</em> <a target="_blank" href="https://www.thinkmind.org/index.php?view=article&amp;articleid=patterns_2022_2_10_70007">https://www.thinkmind.org/index.php?view=article&amp;articleid=patterns_2022_2_10_70007</a></p>
+                </div>
+            </div>
+            <div class="pattern-content">
+                <details class="content-block" open>
+                    <summary ><h3>Intent</h3></summary>
+                    <p>How to reduce the impact of erroneous measurements such that the measured result is closer to the intended quantum state?</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Context</h3></summary>
+                    <p>A NISQ-compatible quantum algorithm, e.g., QAOA or VQE, needs to be run on a quantum device. The device’s decoherence times are short and the measurement operations are error-prone. Hence, the measured probability distribution is inaccurate, even when the measured quantum state is accurate. Thus, the negative impact of readout errors needs to be mitigated to obtain a precise measurement result.</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Forces</h3></summary>
+                    <p>The measurement times of quantum computers in the NISQ era are significant in comparison to their decoherence times. Therefore, the measurements are highly error-prone and often are among the main error sources. Due to the limited capabilities of current NISQ devices, a minimal number of additional qubits and quantum gates shall be used for the mitigation of readout errors. Further, a quantum device’s measurement error rates change over time, thus the Readout Error Mitigation (REM) needs to be adaptive.</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Solution</h3></summary>
+                    <p>Mitigate the impact of readout errors by applying a REM method. The mitigation method is performed after the circuit execution and adjusts the measured probability distribution. The resulting mitigated probability distribution is a more accurate representation of the intended quantum state. A solution sketch for the application of REM is shown in figure below. First, the quantum circuit is implemented and executed. Then the resulting probability distribution is improved based on measurement characteristics collected for the quantum device. These characteristics are typically obtained by separately running so-called calibration circuits. Alternatively, adapted instances of the implemented circuit can be run to obtain additional information about the measurement properties.
+<img src="../../../assets/1f2d8720d17d770b3179a45c001ba6d2bccce3abdacd3efe4f68954ab5e03fc6.svg" alt="" /></p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Result</h3></summary>
+                    <p>REM can reduce the impact of errors caused by measurement operations. The resulting, more precise probability distributions make NISQ devices more suitable for real-world use cases. However, additional classical processing is necessary, which can significantly increase the runtime and classical resource requirements, as not all mitigation methods scale well with the number of qubits. Generally, data provenance can be employed to increase the efficiency of frequently occurring REM tasks, e.g., when executing a VQA.</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Examples</h3></summary>
+                    <p>The figure below illustrates the steps of the Static Invert-and-Measure (SIM) technique<a target="_blank" href="https://dl.acm.org/doi/abs/10.1145/3352460.3358265">[Tannu et al.]</a>. First, multiple slightly adapted instances of the circuit are created. Thereby, bit-flips are added right before the circuit’s measurement operations. This helps to detect erroneous measurements because readout error rates are typically higher when measuring a qubit in the <span class="math">\(\ket{1}\)</span> state than when measuring it in the <span class="math">\(\ket{0}\)</span> state. Once all circuits are executed, the measurement results are processed, returning the mitigated probability distribution.
+<img src="../../../assets/663b84f7f1b652992199a3d82b8105fac65f2b6c37ed3296352e9de412ebd79d.svg" alt="" /></p>
+<p>The figure below shows the typical process of a calibration matrix-based mitigation method. Multiple shallow calibration circuits are generated and executed. The resulting probability distributions give information about the device’s readout error rates. These error rates are then incorporated into a so-called calibration matrix, which can be used to mitigate readout errors. For example, this can be done by multiplying the inverse of the calibration matrix with the circuit’s measurement result.
+<img src="../../../assets/841452648046dc57d0b72499299cdd0534cc35d2d7cb071c1b5473c9fe8e2430.svg" alt="" /></p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Related Patterns</h3></summary>
+                    
+                    <div class="pattern-relations"><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/de2b0ac7bac8e9626e469e22827ff3a1792a991adb0c3834198a22896eaa4099.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Readout Error Mitigation</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">can not be combined</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/ec4b4b2573c53d0238775407689813bee85d9268c80f389d54def345a3976def.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/1a5e3708-da39-4356-ab3f-115264da6390">Error Correction</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/11e8c27f5c44a8831a49b0c7c938345392dc25be2d958dfa9e835427f9040d81.svg" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3d9bca6e-5fca-40c5-b005-8a794958f3aa">Circuit Cutting</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">can be used with</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/de2b0ac7bac8e9626e469e22827ff3a1792a991adb0c3834198a22896eaa4099.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Readout Error Mitigation</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/3a0df94ee7d48b9f0e4dd48e20e111a979b69e85fc606788a35de33785b8ac3b.svg" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/9af072e8-875b-4e7d-980a-98cc6e0e7fd6">Pre-deployed Execution</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">can be used with</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/de2b0ac7bac8e9626e469e22827ff3a1792a991adb0c3834198a22896eaa4099.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Readout Error Mitigation</p>
+                            
+                        </div><div class="relation-description">Can be used as post-processing step in a pre-deployed application.</div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/aedfd1b77d72ea5825040b2ac5ba6a32925d1405a2928cecec28929e31c5964c.svg" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/0ad210d4-18ad-4803-ba6b-536af0fab317">Quantum Hardware Selection</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">can be used with</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/de2b0ac7bac8e9626e469e22827ff3a1792a991adb0c3834198a22896eaa4099.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Readout Error Mitigation</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/bf5bb76de4c5057371a2bed68cc120ffc105b9f6eda6c4dc2099ed61eabb02be.svg" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b2eadd28-6cb8-407d-a4c4-bfb9eab44c2a">Unified Observability</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/de2b0ac7bac8e9626e469e22827ff3a1792a991adb0c3834198a22896eaa4099.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Readout Error Mitigation</p>
+                            
+                        </div></div>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Known Uses</h3></summary>
+                    <p>Various REM methods, e.g., calibration matrix-based <a target="_blank" href="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.103.042605">[Bravyi et al.]</a><a target="_blank" href="https://www.nature.com/articles/s41534-020-00309-7">[Nachman et al.]</a><a target="_blank" href="https://quantum-journal.org/papers/q-2020-04-24-257/">[Maciejewski et al.]</a><a target="_blank" href="https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040326">[Nation et al.]</a> or bit-flip-based <a target="_blank" href="https://dl.acm.org/doi/abs/10.1145/3352460.3358265">[Tannu et al.]</a><a target="_blank" href="https://www.science.org/doi/full/10.1126/sciadv.abi8009">[Smith et al.]</a>,have been introduced in the literature. Moreover, recent work introduces a deep learning-based REM method <a target="_blank" href="https://iopscience.iop.org/article/10.1088/1367-2630/ac7b3d/pdf">[Kim et al.]</a>.</p>
+                </details>
+                
+            </div>
+        </main>
+    </div></body>
+
+</html>

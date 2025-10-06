@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script defer src="/static/microfrontend.js"></script><script src="../../../workarounds.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="../../../styles.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="../../../assets/c3983ee999b61eac77ecdbab901f7afdf26fdbbeec14d24d89e2cd432f9014b9.css" media="screen" />
+    <title>Document Message – Pattern Atlas</title>
+
+    <style>
+        .pattern-header {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding-inline: 1rem;
+        }
+        .pattern-icon {
+            height: 12rem;
+            max-height: 12rem;
+            max-width: 18rem;
+        }
+        .pattern-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin-block: 1rem;
+        }
+        .pattern-header-content > h2 {
+            font-size: 2rem;
+            margin-block: 0px;
+        }
+        p > em {
+            font-weight: 700;
+        }
+        .pattern-content {
+            display: flex;
+            flex-direction: column;
+            margin: 1rem;
+            gap: 1rem;
+        }
+        .content-block {
+            padding: 1rem;
+            border-radius: 0.3rem;
+            box-shadow: 1px 1px 5px 1px rgba(0,0,0,0.1);
+        }
+        .content-block img {
+            display: block;
+        }
+        .content-block > summary {
+            display: inline-block;
+            cursor: pointer;
+        }
+        .content-block > summary[aria-disabled="true"] {
+            color: gray;
+        }
+        .content-block h3 {
+            margin-block-start: 0px;
+            margin-block-end: 0px;
+        }
+        .content-block[open] h3 {
+            margin-block-end: 0.5rem;
+        }
+        .pattern-relations {
+            display: grid;
+            grid-template-columns: 1fr 7rem 1fr;
+            column-gap: 0.5rem;
+            row-gap: 0.2rem;
+            margin-block: 0.5rem;
+        }
+        .pattern-relations .source {
+            grid-column: 1;
+        }
+        .pattern-relations .relation {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            text-align: center;
+        }
+        .relation-label {
+            padding-inline: 1rem;
+            text-wrap: balance;
+        }
+        .arrow {
+            margin-top: -0.5rem;
+            height: 1rem;
+            background-color: black;
+            clip-path: polygon(0 0.4rem, 100% 0.4rem, 100% 0.6rem, 0 0.6rem);
+        }
+        .arrow.right {
+            clip-path: polygon(0 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem, 0 0.6rem);
+        }
+        .arrow.left {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, 100% 0.4rem, 100% 0.6rem, 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .arrow.left.right {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem , 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .pattern-relations .target {
+            grid-column: 3;
+        }
+        .relation-description {
+            display: flex;
+            grid-column: 1 / 4;
+            margin-block-end: 0.5rem;
+        }
+        .pattern-small {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            align-items: center;
+            justify-content: stretch;
+            padding: 0.3rem;
+            border-radius: 0.3rem;
+            border-color: #ccc;
+            border-style: solid;
+            border-width: 1px;
+            
+        }
+        .pattern-icon-small {
+            height: 3rem;
+            max-height: 3rem;
+        }
+        .pattern-name-small {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="../../../assets/93e89c6331691cd0ae7a3764a661cdc1ba0806c872c7bbe46217d9c9251d4b2d.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <script defer src="../../../assets/9873f82d610bfeabc1d683ec1b3125472783c2d984a9ee657950f3dd99395476.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="../../../assets/d98a28de6bb7931fb4d06846cc3aab5425f6474aab255e054ef5400f112fcc5e.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+</head>
+
+<body><div class="titlebar">
+        <a class="home" href="../../../">Pattern Atlas</a>
+    </div><div class="split-content">
+        <nav class="sidebar">
+            <p>Pattern Language</p>
+            <a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f">Enterprise Integration Patterns</a>
+            <p>Patterns</p><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/db5033cf-c13f-47b1-a617-aea77a0d5864">Aggregator</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/98ccd4dc-86a8-4652-b2c1-5b83b6f078e1">Canonical Data Model</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/b5c458ea-3a4e-4211-afc9-82510c2cff46">Channel Adapter</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/38b1dd17-c3ff-46c4-b300-2e1c7d542abe">Channel Purger</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/6c3f4121-65c2-444e-9d5a-f16f47fd2ed5">Claim Check</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/19c5ed05-1a24-4971-9aac-390e1931f010">Command Message</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/d9bd086d-030c-4ca4-b6d2-29c2fbf517c8">Competing Consumers</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/885ade35-d310-421a-98b8-877e27e51531">Composed Message Processor</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/b3418862-26a6-4bbb-b546-c12f48c45b16">Content Enricher</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/26bc2583-1c9f-4d6e-9968-e5aa0e8ab82f">Content Filter</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/d89d5a40-b864-4d97-9b44-211ed25c4f98">Content-Based Router</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/712b29e2-411b-4ef8-8f81-6cae15222c07">Control Bus</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/330ba4a6-411d-4d44-913a-2805a9f21cf7">Correlation Identifier</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/cf3a2b5f-9d7a-4f2c-ba39-ab2911d3a7d7">Datatype Channel</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/78185c7d-f353-49ee-b1e2-c2a0bcfc4ed2">Dead Letter Channel</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/662ffad9-7dd3-490f-93d2-efb92f74c5ae">Detour</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/b14e9775-09ad-4019-b5db-dd9670221679">Document Message</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/ca07715c-696e-4a62-af10-74145ff818f5">Durable Subscriber</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/be9c4245-79db-40cd-a0d4-c750c3a822b6">Dynamic Router</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/658b6fce-40b0-4f05-a2da-2fd3e33684fb">Envelope Wrapper</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/f3afc386-7c81-41d1-9b94-a06a49deb965">Event Message</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/87ae00d9-3fc7-4b9b-ac8b-48b79cbf8f65">Event-Driven Consumer</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/f619a8fd-fff8-4981-8947-48ebaaad993c">File Transfer</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/01d63259-109f-4136-878d-77e503ac8a11">Format Indicator</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/96ec8c86-c024-4d03-a283-49375e43e086">Guaranteed Delivery</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/06c5d5cc-5c29-4a74-be75-dfba20cc4f80">Idempotent Receiver</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/3e74edee-f076-45b3-8247-a5dd19cb24b2">Invalid Message Channel</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/c56361d3-4230-4653-942b-fc8ac7488bf9">Message</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/329b49fc-de79-4d63-97ca-87a8f83ef1e2">Message Broker</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/ccb661e2-6c0d-4020-9eb2-abd290230b5b">Message Bus</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/9fee292c-8c59-4a99-a3c2-467717a22c70">Message Channel</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/7c775873-1ebf-4574-8cb1-29b0c661b8f3">Message Dispatcher</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/3953e924-30f6-4561-8e02-e761b417c1d4">Message Endpoint</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/c34d4c11-da4f-445d-8682-1c92dcfbb6be">Message Expiration</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/9c49472d-47fc-417e-b75a-512d57e76870">Message Filter</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/84c81b22-765b-4edb-a6e7-c626151e0af8">Message History</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/9bafcace-20a3-4726-963b-06d09437c677">Message Router</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/acb053d6-b8be-4bce-b62d-3a8aa10b9a0d">Message Sequence</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/26c8f1cb-a592-415e-846e-22f2ee761c8f">Message Store</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/29f4224d-6b91-4218-aed6-0db3e5fa9dc2">Message Translator</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/a7e45f3a-e408-4593-9aba-0a724c5ebf26">Messaging</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/adcaac7d-a028-4d33-9111-ef3e711637e7">Messaging Bridge</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/02fc1261-b7d6-4d85-89ef-c987ab92f3d4">Messaging Gateway</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/29acda13-a41f-4270-9248-375814889f20">Messaging Mapper</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/89dd6672-dd42-470b-8e84-129e4ec7540c">Normalizer</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/1a1b9319-e303-431d-91c3-f4a3b6189982">Pipes and Filters</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/3b3a9b48-63aa-4523-be3a-6a39fdf4bda7">Point-to-Point Channel</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/78b58f38-9075-44a1-8eb4-5ab0ba4b801d">Polling Consumer</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/53adbbff-f4d6-4bd7-8b90-475f57913c1a">Process Manager</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/28343b10-ce82-4c1f-aef2-f7d95316b48e">Publish-Subscribe Channel</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/0b8fa48f-6ccf-48ef-ac0b-3dadadad40bf">Recipient List</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/36531ec5-477c-4d74-8d84-43276359aa14">Remote Procedure Invocation</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/ef45bb4d-7f1a-4840-9783-aa22ed40032a">Request-Reply</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/8c047398-63a1-4940-a5c5-c44834f48516">Resequencer</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/ea7c0692-6545-40e3-8cf8-f4c828c5fce8">Return Address</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/c7e15bdd-a5f3-486d-8e3d-f3117f39eb1a">Routing Slip</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/ba3aaa33-9010-459f-acb5-5452788e9abc">Scatter-Gather</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/0ee54310-5f4d-4435-9c34-cf93f742e101">Selective Consumer</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/9167d0da-69ec-40a5-b7f8-5eab25833d70">Service Activator</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/60e3ca01-0b7a-4785-acd7-3dddad0eea8e">Shared Database</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/c699fdf0-f31e-45c0-9d0d-cee2388e1544">Smart Proxy</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/7d28fe21-466a-4e22-9851-374e9cb93cd9">Splitter</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/5778b4ba-4acd-4c94-9c10-d83d80f75d50">Test Message</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/a2b0eaca-aa24-4036-b730-265a97043b75">Transactional Client</a><a href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/b244a2fb-1f27-4e6d-8f43-7e512798f299">Wire Tap</a></nav>
+        <main>
+            <h1 class="page-head">Enterprise Integration Patterns</h1>
+            <div class="pattern-header">
+                <img class="pattern-icon" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                <div class="pattern-header-content">
+                    <h2>Document Message</h2>
+                    <p><em>Aliases:</em> –</p>
+                    <p><em>Tags:</em> </p>
+                    <p><em>©</em> –</p>
+                </div>
+            </div>
+            <div class="pattern-content">
+                <details class="content-block" open>
+                    <summary ><h3>Driving Question</h3></summary>
+                    <p>How can messaging be used to transfer data between applications?</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Context</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Forces</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Solution</h3></summary>
+                    <p>Use a Document Message to reliably transfer a data structure between applications.</p>
+<hr />
+<p><img src="../../../assets/71458aa7ea67f0f2dc4b082278b6c17917c76d7ad0b515f65b9039aa527dc2c6.gif" alt="" /></p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Result</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Examples</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Related Patterns</h3></summary>
+                    
+                    <div class="pattern-relations"><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/dbed8a6f8f8ba2de8cb86dfb8764dbf0dfedff207a7f673ab8701fe9360becf9.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/19c5ed05-1a24-4971-9aac-390e1931f010">Command Message</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e42cca75c0e30d12dee7aba22eb6e161f6ce6eb52453752ffe3e50d0c8796ab8.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/f3afc386-7c81-41d1-9b94-a06a49deb965">Event Message</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/735c55d4775278c72a721538107fd71c7259c33880eaca5f597f8ea2dfd2cfe7.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/f619a8fd-fff8-4981-8947-48ebaaad993c">File Transfer</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/18fb172bf6f9e5324e3362fef9c2bf713b7bab28fbab07c55634bdba416e5901.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/96ec8c86-c024-4d03-a283-49375e43e086">Guaranteed Delivery</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/c0d6c1187204be4d6f637f48b4a85639fa16cdf49e1bde5e79e18bffdd5a08c5.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/c56361d3-4230-4653-942b-fc8ac7488bf9">Message</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/5c38adf45f680594618aa17c05d6e73a4a0aca0141feb3627cde19250b5352b5.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/c34d4c11-da4f-445d-8682-1c92dcfbb6be">Message Expiration</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/9a441e56bce3c8fa53289ab9dd157e26dff28d0f4ce8ade5ccb335ff195e2968.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/a7e45f3a-e408-4593-9aba-0a724c5ebf26">Messaging</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/270dce8f9dd61c2b0bcb387d80ecea543d63ff363abfc83c1a59ba592342008a.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/3b3a9b48-63aa-4523-be3a-6a39fdf4bda7">Point-to-Point Channel</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/2679c655a4d6764c2028a84fc9b153d58063e03d0cae3f47b205565adbbf35e7.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/28343b10-ce82-4c1f-aef2-f7d95316b48e">Publish-Subscribe Channel</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/939b04f70428fff013a4caec5870f52cff6effc3e673e360beeba6ddf53bc654.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/36531ec5-477c-4d74-8d84-43276359aa14">Remote Procedure Invocation</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/f83c09678c6ca0cd15de5a865c8ef13a831a4bb5e109805c4e2004eee415eef8.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/ef45bb4d-7f1a-4840-9783-aa22ed40032a">Request-Reply</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/3c39d034689bdaff9ddf6ded5a803abc9e49b363aadd98fc762e646c0f2d8c5d.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/60e3ca01-0b7a-4785-acd7-3dddad0eea8e">Shared Database</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/e42cca75c0e30d12dee7aba22eb6e161f6ce6eb52453752ffe3e50d0c8796ab8.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/f3afc386-7c81-41d1-9b94-a06a49deb965">Event Message</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/c0d6c1187204be4d6f637f48b4a85639fa16cdf49e1bde5e79e18bffdd5a08c5.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/c56361d3-4230-4653-942b-fc8ac7488bf9">Message</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/empty.svg" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/29acda13-a41f-4270-9248-375814889f20">Messaging Mapper</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/270dce8f9dd61c2b0bcb387d80ecea543d63ff363abfc83c1a59ba592342008a.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/3b3a9b48-63aa-4523-be3a-6a39fdf4bda7">Point-to-Point Channel</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/f83c09678c6ca0cd15de5a865c8ef13a831a4bb5e109805c4e2004eee415eef8.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/ef45bb4d-7f1a-4840-9783-aa22ed40032a">Request-Reply</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/4cc73af590a8836ffe558653c63db1f62f58f2b4d9fb882e52046691ce2fc50d.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/a2b0eaca-aa24-4036-b730-265a97043b75">Transactional Client</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/b9b7b0272b0a5e839ba74b53bc05c79dba0b3562d2947007046b4b04f1f15b92.gif" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/f6b807aa-5905-4435-aec6-324355a0483f/b244a2fb-1f27-4e6d-8f43-7e512798f299">Wire Tap</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is related to</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/e5d00e5ba13d19748a39f859277c5536fc12bb39df041fedb700a759a2348d36.gif" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Document Message</p>
+                            
+                        </div></div>
+                </details>
+                <details class="content-block" >
+                    <summary aria-disabled=true><h3>Known Uses</h3></summary>
+                    <p>–</p>
+                </details>
+                
+            </div>
+        </main>
+    </div></body>
+
+</html>

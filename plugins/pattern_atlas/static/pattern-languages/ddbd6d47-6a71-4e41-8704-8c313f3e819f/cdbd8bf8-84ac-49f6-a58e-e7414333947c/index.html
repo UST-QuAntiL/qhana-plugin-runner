@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script defer src="/static/microfrontend.js"></script><script src="../../../workarounds.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="../../../styles.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="../../../assets/c3983ee999b61eac77ecdbab901f7afdf26fdbbeec14d24d89e2cd432f9014b9.css" media="screen" />
+    <title>Customizable Deployment Stack – Pattern Atlas</title>
+
+    <style>
+        .pattern-header {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding-inline: 1rem;
+        }
+        .pattern-icon {
+            height: 12rem;
+            max-height: 12rem;
+            max-width: 18rem;
+        }
+        .pattern-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin-block: 1rem;
+        }
+        .pattern-header-content > h2 {
+            font-size: 2rem;
+            margin-block: 0px;
+        }
+        p > em {
+            font-weight: 700;
+        }
+        .pattern-content {
+            display: flex;
+            flex-direction: column;
+            margin: 1rem;
+            gap: 1rem;
+        }
+        .content-block {
+            padding: 1rem;
+            border-radius: 0.3rem;
+            box-shadow: 1px 1px 5px 1px rgba(0,0,0,0.1);
+        }
+        .content-block img {
+            display: block;
+        }
+        .content-block > summary {
+            display: inline-block;
+            cursor: pointer;
+        }
+        .content-block > summary[aria-disabled="true"] {
+            color: gray;
+        }
+        .content-block h3 {
+            margin-block-start: 0px;
+            margin-block-end: 0px;
+        }
+        .content-block[open] h3 {
+            margin-block-end: 0.5rem;
+        }
+        .pattern-relations {
+            display: grid;
+            grid-template-columns: 1fr 7rem 1fr;
+            column-gap: 0.5rem;
+            row-gap: 0.2rem;
+            margin-block: 0.5rem;
+        }
+        .pattern-relations .source {
+            grid-column: 1;
+        }
+        .pattern-relations .relation {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            text-align: center;
+        }
+        .relation-label {
+            padding-inline: 1rem;
+            text-wrap: balance;
+        }
+        .arrow {
+            margin-top: -0.5rem;
+            height: 1rem;
+            background-color: black;
+            clip-path: polygon(0 0.4rem, 100% 0.4rem, 100% 0.6rem, 0 0.6rem);
+        }
+        .arrow.right {
+            clip-path: polygon(0 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem, 0 0.6rem);
+        }
+        .arrow.left {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, 100% 0.4rem, 100% 0.6rem, 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .arrow.left.right {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem , 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .pattern-relations .target {
+            grid-column: 3;
+        }
+        .relation-description {
+            display: flex;
+            grid-column: 1 / 4;
+            margin-block-end: 0.5rem;
+        }
+        .pattern-small {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            align-items: center;
+            justify-content: stretch;
+            padding: 0.3rem;
+            border-radius: 0.3rem;
+            border-color: #ccc;
+            border-style: solid;
+            border-width: 1px;
+            
+        }
+        .pattern-icon-small {
+            height: 3rem;
+            max-height: 3rem;
+        }
+        .pattern-name-small {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="../../../assets/93e89c6331691cd0ae7a3764a661cdc1ba0806c872c7bbe46217d9c9251d4b2d.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <script defer src="../../../assets/9873f82d610bfeabc1d683ec1b3125472783c2d984a9ee657950f3dd99395476.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="../../../assets/d98a28de6bb7931fb4d06846cc3aab5425f6474aab255e054ef5400f112fcc5e.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+</head>
+
+<body><div class="titlebar">
+        <a class="home" href="../../../">Pattern Atlas</a>
+    </div><div class="split-content">
+        <nav class="sidebar">
+            <p>Pattern Language</p>
+            <a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f">Component Hosting Patterns</a>
+            <p>Patterns</p><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/aab9d0f8-2c0b-4ed8-8a82-1b4e91358854">Consumer-Managed Scaling Configuration</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/5651c09a-634c-4ca1-a5cb-d38ce946c60a">Consumer-managed Container Hosting</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/cdbd8bf8-84ac-49f6-a58e-e7414333947c">Customizable Deployment Stack</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/78b1fe35-9739-46b3-8baf-21731d886913">Fixed Deployment Stack</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/8f497741-928c-480c-9085-1036b2e24051">Provider-defined Stack Hosting</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/b8785a66-2805-4559-8332-dd348ace3afc">Provider-managed Container Hosting</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/92dddd27-4627-42aa-b667-a9c9d805e475">Provider-managed Scaling Configuration</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/ebc49a18-4a96-416c-9dd6-5de89d0d1b89">Serverful Hosting</a><a href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/e316884d-c2c6-453f-a08b-372167957277">Serverless Hosting</a></nav>
+        <main>
+            <h1 class="page-head">Component Hosting Patterns</h1>
+            <div class="pattern-header">
+                <img class="pattern-icon" src="../../../assets/6e20ba9751e6bf085c9c30ebec5081f5d4ea4b8fc16017fff38625ed12a91952.png" aria-hidden="true">
+                <div class="pattern-header-content">
+                    <h2>Customizable Deployment Stack</h2>
+                    <p><em>Aliases:</em> –</p>
+                    <p><em>Tags:</em> </p>
+                    <p><em>©</em> This pattern was first published in <em>Service-Oriented Computing. SummerSOC 2022. Communications in Computer and Information Science</em>, vol 1603, pp. 45-67, 2022 by Springer Nature.</p>
+<p>Yussupov, V., Breitenbücher, U., Brogi, A., Harzenetter, L., Leymann, F., Soldani, J., <strong>&quot;Serverless or Serverful? A Pattern-Based Approach for Exploring Hosting Alternatives&quot;</strong>. In: Service-Oriented Computing. SummerSOC 2022. Communications in Computer and Information Science, vol 1603, pages 45-67. Springer, Cham. 2022, DOI: <a target="_blank" href="https://link.springer.com/chapter/10.1007/978-3-031-18304-1_3">10.1007/978-3-031-18304-1_3</a></p>
+                </div>
+            </div>
+            <div class="pattern-content">
+                <details class="content-block" open>
+                    <summary ><h3>Problem</h3></summary>
+                    <p>How to host a software component when it requires customization of the underlying infrastructure or the host environment it is running on?</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Context</h3></summary>
+                    <p>A software component needs to be hosted such that cloud consumers are able to customize the underlying deployment stack with possibly nested software layers by adding, removing, or changing components in it or configuring the stack in a special way.</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Forces</h3></summary>
+                    <p>Cloud service models vary in modifiability of the underlying deployment stack, e.g., it is possible to install additional software on a virtual machine hosted using IaaS offerings, whereas FaaS offerings hide the underlying deployment stack to enable consumers deploying their applications without the need for technical expertise about underlying components. However, customization requirements for hosting a component can arise due to various reasons, e.g., legacy applications that have special dependencies to other software components that need to run in the same operating system.</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Solution</h3></summary>
+                    <p>Host software components on a Customizable Deployment Stack in which the cloud consumer is responsible for setting up and configuring the infrastructure,execution environment, and middleware components needed to host the given software component. Hence, for a given software component, the cloud consumer can install and configure hosting components with required dependencies completely as required by the component to be deployed. The Customizable Deployment Stack has two variants shown on the solution sketch below: the first variant supports customizing the physical or virtual machine the component is running on. For example, software can be deployed on a physical machine, thus, enabling full customization of all infrastructure components. However, especially in the cloud, provisioning virtual machines and installing software on top of them with all required dependencies is a more common example for this variant. The second variant is based on containers, which can be customized regarding the software and its dependencies that must be installed.
+<img src="../../../assets/0a3c8b4df54468b0e50372b85a408aaf3caf198eff78613e95c731c3cd64a93e.png" alt="" /></p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Result</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" hidden>
+                    <summary aria-disabled=true><h3>Examples</h3></summary>
+                    <p>–</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Related Patterns</h3></summary>
+                    
+                    <div class="pattern-relations"><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/6e20ba9751e6bf085c9c30ebec5081f5d4ea4b8fc16017fff38625ed12a91952.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Customizable Deployment Stack</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is combined with</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/51123d367ea496a24ccbc7abe377469042acb517cbd57abc7401409807cdd494.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/aab9d0f8-2c0b-4ed8-8a82-1b4e91358854">Consumer-Managed Scaling Configuration</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/6e20ba9751e6bf085c9c30ebec5081f5d4ea4b8fc16017fff38625ed12a91952.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Customizable Deployment Stack</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is refined by</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/aa0fe248995471911d4986f412eae50ab1055d48a360d3bd4ce1951923ff2ae3.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/5651c09a-634c-4ca1-a5cb-d38ce946c60a">Consumer-managed Container Hosting</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/6e20ba9751e6bf085c9c30ebec5081f5d4ea4b8fc16017fff38625ed12a91952.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Customizable Deployment Stack</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">conflicts with</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/77fa6bc7fdf34bef5da73e88f1c59b786ab42f0369223505fc159ded7db9e5ba.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/78b1fe35-9739-46b3-8baf-21731d886913">Fixed Deployment Stack</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/6e20ba9751e6bf085c9c30ebec5081f5d4ea4b8fc16017fff38625ed12a91952.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Customizable Deployment Stack</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is refined by</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/9ccb189473a766e0f8ac11a27548ea42d7dda976f738fd2d3a137ddef49fa7cc.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/b8785a66-2805-4559-8332-dd348ace3afc">Provider-managed Container Hosting</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/6e20ba9751e6bf085c9c30ebec5081f5d4ea4b8fc16017fff38625ed12a91952.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Customizable Deployment Stack</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is combined with</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/69a0728bac056fce0dc178e97bd605474601d8c79d43d1d121be2cd8f7c44823.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/92dddd27-4627-42aa-b667-a9c9d805e475">Provider-managed Scaling Configuration</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/6e20ba9751e6bf085c9c30ebec5081f5d4ea4b8fc16017fff38625ed12a91952.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Customizable Deployment Stack</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">is refined by</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/694dedf23248ca0c809cb52d1258e41abe4e3ac6db0a423a8e166b856b051e3f.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/ddbd6d47-6a71-4e41-8704-8c313f3e819f/ebc49a18-4a96-416c-9dd6-5de89d0d1b89">Serverful Hosting</a>
+                            
+                        </div></div>
+                </details>
+                <details class="content-block" >
+                    <summary aria-disabled=true><h3>Known Uses</h3></summary>
+                    <p>–</p>
+                </details>
+                
+            </div>
+        </main>
+    </div></body>
+
+</html>

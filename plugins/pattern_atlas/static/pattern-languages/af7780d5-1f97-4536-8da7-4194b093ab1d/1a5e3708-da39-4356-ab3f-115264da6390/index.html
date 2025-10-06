@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script defer src="/static/microfrontend.js"></script><script src="../../../workarounds.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="../../../styles.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="../../../assets/c3983ee999b61eac77ecdbab901f7afdf26fdbbeec14d24d89e2cd432f9014b9.css" media="screen" />
+    <title>Error Correction – Pattern Atlas</title>
+
+    <style>
+        .pattern-header {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding-inline: 1rem;
+        }
+        .pattern-icon {
+            height: 12rem;
+            max-height: 12rem;
+            max-width: 18rem;
+        }
+        .pattern-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin-block: 1rem;
+        }
+        .pattern-header-content > h2 {
+            font-size: 2rem;
+            margin-block: 0px;
+        }
+        p > em {
+            font-weight: 700;
+        }
+        .pattern-content {
+            display: flex;
+            flex-direction: column;
+            margin: 1rem;
+            gap: 1rem;
+        }
+        .content-block {
+            padding: 1rem;
+            border-radius: 0.3rem;
+            box-shadow: 1px 1px 5px 1px rgba(0,0,0,0.1);
+        }
+        .content-block img {
+            display: block;
+        }
+        .content-block > summary {
+            display: inline-block;
+            cursor: pointer;
+        }
+        .content-block > summary[aria-disabled="true"] {
+            color: gray;
+        }
+        .content-block h3 {
+            margin-block-start: 0px;
+            margin-block-end: 0px;
+        }
+        .content-block[open] h3 {
+            margin-block-end: 0.5rem;
+        }
+        .pattern-relations {
+            display: grid;
+            grid-template-columns: 1fr 7rem 1fr;
+            column-gap: 0.5rem;
+            row-gap: 0.2rem;
+            margin-block: 0.5rem;
+        }
+        .pattern-relations .source {
+            grid-column: 1;
+        }
+        .pattern-relations .relation {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            text-align: center;
+        }
+        .relation-label {
+            padding-inline: 1rem;
+            text-wrap: balance;
+        }
+        .arrow {
+            margin-top: -0.5rem;
+            height: 1rem;
+            background-color: black;
+            clip-path: polygon(0 0.4rem, 100% 0.4rem, 100% 0.6rem, 0 0.6rem);
+        }
+        .arrow.right {
+            clip-path: polygon(0 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem, 0 0.6rem);
+        }
+        .arrow.left {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, 100% 0.4rem, 100% 0.6rem, 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .arrow.left.right {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem , 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .pattern-relations .target {
+            grid-column: 3;
+        }
+        .relation-description {
+            display: flex;
+            grid-column: 1 / 4;
+            margin-block-end: 0.5rem;
+        }
+        .pattern-small {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            align-items: center;
+            justify-content: stretch;
+            padding: 0.3rem;
+            border-radius: 0.3rem;
+            border-color: #ccc;
+            border-style: solid;
+            border-width: 1px;
+            
+        }
+        .pattern-icon-small {
+            height: 3rem;
+            max-height: 3rem;
+        }
+        .pattern-name-small {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="../../../assets/93e89c6331691cd0ae7a3764a661cdc1ba0806c872c7bbe46217d9c9251d4b2d.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <script defer src="../../../assets/9873f82d610bfeabc1d683ec1b3125472783c2d984a9ee657950f3dd99395476.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="../../../assets/d98a28de6bb7931fb4d06846cc3aab5425f6474aab255e054ef5400f112fcc5e.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+</head>
+
+<body><div class="titlebar">
+        <a class="home" href="../../../">Pattern Atlas</a>
+    </div><div class="split-content">
+        <nav class="sidebar">
+            <p>Pattern Language</p>
+            <a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d">Quantum Computing Patterns</a>
+            <p>Patterns</p><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/c450e0ce-c55f-4b72-afe9-e9e2c7e4c091">Ad-hoc Hybrid Code Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b657ea73-63c0-4800-a69d-a91925e19ac6">Alternating Operator Ansatz (AOA)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/96b4d28a-a5ce-4c96-85df-d42587b13c57">Amplitude Amplification</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/502147ec-45fa-403f-8f52-e196b3359399">Amplitude Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/e595558d-bfea-4b82-9f47-a38a2097b245">Angle Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/bcd4c7a1-3c92-4f8c-a530-72b8b95d3750">Basis Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d3f6b18a-c8c1-4010-b750-b71d95eb5f5e">Biased Initial State</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b92daa20-265c-4276-b138-3aa5a7bbc37f">Chained Optimization</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3d9bca6e-5fca-40c5-b005-8a794958f3aa">Circuit Cutting</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/8fcca2dc-fca0-47cf-9bd4-038cd2fe8fb8">Classical-Quantum Interface</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3d1f3991-df47-4d42-8f9a-e6dcf4e3ccec">Creating Entanglement</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/88d3e6f5-c75f-42aa-b665-2ba79746222e">Dynamic Circuit</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/1a5e3708-da39-4356-ab3f-115264da6390">Error Correction</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3f3fabf0-7fa7-4b43-a74a-46a7ac2c55ee">Function Table</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/7821a1f9-02a0-4833-a048-3bf184b1c6fe">Gate Cut</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b6788c99-24f5-496b-a30c-fc0dd7bb3e96">Gate Error Mitigation</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b8c2dca0-563a-432d-adfd-8bd15ef0dfb8">Grover</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/37e64e06-9c2a-4c54-aa18-ddcf67f48a6a">Hadamard Test</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/4074490a-4236-49ed-83d1-625ce58e2dbd">Hybrid Module</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/312bc9d3-26c0-40ae-b90b-56effd136c0d">Initialization</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/45d09c54-3f4a-453b-885d-2772443c8d72">Matrix Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/ae3d4ca7-9503-463a-b0fc-eabed85b83e0">Mid-Circuit Measurement</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/1cc7e9d6-ab37-412e-8afa-604a25de296e">Oracle</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3f3d5582-1af9-4a23-93f5-5d0474b2b42c">Orchestrated Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/c6560c51-d2e3-4595-b9c3-b609c75c0b82">Phase Shift</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/1c95912a-128b-44e7-b2d4-930f7ba11060">Post-Selective Measurement</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/8c893b97-5980-4c81-870a-1cb4917dc33f">Pre-Trained Feature Extractor</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/9af072e8-875b-4e7d-980a-98cc6e0e7fd6">Pre-deployed Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/70adfd6f-0648-47cf-88ff-0212b882a262">Prioritized Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/60736854-6eb4-47b5-9619-2370825a34e9">Quantum Application Archive</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/456d4450-9ba7-4e43-8cb7-03ae01936fc4">Quantum Application Testing</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/da93f915-7f4c-49df-99d0-80d91f26a337">Quantum Approximate Optimization Algorithm (QAOA)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/482714a7-8409-4165-93fe-72b02c2ae99c">Quantum Associative Memory (QuAM)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/aa90de15-b7e3-45a7-bb48-f0a5b8b2c479">Quantum Circuit Translator</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/cc3731cf-ecbb-490f-b996-525c8f60d8a9">Quantum Classification</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/7294c3f2-cb67-492a-8a16-c7384eb9bac2">Quantum Clustering</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/12d260d0-08e3-483e-900e-fbe21db10cac">Quantum Fourier Transformation</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/0ad210d4-18ad-4803-ba6b-536af0fab317">Quantum Hardware Selection</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/5479acf4-0588-49af-a6a9-4956b7ee32af">Quantum Kernel Estimator (QKE)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/424c803a-aefb-4b54-8e45-d177fedac893">Quantum Module</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d5cda8c9-f39b-474a-9032-c17131884975">Quantum Module Template</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/726ead05-e582-4704-904b-6ce2174399d8">Quantum Neural Network (QNN)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/a4ea9f6c-5b0a-4beb-a056-8b261d96ba80">Quantum Phase Estimation (QPE)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d9c57511-1101-4707-99bf-36f43a12cb13">Quantum Random Access Memory (QRAM) Encoding</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/dd15032b-ce2b-40b6-80ac-97623255b531">Quantum-Classic Split</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/ed3af509-904e-4732-8113-215d65a7d53d">Readout Error Mitigation</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/fd2bb9f3-b04a-4645-a2d0-ffa4d986db83">SWAP Test</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/4437fb83-34c0-47a8-8c6f-1272a76b76bb">Schmidt Decomposition</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/ddd64fb6-b324-45eb-8e21-8193dc311841">Speedup via Verifying</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/5850c6ab-5c87-4331-8439-73692a403228">Standalone Circuit Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/d4f7c247-e2bb-4301-ad06-f758fa58f2dc">Uncompute</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/59389814-01e0-4422-8012-a298940064aa">Unified Execution</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b2eadd28-6cb8-407d-a4c4-bfb9eab44c2a">Unified Observability</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/2229a430-fe92-4411-9d72-d10dd1d8da14">Uniform Superposition</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/f417a855-4d52-4a30-b88a-e34a7eaebe86">Variational Parameter Transfer</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/bc795a9b-7977-4e01-b513-f9f5aba38aa7">Variational Quantum Algorithm (VQA)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/27a5d147-a323-4c6a-84ef-45d80cae923d">Variational Quantum Eigensolver (VQE)</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/3ea9e187-e91b-4852-84eb-b35b5c480892">Warm Start</a><a href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/28c99b35-98ce-4bfe-bb6d-94a65207258a">Wire Cut</a></nav>
+        <main>
+            <h1 class="page-head">Quantum Computing Patterns</h1>
+            <div class="pattern-header">
+                <img class="pattern-icon" src="../../../assets/ec4b4b2573c53d0238775407689813bee85d9268c80f389d54def345a3976def.png" aria-hidden="true">
+                <div class="pattern-header-content">
+                    <h2>Error Correction</h2>
+                    <p><em>Aliases:</em> –</p>
+                    <p><em>Tags:</em> augmentation</p>
+                    <p><em>©</em> <a target="_blank" href="https://www.thinkmind.org/index.php?view=article&amp;articleid=patterns_2022_2_10_70007">https://www.thinkmind.org/index.php?view=article&amp;articleid=patterns_2022_2_10_70007</a></p>
+                </div>
+            </div>
+            <div class="pattern-content">
+                <details class="content-block" open>
+                    <summary ><h3>Intent</h3></summary>
+                    <p>How to detect and correct errors occurring during the execution of a quantum circuit?</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Context</h3></summary>
+                    <p>A quantum algorithm needs to be run on a quantum device. The quantum device’s performance is limited by various error sources, such as gate errors and crosstalk. The prevention of these errors enables the execution of large-scale quantum algorithms for real-world problems.</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Forces</h3></summary>
+                    <p>Quantum devices unavoidably cause a certain amount of errors due to the fragility of coherent quantum states [<a target="_blank" href="https://iopscience.iop.org/article/10.1088/0034-4885/76/7/076001/meta">Devitt et al. 2013</a>]. Furthermore, contrary to classical bits, qubits can not be copied. Hence, classical error correction can
+not be used for quantum computers and new quantum-specific methods need to be developed. However, these methods can be costly in terms of quantum resources, as they require a large number of additional qubits and quantum gates.
+To enable scalable quantum computing for real-world problems, all kinds of errors occurring in quantum devices need to be detected and corrected. In general, the correction of errors is preferred over their mitigation, since even minor remaining post-mitigation errors slowly stack up during the computation and ultimately lead to an imprecise result.</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Solution</h3></summary>
+                    <p>Detect and correct quantum errors using quantum error correction codes [<a target="_blank" href="https://iopscience.iop.org/article/10.1088/0034-4885/76/7/076001/meta">Devitt et al. 2013</a>]., which are added to the executed circuit. With these correction codes, many physical qubits are combined into one logical qubit. As a result of
+this bundling, errors in the original qubit can be first detected and then corrected. The figure below depicts a solution sketch showcasing the general building blocks of a quantum error correction procedure. The shown instance applies an error correction code that can detect and fix bit-flip errors in the computational basis. For the correction of errors from other sources, similar processes can be applied. First, the ancilla coupling is created, by encoding the state <span class="math">\(\ket{\psi}\)</span> of a single physical qubit into multiple ancilla qubits. These qubits now hold the logical qubit’s data and are called data qubits in the following. Next, some unitary transformation is applied to the logical qubit, possibly resulting in an error. In order to detect an error, additional ancilla qubits are employed to check the parity of the data qubits. Based on the discovered syndrome, the error-free state can be recovered in the recovery phase. Note that the process is assumed to only have errors at the unitary transformation step, which is denoted by the error indicator. Further, the number and type of detectable errors depends on the applied error correction code.
+<img src="../../../assets/def35b4700cbdd4bcc7da607d563eb948c54c58065077ee23af88efd84e97776.svg" alt="" /></p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Result</h3></summary>
+                    <p>When applying quantum error correction, computational errors can be prevented, enabling error-free systems of logical qubits. Thus, error correction is making fault-tolerant quantum computation feasible. The good scalability of error correction, enables the accurate execution of large algorithms</p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Examples</h3></summary>
+                    <p>The figure below illustrates the application of a 3-qubit variant of the aforementioned error code for multiple qubits. Each of the physical qubits P1 to P4 is transformed into a logical qubit consisting of five physical qubits. Three of these five physical qubits are being used as data qubits and two of them are being used for the detection and recovery process. Further, the 1- and 2-qubit gates G1 to G4 need to be realized by the subroutines S1 to S4, which prepare the data qubits. The resulting errors can then be corrected by individually applying error correction routines for each of the logical qubits.
+<img src="../../../assets/f407192b0c626c562912f397bee36113506a6ad17d4258f50b25aa845b3a8ea3.svg" alt="" /></p>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Related Patterns</h3></summary>
+                    
+                    <div class="pattern-relations"><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/ec4b4b2573c53d0238775407689813bee85d9268c80f389d54def345a3976def.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Error Correction</p>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">can not be combined</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/71e71f1fbd96918d436531d0597cf71da5207db5a00e8b144298ba95c433295b.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/b6788c99-24f5-496b-a30c-fc0dd7bb3e96">Gate Error Mitigation</a>
+                            
+                        </div><div class="pattern-small source">
+                            <img class="pattern-icon-small" src="../../../assets/de2b0ac7bac8e9626e469e22827ff3a1792a991adb0c3834198a22896eaa4099.png" aria-hidden="true">
+                            
+                            <a class="pattern-name-small" href="../../../pattern-languages/af7780d5-1f97-4536-8da7-4194b093ab1d/ed3af509-904e-4732-8113-215d65a7d53d">Readout Error Mitigation</a>
+                            
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">can not be combined</p>
+                            
+                            <div class="arrow right"></div>
+                            
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="../../../assets/ec4b4b2573c53d0238775407689813bee85d9268c80f389d54def345a3976def.png" aria-hidden="true">
+                            
+                            <p class="pattern-name-small">Error Correction</p>
+                            
+                        </div></div>
+                </details>
+                <details class="content-block" open>
+                    <summary ><h3>Known Uses</h3></summary>
+                    <p>Known Uses: <a target="_blank" href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.77.198">Laflamme et al.</a> show a 5-qubit error correction code that can protect a qubit against general 1-qubit errors. Shor’s 9-qubit code can protect a qubit against single bit-flip and phase-flip errors <a target="_blank" href="https://journals.aps.org/pra/abstract/10.1103/PhysRevA.52.R2493">[Shor 1995]</a>. Further, a variety of different quantum error correction codes have been presented in the literature [<a target="_blank" href="https://iopscience.iop.org/article/10.1088/0034-4885/76/7/076001/meta">Devitt et al. 2013</a>], <a target="_blank" href="https://www.sciencedirect.com/science/article/pii/S2667325820300145">[Cai et al. 2021]</a>, <a target="_blank" href="https://arxiv.org/pdf/quant-ph/9705052.pdf">[Gottesman et al. 1997]</a>, <a target="_blank" href="https://www.tandfonline.com/doi/full/10.1080/00107514.2019.1667078">[Roffe 2019]</a></p>
+                </details>
+                
+            </div>
+        </main>
+    </div></body>
+
+</html>
