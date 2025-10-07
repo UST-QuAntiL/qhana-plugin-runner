@@ -1,0 +1,235 @@
+{% extends "base.jinja2" %}
+
+
+{% block head %}
+    {{ super() }}
+    <title>{{pattern.name}} – Pattern Atlas</title>
+
+    <style>
+        .pattern-header {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding-inline: 1rem;
+        }
+        .pattern-icon {
+            height: 12rem;
+            max-height: 12rem;
+            max-width: 18rem;
+        }
+        .pattern-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            margin-block: 1rem;
+        }
+        .pattern-header-content > h2 {
+            font-size: 2rem;
+            margin-block: 0px;
+        }
+        p > em {
+            font-weight: 700;
+        }
+        .pattern-content {
+            display: flex;
+            flex-direction: column;
+            margin: 1rem;
+            gap: 1rem;
+        }
+        .content-block {
+            padding: 1rem;
+            border-radius: 0.3rem;
+            box-shadow: 1px 1px 5px 1px rgba(0,0,0,0.1);
+        }
+        .content-block img {
+            display: block;
+        }
+        .content-block > summary {
+            display: inline-block;
+            cursor: pointer;
+        }
+        .content-block > summary[aria-disabled="true"] {
+            color: gray;
+        }
+        .content-block h3 {
+            margin-block-start: 0px;
+            margin-block-end: 0px;
+        }
+        .content-block[open] h3 {
+            margin-block-end: 0.5rem;
+        }
+        .pattern-relations {
+            display: grid;
+            grid-template-columns: 1fr 7rem 1fr;
+            column-gap: 0.5rem;
+            row-gap: 0.2rem;
+            margin-block: 0.5rem;
+        }
+        .pattern-relations .source {
+            grid-column: 1;
+        }
+        .pattern-relations .relation {
+            grid-column: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            text-align: center;
+        }
+        .relation-label {
+            padding-inline: 1rem;
+            text-wrap: balance;
+        }
+        .arrow {
+            margin-top: -0.5rem;
+            height: 1rem;
+            background-color: black;
+            clip-path: polygon(0 0.4rem, 100% 0.4rem, 100% 0.6rem, 0 0.6rem);
+        }
+        .arrow.right {
+            clip-path: polygon(0 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem, 0 0.6rem);
+        }
+        .arrow.left {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, 100% 0.4rem, 100% 0.6rem, 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .arrow.left.right {
+            clip-path: polygon(0 0.5rem, 0.5rem 0, 0.5rem 0.4rem, calc(100% - 0.5rem) 0.4rem, calc(100% - 0.5rem) 0, 100% 0.5rem, calc(100% - 0.5rem) 1rem, calc(100% - 0.5rem) 0.6rem , 0.5rem 0.6rem, 0.5rem 1rem);
+        }
+        .pattern-relations .target {
+            grid-column: 3;
+        }
+        .relation-description {
+            display: flex;
+            grid-column: 1 / 4;
+            margin-block-end: 0.5rem;
+        }
+        .pattern-small {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            align-items: center;
+            justify-content: stretch;
+            padding: 0.3rem;
+            border-radius: 0.3rem;
+            border-color: #ccc;
+            border-style: solid;
+            border-width: 1px;
+
+        }
+        .pattern-icon-small {
+            height: 3rem;
+            max-height: 3rem;
+        }
+        .pattern-name-small {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="{{'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css' | resource}}" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+    <script defer src="{{'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js' | resource}}" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+    <script defer src="{{'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js' | resource}}" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+    onload="renderMathInElement(document.body);"></script>
+{% endblock head %}
+
+
+{%- block content -%}
+    <div class="split-content">
+        <nav class="sidebar">
+            <p>Pattern Language</p>
+            <a href="/pattern-languages/{{language.language_id}}">{{language.name}}</a>
+            <p>Patterns</p>
+            {%- for pattern in language.get_patterns_sorted(atlas) -%}
+            <a href="/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}">{{pattern.name}}</a>
+            {%- endfor -%}
+        </nav>
+        <main>
+            <h1 class="page-head">{{language.name}}</h1>
+            <div class="pattern-header">
+                <img class="pattern-icon" src="{{pattern.icon | resource}}" aria-hidden="true">
+                <div class="pattern-header-content">
+                    <h2>{{pattern.name}}</h2>
+                    <p><em>Aliases:</em> {{pattern.alias | markdown}}</p>
+                    <p><em>Tags:</em> {{', '.join(pattern.tags)}}</p>
+                    <p><em>©</em> {{pattern.citation | markdown}}</p>
+                </div>
+            </div>
+            <div class="pattern-content">
+                <details class="content-block" {{'open' if pattern.intent else ''}}>
+                    <summary {{'aria-disabled=true' if not pattern.intent}}><h3>{% if pattern.intent_type == 'question': %}Driving Question{% elif pattern.intent_type == "problem": %}Problem{% else: %}Intent{% endif %}</h3></summary>
+                    <p>{{pattern.intent | markdown}}</p>
+                </details>
+                <details class="content-block" {{'open' if pattern.context else 'hidden'}}>
+                    <summary {{'aria-disabled=true' if not pattern.context}}><h3>Context</h3></summary>
+                    <p>{{pattern.context | markdown}}</p>
+                </details>
+                <details class="content-block" {{'open' if pattern.forces else 'hidden'}}>
+                    <summary {{'aria-disabled=true' if not pattern.forces}}><h3>Forces</h3></summary>
+                    <p>{{pattern.forces | markdown}}</p>
+                </details>
+                <details class="content-block" {{'open' if pattern.solution else ''}}>
+                    <summary {{'aria-disabled=true' if not pattern.solution}}><h3>Solution</h3></summary>
+                    <p>{{pattern.solution | markdown}}</p>
+                </details>
+                <details class="content-block" {{'open' if pattern.result else 'hidden'}}>
+                    <summary {{'aria-disabled=true' if not pattern.result}}><h3>Result</h3></summary>
+                    <p>{{pattern.result | markdown}}</p>
+                </details>
+                <details class="content-block" {{'open' if pattern.examples else 'hidden'}}>
+                    <summary {{'aria-disabled=true' if not pattern.examples}}><h3>Examples</h3></summary>
+                    <p>{{pattern.examples | markdown}}</p>
+                </details>
+                <details class="content-block" {{'open' if pattern.has_related_patterns else ''}}>
+                    <summary {{'aria-disabled=true' if not pattern.has_related_patterns}}><h3>Related Patterns</h3></summary>
+                    {% if pattern.related_patterns: -%}<p>{{pattern.related_patterns | markdown}}</p>{%- endif %}
+                    <div class="pattern-relations">
+                        {%- for relation in pattern.get_relations_sorted(atlas) -%}
+                        {%- set source_pattern = relation.get_source(atlas) -%}
+                        {%- set target_pattern = relation.get_target(atlas) -%}
+                        <div class="pattern-small source">
+                            <img class="pattern-icon-small" src="{{source_pattern.icon | resource}}" aria-hidden="true">
+                            {% if source_pattern.pattern_id != pattern.pattern_id %}
+                            <a class="pattern-name-small" href="/pattern-languages/{{source_pattern.pattern_language}}/{{source_pattern.pattern_id}}">{{source_pattern.name}}</a>
+                            {% else %}
+                            <p class="pattern-name-small">{{source_pattern.name}}</p>
+                            {% endif %}
+                        </div>
+                        <div class="relation">
+                            <p class="relation-label">{{relation.edge_type | split_camel_case}}</p>
+                            {% if relation.is_directed %}
+                            <div class="arrow right"></div>
+                            {% else %}
+                            <div class="arrow left right"></div>
+                            {% endif %}
+                        </div>
+                        <div class="pattern-small target">
+                            <img class="pattern-icon-small" src="{{target_pattern.icon | resource}}" aria-hidden="true">
+                            {% if target_pattern.pattern_id != pattern.pattern_id %}
+                            <a class="pattern-name-small" href="/pattern-languages/{{target_pattern.pattern_language}}/{{target_pattern.pattern_id}}">{{target_pattern.name}}</a>
+                            {% else %}
+                            <p class="pattern-name-small">{{target_pattern.name}}</p>
+                            {% endif %}
+                        </div>
+                        {%- if relation.description -%}
+                        <div class="relation-description">{{relation.description}}</div>
+                        {%- endif -%}
+                        {%- endfor -%}
+                    </div>
+                </details>
+                <details class="content-block" {{'open' if pattern.known_uses else ''}}>
+                    <summary {{'aria-disabled=true' if not pattern.known_uses}}><h3>Known Uses</h3></summary>
+                    <p>{{pattern.known_uses | markdown}}</p>
+                </details>
+                {% for section, content in pattern.extra_sections.items() %}
+                <details class="content-block" open>
+                    <summary><h3>{{section}}</h3></summary>
+                    <p>{{content | markdown}}</p>
+                </details>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+{%- endblock content -%}

@@ -1,0 +1,22 @@
+{% extends "base.jinja2" %}
+
+
+{% block head %}
+    {{ super() }}
+    <title>Pattern Languages – Pattern Atlas</title>
+{% endblock head %}
+
+
+{%- block content -%}
+    <main>
+    <h1 class="page-head">Pattern Languages</h1>
+    <div class="card-grid">
+        {%- for language in atlas.languages.values() -%}
+        <div class="card">
+            <img src="{{language.logo | resource}}" aria-hidden="true">
+            <h2><a href="/pattern-languages/{{language.language_id}}">{{language.name}}</a></h2>
+        </div>
+        {%- endfor -%}
+    </div>
+    </main>
+{%- endblock content -%}
