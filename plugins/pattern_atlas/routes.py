@@ -16,7 +16,6 @@ from .plugin import PA_BLP, PatternAtlas
 from .pattern_atlas_dynamic.client import AtlasClient
 from .pattern_atlas_dynamic.render import DynamicRender
 
-
 atlas_client = AtlasClient("http://localhost:1977/patternatlas")
 renderer = DynamicRender()
 
@@ -49,7 +48,7 @@ class PluginRootView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{PA_BLP.name}.{Process.__name__}"),
                 ui_href=url_for(f"{PA_BLP.name}.{IndexUI.__name__}"),
-                plugin_dependencies=["httpx~=0.25.0", "jinja2~=3.1.2","mistune~=3.0.2","markupsafe~=2.1.3"],
+                plugin_dependencies=["httpx~=0.25.0", "jinja2~=3.1.2","mistune~=3.0.0","markupsafe~=2.1.3"],
                 data_input=[],
                 data_output=[],
             ),

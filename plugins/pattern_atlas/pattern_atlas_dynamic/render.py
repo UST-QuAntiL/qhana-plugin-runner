@@ -22,7 +22,11 @@ from httpx import get
 from jinja2 import Environment, PackageLoader, select_autoescape
 from markupsafe import Markup
 from mistune import create_markdown
-from mistune.plugins import math
+#late import
+try: 
+    from mistune.plugins import math
+except ImportError:
+    raise NotImplementedError("Plugin dependencies not installed.")
 from mistune.util import escape
 
 from .model import AtlasContent, Pattern, PatternLanguage
@@ -83,7 +87,7 @@ class DynamicRender:
         self._resource_map: dict[str, str] = {"": "/ui/assets/empty.svg"}
         self._resource_bytes: dict[str, bytes] = {}
         self._jinja = Environment(
-            loader=PackageLoader("patter_atleas_dynamic"),
+            loader=PackageLoader("pattern_atlas.pattern_atlas_dynamic"),
             autoescape=select_autoescape(
                 enabled_extensions=("html", "jinja2", "css"), default_for_string=True
             ),
