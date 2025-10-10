@@ -54,6 +54,12 @@ class PluginRootView(MethodView):
             ),
         )
 
+@PA_BLP.route("/ui/styles.css")
+class StylesUI(MethodView):
+    @PA_BLP.response(HTTPStatus.OK)
+    @PA_BLP.require_jwt("jwt", optional=True)
+    def get(self):
+        return send_from_directory(f"{PA_BLP.root_path}/pattern_atlas_dynamic/templates", "styles.css")
 
 @PA_BLP.route("/ui/index.html")
 class IndexUI(MethodView):
