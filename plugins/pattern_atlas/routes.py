@@ -84,13 +84,13 @@ class PatternUI(MethodView):
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id, pattern_id):
         atlas = get_cached_atlas()
+        print(f"[PatternAtlas] PatternUI called with pattern_id={pattern_id}")
         pattern = atlas.patterns.get(pattern_id)
         if pattern is None:
             return Response("Pattern not found", status=404)
         language = atlas.languages.get(language_id)
         html = renderer.render_pattern(atlas, pattern, language)
         return Response(html, content_type="text/html")
-
 
 
 @PA_BLP.route("/ui/assets/<path:asset_path>")

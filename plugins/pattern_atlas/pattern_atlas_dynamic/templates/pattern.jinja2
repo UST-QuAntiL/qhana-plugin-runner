@@ -140,10 +140,10 @@
     <div class="split-content">
         <nav class="sidebar">
             <p>Pattern Language</p>
-            <a href="/pattern-languages/{{language.language_id}}">{{language.name}}</a>
+            <a href="{{base_url}}/pattern-languages/{{language.language_id}}/index.html">{{language.name}}</a>
             <p>Patterns</p>
             {%- for pattern in language.get_patterns_sorted(atlas) -%}
-            <a href="/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}">{{pattern.name}}</a>
+            <a href="{{base_url}}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a>
             {%- endfor -%}
         </nav>
         <main>
@@ -192,7 +192,7 @@
                         <div class="pattern-small source">
                             <img class="pattern-icon-small" src="{{source_pattern.icon | resource}}" aria-hidden="true">
                             {% if source_pattern.pattern_id != pattern.pattern_id %}
-                            <a class="pattern-name-small" href="/pattern-languages/{{source_pattern.pattern_language}}/{{source_pattern.pattern_id}}">{{source_pattern.name}}</a>
+                            <a class="pattern-name-small" href="{{base_url}}/pattern-languages/{{source_pattern.pattern_language}}/{{source_pattern.pattern_id}}/index.html">{{source_pattern.name}}</a>
                             {% else %}
                             <p class="pattern-name-small">{{source_pattern.name}}</p>
                             {% endif %}
@@ -208,7 +208,7 @@
                         <div class="pattern-small target">
                             <img class="pattern-icon-small" src="{{target_pattern.icon | resource}}" aria-hidden="true">
                             {% if target_pattern.pattern_id != pattern.pattern_id %}
-                            <a class="pattern-name-small" href="/pattern-languages/{{target_pattern.pattern_language}}/{{target_pattern.pattern_id}}">{{target_pattern.name}}</a>
+                            <a class="pattern-name-small" href="{{base_url}}/pattern-languages/{{target_pattern.pattern_language}}/{{target_pattern.pattern_id}}/index.html">{{target_pattern.name}}</a>
                             {% else %}
                             <p class="pattern-name-small">{{target_pattern.name}}</p>
                             {% endif %}

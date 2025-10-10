@@ -15,7 +15,7 @@
         {%- for pattern in language.get_patterns_sorted(atlas) -%}
         <div class="card">
             <img src="{{pattern.icon | resource}}" aria-hidden="true">
-            <h2><a href="/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}">{{pattern.name}}</a></h2>
+            <h2><a href="{{ base_url }}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a></h2>
         </div>
         {%- endfor -%}
     </div>

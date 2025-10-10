@@ -15,7 +15,7 @@
         {%- for language in atlas.languages.values() -%}
         <div class="card">
             <img src="{{language.logo | resource}}" aria-hidden="true">
-            <h2><a href="/pattern-languages/{{language.language_id}}">{{language.name}}</a></h2>
+            <h2><a href="{{base_url}}/pattern-languages/{{language.language_id}}/index.html">{{language.name}}</a></h2>
         </div>
         {%- endfor -%}
     </div>

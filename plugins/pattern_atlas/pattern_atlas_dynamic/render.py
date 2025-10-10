@@ -28,6 +28,7 @@ try:
 except ImportError:
     raise NotImplementedError("Plugin dependencies not installed.")
 from mistune.util import escape
+from pattern_atlas.plugin import PA_BLP
 
 from .model import AtlasContent, Pattern, PatternLanguage
 
@@ -157,13 +158,13 @@ class DynamicRender:
 
     def render_index(self, atlas: AtlasContent) -> str:
         template = self._jinja.get_template("languages.jinja2")
-        return template.render(atlas=atlas, is_planqk=self.is_planqk)
+        return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", is_planqk=self.is_planqk)
 
     def render_language_overview(self, atlas: AtlasContent, language: PatternLanguage) -> str:
         template = self._jinja.get_template("language-overview.jinja2")
-        return template.render(atlas=atlas, language=language, is_planqk=self.is_planqk)
+        return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
 
     def render_pattern(self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage) -> str:
         template = self._jinja.get_template("pattern.jinja2")
-        return template.render(atlas=atlas, pattern=pattern, language=language, is_planqk=self.is_planqk)
+        return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", pattern=pattern, language=language, is_planqk=self.is_planqk)
 
