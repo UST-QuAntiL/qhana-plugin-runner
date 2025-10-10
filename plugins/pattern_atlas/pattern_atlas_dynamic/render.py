@@ -115,12 +115,12 @@ class DynamicRender:
             response.raise_for_status()
             byte_content = response.content
             suffixes = Path(response.url.path).suffixes
-            asset_url = f"/plugins/{PA_BLP.name}/assets/{sha3_256(byte_content).hexdigest()}{''.join(suffixes)}"
+            asset_url = f"/plugins/{PA_BLP.name}/ui/assets/{sha3_256(byte_content).hexdigest()}{''.join(suffixes)}"
             self._resource_map[url] = asset_url
             self._resource_bytes[asset_url] = byte_content
         except Exception:
             print(f"Failed to download resource: {url}")
-            self._resource_map[url] = f"/plugins/{PA_BLP.name}/assets/empty.svg#" + url
+            self._resource_map[url] = f"/plugins/{PA_BLP.name}/ui/assets/empty.svg#" + url
 
         return self._resource_map[url]
 

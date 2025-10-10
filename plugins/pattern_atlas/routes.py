@@ -90,7 +90,6 @@ class PatternUI(MethodView):
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id, pattern_id):
         atlas = get_cached_atlas()
-        print(f"[PatternAtlas] PatternUI called with pattern_id={pattern_id}")
         pattern = atlas.patterns.get(pattern_id)
         if pattern is None:
             return Response("Pattern not found", status=404)
@@ -104,11 +103,25 @@ class AssetsUI(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, asset_path):
-        asset_url = "/assets/" + asset_path
+        asset_url = f"/plugins/{PA_BLP.name}/ui/assets/" + asset_path
         if asset_url in renderer._resource_bytes:
+            if asset_path.endswith(".svg"):
+                content_type = "image/svg+xml"
+            elif asset_path.endswith(".js"):
+                content_type = "application/javascript"
+            elif asset_path.endswith(".woff"):
+                content_type = "font/woff"
+            elif asset_path.endswith(".woff2"):
+                content_type = "font/woff2"
+            elif asset_path.endswith(".ttf"):
+                content_type = "font/ttf"
+            elif asset_path.endswith(".gif"):
+                content_type = "image/gif"
+            else: 
+                content_type = "application/octet-stream"
             return Response(
                 renderer._resource_bytes[asset_url],
-                content_type="application/octet-stream"
+                content_type=content_type
             )
         return Response("Asset not found", status=404)
 
