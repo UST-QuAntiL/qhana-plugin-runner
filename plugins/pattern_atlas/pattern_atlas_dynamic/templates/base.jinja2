@@ -28,10 +28,23 @@
     {%- block script -%}
     {%- endblock script -%}
     <script>
-        if(window._qhana_microfrontend_state){
-            window._qhana_microfrontend_state.targetHeight = "full";
-	        window.notifyParentWindowOnHeightChange(null, "full");
-        }
+
+         function applyWorkaround(){
+            if(window._qhana_microfrontend_state){
+                window._qhana_microfrontend_state.targetHeight = "full";
+	            window.notifyParentWindowOnHeightChange(null, "full");
+            }
+         }
+        let isFirstMessage = true;
+
+        const handleMessage = (event) => {
+        if (isFirstMessage) {
+            isFirstMessage = false;
+            applyWorkaround();
+            }
+        };
+
+        window.addEventListener("message", handleMessage);
     </script>
 </body>
 
