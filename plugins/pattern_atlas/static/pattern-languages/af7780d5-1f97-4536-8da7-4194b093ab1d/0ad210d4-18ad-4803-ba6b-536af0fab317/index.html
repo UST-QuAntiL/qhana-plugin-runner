@@ -130,6 +130,34 @@
             font-size: 1.2rem;
             font-weight: 600;
         }
+        
+        .placeholder-button {
+            background-color: #6a2dca;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 17px;
+            font-family: Arial, sans-serif;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            bottom: 10px;
+            left: 10px;
+            width: 15vw;
+            min-width: 270px; 
+            height: 37px
+        }
+        #arrow-qhana{
+            font-size: 30px;
+            transform: rotate(180deg);
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+
+        
     </style>
 
     <link rel="stylesheet" type="text/css" href="../../../assets/93e89c6331691cd0ae7a3764a661cdc1ba0806c872c7bbe46217d9c9251d4b2d.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
@@ -276,8 +304,16 @@
                     <summary ><h3>Known Uses</h3></summary>
                     <p>Salm et al. <a target="_blank" href="https://doi.org/10.1007/978-3-030-64846-6_5">Salm et al., 2020</a> and <a target="_blank" href="https://doi.org/10.1145/3673241">[Quetschlich et al., 2023]</a> introduce tools to automatically select suitable quantum devices based on given quantum circuits. <a target="_blank" href="https://ieeexplore.ieee.org/document/6657074">[Suchara et al., 2013]</a> present the QuRE Toolbox, a framework to estimate the required resources for executing quantum circuits. This information can then be used to select a suitable quantum device. Qiskit provides functionalities to filter available quantum devices based on different characteristics, e.g., the minimum number of qubits or the supported gate set <a target="_blank" href="https://docs.quantum.ibm.com/guides/get-qpu-information#filter-backends">[IBM, 2024b]</a>. Further, the quantum device for the execution can be selected from the remaining quantum devices based on their current queue size.</p>
                 </details>
-                
+                <button class="placeholder-button" onclick="placeholderFct()">
+                    <strong>Try it out in QHAna</strong>
+                    <span id="arrow-qhana">&#8617;</span>   
+                </button>
             </div>
+            <script>
+                function placeholderFct() {
+                    alert("This is a placeholder!");
+                }
+            </script>
         </main>
     </div></body>
 

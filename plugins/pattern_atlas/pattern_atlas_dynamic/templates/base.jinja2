@@ -27,6 +27,12 @@
 
     {%- block script -%}
     {%- endblock script -%}
+    <script>
+        if(window._qhana_microfrontend_state){
+            window._qhana_microfrontend_state.targetHeight = "full";
+	        window.notifyParentWindowOnHeightChange(null, "full");
+        }
+    </script>
 </body>
 
 </html>
