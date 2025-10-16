@@ -240,7 +240,7 @@ class WorkflowListView(MethodView):
         try:
             cleanup_autosaved_workflows.s(plugin.name).apply_async()
         except OperationalError:
-            pass  # it is OK to trigger the autosave the next time it works
+            pass  # it is OK to trigger the autosave cleanup the next time it works
 
         return unparse_datetime(workflow)
 
