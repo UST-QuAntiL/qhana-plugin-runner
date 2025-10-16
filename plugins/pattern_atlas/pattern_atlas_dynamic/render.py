@@ -160,9 +160,21 @@ class DynamicRender:
         template = self._jinja.get_template("languages.jinja2")
         return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", is_planqk=self.is_planqk)
 
-    def render_language_overview(self, atlas: AtlasContent, language: PatternLanguage) -> str:
+    def render_language_overview(self, atlas: AtlasContent, language: PatternLanguage, query: str) -> str:
+        def matches(pattern: Pattern, query: str) -> bool:
+            # name prüfen (robust gegen None)
+            name_ok = query in (pattern.name or "").lower()
+            # tags (Set[str]) prüfen
+            tags_ok = any(query in (t or "").lower() for t in (pattern.tags or []))
+            return name_ok or tags_ok
+        
         template = self._jinja.get_template("language-overview.jinja2")
-        return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
+        all_patterns = language.get_patterns_sorted(atlas)
+        if query:
+            filtered = [p for p in all_patterns if matches(p, query)]
+        else:
+            filtered = all_patterns        
+        return template.render(patterns=filtered, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
 
     def render_pattern(self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage) -> str:
         template = self._jinja.get_template("pattern.jinja2")

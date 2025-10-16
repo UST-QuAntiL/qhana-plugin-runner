@@ -105,3 +105,64 @@ p {
     max-width: 13rem;
     align-self: center;
 }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .page-header {
+    flex-wrap: wrap;
+  }
+  .search-container {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
+.search-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    margin-right: 10px;
+    margin-left: auto;
+    min-width: 260px;
+    max-width: 420px;
+    width: 100%;
+}
+
+.search-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px 12px;
+    font-size: 1rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-image:
+        linear-gradient(#fff, #fff), 
+        linear-gradient(90deg, #00d0ff, #b347ff, #00d0ff); 
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 200% 100%;
+    background-position: 0% 0%, 0% 50%;
+
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: box-shadow .2s ease;
+}
+
+@keyframes gradient-move {
+  0%   { background-position: 0% 0%,   0% 50%; }
+  100% { background-position: 0% 0%, 100% 50%; }
+}
+
+.search-input:focus {
+  outline: none;
+  box-shadow: 0 0 10px rgba(179, 71, 255, 0.35);
+  animation: gradient-move 3s linear infinite;
+}
+

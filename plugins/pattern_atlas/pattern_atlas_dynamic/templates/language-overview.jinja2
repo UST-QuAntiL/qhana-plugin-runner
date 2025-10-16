@@ -9,14 +9,44 @@
 
 {%- block content -%}
     <main>
-    <h1 class="page-head">{{language.name}}</h1>
+    <header class="page-header">
+        <h1 class="page-head">{{language.name}} </h1>
+
+        <div class="search-container">
+            <input
+                type="text"
+                id="search-box"
+                placeholder="Search by name or tag..."
+                class="search-input"
+            />
+        </div>
+    </header>
+
     <div class="card-grid">
-        {%- for pattern in language.get_patterns_sorted(atlas) -%}
-        <div class="card">
+        {%- for pattern in patterns -%}
+        <div class="card" 
+        data-name="{{ pattern.name | lower }}" 
+        data-tags="{{ pattern.tags | join(' ') | lower }}">
             <img src="{{pattern.icon | resource}}" aria-hidden="true">
-            <h2><a href="{{ base_url }}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a></h2>
+            <h2><a href="{{base_url}}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a></h2>
         </div>
         {%- endfor -%}
     </div>
+
+    <script>
+        const searchBox = document.getElementById('search-box');
+        const cards = document.querySelectorAll('.card-grid .card');
+
+        searchBox.addEventListener('input', () => {
+            const query = searchBox.value.toLowerCase();
+
+            cards.forEach(card => {
+                const name = card.dataset.name;
+                const tags = card.dataset.tags;
+                const visible = name.includes(query) || tags.includes(query);
+                card.style.display = visible ? '' : 'none';
+            });
+        });
+    </script>
     </main>
 {%- endblock content -%}
