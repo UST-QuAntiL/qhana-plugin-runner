@@ -362,6 +362,15 @@
   - preprocessing
 
     similarity-calculation
+* - [Workflow Editor (@v0.1.0)](#workflow-editor)
+
+    workflow-editor@v0-1-0
+  - interaction
+  - camunda
+
+    quantme
+
+    workflow
 * - [Workflow Management (@v0.1.1)](#workflow-management)
 
     workflow-management@v0-1-1
@@ -403,6 +412,19 @@
     demo
 
     quantum
+* - [cirq-simulator (@v1.0.0)](#cirq-simulator)
+
+    cirq-simulator@v1-0-0
+  - processing
+  - circuit-executor
+
+    cirq
+
+    qasm
+
+    qasm-2
+
+    qc-simulator
 * - [csv-visualization (@v0.1.1)](#csv-visualization)
 
     csv-visualization@v0-1-1
@@ -410,6 +432,13 @@
   - csv
 
     visualization
+* - [data-join (@v1.0.0)](#data-join)
+
+    data-join@v1-0-0
+  - processing
+  - join
+
+    preprocessing
 * - [file-upload (@v0.2.0)](#file-upload)
 
     file-upload@v0-2-0
@@ -542,13 +571,13 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `histogram`, `json`, `kernel`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
 
 **Input formats:** `application/X-lines+json`, `application/csv`, `application/json`, `application/zip`, `text/csv`, `text/x-qasm`\
 **Output formats:** `*/*`, `application/csv`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
 
-**Input datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/element-similarities`, `custom/entity-distances`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`\
-**Output datatypes:** `*/*`, `circuit/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
+**Input datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/element-similarities`, `custom/entity-distances`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`\
+**Output datatypes:** `*/*`, `circuit/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
 
 ## Plugins
 
@@ -1432,6 +1461,14 @@ Compares elements and returns similarity values.
 |custom/element-similarities|application/zip|✓|
 
 
+(workflow-editor)=
+### Workflow Editor (@v0.1.0)
+
+interaction – camunda, quantme, workflow\
+*Path:* {file}`stable_plugins/workflow/workflow_editor/plugin.py`
+
+Edit BPMN workflows with an online editor.
+
 (workflow-management)=
 ### Workflow Management (@v0.1.1)
 
@@ -1525,6 +1562,32 @@ A demo plugin implementing circuits for the bell states and executing them using
 |executable/circuit|text/x-qasm|✓|
 
 
+(cirq-simulator)=
+### cirq-simulator (@v1.0.0)
+
+processing – circuit-executor, cirq, qasm, qasm-2, qc-simulator\
+*Path:* {file}`plugins/circuit_executors/cirq_simulator/__init__.py`
+
+Allows execution of quantum circuits using a simulator packaged with cirq.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|executable/circuit|text/x-qasm|✓|
+|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/json|✓|
+|entity/vector|application/json|╳|
+|provenance/trace|application/json|✓|
+|provenance/execution-options|application/json|✓|
+
+
 (csv-visualization)=
 ### csv-visualization (@v0.1.1)
 
@@ -1545,6 +1608,28 @@ A demo CSV visualization plugin.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |*/*|text/html|✓|
+
+
+(data-join)=
+### data-join (@v1.0.0)
+
+processing – join, preprocessing\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/data_join/__init__.py`
+
+Join data from multiple entity files.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/*|text/csv, application/json|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/*|text/csv, application/json|✓|
 
 
 (file-upload)=
