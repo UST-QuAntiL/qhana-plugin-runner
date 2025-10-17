@@ -738,7 +738,7 @@ def list_licenses(
     packages: List[str] = []
     if not include_installed:
         packages_output: Result = c.run(
-            join(["poetry", "export", "--dev", "--without-hashes"]),
+            join(["poetry", "export", "--with=dev", "--all-extras", "--without-hashes"]),
             echo=False,
             hide="both",
         )
@@ -786,7 +786,7 @@ def update_licenses(c, include_installed=False):
     packages: List[str] = []
     if not include_installed:
         packages_output: Result = c.run(
-            join(["poetry", "export", "--dev", "--without-hashes"]),
+            join(["poetry", "export", "--with=dev", "--all-extras", "--without-hashes"]),
             echo=False,
             hide="both",
         )
@@ -831,7 +831,7 @@ def update_dependencies(c):
             [
                 "poetry",
                 "export",
-                "--dev",
+                "--with=dev",
                 "--format",
                 "requirements.txt",
                 "--without-hashes",  # with hashes fails because pip is to strict with transitive dependencies
