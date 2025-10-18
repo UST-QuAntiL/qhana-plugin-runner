@@ -14,8 +14,8 @@ p {
 }
 
 .titlebar {
-    height: 3.3rem;
-    background: #6a2dca;
+    height: 1.5rem;
+    background: #673ab7;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -26,10 +26,15 @@ p {
 }
 
 .titlebar .home {
-    font-size: 1.5rem;
+    font-size: 1.0rem;
     font-family: Arial, sans-serif;
     color: white;
-    text-decoration: none !important;
+    text-decoration: none;
+}
+
+.home:hover{
+    color: #00d0ff;
+    text-decoration: none;
 }
 
 .titlebar.planqk {
