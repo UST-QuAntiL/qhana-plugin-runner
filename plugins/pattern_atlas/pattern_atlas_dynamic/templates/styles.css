@@ -25,11 +25,11 @@ p {
     padding-inline: 1.5rem;
 }
 
-.home {
+.titlebar .home {
     font-size: 1.5rem;
     font-family: Arial, sans-serif;
     color: white;
-    text-decoration: none;
+    text-decoration: none !important;
 }
 
 .titlebar.planqk {
