@@ -23,11 +23,11 @@ def get_config(app: Flask) -> dict[str, str]:
             ["service"], {"service-id": ",".join(config.keys())}
         )
         if services is not None:
-            for item in services.data.get("items", []):
-                resource_key = item.get("resourceKey", {"serviceId": None})
-                service_id = resource_key.get("serviceId")
-                if service_id is None:
+            for api_link in services.data.get("items", []):
+                service = client.fetch_by_api_link(api_link)
+                service_id = service.data.get("serviceId")
+                url = service.data.get("url")
+                if service_id is None or url is None:
                     continue
-                href = item.get("href")
-                config[service_id] = href
+                config[service_id] = url
         return config
