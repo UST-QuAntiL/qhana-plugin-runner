@@ -1,6 +1,8 @@
 This folder contains a plugin for the [low-code-modeler](https://github.com/LEQO-Framework/low-code-modeler)
 
-To regenerate/update the static files you have to run the following commands,
+To regenerate/update the static files you can just run `bash update-lcm.sh`.
+
+If you want to do it manually, you have to run the following commands,
 please run them from inside this directory, unless otherwise specified.
 
 1. `git rm -rf static`
@@ -8,8 +10,9 @@ please run them from inside this directory, unless otherwise specified.
 3. `git checkout -- static/workarounds.js`
 4. `pnpm install` (from inside the low-code-modeler repo)
 5. `pnpm run build --outDir <path to qhana-plugin-runner>/plugins/low_code_modeler/static` (from inside the low-code-modeler repo)
-6. `sed -i '/<\/script>/a <script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>' static/index.html`
-7. `git add static`
+6. `git rev-parse --verify HEAD > <path to qhana-plugin-runner>/plugins/low_code_modeler/static/.git-revision` (from inside the low-code-modeler repo)
+7. `sed -i '/<\/script>/a <script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>' static/index.html`
+8. `git add static`
 
 This should be fixed by `workarounds.js`, but you may need to clear the
 `workbox-precache` inside your browser to actually see any changes,
