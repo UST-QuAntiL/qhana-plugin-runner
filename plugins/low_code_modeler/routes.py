@@ -2,7 +2,7 @@ from http import HTTPStatus
 from datetime import datetime, timezone
 from uuid import uuid4
 import json
-from flask import render_template, send_from_directory, request
+from flask import render_template, send_from_directory, request, current_app
 from flask_smorest import abort
 from qhana_plugin_runner.db.models.virtual_plugins import DataBlob, PluginState
 from flask.views import MethodView
@@ -19,6 +19,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 
 from .plugin import LCM_BLP, LowCodeModeler
+
+from .config import get_config
 
 LCM_STATE_KEY = "saved_models"
 
@@ -51,6 +53,13 @@ class UI(MethodView):
     @LCM_BLP.require_jwt("jwt", optional=True)
     def get(self, path):
         return send_from_directory(f"{LCM_BLP.root_path}/static", path)
+
+
+@LCM_BLP.route("/config/")
+class Config(MethodView):
+    @LCM_BLP.require_jwt("jwt", optional=True)
+    def get(self):
+        return get_config(LowCodeModeler.instance.app)
 
 
 @LCM_BLP.route("/process/")

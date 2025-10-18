@@ -34,4 +34,11 @@
 	isFirstMessage = false
 	applyWorkarounds()
     })
+
+    window.addEventListener("DOMContentLoaded", (event) => {
+	// update config
+	fetch("../config")
+	    .then(response => response.json())
+	    .then(config => Object.entries(config).map(([key,value]) => window[`set${key}`](value)))
+    })
 }
