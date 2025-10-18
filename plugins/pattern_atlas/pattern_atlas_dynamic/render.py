@@ -162,9 +162,7 @@ class DynamicRender:
 
     def render_language_overview(self, atlas: AtlasContent, language: PatternLanguage, query: str) -> str:
         def matches(pattern: Pattern, query: str) -> bool:
-            # name prüfen (robust gegen None)
             name_ok = query in (pattern.name or "").lower()
-            # tags (Set[str]) prüfen
             tags_ok = any(query in (t or "").lower() for t in (pattern.tags or []))
             return name_ok or tags_ok
         
