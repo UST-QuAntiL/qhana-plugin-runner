@@ -22,37 +22,14 @@ from httpx import get
 from jinja2 import Environment, PackageLoader, select_autoescape
 from markupsafe import Markup
 from mistune import create_markdown
-#late import
-try: 
-    from mistune.plugins import math
-except ImportError:
-    raise NotImplementedError("Plugin dependencies not installed.")
-from mistune.util import escape
+from typing import Match
 from pattern_atlas.plugin import PA_BLP
 
 from .model import AtlasContent, Pattern, PatternLanguage
 
-# monkeypatch math plugin to use better regexes
-# https://github.com/lepture/mistune/issues/330
-math.BLOCK_MATH_PATTERN = r"(?!^ {4,})\$\$\s*(?P<math_text>\S.*?)\s*(?<!\\)\$\$"
-math.INLINE_MATH_PATTERN = r"\$\s*(?P<math_text>\S.*?)\s*(?<!\\)\$"
-
-# monkeyfix mistune to correctly escape rendered math
-_render_block_math = math.render_block_math
-_render_inline_math = math.render_inline_math
-
-
-def render_block_math_fixed(renderer, text):
-    return _render_block_math(renderer, escape(text))
-
-
-def render_inline_math_fixed(renderer, text):
-    return _render_inline_math(renderer, escape(text))
-
-
-math.render_block_math = render_block_math_fixed
-math.render_inline_math = render_inline_math_fixed
-
+BLOCK_MATH_RE  = re.compile(r'(?<!\\)\$\$(.+?)(?<!\\)\$\$', re.S)
+INLINE_MATH_RE = re.compile(r'(?<!\\)\$(?!\$)(.+?)(?<!\\)\$', re.S)
+LINK_IN_TEX    = re.compile(r'\[([^\]]+)\]\([^)]+\)')
 
 _CAMEL_CASE_REGEX = re.compile(r"([a-zäöü])([A-ZÄÖÜ])")
 
@@ -64,6 +41,43 @@ def _camel_case_replacer(match: re.Match) -> str:
 def split_camel_case(text: str) -> str:
     return _CAMEL_CASE_REGEX.sub(_camel_case_replacer, text)
 
+def _sanitize_tex(tex: str) -> str:
+    return LINK_IN_TEX.sub(r'\\text{\1}', tex)
+
+def compat_markdown(md_text: str) -> str:
+    if not md_text:
+        return "–"
+    
+    placeholders: list[str] = []
+    counter = 0
+
+    def repl_inline(m: Match[str]) -> str:
+        nonlocal counter
+        tex = _sanitize_tex(m.group(1).strip())
+        placeholders.append(f'<span class="math">\\({tex}\\)</span>')
+        token = f"§INLINE_MATH_{counter}§"
+        counter += 1
+        return token
+
+    def repl_block(m: Match[str]) -> str:
+        nonlocal counter
+        tex = _sanitize_tex(m.group(1).strip())
+        placeholders.append(f'<div class="math">\\[{tex}\\]</div>')
+        token = f"§BLOCK_MATH_{counter}§"
+        counter += 1
+        return token
+    
+    text = BLOCK_MATH_RE.sub(repl_block, md_text)
+    text = INLINE_MATH_RE.sub(repl_inline, text)
+
+    md = create_markdown(escape=False, plugins=["table", "footnotes", "url", "task_lists"])
+    html = md(text)
+
+    for i, snippet in enumerate(placeholders):
+        html = html.replace(f"§INLINE_MATH_{i}§", snippet)
+        html = html.replace(f"§BLOCK_MATH_{i}§", snippet)
+
+    return html
 
 class ExtractImageLinksParser(HTMLParser):
     def __init__(self, *, convert_charrefs: bool = True) -> None:
@@ -97,7 +111,7 @@ class DynamicRender:
         self._jinja.filters["markdown"] = self._markdown
         self._jinja.filters["split_camel_case"] = split_camel_case
         self._mistune = create_markdown(
-            escape=True, plugins=["table", "footnotes", "math", "url", "task_lists"]
+            escape=False, plugins=["table", "footnotes", "url", "task_lists"]
         )
 
     def _resource(self, url: str) -> str:
@@ -123,11 +137,12 @@ class DynamicRender:
             self._resource_map[url] = f"/plugins/{PA_BLP.name}/ui/assets/empty.svg#" + url
 
         return self._resource_map[url]
-
+    
     def _markdown(self, markdown: str):
         if not markdown:
             return "–"
-        html = self._mistune(markdown.strip())
+        print("RAW_MARKDOWN_INPUT:", repr(markdown))
+        html = compat_markdown((markdown.strip()))
         assert isinstance(html, str)
         html = html.strip()
         if html.startswith("<p>") and html.endswith("</p>"):
