@@ -27,6 +27,7 @@ from pattern_atlas.plugin import PA_BLP
 
 from .model import AtlasContent, Pattern, PatternLanguage
 
+# regex for latex math
 BLOCK_MATH_RE  = re.compile(r'(?<!\\)\$\$(.+?)(?<!\\)\$\$', re.S)
 INLINE_MATH_RE = re.compile(r'(?<!\\)\$(?!\$)(.+?)(?<!\\)\$', re.S)
 LINK_IN_TEX    = re.compile(r'\[([^\]]+)\]\([^)]+\)')
@@ -41,43 +42,52 @@ def _camel_case_replacer(match: re.Match) -> str:
 def split_camel_case(text: str) -> str:
     return _CAMEL_CASE_REGEX.sub(_camel_case_replacer, text)
 
-def _sanitize_tex(tex: str) -> str:
+# convert Markdown links [label](url) inside Latex code into plain text: \text{label}
+def _link_as_text(tex: str) -> str:
     return LINK_IN_TEX.sub(r'\\text{\1}', tex)
 
-def compat_markdown(md_text: str) -> str:
-    if not md_text:
+def compatible_markdown(markdown_text: str) -> str:
+    if not markdown_text:
         return "–"
     
+    # placeholders will store all math snippets (both inline and block) from markdown_text as html
     placeholders: list[str] = []
     counter = 0
 
-    def repl_inline(m: Match[str]) -> str:
+    def replace_inline(match_obj: Match[str]) -> str:
+        assert INLINE_MATH_RE.fullmatch(match_obj.group(0))
         nonlocal counter
-        tex = _sanitize_tex(m.group(1).strip())
+        tex = _link_as_text(match_obj.group(1).strip())
         placeholders.append(f'<span class="math">\\({tex}\\)</span>')
+        # the counter in the token corresponds to the index of this snippet in placeholders
         token = f"§INLINE_MATH_{counter}§"
         counter += 1
         return token
 
-    def repl_block(m: Match[str]) -> str:
+    def replace_block(match_obj: Match[str]) -> str:
+        assert BLOCK_MATH_RE.fullmatch(match_obj.group(0))
         nonlocal counter
-        tex = _sanitize_tex(m.group(1).strip())
+        tex = _link_as_text(match_obj.group(1).strip())
         placeholders.append(f'<div class="math">\\[{tex}\\]</div>')
+        # the counter in the token corresponds to the index of this snippet in placeholders
         token = f"§BLOCK_MATH_{counter}§"
         counter += 1
         return token
     
-    text = BLOCK_MATH_RE.sub(repl_block, md_text)
-    text = INLINE_MATH_RE.sub(repl_inline, text)
+    # replace all math snippets with tokens so that mistune does not alter or escape them
+    text = BLOCK_MATH_RE.sub(replace_block, markdown_text)
+    text = INLINE_MATH_RE.sub(replace_inline, text)
 
     md = create_markdown(escape=False, plugins=["table", "footnotes", "url", "task_lists"])
     html = md(text)
 
+    # replace all tokens with their corresponding math html snippets
     for i, snippet in enumerate(placeholders):
         html = html.replace(f"§INLINE_MATH_{i}§", snippet)
         html = html.replace(f"§BLOCK_MATH_{i}§", snippet)
 
     return html
+
 
 class ExtractImageLinksParser(HTMLParser):
     def __init__(self, *, convert_charrefs: bool = True) -> None:
@@ -110,9 +120,6 @@ class DynamicRender:
         self._jinja.filters["resource"] = self._resource
         self._jinja.filters["markdown"] = self._markdown
         self._jinja.filters["split_camel_case"] = split_camel_case
-        self._mistune = create_markdown(
-            escape=False, plugins=["table", "footnotes", "url", "task_lists"]
-        )
 
     def _resource(self, url: str) -> str:
         if url is None:
@@ -141,8 +148,7 @@ class DynamicRender:
     def _markdown(self, markdown: str):
         if not markdown:
             return "–"
-        print("RAW_MARKDOWN_INPUT:", repr(markdown))
-        html = compat_markdown((markdown.strip()))
+        html = compatible_markdown((markdown.strip()))
         assert isinstance(html, str)
         html = html.strip()
         if html.startswith("<p>") and html.endswith("</p>"):
@@ -175,19 +181,10 @@ class DynamicRender:
         template = self._jinja.get_template("languages.jinja2")
         return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", is_planqk=self.is_planqk)
 
-    def render_language_overview(self, atlas: AtlasContent, language: PatternLanguage, query: str) -> str:
-        def matches(pattern: Pattern, query: str) -> bool:
-            name_ok = query in (pattern.name or "").lower()
-            tags_ok = any(query in (t or "").lower() for t in (pattern.tags or []))
-            return name_ok or tags_ok
-        
+    def render_language_overview(self, atlas: AtlasContent, language: PatternLanguage) -> str:
         template = self._jinja.get_template("language-overview.jinja2")
-        all_patterns = language.get_patterns_sorted(atlas)
-        if query:
-            filtered = [p for p in all_patterns if matches(p, query)]
-        else:
-            filtered = all_patterns        
-        return template.render(patterns=filtered, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
+        all_patterns = language.get_patterns_sorted(atlas)       
+        return template.render(patterns=all_patterns, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
 
     def render_pattern(self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage) -> str:
         template = self._jinja.get_template("pattern.jinja2")

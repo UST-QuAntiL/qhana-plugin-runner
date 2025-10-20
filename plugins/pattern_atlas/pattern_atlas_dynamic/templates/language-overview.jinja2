@@ -25,8 +25,8 @@
     <div class="card-grid">
         {%- for pattern in patterns -%}
         <div class="card" 
-        data-name="{{ pattern.name | lower }}" 
-        data-tags="{{ pattern.tags | join(' ') | lower }}">
+        data-name="{{pattern.name | lower}}" 
+        data-tags="{{pattern.tags | join(' ') | lower}}">
             <img src="{{pattern.icon | resource}}" aria-hidden="true">
             <h2><a href="{{base_url}}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a></h2>
         </div>
