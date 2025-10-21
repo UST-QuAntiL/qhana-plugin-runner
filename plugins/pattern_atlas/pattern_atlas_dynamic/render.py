@@ -187,15 +187,10 @@ class DynamicRender:
         all_patterns = language.get_patterns_sorted(atlas)       
         return template.render(patterns=all_patterns, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
 
-    def render_language_overview_categorized(self, atlas: AtlasContent, language: PatternLanguage, query: str) -> str:
-        def matches(pattern: Pattern, query: str) -> bool:
-            name_ok = query in (pattern.name or "").lower()
-            tags_ok = any(query in (t or "").lower() for t in (pattern.tags or []))
-            return name_ok or tags_ok
-        
+    def render_language_overview_categorized(self, atlas: AtlasContent, language: PatternLanguage) -> str:
         template = self._jinja.get_template("language-overview-categorized.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
-        #TODO fix this
+
         patterns_by_tag = defaultdict(list)
         for pattern in all_patterns:
             for tag in pattern.tags:

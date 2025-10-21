@@ -20,13 +20,13 @@
                 class="search-input"
             />
             <a href="index.html" style="text-decoration: none;">
-                 <button id="tags-btn" class="search-input active-btn">tags</button>
+                 <button id="tags-btn" class="active-btn">tags</button>
             </a>
         </div>
     </header>
 
     {%- for tag, patterns in patterns_by_tag.items() -%}
-    <h1>{{ tag }}</h1>
+    <h1 class="pattern_headline">{{ tag }}</h1>
     <div class="card-grid">
         {%- for pattern in patterns -%}
         <div class="card" 

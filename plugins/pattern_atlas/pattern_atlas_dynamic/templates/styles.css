@@ -179,7 +179,7 @@ p {
     margin-left: 10px;
     font-size: 1rem;
     border-radius: 12px;
-    border: 2px solid #b60dff;
+    border: 1px solid #b60dff;
     background-image:
         linear-gradient(#fff, #fff), 
         linear-gradient(90deg, #4400b9, #b60dff, #4400b9); 
@@ -197,9 +197,14 @@ p {
     animation: gradient-move 3s linear infinite;
 }
 /*style overwritten? */
-.active-btn {
+.search-container .active-btn {
     box-shadow: inset 0 4px 12px rgba(68,0,185,0.35), 0 2px 4px rgba(0,0,0,0.1);
-    background-color: #e6d6ff; 
+    background: #cab5eb !important; 
     border-color: #4400b9;
     transform: translateY(2px);
+}
+
+.pattern_headline{
+    display:flex;
+    margin-left: 10px;
 }
