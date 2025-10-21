@@ -170,3 +170,36 @@ p {
   animation: gradient-move 3s linear infinite;
 }
 
+
+#tags-btn {
+    cursor: pointer;
+    width: auto;
+    max-width: 200px;
+    padding: 8px 12px;
+    margin-left: 10px;
+    font-size: 1rem;
+    border-radius: 12px;
+    border: 2px solid #b60dff;
+    background-image:
+        linear-gradient(#fff, #fff), 
+        linear-gradient(90deg, #4400b9, #b60dff, #4400b9); 
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 200% 100%;
+    background-position: 0% 0%, 0% 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow .2s ease;
+}
+
+#tags-btn:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(179, 71, 255, 0.35);
+    animation: gradient-move 3s linear infinite;
+}
+/*style overwritten? */
+.active-btn {
+    box-shadow: inset 0 4px 12px rgba(68,0,185,0.35), 0 2px 4px rgba(0,0,0,0.1);
+    background-color: #e6d6ff; 
+    border-color: #4400b9;
+    transform: translateY(2px);
+}

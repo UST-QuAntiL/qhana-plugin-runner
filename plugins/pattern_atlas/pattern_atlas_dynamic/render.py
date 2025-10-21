@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 import re
 from hashlib import sha3_256
 from html.parser import HTMLParser
@@ -189,7 +190,26 @@ class DynamicRender:
             filtered = all_patterns        
         return template.render(patterns=filtered, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
 
+    def render_language_overview_categorized(self, atlas: AtlasContent, language: PatternLanguage, query: str) -> str:
+        def matches(pattern: Pattern, query: str) -> bool:
+            name_ok = query in (pattern.name or "").lower()
+            tags_ok = any(query in (t or "").lower() for t in (pattern.tags or []))
+            return name_ok or tags_ok
+        
+        template = self._jinja.get_template("language-overview-categorized.jinja2")
+        all_patterns = language.get_patterns_sorted(atlas)
+        #TODO fix this
+        patterns_by_tag = defaultdict(list)
+        for pattern in all_patterns:
+            for tag in pattern.tags:
+                patterns_by_tag[tag].append(pattern)
+       
+        return template.render(patterns_by_tag=patterns_by_tag, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
+
+
     def render_pattern(self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage) -> str:
         template = self._jinja.get_template("pattern.jinja2")
         return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", pattern=pattern, language=language, is_planqk=self.is_planqk)
+    
+    
 
