@@ -4,7 +4,7 @@ from qhana_plugin_runner.registry_client.client import PluginRegistryClient
 
 DEFAULT_CONFIG = {
     "NisqAnalyzerEndpoint": "http://localhost:8098/nisq-analyzer",
-    "QunicornEndpoint": "http://localhost:8080",
+    "QunicornEndpoint": "http://localhost:8081",
     "LowcodeBackendEndpoint": "http://localhost:8000",
     "PatternAtlasUiEndpoint": "http://localhost:1978",
     "PatternAtlasApiEndpoint": "http://localhost:1977/patternatlas/patternLanguages/af7780d5-1f97-4536-8da7-4194b093ab1d",
