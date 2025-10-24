@@ -120,6 +120,14 @@
 	      }
 	  );
       });
+
+      document.addEventListener("lcm-open", (event) => {
+	  event.preventDefault();
+	  const restoreFlow = event.detail.restoreFlow;
+	  console.log("recieved:", restoreFlow);
+	  const dialog = document.querySelector("#openWF");
+	  dialog.showModal()
+      });
     </script>
   </body>
 </html>
