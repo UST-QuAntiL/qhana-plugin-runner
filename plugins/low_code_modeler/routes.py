@@ -74,7 +74,7 @@ class Process(MethodView):
 @LCM_BLP.route("/models/")
 class ModelListView(MethodView):
 
-    @LCM_BLP.response(HTTPStatus.OK, MetadataOfModellSchema(many=True))
+    @LCM_BLP.response(HTTPStatus.OK)
     @LCM_BLP.require_jwt("jwt", optional=True)
     def get(self):
         """Get list of all models saved"""
@@ -85,7 +85,7 @@ class ModelListView(MethodView):
             models = []
         return models
 
-    @LCM_BLP.response(HTTPStatus.OK, MetadataOfModellSchema())
+    @LCM_BLP.response(HTTPStatus.OK)
     @LCM_BLP.require_jwt("jwt", optional=True)
     def post(self):
         """Post to save a new Model"""
@@ -93,25 +93,21 @@ class ModelListView(MethodView):
 
         model_data = request.get_json()
 
-        model_id = str(uuid4())
-        model = {
-            "id": model_data.get("id", "unnamed"),
-            "name": model_data.get("name", "Unnamed Model"),
-            "version": model_data.get("version", "1.0"),
-            "date": datetime.now(timezone.utc).isoformat(),
-            "model_id": model_id,
-            "autosave": model_data.get("autosave", False),
-        }
-
-        DataBlob.set_value(plugin.name, model_id, json.dumps(model_data).encode("utf-8"))
+        DataBlob.set_value(
+            plugin.name,
+            model_data["metadata"]["id"],
+            json.dumps(model_data).encode("utf-8"),
+        )
 
         models = PluginState.get_value(plugin.name, LCM_STATE_KEY, [])
         if models is None:
             models = []
 
-        PluginState.set_value(plugin.name, LCM_STATE_KEY, [model] + models, commit=True)
+        PluginState.set_value(
+            plugin.name, LCM_STATE_KEY, [model_data] + models, commit=True
+        )
 
-        return model
+        return Response("")
 
 
 @LCM_BLP.route("/models/<string:model_id>/")
