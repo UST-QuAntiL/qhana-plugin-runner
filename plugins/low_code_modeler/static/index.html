@@ -110,10 +110,13 @@
 	  const flowWithMetadata = event.detail;
 	  console.log("recieved:", flowWithMetadata);
 	  fetch(
-	      "../models",
+	      "../models/",
 	      {
 		  method: "post",
-		  body: flowWithMetadata,
+		  body: JSON.stringify(flowWithMetadata),
+		  headers: {
+		      "Content-Type": "application/json"
+		  },
 	      }
 	  );
       });
