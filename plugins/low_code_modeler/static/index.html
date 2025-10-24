@@ -11,8 +11,112 @@
 <script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>
     <link rel="stylesheet" href="./assets/index-80aaee7b.css">
   <link rel="manifest" href="./manifest.webmanifest"></head>
+    <link rel="stylesheet" type="text/css" href="/static/forms.css" media="screen" />
+<link href="http://127.0.0.1:8080/styles.f605019a8cc03494.css" rel="stylesheet">
+<style>
+    body {
+        margin: 0px;
+	color: black;
+	background: white;
+    }
+
+    .content {
+        width: 100%;
+        height: calc(100vh - 1rem);
+        padding-block: 0.5rem;
+        position: relative;
+        background-color: white;
+        color: black;
+    }
+
+    .workflow-list {
+        max-height: 50vh;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        margin-block-end: 1rem;
+    }
+
+    .workflow-item {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .workflow-item:not(:nth-child(1)) {
+        border-top: 1px solid var(--border-color, gray);
+    }
+
+    .workflow-title {
+        font-weight: 600;
+        font-size: 120%;
+        margin-block: 0.1em;
+    }
+
+    .workflow-subtitle {
+        margin-block: 0.1em;
+    }
+
+    dialog {
+	margin: revert;
+    }
+
+</style>
   <body>
     <div id="root"></div>
     
+
+    <dialog class="card mat-mdc-card color-scheme-card" id="openWF" closedby="any" autofocus>
+        <h2>Open Workflow</h2>
+        <form method="dialog" class="qhana-form">
+            <div class="qhana-form-field">
+                <label class="qhana-form-label" for="openWFinput">Open Workflow from local filesystem:</label>
+                <div class="qhana-input-wrapper">
+                    <input class="qhana-form-input" type="file" name="workflow" id="openWFinput" accept="bpmn" required>
+                    <button class="qhana-form-submit" type="submit" value="openLocal">Open selected workflow</button>
+                </div>
+            </div>
+        </form>
+        <h3>Load Saved Workflow</h3>
+        <form method="dialog" id="openExisting" class="qhana-form">
+            <div class="workflow-list">
+            </div>
+        </form>
+        <div id="experimentWorkflows">
+            <h3>Load Workflow from current Experiment</h3>
+            <form method="dialog" id="openExisting" class="qhana-form">
+                <div class="workflow-list">
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="qhana-form">
+            <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
+        </form>
+    </dialog>
+
+    <dialog class="card mat-mdc-card color-scheme-card" id="deployWF" closedby="any">
+        <h2>Deploy Workflow</h2>
+        <form method="dialog" class="qhana-form">
+            <button class="qhana-form-submit" type="submit" value="cancel" autofocus>Cancel</button>
+            <button class="qhana-form-submit" type="submit" value="deployPlugin">Deploy as Plugin</button>
+            <button class="qhana-form-submit" type="submit" value="deployWorkflow">Deploy as Workflow</button>
+        </form>
+    </dialog>
+    <script>
+      document.addEventListener("lcm-save", (event) => {
+	  event.preventDefault();
+	  const flowWithMetadata = event.detail;
+	  console.log("recieved:", flowWithMetadata);
+	  fetch(
+	      "../models",
+	      {
+		  method: "post",
+		  body: flowWithMetadata,
+	      }
+	  );
+      });
+    </script>
   </body>
 </html>
