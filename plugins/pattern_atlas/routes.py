@@ -23,6 +23,7 @@ _cache_data = None
 _cache_timestamp = 0
 CACHE_TTL = 24 * 60 * 60
 
+
 def get_cached_atlas():
 
     global _cache_data, _cache_timestamp
@@ -54,12 +55,16 @@ class PluginRootView(MethodView):
             ),
         )
 
+
 @PA_BLP.route("/ui/styles.css")
 class StylesUI(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        return send_from_directory(f"{PA_BLP.root_path}/pattern_atlas_dynamic/templates", "styles.css")
+        return send_from_directory(
+            f"{PA_BLP.root_path}/pattern_atlas_dynamic/templates", "styles.css"
+        )
+
 
 @PA_BLP.route("/ui/index.html")
 class IndexUI(MethodView):
@@ -82,6 +87,7 @@ class LanguageUI(MethodView):
             return Response("Language not found", status=404)
         html = renderer.render_language_overview(atlas, language)
         return Response(html, content_type="text/html")
+
 
 @PA_BLP.route("/ui/pattern-languages/<language_id>/categorized.html")
 class LanguageUIcategorized(MethodView):
@@ -129,11 +135,10 @@ class AssetsUI(MethodView):
                 content_type = "font/ttf"
             elif asset_path.endswith(".gif"):
                 content_type = "image/gif"
-            else: 
+            else:
                 content_type = "application/octet-stream"
             return Response(
-                renderer._resource_bytes[asset_url],
-                content_type=content_type
+                renderer._resource_bytes[asset_url], content_type=content_type
             )
         return Response("Asset not found", status=404)
 

@@ -29,24 +29,24 @@ from pattern_atlas.plugin import PA_BLP
 from .model import AtlasContent, Pattern, PatternLanguage
 
 CATEGORY_HEADLINES = {
-    "dataencodings":"Data Encodings- How can classical data be encoded into quantum states for computation?",
-    "unitarytransformations":"Unitary Transformations - How can unitary transformations be designed and composed to build quantum algorithms?",
-    "warmstaring":"Warm-Starting- How can prior knowledge or favorable initializations be used to improve the convergence of quantum algorithms?",
-    "programflow":"Program Flow- How can computations be effectively distributed between quantum and classical hardware?",
-    "circuitcutting":"Circuit Cutting- How can large quantum circuits be partitioned into smaller, executable subcircuits to overcome hardware limitations?",
-    "errorhandling":"Error Handling- How can quantum algorithms be made robust against noise and errors in current quantum hardware?",
-    "quantumstates":"Quantum States- What are quantum states, and how are they represented and manipulated in quantum algorithms?",
-    "execution":"Execution- What best practices should be followed when developing hybrid quantum-classical applications?",
-    "development":"Development- What best practices should be followed when developing hybrid quantum-classical applications?",
-    "operations":"Operations- How can the execution, monitoring, and management of quantum applications be organized and automated?",
-    "measurement":"Measurement- How can classical information be accurately extracted from quantum states after computation?",
-    "qml":"Quantum Machine Learning- How to use quantum computing to solve machine learning problems?",
-} 
+    "dataencodings": "Data Encodings- How can classical data be encoded into quantum states for computation?",
+    "unitarytransformations": "Unitary Transformations - How can unitary transformations be designed and composed to build quantum algorithms?",
+    "warmstaring": "Warm-Starting- How can prior knowledge or favorable initializations be used to improve the convergence of quantum algorithms?",
+    "programflow": "Program Flow- How can computations be effectively distributed between quantum and classical hardware?",
+    "circuitcutting": "Circuit Cutting- How can large quantum circuits be partitioned into smaller, executable subcircuits to overcome hardware limitations?",
+    "errorhandling": "Error Handling- How can quantum algorithms be made robust against noise and errors in current quantum hardware?",
+    "quantumstates": "Quantum States- What are quantum states, and how are they represented and manipulated in quantum algorithms?",
+    "execution": "Execution- What best practices should be followed when developing hybrid quantum-classical applications?",
+    "development": "Development- What best practices should be followed when developing hybrid quantum-classical applications?",
+    "operations": "Operations- How can the execution, monitoring, and management of quantum applications be organized and automated?",
+    "measurement": "Measurement- How can classical information be accurately extracted from quantum states after computation?",
+    "qml": "Quantum Machine Learning- How to use quantum computing to solve machine learning problems?",
+}
 
 # regex for latex math
-BLOCK_MATH_RE  = re.compile(r'(?<!\\)\$\$(.+?)(?<!\\)\$\$', re.S)
-INLINE_MATH_RE = re.compile(r'(?<!\\)\$(?!\$)(.+?)(?<!\\)\$', re.S)
-LINK_IN_TEX    = re.compile(r'\[([^\]]+)\]\([^)]+\)')
+BLOCK_MATH_RE = re.compile(r"(?<!\\)\$\$(.+?)(?<!\\)\$\$", re.S)
+INLINE_MATH_RE = re.compile(r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$", re.S)
+LINK_IN_TEX = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 
 _CAMEL_CASE_REGEX = re.compile(r"([a-zäöü])([A-ZÄÖÜ])")
 
@@ -58,14 +58,16 @@ def _camel_case_replacer(match: re.Match) -> str:
 def split_camel_case(text: str) -> str:
     return _CAMEL_CASE_REGEX.sub(_camel_case_replacer, text)
 
+
 # convert Markdown links [label](url) inside Latex code into plain text: \text{label}
 def _link_as_text(tex: str) -> str:
-    return LINK_IN_TEX.sub(r'\\text{\1}', tex)
+    return LINK_IN_TEX.sub(r"\\text{\1}", tex)
+
 
 def compatible_markdown(markdown_text: str) -> str:
     if not markdown_text:
         return "–"
-    
+
     # placeholders will store all math snippets (both inline and block) from markdown_text as html
     placeholders: list[str] = []
     counter = 0
@@ -89,12 +91,14 @@ def compatible_markdown(markdown_text: str) -> str:
         token = f"§BLOCK_MATH_{counter}§"
         counter += 1
         return token
-    
+
     # replace all math snippets with tokens so that mistune does not alter or escape them
     text = BLOCK_MATH_RE.sub(replace_block, markdown_text)
     text = INLINE_MATH_RE.sub(replace_inline, text)
 
-    md = create_markdown(escape=False, plugins=["table", "footnotes", "url", "task_lists"])
+    md = create_markdown(
+        escape=False, plugins=["table", "footnotes", "url", "task_lists"]
+    )
     html = md(text)
 
     # replace all tokens with their corresponding math html snippets
@@ -160,7 +164,7 @@ class DynamicRender:
             self._resource_map[url] = f"/plugins/{PA_BLP.name}/ui/assets/empty.svg#" + url
 
         return self._resource_map[url]
-    
+
     def _markdown(self, markdown: str):
         if not markdown:
             return "–"
@@ -195,28 +199,48 @@ class DynamicRender:
 
     def render_index(self, atlas: AtlasContent) -> str:
         template = self._jinja.get_template("languages.jinja2")
-        return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", is_planqk=self.is_planqk)
+        return template.render(
+            atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", is_planqk=self.is_planqk
+        )
 
-    def render_language_overview(self, atlas: AtlasContent, language: PatternLanguage) -> str:
+    def render_language_overview(
+        self, atlas: AtlasContent, language: PatternLanguage
+    ) -> str:
         template = self._jinja.get_template("language-overview.jinja2")
-        all_patterns = language.get_patterns_sorted(atlas)       
-        return template.render(patterns=all_patterns, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
+        all_patterns = language.get_patterns_sorted(atlas)
+        return template.render(
+            patterns=all_patterns,
+            base_url=f"/plugins/{PA_BLP.name}/ui",
+            language=language,
+            is_planqk=self.is_planqk,
+        )
 
-    def render_language_overview_categorized(self, atlas: AtlasContent, language: PatternLanguage) -> str:
+    def render_language_overview_categorized(
+        self, atlas: AtlasContent, language: PatternLanguage
+    ) -> str:
         template = self._jinja.get_template("language-overview-categorized.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
 
         patterns_by_category = defaultdict(list)
         for pattern in all_patterns:
             for category in pattern.categories:
-                 patterns_by_category[CATEGORY_HEADLINES[category]].append(pattern)
+                patterns_by_category[CATEGORY_HEADLINES[category]].append(pattern)
 
-        return template.render(patterns_by_category=patterns_by_category, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
+        return template.render(
+            patterns_by_category=patterns_by_category,
+            base_url=f"/plugins/{PA_BLP.name}/ui",
+            language=language,
+            is_planqk=self.is_planqk,
+        )
 
-
-    def render_pattern(self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage) -> str:
+    def render_pattern(
+        self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage
+    ) -> str:
         template = self._jinja.get_template("pattern.jinja2")
-        return template.render(atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", pattern=pattern, language=language, is_planqk=self.is_planqk)
-    
-    
-
+        return template.render(
+            atlas=atlas,
+            base_url=f"/plugins/{PA_BLP.name}/ui",
+            pattern=pattern,
+            language=language,
+            is_planqk=self.is_planqk,
+        )

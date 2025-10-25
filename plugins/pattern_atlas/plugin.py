@@ -19,7 +19,7 @@ class PatternAtlas(QHAnaPluginBase):
     description = "pattern atlas plugin"
     tags = ["pattern-atlas"]
 
-    def get_api_blueprint(self): 
+    def get_api_blueprint(self):
         return PA_BLP
 
     def get_requirements(self):
