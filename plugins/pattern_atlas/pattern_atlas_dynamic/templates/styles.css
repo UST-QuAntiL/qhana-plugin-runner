@@ -206,5 +206,6 @@ p {
 
 .pattern_headline{
     display:flex;
-    margin-left: 10px;
+    margin-left: 2%;
+    font-size: 1.8rem
 }
