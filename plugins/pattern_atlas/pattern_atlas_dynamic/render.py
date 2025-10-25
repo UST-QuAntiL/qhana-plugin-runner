@@ -28,6 +28,21 @@ from pattern_atlas.plugin import PA_BLP
 
 from .model import AtlasContent, Pattern, PatternLanguage
 
+CATEGORY_HEADLINES = {
+    "dataencodings":"Data Encodings- How can classical data be encoded into quantum states for computation?",
+    "unitarytransformations":"Unitary Transformations - How can unitary transformations be designed and composed to build quantum algorithms?",
+    "warmstaring":"Warm-Starting- How can prior knowledge or favorable initializations be used to improve the convergence of quantum algorithms?",
+    "programflow":"Program Flow- How can computations be effectively distributed between quantum and classical hardware?",
+    "circuitcutting":"Circuit Cutting- How can large quantum circuits be partitioned into smaller, executable subcircuits to overcome hardware limitations?",
+    "errorhandling":"Error Handling- How can quantum algorithms be made robust against noise and errors in current quantum hardware?",
+    "quantumstates":"Quantum States- What are quantum states, and how are they represented and manipulated in quantum algorithms?",
+    "execution":"Execution- What best practices should be followed when developing hybrid quantum-classical applications?",
+    "development":"Development- What best practices should be followed when developing hybrid quantum-classical applications?",
+    "operations":"Operations- How can the execution, monitoring, and management of quantum applications be organized and automated?",
+    "measurement":"Measurement- How can classical information be accurately extracted from quantum states after computation?",
+    "qml":"Quantum Machine Learning- How to use quantum computing to solve machine learning problems?",
+} 
+
 # regex for latex math
 BLOCK_MATH_RE  = re.compile(r'(?<!\\)\$\$(.+?)(?<!\\)\$\$', re.S)
 INLINE_MATH_RE = re.compile(r'(?<!\\)\$(?!\$)(.+?)(?<!\\)\$', re.S)
@@ -191,12 +206,12 @@ class DynamicRender:
         template = self._jinja.get_template("language-overview-categorized.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
 
-        patterns_by_tag = defaultdict(list)
+        patterns_by_category = defaultdict(list)
         for pattern in all_patterns:
-            for tag in pattern.tags:
-                patterns_by_tag[tag].append(pattern)
-       
-        return template.render(patterns_by_tag=patterns_by_tag, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
+            for category in pattern.categories:
+                 patterns_by_category[CATEGORY_HEADLINES[category]].append(pattern)
+
+        return template.render(patterns_by_category=patterns_by_category, base_url=f"/plugins/{PA_BLP.name}/ui", language=language, is_planqk=self.is_planqk)
 
 
     def render_pattern(self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage) -> str:

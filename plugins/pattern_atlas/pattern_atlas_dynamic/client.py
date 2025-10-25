@@ -116,9 +116,11 @@ class AtlasClient:
                 name=pattern["name"],
                 icon=pattern["iconUrl"],
                 citation="",
-                tags=set([pattern["tags"]]) if pattern.get("tags") else set(),
+                tags={tag for tag in tags if not tag.startswith("cat:")},
+                categories={tag[4:].lower() for tag in tags if tag.startswith("cat:")},
             )
             for pattern in data
+            for tags in [set(pattern["tags"].split(" ")) if pattern.get("tags") else set()]
         ]
         for pattern in patterns:
             self._update_pattern(pattern)

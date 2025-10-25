@@ -39,6 +39,7 @@ class Pattern:
     citation: str
     aliases: str = ""
     tags: set[str] = field(default_factory=set)
+    categories: set[str] = field(default_factory=set)
     intent: str = ""
     intent_type: Literal["intent", "problem", "question"] = "intent"
     context: str = ""
