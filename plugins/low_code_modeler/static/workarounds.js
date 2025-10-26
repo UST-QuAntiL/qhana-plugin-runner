@@ -17,11 +17,6 @@
 	} else {
 	    console.log("microfrontend.js hasn't been loaded yet, cannot request full height!")
 	}
-
-	// ignore css load requests
-	window.onLoadCssMessage = function onLoadCssMessage(data, state) {
-	    console.log("css load request from the ui has been ignored!", data, state)
-	}
     }
 
     // apply workarounds the first time a message is recived
