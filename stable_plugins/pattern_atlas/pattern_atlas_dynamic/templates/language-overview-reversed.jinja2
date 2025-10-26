@@ -24,7 +24,7 @@
             </div>
             <div class="sort-dropdown">
                 <button id="sort-btn" class="sort-btn">
-                    Sort by: <span id="sort-label">Tags</span>
+                    Sort by: <span id="sort-label">Name: Z → A</span>
                     <span class="arrow">▼</span>
                 </button>
                 <ul id="sort-menu" class="sort-menu">
@@ -36,8 +36,6 @@
         </div>
     </header>
 
-    {%- for category, patterns in patterns_by_category.items() -%}
-    <h2 class="pattern_headline">{{ category }}</h2>
     <div class="card-grid">
         {%- for pattern in patterns -%}
         <div class="card"
@@ -49,7 +47,6 @@
         </div>
         {%- endfor -%}
     </div>
-    {%- endfor -%}
 
     <script>
         const searchBox = document.getElementById('search-box');
@@ -67,6 +64,7 @@
             });
         });
 
+
         const dropdown = document.querySelector('.sort-dropdown');
         const sortBtn   = document.getElementById('sort-btn');
         const sortMenu  = document.getElementById('sort-menu');
@@ -74,7 +72,7 @@
         sortBtn.addEventListener('click', (e) => {
             e.preventDefault();
             dropdown.classList.toggle('open');
-          });
+        });
     </script>
     </main>
 {%- endblock content -%}

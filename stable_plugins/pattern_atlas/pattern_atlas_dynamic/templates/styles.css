@@ -228,3 +228,86 @@ p {
     margin-left: 2%;
     font-size: 1.8rem
 }
+
+.sort-dropdown {
+    position: relative;
+    margin-left: 10px;
+}
+
+.sort-btn {
+    cursor: pointer;
+    padding: 8px 12px;
+    font-size: 1rem;
+    border-radius: 12px;
+    border: 1px solid #b60dff;
+    background-image:
+            linear-gradient(#fff, #fff),
+            linear-gradient(90deg, #4400b9, #b60dff, #4400b9);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 200% 100%;
+    background-position: 0% 0%, 0% 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow .2s ease, background-position .3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sort-btn:hover,
+.sort-btn:focus {
+    outline: none;
+    box-shadow: 0 0 10px rgba(179, 71, 255, 0.35);
+    animation: gradient-move 3s linear infinite;
+}
+
+.sort-btn .arrow {
+    font-size: 0.8rem;
+    line-height: 1;
+    transform: translateY(1px);
+    opacity: 0.9;
+}
+
+.sort-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: #fff;
+    border: 1px solid #b6b6b6;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    list-style: none;
+    padding: 6px 0;
+    margin: 0;
+    min-width: 200px;
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: opacity .15s ease-out, transform .15s ease-out;
+}
+
+.sort-dropdown.open .sort-menu {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.sort-menu li {
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+.sort-menu li a {
+    color: #111;
+    text-decoration: none;
+    display: block;
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+
+.sort-menu li:hover,
+.sort-menu li a:hover {
+    background: #f3f3f3;
+}

@@ -102,6 +102,19 @@ class LanguageUIcategorized(MethodView):
         return Response(html, content_type="text/html")
 
 
+@PA_BLP.route("/ui/pattern-languages/<language_id>/reverse.html")
+class LanguageUIreverse(MethodView):
+    @PA_BLP.response(HTTPStatus.OK)
+    @PA_BLP.require_jwt("jwt", optional=True)
+    def get(self, language_id):
+        atlas = get_cached_atlas()
+        language = atlas.languages.get(language_id)
+        if language is None:
+            return Response("Language not found", status=404)
+        html = renderer.render_language_overview_reverse(atlas, language)
+        return Response(html, content_type="text/html")
+
+
 @PA_BLP.route("/ui/pattern-languages/<language_id>/<pattern_id>/index.html")
 class PatternUI(MethodView):
     @PA_BLP.response(HTTPStatus.OK)

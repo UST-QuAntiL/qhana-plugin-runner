@@ -22,9 +22,17 @@
                     class="search-input"
                 />
             </div>
-            <a href="categorized.html" style="text-decoration: none;">
-                <button id="tags-btn" class="search-input">tags</button>
-            </a>
+            <div class="sort-dropdown">
+                <button id="sort-btn" class="sort-btn">
+                    Sort by: <span id="sort-label">Name: A → Z</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <ul id="sort-menu" class="sort-menu">
+                    <li><a href="index.html">Name: A → Z</a></li>
+                    <li><a href="reverse.html">Name: Z → A</a></li>
+                    <li><a href="categorized.html">Tags</a></li>
+                </ul>
+            </div>
         </div>
     </header>
 
@@ -54,6 +62,16 @@
                 const visible = name.includes(query) || tags.includes(query) || categories.includes(query);
                 card.style.display = visible ? '' : 'none';
             });
+        });
+
+
+        const dropdown = document.querySelector('.sort-dropdown');
+        const sortBtn   = document.getElementById('sort-btn');
+        const sortMenu  = document.getElementById('sort-menu');
+
+        sortBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            dropdown.classList.toggle('open');
         });
     </script>
     </main>
