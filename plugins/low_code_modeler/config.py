@@ -1,3 +1,4 @@
+from os import getenv
 from flask import Flask
 from qhana_plugin_runner.registry_client.client import PluginRegistryClient
 
@@ -19,6 +20,8 @@ DEFAULT_CONFIG = {
 def get_config(app: Flask) -> dict[str, str]:
     with PluginRegistryClient(app) as client:
         config = dict(DEFAULT_CONFIG)
+        for key, value in config.items():
+            config[key] = getenv(f"LCM_{key}", value)
         services = client.fetch_by_rel(
             ["service"], {"service-id": ",".join(config.keys())}
         )

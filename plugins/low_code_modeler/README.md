@@ -2,17 +2,10 @@ This folder contains a plugin for the [low-code-modeler](https://github.com/LEQO
 
 To regenerate/update the static files you can just run `bash update-lcm.sh`.
 
-If you want to do it manually, you have to run the following commands,
-please run them from inside this directory, unless otherwise specified.
-
-1. `git rm -rf static`
-2. `git reset -- static/workarounds.js`
-3. `git checkout -- static/workarounds.js`
-4. `pnpm install` (from inside the low-code-modeler repo)
-5. `pnpm run build --outDir <path to qhana-plugin-runner>/plugins/low_code_modeler/static` (from inside the low-code-modeler repo)
-6. `git rev-parse --verify HEAD > <path to qhana-plugin-runner>/plugins/low_code_modeler/static/.git-revision` (from inside the low-code-modeler repo)
-7. `sed -i '/<\/script>/a <script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>' static/index.html`
-8. `git add static`
+To configure this plugin you can configure the services in the plugin
+registry using the identifiers listed in [config.py](config.py)
+(e.g. `QunicornEndpoint`) or environment variables, which use the same
+names but have `LCM_` as a prefix (e.g. `LCM_QunicornEndpoint`)
 
 This should be fixed by `workarounds.js`, but you may need to clear the
 `workbox-precache` inside your browser to actually see any changes,
