@@ -29,14 +29,14 @@
         color: black;
     }
 
-    .workflow-list {
+    .diagram-list {
         max-height: 50vh;
         overflow-y: auto;
         scrollbar-gutter: stable;
         margin-block-end: 1rem;
     }
 
-    .workflow-item {
+    .diagram-item {
         width: 100%;
         display: flex;
         flex-wrap: wrap;
@@ -45,17 +45,17 @@
         justify-content: space-between;
     }
 
-    .workflow-item:not(:nth-child(1)) {
+    .diagram-item:not(:nth-child(1)) {
         border-top: 1px solid var(--border-color, gray);
     }
 
-    .workflow-title {
+    .diagram-title {
         font-weight: 600;
         font-size: 120%;
         margin-block: 0.1em;
     }
 
-    .workflow-subtitle {
+    .diagram-subtitle {
         margin-block: 0.1em;
     }
 
@@ -68,42 +68,27 @@
     <div id="root"></div>
     
 
-    <dialog class="card mat-mdc-card color-scheme-card" id="openWF" closedby="any" autofocus>
-        <h2>Open Workflow</h2>
+    <dialog class="card mat-mdc-card color-scheme-card" id="openDiagram" closedby="any" autofocus>
+        <h2>Open Diagram</h2>
         <form method="dialog" class="qhana-form">
             <div class="qhana-form-field">
-                <label class="qhana-form-label" for="openWFinput">Open Workflow from local filesystem:</label>
+                <label class="qhana-form-label" for="openDiagraminput">Open Diagram from local filesystem:</label>
                 <div class="qhana-input-wrapper">
-                    <input class="qhana-form-input" type="file" name="workflow" id="openWFinput" accept="bpmn" required>
-                    <button class="qhana-form-submit" type="submit" value="openLocal">Open selected workflow</button>
+                    <input class="qhana-form-input" type="file" name="diagram" id="openDiagraminput" accept="bpmn" required>
+                    <button class="qhana-form-submit" type="submit" value="openLocal">Open selected diagram</button>
                 </div>
             </div>
         </form>
-        <h3>Load Saved Workflow</h3>
+        <h3>Load Saved Diagram</h3>
         <form method="dialog" id="openExisting" class="qhana-form">
-            <div class="workflow-list">
+            <div class="diagram-list">
             </div>
         </form>
-        <div id="experimentWorkflows">
-            <h3>Load Workflow from current Experiment</h3>
-            <form method="dialog" id="openExisting" class="qhana-form">
-                <div class="workflow-list">
-                </div>
-            </form>
-        </div>
         <form method="dialog" class="qhana-form">
             <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
         </form>
     </dialog>
 
-    <dialog class="card mat-mdc-card color-scheme-card" id="deployWF" closedby="any">
-        <h2>Deploy Workflow</h2>
-        <form method="dialog" class="qhana-form">
-            <button class="qhana-form-submit" type="submit" value="cancel" autofocus>Cancel</button>
-            <button class="qhana-form-submit" type="submit" value="deployPlugin">Deploy as Plugin</button>
-            <button class="qhana-form-submit" type="submit" value="deployWorkflow">Deploy as Workflow</button>
-        </form>
-    </dialog>
     <script>
         let currentRestoreFlow = null;
 
@@ -132,11 +117,11 @@
 
         
         function onFileOpenRequest() {
-            const dialogElement = document.querySelector("dialog#openWF");
+            const dialogElement = document.querySelector("dialog#openDiagram");
             const url = "../models/";
             fetch(url).then(response => response.json()).then(result => {
 		console.log("Received models from backend:", result);
-                const container = document.querySelector("form#openExisting .workflow-list");
+                const container = document.querySelector("form#openExisting .diagram-list");
 
                 const newChildren = result.map(model => {
 		    console.log("Processing model:", model);
@@ -144,14 +129,14 @@
 		    const metadata = model.metadata || model;
                     const modelId = model.metadata ? model.metadata.id : model.model_id;                          
                     const outer = document.createElement("div");
-                    outer.classList.add("workflow-item")
+                    outer.classList.add("diagram-item")
                     const inner = document.createElement("div");
                     const title = document.createElement("p");
-                    title.classList.add("workflow-title");
+                    title.classList.add("diagram-title");
                     title.textContent = `${metadata.name} – ${metadata.id}@${metadata.version}`;
                     const subtitle = document.createElement("p");
-                    subtitle.classList.add("workflow-subtitle");
-                    const date = new Date(metadata.date)
+                    subtitle.classList.add("diagram-subtitle");
+                    const date = new Date(metadata.timestamp)
                     subtitle.textContent = date.toLocaleString();
                     const button = document.createElement("button");
                     button.setAttribute("value", `load:${modelId}`);
@@ -171,10 +156,10 @@
         }
 
         function onOpenDialogClosed(event) {
-            const localWFInput = event.target.querySelector("input#openWFinput");
+            const localDiagramInput = event.target.querySelector("input#openDiagraminput");
             if (event.target.returnValue === "openLocal") {
-                if (localWFInput.files.length === 1) {
-                    const file = localWFInput.files[0];
+                if (localDiagramInput.files.length === 1) {
+                    const file = localDiagramInput.files[0];
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         try {
@@ -189,7 +174,7 @@
                     reader.readAsText(file);
                 }
             }
-            localWFInput.value = "";
+            localDiagramInput.value = "";
             if (event.target.returnValue === "cancel") {
                 return;
             }
@@ -210,7 +195,7 @@
             }
         }
 
-        document.querySelector("dialog#openWF").addEventListener("close", onOpenDialogClosed);
+        document.querySelector("dialog#openDiagram").addEventListener("close", onOpenDialogClosed);
       </script>
   </body>
 </html>
