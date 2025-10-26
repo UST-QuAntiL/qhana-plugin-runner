@@ -133,14 +133,14 @@ p {
     margin-right: 10px;
     margin-left: auto;
     min-width: 260px;
-    max-width: 420px;
+    max-width: 460px;
     width: 100%;
 }
 
 .search-input {
     width: 100%;
-    max-width: 400px;
-    padding: 8px 12px;
+    max-width: 460px;
+    padding: 10px 12px 10px 36px;
     font-size: 1rem;
     border: 1px solid transparent;
     border-radius: 12px;
@@ -157,6 +157,25 @@ p {
     appearance: none;
     -webkit-appearance: none;
     transition: box-shadow .2s ease;
+}
+
+.search-input-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #9aa0a6;
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0.9;
 }
 
 @keyframes gradient-move {
