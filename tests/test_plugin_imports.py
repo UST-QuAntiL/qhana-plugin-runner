@@ -39,9 +39,11 @@ ALLOWED_IMPORTS = {
     "qhana_plugin_runner",
     # direct plugin runner dependencies
     "flask",
+    "flask_smorest",
     "werkzeug",
     "marshmallow",
     "celery",
+    "kombu",
     "requests",
     "sqlalchemy",
     "typing_extensions",
@@ -102,6 +104,10 @@ def extract_imports(code: str, path: Path):  # noqa: C901
                         base_class_aliases.add(PLUGIN_BASE_CLASS_NAME)
                 yield module, n.lineno
         elif isinstance(node, ast.ImportFrom):
+            if node.module is None and node.level == 1:
+                for name in node.names:
+                    yield ("", str(name.name)), node.lineno
+                continue
             assert (
                 node.module is not None
             ), f"Bad import found in line {node.lineno} in file {path}"
@@ -241,7 +247,17 @@ def check_imports_recursive(
 
     import_path = file_
     if import_path.name == "__init__.py":
+        # file is standin for parent folder
         import_path = import_path.parent
+    if (
+        import_path.name.endswith(".py")
+        and import_path.is_file()
+        and import_path.exists()
+    ):
+        # path is a python file which cannot have submodules
+        if import_path.parent.is_relative_to(module_base):
+            # file is part of a larger module, resolve import relative to that
+            import_path = import_path.parent
 
     for component in module[1:]:
         if component == "":
