@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import Counter
 from os import environ
 from os import execvpe as replace_process
 from os import urandom
 from pathlib import Path
 from re import match
 from shlex import join
-from shutil import copytree
+from shutil import copy, copytree
 from typing import List, Optional, cast
 
 from dotenv import load_dotenv, set_key, unset_key
@@ -508,6 +509,8 @@ def load_git_plugins(c, plugins_path="./git-plugins"):
     if not repositories_path.exists():
         repositories_path.mkdir(parents=True, exist_ok=True)
 
+    folder_count = Counter()
+
     for git_plugin in git_plugins.splitlines():
         plugin_match = match(
             # roughly matches <vcs=git>+<repo_url>[@<ref>][#…subdirectory=<sub_dir>…]
@@ -534,7 +537,10 @@ def load_git_plugins(c, plugins_path="./git-plugins"):
         if ref:
             shallow_cmd.append(f"--branch={ref}")
 
-        folder = git_url_to_folder(url)
+        folder_name = git_url_to_folder(url)
+        folder_count.update([folder_name])
+        folder = f"{folder_name}_{folder_count[folder_name]}"
+
         if (Path(plugins_path) / Path(".repositories") / Path(folder)).exists():
             print(f"Repository '{url}' is already checked out – skipping")
             continue  # todo better handling for checked out repositories
@@ -550,13 +556,28 @@ def load_git_plugins(c, plugins_path="./git-plugins"):
                     with c.cd(folder):
                         c.run(join(["git", "checkout", ref]), warn=True)
             if sub_dir:
-                plugin_folder = repositories_path / Path(folder) / Path(sub_dir)
+                plugin_source = repositories_path / Path(folder) / Path(sub_dir)
             else:
-                plugin_folder = repositories_path / Path(folder)
+                plugin_source = repositories_path / Path(folder)
 
-            if plugin_folder.exists() and plugin_folder.is_dir():
-                # copy all files into the plugins directory
-                copytree(plugin_folder, Path(plugins_path), dirs_exist_ok=True)
+            print("Copying plugin(s) from", plugin_source)
+
+            if plugin_source.exists() and plugin_source.is_dir():
+                if (plugin_source / "__init__.py").exists():
+                    dest = Path(plugins_path) / plugin_source.name / plugin_source.name
+                    dest.mkdir(parents=True, exist_ok=True)
+                    # copy a single plugin package
+                    copytree(plugin_source, dest, dirs_exist_ok=True)
+                    print("Destination:", dest.parent)
+                else:
+                    # copy all files into the plugins directory
+                    copytree(plugin_source, Path(plugins_path), dirs_exist_ok=True)
+                    print("Destination:", plugins_path)
+            elif plugin_source.exists() and plugin_source.is_file():
+                dest = Path(plugins_path) / plugin_source.name
+                if not dest.exists():
+                    copy(plugin_source, Path(plugins_path) / plugin_source.name)
+                    print("Destination:", plugins_path)
 
 
 @task
