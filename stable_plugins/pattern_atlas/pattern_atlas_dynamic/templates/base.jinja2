@@ -29,23 +29,24 @@
     {%- endblock script -%}
     <script>
 
-         function applyWorkaround(){
+       function applyWorkaround(){
             if(window._qhana_microfrontend_state){
                 window._qhana_microfrontend_state.targetHeight = "full";
 	            window.notifyParentWindowOnHeightChange(null, "full");
             }
          }
-        let isFirstMessage = true;
+        let hasApplied = false;
 
-        const handleMessage = (event) => {
-        if (isFirstMessage) {
-            isFirstMessage = false;
-            applyWorkaround();
-            }
-        };
+        function ensureHeight(){
+			if(!hasApplied){
+				hasApplied = true;
+				applyWorkaround();
+			}
+		}
 
-        window.addEventListener("message", handleMessage);
-    </script>
+        window.addEventListener("message", ensureHeight);
+		document.addEventListener("DOMContentLoaded", ensureHeight);
+    </script>  
 </body>
 
 </html>
