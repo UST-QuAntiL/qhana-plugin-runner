@@ -18,8 +18,10 @@
     <button class="cancel-dialog qhana-form-submit" type="submit" value="cancel">Close dialog</button>
   </form>
 </dialog>
+
 <script>
   let currentRestoreFlow = null;
+
   document.addEventListener("lcm-save", (event) => {
       event.preventDefault();
       const flowWithMetadata = event.detail;
@@ -35,22 +37,27 @@
 	  }
       );
   });
+
   document.addEventListener("lcm-open", (event) => {
       event.preventDefault();
       currentRestoreFlow = event.detail.restoreFlow;
       console.log("received restoreFlow function");
       onFileOpenRequest();
   });
+
+
   function onFileOpenRequest() {
       const dialogElement = document.querySelector("dialog#openDiagram");
       const url = "../models/";
       fetch(url).then(response => response.json()).then(result => {
 	  console.log("Received models from backend:", result);
 	  const container = document.querySelector("form#openExisting .diagram-list");
+
 	  const newChildren = result.map(model => {
 	      console.log("Processing model:", model);
+
 	      const metadata = model.metadata || model;
-	      const modelId = model.metadata ? model.metadata.id : model.model_id;
+	      const modelId = model.metadata ? model.metadata.id : model.model_id;                          
 	      const outer = document.createElement("div");
 	      outer.classList.add("diagram-item")
 	      const inner = document.createElement("div");
@@ -72,10 +79,12 @@
 	      outer.appendChild(button);
 	      return outer;
 	  });
+
 	  container.replaceChildren(...newChildren);
       });
       dialogElement.showModal();
   }
+
   function onOpenDialogClosed(event) {
       const localDiagramInput = event.target.querySelector("input#openDiagraminput");
       if (event.target.returnValue === "openLocal") {
@@ -115,5 +124,6 @@
 	  });
       }
   }
+
   document.querySelector("dialog#openDiagram").addEventListener("close", onOpenDialogClosed);
 </script>
