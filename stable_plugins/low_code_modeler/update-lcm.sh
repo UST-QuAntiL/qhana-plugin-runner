@@ -45,7 +45,7 @@ commit="$(git rev-parse --verify HEAD)"
 pnpm install
 pnpm run build --outDir "$plugin_folder"/static
 popd
-sed -i '/<\/script>/a <script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>' static/index.html
+sed -i -e '/<\/script>/r head.html' -e '/<\/div>/r body.html' static/index.html
 printf "%s" "$commit" > static/.git-revision
 git add static
 

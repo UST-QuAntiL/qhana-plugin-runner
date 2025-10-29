@@ -1,6 +1,11 @@
 This folder contains a plugin for the [low-code-modeler](https://github.com/LEQO-Framework/low-code-modeler)
 
-To regenerate/update the static files you can just run `bash update-lcm.sh`.
+To regenerate/update the static files you can just run `bash update-lcm.sh <path to low-code-modeler repo>`.
+
+The shell script [`update-lcm.sh`](update-lcm.sh) builds the
+low-code-modeler using `pnpm run build` and then injects the code in
+[`head.html`](head.html) and [`body.html`](body.html) in the head and
+the body of the generated `index.html` respectively.
 
 To configure this plugin you can configure the services in the plugin
 registry using the identifiers listed in [config.py](config.py)
