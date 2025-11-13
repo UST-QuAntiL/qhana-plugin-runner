@@ -1,0 +1,66 @@
+{% extends "base.jinja2" %}
+
+
+{% block head %}
+    {{ super() }}
+    <title>{{language.name}} – Pattern Atlas</title>
+{% endblock head %}
+
+
+{%- block content -%}
+    <main>
+    <header class="page-header">
+        <h1 class="page-head">{{language.name}} </h1>
+        <div class="btn-group">
+            <button id="cards-btn" class="cards-btn"><a class="cards-graph-link" href="index.html"> Cards </a></button>
+            <button id="graph-btn-active" class="graph-btn-active"> Graph </button>
+        </div>
+    </header>
+
+    <svg id="graph" viewBox="0 0 800 600" style="width:100%;height:500px;">
+        <g class="zoom-group" transform="translate(0, 0) scale(1)">
+            <defs>
+                <marker id="arrow"
+                    viewBox="0 0 10 10"
+                    refX="10" refY="5"
+                    markerWidth="8" markerHeight="8"
+                    orient="auto-start-reverse"
+                    markerUnits="strokeWidth">
+                    <path d="M 0 0 L 10 5 L 0 10 Z" fill="black"></path>
+                </marker>
+            </defs>         
+            <g class="edges">
+                {%- for rel in relations -%}
+                    <g id="edge-{{rel.edge_id}}" class="edge-group">
+                        <path class="edge" data-source="{{rel.source_pattern}}" data-target="{{rel.target_pattern}}" fill="none" 
+                        stroke="black" vector-effect="non-scaling-stroke" d="M 100 120 C 180 80, 220 160, 300 120"
+                        marker-end="url(#arrow)"></path>
+                    </g>
+                {%- endfor -%}
+            </g>
+            <g class="nodes">
+                {%- for pattern in patterns -%}
+                    <g class="node" id="node-{{pattern.pattern_id}}" transform="translate(0, 0)" data-template="default" data-x="0" data-y="0">
+                        <rect data-link-handles="edges" height="50" rx="5" ry="5" width="170" x="-85" y="-25"
+                        style="stroke: black; stroke-width: 1;"></rect>
+                        <text data-click="title" data-content="title" dominant-baseline="middle" height="50"
+                        text-anchor="middle" width="120" x="0" y="0" class="text" style="font-weight: bold;" data-lineheight="8.5">
+                            {{pattern.name}}
+                        </text>
+                    </g>
+                {%- endfor -%}
+            </g>
+        </g>
+    </svg>
+
+    <script defer src="{{base_url}}/graph.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+        PatternGraph.layoutRandom('graph', '.node', 40);
+        PatternGraph.connectEdges('graph', '.edge', '.node');   
+        PatternGraph.enableZoom('graph', '.zoom-group', 'arrow');  
+        });
+    </script>
+
+    </main>
+{%- endblock content -%}

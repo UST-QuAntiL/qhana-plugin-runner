@@ -120,6 +120,9 @@ class Pattern:
 
         self.extra_sections.update(pattern.extra_sections)
 
+    def get_language(self) -> str:
+        return self.pattern_language
+
 
 @dataclass
 class PatternRelation:
@@ -207,3 +210,30 @@ class AtlasContent:
         else:
             source_pattern.undirected_edges.add(pattern_relation.edge_id)
             target_pattern.undirected_edges.add(pattern_relation.edge_id)
+
+# in-memory Index: language_id -> relation_ids
+class AtlasIndex:
+    def __init__(self):
+        self._built = False
+        self._lang_to_rel: dict[str, list[PatternRelation]] = {}
+
+    def build(self, atlas: AtlasContent):
+        if self._built:
+            return
+        
+        for lang in atlas.languages.keys():
+            self._lang_to_rel[lang] = []
+        
+        for rel in atlas.relations.values():
+            src_lang = rel.get_source(atlas).get_language()
+            if src_lang == rel.get_target(atlas).get_language():
+                if not src_lang in self._lang_to_rel:
+                    raise RuntimeError("Language not in atlas")
+                self._lang_to_rel[src_lang].append(rel)
+
+        self._built = True
+
+    def relations_for_language(self, language_id: str) -> list[PatternRelation]:
+        if not self._built:
+            raise RuntimeError("AtlasIndex not built yet")
+        return self._lang_to_rel.get(language_id, [])

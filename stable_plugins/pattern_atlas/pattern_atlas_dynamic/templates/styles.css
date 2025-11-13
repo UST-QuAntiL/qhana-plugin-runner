@@ -128,6 +128,7 @@ p {
 
 .search-container {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     margin-top: 10px;
     margin-right: 10px;
@@ -310,4 +311,83 @@ p {
 .sort-menu li:hover,
 .sort-menu li a:hover {
     background: #f3f3f3;
+}
+
+.node { 
+    fill: rgba(239, 217, 254, 0.95); 
+    cursor: move; 
+}
+
+.node:hover { 
+    fill: rgba(178, 73, 252, 0.9);  
+    color: white; 
+}
+
+.text { 
+    fill: black; 
+    font-size: 6pt; 
+    text-overflow: ellipsis; 
+    word-break: break-word; 
+}
+
+#graph { 
+    touch-action: none; 
+}
+
+.graph-btn,
+.cards-btn,
+.graph-btn-active,
+.cards-btn-active {
+    position: relative;
+    font-size: 1rem;
+    padding: 8px 12px;
+    border: 1px solid #7a7a7a;    
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+
+}
+
+.graph-btn,
+.cards-btn {
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow .2s ease;
+    cursor: pointer;
+}
+
+.cards-btn-active,
+.graph-btn-active {
+    background-color: rgb(190, 190, 190);
+    color: #3b3b3b;
+}
+
+.cards-btn,
+.cards-btn-active {
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+.graph-btn,
+.graph-btn-active {
+    margin-right: 10px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.graph-btn:hover,
+.cards-btn:hover {
+    outline: none;
+    box-shadow: 0 0 10px rgba(217, 161, 254, 0.4);
+    background-color: rgb(219, 219, 219);
+}
+
+.btn-group {
+    display:inline-flex; 
+    gap:0;
+}
+
+.cards-graph-link {
+    color: black !important;
+    text-decoration: none;
 }

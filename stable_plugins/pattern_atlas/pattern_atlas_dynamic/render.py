@@ -26,7 +26,7 @@ from mistune import create_markdown
 from typing import Match
 from pattern_atlas.plugin import PA_BLP
 
-from .model import AtlasContent, Pattern, PatternLanguage
+from .model import AtlasContent, Pattern, PatternLanguage, AtlasIndex
 
 CATEGORY_HEADLINES = {
     "dataencodings": "Data Encodings- How can classical data be encoded into quantum states for computation?",
@@ -140,6 +140,7 @@ class DynamicRender:
         self._jinja.filters["resource"] = self._resource
         self._jinja.filters["markdown"] = self._markdown
         self._jinja.filters["split_camel_case"] = split_camel_case
+        self._atlas_index = AtlasIndex()
 
     def _resource(self, url: str) -> str:
         if url is None:
@@ -242,6 +243,19 @@ class DynamicRender:
             base_url=f"/plugins/{PA_BLP.name}/ui",
             language=language,
             is_planqk=self.is_planqk,
+        )
+    
+    def render_pattern_graph(self, atlas: AtlasContent, language: PatternLanguage) -> str:
+        template = self._jinja.get_template("pattern-graph.jinja2")
+        self._atlas_index.build(atlas)
+        lang_relations = self._atlas_index.relations_for_language(language.language_id)
+        all_patterns = language.get_patterns_sorted(atlas)
+        return template.render(
+            relations = lang_relations,
+            patterns = all_patterns,
+            base_url=f"/plugins/{PA_BLP.name}/ui",
+            language = language,
+            is_plank=self.is_planqk,
         )
 
     def render_pattern(
