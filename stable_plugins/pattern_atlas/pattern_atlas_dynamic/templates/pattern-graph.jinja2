@@ -17,7 +17,7 @@
         </div>
     </header>
 
-    <svg id="graph" viewBox="0 0 800 600" style="width:100%;height:500px;">
+    <svg id="graph" viewBox="0 0 3200 2000" style="width:100%;height:1200px;">
         <g class="zoom-group" transform="translate(0, 0) scale(1)">
             <defs>
                 <marker id="arrow"
@@ -41,12 +41,22 @@
             <g class="nodes">
                 {%- for pattern in patterns -%}
                     <g class="node" id="node-{{pattern.pattern_id}}" transform="translate(0, 0)" data-template="default" data-x="0" data-y="0">
-                        <rect data-link-handles="edges" height="50" rx="5" ry="5" width="170" x="-85" y="-25"
+                        <rect data-link-handles="edges" height="70" rx="5" ry="5" width="250" x="-85" y="-25"
                         style="stroke: black; stroke-width: 1;"></rect>
-                        <text data-click="title" data-content="title" dominant-baseline="middle" height="50"
-                        text-anchor="middle" width="120" x="0" y="0" class="text" style="font-weight: bold;" data-lineheight="8.5">
-                            {{pattern.name}}
-                        </text>
+                        <foreignObject x="-80" y="-25" width="160" height="70">
+                            <div xmlns="http://www.w3.org/1999/xhtml"
+                                 style="display:flex;
+                                        width:100%;
+                                        height:100%;
+                                        font-size:18px;
+                                        font-weight:bold;
+                                        text-align:center;
+                                        justify-content:center;
+                                        align-items:center;
+                                        overflow:hidden;">
+                                {{pattern.name}}
+                            </div>
+                        </foreignObject>
                     </g>
                 {%- endfor -%}
             </g>
@@ -56,7 +66,7 @@
     <script defer src="{{base_url}}/graph.js"></script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
-        PatternGraph.layoutRandom('graph', '.node', 40);
+        PatternGraph.layoutGrid('graph', '.node', 8, 300, 150, 150, 100);
         PatternGraph.connectEdges('graph', '.edge', '.node');   
         PatternGraph.enableZoom('graph', '.zoom-group', 'arrow');  
         });
