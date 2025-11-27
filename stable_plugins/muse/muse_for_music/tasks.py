@@ -74,9 +74,9 @@ def import_data(self, db_id: int) -> str:
     if muse_for_music_url is None:
         muse_for_music_url = get_muse_for_music_url_from_registry()
 
-    # TODO: load from env vars
+    request_timeout = 60  # TODO: load from env vars
 
-    client = Muse4MusicClient(muse_for_music_url)
+    client = Muse4MusicClient(muse_for_music_url, request_timeout)
     metadata = get_attribute_metadata()
 
     with requests.session():
