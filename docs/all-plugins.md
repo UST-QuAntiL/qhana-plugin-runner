@@ -116,6 +116,11 @@
     preprocessing
 
     quantum
+* - [LCM (@v0.0.0)](#low-code-modeler)
+
+    low-code-modeler@v0-0-0
+  - interaction
+  - low-code-modeler
 * - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
 
     muse-for-music-loader@v1-0-0
@@ -571,7 +576,7 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
 
 **Input formats:** `application/X-lines+json`, `application/csv`, `application/json`, `application/zip`, `text/csv`, `text/x-qasm`\
 **Output formats:** `*/*`, `application/csv`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
@@ -835,6 +840,14 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |entity/vector|application/json|✓|
 |qnn-weights/*|application/json|✓|
 
+
+(low-code-modeler)=
+### LCM (@v0.0.0)
+
+interaction – low-code-modeler\
+*Path:* {file}`plugins/low_code_modeler/plugin.py`
+
+low code modeler plugin
 
 (muse-for-music-loader)=
 ### MUSE4Music Loader (@v1.0.0)
