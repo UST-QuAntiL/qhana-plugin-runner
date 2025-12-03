@@ -22,8 +22,10 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
 
   <div class="qhana-input-wrapper">
     {% if input_type == 'textarea' %}
-    <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off" {{ 'required' if
-      field.required else '' }}>{{values.get(form_key, '')}}</textarea>
+    <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off" 
+      aria-describedby="{{key}}-description" {{ 'required' if field.required else '' }}>
+        {{values.get(form_key, '')}}
+    </textarea>
     {% elif input_type == "select" %}
     <select class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off">
       {% for name, value in field.metadata.get("options", extras.get(key, {}).get("options", {}) if extras else {}).items() %}
@@ -32,7 +34,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
     </select>
     {% elif input_type == 'text_with_datalist' %}
     <input class="{{form_input_class}}" type="text" name="{{form_key}}" id="{{key}}" autocomplete="off"
-      aria-describedby="{{key}}-description" {{required if field.required else '' }} {{ get_validation_attrs(field) }}
+      aria-describedby="{{key}}-description" {{ 'required' if field.required else '' }} {{ get_validation_attrs(field) }}
       list="{{key}}-datalist" {{ field_value(input_type, values.get(form_key)) }}>
     {% set datalist=get_datalist_from_schema(schema, key, extras) %}
     {% if datalist %}
