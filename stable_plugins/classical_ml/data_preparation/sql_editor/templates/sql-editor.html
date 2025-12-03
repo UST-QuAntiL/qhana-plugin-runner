@@ -8,6 +8,19 @@
         min-height: 6lh;
         field-sizing: content;
     }
+
+    .suggestion-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3em;
+    }
+
+    .suggestion-chip {
+        border-radius: 500px;
+        border: none;
+        padding-block: 0.3em;
+        padding-inline: 0.8em;
+    }
 </style>
 {% endblock head %}
 
@@ -18,10 +31,27 @@
         <div class="qhana-form-field">
             <label class="qhana-form-label" for="input_sql">SQL Command</label>
             <div class="qhana-input-wrapper">
-                <textarea class="qhana-form-input" name="sql" id="input_sql" autocomplete="off" required spellcheck="false"></textarea>
+                <textarea class="qhana-form-input" name="sql" id="input_sql" autocomplete="off" aria-describedby="input_sql-description" required spellcheck="false"></textarea>
             </div>
-            <div id="input_str-description" class="qhana-input-description">
-                <p>TODO: Description</p>
+            <div id="input_sql-description" class="qhana-input-description">
+                <p>
+                    Execute an SQL Command using the DuckDB SQL Enging.
+                    Consult the <a target="_blank" referrerpolicy="no-referrer" href="https://duckdb.org/docs/stable/sql/introduction#querying-a-table">DuckDB manual</a> for more information.
+                </p>
+            </div>
+            <div class="suggestion-list">
+                <button class="suggestion-chip" data-suggestion="DESCRIBE ">DESCRIBE …</button>
+                <button class="suggestion-chip" data-suggestion="SELECT * FROM ">SELECT</button>
+                <button class="suggestion-chip" data-suggestion="SELECT DISTINKT * FROM ">SELECT DISTINCT</button>
+                <button class="suggestion-chip" data-suggestion="read_csv('http://') AS table_a">read_csv(…)</button>
+                <button class="suggestion-chip" data-suggestion="read_json('http://') AS table_a">read_json(…)</button>
+                <button class="suggestion-chip" data-suggestion="USING SAMPLE 10">SAMPLE</button>
+                <button class="suggestion-chip" data-suggestion="INNER JOIN  ON  = ">JOIN (matching only)</button>
+                <button class="suggestion-chip" data-suggestion="LEFT OUTER JOIN  ON  = ">JOIN (keep left)</button>
+                <button class="suggestion-chip" data-suggestion="WHERE ">WHERE</button>
+                <button class="suggestion-chip" data-suggestion="ORDER BY ">ORDER BY</button>
+                <button class="suggestion-chip" data-suggestion="DESC">DESC</button>
+                <button class="suggestion-chip" data-suggestion="LIMIT 10">LIMIT</button>
             </div>
         </div>
         <div class="qhana-form-buttons">
@@ -39,7 +69,6 @@
 {{ super() }}
 
 <script>
-    // TODO
     function customSubmitHandler(event) {
         const form = event.target;
         const submitter = event.submitter;
@@ -58,11 +87,31 @@
         return false; // event not handled, use default handling
     }
 
+    function onSuggestionClick(event) {
+        event.preventDefault();
+
+        /** @type {HTMLButtonElement} */
+        const button = event.target;
+        const suggestion = button.dataset.suggestion;
+
+        /** @type {HTMLTextAreaElement} */
+        const sqlInput = document.querySelector("textarea#input_sql");
+
+        if (suggestion) {
+            sqlInput.focus();
+            sqlInput.setRangeText(suggestion, sqlInput.selectionStart, sqlInput.selectionEnd, "end");
+        }
+    }
+
     if (window._qhana_microfrontend_state != null) {
         window._qhana_microfrontend_state.formSubmitHandler = customSubmitHandler;
     } else {
         document.querySelector("form#form_sql").addEventListener("submit", customSubmitHandler);
     }
+
+    document.querySelectorAll("button[data-suggestion]").forEach(button => {
+        button.addEventListener("click", onSuggestionClick);
+    });
 </script>
 
 {% endblock script %}
