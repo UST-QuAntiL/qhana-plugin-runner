@@ -46,7 +46,10 @@ class PluginRootView(MethodView):
                 ui_href=url_for(f"{SQL_BLP.name}.{SQLFrontend.__name__}", _external=True),
                 data_input=[
                     InputDataMetadata(
-                        "*", content_type=["application/json", "text/csv"], required=False
+                        "*",
+                        content_type=["application/json", "text/csv"],
+                        parameter="sql",
+                        required=False,
                     )
                 ],
                 data_output=[],
@@ -55,7 +58,7 @@ class PluginRootView(MethodView):
         )
 
 
-@SQL_BLP.route("/wf-editor-ui/")
+@SQL_BLP.route("/ui/")
 class SQLFrontend(MethodView):
     """Micro frontend for the sql editor plugin."""
 

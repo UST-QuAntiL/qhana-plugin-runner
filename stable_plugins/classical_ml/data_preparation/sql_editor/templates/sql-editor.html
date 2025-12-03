@@ -4,15 +4,34 @@
 {{ super() }}
 <style>
     /* TODO */
+    textarea#input_sql {
+        min-height: 6lh;
+        field-sizing: content;
+    }
 </style>
 {% endblock head %}
 
 {% block content %}
 <div>
-    <div>Input Selection</div>
-    <div>SQL Input</div>
-    <div>SQL Help</div>
-    <div>Output Preview</div>
+    <div>TODO: Input Selection</div>
+    <form id="form_sql" action="" method="post" data-target="check" class="qhana-form" enctype="multipart/form-data">
+        <div class="qhana-form-field">
+            <label class="qhana-form-label" for="input_sql">SQL Command</label>
+            <div class="qhana-input-wrapper">
+                <textarea class="qhana-form-input" name="sql" id="input_sql" autocomplete="off" required spellcheck="false"></textarea>
+            </div>
+            <div id="input_str-description" class="qhana-input-description">
+                <p>TODO: Description</p>
+            </div>
+        </div>
+        <div class="qhana-form-buttons">
+            <button class="qhana-form-submit" type="submit" data-target="check">check sql</button>
+            <button class="qhana-form-submit" type="submit" data-target="preview">try out</button>
+            <button class="qhana-form-submit" type="submit" data-target="api" formaction="{{process}}">submit</button>
+        </div>
+    </form>
+    <div>TODO: SQL Help</div>
+    <div>TODO: Output Preview</div>
 </div>
 {% endblock content %}
 
@@ -21,6 +40,29 @@
 
 <script>
     // TODO
+    function customSubmitHandler(event) {
+        const form = event.target;
+        const submitter = event.submitter;
+        let submitTarget = submitter.getAttribute("data-target") || form.getAttribute("data-target");
+        console.log("SUBMIT", submitTarget);
+        if (submitTarget === "check") {
+            // TODO implement
+            event.preventDefault();
+            return true;
+        }
+        if (submitTarget === "preview") {
+            // TODO implement
+            event.preventDefault();
+            return true;
+        }
+        return false; // event not handled, use default handling
+    }
+
+    if (window._qhana_microfrontend_state != null) {
+        window._qhana_microfrontend_state.formSubmitHandler = customSubmitHandler;
+    } else {
+        document.querySelector("form#form_sql").addEventListener("submit", customSubmitHandler);
+    }
 </script>
 
 {% endblock script %}
