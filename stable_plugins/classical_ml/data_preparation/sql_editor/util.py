@@ -19,6 +19,7 @@ def execute_sql(sql: str):
             # "disabled_filesystems": "LocalFileSystem",
         }
     ) as con:
+        # FIXME: https://duckdb.org/docs/stable/operations_manual/securing_duckdb/overview
         con.install_extension("httpfs")
         con.load_extension("httpfs")
         result = con.sql(sql)
