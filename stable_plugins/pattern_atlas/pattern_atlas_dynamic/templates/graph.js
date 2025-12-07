@@ -17,7 +17,7 @@ window.PatternGraph = {
             e.preventDefault();
             const f = e.deltaY < 0 ? 1.1 : 0.9;
             const nk = Math.min(kMax, Math.max(kMin, k * f));
-            const c = this.svgPoint(e, svg);
+            const c = PatternGraph.svgPoint(e, svg);
             x = c.x - (c.x - x) * (nk / k);
             y = c.y - (c.y - y) * (nk / k);
             k = nk;
@@ -27,7 +27,7 @@ window.PatternGraph = {
         svg.addEventListener("wheel", onWheel, {passive: false, capture: true});
     },
 
-    enableDrag(svgId = "graph", nodeSelector = ".node"){
+    enableDrag(svgId = "graph", nodeSelector = ".node") {
         const svg = document.getElementById(svgId);
         const nodes = svg.querySelectorAll(nodeSelector);
         let dragging = null;
@@ -41,7 +41,7 @@ window.PatternGraph = {
 
                 dragging = node;
 
-                const pt = this.svgPoint(e, svg);
+                const pt = PatternGraph.svgPoint(e, svg);
                 const currentX = parseFloat(node.dataset.x);
                 const currentY = parseFloat(node.dataset.y);
 
@@ -53,7 +53,7 @@ window.PatternGraph = {
         });
 
         svg.addEventListener("mousemove", (e) => {
-            if(!dragging) return;
+            if (!dragging) return;
             const pt = PatternGraph.svgPoint(e, svg);
             const newX = pt.x - offsetX;
             const newY = pt.y - offsetY;
@@ -72,6 +72,25 @@ window.PatternGraph = {
 
         svg.addEventListener("mouseleave", () => {
             dragging = null;
+        });
+    },
+
+    enableHighlight(svgId = "graph", nodeSel = ".node", edgeSel = ".edge") {
+
+        const svg = document.getElementById(svgId);
+        const nodes = svg.querySelectorAll(nodeSel);
+
+        nodes.forEach(node => {
+            node.addEventListener("click", (evt) => {
+                evt.stopPropagation();  // kein Pan
+                PatternGraph.highlight(svgId, nodeSel, edgeSel, node.id);
+            });
+        });
+
+        svg.addEventListener("click", (evt) => {
+            if (!evt.target.closest(".node")) {
+                PatternGraph.clearHighlight(svgId, nodeSel, edgeSel);
+            }
         });
     },
 
@@ -129,12 +148,12 @@ window.PatternGraph = {
                 y1 = y1 + 25;
                 y2 = y2 - 25;
             }
-            edge.setAttribute("d", this.pathDCubic(x1, y1, x2, y2, 0.5));
+            edge.setAttribute("d", PatternGraph.pathDCubic(x1, y1, x2, y2, 0.5));
         })
     },
 
     pathDCubic(x1, y1, x2, y2, t = 0.5) {
-        const dx = this.distance(x1, x2), dy = this.distance(y1, y2);
+        const dx = PatternGraph.distance(x1, x2), dy = PatternGraph.distance(y1, y2);
         const cx1 = x1 + dx * t;
         const cy1 = y1 + dy * t;
         const cx2 = x2 - dx * t;
@@ -154,6 +173,37 @@ window.PatternGraph = {
         pt.x = evt.clientX;
         pt.y = evt.clientY;
         return pt.matrixTransform(svg.getScreenCTM().inverse());
-    }
+    },
 
+    clearHighlight(svgId = "graph", nodeSel = ".node", edgeSel = ".edge") {
+        const svg = document.getElementById(svgId);
+        svg.querySelectorAll(nodeSel).forEach((node) => node.classList.remove("highlight"));
+        svg.querySelectorAll(edgeSel).forEach((edge) => edge.classList.remove("highlight"));
+    },
+
+    highlight(svgId = "graph", nodeSel = ".node", edgeSel = ".edge", nodeId) {
+        const svg = document.getElementById(svgId);
+
+        this.clearHighlight(svgId, nodeSel, edgeSel);
+
+        const clickedNode = svg.querySelector(`#${nodeId}`);
+        if (!clickedNode) return;
+        clickedNode.classList.add("highlight");
+
+        const edges = svg.querySelectorAll(edgeSel);
+
+        const idNumber = nodeId.replace("node-", "");
+
+        edges.forEach(edge => {
+            const source = edge.dataset.source;
+            const target = edge.dataset.target;
+
+            if (source === idNumber) {
+                edge.classList.add("highlight");
+
+                const followerNode = svg.querySelector(`#node-${target}`);
+                if (followerNode) followerNode.classList.add("highlight");
+            }
+        });
+    }
 };

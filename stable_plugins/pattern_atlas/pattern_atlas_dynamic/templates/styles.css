@@ -391,3 +391,13 @@ p {
     color: black !important;
     text-decoration: none;
 }
+
+.node.highlight {
+    fill: rgba(178, 73, 252, 0.9);
+    color: white;
+}
+
+.edge.highlight {
+    stroke: rgba(178, 73, 252, 0.9) !important;
+    stroke-width: 3;
+}
