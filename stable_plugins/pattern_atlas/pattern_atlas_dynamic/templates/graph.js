@@ -13,18 +13,11 @@ window.PatternGraph = {
         }
         apply();
 
-        const svgPoint = (evt) => {
-            const pt = svg.createSVGPoint();
-            pt.x = evt.clientX;
-            pt.y = evt.clientY;
-            return pt.matrixTransform(svg.getScreenCTM().inverse());
-        };
-
         const onWheel = (e) => {
             e.preventDefault();
             const f = e.deltaY < 0 ? 1.1 : 0.9;
             const nk = Math.min(kMax, Math.max(kMin, k * f));
-            const c = svgPoint(e);
+            const c = this.svgPoint(e, svg);
             x = c.x - (c.x - x) * (nk / k);
             y = c.y - (c.y - y) * (nk / k);
             k = nk;
@@ -32,6 +25,54 @@ window.PatternGraph = {
         };
 
         svg.addEventListener("wheel", onWheel, {passive: false, capture: true});
+    },
+
+    enableDrag(svgId = "graph", nodeSelector = ".node"){
+        const svg = document.getElementById(svgId);
+        const nodes = svg.querySelectorAll(nodeSelector);
+        let dragging = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        nodes.forEach(node => {
+            node.addEventListener("mousedown", (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+
+                dragging = node;
+
+                const pt = this.svgPoint(e, svg);
+                const currentX = parseFloat(node.dataset.x);
+                const currentY = parseFloat(node.dataset.y);
+
+                offsetX = pt.x - currentX;
+                offsetY = pt.y - currentY;
+
+                node.style.cursor = "grabbing";
+            });
+        });
+
+        svg.addEventListener("mousemove", (e) => {
+            if(!dragging) return;
+            const pt = PatternGraph.svgPoint(e, svg);
+            const newX = pt.x - offsetX;
+            const newY = pt.y - offsetY;
+
+            dragging.dataset.x = newX;
+            dragging.dataset.y = newY;
+            dragging.setAttribute("transform", `translate(${newX}, ${newY})`);
+
+            PatternGraph.connectEdges(svgId, ".edge", ".node");
+        });
+
+        svg.addEventListener("mouseup", () => {
+            if (dragging) dragging.style.cursor = "move";
+            dragging = null;
+        });
+
+        svg.addEventListener("mouseleave", () => {
+            dragging = null;
+        });
     },
 
     layoutGrid(svgId = "graph", nodeSel = ".node", cols = 8, spacingX = 300, spacingY = 150, startX = 150, startY = 100) {
@@ -106,6 +147,13 @@ window.PatternGraph = {
             return x - y;
         }
         return y - x;
+    },
+
+    svgPoint(evt, svg) {
+        const pt = svg.createSVGPoint();
+        pt.x = evt.clientX;
+        pt.y = evt.clientY;
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
     }
 
 };

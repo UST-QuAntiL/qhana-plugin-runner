@@ -68,7 +68,8 @@
         window.addEventListener('DOMContentLoaded', () => {
         PatternGraph.layoutGrid('graph', '.node', 8, 300, 150, 150, 100);
         PatternGraph.connectEdges('graph', '.edge', '.node');   
-        PatternGraph.enableZoom('graph', '.zoom-group', 'arrow');  
+        PatternGraph.enableZoom('graph', '.zoom-group', 'arrow');
+        PatternGraph.enableDrag('graph', '.node');
         });
     </script>
 
