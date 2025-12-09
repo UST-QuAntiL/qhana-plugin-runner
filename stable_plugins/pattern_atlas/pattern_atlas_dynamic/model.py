@@ -63,7 +63,9 @@ class Pattern:
             or bool(self.undirected_edges)
         )
 
-    def get_relations_sorted(self, atlas: "PatternAtlasContent") -> list["PatternRelation"]:
+    def get_relations_sorted(
+        self, atlas: "PatternAtlasContent"
+    ) -> list["PatternRelation"]:
         relations: list[PatternRelation] = []
 
         relations += sorted(
@@ -211,6 +213,7 @@ class PatternAtlasContent:
             source_pattern.undirected_edges.add(pattern_relation.edge_id)
             target_pattern.undirected_edges.add(pattern_relation.edge_id)
 
+
 # in-memory Index: language_id -> relation_ids
 class PatternAtlasIndex:
     def __init__(self):
@@ -220,10 +223,10 @@ class PatternAtlasIndex:
     def build(self, atlas: PatternAtlasContent):
         if self._built:
             return
-        
+
         for lang in atlas.languages.keys():
             self._lang_to_rel[lang] = []
-        
+
         for rel in atlas.relations.values():
             src_lang = rel.get_source(atlas).get_language()
             if src_lang == rel.get_target(atlas).get_language():

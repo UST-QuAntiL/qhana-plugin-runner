@@ -244,17 +244,19 @@ class DynamicRender:
             language=language,
             is_planqk=self.is_planqk,
         )
-    
-    def render_pattern_graph(self, atlas: PatternAtlasContent, language: PatternLanguage) -> str:
+
+    def render_pattern_graph(
+        self, atlas: PatternAtlasContent, language: PatternLanguage
+    ) -> str:
         template = self._jinja.get_template("pattern-graph.jinja2")
         self._atlas_index.build(atlas)
         lang_relations = self._atlas_index.relations_for_language(language.language_id)
         all_patterns = language.get_patterns_sorted(atlas)
         return template.render(
-            relations = lang_relations,
-            patterns = all_patterns,
+            relations=lang_relations,
+            patterns=all_patterns,
             base_url=f"/plugins/{PA_BLP.name}/ui",
-            language = language,
+            language=language,
             is_plank=self.is_planqk,
         )
 

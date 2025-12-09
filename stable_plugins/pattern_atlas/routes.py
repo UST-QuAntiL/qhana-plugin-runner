@@ -64,7 +64,7 @@ class StylesUI(MethodView):
         return send_from_directory(
             f"{PA_BLP.root_path}/pattern_atlas_dynamic/templates", "styles.css"
         )
-    
+
 
 @PA_BLP.route("/ui/graph.js")
 class GraphUI(MethodView):
@@ -97,7 +97,7 @@ class LanguageUI(MethodView):
             return Response("Language not found", status=404)
         html = renderer.render_language_overview(atlas, language)
         return Response(html, content_type="text/html")
-    
+
 
 @PA_BLP.route("/ui/pattern-languages/<language_id>/graph.html")
 class LanguageUIgraph(MethodView):
