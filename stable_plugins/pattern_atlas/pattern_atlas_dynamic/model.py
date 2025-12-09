@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Union, Literal
 
@@ -320,16 +321,20 @@ class QCFile:
 @dataclass
 class QCAtlasContent:
     implementations: dict[str, AlgorithmImplementation] = field(default_factory=dict)
-    implementation_packages: dict[str, ImplementationPackage] = field(
-        default_factory=dict
+    implementation_packages: dict[str, list[ImplementationPackage]] = field(
+        default_factory=lambda: defaultdict(list)
     )
     implementation_packages_files: dict[str, QCFile] = field(default_factory=dict)
 
     def add_implementation(self, implementation: AlgorithmImplementation):
         self.implementations[implementation.id] = implementation
 
-    def add_implementation_package(self, implementation_package: ImplementationPackage):
-        self.implementation_packages[implementation_package.id] = implementation_package
+    def add_implementation_package(
+        self,
+        implementation: AlgorithmImplementation,
+        implementation_package: ImplementationPackage,
+    ):
+        self.implementation_packages[implementation.id].append(implementation_package)
 
     def add_implementation_package_file(
         self, implementation_package: ImplementationPackage, file: QCFile

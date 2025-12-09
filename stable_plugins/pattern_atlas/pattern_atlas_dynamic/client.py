@@ -300,7 +300,7 @@ class QCAtlasClient:
             atlas.add_implementation(implementation)
             implementation_packages = self.get_implementation_packages(implementation)
             for implementation_package in implementation_packages:
-                atlas.add_implementation_package(implementation_package)
+                atlas.add_implementation_package(implementation, implementation_package)
                 file = self.get_files(implementation, implementation_package)
                 atlas.add_implementation_package_file(implementation_package, file)
 
