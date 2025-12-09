@@ -11,13 +11,14 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginType,
 )
-from stable_plugins.pattern_atlas.pattern_atlas_dynamic.model import PatternAtlasContent
 
 from .plugin import PA_BLP, PatternAtlas
-from .pattern_atlas_dynamic.client import PatternAtlasClient
+from .pattern_atlas_dynamic.client import PatternAtlasClient, QCAtlasClient
+from .pattern_atlas_dynamic.model import PatternAtlasContent, QCAtlasContent
 from .pattern_atlas_dynamic.render import DynamicRender
 
 pattern_atlas_client = PatternAtlasClient("http://localhost:1977/patternatlas")
+qc_atlas_client = QCAtlasClient("http://localhost:6626/atlas")
 renderer = DynamicRender()
 
 _cache_data = None
@@ -25,13 +26,21 @@ _cache_timestamp = 0
 CACHE_TTL = 24 * 60 * 60
 
 
-def get_cached_pattern_atlas() -> PatternAtlasContent:
+def get_cached_atlases() -> tuple[PatternAtlasContent, QCAtlasContent]:
     global _cache_data, _cache_timestamp
     now = time.time()
     if _cache_data is None or (now - _cache_timestamp > CACHE_TTL):
-        _cache_data = pattern_atlas_client.get_all()
+        _cache_data = pattern_atlas_client.get_all(), qc_atlas_client.get_all()
         _cache_timestamp = now
     return _cache_data
+
+
+def get_cached_pattern_atlas() -> PatternAtlasContent:
+    return get_cached_atlases()[0]
+
+
+def get_cached_qc_atlas() -> QCAtlasContent:
+    return get_cached_atlases()[1]
 
 
 @PA_BLP.route("/")
@@ -143,12 +152,13 @@ class PatternUI(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id, pattern_id):
-        atlas = get_cached_pattern_atlas()
-        pattern = atlas.patterns.get(pattern_id)
+        pattern_atlas = get_cached_pattern_atlas()
+        pattern = pattern_atlas.patterns.get(pattern_id)
         if pattern is None:
             return Response("Pattern not found", status=404)
-        language = atlas.languages.get(language_id)
-        html = renderer.render_pattern(atlas, pattern, language)
+        language = pattern_atlas.languages.get(language_id)
+        implementations = get_cached_qc_atlas().get_implementations_of_pattern(pattern)
+        html = renderer.render_pattern(pattern_atlas, pattern, language, implementations)
         return Response(html, content_type="text/html")
 
 

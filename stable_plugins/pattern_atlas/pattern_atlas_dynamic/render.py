@@ -26,7 +26,13 @@ from mistune import create_markdown
 from typing import Match
 from pattern_atlas.plugin import PA_BLP
 
-from .model import PatternAtlasContent, Pattern, PatternLanguage, PatternAtlasIndex
+from .model import (
+    AlgorithmImplementation,
+    PatternAtlasContent,
+    Pattern,
+    PatternLanguage,
+    PatternAtlasIndex,
+)
 
 CATEGORY_HEADLINES = {
     "dataencodings": "Data Encodings- How can classical data be encoded into quantum states for computation?",
@@ -261,7 +267,11 @@ class DynamicRender:
         )
 
     def render_pattern(
-        self, atlas: PatternAtlasContent, pattern: Pattern, language: PatternLanguage
+        self,
+        atlas: PatternAtlasContent,
+        pattern: Pattern,
+        language: PatternLanguage,
+        implementations: list[AlgorithmImplementation],
     ) -> str:
         template = self._jinja.get_template("pattern.jinja2")
         return template.render(
@@ -269,5 +279,6 @@ class DynamicRender:
             base_url=f"/plugins/{PA_BLP.name}/ui",
             pattern=pattern,
             language=language,
+            implementations=implementations,
             is_planqk=self.is_planqk,
         )

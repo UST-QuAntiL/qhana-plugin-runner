@@ -141,9 +141,7 @@
             gap: 8px;
             bottom: 10px;
             left: 10px;
-            width: 15vw;
-            min-width: 270px;
-            height: 37px
+            width: 20em;
         }
         #arrow-qhana{
             font-size: 30px;
@@ -253,10 +251,12 @@
                     <p>{{content | markdown}}</p>
                 </details>
                 {% endfor %}
+                {% for implementation in implementations %}
                 <button class="placeholder-button" onclick="placeholderFct()">
-                    <strong>Try it out in QHAna</strong>
+                    <strong>Try {{ implementation.name }} in QHAna</strong>
                     <span id="arrow-qhana">&#8617;</span>
                 </button>
+                {% endfor %}
             </div>
             <script>
                 function placeholderFct() {
