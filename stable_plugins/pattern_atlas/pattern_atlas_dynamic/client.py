@@ -17,7 +17,7 @@ from urllib.parse import urljoin, urlparse
 
 from httpx import get
 
-from .model import AtlasContent, Pattern, PatternLanguage, PatternRelation
+from .model import PatternAtlasContent, Pattern, PatternLanguage, PatternRelation
 
 KNOWN_PATTERN_SECTIONS = {
     "License",
@@ -54,18 +54,18 @@ def _get_content(pattern_content: dict[str, str], attr: str) -> str:
     return value
 
 
-class AtlasClient:
+class PatternAtlasClient:
     def __init__(self, atlas_url: str) -> None:
         if not atlas_url.endswith("/"):
             atlas_url = atlas_url + "/"
         urlparse(atlas_url)  # ensure a valid url
         self.atlas_url = atlas_url
 
-    def get_all(self) -> AtlasContent:
+    def get_all(self) -> PatternAtlasContent:
         # from example_data import EXAMPLE_DATA
 
         # return EXAMPLE_DATA
-        atlas = AtlasContent()
+        atlas = PatternAtlasContent()
         languages = self.get_pattern_languages()
 
         relations = []

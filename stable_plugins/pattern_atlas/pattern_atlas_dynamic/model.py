@@ -24,7 +24,7 @@ class PatternLanguage:
     copyright_notice: str
     patterns: set[str] = field(default_factory=set)
 
-    def get_patterns_sorted(self, atlas: "AtlasContent") -> list["Pattern"]:
+    def get_patterns_sorted(self, atlas: "PatternAtlasContent") -> list["Pattern"]:
         patterns = [atlas.patterns[p] for p in self.patterns]
         patterns.sort(key=lambda p: (p.name, p.pattern_id))
         return patterns
@@ -63,7 +63,7 @@ class Pattern:
             or bool(self.undirected_edges)
         )
 
-    def get_relations_sorted(self, atlas: "AtlasContent") -> list["PatternRelation"]:
+    def get_relations_sorted(self, atlas: "PatternAtlasContent") -> list["PatternRelation"]:
         relations: list[PatternRelation] = []
 
         relations += sorted(
@@ -133,10 +133,10 @@ class PatternRelation:
     edge_type: str = "uses"
     description: str = ""
 
-    def get_source(self, atlas: "AtlasContent") -> Pattern:
+    def get_source(self, atlas: "PatternAtlasContent") -> Pattern:
         return atlas.patterns[self.source_pattern]
 
-    def get_target(self, atlas: "AtlasContent") -> Pattern:
+    def get_target(self, atlas: "PatternAtlasContent") -> Pattern:
         return atlas.patterns[self.target_pattern]
 
     def from_persepective(self, pattern_id: str) -> "PatternRelation":
@@ -159,7 +159,7 @@ class PatternRelation:
 
 
 @dataclass
-class AtlasContent:
+class PatternAtlasContent:
     asset_map: dict[str, str] = field(default_factory=dict)
     languages: dict[str, PatternLanguage] = field(default_factory=dict)
     patterns: dict[str, Pattern] = field(default_factory=dict)
@@ -212,12 +212,12 @@ class AtlasContent:
             target_pattern.undirected_edges.add(pattern_relation.edge_id)
 
 # in-memory Index: language_id -> relation_ids
-class AtlasIndex:
+class PatternAtlasIndex:
     def __init__(self):
         self._built = False
         self._lang_to_rel: dict[str, list[PatternRelation]] = {}
 
-    def build(self, atlas: AtlasContent):
+    def build(self, atlas: PatternAtlasContent):
         if self._built:
             return
         

@@ -11,12 +11,13 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginType,
 )
+from stable_plugins.pattern_atlas.pattern_atlas_dynamic.model import PatternAtlasContent
 
 from .plugin import PA_BLP, PatternAtlas
-from .pattern_atlas_dynamic.client import AtlasClient
+from .pattern_atlas_dynamic.client import PatternAtlasClient
 from .pattern_atlas_dynamic.render import DynamicRender
 
-atlas_client = AtlasClient("http://localhost:1977/patternatlas")
+pattern_atlas_client = PatternAtlasClient("http://localhost:1977/patternatlas")
 renderer = DynamicRender()
 
 _cache_data = None
@@ -24,12 +25,11 @@ _cache_timestamp = 0
 CACHE_TTL = 24 * 60 * 60
 
 
-def get_cached_atlas():
-
+def get_cached_pattern_atlas() -> PatternAtlasContent:
     global _cache_data, _cache_timestamp
     now = time.time()
     if _cache_data is None or (now - _cache_timestamp > CACHE_TTL):
-        _cache_data = atlas_client.get_all()
+        _cache_data = pattern_atlas_client.get_all()
         _cache_timestamp = now
     return _cache_data
 
@@ -81,7 +81,7 @@ class IndexUI(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        atlas = get_cached_atlas()
+        atlas = get_cached_pattern_atlas()
         html = renderer.render_index(atlas)
         return Response(html, content_type="text/html")
 
@@ -91,7 +91,7 @@ class LanguageUI(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id):
-        atlas = get_cached_atlas()
+        atlas = get_cached_pattern_atlas()
         language = atlas.languages.get(language_id)
         if language is None:
             return Response("Language not found", status=404)
@@ -104,7 +104,7 @@ class LanguageUIgraph(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id):
-        atlas = get_cached_atlas()
+        atlas = get_cached_pattern_atlas()
         language = atlas.languages.get(language_id)
         if language is None:
             return Response("Language not found", status=404)
@@ -117,7 +117,7 @@ class LanguageUIcategorized(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id):
-        atlas = get_cached_atlas()
+        atlas = get_cached_pattern_atlas()
         language = atlas.languages.get(language_id)
         if language is None:
             return Response("Language not found", status=404)
@@ -130,7 +130,7 @@ class LanguageUIreverse(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id):
-        atlas = get_cached_atlas()
+        atlas = get_cached_pattern_atlas()
         language = atlas.languages.get(language_id)
         if language is None:
             return Response("Language not found", status=404)
@@ -143,7 +143,7 @@ class PatternUI(MethodView):
     @PA_BLP.response(HTTPStatus.OK)
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id, pattern_id):
-        atlas = get_cached_atlas()
+        atlas = get_cached_pattern_atlas()
         pattern = atlas.patterns.get(pattern_id)
         if pattern is None:
             return Response("Pattern not found", status=404)

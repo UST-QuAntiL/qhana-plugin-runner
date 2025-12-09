@@ -26,7 +26,7 @@ from mistune import create_markdown
 from typing import Match
 from pattern_atlas.plugin import PA_BLP
 
-from .model import AtlasContent, Pattern, PatternLanguage, AtlasIndex
+from .model import PatternAtlasContent, Pattern, PatternLanguage, PatternAtlasIndex
 
 CATEGORY_HEADLINES = {
     "dataencodings": "Data Encodings- How can classical data be encoded into quantum states for computation?",
@@ -140,7 +140,7 @@ class DynamicRender:
         self._jinja.filters["resource"] = self._resource
         self._jinja.filters["markdown"] = self._markdown
         self._jinja.filters["split_camel_case"] = split_camel_case
-        self._atlas_index = AtlasIndex()
+        self._atlas_index = PatternAtlasIndex()
 
     def _resource(self, url: str) -> str:
         if url is None:
@@ -198,14 +198,14 @@ class DynamicRender:
         template = self._jinja.get_template("styles.css")
         return template.render()
 
-    def render_index(self, atlas: AtlasContent) -> str:
+    def render_index(self, atlas: PatternAtlasContent) -> str:
         template = self._jinja.get_template("languages.jinja2")
         return template.render(
             atlas=atlas, base_url=f"/plugins/{PA_BLP.name}/ui", is_planqk=self.is_planqk
         )
 
     def render_language_overview(
-        self, atlas: AtlasContent, language: PatternLanguage
+        self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
         template = self._jinja.get_template("language-overview.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
@@ -217,7 +217,7 @@ class DynamicRender:
         )
 
     def render_language_overview_categorized(
-        self, atlas: AtlasContent, language: PatternLanguage
+        self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
         template = self._jinja.get_template("language-overview-categorized.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
@@ -233,7 +233,7 @@ class DynamicRender:
         )
 
     def render_language_overview_reverse(
-        self, atlas: AtlasContent, language: PatternLanguage
+        self, atlas: PatternAtlasContent, language: PatternLanguage
     ) -> str:
         template = self._jinja.get_template("language-overview-reversed.jinja2")
         all_patterns = language.get_patterns_sorted(atlas)
@@ -245,7 +245,7 @@ class DynamicRender:
             is_planqk=self.is_planqk,
         )
     
-    def render_pattern_graph(self, atlas: AtlasContent, language: PatternLanguage) -> str:
+    def render_pattern_graph(self, atlas: PatternAtlasContent, language: PatternLanguage) -> str:
         template = self._jinja.get_template("pattern-graph.jinja2")
         self._atlas_index.build(atlas)
         lang_relations = self._atlas_index.relations_for_language(language.language_id)
@@ -259,7 +259,7 @@ class DynamicRender:
         )
 
     def render_pattern(
-        self, atlas: AtlasContent, pattern: Pattern, language: PatternLanguage
+        self, atlas: PatternAtlasContent, pattern: Pattern, language: PatternLanguage
     ) -> str:
         template = self._jinja.get_template("pattern.jinja2")
         return template.render(
