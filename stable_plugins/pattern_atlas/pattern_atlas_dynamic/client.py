@@ -17,7 +17,16 @@ from urllib.parse import urljoin, urlparse
 
 from httpx import get
 
-from .model import PatternAtlasContent, Pattern, PatternLanguage, PatternRelation
+from .model import (
+    AlgorithmImplementation,
+    ImplementationPackage,
+    QCAtlasContent,
+    QCFile,
+    PatternAtlasContent,
+    Pattern,
+    PatternLanguage,
+    PatternRelation,
+)
 
 KNOWN_PATTERN_SECTIONS = {
     "License",
@@ -271,3 +280,75 @@ class PatternAtlasClient:
             for edge in data
         ]
         return relations
+
+
+class QCAtlasClient:
+    def __init__(self, atlas_url: str) -> None:
+        if not atlas_url.endswith("/"):
+            atlas_url = atlas_url + "/"
+        urlparse(atlas_url)  # ensure a valid url
+        self.atlas_url = atlas_url
+
+    def get_all(self) -> QCAtlasContent:
+        # from example_data import EXAMPLE_DATA
+
+        # return EXAMPLE_DATA
+        atlas = QCAtlasContent()
+        implementations = self.get_implementations()
+
+        for implementation in implementations:
+            atlas.add_implementation(implementation)
+            implementation_packages = self.get_implementation_packages(implementation)
+            for implementation_package in implementation_packages:
+                atlas.add_implementation_package(implementation_package)
+                file = self.get_files(implementation, implementation_package)
+                atlas.add_implementation_package_file(implementation_package, file)
+
+        return atlas
+
+    def get_implementations(self) -> list[AlgorithmImplementation]:
+        url = urljoin(self.atlas_url, "./implementations")
+        response = get(url, headers={"Accept": "application/hal+json, application/json"})
+        response.raise_for_status()
+        try:
+            data = response.json().get("content", [])
+        except Exception as err:
+            raise ValueError(f"Could not decode json response from url '{url}'!") from err
+        return [
+            AlgorithmImplementation.from_dict(implementation) for implementation in data
+        ]
+
+    def get_implementation_packages(
+        self, implementation: AlgorithmImplementation
+    ) -> list[ImplementationPackage]:
+        url = urljoin(
+            self.atlas_url,
+            f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages",
+        )
+        response = get(url, headers={"Accept": "application/hal+json, application/json"})
+        response.raise_for_status()
+        try:
+            data = response.json().get("content", [])
+        except Exception as err:
+            raise ValueError(f"Could not decode json response from url '{url}'!") from err
+        return [
+            ImplementationPackage.from_dict(implementation_package)
+            for implementation_package in data
+        ]
+
+    def get_files(
+        self,
+        implementation: AlgorithmImplementation,
+        implementation_package: ImplementationPackage,
+    ) -> QCFile:
+        url = urljoin(
+            self.atlas_url,
+            f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}/file",
+        )
+        response = get(url, headers={"Accept": "application/hal+json, application/json"})
+        response.raise_for_status()
+        try:
+            data = response.json()
+        except Exception as err:
+            raise ValueError(f"Could not decode json response from url '{url}'!") from err
+        return QCFile.from_dict(data)

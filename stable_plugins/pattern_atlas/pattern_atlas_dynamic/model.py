@@ -240,3 +240,108 @@ class PatternAtlasIndex:
         if not self._built:
             raise RuntimeError("AtlasIndex not built yet")
         return self._lang_to_rel.get(language_id, [])
+
+
+@dataclass
+class AlgorithmImplementation:
+    id: str
+    implementedAlgorithmId: str
+    name: str
+    inputFormat: str
+    outputFormat: str
+    description: str
+    contributors: str
+    assumptions: str
+    parameter: str
+    dependencies: str
+    version: str
+    license: str
+    technology: str
+    problemStatement: str
+    softwarePlatforms: str
+    patterns: list[str]
+
+    @staticmethod
+    def from_dict(input) -> "AlgorithmImplementation":
+        return AlgorithmImplementation(
+            id=input["id"],
+            implementedAlgorithmId=input["implementedAlgorithmId"],
+            name=input["name"],
+            inputFormat=input["inputFormat"],
+            outputFormat=input["outputFormat"],
+            description=input["description"],
+            contributors=input["contributors"],
+            assumptions=input["assumptions"],
+            parameter=input["parameter"],
+            dependencies=input["dependencies"],
+            version=input["version"],
+            license=input["license"],
+            technology=input["technology"],
+            problemStatement=input["problemStatement"],
+            softwarePlatforms=input["softwarePlatforms"],
+            patterns=input["patterns"],
+        )
+
+
+@dataclass
+class ImplementationPackage:
+    id: str
+    name: str
+    description: str
+    packageType: str
+
+    @staticmethod
+    def from_dict(input) -> "ImplementationPackage":
+        return ImplementationPackage(
+            id=input["id"],
+            name=input["name"],
+            description=input["description"],
+            packageType=input["packageType"],
+        )
+
+
+@dataclass
+class QCFile:
+    id: str
+    name: str
+    mimeType: str
+    fileURL: str
+
+    @staticmethod
+    def from_dict(input) -> "QCFile":
+        return QCFile(
+            id=input["id"],
+            name=input["name"],
+            mimeType=input["mimeType"],
+            fileURL=input["fileURL"],
+        )
+
+
+@dataclass
+class QCAtlasContent:
+    implementations: dict[str, AlgorithmImplementation] = field(default_factory=dict)
+    implementation_packages: dict[str, ImplementationPackage] = field(
+        default_factory=dict
+    )
+    implementation_packages_files: dict[str, QCFile] = field(default_factory=dict)
+
+    def add_implementation(self, implementation: AlgorithmImplementation):
+        self.implementations[implementation.id] = implementation
+
+    def add_implementation_package(self, implementation_package: ImplementationPackage):
+        self.implementation_packages[implementation_package.id] = implementation_package
+
+    def add_implementation_package_file(
+        self, implementation_package: ImplementationPackage, file: QCFile
+    ):
+        self.implementation_packages_files[implementation_package.id] = file
+
+    def get_implementations_of_pattern(
+        self, pattern: Pattern
+    ) -> list[AlgorithmImplementation]:
+        return [
+            implementation
+            for implementation in self.implementations.values()
+            if f"pattern-languages/{pattern.pattern_language}/{pattern.pattern_id}"
+            in implementation.patterns
+        ]
