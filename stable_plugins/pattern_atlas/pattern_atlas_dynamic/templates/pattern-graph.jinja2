@@ -41,22 +41,29 @@
             <g class="nodes">
                 {%- for pattern in patterns -%}
                     <g class="node" id="node-{{pattern.pattern_id}}" transform="translate(0, 0)" data-template="default" data-x="0" data-y="0">
-                        <rect data-link-handles="edges" height="70" rx="5" ry="5" width="250" x="-85" y="-25"
+                        <rect data-link-handles="edges" height="120" rx="5" ry="5" width="120" x="-85" y="-25"
                         style="stroke: black; stroke-width: 1;"></rect>
-                        <foreignObject x="-80" y="-25" width="160" height="70">
+                        <foreignObject x="-75" y="-15" width="100" height="100">
                             <div xmlns="http://www.w3.org/1999/xhtml"
-                                 style="display:flex;
-                                        width:100%;
-                                        height:100%;
-                                        font-size:18px;
-                                        font-weight:bold;
-                                        text-align:center;
-                                        justify-content:center;
-                                        align-items:center;
-                                        overflow:hidden;">
-                                {{pattern.name}}
+                                 style="
+                                    display:flex;
+                                    justify-content:center;
+                                    align-items:center;
+                                    width:100%;
+                                    height:100%;
+                                 ">
+                                <img
+                                    src="{{ pattern.icon | resource }}"
+                                    alt=""
+                                    aria-hidden="true"
+                                    style="
+                                        width:100px;
+                                        height:100px;
+                                    "
+                                />
                             </div>
                         </foreignObject>
+
                     </g>
                 {%- endfor -%}
             </g>
