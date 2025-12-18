@@ -26,7 +26,11 @@
 
 {% block content %}
 <div>
-    <div>TODO: Input Selection</div>
+    <div>
+        <h2>Data Sources</h2>
+        <ul id="data_sources"></ul>
+        <button id="add_data_source" class="qhana-choose-file-button">Select from Experiment</button>
+    </div>
     <form id="form_sql" action="" method="post" data-target="check" class="qhana-form" enctype="multipart/form-data">
         <div class="qhana-form-field">
             <label class="qhana-form-label" for="input_sql">SQL Command</label>
@@ -87,6 +91,16 @@
         return false; // event not handled, use default handling
     }
 
+    function onChooseNewDataSource(event) {
+        event.preventDefault();
+        sendMessage({
+            type: "request-data-url",
+            inputKey: "dataSource",
+            acceptedInputType: "*",
+            acceptedContentTypes: ["text/csv", "application/json"], // TODO: check against duckdb
+        });
+    }
+
     function onSuggestionClick(event) {
         event.preventDefault();
 
@@ -103,11 +117,110 @@
         }
     }
 
+    function onDataUrlResponse(message) {
+        if (message.inputKey !== "dataSource") {
+            return;
+        }
+
+        const exisitngEntries = Array.from(document.querySelectorAll(`ul#data_sources li[data-url]`));
+        if (exisitngEntries.some(li => li.dataset.url === message.href)) {
+            return;  // data source already added
+        }
+
+        const test = {
+            "type": "data-url-response",
+            "inputKey": "",
+            "href": "",
+            "dataType": "entity/list",
+            "contentType": "text/csv",
+            "filename": "test.csv",
+            "version": "v1"
+        }
+        const urlStatement = `'${message.href}'`;
+
+        /** @type {string} */
+        let tableName = message.filename;
+        if (tableName.includes(".")) {
+            tableName = tableName.substring(0, tableName.indexOf("."));
+        }
+        tableName = tableName.replace(/[^a-zA-Z]/g, "");
+
+        let tableStatement;
+        let tableStatementShort;
+        if (message.contentType === "text/csv") {
+            tableStatement = `read_csv(${urlStatement}) AS ${tableName}`;
+            tableStatementShort = "read_csv(…)";
+        } else if (message.contentType === "application/json") {
+            tableStatement = `read_json(${urlStatement}) AS ${tableName}`;
+            tableStatementShort = "read_json(…)";
+        } else {
+            console.log(`Unsupported content type ${message.contentType}.`, message);
+            return;
+        }
+
+        const selectStatement = `SELECT * FROM ${tableStatement}`;
+
+        const container = document.createElement("li");
+        container.dataset.url = message.href;
+        container.dataset.filename = message.filename;
+        container.dataset.version = message.version;
+        container.dataset.dataType = message.dataType;
+        container.dataset.contentType = message.contentType;
+
+        const header = document.createElement("p");
+        container.appendChild(header);
+        header.textContent = `${message.filename} (${message.version}) – ${message.dataType}; ${message.contentType}`;
+
+        const buttonList = document.createElement("div");
+        container.appendChild(buttonList);
+        buttonList.classList.add("suggestion-list");
+
+        const selectBtn = document.createElement("button");
+        buttonList.appendChild(selectBtn);
+        selectBtn.classList.add("suggestion-chip");
+        selectBtn.dataset.suggestion = selectStatement;
+        selectBtn.textContent = "SELECT …";
+        selectBtn.addEventListener("click", onSuggestionClick);
+
+        const tableBtn = document.createElement("button");
+        buttonList.appendChild(tableBtn);
+        tableBtn.classList.add("suggestion-chip");
+        tableBtn.dataset.suggestion = tableStatement;
+        tableBtn.textContent = tableStatementShort;
+        tableBtn.addEventListener("click", onSuggestionClick);
+
+        const urlBtn = document.createElement("button");
+        buttonList.appendChild(urlBtn);
+        urlBtn.classList.add("suggestion-chip");
+        urlBtn.dataset.suggestion = urlStatement;
+        urlBtn.textContent = "'http://…'";
+        urlBtn.addEventListener("click", onSuggestionClick);
+
+        document.querySelector("ul#data_sources").appendChild(container);
+
+        if (window._qhana_microfrontend_state != null) {
+            // height has changed, notify parent
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    function messageInterceptor(event) {
+        var data = event.data;
+        if ((typeof data !== "string") && (data != null && data.type === "data-url-response")) {
+            onDataUrlResponse(data);
+            return true;
+        }
+        return false; // message event not handled, use default handling
+    }
+
     if (window._qhana_microfrontend_state != null) {
         window._qhana_microfrontend_state.formSubmitHandler = customSubmitHandler;
+        window._qhana_microfrontend_state.messageHandler = messageInterceptor;
     } else {
         document.querySelector("form#form_sql").addEventListener("submit", customSubmitHandler);
     }
+
+    document.querySelector("button#add_data_source").addEventListener("click", onChooseNewDataSource);
 
     document.querySelectorAll("button[data-suggestion]").forEach(button => {
         button.addEventListener("click", onSuggestionClick);
