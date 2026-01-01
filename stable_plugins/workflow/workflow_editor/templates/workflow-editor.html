@@ -412,6 +412,25 @@
     ];
 
     console.log("WF Editor: ", modeler);
+
+    async function loadFromQueryParam() {
+        const params = new URLSearchParams(window.location.search);
+        const loadUrl = params.get("load-url");
+        if (!loadUrl) return;
+
+        const res = await fetch(loadUrl);
+        if (!res.ok) throw new Error("Could not load BPMN from load_url!");
+
+        const bpmn = await res.text();
+        modeler.loadWorkflowDiagram(bpmn);
+    }
+
+    loadFromQueryParam().catch(err => {
+        console.error(err);
+        alert(err.message);
+    });
+
+
 </script>
 
 {% endblock script %}
