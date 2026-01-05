@@ -264,7 +264,7 @@ class QasmVisualization(QHAnaPluginBase):
         return QASM_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nqiskit~=0.43"
+        return "pylatexenc~=2.10\nqiskit~=2.2.3"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -311,10 +311,16 @@ def generate_image(self, url: str, hash: str) -> str:
     max_retries=None,
 )
 def process(self, db_id: str, url: str, hash: str) -> str:
-    if not (image := DataBlob.get_value(QasmVisualization.instance.identifier, hash)):
-        if not (
-            task_id := PluginState.get_value(QasmVisualization.instance.identifier, hash)
-        ):
+    try:
+        image = DataBlob.get_value(QasmVisualization.instance.identifier, hash)
+    except KeyError:
+        image = None
+    if not image:
+        try:
+            task_id = PluginState.get_value(QasmVisualization.instance.identifier, hash)
+        except KeyError:
+            task_id = None
+        if not task_id:
             task_result = generate_image.s(url, hash).apply_async()
             PluginState.set_value(
                 QasmVisualization.instance.identifier,

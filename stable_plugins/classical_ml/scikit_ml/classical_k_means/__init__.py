@@ -50,7 +50,7 @@ class ClassicalKMeans(QHAnaPluginBase):
         return ClassicKMeans_BLP
 
     def get_requirements(self) -> str:
-        return "plotly~=5.18.0\nscikit-learn~=1.1"
+        return "plotly~=5.18.0\nscikit-learn~=1.2.0"
 
 
 try:

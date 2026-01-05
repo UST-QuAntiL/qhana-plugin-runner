@@ -1077,7 +1077,7 @@ Allows execution of quantum circuits using IBM Quantum backends.
 processing – QML, kernel, mapping, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/qiskit_quantum_kernel_estimation/__init__.py`
 
-Produces a kernel matrix from a quantum kernel. Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed kernel by Havlíček [0]. The following versions were used `qiskit~=0.43` and `qiskit-machine-learning~=0.4.0`.
+Produces a kernel matrix from a quantum kernel. Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed kernel by Havlíček [0]. The following versions were used `qiskit~=2.2.3` and `qiskit-machine-learning~=0.8.0`.
 
 The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format. They may be stored in either a csv or a json file. The plugin ``data-creator`` can generate these entities.
 

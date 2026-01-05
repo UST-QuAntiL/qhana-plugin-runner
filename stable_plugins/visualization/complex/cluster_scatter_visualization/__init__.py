@@ -55,7 +55,7 @@ class ClusterScatterVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nqiskit~=0.43\nkaleido~=0.2.1\ndash~=2.18.1"
+        return "pylatexenc~=2.10\nqiskit~=2.2.3\nkaleido~=0.2.1\ndash~=2.18.1"
 
 
 try:

@@ -110,7 +110,7 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
         missing=None,
         metadata={
             "label": "IBMQ Token",
-            "description": "Token for IBMQ (**** indicates that a default IBMQ token is available).",
+            "description": "Token for IBM Quantum (**** indicates that a default token is available via QISKIT_IBM_TOKEN or IBMQ_TOKEN).",
             "input_type": "password",
         },
     )
@@ -136,7 +136,7 @@ class AuthenticationParameterSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "IBMQ Token",
-            "description": "Token for IBMQ.",
+            "description": "Token for IBM Quantum (QISKIT_IBM_TOKEN or IBMQ_TOKEN).",
             "input_type": "password",
         },
     )

@@ -32,7 +32,7 @@ SVM_BLP = SecurityBlueprint(
     template_folder="templates",
 )
 
-sklearn_version = "1.1"
+sklearn_version = "1.2.0"
 
 
 class SVM(QHAnaPluginBase):
@@ -48,7 +48,7 @@ class SVM(QHAnaPluginBase):
         "All of them may be stored in either a csv or a json file. A set of entity points and labels can be generated with the ``data-creator`` plugin. A precomputed kernel can be "
         "computed with a quantum kernel estimation plugin, given the entity points.\n\n"
         "Source:\n"
-        "[0] [https://scikit-learn.org/1.1/modules/svm.html#svm](https://scikit-learn.org/1.1/modules/svm.html#svm)\n"
+        "[0] [https://scikit-learn.org/1.2/modules/svm.html#svm](https://scikit-learn.org/1.2/modules/svm.html#svm)\n"
         "[1] Qiskit's quantum kernels [ZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZFeatureMap.html), "
         "[ZZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZZFeatureMap.html) and "
         "[PauliFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.PauliFeatureMap.html)\n"
@@ -65,7 +65,7 @@ class SVM(QHAnaPluginBase):
         return SVM_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~=0.43\nqiskit-machine-learning~=0.4.0\nscikit-learn~={sklearn_version}\nplotly~=5.18.0\npandas~=1.5.0\nmuid~=0.5.3"
+        return f"qiskit~=2.2.3\nqiskit-machine-learning~=0.8.0\nscikit-learn~={sklearn_version}\nplotly~=5.18.0\npandas~=1.5.0\nmuid~=0.5.3"
 
 
 try:

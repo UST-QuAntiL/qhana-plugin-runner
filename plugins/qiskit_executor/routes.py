@@ -153,10 +153,19 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {}
 
-        if "IBMQ_BACKEND" in os.environ:
-            default_values[fields["backend"].data_key] = os.environ["IBMQ_BACKEND"]
+        backend_env = os.environ.get("QISKIT_IBM_BACKEND") or os.environ.get(
+            "IBMQ_BACKEND"
+        )
+        if backend_env:
+            default_values[fields["backend"].data_key] = backend_env
 
-        if "IBMQ_TOKEN" in os.environ:
+        token_env = os.environ.get("QISKIT_IBM_TOKEN")
+        if token_env:
+            default_values[fields["ibmqToken"].data_key] = "****"
+            TASK_LOGGER.info(
+                "Qiskit IBM token successfully loaded from environment variable"
+            )
+        elif "IBMQ_TOKEN" in os.environ:
             default_values[fields["ibmqToken"].data_key] = "****"
             TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
 
@@ -197,7 +206,12 @@ class CalcView(MethodView):
         if not arguments.shots:
             arguments.shots = options.get("shots", 1024)
         if arguments.ibmqToken == "****":
-            if "IBMQ_TOKEN" in os.environ:
+            if "QISKIT_IBM_TOKEN" in os.environ:
+                arguments.ibmqToken = os.environ["QISKIT_IBM_TOKEN"]
+                TASK_LOGGER.info(
+                    "Qiskit IBM token successfully loaded from environment variable."
+                )
+            elif "IBMQ_TOKEN" in os.environ:
                 arguments.ibmqToken = os.environ["IBMQ_TOKEN"]
                 TASK_LOGGER.info(
                     "IBMQ token successfully loaded from environment variable."

@@ -29,7 +29,7 @@ psycopg = { version = "^3.1.17", optional = true }
 PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
-urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
+urllib3 = ">=1.26,<3"                               # allow urllib3 v2 for Qiskit >=2.x compatibility
 
 [tool.poetry.group.dev.dependencies]
 black = ">=25.1.0,<25.2.0"

@@ -286,7 +286,7 @@ class MDS(QHAnaPluginBase):
         return MDS_BLP
 
     def get_requirements(self) -> str:
-        return "scikit-learn~=1.1"
+        return "scikit-learn~=1.2.0"
 
 
 TASK_LOGGER = get_task_logger(__name__)

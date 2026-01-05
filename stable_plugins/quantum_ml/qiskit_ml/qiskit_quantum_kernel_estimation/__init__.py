@@ -32,8 +32,8 @@ QISKIT_QKE_BLP = SecurityBlueprint(
 )
 
 
-qiskit_version = "0.43"
-qiskit_ml_version = "0.4.0"
+qiskit_version = "2.2.3"
+qiskit_ml_version = "0.8.0"
 
 
 class QiskitQKE(QHAnaPluginBase):

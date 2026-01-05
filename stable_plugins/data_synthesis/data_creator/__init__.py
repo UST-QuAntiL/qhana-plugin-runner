@@ -48,7 +48,7 @@ class DataCreator(QHAnaPluginBase):
         return DataCreator_BLP
 
     def get_requirements(self) -> str:
-        return "numpy~=1.13"
+        return "numpy~=1.26.4"
 
 
 try:
