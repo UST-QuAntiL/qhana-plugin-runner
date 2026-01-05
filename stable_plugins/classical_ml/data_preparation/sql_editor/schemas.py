@@ -18,4 +18,21 @@ from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 
 
 class SQLInputSchema(FrontendFormBaseSchema):
-    sql = ma.fields.String()
+    sql = ma.fields.String(
+        required=True,
+        metadata={
+            "label": "SQL Command",
+            "description": "DuckDB SQL query to execute.",
+            "input_type": "textarea",
+        },
+    )
+    output_format = ma.fields.String(
+        missing="csv",
+        validate=ma.validate.OneOf(("csv", "json")),
+        metadata={
+            "label": "Output Format",
+            "description": "Format of the output data.",
+            "input_type": "select",
+            "options": {"csv": "CSV", "json": "JSON"},
+        },
+    )
