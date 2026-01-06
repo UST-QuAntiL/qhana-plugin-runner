@@ -126,7 +126,7 @@
             font-size: 1.2rem;
             font-weight: 600;
         }
-        .placeholder-button {
+        .try-out-button {
             background-color: #6a2dca;
             color: white;
             border: none;
@@ -251,17 +251,26 @@
                     <p>{{content | markdown}}</p>
                 </details>
                 {% endfor %}
-                {% for implementation in implementations %}
-                <button class="placeholder-button" onclick="placeholderFct()">
-                    <strong>Try {{ implementation.name }} in QHAna</strong>
+                {% for try_out_metadata in qc_atlas.get_try_out_metadata_for_pattern(pattern) %}
+                <button class="try-out-button" data-plugin-name="{{ try_out_metadata.pluginName }}" data-parameters="{{ try_out_metadata.parameters | json_dumps | escape }}">
+                    <strong>Try {{ try_out_metadata.name }} in QHAna</strong>
                     <span id="arrow-qhana">&#8617;</span>
                 </button>
                 {% endfor %}
             </div>
             <script>
-                function placeholderFct() {
-                    alert("This is a placeholder!");
+              try_out_buttons = document.querySelectorAll(".try-out-button")
+              for (const try_out_button of try_out_buttons) {
+                const message = {
+                  type: "switch-plugin",
+                  pluginName: try_out_button.dataset.pluginName,
+                  parameters: JSON.parse(try_out_button.dataset.parameters),
                 }
+                try_out_button.onclick = () => {
+                  console.log(message)
+                  sendMessage(message)
+                }
+              }
             </script>
         </main>
     </div>

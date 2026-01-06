@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from typing import Literal
 from urllib.parse import urljoin, urlparse
 
+from flask import current_app
 from httpx import get
 
 from .model import (
@@ -26,6 +28,7 @@ from .model import (
     Pattern,
     PatternLanguage,
     PatternRelation,
+    TryOutMetadata,
 )
 
 KNOWN_PATTERN_SECTIONS = {
@@ -92,8 +95,9 @@ class PatternAtlasClient:
 
     def get_pattern_languages(self) -> list[PatternLanguage]:
         url = urljoin(self.atlas_url, "./patternLanguages")
-        response = get(url, headers={"Accept": "application/hal+json, application/json"})
-        response.raise_for_status()
+        response = get(
+            url, headers={"Accept": "application/hal+json, application/json"}
+        ).raise_for_status()
         try:
             data = response.json().get("_embedded", {}).get("patternLanguageModels", [])
         except Exception as err:
@@ -112,8 +116,9 @@ class PatternAtlasClient:
         url = urljoin(
             self.atlas_url, f"./patternLanguages/{language.language_id}/patterns"
         )
-        response = get(url, headers={"Accept": "application/hal+json, application/json"})
-        response.raise_for_status()
+        response = get(
+            url, headers={"Accept": "application/hal+json, application/json"}
+        ).raise_for_status()
         try:
             data = response.json().get("_embedded", {}).get("patternModels", [])
         except Exception as err:
@@ -142,8 +147,9 @@ class PatternAtlasClient:
             self.atlas_url,
             f"./patternLanguages/{pattern.pattern_language}/patterns/{pattern.pattern_id}",
         )
-        response = get(url, headers={"Accept": "application/hal+json, application/json"})
-        response.raise_for_status()
+        response = get(
+            url, headers={"Accept": "application/hal+json, application/json"}
+        ).raise_for_status()
         try:
             data = response.json()
         except Exception as err:
@@ -238,8 +244,7 @@ class PatternAtlasClient:
         )
         response = get(
             directed_url, headers={"Accept": "application/hal+json, application/json"}
-        )
-        response.raise_for_status()
+        ).raise_for_status()
         try:
             directed_data = (
                 response.json().get("_embedded", {}).get("directedEdgeModels", [])
@@ -262,8 +267,9 @@ class PatternAtlasClient:
         url = urljoin(
             self.atlas_url, f"./patternLanguages/{language.language_id}/undirectedEdges"
         )
-        response = get(url, headers={"Accept": "application/hal+json, application/json"})
-        response.raise_for_status()
+        response = get(
+            url, headers={"Accept": "application/hal+json, application/json"}
+        ).raise_for_status()
         try:
             data = response.json().get("_embedded", {}).get("undirectedEdgeModels", [])
         except Exception as err:
@@ -303,13 +309,19 @@ class QCAtlasClient:
                 atlas.add_implementation_package(implementation, implementation_package)
                 file = self.get_files(implementation, implementation_package)
                 atlas.add_implementation_package_file(implementation_package, file)
+                try_out_metadata = self.get_try_out_metadata(
+                    implementation, implementation_package, file
+                )
+                if try_out_metadata is not None:
+                    atlas.add_try_out_metadata(implementation_package, try_out_metadata)
 
         return atlas
 
     def get_implementations(self) -> list[AlgorithmImplementation]:
         url = urljoin(self.atlas_url, "./implementations")
-        response = get(url, headers={"Accept": "application/hal+json, application/json"})
-        response.raise_for_status()
+        response = get(
+            url, headers={"Accept": "application/hal+json, application/json"}
+        ).raise_for_status()
         try:
             data = response.json().get("content", [])
         except Exception as err:
@@ -325,8 +337,9 @@ class QCAtlasClient:
             self.atlas_url,
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages",
         )
-        response = get(url, headers={"Accept": "application/hal+json, application/json"})
-        response.raise_for_status()
+        response = get(
+            url, headers={"Accept": "application/hal+json, application/json"}
+        ).raise_for_status()
         try:
             data = response.json().get("content", [])
         except Exception as err:
@@ -345,10 +358,62 @@ class QCAtlasClient:
             self.atlas_url,
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}/file",
         )
-        response = get(url, headers={"Accept": "application/hal+json, application/json"})
-        response.raise_for_status()
+        response = get(
+            url, headers={"Accept": "application/hal+json, application/json"}
+        ).raise_for_status()
         try:
             data = response.json()
         except Exception as err:
             raise ValueError(f"Could not decode json response from url '{url}'!") from err
         return QCFile.from_dict(data)
+
+    def get_try_out_metadata(
+        self,
+        implementation: AlgorithmImplementation,
+        implementation_package: ImplementationPackage,
+        file: QCFile,
+    ) -> TryOutMetadata | None:
+        implementation_package_url = urljoin(
+            self.atlas_url,
+            f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}",
+        )
+        content_url = urljoin(
+            self.atlas_url,
+            f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}/file/content",
+        )
+        match implementation_package.type:
+            case "workflow_editor":
+                return TryOutMetadata(
+                    name=implementation_package.description,
+                    pluginName="workflow-editor",
+                    parameters={"load-url": content_url},
+                )
+            case "low_code_modeler":
+                return TryOutMetadata(
+                    name=implementation_package.description,
+                    pluginName="low-code-modeler",
+                    parameters={"load-url": content_url},
+                )
+            case "qhana_plugin":
+                response = get(
+                    content_url,
+                    headers={"Accept": "application/hal+json, application/json"},
+                ).raise_for_status()
+                try:
+                    data = response.json()
+                except Exception as err:
+                    raise ValueError(
+                        f"Could not decode json response from url '{content_url}'!"
+                    ) from err
+                plugin_name = data["pluginName"]
+                parameters = data.get("parameters", [])
+                return TryOutMetadata(
+                    name=implementation_package.description,
+                    pluginName=plugin_name,
+                    parameters=parameters,
+                )
+            case _:
+                current_app.logger.info(
+                    f"implementation_package at {implementation_package_url} has unhandled type {json.dumps(implementation_package.type)}"
+                )
+                return None

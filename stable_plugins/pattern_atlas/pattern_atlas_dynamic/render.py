@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
+import json
 import re
 from hashlib import sha3_256
 from html.parser import HTMLParser
@@ -27,11 +28,12 @@ from typing import Match
 from pattern_atlas.plugin import PA_BLP
 
 from .model import (
-    AlgorithmImplementation,
+    ImplementationPackage,
     PatternAtlasContent,
     Pattern,
     PatternLanguage,
     PatternAtlasIndex,
+    QCAtlasContent,
 )
 
 CATEGORY_HEADLINES = {
@@ -146,6 +148,7 @@ class DynamicRender:
         self._jinja.filters["resource"] = self._resource
         self._jinja.filters["markdown"] = self._markdown
         self._jinja.filters["split_camel_case"] = split_camel_case
+        self._jinja.filters["json_dumps"] = lambda o: json.dumps(o)
         self._atlas_index = PatternAtlasIndex()
 
     def _resource(self, url: str) -> str:
@@ -269,16 +272,16 @@ class DynamicRender:
     def render_pattern(
         self,
         atlas: PatternAtlasContent,
+        qc_atlas: QCAtlasContent,
         pattern: Pattern,
         language: PatternLanguage,
-        implementations: list[AlgorithmImplementation],
     ) -> str:
         template = self._jinja.get_template("pattern.jinja2")
         return template.render(
             atlas=atlas,
+            qc_atlas=qc_atlas,
             base_url=f"/plugins/{PA_BLP.name}/ui",
             pattern=pattern,
             language=language,
-            implementations=implementations,
             is_planqk=self.is_planqk,
         )

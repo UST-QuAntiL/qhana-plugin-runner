@@ -290,6 +290,7 @@ class ImplementationPackage:
     name: str
     description: str
     packageType: str
+    type: str
 
     @staticmethod
     def from_dict(input) -> "ImplementationPackage":
@@ -298,6 +299,7 @@ class ImplementationPackage:
             name=input["name"],
             description=input["description"],
             packageType=input["packageType"],
+            type=input["type"],
         )
 
 
@@ -319,12 +321,20 @@ class QCFile:
 
 
 @dataclass
+class TryOutMetadata:
+    name: str
+    pluginName: str
+    parameters: dict[str, str]
+
+
+@dataclass
 class QCAtlasContent:
     implementations: dict[str, AlgorithmImplementation] = field(default_factory=dict)
     implementation_packages: dict[str, list[ImplementationPackage]] = field(
         default_factory=lambda: defaultdict(list)
     )
     implementation_packages_files: dict[str, QCFile] = field(default_factory=dict)
+    try_out_metadata: dict[str, TryOutMetadata] = field(default_factory=dict)
 
     def add_implementation(self, implementation: AlgorithmImplementation):
         self.implementations[implementation.id] = implementation
@@ -341,12 +351,36 @@ class QCAtlasContent:
     ):
         self.implementation_packages_files[implementation_package.id] = file
 
-    def get_implementations_of_pattern(
-        self, pattern: Pattern
-    ) -> list[AlgorithmImplementation]:
+    def add_try_out_metadata(
+        self,
+        implementation_package: ImplementationPackage,
+        try_out_metadata: TryOutMetadata,
+    ):
+        self.try_out_metadata[implementation_package.id] = try_out_metadata
+
+    def get_implementations(self, pattern: Pattern) -> list[AlgorithmImplementation]:
         return [
             implementation
             for implementation in self.implementations.values()
             if f"pattern-languages/{pattern.pattern_language}/{pattern.pattern_id}"
             in implementation.patterns
+        ]
+
+    def get_implementation_packages(
+        self, implementation: AlgorithmImplementation
+    ) -> list[ImplementationPackage]:
+        return self.implementation_packages[implementation.id]
+
+    def get_try_out_metadata(
+        self, implementation_package: ImplementationPackage
+    ) -> TryOutMetadata | None:
+        return self.try_out_metadata.get(implementation_package.id)
+
+    def get_try_out_metadata_for_pattern(self, pattern: Pattern) -> list[TryOutMetadata]:
+        return [
+            try_out_metadata
+            for implementation in self.get_implementations(pattern)
+            for implementation_package in self.get_implementation_packages(implementation)
+            for try_out_metadata in [self.get_try_out_metadata(implementation_package)]
+            if try_out_metadata is not None
         ]

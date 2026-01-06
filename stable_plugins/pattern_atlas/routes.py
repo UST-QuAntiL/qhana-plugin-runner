@@ -153,12 +153,12 @@ class PatternUI(MethodView):
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self, language_id, pattern_id):
         pattern_atlas = get_cached_pattern_atlas()
+        qc_atlas = get_cached_qc_atlas()
         pattern = pattern_atlas.patterns.get(pattern_id)
         if pattern is None:
             return Response("Pattern not found", status=404)
         language = pattern_atlas.languages.get(language_id)
-        implementations = get_cached_qc_atlas().get_implementations_of_pattern(pattern)
-        html = renderer.render_pattern(pattern_atlas, pattern, language, implementations)
+        html = renderer.render_pattern(pattern_atlas, qc_atlas, pattern, language)
         return Response(html, content_type="text/html")
 
 

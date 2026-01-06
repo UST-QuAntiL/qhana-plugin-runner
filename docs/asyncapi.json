@@ -650,7 +650,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "const": "plugin-context"
+              "const": "switch-plugin"
             },
             "pluginName": {
               "type": "string",
