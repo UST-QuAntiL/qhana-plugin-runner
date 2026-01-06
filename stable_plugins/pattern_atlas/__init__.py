@@ -1,7 +1,7 @@
 from . import plugin
 
 try:
-    from . import routes, pattern_atlas_dynamic, foo
+    from . import routes, pattern_atlas_dynamic
 except ImportError as err:
     import traceback
 
