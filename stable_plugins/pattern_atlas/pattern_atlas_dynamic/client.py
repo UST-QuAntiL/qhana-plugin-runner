@@ -385,13 +385,13 @@ class QCAtlasClient:
             case "workflow_editor":
                 return TryOutMetadata(
                     name=implementation_package.description,
-                    pluginName="workflow-editor",
+                    pluginName="Workflow Editor",
                     parameters={"load-url": content_url},
                 )
             case "low_code_modeler":
                 return TryOutMetadata(
                     name=implementation_package.description,
-                    pluginName="low-code-modeler",
+                    pluginName="LCM",
                     parameters={"load-url": content_url},
                 )
             case "qhana_plugin":
