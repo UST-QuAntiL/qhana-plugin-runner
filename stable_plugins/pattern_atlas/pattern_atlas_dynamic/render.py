@@ -52,8 +52,8 @@ CATEGORY_HEADLINES = {
 }
 
 # regex for latex math
-BLOCK_MATH_RE = re.compile(r"(?<!\\)\$\$(.+?)(?<!\\)\$\$", re.S)
-INLINE_MATH_RE = re.compile(r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$", re.S)
+BLOCK_MATH_RE = re.compile(r"(?<!\\)\$\$(.+?)(?<!\\)\$\$|(?<!\\)\\\[(.+?)(?<!\\)\\\]", re.S)
+INLINE_MATH_RE = re.compile(r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$|(?<!\\)\\\((.+?)(?<!\\)\\\)", re.S)
 LINK_IN_TEX = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 
 _CAMEL_CASE_REGEX = re.compile(r"([a-zäöü])([A-ZÄÖÜ])")
@@ -83,7 +83,7 @@ def compatible_markdown(markdown_text: str) -> str:
     def replace_inline(match_obj: Match[str]) -> str:
         assert INLINE_MATH_RE.fullmatch(match_obj.group(0))
         nonlocal counter
-        tex = _link_as_text(match_obj.group(1).strip())
+        tex = _link_as_text((match_obj.group(1) or match_obj.group(2)).strip())
         placeholders.append(f'<span class="math">\\({tex}\\)</span>')
         # the counter in the token corresponds to the index of this snippet in placeholders
         token = f"§INLINE_MATH_{counter}§"
@@ -93,7 +93,7 @@ def compatible_markdown(markdown_text: str) -> str:
     def replace_block(match_obj: Match[str]) -> str:
         assert BLOCK_MATH_RE.fullmatch(match_obj.group(0))
         nonlocal counter
-        tex = _link_as_text(match_obj.group(1).strip())
+        tex = _link_as_text((match_obj.group(1) or match_obj.group(2)).strip())
         placeholders.append(f'<div class="math">\\[{tex}\\]</div>')
         # the counter in the token corresponds to the index of this snippet in placeholders
         token = f"§BLOCK_MATH_{counter}§"
