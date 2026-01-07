@@ -52,8 +52,12 @@ CATEGORY_HEADLINES = {
 }
 
 # regex for latex math
-BLOCK_MATH_RE = re.compile(r"(?<!\\)\$\$(.+?)(?<!\\)\$\$|(?<!\\)\\\[(.+?)(?<!\\)\\\]", re.S)
-INLINE_MATH_RE = re.compile(r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$|(?<!\\)\\\((.+?)(?<!\\)\\\)", re.S)
+BLOCK_MATH_RE = re.compile(
+    r"(?<!\\)\$\$(.+?)(?<!\\)\$\$|(?<!\\)\\\[(.+?)(?<!\\)\\\]", re.S
+)
+INLINE_MATH_RE = re.compile(
+    r"(?<!\\)\$(?!\$)(.+?)(?<!\\)\$|(?<!\\)\\\((.+?)(?<!\\)\\\)", re.S
+)
 LINK_IN_TEX = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 
 _CAMEL_CASE_REGEX = re.compile(r"([a-zäöü])([A-ZÄÖÜ])")
