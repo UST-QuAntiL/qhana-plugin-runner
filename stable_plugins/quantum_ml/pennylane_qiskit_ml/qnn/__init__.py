@@ -37,10 +37,15 @@ class QNN(QHAnaPluginBase):
     version = __version__
     description = (
         "Classifies data with a dressed quantum or a classical neural network.\n"
-        "A dressed quantum neural network has a classical neural network in front of and after the quantum network.\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
-        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
-        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin."
+        "A dressed quantum neural network has a classical neural network in front "
+        "of and after the quantum network.\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format and labels in the [entity/label]"
+        "(https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/"
+        "examples/entities.html#entity-label) format. Both may be stored in "
+        "either a csv or a json file. Both can be generated with the "
+        "``data-creator`` plugin."
     )
 
     tags = ["QML", "classification", "quantum", "classical", "neural-network"]
@@ -52,14 +57,23 @@ class QNN(QHAnaPluginBase):
         return QNN_BLP
 
     def get_requirements(self) -> str:
-        return "matplotlib~=3.5.1\nqiskit~=2.2.3\npennylane~=0.35.1\npennylane-qiskit~=0.35.1\nscikit-learn~=1.2.0\ntorch~=2.0.1\nmuid~=0.5.3\nautoray<0.8"
+        return (
+            "matplotlib~=3.5.1\n"
+            "qiskit~=2.2.3\n"
+            "pennylane~=0.35.1\n"
+            "pennylane-qiskit~=0.35.1\n"
+            "scikit-learn~=1.2.0\n"
+            "torch~=2.0.1\n"
+            "muid~=0.5.3\n"
+            "autoray<0.8"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

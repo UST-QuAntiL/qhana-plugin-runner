@@ -36,15 +36,29 @@ class QKNN(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
-        "This plugin implements quantum k nearest neighbours algorithms. Given a set of already labeled data "
-        "and an integer k, a new data point is labeled by a majority vote of the k nearest training points.\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
-        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
-        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin.\n\n"
+        "This plugin implements quantum k nearest neighbours algorithms. Given "
+        "a set of already labeled data and an integer k, a new data point is "
+        "labeled by a majority vote of the k nearest training points.\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format and labels in the [entity/label]"
+        "(https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/"
+        "examples/entities.html#entity-label) format. Both may be stored in "
+        "either a csv or a json file. Both can be generated with the "
+        "``data-creator`` plugin.\n\n"
         "Source:\n"
-        "[0] [Schuld, M., Sinayskiy, I., Petruccione, F. (2014). Quantum Computing for Pattern Classification. In: Pham, DN., Park, SB. (eds) PRICAI 2014: Trends in Artificial Intelligence. PRICAI 2014. Lecture Notes in Computer Science(), vol 8862. Springer, Cham.](https://doi.org/10.1007/978-3-319-13560-1_17)\n"
-        "[1] [Basheer, Afrad and Afham, A. and Goyal, Sandeep K. (2020). Quantum k-nearest neighbors algorithm. In arXiv.](https://doi.org/10.48550/arXiv.2003.09187)\n"
-        "[2] [Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest Neighbors Classification Based on the Metric of Hamming Distance. Int J Theor Phys 56, 3496–3507 (2017).](https://doi.org/10.1007/s10773-017-3514-4)\n"
+        "[0] [Schuld, M., Sinayskiy, I., Petruccione, F. (2014). Quantum "
+        "Computing for Pattern Classification. In: Pham, DN., Park, SB. (eds) "
+        "PRICAI 2014: Trends in Artificial Intelligence. PRICAI 2014. Lecture "
+        "Notes in Computer Science(), vol 8862. Springer, Cham.](https://"
+        "doi.org/10.1007/978-3-319-13560-1_17)\n"
+        "[1] [Basheer, Afrad and Afham, A. and Goyal, Sandeep K. (2020). "
+        "Quantum k-nearest neighbors algorithm. In arXiv.](https://doi.org/"
+        "10.48550/arXiv.2003.09187)\n"
+        "[2] [Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest "
+        "Neighbors Classification Based on the Metric of Hamming Distance. "
+        "Int J Theor Phys 56, 3496–3507 (2017).](https://doi.org/"
+        "10.1007/s10773-017-3514-4)\n"
     )
     tags = ["QML", "clustering", "quantum", "supervised-learning"]
 
@@ -55,14 +69,21 @@ class QKNN(QHAnaPluginBase):
         return QKNN_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=2.2.3\npennylane~=0.35.1\npennylane-qiskit~=0.35.1\nscikit-learn~=1.2.0\nmuid~=0.5.3\nautoray<0.8"
+        return (
+            "qiskit~=2.2.3\n"
+            "pennylane~=0.35.1\n"
+            "pennylane-qiskit~=0.35.1\n"
+            "scikit-learn~=1.2.0\n"
+            "muid~=0.5.3\n"
+            "autoray<0.8"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

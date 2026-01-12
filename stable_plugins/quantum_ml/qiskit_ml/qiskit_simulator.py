@@ -304,6 +304,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from qiskit import QiskitError, QuantumCircuit, transpile
     from qiskit_aer import AerSimulator
     from qiskit.qasm2 import loads as loads2
+
     try:
         from qiskit.qasm3 import loads as loads3, QASM3ImporterError
     except ImportError:  # pragma: no cover - fallback for older qiskit_qasm3_import shims

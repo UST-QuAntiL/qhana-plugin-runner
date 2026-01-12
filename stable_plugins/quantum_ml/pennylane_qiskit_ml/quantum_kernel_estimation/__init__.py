@@ -39,11 +39,18 @@ class QKE(QHAnaPluginBase):
         "This plugin produces the matrix of a quantum kernel. Since this depends on the expected values of "
         "the quantum circuit, we can only estimate it and therefore call it Quantum Kernel Estimation. "
         "The Plugin implements the kernels by Havlíček et al [0] and Suzuki et al [1].\n\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format. "
-        "They may be stored in either a csv or a json file. The plugin ``data-creator`` can generate these entities.\n\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format. They may be stored in either a "
+        "csv or a json file. The plugin ``data-creator`` can generate these "
+        "entities.\n\n"
         "Source:\n"
-        "[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)\n"
-        "[1] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
+        "[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning "
+        "with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).]"
+        "(https://doi.org/10.1038/s41586-019-0980-2)\n"
+        "[1] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of "
+        "feature map for kernel-based quantum classifier. Quantum Mach. "
+        "Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)"
     )
     tags = ["QML", "quantum", "kernel", "mapping"]
 
@@ -54,14 +61,20 @@ class QKE(QHAnaPluginBase):
         return QKE_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=2.2.3\npennylane~=0.35.1\npennylane-qiskit~=0.35.1\nmuid~=0.5.3\nautoray<0.8"
+        return (
+            "qiskit~=2.2.3\n"
+            "pennylane~=0.35.1\n"
+            "pennylane-qiskit~=0.35.1\n"
+            "muid~=0.5.3\n"
+            "autoray<0.8"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

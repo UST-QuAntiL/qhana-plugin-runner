@@ -41,13 +41,22 @@ class QiskitQKE(QHAnaPluginBase):
     version = __version__
     description = (
         "Produces a kernel matrix from a quantum kernel. "
-        "Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature "
-        "maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed "
-        f"kernel by Havlíček [0]. The following versions were used `qiskit~={qiskit_version}` and `qiskit-machine-learning~={qiskit_ml_version}`.\n\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format. "
-        "They may be stored in either a csv or a json file. The plugin ``data-creator`` can generate these entities.\n\n"
+        "Specifically qiskit's feature maps are used, combined with "
+        "qiskit_machine_learning.kernels.QuantumKernel. These feature maps are "
+        "ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. "
+        "These feature maps all use the proposed kernel by Havlíček [0]. The "
+        "following versions were used "
+        f"`qiskit~={qiskit_version}` and "
+        f"`qiskit-machine-learning~={qiskit_ml_version}`.\n\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format. They may be stored in either a "
+        "csv or a json file. The plugin ``data-creator`` can generate these "
+        "entities.\n\n"
         "Source:\n"
-        "[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)"
+        "[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning "
+        "with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).]"
+        "(https://doi.org/10.1038/s41586-019-0980-2)"
     )
     tags = ["QML", "quantum", "kernel", "mapping"]
 
@@ -58,14 +67,18 @@ class QiskitQKE(QHAnaPluginBase):
         return QISKIT_QKE_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}\nmuid~=0.5.3"
+        return (
+            f"qiskit~={qiskit_version}\n"
+            f"qiskit-machine-learning~={qiskit_ml_version}\n"
+            "muid~=0.5.3"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

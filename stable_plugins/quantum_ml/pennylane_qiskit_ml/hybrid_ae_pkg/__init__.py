@@ -35,9 +35,13 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
-        "Reduces the dimensionality of a given dataset with a combination of classical and quantum neural networks.\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
-        "and they may be stored in either a csv or a json file. The ``data-creator`` plugin can generate some entity points."
+        "Reduces the dimensionality of a given dataset with a combination of "
+        "classical and quantum neural networks.\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format and they may be stored in either "
+        "a csv or a json file. The ``data-creator`` plugin can generate some "
+        "entity points."
     )
     tags = ["QML", "preprocessing", "feature-engineering", "quantum"]
 
@@ -48,14 +52,21 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
         return HA_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=2.2.3\npennylane~=0.35.1\npennylane-qiskit~=0.35.1\ntorch~=2.0.1\nmuid~=0.5.3\nautoray<0.8"
+        return (
+            "qiskit~=2.2.3\n"
+            "pennylane~=0.35.1\n"
+            "pennylane-qiskit~=0.35.1\n"
+            "torch~=2.0.1\n"
+            "muid~=0.5.3\n"
+            "autoray<0.8"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass
