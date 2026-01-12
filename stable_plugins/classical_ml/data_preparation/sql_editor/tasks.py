@@ -22,6 +22,7 @@ TASK_LOGGER = get_task_logger(__name__)
     ignore_result=True,
 )
 def process_sql(self, db_id: int) -> str:
+    """Execute the stored SQL query and persist results in the chosen format."""
     TASK_LOGGER.info(f"Starting new SQL editor task with db id '{db_id}'")
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     if task_data is None:

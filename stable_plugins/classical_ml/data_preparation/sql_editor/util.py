@@ -19,6 +19,7 @@ PRAGMA_PATTERN = re.compile(r"^pragma\s+([a-z_]+)\b", re.IGNORECASE)
 
 
 def normalize_sql(sql: str) -> str:
+    """Normalize SQL input by trimming whitespace and trailing semicolons."""
     normalized = (sql or "").strip()
     while normalized.endswith(";"):
         normalized = normalized[:-1].rstrip()
@@ -26,6 +27,7 @@ def normalize_sql(sql: str) -> str:
 
 
 def strip_leading_comments(sql: str) -> str:
+    """Remove leading line/block comments to inspect the actual statement."""
     stripped = sql.lstrip()
     while True:
         if stripped.startswith("--"):
@@ -46,6 +48,7 @@ def strip_leading_comments(sql: str) -> str:
 # Security hardening without restricting access in duckdb
 # TBD whether enough or not
 def validate_pragma(sql: str) -> str | None:
+    """Allow only whitelisted, read-only PRAGMA statements."""
     match = PRAGMA_PATTERN.match(sql)
     if not match:
         return None
@@ -56,7 +59,7 @@ def validate_pragma(sql: str) -> str | None:
 
 
 def validate_sql(sql: str) -> tuple[str | None, str]:
-    """Validate SQL syntax and enforce basic safety checks."""
+    """Parse SQL and enforce single-statement, read-only policy."""
     normalized = normalize_sql(sql)
     if not normalized:
         return "SQL query is required.", normalized
@@ -76,11 +79,13 @@ def validate_sql(sql: str) -> tuple[str | None, str]:
 
 
 def check_sql_syntax(sql: str) -> str | None:
+    """Return a user-facing error message for invalid SQL, else None."""
     error, _ = validate_sql(sql)
     return error
 
 
 def _prepare_connection(con: duckdb.DuckDBPyConnection) -> None:
+    """Enable HTTP(S) reads by loading DuckDB's httpfs extension."""
     try:
         con.install_extension("httpfs")
     except duckdb.Error:
@@ -95,6 +100,7 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def execute_sql(sql: str, *, limit: int | None = None) -> tuple[list[str], list[tuple]]:
+    """Run validated SQL and return column names plus result rows."""
     error, normalized = validate_sql(sql)
     if error:
         raise ValueError(error)
@@ -106,7 +112,8 @@ def execute_sql(sql: str, *, limit: int | None = None) -> tuple[list[str], list[
             # "disabled_filesystems": "LocalFileSystem",
         }
     ) as con:
-        # FIXME: https://duckdb.org/docs/stable/operations_manual/securing_duckdb/overview
+        # FIXME: https://duckdb.org/docs/stable/operations_manual/
+        # securing_duckdb/overview
         _prepare_connection(con)
         relation = con.sql(normalized)
         if limit is not None:
@@ -117,6 +124,7 @@ def execute_sql(sql: str, *, limit: int | None = None) -> tuple[list[str], list[
 
 
 def serialize_value(value):
+    """Convert result values into JSON-safe primitives."""
     if isinstance(value, (datetime, date)):
         return value.isoformat()
     if isinstance(value, Decimal):
@@ -127,10 +135,12 @@ def serialize_value(value):
 
 
 def serialize_rows(rows: Iterable[tuple]) -> list[list]:
+    """Serialize an iterable of rows into JSON-friendly lists."""
     return [[serialize_value(value) for value in row] for row in rows]
 
 
 def rows_to_records(columns: list[str], rows: Iterable[tuple]) -> list[dict]:
+    """Map result rows to dict records keyed by column name."""
     return [
         {column: serialize_value(value) for column, value in zip(columns, row)}
         for row in rows
