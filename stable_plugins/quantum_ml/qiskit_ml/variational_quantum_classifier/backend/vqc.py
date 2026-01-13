@@ -24,6 +24,7 @@ from qiskit.circuit.library import (
     EfficientSU2,
 )
 from qiskit.qasm2 import dumps as qasm2_dumps
+
 try:
     from ...compat import ensure_qiskit_machine_learning_compat
 except ImportError:
@@ -161,7 +162,9 @@ class QiskitVQC:
 
         # Bind parameters to circuit, ignoring any parameters not present.
         circuit = vqc._neural_network._circuit
-        param_values_by_name = {param.name: value for param, value in param_values.items()}
+        param_values_by_name = {
+            param.name: value for param, value in param_values.items()
+        }
         bound_params = {
             param: value
             for param, value in param_values.items()

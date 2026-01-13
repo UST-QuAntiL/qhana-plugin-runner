@@ -53,12 +53,14 @@ def ensure_qiskit_machine_learning_compat() -> None:
         return
 
     if not hasattr(primitives_utils, "_circuit_key"):
+
         def _circuit_key(circuit: Any) -> int:
             return id(circuit)
 
         primitives_utils._circuit_key = _circuit_key  # type: ignore[attr-defined]
 
     if not hasattr(primitives_utils, "init_observable"):
+
         def init_observable(observable: Any) -> Any:
             return observable
 

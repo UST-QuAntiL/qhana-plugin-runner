@@ -60,9 +60,7 @@ class QuantumBackends(enum.Enum):
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             if IBMProvider is None:
-                raise RuntimeError(
-                    "qiskit-ibm-provider is required for IBMQ backends."
-                )
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
             if not ibmq_token:
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)
@@ -70,9 +68,7 @@ class QuantumBackends(enum.Enum):
             return backend.configuration().n_qubits
         elif self.name.startswith("custom_ibmq"):
             if IBMProvider is None:
-                raise RuntimeError(
-                    "qiskit-ibm-provider is required for IBMQ backends."
-                )
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
             if not ibmq_token:
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)
@@ -94,15 +90,11 @@ class QuantumBackends(enum.Enum):
             aer_backend_name = self.name[4:]
 
             with pennylane_qiskit_version_override():
-                return qml.device(
-                    "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name
-                )
+                return qml.device("qiskit.aer", wires=qubit_cnt, backend=aer_backend_name)
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             if IBMProvider is None:
-                raise RuntimeError(
-                    "qiskit-ibm-provider is required for IBMQ backends."
-                )
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
             if not ibmq_token:
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)
@@ -113,9 +105,7 @@ class QuantumBackends(enum.Enum):
                 )
         elif self.name.startswith("custom_ibmq"):
             if IBMProvider is None:
-                raise RuntimeError(
-                    "qiskit-ibm-provider is required for IBMQ backends."
-                )
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
             if not ibmq_token:
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)
@@ -141,18 +131,14 @@ class QuantumBackends(enum.Enum):
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             if IBMProvider is None:
-                raise RuntimeError(
-                    "qiskit-ibm-provider is required for IBMQ backends."
-                )
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
             if not ibmq_token:
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)
             return provider.get_backend(self.name)
         elif self.name.startswith("custom_ibmq"):
             if IBMProvider is None:
-                raise RuntimeError(
-                    "qiskit-ibm-provider is required for IBMQ backends."
-                )
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
             if not ibmq_token:
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)

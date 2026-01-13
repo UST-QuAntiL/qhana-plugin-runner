@@ -25,6 +25,7 @@ def ensure_qiskit_ibm_provider_compat() -> None:
         return
 
     if not hasattr(providers, "ProviderV1"):
+
         class ProviderV1:
             pass
 
@@ -46,6 +47,7 @@ def ensure_qiskit_ibm_provider_compat() -> None:
     if backend_module and not hasattr(backend_module, "BackendV1"):
         backend_v1 = getattr(backend_module, "BackendV2", None)
         if backend_v1 is None:
+
             class BackendV1:
                 pass
 
