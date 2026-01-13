@@ -17,19 +17,30 @@ import qiskit
 from numpy import ndarray
 from typing import Callable
 
+from pennylane_qiskit_compat import (
+    ensure_qiskit_ibm_provider_compat,
+    pennylane_qiskit_version_override,
+)
+
 
 def get_controlled_one_qubit_unitary(U: ndarray) -> Callable[[int, int], None]:
+    ensure_qiskit_ibm_provider_compat()
+    try:
+        from qiskit.circuit import Instruction
+    except Exception:
+        Instruction = None
+    if Instruction is not None and not hasattr(Instruction, "condition"):
+        Instruction.condition = None
     qc = qiskit.QuantumCircuit(1)
     qc.unitary(U, [0])
     c_qc = qc.control()
-    sv_backend = qiskit.Aer.get_backend("statevector_simulator")
     qc_transpiled = qiskit.transpile(
         c_qc,
-        backend=sv_backend,
-        basis_gates=sv_backend.configuration().basis_gates,
+        basis_gates=["u", "cx"],
         optimization_level=3,
     )
-    converted = qml.from_qiskit(qc_transpiled)
+    with pennylane_qiskit_version_override():
+        converted = qml.from_qiskit(qc_transpiled)
 
     def circuit(c_wire, t_wire):
         converted(wires=(t_wire, c_wire))

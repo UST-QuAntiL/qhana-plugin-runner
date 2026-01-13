@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 from enum import Enum
 from typing import List, Optional
 
-from qiskit_machine_learning.algorithms.classifiers import VQC
-from qiskit.utils import QuantumInstance
+import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import (
     TwoLocal,
@@ -25,9 +23,31 @@ from qiskit.circuit.library import (
     ExcitationPreserving,
     EfficientSU2,
 )
-from qiskit.algorithms.optimizers import Optimizer
+from qiskit.qasm2 import dumps as qasm2_dumps
+try:
+    from ...compat import ensure_qiskit_machine_learning_compat
+except ImportError:
+    from compat import ensure_qiskit_machine_learning_compat
+
+ensure_qiskit_machine_learning_compat()
+
+from qiskit_machine_learning.optimizers import Optimizer
+from qiskit_machine_learning.algorithms.classifiers import VQC
 
 from .optimizer import OptimizerEnum
+
+
+def _decompose_blueprint(circuit: QuantumCircuit) -> QuantumCircuit:
+    # Decompose blueprint circuits so backends don't see custom instructions.
+    for _ in range(3):
+        if any(
+            inst.operation.name and inst.operation.name[0].isupper()
+            for inst in circuit.data
+        ):
+            circuit = circuit.decompose()
+        else:
+            break
+    return circuit
 
 
 class AnsatzEnum(Enum):
@@ -38,17 +58,19 @@ class AnsatzEnum(Enum):
 
     def get_ansatz(self, n_qbits: int, entanglement, reps: int) -> QuantumCircuit:
         if self == AnsatzEnum.real_amplitudes:
-            return RealAmplitudes(
+            ansatz = RealAmplitudes(
                 num_qubits=n_qbits, entanglement=entanglement, reps=reps
             )
         elif self == AnsatzEnum.excitation_preserving:
-            return ExcitationPreserving(
+            ansatz = ExcitationPreserving(
                 num_qubits=n_qbits, entanglement=entanglement, reps=reps
             )
         elif self == AnsatzEnum.efficient_su2:
-            return EfficientSU2(num_qubits=n_qbits, entanglement=entanglement, reps=reps)
+            ansatz = EfficientSU2(
+                num_qubits=n_qbits, entanglement=entanglement, reps=reps
+            )
         elif self == AnsatzEnum.ry_rz:
-            return TwoLocal(
+            ansatz = TwoLocal(
                 num_qubits=n_qbits,
                 rotation_blocks=["ry", "rz"],
                 entanglement_blocks="cz",
@@ -59,16 +81,18 @@ class AnsatzEnum(Enum):
             err_str = f"Unkown ansatz {self.name}!"
             raise ValueError(err_str)
 
+        return _decompose_blueprint(ansatz)
+
 
 class QiskitVQC:
     def __init__(
         self,
-        quantum_instance: QuantumInstance,
+        sampler,
         feature_map: QuantumCircuit,
         ansatz: QuantumCircuit,
         optimizer: Optimizer,
     ):
-        self.__quantum_instance = quantum_instance
+        self.__sampler = sampler
         self.__feature_map = feature_map
         self.__ansatz = ansatz
         self.__optimizer = optimizer
@@ -76,7 +100,7 @@ class QiskitVQC:
             feature_map=feature_map,
             ansatz=ansatz,
             optimizer=optimizer,
-            quantum_instance=quantum_instance,
+            sampler=sampler,
         )
 
     def prep_labels(self, labels: np.ndarray) -> (np.ndarray, dict):
@@ -118,7 +142,7 @@ class QiskitVQC:
                 feature_map=self.__feature_map,
                 ansatz=self.__ansatz,
                 optimizer=optimizer,
-                quantum_instance=self.__quantum_instance,
+                sampler=self.__sampler,
             )
             labels_onehot, _ = self.prep_labels(labels)
             vqc.fit(data, labels_onehot)
@@ -135,11 +159,30 @@ class QiskitVQC:
             }
         )
 
-        # Bind parameters to circuit
-        circuit = vqc._neural_network._circuit.bind_parameters(param_values)
+        # Bind parameters to circuit, ignoring any parameters not present.
+        circuit = vqc._neural_network._circuit
+        param_values_by_name = {param.name: value for param, value in param_values.items()}
+        bound_params = {
+            param: value
+            for param, value in param_values.items()
+            if param in circuit.parameters
+        }
+        if circuit.parameters - bound_params.keys():
+            bound_params.update(
+                {
+                    param: param_values_by_name.get(param.name, 0.0)
+                    for param in circuit.parameters
+                    if param not in bound_params
+                }
+            )
+        circuit = circuit.assign_parameters(bound_params, strict=False)
+        if circuit.parameters:
+            circuit = circuit.assign_parameters(
+                {param: 0.0 for param in circuit.parameters}, strict=False
+            )
 
         # Return qasm string
-        return circuit.qasm()
+        return qasm2_dumps(circuit)
 
     def get_weights(self) -> Optional[np.ndarray]:
         if self.__vqc._fit_result is None:

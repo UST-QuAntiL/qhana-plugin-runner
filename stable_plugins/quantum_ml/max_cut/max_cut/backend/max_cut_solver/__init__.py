@@ -22,8 +22,8 @@ from maxcut import MaxCutBM
 from .classic_naive_max_cut_solver import ClassicNaiveMaxCutSolver
 from .vqe_max_cut_solver import VQEMaxCutSolver
 
-from qiskit.primitives.sampler import BaseSampler
-from qiskit.algorithms.optimizers.optimizer import Optimizer
+from qiskit.primitives.base import BaseSamplerV2
+from qiskit_algorithms.optimizers import Optimizer
 
 
 def create_graph(adjacency_matrix: np.array) -> nx.Graph:
@@ -89,7 +89,7 @@ def classic_naive_maxcut(adjacency_matrix: np.array) -> (np.array, float):
 
 def vqe_maxcut(
     adjacency_matrix: np.array,
-    backend: BaseSampler,
+    backend: BaseSamplerV2,
     optimizer: Optimizer,
     reps: int,
     entanglement: str,

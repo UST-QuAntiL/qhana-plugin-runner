@@ -68,7 +68,9 @@ class VQC(QHAnaPluginBase):
     def get_requirements(self) -> str:
         return (
             "qiskit~=2.2.3\n"
+            "qiskit-aer>=0.17,<0.18\n"
             f"qiskit-machine-learning~={qiskit_ml_version}\n"
+            "numpy<2\n"
             "scikit-learn~=1.2.0\n"
             "muid~=0.5.3"
         )

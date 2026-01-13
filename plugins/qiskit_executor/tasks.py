@@ -123,7 +123,7 @@ def start_execution(self, db_id: int) -> str:
     circuit: QuantumCircuit
     try:
         circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QiskitError):
         circuit = loads2(circuit_qasm)
 
     TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")

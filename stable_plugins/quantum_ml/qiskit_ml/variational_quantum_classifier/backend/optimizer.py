@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from enum import Enum
-from qiskit.algorithms.optimizers import (
+
+from qiskit_machine_learning.optimizers import (
     Optimizer,
     ADAM,
     AQGD,
-    BOBYQA,
     COBYLA,
     NELDER_MEAD,
     SPSA,
@@ -30,7 +30,6 @@ from qiskit.algorithms.optimizers import (
 class OptimizerEnum(Enum):
     adam = "ADAM"
     aqgd = "AQGD"
-    bobyqa = "BOBYQA"
     cobyla = "COBYLA"
     nelder_mead = "NELDER_MEAD"
     spsa = "SPSA"
@@ -43,8 +42,6 @@ class OptimizerEnum(Enum):
             return ADAM(maxiter=maxitr)
         if self == OptimizerEnum.aqgd:
             return AQGD(maxiter=maxitr)
-        if self == OptimizerEnum.bobyqa:
-            return BOBYQA(maxiter=maxitr)
         if self == OptimizerEnum.cobyla:
             return COBYLA(maxiter=maxitr)
         if self == OptimizerEnum.nelder_mead:

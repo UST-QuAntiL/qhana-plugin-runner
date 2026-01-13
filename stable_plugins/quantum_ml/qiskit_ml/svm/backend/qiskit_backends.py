@@ -15,8 +15,16 @@
 import enum
 
 from celery.utils.log import get_task_logger
-from qiskit import IBMQ, Aer
-from qiskit.utils import QuantumInstance
+
+try:
+    from qiskit_aer import Aer
+except ImportError:  # pragma: no cover - optional dependency
+    Aer = None
+
+try:
+    from qiskit_ibm_provider import IBMProvider
+except ImportError:  # pragma: no cover - optional dependency
+    IBMProvider = None
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -40,23 +48,37 @@ class QiskitBackends(enum.Enum):
         ibmq_token: str,
         custom_backend_name: str,
         shots: int,
-    ) -> QuantumInstance:
+    ):
         if self.name.startswith("aer"):
             # Use local AER backend
+            if Aer is None:
+                raise RuntimeError("qiskit-aer is required for local aer backends.")
             aer_backend_name = self.name[4:]
 
             backend = Aer.get_backend(aer_backend_name)
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError(
+                    "qiskit-ibm-provider is required for IBMQ backends."
+                )
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
             backend = provider.get_backend(self.name)
         elif self.name.startswith("custom_ibmq"):
             # Use custom IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError(
+                    "qiskit-ibm-provider is required for IBMQ backends."
+                )
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
             backend = provider.get_backend(custom_backend_name)
         else:
             raise NotImplementedError("Unknown qiskit backend specified!")
 
-        return QuantumInstance(backend, shots=shots)
+        return backend

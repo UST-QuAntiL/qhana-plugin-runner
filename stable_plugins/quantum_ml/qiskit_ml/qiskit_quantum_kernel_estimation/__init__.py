@@ -69,7 +69,9 @@ class QiskitQKE(QHAnaPluginBase):
     def get_requirements(self) -> str:
         return (
             f"qiskit~={qiskit_version}\n"
+            "qiskit-aer>=0.17,<0.18\n"
             f"qiskit-machine-learning~={qiskit_ml_version}\n"
+            "numpy<2\n"
             "muid~=0.5.3"
         )
 

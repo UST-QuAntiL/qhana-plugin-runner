@@ -294,7 +294,7 @@ class QiskitSimulator(QHAnaPluginBase):
         return QISKIT_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=2.2.3"
+        return "qiskit~=2.2.3\nqiskit-aer>=0.17,<0.18"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -320,7 +320,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     try:
         circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QiskitError):
         circuit = loads2(circuit_qasm)
 
     compiled_counts = transpile(circuit, backend_counts)

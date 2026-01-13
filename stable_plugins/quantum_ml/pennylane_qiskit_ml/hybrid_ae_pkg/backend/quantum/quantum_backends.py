@@ -12,9 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pennylane as qml
 from enum import Enum
-from qiskit import IBMQ
+
+import pennylane as qml
+
+try:
+    from qiskit_ibm_provider import IBMProvider
+except ImportError:  # pragma: no cover - optional dependency
+    IBMProvider = None
+
+from pennylane_qiskit_compat import (
+    ensure_qiskit_ibm_provider_compat,
+    pennylane_qiskit_version_override,
+)
 
 
 class QuantumBackends(Enum):
@@ -38,34 +48,51 @@ class QuantumBackends(Enum):
         qubit_cnt: int,
         shots: int,
     ) -> qml.Device:
+        if self.name.startswith(("aer", "ibmq", "custom_ibmq")):
+            ensure_qiskit_ibm_provider_compat()
         if self.name.startswith("aer"):
             # Use local AER backend
             aer_backend_name = self.name[4:]
-            return qml.device(
-                "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
-            )
+            with pennylane_qiskit_version_override():
+                return qml.device(
+                    "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
+                )
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError(
+                    "qiskit-ibm-provider is required for IBMQ backends."
+                )
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
-            return qml.device(
-                "qiskit.ibmq",
-                wires=qubit_cnt,
-                backend=self.name,
-                provider=provider,
-                shots=shots,
-            )
+            with pennylane_qiskit_version_override():
+                return qml.device(
+                    "qiskit.ibmq",
+                    wires=qubit_cnt,
+                    backend=self.name,
+                    provider=provider,
+                    shots=shots,
+                )
         elif self.name.startswith("custom_ibmq"):
             # Use custom IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError(
+                    "qiskit-ibm-provider is required for IBMQ backends."
+                )
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
-            return qml.device(
-                "qiskit.ibmq",
-                wires=qubit_cnt,
-                backend=custom_backend_name,
-                provider=provider,
-                shots=shots,
-            )
+            with pennylane_qiskit_version_override():
+                return qml.device(
+                    "qiskit.ibmq",
+                    wires=qubit_cnt,
+                    backend=custom_backend_name,
+                    provider=provider,
+                    shots=shots,
+                )
         elif self.name.startswith("pennylane"):
             return qml.device(self.value[10:], wires=qubit_cnt, shots=shots)
         else:

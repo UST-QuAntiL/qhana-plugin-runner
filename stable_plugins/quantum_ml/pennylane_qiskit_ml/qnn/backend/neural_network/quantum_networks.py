@@ -196,7 +196,10 @@ class DressedQuantumNet(QuantumNet):
         # Apply the quantum circuit to each element of the batch and append to q_out
         q_out = torch.Tensor(input_features.shape[0], self.n_qubits)
         for idx, elem in enumerate(q_in):
-            q_out_elem = self.q_net(elem, self.q_params).float().unsqueeze(0)
+            q_out_elem = self.q_net(elem, self.q_params)
+            if not isinstance(q_out_elem, torch.Tensor):
+                q_out_elem = torch.tensor(q_out_elem, dtype=torch.float32)
+            q_out_elem = q_out_elem.float().unsqueeze(0)
             q_out[idx] = q_out_elem
 
         # two-dimensional prediction from the postprocessing layer

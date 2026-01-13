@@ -62,6 +62,7 @@ class QKMeans(QHAnaPluginBase):
     def get_requirements(self) -> str:
         return (
             "qiskit~=2.2.3\n"
+            "qiskit-aer>=0.17,<0.18\n"
             "pennylane~=0.35.1\n"
             "pennylane-qiskit~=0.35.1\n"
             "autoray<0.8"
