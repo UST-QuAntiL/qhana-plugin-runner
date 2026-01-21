@@ -58,7 +58,8 @@ def validate_pragma(sql: str) -> str | None:
     return None
 
 
-def validate_sql(sql: str) -> tuple[str | None, str]:
+# This helper normalizes SQL while validating it for read-only usage.
+def _normalize_and_validate_sql(sql: str) -> tuple[str | None, str]:
     """Parse SQL and enforce single-statement, read-only policy."""
     normalized = normalize_sql(sql)
     if not normalized:
@@ -78,10 +79,15 @@ def validate_sql(sql: str) -> tuple[str | None, str]:
     return None, normalized
 
 
+def validate_sql(sql: str) -> str | None:
+    """Return a user-facing error message for invalid SQL, else None."""
+    error, _ = _normalize_and_validate_sql(sql)
+    return error
+
+
 def check_sql_syntax(sql: str) -> str | None:
     """Return a user-facing error message for invalid SQL, else None."""
-    error, _ = validate_sql(sql)
-    return error
+    return validate_sql(sql)
 
 
 def _prepare_connection(con: duckdb.DuckDBPyConnection) -> None:
@@ -101,7 +107,7 @@ def _prepare_connection(con: duckdb.DuckDBPyConnection) -> None:
 
 def execute_sql(sql: str, *, limit: int | None = None) -> tuple[list[str], list[tuple]]:
     """Run validated SQL and return column names plus result rows."""
-    error, normalized = validate_sql(sql)
+    error, normalized = _normalize_and_validate_sql(sql)
     if error:
         raise ValueError(error)
     with duckdb.connect(
@@ -134,14 +140,15 @@ def serialize_value(value):
     return value
 
 
-def serialize_rows(rows: Iterable[tuple]) -> list[list]:
-    """Serialize an iterable of rows into JSON-friendly lists."""
-    return [[serialize_value(value) for value in row] for row in rows]
+def serialize_rows(rows: Iterable[tuple]) -> Iterable[list]:
+    """Serialize rows into JSON-friendly lists as a generator."""
+    for row in rows:
+        yield [serialize_value(value) for value in row]
 
 
-def rows_to_records(columns: list[str], rows: Iterable[tuple]) -> list[dict]:
+def rows_to_records(columns: list[str], rows: Iterable[tuple]) -> Iterable[dict]:
     """Map result rows to dict records keyed by column name."""
-    return [
-        {column: serialize_value(value) for column, value in zip(columns, row)}
-        for row in rows
-    ]
+    for row in rows:
+        yield {
+            column: serialize_value(value) for column, value in zip(columns, row)
+        }

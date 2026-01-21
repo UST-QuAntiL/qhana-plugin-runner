@@ -16,14 +16,32 @@ import marshmallow as ma
 
 from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 
+from .util import validate_sql
+
+
+def _validate_sql(value: str) -> None:
+    error = validate_sql(value)
+    if error:
+        raise ma.ValidationError(error)
+
 
 class SQLInputSchema(FrontendFormBaseSchema):
     sql = ma.fields.String(
         required=True,
+        validate=_validate_sql,
         metadata={
             "label": "SQL Command",
             "description": "DuckDB SQL query to execute.",
             "input_type": "textarea",
+        },
+    )
+    output_data_type = ma.fields.String(
+        missing="entity/list",
+        validate=ma.validate.Regexp(r"^[A-Za-z0-9_./*-]+$"),
+        metadata={
+            "label": "Output Data Type",
+            "description": "Data type metadata for the output file.",
+            "input_type": "text",
         },
     )
     output_format = ma.fields.String(
