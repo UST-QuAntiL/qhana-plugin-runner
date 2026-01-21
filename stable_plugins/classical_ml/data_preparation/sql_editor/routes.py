@@ -3,11 +3,11 @@ from json import dumps
 from typing import Mapping
 
 from celery.canvas import chain
-from flask import jsonify, redirect, render_template
+import celery
+from flask import Response, current_app, jsonify, redirect, render_template
 from flask.globals import request
 from flask.helpers import url_for
 from flask.views import MethodView
-from flask.wrappers import Response
 from flask_smorest import abort
 from marshmallow import EXCLUDE
 
@@ -24,7 +24,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from .plugin import SQL_BLP, SQLEditor
 from .schemas import SQLInputSchema
-from .tasks import process_sql
+from .tasks import preview_sql, process_sql
 from .util import PREVIEW_LIMIT, execute_sql, serialize_rows, validate_sql
 
 
@@ -59,7 +59,7 @@ class PluginRootView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="entity/list",
+                        data_type="*",
                         content_type=["text/csv", "application/json"],
                         required=True,
                     )
@@ -104,8 +104,8 @@ class SQLFrontend(MethodView):
 
         render_errors = dict(errors) if errors else {}
         sql_value = (data.get("sql") or "").strip()
-        if sql_value:
-            sql_error, _ = validate_sql(sql_value)
+        if sql_value and "sql" not in render_errors:
+            sql_error = validate_sql(sql_value)
             if sql_error:
                 render_errors.setdefault("sql", []).append(sql_error)
                 valid = False
@@ -134,11 +134,7 @@ class CheckSQL(MethodView):
     @SQL_BLP.arguments(SQLInputSchema(unknown=EXCLUDE), location="form")
     @SQL_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        sql = arguments.get("sql", "")
-        error, _ = validate_sql(sql)
-        if error:
-            return jsonify({"ok": False, "error": error}), HTTPStatus.BAD_REQUEST
-        return jsonify({"ok": True})
+        return Response(status=HTTPStatus.NO_CONTENT)
 
 
 @SQL_BLP.route("/preview/")
@@ -149,8 +145,31 @@ class PreviewSQL(MethodView):
     @SQL_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         sql = arguments.get("sql", "")
+        use_celery = current_app.config.get("SQL_EDITOR_PREVIEW_USE_CELERY", False)
+        preview_timeout = current_app.config.get("SQL_EDITOR_PREVIEW_TIMEOUT_SEC", 10)
         try:
-            columns, rows = execute_sql(sql, limit=PREVIEW_LIMIT)
+            if use_celery:
+                task_result = preview_sql.s(sql, PREVIEW_LIMIT).apply_async()
+                try:
+                    payload = task_result.get(timeout=preview_timeout)
+                except celery.exceptions.TimeoutError:
+                    task_result.revoke(terminate=True)
+                    return (
+                        jsonify(
+                            {
+                                "ok": False,
+                                "error": (
+                                    f"Preview timed out after {preview_timeout} seconds."
+                                ),
+                            }
+                        ),
+                        HTTPStatus.REQUEST_TIMEOUT,
+                    )
+                columns = payload.get("columns", [])
+                serialized_rows = payload.get("rows", [])
+            else:
+                columns, rows = execute_sql(sql, limit=PREVIEW_LIMIT)
+                serialized_rows = list(serialize_rows(rows))
         except ValueError as err:
             return (
                 jsonify({"ok": False, "error": str(err)}),
@@ -162,7 +181,6 @@ class PreviewSQL(MethodView):
                 HTTPStatus.BAD_REQUEST,
             )
 
-        serialized_rows = serialize_rows(rows)
         return jsonify(
             {
                 "ok": True,
@@ -184,9 +202,6 @@ class ProcessSQL(MethodView):
     @SQL_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         sql = arguments.get("sql", "")
-        error, _ = validate_sql(sql)
-        if error:
-            abort(HTTPStatus.BAD_REQUEST, message=error)
 
         db_task = ProcessingTask(task_name=process_sql.name, parameters=dumps(arguments))
         db_task.save(commit=True)
