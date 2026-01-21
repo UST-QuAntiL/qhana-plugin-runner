@@ -16,6 +16,29 @@ from .util import execute_sql, rows_to_records, serialize_rows
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def _write_json_records(output, records) -> None:
+    output.write("[")
+    first = True
+    for record in records:
+        if first:
+            first = False
+        else:
+            output.write(",")
+        output.write(json.dumps(record, ensure_ascii=True, default=str))
+    output.write("]")
+
+
+@CELERY.task(
+    name=f"{plugin.SQLEditor.instance.identifier}.preview_sql",
+    bind=True,
+    ignore_result=False,
+)
+def preview_sql(self, sql: str, limit: int) -> dict:
+    """Execute a limited SQL query for preview purposes."""
+    columns, rows = execute_sql(sql, limit=limit)
+    return {"columns": columns, "rows": list(serialize_rows(rows))}
+
+
 @CELERY.task(
     name=f"{plugin.SQLEditor.instance.identifier}.process_sql",
     bind=True,
@@ -33,21 +56,19 @@ def process_sql(self, db_id: int) -> str:
     params = loads(task_data.parameters or "{}")
     sql = params.get("sql", "")
     output_format = params.get("output_format", "csv")
+    output_data_type = (params.get("output_data_type") or "entity/list").strip()
+    if not output_data_type:
+        output_data_type = "entity/list"
 
     columns, rows = execute_sql(sql)
     file_name = "sql_result.csv"
-    data_type = "entity/list"
+    data_type = output_data_type
     if output_format == "json":
         file_name = "sql_result.json"
 
     with SpooledTemporaryFile(mode="w", newline="") as output:
         if output_format == "json":
-            json.dump(
-                rows_to_records(columns, rows),
-                output,
-                ensure_ascii=True,
-                default=str,
-            )
+            _write_json_records(output, rows_to_records(columns, rows))
             content_type = "application/json"
         else:
             writer = csv.writer(output)
