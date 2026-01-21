@@ -405,8 +405,17 @@ class QCAtlasClient:
                     raise ValueError(
                         f"Could not decode json response from url '{content_url}'!"
                     ) from err
-                plugin_name = data["pluginName"]
-                parameters = data.get("parameters", [])
+                plugin_name = data.get("pluginName")
+                if plugin_name is None:
+                    current_app.logger.error(
+                        f"data file of implementation_package of type qhana_plugin at {content_url} and {implementation_package_url} does not have pluginName set"
+                    )
+                    return TryOutMetadata(
+                        name=f"{implementation_package.description} (BROKEN)",
+                        pluginName="",
+                        parameters={},
+                    )
+                parameters = data.get("parameters", {})
                 return TryOutMetadata(
                     name=implementation_package.description,
                     pluginName=plugin_name,
