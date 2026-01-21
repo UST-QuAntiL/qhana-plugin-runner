@@ -3,8 +3,8 @@
 {% block head %}
 {{ super() }}
 <style>
-    /* TODO */
     textarea#input_sql {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         min-height: 6lh;
         field-sizing: content;
     }
@@ -90,13 +90,32 @@
         <div class="qhana-form-field">
             <label class="qhana-form-label" for="output_format">Output Format</label>
             <div class="qhana-input-wrapper">
-                <select class="qhana-form-input" name="output_format" id="output_format" autocomplete="off">
-                    <option value="csv" {% if values.get("output_format", "csv") == "csv" %}selected{% endif %}>CSV</option>
-                    <option value="json" {% if values.get("output_format") == "json" %}selected{% endif %}>JSON</option>
+                <select class="qhana-form-input" name="outputFormat" id="output_format" autocomplete="off">
+                    <option value="csv" {% if values.get("outputFormat", "csv") == "csv" %}selected{% endif %}>CSV</option>
+                    <option value="json" {% if values.get("outputFormat") == "json" %}selected{% endif %}>JSON</option>
                 </select>
             </div>
             <div id="output_format-description" class="qhana-input-description">
                 <p>Choose the output format written by the processing task.</p>
+            </div>
+        </div>
+        <div class="qhana-form-field">
+            <label class="qhana-form-label" for="output_data_type">Output Data Type</label>
+            <div class="qhana-input-wrapper">
+                <select class="qhana-form-input" name="outputDataType" id="output_data_type" autocomplete="off">
+                    <option value="entity/list" {% if values.get("outputDataType", "entity/list") == "entity/list" %}selected{% endif %}>entity/list</option>
+                    <option value="entity/vector" {% if values.get("outputDataType") == "entity/vector" %}selected{% endif %}>entity/vector</option>
+                    <option value="entity/matrix" {% if values.get("outputDataType") == "entity/matrix" %}selected{% endif %}>entity/matrix</option>
+                    <option value="entity/attribute-metadata" {% if values.get("outputDataType") == "entity/attribute-metadata" %}selected{% endif %}>entity/attribute-metadata</option>
+                    <option value="custom/attribute-similarities" {% if values.get("outputDataType") == "custom/attribute-similarities" %}selected{% endif %}>custom/attribute-similarities</option>
+                    <option value="custom/attribute-distances" {% if values.get("outputDataType") == "custom/attribute-distances" %}selected{% endif %}>custom/attribute-distances</option>
+                    <option value="custom/entity-distances" {% if values.get("outputDataType") == "custom/entity-distances" %}selected{% endif %}>custom/entity-distances</option>
+                    <option value="graph/taxonomy" {% if values.get("outputDataType") == "graph/taxonomy" %}selected{% endif %}>graph/taxonomy</option>
+                    <option value="*" {% if values.get("outputDataType") == "*" %}selected{% endif %}>*</option>
+                </select>
+            </div>
+            <div id="output_data_type-description" class="qhana-input-description">
+                <p>Override the output data type metadata if needed for downstream plugins.</p>
             </div>
         </div>
         <div class="qhana-form-buttons">
@@ -197,6 +216,45 @@
         }
     }
 
+    function getFirstError(errors) {
+        if (!errors || typeof errors !== "object") {
+            return null;
+        }
+        for (const key of Object.keys(errors)) {
+            const value = errors[key];
+            if (Array.isArray(value) && value.length > 0) {
+                return value[0];
+            }
+            if (typeof value === "string") {
+                return value;
+            }
+            if (value && typeof value === "object") {
+                const nested = getFirstError(value);
+                if (nested) {
+                    return nested;
+                }
+            }
+        }
+        return null;
+    }
+
+    function getErrorMessage(payload) {
+        if (!payload) {
+            return "Request failed.";
+        }
+        if (payload.error) {
+            return payload.error;
+        }
+        const nestedError = getFirstError(payload.errors);
+        if (nestedError) {
+            return nestedError;
+        }
+        if (payload.message) {
+            return payload.message;
+        }
+        return "Request failed.";
+    }
+
     async function postForm(form, url) {
         const response = await fetch(url, {
             method: "POST",
@@ -209,8 +267,7 @@
             payload = {};
         }
         if (!response.ok || payload.ok === false) {
-            const message = payload.error || payload.message || "Request failed.";
-            throw new Error(message);
+            throw new Error(getErrorMessage(payload));
         }
         return payload;
     }
@@ -270,7 +327,7 @@
             type: "request-data-url",
             inputKey: "dataSource",
             acceptedInputType: "*",
-            acceptedContentTypes: ["text/csv", "application/json"], // TODO: check against duckdb
+            acceptedContentTypes: ["text/csv", "application/json"],
         });
     }
 
