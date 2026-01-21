@@ -149,6 +149,4 @@ def serialize_rows(rows: Iterable[tuple]) -> Iterable[list]:
 def rows_to_records(columns: list[str], rows: Iterable[tuple]) -> Iterable[dict]:
     """Map result rows to dict records keyed by column name."""
     for row in rows:
-        yield {
-            column: serialize_value(value) for column, value in zip(columns, row)
-        }
+        yield {column: serialize_value(value) for column, value in zip(columns, row)}
