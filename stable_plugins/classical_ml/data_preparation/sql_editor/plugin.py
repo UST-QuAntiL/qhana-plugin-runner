@@ -5,7 +5,7 @@ from flask import Blueprint, Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_name = "duckdb"
+_name = "sql-editor"
 _version = "v0.1.0"
 
 
