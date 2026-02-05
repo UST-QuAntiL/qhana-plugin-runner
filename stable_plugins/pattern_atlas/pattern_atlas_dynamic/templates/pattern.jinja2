@@ -251,11 +251,15 @@
                     <p>{{content | markdown}}</p>
                 </details>
                 {% endfor %}
-                {% for try_out_metadata in qc_atlas.get_try_out_metadata_for_pattern(pattern) %}
-                <button class="try-out-button" data-plugin-name="{{ try_out_metadata.pluginName }}" data-parameters="{{ try_out_metadata.parameters | json_dumps | escape }}">
-                    <strong>Try {{ try_out_metadata.name }} in QHAna</strong>
-                    <span id="arrow-qhana">&#8617;</span>
-                </button>
+                {% for button in qc_atlas.get_try_out_buttons_for_pattern(pattern) %}
+                    <button
+                        class="try-out-button"
+                        data-identifier="{{ button.identifier }}"
+                        data-parameters="{{ button.parameters | json_dumps | escape }}"
+                    >
+                        <strong>Try {{ button.name }} in QHAna</strong>
+                        <span id="arrow-qhana">&#8617;</span>
+                    </button>
                 {% endfor %}
             </div>
             <script>
@@ -263,7 +267,7 @@
               for (const try_out_button of try_out_buttons) {
                 const message = {
                   type: "switch-plugin",
-                  pluginName: try_out_button.dataset.pluginName,
+                  pluginName: try_out_button.dataset.identifier,
                   parameters: JSON.parse(try_out_button.dataset.parameters),
                 }
                 try_out_button.onclick = () => {

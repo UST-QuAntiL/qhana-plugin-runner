@@ -14,7 +14,7 @@
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Union, Literal
+from typing import Union, Literal, Any
 
 
 @dataclass
@@ -323,9 +323,14 @@ class QCFile:
 @dataclass
 class TryOutMetadata:
     name: str
-    pluginName: str
+    identifiers: list[str]
     parameters: dict[str, str]
 
+@dataclass
+class TryOutButton:
+    name: str
+    identifier: str
+    parameters: dict[str, Any]
 
 @dataclass
 class QCAtlasContent:
@@ -334,7 +339,9 @@ class QCAtlasContent:
         default_factory=lambda: defaultdict(list)
     )
     implementation_packages_files: dict[str, QCFile] = field(default_factory=dict)
-    try_out_metadata: dict[str, TryOutMetadata] = field(default_factory=dict)
+    try_out_metadata: dict[str, list[TryOutMetadata]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
 
     def add_implementation(self, implementation: AlgorithmImplementation):
         self.implementations[implementation.id] = implementation
@@ -356,7 +363,7 @@ class QCAtlasContent:
         implementation_package: ImplementationPackage,
         try_out_metadata: TryOutMetadata,
     ):
-        self.try_out_metadata[implementation_package.id] = try_out_metadata
+        self.try_out_metadata[implementation_package.id].append(try_out_metadata)
 
     def get_implementations(self, pattern: Pattern) -> list[AlgorithmImplementation]:
         return [
@@ -373,14 +380,22 @@ class QCAtlasContent:
 
     def get_try_out_metadata(
         self, implementation_package: ImplementationPackage
-    ) -> TryOutMetadata | None:
-        return self.try_out_metadata.get(implementation_package.id)
+    ) -> list[TryOutMetadata]:
+        return self.try_out_metadata.get(implementation_package.id, [])
 
-    def get_try_out_metadata_for_pattern(self, pattern: Pattern) -> list[TryOutMetadata]:
-        return [
-            try_out_metadata
-            for implementation in self.get_implementations(pattern)
-            for implementation_package in self.get_implementation_packages(implementation)
-            for try_out_metadata in [self.get_try_out_metadata(implementation_package)]
-            if try_out_metadata is not None
-        ]
+    def get_try_out_buttons_for_pattern(self, pattern: Pattern) -> list[TryOutButton]:
+        buttons: list[TryOutButton] = []
+
+        for impl in self.get_implementations(pattern):
+            for pkg in self.get_implementation_packages(impl):
+                for tom in self.get_try_out_metadata(pkg):
+                    for ident in tom.identifiers:
+                        buttons.append(
+                            TryOutButton(
+                                name=tom.name,
+                                identifier=ident,
+                                parameters=tom.parameters,
+                            )
+                        )
+
+        return buttons

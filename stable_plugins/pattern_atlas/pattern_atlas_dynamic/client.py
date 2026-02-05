@@ -309,10 +309,10 @@ class QCAtlasClient:
                 atlas.add_implementation_package(implementation, implementation_package)
                 file = self.get_files(implementation, implementation_package)
                 atlas.add_implementation_package_file(implementation_package, file)
-                try_out_metadata = self.get_try_out_metadata(
+                try_out_metadata_list = self.get_try_out_metadata(
                     implementation, implementation_package, file
                 )
-                if try_out_metadata is not None:
+                for try_out_metadata in try_out_metadata_list:
                     atlas.add_try_out_metadata(implementation_package, try_out_metadata)
 
         return atlas
@@ -372,7 +372,7 @@ class QCAtlasClient:
         implementation: AlgorithmImplementation,
         implementation_package: ImplementationPackage,
         file: QCFile,
-    ) -> TryOutMetadata | None:
+    ) -> list[TryOutMetadata]:
         implementation_package_url = urljoin(
             self.atlas_url,
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}",
@@ -383,46 +383,38 @@ class QCAtlasClient:
         )
         match implementation_package.type:
             case "workflow_editor":
-                return TryOutMetadata(
+                return [TryOutMetadata(
                     name=implementation_package.description,
-                    pluginName="Workflow Editor",
+                    identifiers=["workflow_editor"],
                     parameters={"load-url": content_url},
-                )
+                )]
+
             case "low_code_modeler":
-                return TryOutMetadata(
+                return [TryOutMetadata(
                     name=implementation_package.description,
-                    pluginName="LCM",
+                    identifiers=["low_code_modeler"],
                     parameters={"load-url": content_url},
-                )
+                )]
+
             case "qhana_plugin":
-                response = get(
-                    content_url,
-                    headers={"Accept": "application/hal+json, application/json"},
-                ).raise_for_status()
-                try:
-                    data = response.json()
-                except Exception as err:
-                    raise ValueError(
-                        f"Could not decode json response from url '{content_url}'!"
-                    ) from err
+                data = (
+                    get(content_url, headers={"Accept": "application/hal+json, application/json"})
+                    .raise_for_status()
+                    .json()
+                )
                 plugin_name = data.get("pluginName")
-                if plugin_name is None:
-                    current_app.logger.error(
-                        f"data file of implementation_package of type qhana_plugin at {content_url} and {implementation_package_url} does not have pluginName set"
-                    )
-                    return TryOutMetadata(
-                        name=f"{implementation_package.description} (BROKEN)",
-                        pluginName="",
-                        parameters={},
-                    )
-                parameters = data.get("parameters", {})
-                return TryOutMetadata(
+                params = data.get("parameters", {})
+
+                # Hier kannst du mehrere identifiers hinterlegen:
+                idents = ["qhana_plugin"]
+                if plugin_name:
+                    idents.append(plugin_name)  # optionaler spezifischer Ident
+
+                return [TryOutMetadata(
                     name=implementation_package.description,
-                    pluginName=plugin_name,
-                    parameters=parameters,
-                )
+                    identifiers=idents,
+                    parameters=params,
+                )]
+
             case _:
-                current_app.logger.info(
-                    f"implementation_package at {implementation_package_url} has unhandled type {json.dumps(implementation_package.type)}"
-                )
-                return None
+                return []
