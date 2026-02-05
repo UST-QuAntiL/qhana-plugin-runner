@@ -402,17 +402,14 @@ class QCAtlasClient:
                     .raise_for_status()
                     .json()
                 )
-                plugin_name = data.get("pluginName")
+                identifiers = data.get("identifiers", [])
                 params = data.get("parameters", {})
 
-                # Hier kannst du mehrere identifiers hinterlegen:
-                idents = ["qhana_plugin"]
-                if plugin_name:
-                    idents.append(plugin_name)  # optionaler spezifischer Ident
+
 
                 return [TryOutMetadata(
                     name=implementation_package.description,
-                    identifiers=idents,
+                    identifiers=identifiers,
                     parameters=params,
                 )]
 
