@@ -386,7 +386,7 @@ class QCAtlasClient:
                 return [
                     TryOutMetadata(
                         name=implementation_package.description,
-                        identifiers=["workflow_editor"],
+                        identifiers=["workflow-editor"],
                         parameters={"load-url": content_url},
                     )
                 ]
@@ -395,7 +395,7 @@ class QCAtlasClient:
                 return [
                     TryOutMetadata(
                         name=implementation_package.description,
-                        identifiers=["low_code_modeler"],
+                        identifiers=["low-code-modeler"],
                         parameters={"load-url": content_url},
                     )
                 ]
