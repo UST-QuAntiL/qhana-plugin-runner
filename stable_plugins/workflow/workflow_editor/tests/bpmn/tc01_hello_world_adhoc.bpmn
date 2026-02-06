@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_HelloWorld_Adhoc_Testcase"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:process id="hello_world_adhoc_test" name="Hello World + Ad-hoc Subprocess Test" isExecutable="true" camunda:versionTag="0.1">
+
+    <!-- Start -->
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <!-- User input task -->
+    <bpmn:userTask id="UserTask_Input" name="User Input">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.inputHelloWorld" label="Input for Hello-World" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <!-- Ad-hoc subprocess -->
+    <bpmn:adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc group (contains hello-world)">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_HelloWorld" name="hello-world">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+            <!-- <camunda:inputParameter name="qhanaIdentifier">hello-world</camunda:inputParameter> -->
+            <!-- <camunda:inputParameter name="qhanaVersion">v0.2.1</camunda:inputParameter> -->
+            <camunda:inputParameter name="qinput.inputStr">${qoutput.inputHelloWorld}</camunda:inputParameter>
+            <camunda:outputParameter name="result.qoutput.helloWorldResult">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <!-- End -->
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequence flows -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="AdHocSubProcess_1"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_1" targetRef="EndEvent_1"/>
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="hello_world_adhoc_test">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="150" y="120" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="240" y="96" width="200" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1">
+        <dc:Bounds x="500" y="80" width="320" height="110"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_HelloWorld_di" bpmnElement="QHanaTask_HelloWorld">
+        <dc:Bounds x="540" y="110" width="240" height="60"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="880" y="120" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="186" y="138"/>
+        <di:waypoint x="240" y="136"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="440" y="136"/>
+        <di:waypoint x="500" y="136"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="820" y="136"/>
+        <di:waypoint x="880" y="138"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
