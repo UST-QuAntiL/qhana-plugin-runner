@@ -326,11 +326,13 @@ class TryOutMetadata:
     identifiers: list[str]
     parameters: dict[str, str]
 
+
 @dataclass
 class TryOutButton:
     name: str
     identifier: str
     parameters: dict[str, Any]
+
 
 @dataclass
 class QCAtlasContent:

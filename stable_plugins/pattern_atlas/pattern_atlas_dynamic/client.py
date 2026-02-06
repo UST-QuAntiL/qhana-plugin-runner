@@ -383,35 +383,42 @@ class QCAtlasClient:
         )
         match implementation_package.type:
             case "workflow_editor":
-                return [TryOutMetadata(
-                    name=implementation_package.description,
-                    identifiers=["workflow_editor"],
-                    parameters={"load-url": content_url},
-                )]
+                return [
+                    TryOutMetadata(
+                        name=implementation_package.description,
+                        identifiers=["workflow_editor"],
+                        parameters={"load-url": content_url},
+                    )
+                ]
 
             case "low_code_modeler":
-                return [TryOutMetadata(
-                    name=implementation_package.description,
-                    identifiers=["low_code_modeler"],
-                    parameters={"load-url": content_url},
-                )]
+                return [
+                    TryOutMetadata(
+                        name=implementation_package.description,
+                        identifiers=["low_code_modeler"],
+                        parameters={"load-url": content_url},
+                    )
+                ]
 
             case "qhana_plugin":
                 data = (
-                    get(content_url, headers={"Accept": "application/hal+json, application/json"})
+                    get(
+                        content_url,
+                        headers={"Accept": "application/hal+json, application/json"},
+                    )
                     .raise_for_status()
                     .json()
                 )
                 identifiers = data.get("identifiers", [])
                 params = data.get("parameters", {})
 
-
-
-                return [TryOutMetadata(
-                    name=implementation_package.description,
-                    identifiers=identifiers,
-                    parameters=params,
-                )]
+                return [
+                    TryOutMetadata(
+                        name=implementation_package.description,
+                        identifiers=identifiers,
+                        parameters=params,
+                    )
+                ]
 
             case _:
                 return []
