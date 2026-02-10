@@ -430,7 +430,7 @@ def purge_task_queues(c):
 
 
 @task
-def start_gunicorn(c, workers=1, log_level="info", docker=False):
+def start_gunicorn(c, workers=1, log_level="info", timeout=300, docker=False):
     """Start the gunicorn server.
 
     This task is intended to be run in docker.
@@ -441,6 +441,7 @@ def start_gunicorn(c, workers=1, log_level="info", docker=False):
         c (Context): task context
         workers (int, optional): The number of parallel workers (set this to around <nr_of_cores>*2 + 1). Defaults to 1.
         log_level (str, optional): the log level to output in console. Defaults to "info".
+        timeout (int, optional): The gunicorn timeout. Defaults to 300.
         docker (bool, optional): set this to True if running inside of docker. Defaults to false.
     """
     server_port: str = environ.get("SERVER_PORT", "8080")
@@ -463,6 +464,8 @@ def start_gunicorn(c, workers=1, log_level="info", docker=False):
         log_level.lower(),
         "--error-logfile=-",
         f"{MODULE_NAME}:create_app()",
+        "--timeout",
+        environ.get("GUNICORN_TIMEOUT", str(timeout)),
     ]
 
     print(join(cmd))
