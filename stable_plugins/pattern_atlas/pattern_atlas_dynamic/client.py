@@ -395,7 +395,7 @@ class QCAtlasClient:
                 return [
                     TryOutMetadata(
                         name=implementation_package.description,
-                        identifiers=["low-code-modeler"],
+                        identifiers=["LCM"],
                         parameters={"load-url": content_url},
                     )
                 ]
