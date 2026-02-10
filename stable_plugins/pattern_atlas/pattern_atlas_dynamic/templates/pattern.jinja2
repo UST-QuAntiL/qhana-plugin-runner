@@ -265,9 +265,16 @@
             <script>
               try_out_buttons = document.querySelectorAll(".try-out-button")
               for (const try_out_button of try_out_buttons) {
+                const identifierWords = try_out_button.dataset.identifier.split("-");
+
+                const capitalizedWords = identifierWords.map(word =>
+                  word.charAt(0).toUpperCase() + word.slice(1)
+                );
+
+                const pluginName = capitalizedWords.join(" ");
                 const message = {
                   type: "switch-plugin",
-                  pluginName: try_out_button.dataset.identifier,
+                  pluginName: pluginName,
                   parameters: JSON.parse(try_out_button.dataset.parameters),
                 }
                 try_out_button.onclick = () => {
