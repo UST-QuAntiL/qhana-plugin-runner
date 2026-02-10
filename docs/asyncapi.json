@@ -62,6 +62,9 @@
             },
             {
               "$ref": "#/components/messages/requestImplementations"
+            },
+            {
+              "$ref": "#/components/messages/switchPlugin"
             }
           ]
         }
@@ -637,6 +640,33 @@
           },
           "required": [
             "type"
+          ]
+        }
+      },
+      "switchPlugin": {
+        "summary": "The user has wants to view data in a different plugin.",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "switch-plugin"
+            },
+            "pluginName": {
+              "type": "string",
+              "description": "The plugin name as used in the plugin registry."
+            },
+            "parameters": {
+              "type": "object",
+              "description": "Additional parameters which should be passed to the plugin.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "pluginName"
           ]
         }
       }

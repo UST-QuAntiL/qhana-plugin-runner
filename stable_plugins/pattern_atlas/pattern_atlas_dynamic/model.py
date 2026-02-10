@@ -1,0 +1,403 @@
+# Copyright 2024 University of Stuttgart
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Union, Literal, Any
+
+
+@dataclass
+class PatternLanguage:
+    language_id: str
+    name: str
+    logo: str
+    copyright_notice: str
+    patterns: set[str] = field(default_factory=set)
+
+    def get_patterns_sorted(self, atlas: "PatternAtlasContent") -> list["Pattern"]:
+        patterns = [atlas.patterns[p] for p in self.patterns]
+        patterns.sort(key=lambda p: (p.name, p.pattern_id))
+        return patterns
+
+
+@dataclass
+class Pattern:
+    pattern_id: str
+    pattern_language: str
+    name: str
+    icon: str
+    citation: str
+    aliases: str = ""
+    tags: set[str] = field(default_factory=set)
+    categories: set[str] = field(default_factory=set)
+    intent: str = ""
+    intent_type: Literal["intent", "problem", "question"] = "intent"
+    context: str = ""
+    forces: str = ""
+    solution: str = ""
+    result: str = ""
+    examples: str = ""
+    related_patterns: str = ""
+    known_uses: str = ""
+    extra_sections: dict[str, str] = field(default_factory=dict)
+    outgoing_edges: set[str] = field(default_factory=set)
+    incoming_edges: set[str] = field(default_factory=set)
+    undirected_edges: set[str] = field(default_factory=set)
+
+    @property
+    def has_related_patterns(self):
+        return (
+            bool(self.related_patterns)
+            or bool(self.outgoing_edges)
+            or bool(self.incoming_edges)
+            or bool(self.undirected_edges)
+        )
+
+    def get_relations_sorted(
+        self, atlas: "PatternAtlasContent"
+    ) -> list["PatternRelation"]:
+        relations: list[PatternRelation] = []
+
+        relations += sorted(
+            (atlas.relations[r] for r in self.outgoing_edges),
+            key=lambda r: r.get_target(atlas).name,
+        )
+
+        relations += sorted(
+            (
+                atlas.relations[r].from_persepective(self.pattern_id)
+                for r in self.undirected_edges
+            ),
+            key=lambda r: r.get_target(atlas).name,
+        )
+
+        relations += sorted(
+            (atlas.relations[r] for r in self.incoming_edges),
+            key=lambda r: r.get_source(atlas).name,
+        )
+
+        return relations
+
+    def update(self, pattern: "Pattern"):
+        if self.pattern_id != pattern.pattern_id:
+            raise ValueError("Can only update patterns when the pattern id matches!")
+
+        for attr in (
+            "pattern_language",
+            "name",
+            "icon",
+            "citation",
+            "aliases",
+            "intent",
+            "context",
+            "forces",
+            "solution",
+            "result",
+            "examples",
+            "related_patterns",
+            "known_uses",
+        ):
+            self_value = getattr(self, attr)
+            if not self_value:
+                setattr(self, attr, getattr(pattern, attr))
+
+        for set_attr in (
+            "tags",
+            "outgoing_edges",
+            "incoming_edges",
+            "undirected_edges",
+        ):
+            self_value: set = getattr(self, set_attr)
+            self_value.update(getattr(pattern, set_attr))
+
+        self.extra_sections.update(pattern.extra_sections)
+
+    def get_language(self) -> str:
+        return self.pattern_language
+
+
+@dataclass
+class PatternRelation:
+    edge_id: str
+    source_pattern: str
+    target_pattern: str
+    is_directed: bool = True
+    edge_type: str = "uses"
+    description: str = ""
+
+    def get_source(self, atlas: "PatternAtlasContent") -> Pattern:
+        return atlas.patterns[self.source_pattern]
+
+    def get_target(self, atlas: "PatternAtlasContent") -> Pattern:
+        return atlas.patterns[self.target_pattern]
+
+    def from_persepective(self, pattern_id: str) -> "PatternRelation":
+        if self.is_directed:
+            raise ValueError("Cannot switch source and target for directed edges!")
+        if self.source_pattern == pattern_id:
+            return self
+        if self.target_pattern == pattern_id:
+            return PatternRelation(
+                edge_id=self.edge_id,
+                source_pattern=self.target_pattern,
+                target_pattern=self.source_pattern,
+                is_directed=False,
+                edge_type=self.edge_type,
+                description=self.description,
+            )
+        raise ValueError(
+            f"Pattern {pattern_id} is not connected by this PatternRelation!"
+        )
+
+
+@dataclass
+class PatternAtlasContent:
+    asset_map: dict[str, str] = field(default_factory=dict)
+    languages: dict[str, PatternLanguage] = field(default_factory=dict)
+    patterns: dict[str, Pattern] = field(default_factory=dict)
+    relations: dict[str, PatternRelation] = field(default_factory=dict)
+
+    def add(self, obj: Union[PatternLanguage, Pattern, PatternRelation]):
+        if isinstance(obj, PatternLanguage):
+            self.add_language(obj)
+        elif isinstance(obj, Pattern):
+            self.add_pattern(obj)
+        elif isinstance(obj, PatternRelation):
+            self.add_pattern_relation(obj)
+        else:
+            raise TypeError(f"Unsupported Type {type(obj)}!")
+
+    def add_language(self, language: PatternLanguage):
+        if language.language_id in self.languages:
+            return
+        self.languages[language.language_id] = language
+
+    def add_pattern(self, pattern: Pattern):
+        existing_pattern = self.patterns.get(pattern.pattern_id)
+        if existing_pattern:
+            existing_pattern.update(pattern)
+        else:
+            self.patterns[pattern.pattern_id] = pattern
+        if pattern.pattern_language:
+            language = self.languages.get(pattern.pattern_language)
+            if not language:
+                raise KeyError(
+                    "Attempted to add Pattern before adding its Pattern Language!"
+                )
+            language.patterns.add(pattern.pattern_id)
+
+    def add_pattern_relation(self, pattern_relation: PatternRelation):
+        if pattern_relation.edge_id in self.relations:
+            return
+        self.relations[pattern_relation.edge_id] = pattern_relation
+        source_pattern = self.patterns.get(pattern_relation.source_pattern)
+        target_pattern = self.patterns.get(pattern_relation.target_pattern)
+        if not source_pattern:
+            raise KeyError("Attempted to add Relation before its source Pattern!")
+        if not target_pattern:
+            raise KeyError("Attempted to add Relation before its target Pattern!")
+        if pattern_relation.is_directed:
+            source_pattern.outgoing_edges.add(pattern_relation.edge_id)
+            target_pattern.incoming_edges.add(pattern_relation.edge_id)
+        else:
+            source_pattern.undirected_edges.add(pattern_relation.edge_id)
+            target_pattern.undirected_edges.add(pattern_relation.edge_id)
+
+
+# in-memory Index: language_id -> relation_ids
+class PatternAtlasIndex:
+    def __init__(self):
+        self._built = False
+        self._lang_to_rel: dict[str, list[PatternRelation]] = {}
+
+    def build(self, atlas: PatternAtlasContent):
+        if self._built:
+            return
+
+        for lang in atlas.languages.keys():
+            self._lang_to_rel[lang] = []
+
+        for rel in atlas.relations.values():
+            src_lang = rel.get_source(atlas).get_language()
+            if src_lang == rel.get_target(atlas).get_language():
+                if not src_lang in self._lang_to_rel:
+                    raise RuntimeError("Language not in atlas")
+                self._lang_to_rel[src_lang].append(rel)
+
+        self._built = True
+
+    def relations_for_language(self, language_id: str) -> list[PatternRelation]:
+        if not self._built:
+            raise RuntimeError("AtlasIndex not built yet")
+        return self._lang_to_rel.get(language_id, [])
+
+
+@dataclass
+class AlgorithmImplementation:
+    id: str
+    implementedAlgorithmId: str
+    name: str
+    inputFormat: str
+    outputFormat: str
+    description: str
+    contributors: str
+    assumptions: str
+    parameter: str
+    dependencies: str
+    version: str
+    license: str
+    technology: str
+    problemStatement: str
+    softwarePlatforms: str
+    patterns: list[str]
+
+    @staticmethod
+    def from_dict(input) -> "AlgorithmImplementation":
+        return AlgorithmImplementation(
+            id=input["id"],
+            implementedAlgorithmId=input["implementedAlgorithmId"],
+            name=input["name"],
+            inputFormat=input["inputFormat"],
+            outputFormat=input["outputFormat"],
+            description=input["description"],
+            contributors=input["contributors"],
+            assumptions=input["assumptions"],
+            parameter=input["parameter"],
+            dependencies=input["dependencies"],
+            version=input["version"],
+            license=input["license"],
+            technology=input["technology"],
+            problemStatement=input["problemStatement"],
+            softwarePlatforms=input["softwarePlatforms"],
+            patterns=input["patterns"],
+        )
+
+
+@dataclass
+class ImplementationPackage:
+    id: str
+    name: str
+    description: str
+    packageType: str
+    type: str
+
+    @staticmethod
+    def from_dict(input) -> "ImplementationPackage":
+        return ImplementationPackage(
+            id=input["id"],
+            name=input["name"],
+            description=input["description"],
+            packageType=input["packageType"],
+            type=input["type"],
+        )
+
+
+@dataclass
+class QCFile:
+    id: str
+    name: str
+    mimeType: str
+    fileURL: str
+
+    @staticmethod
+    def from_dict(input) -> "QCFile":
+        return QCFile(
+            id=input["id"],
+            name=input["name"],
+            mimeType=input["mimeType"],
+            fileURL=input["fileURL"],
+        )
+
+
+@dataclass
+class TryOutMetadata:
+    name: str
+    identifiers: list[str]
+    parameters: dict[str, str]
+
+
+@dataclass
+class TryOutButton:
+    name: str
+    identifier: str
+    parameters: dict[str, Any]
+
+
+@dataclass
+class QCAtlasContent:
+    implementations: dict[str, AlgorithmImplementation] = field(default_factory=dict)
+    implementation_packages: dict[str, list[ImplementationPackage]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+    implementation_packages_files: dict[str, QCFile] = field(default_factory=dict)
+    try_out_metadata: dict[str, list[TryOutMetadata]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+
+    def add_implementation(self, implementation: AlgorithmImplementation):
+        self.implementations[implementation.id] = implementation
+
+    def add_implementation_package(
+        self,
+        implementation: AlgorithmImplementation,
+        implementation_package: ImplementationPackage,
+    ):
+        self.implementation_packages[implementation.id].append(implementation_package)
+
+    def add_implementation_package_file(
+        self, implementation_package: ImplementationPackage, file: QCFile
+    ):
+        self.implementation_packages_files[implementation_package.id] = file
+
+    def add_try_out_metadata(
+        self,
+        implementation_package: ImplementationPackage,
+        try_out_metadata: TryOutMetadata,
+    ):
+        self.try_out_metadata[implementation_package.id].append(try_out_metadata)
+
+    def get_implementations(self, pattern: Pattern) -> list[AlgorithmImplementation]:
+        return [
+            implementation
+            for implementation in self.implementations.values()
+            if f"pattern-languages/{pattern.pattern_language}/{pattern.pattern_id}"
+            in implementation.patterns
+        ]
+
+    def get_implementation_packages(
+        self, implementation: AlgorithmImplementation
+    ) -> list[ImplementationPackage]:
+        return self.implementation_packages[implementation.id]
+
+    def get_try_out_metadata(
+        self, implementation_package: ImplementationPackage
+    ) -> list[TryOutMetadata]:
+        return self.try_out_metadata.get(implementation_package.id, [])
+
+    def get_try_out_buttons_for_pattern(self, pattern: Pattern) -> list[TryOutButton]:
+        buttons: list[TryOutButton] = []
+
+        for impl in self.get_implementations(pattern):
+            for pkg in self.get_implementation_packages(impl):
+                for tom in self.get_try_out_metadata(pkg):
+                    for ident in tom.identifiers:
+                        buttons.append(
+                            TryOutButton(
+                                name=tom.name,
+                                identifier=ident,
+                                parameters=tom.parameters,
+                            )
+                        )
+
+        return buttons

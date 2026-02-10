@@ -1,0 +1,80 @@
+{% extends "base.jinja2" %}
+
+
+{% block head %}
+    {{ super() }}
+    <title>{{language.name}} – Pattern Atlas</title>
+{% endblock head %}
+
+
+{%- block content -%}
+    <main>
+    <header class="page-header">
+        <h1 class="page-head">{{language.name}} </h1>
+
+        <div class="search-container">
+            <button id="cards-btn-active" class="cards-btn-active"> Cards </button>
+            <button id="graph-btn" class="graph-btn"><a class="cards-graph-link" href="graph.html"> Graph </a></button>
+            <div class="search-input-wrap">
+                <span class="search-icon" aria-hidden="true">🔍︎</span>
+                <input
+                    type="text"
+                    id="search-box"
+                    placeholder="Search by name or tag..."
+                    class="search-input"
+                />
+            </div>
+            <div class="sort-dropdown">
+                <button id="sort-btn" class="sort-btn">
+                    Sort by: <span id="sort-label">Name: Z → A</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <ul id="sort-menu" class="sort-menu">
+                    <li><a href="index.html">Name: A → Z</a></li>
+                    <li><a href="reverse.html">Name: Z → A</a></li>
+                    <li><a href="categorized.html">Tags</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <div class="card-grid">
+        {%- for pattern in patterns -%}
+        <div class="card"
+        data-name="{{pattern.name | lower}}"
+        data-tags="{{pattern.tags | join(' ') | lower}}"
+        data-categories="{{pattern.categories | join(' ') | lower}}">
+            <img src="{{pattern.icon | resource}}" aria-hidden="true">
+            <h2><a href="{{base_url}}/pattern-languages/{{language.language_id}}/{{pattern.pattern_id}}/index.html">{{pattern.name}}</a></h2>
+        </div>
+        {%- endfor -%}
+    </div>
+
+    <script>
+        const searchBox = document.getElementById('search-box');
+        const cards = document.querySelectorAll('.card-grid .card');
+
+        searchBox.addEventListener('input', () => {
+            const query = searchBox.value.toLowerCase();
+
+            cards.forEach(card => {
+                const name = card.dataset.name;
+                const tags = card.dataset.tags;
+                const categories = card.dataset.categories;
+                const visible = name.includes(query) || tags.includes(query) || categories.includes(query);
+                card.style.display = visible ? '' : 'none';
+            });
+        });
+
+
+        const dropdown = document.querySelector('.sort-dropdown');
+        const sortBtn   = document.getElementById('sort-btn');
+        const sortMenu  = document.getElementById('sort-menu');
+
+        sortBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            dropdown.classList.toggle('open');
+        });
+    </script>
+    </main>
+{%- endblock content -%}

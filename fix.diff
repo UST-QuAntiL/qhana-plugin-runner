@@ -1,0 +1,13 @@
+diff --git a/qhana_plugin_runner/api/plugin_schemas.py b/qhana_plugin_runner/api/plugin_schemas.py
+index 99a35264..627675c5 100644
+--- a/qhana_plugin_runner/api/plugin_schemas.py
++++ b/qhana_plugin_runner/api/plugin_schemas.py
+@@ -156,7 +156,7 @@ class PluginDependencyMetadataSchema(MaBaseSchema):
+     def remove_empty_attributes(self, data: Dict[str, Any], **kwargs):
+         """Remove result attributes from serialized tasks that have not finished."""
+         for attr in ("name", "type", "version", "tags"):
+-            if data[attr] == None:
++            if attr in data and data[attr] == None:
+                 del data[attr]
+         return data
+ 
