@@ -149,6 +149,9 @@
             vertical-align: middle;
             margin-left: 5px;
         }
+        .button-disabled {
+            filter: saturate(0);
+        }
     </style>
 
     <link rel="stylesheet" type="text/css" href="{{'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css' | resource}}" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
@@ -262,26 +265,29 @@
                     </button>
                 {% endfor %}
             </div>
-            <script>
-              try_out_buttons = document.querySelectorAll(".try-out-button")
-              for (const try_out_button of try_out_buttons) {
-                const identifierWords = try_out_button.dataset.identifier.split("-");
+            <script type="module">
+                const try_out_buttons = document.querySelectorAll(".try-out-button");
+                const res = await fetch("http://localhost:5006/api/plugins?item-count=100");
+                const pluginData = await res.json();
 
-                const capitalizedWords = identifierWords.map(word =>
-                  word.charAt(0).toUpperCase() + word.slice(1)
-                );
 
-                const pluginName = capitalizedWords.join(" ");
-                const message = {
-                  type: "switch-plugin",
-                  pluginName: pluginName,
-                  parameters: JSON.parse(try_out_button.dataset.parameters),
+                for (const try_out_button of try_out_buttons) {
+                    const identifier = try_out_button.dataset.identifier;
+                    const pluginName = pluginData.embedded.find((plugin) => plugin.data.identifier === identifier)?.data?.title;
+                    if (pluginName === undefined) {
+                        try_out_button.classList.add("button-disabled")
+                        continue;
+                    }
+                    const message = {
+                        type: "switch-plugin",
+                        pluginName: pluginName,
+                        parameters: JSON.parse(try_out_button.dataset.parameters),
+                    }
+                    try_out_button.onclick = () => {
+                        console.log(message)
+                        sendMessage(message)
+                    }
                 }
-                try_out_button.onclick = () => {
-                  console.log(message)
-                  sendMessage(message)
-                }
-              }
             </script>
         </main>
     </div>
