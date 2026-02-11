@@ -8,3 +8,4 @@ The following dependencies are used by these plugins:
 - scikit-learn~=1.1
 - torch~=2.0.1
 - muid~=0.5.3
+- autoray==0.7.2
