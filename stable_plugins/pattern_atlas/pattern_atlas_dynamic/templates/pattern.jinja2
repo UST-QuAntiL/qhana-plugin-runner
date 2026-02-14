@@ -142,6 +142,7 @@
             bottom: 10px;
             left: 10px;
             width: 20em;
+            text-decoration: none;
         }
         #arrow-qhana{
             font-size: 30px;
@@ -255,40 +256,12 @@
                 </details>
                 {% endfor %}
                 {% for button in qc_atlas.get_try_out_buttons_for_pattern(pattern) %}
-                    <button
-                        class="try-out-button"
-                        data-identifier="{{ button.identifier }}"
-                        data-parameters="{{ button.parameters | json_dumps | escape }}"
-                    >
+                    <a href="{{ button.url }}" class="try-out-button">
                         <strong>Try {{ button.name }} in QHAna</strong>
                         <span id="arrow-qhana">&#8617;</span>
-                    </button>
+                    </a>
                 {% endfor %}
             </div>
-            <script type="module">
-                const try_out_buttons = document.querySelectorAll(".try-out-button");
-                const res = await fetch("http://localhost:5006/api/plugins?item-count=100");
-                const pluginData = await res.json();
-
-
-                for (const try_out_button of try_out_buttons) {
-                    const identifier = try_out_button.dataset.identifier;
-                    const pluginName = pluginData.embedded.find((plugin) => plugin.data.identifier === identifier)?.data?.title;
-                    if (pluginName === undefined) {
-                        try_out_button.classList.add("button-disabled")
-                        continue;
-                    }
-                    const message = {
-                        type: "switch-plugin",
-                        pluginName: pluginName,
-                        parameters: JSON.parse(try_out_button.dataset.parameters),
-                    }
-                    try_out_button.onclick = () => {
-                        console.log(message)
-                        sendMessage(message)
-                    }
-                }
-            </script>
         </main>
     </div>
 

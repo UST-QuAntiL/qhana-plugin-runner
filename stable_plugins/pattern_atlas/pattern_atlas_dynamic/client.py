@@ -18,6 +18,7 @@ from urllib.parse import urljoin, urlparse
 
 from flask import current_app
 from httpx import get
+from urllib.parse import urlencode
 
 from .model import (
     AlgorithmImplementation,
@@ -381,24 +382,65 @@ class QCAtlasClient:
             self.atlas_url,
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}/file/content",
         )
+
+        plugin_reg_url = "http://localhost:5006/api/plugins/"
+
         match implementation_package.type:
+
             case "workflow_editor":
-                return [
-                    TryOutMetadata(
-                        name=implementation_package.description,
-                        identifiers=["workflow-editor"],
-                        parameters={"load-url": content_url},
-                    )
-                ]
+
+                response = get(
+                    plugin_reg_url,
+                    params={
+                        "name": "workflow-editor"
+                    },
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                data = response.json()
+                if "embedded" not in data or not data["embedded"]:
+                    return []
+                plugin = data.get("embedded")[0]
+                plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
+                if plugin_url:
+                    final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
+
+
+                    return [
+                        TryOutMetadata(
+                            name=implementation_package.description,
+                            identifiers=["workflow-editor"],
+                            parameters={"load-url": content_url},
+                            url=final_url
+                        )
+                    ]
+                return []
 
             case "low_code_modeler":
-                return [
-                    TryOutMetadata(
-                        name=implementation_package.description,
-                        identifiers=["low-code-modeler"],
-                        parameters={"load-url": content_url},
-                    )
-                ]
+                response = get(
+                    plugin_reg_url,
+                    params={
+                        "name": "low-code-modeler"
+                    },
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                data = response.json()
+                if "embedded" not in data or not data["embedded"]:
+                    return []
+                plugin = data.get("embedded")[0]
+                plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
+                if plugin_url:
+                    final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
+                    return [
+                        TryOutMetadata(
+                            name=implementation_package.description,
+                            identifiers=["low-code-modeler"],
+                            parameters={"load-url": content_url},
+                            url=final_url
+                        )
+                    ]
+                return []
 
             case "qhana_plugin":
                 data = (
@@ -412,13 +454,45 @@ class QCAtlasClient:
                 identifiers = data.get("identifiers", [])
                 params = data.get("parameters", {})
 
-                return [
-                    TryOutMetadata(
-                        name=implementation_package.description,
-                        identifiers=identifiers,
-                        parameters=params,
+
+                unique_urls = set()
+
+                for identifier in identifiers:
+                    response = get(
+                        plugin_reg_url,
+                        params={
+                            "name": identifier
+                        },
+                        headers={"Accept": "application/json"},
                     )
-                ]
+                    response.raise_for_status()
+                    data = response.json()
+                    if "embedded" not in data or not data["embedded"]:
+                        continue
+                    plugin = data.get("embedded")[0]
+                    plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
+                    if plugin_url:
+                        unique_urls.add(plugin_url)
+
+                try_out_list = []
+
+                for base_url in unique_urls:
+                    final_url = (
+                        f"{base_url}?{urlencode(params)}"
+                        if params else base_url
+                    )
+                    try_out_list.append(
+                        TryOutMetadata(
+                            name=implementation_package.description,
+                            identifiers=[],
+                            parameters={},
+                            url=final_url,
+                        )
+                    )
+
+
+
+                return try_out_list
 
             case _:
                 return []

@@ -325,13 +325,13 @@ class TryOutMetadata:
     name: str
     identifiers: list[str]
     parameters: dict[str, str]
+    url: str
 
 
 @dataclass
 class TryOutButton:
     name: str
-    identifier: str
-    parameters: dict[str, Any]
+    url: str
 
 
 @dataclass
@@ -391,12 +391,11 @@ class QCAtlasContent:
         for impl in self.get_implementations(pattern):
             for pkg in self.get_implementation_packages(impl):
                 for tom in self.get_try_out_metadata(pkg):
-                    for ident in tom.identifiers:
+                    if tom.url:
                         buttons.append(
                             TryOutButton(
                                 name=tom.name,
-                                identifier=ident,
-                                parameters=tom.parameters,
+                                url=tom.url,
                             )
                         )
 
