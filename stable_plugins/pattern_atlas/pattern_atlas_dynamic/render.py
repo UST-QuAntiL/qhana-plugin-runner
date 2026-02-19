@@ -138,7 +138,6 @@ class ExtractImageLinksParser(HTMLParser):
 
 
 class DynamicRender:
-
     def __init__(self, is_planqk: bool = False) -> None:
         self.is_planqk = is_planqk
         self._resource_map: dict[str, str] = {"": "/ui/assets/empty.svg"}
@@ -163,21 +162,7 @@ class DynamicRender:
         if resolved:
             return resolved
 
-        try:
-            response = get(
-                url, headers={"Accept": "*/*"}, timeout=3, follow_redirects=True
-            )
-            response.raise_for_status()
-            byte_content = response.content
-            suffixes = Path(response.url.path).suffixes
-            asset_url = f"/plugins/{PA_BLP.name}/ui/assets/{sha3_256(byte_content).hexdigest()}{''.join(suffixes)}"
-            self._resource_map[url] = asset_url
-            self._resource_bytes[asset_url] = byte_content
-        except Exception:
-            print(f"Failed to download resource: {url}")
-            self._resource_map[url] = f"/plugins/{PA_BLP.name}/ui/assets/empty.svg#" + url
-
-        return self._resource_map[url]
+        return url
 
     def _markdown(self, markdown: str):
         if not markdown:
@@ -197,15 +182,6 @@ class DynamicRender:
         html = html.replace('href="pattern-languages/', 'href="/pattern-languages/')
         html = html.replace('href="http', 'target="_blank" href="http')
         return Markup(html)
-
-    def render_empty_picture_asset(self):
-        template = self._jinja.get_template("empty.svg")
-        svg = template.render()
-        svg_bytes = svg.encode("utf-8")
-
-        asset_url = f"/plugins/{PA_BLP.name}/ui/assets/empty.svg"
-        self._resource_map[""] = asset_url
-        self._resource_bytes[asset_url] = svg_bytes
 
     def render_styles(self) -> str:
         template = self._jinja.get_template("styles.css")
