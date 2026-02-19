@@ -391,9 +391,7 @@ class QCAtlasClient:
 
                 response = get(
                     plugin_reg_url,
-                    params={
-                        "name": "workflow-editor"
-                    },
+                    params={"name": "workflow-editor"},
                     headers={"Accept": "application/json"},
                 )
                 response.raise_for_status()
@@ -405,13 +403,12 @@ class QCAtlasClient:
                 if plugin_url:
                     final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
 
-
                     return [
                         TryOutMetadata(
                             name=implementation_package.description,
                             identifiers=["workflow-editor"],
                             parameters={"load-url": content_url},
-                            url=final_url
+                            url=final_url,
                         )
                     ]
                 return []
@@ -419,9 +416,7 @@ class QCAtlasClient:
             case "low_code_modeler":
                 response = get(
                     plugin_reg_url,
-                    params={
-                        "name": "low-code-modeler"
-                    },
+                    params={"name": "low-code-modeler"},
                     headers={"Accept": "application/json"},
                 )
                 response.raise_for_status()
@@ -437,7 +432,7 @@ class QCAtlasClient:
                             name=implementation_package.description,
                             identifiers=["low-code-modeler"],
                             parameters={"load-url": content_url},
-                            url=final_url
+                            url=final_url,
                         )
                     ]
                 return []
@@ -460,9 +455,7 @@ class QCAtlasClient:
                 for identifier in identifiers:
                     response = get(
                         plugin_reg_url,
-                        params={
-                            "name": identifier
-                        },
+                        params={"name": identifier},
                         headers={"Accept": "application/json"},
                     )
                     response.raise_for_status()
@@ -477,9 +470,7 @@ class QCAtlasClient:
                 for tag in tags:
                     response = get(
                         plugin_reg_url,
-                        params={
-                            "tags": tag
-                        },
+                        params={"tags": tag},
                         headers={"Accept": "application/json"},
                     )
                     response.raise_for_status()
@@ -490,14 +481,11 @@ class QCAtlasClient:
                         plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
                         if plugin_url:
                             unique_urls.add(plugin_url)
-                
+
                 try_out_list = []
 
                 for base_url in unique_urls:
-                    final_url = (
-                        f"{base_url}?{urlencode(params)}"
-                        if params else base_url
-                    )
+                    final_url = f"{base_url}?{urlencode(params)}" if params else base_url
                     try_out_list.append(
                         TryOutMetadata(
                             name=implementation_package.description,
@@ -506,8 +494,6 @@ class QCAtlasClient:
                             url=final_url,
                         )
                     )
-
-
 
                 return try_out_list
 
