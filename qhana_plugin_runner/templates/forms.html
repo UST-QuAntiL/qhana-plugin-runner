@@ -23,9 +23,7 @@ form_label_class="qhana-form-label", form_input_class="qhana-form-input") -%}
   <div class="qhana-input-wrapper">
     {% if input_type == 'textarea' %}
     <textarea class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off" 
-      aria-describedby="{{key}}-description" {{ 'required' if field.required else '' }}>
-        {{values.get(form_key, '')}}
-    </textarea>
+      aria-describedby="{{key}}-description" {{ 'required' if field.required else '' }}>{{values.get(form_key, '')}}</textarea>
     {% elif input_type == "select" %}
     <select class="{{form_input_class}}" name="{{form_key}}" id="{{key}}" autocomplete="off">
       {% for name, value in field.metadata.get("options", extras.get(key, {}).get("options", {}) if extras else {}).items() %}
