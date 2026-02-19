@@ -453,7 +453,7 @@ class QCAtlasClient:
                 )
                 identifiers = data.get("identifiers", [])
                 params = data.get("parameters", {})
-
+                tags = data.get("tags", [])
 
                 unique_urls = set()
 
@@ -474,6 +474,23 @@ class QCAtlasClient:
                     if plugin_url:
                         unique_urls.add(plugin_url)
 
+                for tag in tags:
+                    response = get(
+                        plugin_reg_url,
+                        params={
+                            "tags": tag
+                        },
+                        headers={"Accept": "application/json"},
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    if "embedded" not in data or not data["embedded"]:
+                        continue
+                    for plugin in data.get("embedded", []):
+                        plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
+                        if plugin_url:
+                            unique_urls.add(plugin_url)
+                
                 try_out_list = []
 
                 for base_url in unique_urls:
