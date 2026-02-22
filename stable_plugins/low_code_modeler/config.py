@@ -1,6 +1,6 @@
 from os import getenv
 from flask import Flask
-from qhana_plugin_runner.registry_client.client import PluginRegistryClient
+from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
 
 DEFAULT_CONFIG = {
@@ -17,8 +17,8 @@ DEFAULT_CONFIG = {
 }
 
 
-def get_config(app: Flask) -> dict[str, str]:
-    with PluginRegistryClient(app) as client:
+def get_config() -> dict[str, str]:
+    with PLUGIN_REGISTRY_CLIENT as client:
         config = dict(DEFAULT_CONFIG)
         for key, value in config.items():
             config[key] = getenv(f"LCM_{key}", value)

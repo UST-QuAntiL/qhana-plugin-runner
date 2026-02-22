@@ -59,7 +59,7 @@ class UI(MethodView):
 class Config(MethodView):
     @LCM_BLP.require_jwt("jwt", optional=True)
     def get(self):
-        return get_config(LowCodeModeler.instance.app)
+        return get_config()
 
 
 @LCM_BLP.route("/process/")
