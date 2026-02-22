@@ -20,6 +20,8 @@ from flask import current_app
 from httpx import get
 from urllib.parse import urlencode
 
+from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
+
 from .model import (
     AlgorithmImplementation,
     ImplementationPackage,
@@ -383,14 +385,14 @@ class QCAtlasClient:
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}/file/content",
         )
 
-        plugin_reg_url = "http://localhost:5006/api/plugins/"
+        plugin_registry_url = PLUGIN_REGISTRY_CLIENT.plugin_registry_url
 
         match implementation_package.type:
 
             case "workflow_editor":
 
                 response = get(
-                    plugin_reg_url,
+                    plugin_registry_url,
                     params={"name": "workflow-editor"},
                     headers={"Accept": "application/json"},
                 )
@@ -415,7 +417,7 @@ class QCAtlasClient:
 
             case "low_code_modeler":
                 response = get(
-                    plugin_reg_url,
+                    plugin_registry_url,
                     params={"name": "low-code-modeler"},
                     headers={"Accept": "application/json"},
                 )
@@ -454,7 +456,7 @@ class QCAtlasClient:
 
                 for identifier in identifiers:
                     response = get(
-                        plugin_reg_url,
+                        plugin_registry_url,
                         params={"name": identifier},
                         headers={"Accept": "application/json"},
                     )
@@ -469,7 +471,7 @@ class QCAtlasClient:
 
                 for tag in tags:
                     response = get(
-                        plugin_reg_url,
+                        plugin_registry_url,
                         params={"tags": tag},
                         headers={"Accept": "application/json"},
                     )

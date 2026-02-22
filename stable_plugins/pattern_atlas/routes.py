@@ -1,3 +1,4 @@
+from os import getenv
 from http import HTTPStatus
 from flask import render_template, send_from_directory, redirect, request
 from flask.views import MethodView
@@ -11,14 +12,38 @@ from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
     PluginType,
 )
+from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
 from .plugin import PA_BLP, PatternAtlas
 from .pattern_atlas_dynamic.client import PatternAtlasClient, QCAtlasClient
 from .pattern_atlas_dynamic.model import PatternAtlasContent, QCAtlasContent
 from .pattern_atlas_dynamic.render import DynamicRender
 
-pattern_atlas_client = PatternAtlasClient("http://localhost:1977/patternatlas")
-qc_atlas_client = QCAtlasClient("http://localhost:6626/atlas")
+DEFAULT_CONFIG = {
+    "PatternAtlasApiEndpoint": "http://localhost:1977/patternatlas",
+    "QcAtlasEndpoint": "http://localhost:6626/atlas",
+}
+
+
+def get_config() -> dict[str, str]:
+    with PLUGIN_REGISTRY_CLIENT as client:
+        config = dict(DEFAULT_CONFIG)
+        for key, value in config.items():
+            config[key] = getenv(f"PA_{key}", value)
+        services = client.fetch_by_rel(
+            ["service"], {"service-id": ",".join(config.keys())}
+        )
+        if services is not None:
+            for api_link in services.data.get("items", []):
+                service = client.fetch_by_api_link(api_link)
+                service_id = service.data.get("serviceId")
+                url = service.data.get("url")
+                if service_id is None or url is None:
+                    continue
+                config[service_id] = url
+        return config
+
+
 renderer = DynamicRender()
 
 _cache_data = None
@@ -30,6 +55,9 @@ def get_cached_atlases() -> tuple[PatternAtlasContent, QCAtlasContent]:
     global _cache_data, _cache_timestamp
     now = time.time()
     if _cache_data is None or (now - _cache_timestamp > CACHE_TTL):
+        config = get_config()
+        pattern_atlas_client = PatternAtlasClient(config["PatternAtlasApiEndpoint"])
+        qc_atlas_client = QCAtlasClient(config["QcAtlasEndpoint"])
         _cache_data = pattern_atlas_client.get_all(), qc_atlas_client.get_all()
         _cache_timestamp = now
     return _cache_data
