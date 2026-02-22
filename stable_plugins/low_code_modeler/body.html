@@ -68,15 +68,24 @@
 	      subtitle.classList.add("diagram-subtitle");
 	      const date = new Date(metadata.timestamp)
 	      subtitle.textContent = date.toLocaleString();
-	      const button = document.createElement("button");
-	      button.setAttribute("value", `load:${modelId}`);
-	      button.setAttribute("type", "submit");
-	      button.classList.add("qhana-form-submit");
-	      button.textContent = `Load ${metadata.name}`;
+	      const loadButton = document.createElement("button");
+	      const downloadButtonAnchor = document.createElement("a");
+	      const downloadButtonButton = document.createElement("input");
+	      downloadButtonButton.type = "button";
+	      downloadButtonButton.className = "qhana-form-submit";
+	      downloadButtonButton.value = "Download";
+	      downloadButtonAnchor.href = `../models/${modelId}/`;
+	      downloadButtonAnchor.download = `${modelId}.json`;
+	      downloadButtonAnchor.appendChild(downloadButtonButton);
+	      loadButton.setAttribute("value", `load:${modelId}`);
+	      loadButton.setAttribute("type", "submit");
+	      loadButton.classList.add("qhana-form-submit");
+	      loadButton.textContent = "Load";
 	      inner.appendChild(title);
 	      inner.appendChild(subtitle);
 	      outer.appendChild(inner);
-	      outer.appendChild(button);
+	      outer.appendChild(loadButton);
+	      outer.appendChild(downloadButtonAnchor);
 	      return outer;
 	  });
 
