@@ -398,22 +398,24 @@ class QCAtlasClient:
                 )
                 response.raise_for_status()
                 data = response.json()
-                if "embedded" not in data or not data["embedded"]:
+                if not data.get("embedded"):
+                    current_app.logger.info(f"workflow-editor not found!")
                     return []
                 plugin = data.get("embedded")[0]
                 plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
-                if plugin_url:
-                    final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
+                if not plugin_url:
+                    current_app.logger.info(f"workflow-editor has no uiHref!")
+                    return []
+                final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
 
-                    return [
-                        TryOutMetadata(
-                            name=implementation_package.description,
-                            identifiers=["workflow-editor"],
-                            parameters={"load-url": content_url},
-                            url=final_url,
-                        )
-                    ]
-                return []
+                return [
+                    TryOutMetadata(
+                        name=implementation_package.description,
+                        identifiers=["workflow-editor"],
+                        parameters={"load-url": content_url},
+                        url=final_url,
+                    )
+                ]
 
             case "low_code_modeler":
                 response = get(
@@ -423,21 +425,24 @@ class QCAtlasClient:
                 )
                 response.raise_for_status()
                 data = response.json()
-                if "embedded" not in data or not data["embedded"]:
+                if not data.get("embedded"):
+                    current_app.logger.info(f"low-code-modeler not found!")
                     return []
                 plugin = data.get("embedded")[0]
                 plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
-                if plugin_url:
-                    final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
-                    return [
-                        TryOutMetadata(
-                            name=implementation_package.description,
-                            identifiers=["low-code-modeler"],
-                            parameters={"load-url": content_url},
-                            url=final_url,
-                        )
-                    ]
-                return []
+                if not plugin_url:
+                    current_app.logger.info(f"low-code-modeler has no uiHref!")
+                    return []
+                final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
+
+                return [
+                    TryOutMetadata(
+                        name=implementation_package.description,
+                        identifiers=["low-code-modeler"],
+                        parameters={"load-url": content_url},
+                        url=final_url,
+                    )
+                ]
 
             case "qhana_plugin":
                 data = (
@@ -462,12 +467,19 @@ class QCAtlasClient:
                     )
                     response.raise_for_status()
                     data = response.json()
-                    if "embedded" not in data or not data["embedded"]:
+                    if not data.get("embedded"):
+                        current_app.logger.info(
+                            f"plugin with identifier {identifier!r} not found!"
+                        )
                         continue
                     plugin = data.get("embedded")[0]
                     plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
-                    if plugin_url:
-                        unique_urls.add(plugin_url)
+                    if not plugin_url:
+                        current_app.logger.info(
+                            f"plugin with identifier {identifier!r} has no uiHref!"
+                        )
+                        continue
+                    unique_urls.add(plugin_url)
 
                 for tag in tags:
                     response = get(
@@ -477,12 +489,18 @@ class QCAtlasClient:
                     )
                     response.raise_for_status()
                     data = response.json()
-                    if "embedded" not in data or not data["embedded"]:
+                    embedded = data.get("embedded")
+                    if not embedded or len(embedded) == 0:
+                        current_app.logger.info(f"plugin with tag {tag!r} not found!")
                         continue
-                    for plugin in data.get("embedded", []):
+                    for plugin in embedded:
                         plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
-                        if plugin_url:
-                            unique_urls.add(plugin_url)
+                        if not plugin_url:
+                            current_app.logger.info(
+                                f"plugin with tag {tag!r} has no uiHref!"
+                            )
+                            continue
+                        unique_urls.add(plugin_url)
 
                 try_out_list = []
 
@@ -500,4 +518,7 @@ class QCAtlasClient:
                 return try_out_list
 
             case _:
+                current_app.logger.info(
+                    f"implementation_package at {implementation_package_url} has unhandled type {json.dumps(implementation_package.type)}"
+                )
                 return []
