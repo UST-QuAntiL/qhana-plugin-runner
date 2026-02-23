@@ -322,15 +322,27 @@ class QCAtlasClient:
 
     def get_implementations(self) -> list[AlgorithmImplementation]:
         url = urljoin(self.atlas_url, "./implementations")
-        response = get(
-            url, headers={"Accept": "application/hal+json, application/json"}
-        ).raise_for_status()
-        try:
-            data = response.json().get("content", [])
-        except Exception as err:
-            raise ValueError(f"Could not decode json response from url '{url}'!") from err
+
+        def get_page(page):
+            response = get(
+                url,
+                params={"page": f"{page}"},
+                headers={"Accept": "application/hal+json, application/json"},
+            ).raise_for_status()
+            try:
+                return response.json()
+            except Exception as err:
+                raise ValueError(
+                    f"Could not decode json response from url '{url}'!"
+                ) from err
+
+        data = get_page(0)
+        contents = data.get("content", [])
+        for page in range(1, data["totalPages"]):
+            contents += get_page(page).get("content", [])
         return [
-            AlgorithmImplementation.from_dict(implementation) for implementation in data
+            AlgorithmImplementation.from_dict(implementation)
+            for implementation in contents
         ]
 
     def get_implementation_packages(
