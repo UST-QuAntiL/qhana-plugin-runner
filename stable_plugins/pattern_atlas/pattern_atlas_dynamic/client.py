@@ -385,7 +385,9 @@ class QCAtlasClient:
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}/file/content",
         )
 
-        plugin_registry_url = PLUGIN_REGISTRY_CLIENT.plugin_registry_url
+        plugin_registry_url = urljoin(
+            PLUGIN_REGISTRY_CLIENT.plugin_registry_url, "./plugins/"
+        )
 
         match implementation_package.type:
 
