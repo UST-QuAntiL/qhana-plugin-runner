@@ -103,8 +103,17 @@ class ModelListView(MethodView):
         if models is None:
             models = []
 
+        # migration
+        old = models
+        models = []
+        for model in old:
+            if "metadata" in model:
+                models.append(model["metadata"])
+            else:
+                models.append(model)
+
         PluginState.set_value(
-            plugin.name, LCM_STATE_KEY, [model_data] + models, commit=True
+            plugin.name, LCM_STATE_KEY, [model_data["metadata"]] + models, commit=True
         )
 
         return Response("")
