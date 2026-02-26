@@ -102,20 +102,34 @@
         <div class="qhana-form-field">
             <label class="qhana-form-label" for="output_data_type">Output Data Type</label>
             <div class="qhana-input-wrapper">
-                <select class="qhana-form-input" name="outputDataType" id="output_data_type" autocomplete="off">
-                    <option value="entity/list" {% if values.get("outputDataType", "entity/list") == "entity/list" %}selected{% endif %}>entity/list</option>
-                    <option value="entity/vector" {% if values.get("outputDataType") == "entity/vector" %}selected{% endif %}>entity/vector</option>
-                    <option value="entity/matrix" {% if values.get("outputDataType") == "entity/matrix" %}selected{% endif %}>entity/matrix</option>
-                    <option value="entity/attribute-metadata" {% if values.get("outputDataType") == "entity/attribute-metadata" %}selected{% endif %}>entity/attribute-metadata</option>
-                    <option value="custom/attribute-similarities" {% if values.get("outputDataType") == "custom/attribute-similarities" %}selected{% endif %}>custom/attribute-similarities</option>
-                    <option value="custom/attribute-distances" {% if values.get("outputDataType") == "custom/attribute-distances" %}selected{% endif %}>custom/attribute-distances</option>
-                    <option value="custom/entity-distances" {% if values.get("outputDataType") == "custom/entity-distances" %}selected{% endif %}>custom/entity-distances</option>
-                    <option value="graph/taxonomy" {% if values.get("outputDataType") == "graph/taxonomy" %}selected{% endif %}>graph/taxonomy</option>
-                    <option value="*" {% if values.get("outputDataType") == "*" %}selected{% endif %}>*</option>
-                </select>
+                <input
+                    class="qhana-form-input"
+                    type="text"
+                    name="outputDataType"
+                    id="output_data_type"
+                    list="output_data_type_suggestions"
+                    pattern="[A-Za-z0-9_./*-]+"
+                    value="{{ values.get('outputDataType', 'entity/list') }}"
+                    autocomplete="off"
+                    required
+                >
+                <datalist id="output_data_type_suggestions">
+                    <option value="entity/list">
+                    <option value="entity/vector">
+                    <option value="entity/matrix">
+                    <option value="entity/attribute-metadata">
+                    <option value="custom/attribute-similarities">
+                    <option value="custom/attribute-distances">
+                    <option value="custom/entity-distances">
+                    <option value="graph/taxonomy">
+                    <option value="*">
+                </datalist>
             </div>
             <div id="output_data_type-description" class="qhana-input-description">
-                <p>Override the output data type metadata if needed for downstream plugins.</p>
+                <p>
+                    Override the output data type metadata if needed for downstream plugins.
+                    Custom values are allowed.
+                </p>
             </div>
         </div>
         <div class="qhana-form-buttons">

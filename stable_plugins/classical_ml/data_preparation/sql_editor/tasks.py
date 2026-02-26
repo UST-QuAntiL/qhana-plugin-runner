@@ -56,9 +56,7 @@ def process_sql(self, db_id: int) -> str:
     params = loads(task_data.parameters or "{}")
     sql = params.get("sql", "")
     output_format = params.get("output_format", "csv")
-    output_data_type = (params.get("output_data_type") or "entity/list").strip()
-    if not output_data_type:
-        output_data_type = "entity/list"
+    output_data_type = (params.get("output_data_type", "entity/list")).strip()
 
     columns, rows = execute_sql(sql)
     file_name = "sql_result.csv"

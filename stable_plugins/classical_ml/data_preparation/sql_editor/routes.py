@@ -25,7 +25,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from .plugin import SQL_BLP, SQLEditor
 from .schemas import SQLInputSchema
 from .tasks import preview_sql, process_sql
-from .util import PREVIEW_LIMIT, execute_sql, serialize_rows, validate_sql
+from .util import PREVIEW_LIMIT, execute_sql, serialize_rows
 
 
 @SQL_BLP.route("/")
@@ -103,12 +103,6 @@ class SQLFrontend(MethodView):
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
 
         render_errors = dict(errors) if errors else {}
-        sql_value = (data.get("sql") or "").strip()
-        if sql_value and "sql" not in render_errors:
-            sql_error = validate_sql(sql_value)
-            if sql_error:
-                render_errors.setdefault("sql", []).append(sql_error)
-                valid = False
 
         schema = SQLInputSchema()
         return Response(

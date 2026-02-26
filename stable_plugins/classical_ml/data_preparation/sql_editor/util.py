@@ -85,11 +85,6 @@ def validate_sql(sql: str) -> str | None:
     return error
 
 
-def check_sql_syntax(sql: str) -> str | None:
-    """Return a user-facing error message for invalid SQL, else None."""
-    return validate_sql(sql)
-
-
 def _prepare_connection(con: duckdb.DuckDBPyConnection) -> None:
     """Enable HTTP(S) reads by loading DuckDB's httpfs extension."""
     try:
