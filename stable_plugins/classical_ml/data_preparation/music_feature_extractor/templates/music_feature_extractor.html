@@ -1,0 +1,151 @@
+{% import 'forms.html' as forms %}
+{% extends "simple_template.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .mfx-layout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 0.8rem;
+    }
+    .mfx-panel {
+        border: 1px solid var(--border-color, #c7ced8);
+        border-radius: 8px;
+        padding: 0.8rem;
+        background: var(--background, #fff);
+    }
+    .mfx-panel h3 {
+        margin: 0 0 0.4rem 0;
+        font-size: 1rem;
+    }
+    .mfx-panel p {
+        margin: 0 0 0.6rem 0;
+    }
+    .mfx-panel ul {
+        margin: 0.4rem 0 0 1rem;
+        padding: 0;
+    }
+    #mfx-hidden-fields {
+        display: none;
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<div class="qhana-microfrontend">
+    {% call forms.render_form(target="microfrontend") %}
+    <div class="mfx-layout">
+        <section class="mfx-panel">
+            <h3>Source Selection</h3>
+            <p id="mfx-mode-hint">Choose one source URL. Auto mode detects single files and ZIP batches.</p>
+            <div id="mfx-source-fields"></div>
+        </section>
+        <section class="mfx-panel">
+            <h3>Extraction Options</h3>
+            <p>Set format, ZIP limits, and error behavior.</p>
+            <div id="mfx-option-fields"></div>
+        </section>
+        <section class="mfx-panel">
+            <h3>Preflight Summary</h3>
+            {% if preflight %}
+            <p>Resolved mode: <b>{{ preflight.resolved_mode }}</b></p>
+            <ul>
+                <li>Detected files: {{ preflight.source_count }} / candidates: {{ preflight.candidate_count }}</li>
+                <li>Sample vector-ready files: {{ preflight.vector_ready_samples }} / {{ preflight.sample_count }}</li>
+                <li>Truncated by max-files: {{ "yes" if preflight.truncated else "no" }}</li>
+            </ul>
+            {% if preflight.preview_names %}
+            <p><b>Preview files</b></p>
+            <ul>
+                {% for name in preflight.preview_names %}
+                <li>{{ name }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if preflight.sample %}
+            <p><b>Sample extraction</b></p>
+            <ul>
+                {% for item in preflight.sample %}
+                <li>{{ item.source_name }} ({{ item.format }}) - vector ready: {{ "yes" if item.vector_ready else "no" }}, warnings: {{ item.warning_count }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if preflight.warnings %}
+            <p><b>Warnings</b></p>
+            <ul>
+                {% for warning in preflight.warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% else %}
+            <p>Use <b>validate</b> to run a quick source check and sample extraction preview.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <div id="mfx-hidden-fields">
+        {{ forms.render_fields(schema, values=values, errors=errors) }}
+    </div>
+
+    <div class="qhana-form-buttons">
+        {{ forms.submit("validate", target="microfrontend")}}
+        {{ forms.submit("submit", action=process)}}
+    </div>
+    {% endcall %}
+</div>
+{% endblock content %}
+
+{% block script %}
+<script>
+    function moveMusicFeatureFields() {
+        const hiddenContainer = document.getElementById("mfx-hidden-fields");
+        if (!hiddenContainer) {
+            return;
+        }
+        const sourceTarget = document.getElementById("mfx-source-fields");
+        const optionTarget = document.getElementById("mfx-option-fields");
+        const fields = Array.from(hiddenContainer.children);
+        for (let i = 0; i < fields.length; i++) {
+            if (i < 2) {
+                sourceTarget.appendChild(fields[i]);
+            } else {
+                optionTarget.appendChild(fields[i]);
+            }
+        }
+        hiddenContainer.remove();
+    }
+
+    function updateModeHint() {
+        const sourceMode = document.getElementById("source_mode");
+        const modeHint = document.getElementById("mfx-mode-hint");
+        const maxFilesField = document.getElementById("max_files");
+        if (!sourceMode || !modeHint || !maxFilesField) {
+            return;
+        }
+
+        const maxFilesWrapper = maxFilesField.closest(".qhana-form-field");
+        if (sourceMode.value === "single") {
+            modeHint.innerText = "Single mode selected. The plugin treats the source URL as one file.";
+            maxFilesWrapper.style.display = "none";
+        } else if (sourceMode.value === "zip") {
+            modeHint.innerText = "ZIP mode selected. Supported files inside the archive are processed.";
+            maxFilesWrapper.style.display = "block";
+        } else {
+            modeHint.innerText = "Auto mode detects single files and ZIP batches.";
+            maxFilesWrapper.style.display = "block";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        moveMusicFeatureFields();
+        updateModeHint();
+        const sourceMode = document.getElementById("source_mode");
+        if (sourceMode) {
+            sourceMode.addEventListener("change", updateModeHint);
+        }
+    });
+</script>
+{{ super() }}
+{% endblock script %}
