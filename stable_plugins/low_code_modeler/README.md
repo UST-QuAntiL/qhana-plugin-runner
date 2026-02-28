@@ -15,3 +15,9 @@ names but have `LCM_` as a prefix (e.g. `LCM_QunicornEndpoint`)
 This should be fixed by `workarounds.js`, but you may need to clear the
 `workbox-precache` inside your browser to actually see any changes,
 especially if you upgrade from a version without `workarounds.js`.
+
+# Dependencies
+
+- (gnu) sed (as `sed`)
+- git
+- pnpm
