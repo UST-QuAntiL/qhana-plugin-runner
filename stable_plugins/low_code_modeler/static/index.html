@@ -139,6 +139,7 @@
 	      subtitle.classList.add("diagram-subtitle");
 	      const date = new Date(metadata.timestamp)
 	      subtitle.textContent = date.toLocaleString();
+	      const buttonContainer = document.createElement("span");
 	      const loadButton = document.createElement("button");
 	      const downloadButtonAnchor = document.createElement("a");
 	      const downloadButtonButton = document.createElement("input");
@@ -155,8 +156,9 @@
 	      inner.appendChild(title);
 	      inner.appendChild(subtitle);
 	      outer.appendChild(inner);
-	      outer.appendChild(loadButton);
-	      outer.appendChild(downloadButtonAnchor);
+	      buttonContainer.appendChild(downloadButtonAnchor);
+	      buttonContainer.appendChild(loadButton);
+	      outer.appendChild(buttonContainer);
 	      return outer;
 	  });
 
