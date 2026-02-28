@@ -53,11 +53,10 @@
 	  console.log("Received models from backend:", result);
 	  const container = document.querySelector("form#openExisting .diagram-list");
 
-	  const newChildren = result.map(model => {
-	      console.log("Processing model:", model);
+	  const newChildren = result.map(metadata => {
+	      console.log("Processing model:", metadata);
 
-	      const metadata = model.metadata || model;
-	      const modelId = model.metadata ? model.metadata.id : model.model_id;                          
+	      const modelId = metadata.id;
 	      const outer = document.createElement("div");
 	      outer.classList.add("diagram-item")
 	      const inner = document.createElement("div");

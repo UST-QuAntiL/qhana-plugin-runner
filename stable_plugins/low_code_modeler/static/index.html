@@ -121,15 +121,10 @@
   function onFileOpenRequest() {
       const dialogElement = document.querySelector("dialog#openDiagram");
       const url = "../models/";
-      fetch(url).then(response => response.json()).then(result => {
-	  console.log("Received models from backend:", result);
-	  const container = document.querySelector("form#openExisting .diagram-list");
+      fetch(url).then(response => response.json()).then(metadata => {
+	      console.log("Processing model:", metadata);
 
-	  const newChildren = result.map(model => {
-	      console.log("Processing model:", model);
-
-	      const metadata = model.metadata || model;
-	      const modelId = model.metadata ? model.metadata.id : model.model_id;                          
+	      const modelId = metadata.id;
 	      const outer = document.createElement("div");
 	      outer.classList.add("diagram-item")
 	      const inner = document.createElement("div");
