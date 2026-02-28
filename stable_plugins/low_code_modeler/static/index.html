@@ -121,7 +121,11 @@
   function onFileOpenRequest() {
       const dialogElement = document.querySelector("dialog#openDiagram");
       const url = "../models/";
-      fetch(url).then(response => response.json()).then(metadata => {
+      fetch(url).then(response => response.json()).then(result => {
+	  console.log("Received models from backend:", result);
+	  const container = document.querySelector("form#openExisting .diagram-list");
+
+	  const newChildren = result.map(metadata => {
 	      console.log("Processing model:", metadata);
 
 	      const modelId = metadata.id;
