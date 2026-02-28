@@ -371,7 +371,7 @@ class QCAtlasContent:
         return [
             implementation
             for implementation in self.implementations.values()
-            if f"pattern-languages/{pattern.pattern_language}/{pattern.pattern_id}"
+            if f"patternLanguages/{pattern.pattern_language}/patterns/{pattern.pattern_id}"
             in implementation.patterns
         ]
 
