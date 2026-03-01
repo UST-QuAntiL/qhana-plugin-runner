@@ -47,12 +47,20 @@
             <div id="mfx-option-fields"></div>
         </section>
         <section class="mfx-panel">
+            <h3>Feature Selection</h3>
+            <p>Choose a preset or switch to custom and enable feature groups manually.</p>
+            <div id="mfx-feature-fields"></div>
+        </section>
+        <section class="mfx-panel">
             <h3>Preflight Summary</h3>
             {% if preflight %}
             <p>Resolved mode: <b>{{ preflight.resolved_mode }}</b></p>
             <ul>
                 <li>Detected files: {{ preflight.source_count }} / candidates: {{ preflight.candidate_count }}</li>
                 <li>Sample vector-ready files: {{ preflight.vector_ready_samples }} / {{ preflight.sample_count }}</li>
+                <li>Selected preset: {{ preflight.feature_preset }}</li>
+                <li>Enabled groups: {{ ", ".join(preflight.enabled_groups) if preflight.enabled_groups else "none (base only)" }}</li>
+                <li>Vector dimensions (sample): {{ preflight.dim_count }}</li>
                 <li>Truncated by max-files: {{ "yes" if preflight.truncated else "no" }}</li>
             </ul>
             {% if preflight.preview_names %}
@@ -67,7 +75,7 @@
             <p><b>Sample extraction</b></p>
             <ul>
                 {% for item in preflight.sample %}
-                <li>{{ item.source_name }} ({{ item.format }}) - vector ready: {{ "yes" if item.vector_ready else "no" }}, warnings: {{ item.warning_count }}</li>
+                <li>{{ item.source_name }} ({{ item.format }}) - vector ready: {{ "yes" if item.vector_ready else "no" }}, dims: {{ item.dim_count }}, warnings: {{ item.warning_count }}</li>
                 {% endfor %}
             </ul>
             {% endif %}
@@ -99,6 +107,41 @@
 
 {% block script %}
 <script>
+    const MFX_PRESET_GROUPS = {
+        basic: [],
+        extended: [
+            "pitch_stats",
+            "intervals",
+            "rhythm",
+            "meter_tempo",
+            "texture",
+            "dynamics",
+            "tonality",
+        ],
+        full: [
+            "pitch_stats",
+            "intervals",
+            "rhythm",
+            "meter_tempo",
+            "texture",
+            "dynamics",
+            "tonality",
+            "harmony",
+        ],
+        custom: [],
+    };
+
+    const MFX_FEATURE_CHECKBOXES = [
+        { id: "include_pitch_stats", group: "pitch_stats" },
+        { id: "include_intervals", group: "intervals" },
+        { id: "include_rhythm", group: "rhythm" },
+        { id: "include_meter_tempo", group: "meter_tempo" },
+        { id: "include_texture", group: "texture" },
+        { id: "include_dynamics", group: "dynamics" },
+        { id: "include_tonality", group: "tonality" },
+        { id: "include_harmony", group: "harmony" },
+    ];
+
     function moveMusicFeatureFields() {
         const hiddenContainer = document.getElementById("mfx-hidden-fields");
         if (!hiddenContainer) {
@@ -106,14 +149,35 @@
         }
         const sourceTarget = document.getElementById("mfx-source-fields");
         const optionTarget = document.getElementById("mfx-option-fields");
-        const fields = Array.from(hiddenContainer.children);
-        for (let i = 0; i < fields.length; i++) {
-            if (i < 2) {
-                sourceTarget.appendChild(fields[i]);
-            } else {
-                optionTarget.appendChild(fields[i]);
+        const featureTarget = document.getElementById("mfx-feature-fields");
+        const fieldTargets = [
+            { id: "source_url", target: sourceTarget },
+            { id: "source_mode", target: sourceTarget },
+            { id: "declared_format", target: optionTarget },
+            { id: "max_files", target: optionTarget },
+            { id: "continue_on_error", target: optionTarget },
+            { id: "feature_preset", target: featureTarget },
+            { id: "include_pitch_stats", target: featureTarget },
+            { id: "include_intervals", target: featureTarget },
+            { id: "include_rhythm", target: featureTarget },
+            { id: "include_meter_tempo", target: featureTarget },
+            { id: "include_texture", target: featureTarget },
+            { id: "include_dynamics", target: featureTarget },
+            { id: "include_tonality", target: featureTarget },
+            { id: "include_harmony", target: featureTarget },
+        ];
+
+        fieldTargets.forEach(({ id, target }) => {
+            if (!target) {
+                return;
             }
-        }
+            const input = hiddenContainer.querySelector(`#${id}`);
+            const wrapper = input ? input.closest(".qhana-form-field") : null;
+            if (wrapper) {
+                target.appendChild(wrapper);
+            }
+        });
+
         hiddenContainer.remove();
     }
 
@@ -138,12 +202,41 @@
         }
     }
 
+    function syncFeaturePreset() {
+        const presetInput = document.getElementById("feature_preset");
+        if (!presetInput) {
+            return;
+        }
+
+        const preset = presetInput.value || "basic";
+        const isCustom = preset === "custom";
+        const selectedGroups = new Set(MFX_PRESET_GROUPS[preset] || []);
+
+        MFX_FEATURE_CHECKBOXES.forEach(({ id, group }) => {
+            const checkbox = document.getElementById(id);
+            if (!checkbox) {
+                return;
+            }
+            if (isCustom) {
+                checkbox.disabled = false;
+                return;
+            }
+            checkbox.checked = selectedGroups.has(group);
+            checkbox.disabled = true;
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         moveMusicFeatureFields();
         updateModeHint();
+        syncFeaturePreset();
         const sourceMode = document.getElementById("source_mode");
         if (sourceMode) {
             sourceMode.addEventListener("change", updateModeHint);
+        }
+        const featurePreset = document.getElementById("feature_preset");
+        if (featurePreset) {
+            featurePreset.addEventListener("change", syncFeaturePreset);
         }
     });
 </script>

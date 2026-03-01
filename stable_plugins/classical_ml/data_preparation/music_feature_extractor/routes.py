@@ -40,7 +40,12 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from . import MusicFeatureExtractorPlugin, MusicFeatureExtractor_BLP
 from .feature_extractor import MusicFeatureInput, extract_music_features
 from .io_utils import load_music_sources
-from .schemas import InputParametersSchema, TaskResponseSchema
+from .schemas import (
+    InputParametersSchema,
+    TaskResponseSchema,
+    list_enabled_groups,
+    resolve_feature_selection_from_values,
+)
 from .tasks import extract_music_features_task
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -148,6 +153,15 @@ class MicroFrontend(MethodView):
             "declaredFormat": "auto",
             "maxFiles": 1000,
             "continueOnError": True,
+            "featurePreset": "basic",
+            "includePitchStats": False,
+            "includeIntervals": False,
+            "includeRhythm": False,
+            "includeMeterTempo": False,
+            "includeTexture": False,
+            "includeDynamics": False,
+            "includeTonality": False,
+            "includeHarmony": False,
         }
         values.update(dict(data))
 
@@ -210,6 +224,8 @@ def _build_preflight(values: Mapping[str, object]) -> tuple[dict | None, str | N
         max_files = int(values.get("maxFiles") or 1000)
     except ValueError:
         max_files = 1000
+    feature_preset, feature_selection = resolve_feature_selection_from_values(values)
+    enabled_groups = list_enabled_groups(feature_selection)
 
     try:
         sources, summary = load_music_sources(
@@ -224,25 +240,35 @@ def _build_preflight(values: Mapping[str, object]) -> tuple[dict | None, str | N
     sample = []
     warnings: list[str] = []
     vector_ready_samples = 0
+    vector_dim_count = 0
     for source in sources[:3]:
         extraction = extract_music_features(
             MusicFeatureInput(
                 format=source.format,
                 content=source.content,
                 source_name=source.source_name,
-            )
+            ),
+            selection=feature_selection,
         )
         item_warnings = extraction.payload.get("warnings", [])
         warnings.extend(item_warnings)
         vector_ready = extraction.feature_vector is not None
+        dim_count = (
+            len(extraction.feature_vector_schema)
+            if extraction.feature_vector_schema is not None
+            else 0
+        )
         if vector_ready:
             vector_ready_samples += 1
+        if vector_dim_count == 0 and extraction.feature_vector_schema is not None:
+            vector_dim_count = len(extraction.feature_vector_schema)
         sample.append(
             {
                 "source_name": source.source_name,
                 "format": source.format,
                 "part_count": extraction.part_count,
                 "vector_ready": vector_ready,
+                "dim_count": dim_count,
                 "warning_count": len(item_warnings),
             }
         )
@@ -258,6 +284,9 @@ def _build_preflight(values: Mapping[str, object]) -> tuple[dict | None, str | N
             "sample": sample,
             "vector_ready_samples": vector_ready_samples,
             "sample_count": len(sample),
+            "feature_preset": feature_preset,
+            "enabled_groups": enabled_groups,
+            "dim_count": vector_dim_count,
             "warnings": unique_warnings[:20],
         },
         None,

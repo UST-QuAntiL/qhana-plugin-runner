@@ -30,7 +30,11 @@ from qhana_plugin_runner.storage import STORE
 from . import MusicFeatureExtractorPlugin
 from .feature_extractor import MusicFeatureInput, extract_music_features
 from .io_utils import LoadedMusicSource, load_music_sources
-from .schemas import InputParameters, InputParametersSchema
+from .schemas import (
+    InputParameters,
+    InputParametersSchema,
+    resolve_feature_selection_from_input,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -49,6 +53,7 @@ def extract_music_features_task(self, db_id: int) -> str:
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
     TASK_LOGGER.info(f"Loaded input parameters from db: {input_params}")
+    feature_selection = resolve_feature_selection_from_input(input_params)
 
     sources, source_summary = load_music_sources(
         source_url=input_params.source_url,
@@ -70,7 +75,8 @@ def extract_music_features_task(self, db_id: int) -> str:
                     format=source.format,
                     content=source.content,
                     source_name=source.source_name,
-                )
+                ),
+                selection=feature_selection,
             )
         except Exception as exc:
             error_count += 1
