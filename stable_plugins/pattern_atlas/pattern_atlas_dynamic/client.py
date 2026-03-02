@@ -496,22 +496,34 @@ class QCAtlasClient:
                     unique_urls.add(plugin_url)
 
                 for tag in tags:
+                    match tag:
+                        case tag if isinstance(tag, str):
+                            tags_param = tag
+                        case {"match": "all", "tags": tag_list} if isinstance(
+                            tag_list, list
+                        ) and all(isinstance(tag, str) for tag in tag_list):
+                            tags_param = ",".join(tag_list)
+                        case _:
+                            current_app.logger.warning(f"invalid tag format {tag!r}")
+                            continue
                     response = get(
                         plugin_registry_url,
-                        params={"tags": tag},
+                        params={"tags": tags_param},
                         headers={"Accept": "application/json"},
                     )
                     response.raise_for_status()
                     data = response.json()
                     embedded = data.get("embedded")
                     if not embedded or len(embedded) == 0:
-                        current_app.logger.info(f"plugin with tag {tag!r} not found!")
+                        current_app.logger.info(
+                            f"plugin with tags {tags_param!r} not found!"
+                        )
                         continue
                     for plugin in embedded:
                         plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
                         if not plugin_url:
                             current_app.logger.info(
-                                f"plugin with tag {tag!r} has no uiHref!"
+                                f"plugin with tag {tags_param!r} has no uiHref!"
                             )
                             continue
                         unique_urls.add(plugin_url)
