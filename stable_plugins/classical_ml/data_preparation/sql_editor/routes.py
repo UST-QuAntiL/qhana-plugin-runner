@@ -10,6 +10,7 @@ from flask.helpers import url_for
 from flask.views import MethodView
 from flask_smorest import abort
 from marshmallow import EXCLUDE
+from werkzeug.exceptions import HTTPException
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -148,22 +149,17 @@ class PreviewSQL(MethodView):
                     payload = task_result.get(timeout=preview_timeout)
                 except celery.exceptions.TimeoutError:
                     task_result.revoke(terminate=True)
-                    return (
-                        jsonify(
-                            {
-                                "ok": False,
-                                "error": (
-                                    f"Preview timed out after {preview_timeout} seconds."
-                                ),
-                            }
-                        ),
+                    abort(
                         HTTPStatus.REQUEST_TIMEOUT,
+                        message=f"Preview timed out after {preview_timeout} seconds.",
                     )
                 columns = payload.get("columns", [])
                 serialized_rows = payload.get("rows", [])
             else:
                 columns, rows = execute_sql(sql, limit=PREVIEW_LIMIT)
                 serialized_rows = list(serialize_rows(rows))
+        except HTTPException:
+            raise
         except ValueError as err:
             return (
                 jsonify({"ok": False, "error": str(err)}),
