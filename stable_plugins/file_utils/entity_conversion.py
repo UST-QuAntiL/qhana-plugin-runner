@@ -131,8 +131,8 @@ class CsvPluginView(MethodView):
             version=plugin.version,
             type=PluginType.conversion,
             entry_point=EntryPoint(
-                href=url_for(f"{CSV_TO_JSON_BLP.name}.{CsvProcessView}"),
-                ui_href=url_for(f"{CSV_TO_JSON_BLP.name}.{CsvMicroFrontend}"),
+                href=url_for(f"{CSV_TO_JSON_BLP.name}.{CsvProcessView.__name__}"),
+                ui_href=url_for(f"{CSV_TO_JSON_BLP.name}.{CsvMicroFrontend.__name__}"),
                 plugin_dependencies=[],
                 data_input=[
                     InputDataMetadata(
@@ -172,8 +172,8 @@ class JsonPluginView(MethodView):
             version=plugin.version,
             type=PluginType.conversion,
             entry_point=EntryPoint(
-                href=url_for(f"{JSON_TO_CSV_BLP.name}.{JsonProcessView}"),
-                ui_href=url_for(f"{JSON_TO_CSV_BLP.name}.{JsonMicroFrontend}"),
+                href=url_for(f"{JSON_TO_CSV_BLP.name}.{JsonProcessView.__name__}"),
+                ui_href=url_for(f"{JSON_TO_CSV_BLP.name}.{JsonMicroFrontend.__name__}"),
                 plugin_dependencies=[],
                 data_input=[
                     InputDataMetadata(
@@ -239,9 +239,9 @@ class CsvMicroFrontend(MethodView):
                 valid=valid,
                 values=data,
                 errors=errors,
-                process=url_for(f"{CSV_TO_JSON_BLP.name}.{CsvProcessView}"),
+                process=url_for(f"{CSV_TO_JSON_BLP.name}.{CsvProcessView.__name__}"),
                 example_values=url_for(
-                    f"{CSV_TO_JSON_BLP.name}.{CsvMicroFrontend}", **self.example_inputs
+                    f"{CSV_TO_JSON_BLP.name}.{CsvMicroFrontend.__name__}"
                 ),
             )
         )
@@ -291,9 +291,9 @@ class JsonMicroFrontend(MethodView):
                 valid=valid,
                 values=data,
                 errors=errors,
-                process=url_for(f"{JSON_TO_CSV_BLP.name}.{JsonProcessView}"),
+                process=url_for(f"{JSON_TO_CSV_BLP.name}.{JsonProcessView.__name__}"),
                 example_values=url_for(
-                    f"{JSON_TO_CSV_BLP.name}.{JsonMicroFrontend}", **self.example_inputs
+                    f"{JSON_TO_CSV_BLP.name}.{JsonMicroFrontend.__name__}"
                 ),
             )
         )
@@ -386,9 +386,9 @@ def _fill_in_metadata(
     metadata: dict[str, AttributeMetadata], data_type: str, attributes: tuple[str, ...]
 ) -> dict[str, AttributeMetadata]:
     if "ID" not in metadata:
-        metadata["ID"] = AttributeMetadata("ID", "string")
+        metadata["ID"] = AttributeMetadata("ID", "string", "ID")
     if "href" not in metadata:
-        metadata["href"] = AttributeMetadata("href", "string")
+        metadata["href"] = AttributeMetadata("href", "string", "href")
 
     if not (metadata.keys() <= {"ID", "href"}):
         return metadata
@@ -401,10 +401,10 @@ def _fill_in_metadata(
     ):
         for attr in attributes:
             if attr not in ("ID", "href"):
-                metadata[attr] = AttributeMetadata(attr, "number")
+                metadata[attr] = AttributeMetadata(attr, "number", attr)
 
     if data_type == "entity/label":
-        metadata["label"] = AttributeMetadata("label", "string")
+        metadata["label"] = AttributeMetadata("label", "string", "label")
 
     return metadata
 
@@ -434,7 +434,7 @@ def _convert_data(db_task: ProcessingTask):
         def load():
             nonlocal entities_metadata
             deserializer = None
-            ent_attributes: tuple[str, ...]
+            ent_attributes: tuple[str, ...] | None = None
             for ent in load_entities(entities_data, mimetype):
                 if isinstance(ent, EntityTupleMixin):  # is NamedTuple
                     if deserializer is None:
