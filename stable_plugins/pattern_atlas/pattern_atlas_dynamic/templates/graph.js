@@ -1,15 +1,17 @@
 window.PatternGraph = {
+    scale: 1,
 
     enableZoom(svgId = "graph", groupSelector = ".zoom-group", markerId = "arrow", kMin = 0.2, kMax = 8) {
         const svg = document.getElementById(svgId);
         const marker = document.getElementById(markerId);
         const viewport = svg.querySelector(groupSelector);
-        let k = 1, x = 0, y = 0;
+        let k = window.PatternGraph.scale, x = 0, y = 0;
 
         const apply = () => {
             viewport.setAttribute("transform", `translate(${x},${y}) scale(${k})`);
             marker.setAttribute("markerWidth", `${k * 8}`);
             marker.setAttribute("markerHeight", `${k * 8}`);
+	    window.PatternGraph.scale = k;
         }
         apply();
 
@@ -33,6 +35,8 @@ window.PatternGraph = {
         let dragging = null;
         let offsetX = 0;
         let offsetY = 0;
+        let startX = 0;
+        let startY = 0;
 
         nodes.forEach(node => {
             node.addEventListener("mousedown", (e) => {
@@ -42,11 +46,11 @@ window.PatternGraph = {
                 dragging = node;
 
                 const pt = PatternGraph.svgPoint(e, svg);
-                const currentX = parseFloat(node.dataset.x);
-                const currentY = parseFloat(node.dataset.y);
+                startNodeX = parseFloat(node.dataset.x);
+                startNodeY = parseFloat(node.dataset.y);
 
-                offsetX = pt.x - currentX;
-                offsetY = pt.y - currentY;
+                startMouseX = pt.x;
+                startMouseY = pt.y;
 
                 node.style.cursor = "grabbing";
             });
@@ -55,8 +59,8 @@ window.PatternGraph = {
         svg.addEventListener("mousemove", (e) => {
             if (!dragging) return;
             const pt = PatternGraph.svgPoint(e, svg);
-            const newX = pt.x - offsetX;
-            const newY = pt.y - offsetY;
+            const newX = (pt.x - startMouseX)/window.PatternGraph.scale + startNodeX;
+            const newY = (pt.y - startMouseY)/window.PatternGraph.scale + startNodeY;
 
             dragging.dataset.x = newX;
             dragging.dataset.y = newY;
