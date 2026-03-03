@@ -41,9 +41,9 @@
             <g class="nodes">
                 {%- for pattern in patterns -%}
                     <g class="node" id="node-{{pattern.pattern_id}}" transform="translate(0, 0)" data-template="default" data-x="0" data-y="0">
-                        <rect data-link-handles="edges" height="120" rx="5" ry="5" width="120" x="-85" y="-25"
+                        <rect data-link-handles="edges" height="120" rx="5" ry="5" width="270" x="-135" y="-25"
                         style="stroke: black; stroke-width: 1;"></rect>
-                        <foreignObject x="-75" y="-15" width="100" height="100">
+                        <foreignObject x="-125" y="-15" width="250" height="100">
                             <div xmlns="http://www.w3.org/1999/xhtml"
                                  style="
                                     display:flex;
@@ -54,6 +54,7 @@
                                     font-size:18px;
                                     font-weight:bold;
                                     overflow:hidden;
+				    text-align:center;
                                  ">
                                 <img
                                     src="{{ pattern.icon | resource }}"
@@ -62,6 +63,7 @@
                                     style="
                                         width:100px;
                                         height:100px;
+					margin-right:10px;
                                     "
                                 />
                                 {{pattern.name}}
