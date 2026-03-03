@@ -41,9 +41,9 @@
             <g class="nodes">
                 {%- for pattern in patterns -%}
                     <g class="node" id="node-{{pattern.pattern_id}}" transform="translate(0, 0)" data-template="default" data-x="0" data-y="0">
-                        <rect data-link-handles="edges" height="120" rx="5" ry="5" width="270" x="-135" y="-25"
+                        <rect data-link-handles="edges" height="170" rx="5" ry="5" width="270" x="-135" y="-25"
                         style="stroke: black; stroke-width: 1;"></rect>
-                        <foreignObject x="-125" y="-15" width="250" height="100">
+                        <foreignObject x="-125" y="-15" width="250" height="150">
                             <div xmlns="http://www.w3.org/1999/xhtml"
                                  style="
                                     display:flex;
@@ -79,7 +79,7 @@
     <script defer src="{{base_url}}/graph.js"></script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
-        PatternGraph.layoutGrid('graph', '.node', 8, 300, 150, 150, 100);
+        PatternGraph.layoutGrid('graph', '.node', 8, 300, 200, 150, 100);
         PatternGraph.connectEdges('graph', '.edge', '.node');   
         PatternGraph.enableZoom('graph', '.zoom-group', 'arrow');
         PatternGraph.enableDrag('graph', '.node');

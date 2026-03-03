@@ -94,7 +94,7 @@ window.PatternGraph = {
         });
     },
 
-    layoutGrid(svgId = "graph", nodeSel = ".node", cols = 8, spacingX = 300, spacingY = 150, startX = 150, startY = 100) {
+    layoutGrid(svgId = "graph", nodeSel = ".node", cols = 8, spacingX = 300, spacingY = 200, startX = 150, startY = 100) {
         const svg = document.getElementById(svgId);
         const nodes = svg.querySelectorAll(nodeSel);
 
