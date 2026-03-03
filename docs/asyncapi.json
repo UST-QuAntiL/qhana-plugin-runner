@@ -654,7 +654,7 @@
             },
             "pluginName": {
               "type": "string",
-              "description": "The plugin name as used in the plugin registry."
+              "description": "The plugin identifier as used in the plugin registry."
             },
             "parameters": {
               "type": "object",

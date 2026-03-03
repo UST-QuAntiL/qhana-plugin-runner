@@ -321,17 +321,10 @@ class QCFile:
 
 
 @dataclass
-class TryOutMetadata:
-    name: str
-    identifiers: list[str]
-    parameters: dict[str, str]
-    url: str
-
-
-@dataclass
 class TryOutButton:
     name: str
-    url: str
+    identifier: str
+    parameters: dict[str, str]
 
 
 @dataclass
@@ -341,7 +334,7 @@ class QCAtlasContent:
         default_factory=lambda: defaultdict(list)
     )
     implementation_packages_files: dict[str, QCFile] = field(default_factory=dict)
-    try_out_metadata: dict[str, list[TryOutMetadata]] = field(
+    try_out_buttons: dict[str, list[TryOutButton]] = field(
         default_factory=lambda: defaultdict(list)
     )
 
@@ -360,12 +353,12 @@ class QCAtlasContent:
     ):
         self.implementation_packages_files[implementation_package.id] = file
 
-    def add_try_out_metadata(
+    def add_try_out_button(
         self,
         implementation_package: ImplementationPackage,
-        try_out_metadata: TryOutMetadata,
+        try_out_buttons: TryOutButton,
     ):
-        self.try_out_metadata[implementation_package.id].append(try_out_metadata)
+        self.try_out_buttons[implementation_package.id].append(try_out_buttons)
 
     def get_implementations(self, pattern: Pattern) -> list[AlgorithmImplementation]:
         return [
@@ -380,23 +373,16 @@ class QCAtlasContent:
     ) -> list[ImplementationPackage]:
         return self.implementation_packages[implementation.id]
 
-    def get_try_out_metadata(
+    def get_try_out_buttons(
         self, implementation_package: ImplementationPackage
-    ) -> list[TryOutMetadata]:
-        return self.try_out_metadata.get(implementation_package.id, [])
+    ) -> list[TryOutButton]:
+        return self.try_out_buttons.get(implementation_package.id, [])
 
     def get_try_out_buttons_for_pattern(self, pattern: Pattern) -> list[TryOutButton]:
         buttons: list[TryOutButton] = []
 
         for impl in self.get_implementations(pattern):
             for pkg in self.get_implementation_packages(impl):
-                for tom in self.get_try_out_metadata(pkg):
-                    if tom.url:
-                        buttons.append(
-                            TryOutButton(
-                                name=tom.name,
-                                url=tom.url,
-                            )
-                        )
-
+                for tob in self.get_try_out_buttons(pkg):
+                    buttons.append(tob)
         return buttons

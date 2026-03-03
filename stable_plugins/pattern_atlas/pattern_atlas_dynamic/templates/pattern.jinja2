@@ -126,10 +126,9 @@
             font-size: 1.2rem;
             font-weight: 600;
         }
-        .try-out-button,
-        .try-out-button:visited {
+        .try-out-button {
             background-color: #6a2dca;
-            color: white !important;
+            color: white;
             border: none;
             padding: 10px;
             font-size: 17px;
@@ -143,7 +142,6 @@
             bottom: 10px;
             left: 10px;
             width: 20em;
-            text-decoration: none;
         }
         #arrow-qhana{
             font-size: 30px;
@@ -257,12 +255,31 @@
                 </details>
                 {% endfor %}
                 {% for button in qc_atlas.get_try_out_buttons_for_pattern(pattern) %}
-                    <a href="{{ button.url }}" class="try-out-button">
+                    <button
+                        class="try-out-button"
+                        data-identifier="{{ button.identifier }}"
+                        data-parameters="{{ button.parameters | json_dumps | escape }}"
+                    >
                         <strong>Try {{ button.name }} in QHAna</strong>
                         <span id="arrow-qhana">&#8617;</span>
-                    </a>
+                    </button>
                 {% endfor %}
             </div>
+            <script type="module">
+                const try_out_buttons = document.querySelectorAll(".try-out-button");
+
+                for (const try_out_button of try_out_buttons) {
+                    const message = {
+                        type: "switch-plugin",
+                        pluginName: try_out_button.dataset.identifier,
+                        parameters: JSON.parse(try_out_button.dataset.parameters),
+                    }
+                    try_out_button.onclick = () => {
+                        console.log(message)
+                        sendMessage(message)
+                    }
+                }
+            </script>
         </main>
     </div>
 

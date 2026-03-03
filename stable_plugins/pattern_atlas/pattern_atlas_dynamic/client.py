@@ -18,7 +18,6 @@ from urllib.parse import urljoin, urlparse
 
 from flask import current_app
 from httpx import get
-from urllib.parse import urlencode
 
 from qhana_plugin_runner.registry_client import PLUGIN_REGISTRY_CLIENT
 
@@ -31,7 +30,7 @@ from .model import (
     Pattern,
     PatternLanguage,
     PatternRelation,
-    TryOutMetadata,
+    TryOutButton,
 )
 
 KNOWN_PATTERN_SECTIONS = {
@@ -312,11 +311,11 @@ class QCAtlasClient:
                 atlas.add_implementation_package(implementation, implementation_package)
                 file = self.get_files(implementation, implementation_package)
                 atlas.add_implementation_package_file(implementation_package, file)
-                try_out_metadata_list = self.get_try_out_metadata(
+                try_out_button_list = self.get_try_out_buttons(
                     implementation, implementation_package, file
                 )
-                for try_out_metadata in try_out_metadata_list:
-                    atlas.add_try_out_metadata(implementation_package, try_out_metadata)
+                for try_out_button in try_out_button_list:
+                    atlas.add_try_out_button(implementation_package, try_out_button)
 
         return atlas
 
@@ -382,12 +381,12 @@ class QCAtlasClient:
             raise ValueError(f"Could not decode json response from url '{url}'!") from err
         return QCFile.from_dict(data)
 
-    def get_try_out_metadata(
+    def get_try_out_buttons(
         self,
         implementation: AlgorithmImplementation,
         implementation_package: ImplementationPackage,
         file: QCFile,
-    ) -> list[TryOutMetadata]:
+    ) -> list[TryOutButton]:
         implementation_package_url = urljoin(
             self.atlas_url,
             f"./algorithms/{implementation.implementedAlgorithmId}/implementations/{implementation.id}/implementation-packages/{implementation_package.id}",
@@ -416,18 +415,16 @@ class QCAtlasClient:
                     current_app.logger.info(f"workflow-editor not found!")
                     return []
                 plugin = data.get("embedded")[0]
-                plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
+                plugin_url = plugin["data"].get("identifier")
                 if not plugin_url:
-                    current_app.logger.info(f"workflow-editor has no uiHref!")
+                    current_app.logger.info(f"workflow-editor has no identifier!")
                     return []
-                final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
 
                 return [
-                    TryOutMetadata(
+                    TryOutButton(
                         name=implementation_package.description,
-                        identifiers=["workflow-editor"],
+                        identifier="workflow-editor",
                         parameters={"load-url": content_url},
-                        url=final_url,
                     )
                 ]
 
@@ -443,18 +440,16 @@ class QCAtlasClient:
                     current_app.logger.info(f"low-code-modeler not found!")
                     return []
                 plugin = data.get("embedded")[0]
-                plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
+                plugin_url = plugin["data"].get("identifier")
                 if not plugin_url:
-                    current_app.logger.info(f"low-code-modeler has no uiHref!")
+                    current_app.logger.info(f"low-code-modeler has no identifier!")
                     return []
-                final_url = f"{plugin_url}?{urlencode({'load-url': content_url})}"
 
                 return [
-                    TryOutMetadata(
+                    TryOutButton(
                         name=implementation_package.description,
-                        identifiers=["low-code-modeler"],
+                        identifier="low-code-modeler",
                         parameters={"load-url": content_url},
-                        url=final_url,
                     )
                 ]
 
@@ -471,7 +466,7 @@ class QCAtlasClient:
                 params = data.get("parameters", {})
                 tags = data.get("tags", [])
 
-                unique_urls = set()
+                unique_identifiers: set[str] = set()
 
                 for identifier in identifiers:
                     response = get(
@@ -487,13 +482,13 @@ class QCAtlasClient:
                         )
                         continue
                     plugin = data.get("embedded")[0]
-                    plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
-                    if not plugin_url:
+                    identifier = plugin["data"].get("identifier")
+                    if not identifier:
                         current_app.logger.info(
-                            f"plugin with identifier {identifier!r} has no uiHref!"
+                            f"plugin with identifier {identifier!r} has no identifier!"
                         )
                         continue
-                    unique_urls.add(plugin_url)
+                    unique_identifiers.add(identifier)
 
                 for tag in tags:
                     match tag:
@@ -520,26 +515,22 @@ class QCAtlasClient:
                         )
                         continue
                     for plugin in embedded:
-                        plugin_url = plugin["data"].get("entryPoint", {}).get("uiHref")
-                        if not plugin_url:
+                        identifier = plugin["data"].get("identifier")
+                        if not identifier:
                             current_app.logger.info(
-                                f"plugin with tag {tags_param!r} has no uiHref!"
+                                f"plugin with tag {tags_param!r} has no identifier!"
                             )
                             continue
-                        unique_urls.add(plugin_url)
+                        unique_identifiers.add(identifier)
 
-                try_out_list = []
-
-                for base_url in unique_urls:
-                    final_url = f"{base_url}?{urlencode(params)}" if params else base_url
-                    try_out_list.append(
-                        TryOutMetadata(
-                            name=implementation_package.description,
-                            identifiers=[],
-                            parameters={},
-                            url=final_url,
-                        )
+                try_out_list = [
+                    TryOutButton(
+                        name=implementation_package.description,
+                        identifier=identifier,
+                        parameters={},
                     )
+                    for identifier in unique_identifiers
+                ]
 
                 return try_out_list
 
