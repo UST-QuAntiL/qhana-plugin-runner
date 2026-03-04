@@ -33,6 +33,8 @@
 {% block script %}
 {{ super() }}
 <script>
+    let requestedEntityDataFor = null;
+
     // Resets the iframe without a plot
     function onPlotError() {
         document.querySelector('.cluster-preview').innerHTML = '';
@@ -42,80 +44,46 @@
         }
     }
 
-    function chooseRelatedData(event) {
-        event.preventDefault();
-        const button = event.target;
-        let relatedData;
-        if (button.dataset.inputId === "entity_url") {
-            relatedData = document.querySelector('input[name=clustersUrl]').value;
-        } else if (button.dataset.inputId === "clusters_url") {
-            relatedData = document.querySelector('input[name=entityUrl]').value;
-        } else {
+    function autoSelectEntityData(entityUrl, entityDataUrl) {
+        if (!entityUrl || entityDataUrl) {
+            requestedEntityDataFor = null;
             return;
         }
-        if (!relatedData) {
+        const looksLikeUrl = entityUrl.includes("://") || entityUrl.startsWith("data:");
+        if (!looksLikeUrl) {
             return;
         }
+        if (requestedEntityDataFor === entityUrl) {
+            return;
+        }
+        requestedEntityDataFor = entityUrl;
         sendMessage({
             type: "request-related-data-url",
-            dataUrl: relatedData,
-            inputKey: button.dataset.inputId,
-            relation: button.dataset.relation,
-            acceptedInputType: button.dataset.dataType,
-            userInteraction: true,
+            dataUrl: entityUrl,
+            inputKey: "entity_data_url",
+            relation: "pre",
+            acceptedInputType: "entity/*",
+            userInteraction: false,
         });
     }
 
-    // Setup event listeners for the entityUrl and clustersUrl input fields
     function setupEventListeners() {
-        const entityInput = document.querySelector('input[name=entityUrl]');
-        entityInput.addEventListener("input", (event) => updatePreview());
-        const clusterInput = document.querySelector('input[name=clustersUrl]');
-        clusterInput.addEventListener("input", (event) => updatePreview());
-
-        // setup extra choose buttons:
-        const chooseRelPointsBtn = document.createElement("button");
-        chooseRelPointsBtn.textContent = "choose related";
-        chooseRelPointsBtn.setAttribute("id", "choose-rel-points");
-        chooseRelPointsBtn.classList.add("qhana-choose-file-button");
-        chooseRelPointsBtn.dataset.inputId = "entity_url";
-        chooseRelPointsBtn.dataset.relation = "pre";
-        chooseRelPointsBtn.dataset.dataType = "entity/vector";
-        chooseRelPointsBtn.setAttribute("disabled", "");
-        chooseRelPointsBtn.setAttribute("role", "button");
-        chooseRelPointsBtn.addEventListener("click", chooseRelatedData);
-        entityInput.parentElement.appendChild(chooseRelPointsBtn);
-
-        const chooseRelLabelsBtn = document.createElement("button");
-        chooseRelLabelsBtn.textContent = "choose related";
-        chooseRelLabelsBtn.setAttribute("id", "choose-rel-labels");
-        chooseRelLabelsBtn.classList.add("qhana-choose-file-button");
-        chooseRelLabelsBtn.dataset.inputId = "clusters_url";
-        chooseRelLabelsBtn.dataset.relation = "post";
-        chooseRelLabelsBtn.dataset.dataType = "entity/label";
-        chooseRelLabelsBtn.setAttribute("disabled", "");
-        chooseRelLabelsBtn.setAttribute("role", "button");
-        chooseRelLabelsBtn.addEventListener("click", chooseRelatedData);
-        clusterInput.parentElement.appendChild(chooseRelLabelsBtn);
+        ["entityUrl", "clustersUrl", "entityDataUrl"].forEach((inputName) => {
+            const input = document.querySelector(`input[name=${inputName}]`);
+            if (!input) {
+                return;
+            }
+            input.addEventListener("input", () => updatePreview());
+            input.addEventListener("change", () => updatePreview());
+        });
     }
 
     async function updatePreview() {
         const entityUrl = document.querySelector('input[name=entityUrl]').value;
         const clustersUrl = document.querySelector('input[name=clustersUrl]').value;
+        const entityDataUrl = document.querySelector('input[name=entityDataUrl]').value;
 
-        const chooseRelEntity = document.querySelector("#choose-rel-points");
-        const chooseRelLabels = document.querySelector("#choose-rel-labels");
-
-        if (entityUrl) {
-            chooseRelLabels.removeAttribute("disabled");
-        } else {
-            chooseRelLabels.setAttribute("disabled", "");
-        }
-        if (clustersUrl) {
-            chooseRelEntity.removeAttribute("disabled");
-        } else {
-            chooseRelEntity.setAttribute("disabled", "");
-        }
+        autoSelectEntityData(entityUrl, entityDataUrl);
 
         // Only an entity Url is required to generate a plot
         if (entityUrl === "" || entityUrl === null) {
@@ -127,6 +95,7 @@
         const params = new URLSearchParams();
         params.set("entityUrl", entityUrl);
         params.set("clustersUrl", clustersUrl ?? "");
+        params.set("entityDataUrl", entityDataUrl ?? "");
         const url = "{{ get_plot_url }}?" + params.toString();
 
         const preview = document.querySelector('.cluster-preview');

@@ -75,8 +75,14 @@ class PluginsView(MethodView):
                     InputDataMetadata(
                         data_type="entity/label",
                         content_type=["application/json", "application/csv"],
-                        required=True,
+                        required=False,
                         parameter="clustersUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/*",
+                        content_type=["application/json", "application/csv"],
+                        required=False,
+                        parameter="entityDataUrl",
                     ),
                 ],
                 data_output=[
@@ -160,12 +166,13 @@ class MicroFrontend(MethodView):
 def get_plot(data: Mapping):
     entity_url = data.get("entity_url", None)
     clusters_url = data.get("clusters_url", None)
+    entity_data_url = data.get("entity_data_url", None)
     # Only an entity_url is required to generate a plot
     if entity_url is None:
         abort(HTTPStatus.BAD_REQUEST)
     # As the clusters_url can be null, the str method is required
     url_hash = hashlib.sha256(
-        (entity_url + str(clusters_url)).encode("utf-8")
+        (entity_url + str(clusters_url) + str(entity_data_url)).encode("utf-8")
     ).hexdigest()
     plot = DataBlob.get_value(
         ClusterScatterVisualization.instance.identifier, url_hash, None
@@ -178,7 +185,7 @@ def get_plot(data: Mapping):
         ):
             # Add the generate_plot from task.py as an async method
             task_result = generate_plot.s(
-                entity_url, clusters_url, hash_=url_hash
+                entity_url, clusters_url, entity_data_url, hash_=url_hash
             ).apply_async()
             PluginState.set_value(
                 ClusterScatterVisualization.instance.identifier,
@@ -197,7 +204,7 @@ def get_plot(data: Mapping):
         except TimeoutError:
             return Response("Plot not yet created!", HTTPStatus.ACCEPTED)
     if not plot:
-        abort(HTTPStatus.BAD_REQUEST, "Invalid circuit URL!")
+        abort(HTTPStatus.BAD_REQUEST, "Invalid entity URL!")
 
     # Returns the html to the micro frontend
     return Response(plot)
@@ -215,17 +222,21 @@ class ProcessView(MethodView):
     def post(self, arguments):
         entity_url = arguments.get("entity_url", None)
         clusters_url = arguments.get("clusters_url", None)
+        entity_data_url = arguments.get("entity_data_url", None)
         if entity_url is None:
             abort(HTTPStatus.BAD_REQUEST)
         url_hash = hashlib.sha256(
-            (entity_url + str(clusters_url)).encode("utf-8")
+            (entity_url + str(clusters_url) + str(entity_data_url)).encode("utf-8")
         ).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
         task: chain = process.s(
-            db_id=db_task.id, entity_url=entity_url, clusters_url=clusters_url
+            db_id=db_task.id,
+            entity_url=entity_url,
+            clusters_url=clusters_url,
+            entity_data_url=entity_data_url,
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))
