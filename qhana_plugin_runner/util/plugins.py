@@ -245,6 +245,20 @@ def _load_plugins_from_folder(
             _try_load_plugin_package(app, child)
 
 
+def _disable_plugins(app: Flask):
+    """Remove disabled plugins from the plugin registry before blueprint registration."""
+    disabled_plugins = {
+        plugin for plugin in app.config.get("DISABLED_PLUGINS", []) if plugin
+    }
+    if not disabled_plugins:
+        return
+
+    for identifier, plugin in list(QHAnaPluginBase.get_plugins().items()):
+        if plugin.identifier in disabled_plugins or plugin.name in disabled_plugins:
+            del QHAnaPluginBase.__plugins__[identifier]
+            app.logger.info(f"Plugin '{identifier}' is disabled by configuration.")
+
+
 def register_plugins(app: Flask):
     """Load and register QHAna plugins in the locations specified by the app config.
 
@@ -257,6 +271,7 @@ def register_plugins(app: Flask):
     plugin_folders = app.config.get("PLUGIN_FOLDERS", [])
     for folder in plugin_folders:
         _load_plugins_from_folder(app, folder)
+    _disable_plugins(app)
 
     url_prefix: str = app.config.get("OPENAPI_URL_PREFIX", "").rstrip("/")
 
