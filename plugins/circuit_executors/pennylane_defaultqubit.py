@@ -295,7 +295,7 @@ class PennylaneSimulator(QHAnaPluginBase):
         return PENNYLANE_BLP
 
     def get_requirements(self) -> str:
-        return """pennylane~=0.35.0\nqiskit_qasm3_import\nautoray<0.8"""
+        return """qiskit~=2.3.0\npennylane~=0.44.0\npennylane-qiskit~=0.44.1\nautoray~=0.8.2"""
 
 
 TASK_LOGGER = get_task_logger(__name__)

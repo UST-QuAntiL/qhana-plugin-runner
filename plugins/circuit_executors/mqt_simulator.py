@@ -293,16 +293,22 @@ class MqtSimulator(QHAnaPluginBase):
         return MQT_BLP
 
     def get_requirements(self) -> str:
-        return """qiskit~=2.2.3\nmqt.ddsim~=1.18\nqiskit_qasm3_import"""
+        return """qiskit~=2.3.0\nmqt.ddsim~=2.2.0"""
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QuantumCircuit, execute
+    from qiskit import QiskitError, QuantumCircuit, transpile
     from qiskit.qasm2 import loads as loads2
-    from qiskit.qasm3 import loads as loads3, QASM3ImporterError
+
+    try:
+        from qiskit.qasm3 import loads as loads3, QASM3ImporterError
+    except ImportError:  # pragma: no cover - fallback for older qiskit_qasm3_import shims
+        from qiskit.qasm3 import loads as loads3  # type: ignore
+
+        QASM3ImporterError = Exception
 
     from mqt import ddsim
 
@@ -312,7 +318,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     circuit: QuantumCircuit
     try:
         circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QiskitError):
         circuit = loads2(circuit_qasm)
 
     backend_Qasm = ddsim.DDSIMProvider().get_backend("qasm_simulator")
@@ -328,20 +334,20 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     else:
         # QASM simulation with time
         startime_qasm = time.perf_counter_ns()
-        result_qasm = execute(
-            circuit, backend_Qasm, shots=execution_options["shots"]
-        ).result()  # qasm simulation
+        compiled_qasm = transpile(circuit, backend_Qasm)
+        result_qasm = backend_Qasm.run(
+            compiled_qasm, shots=execution_options["shots"]
+        ).result()
         endtime_qasm = time.perf_counter_ns()
-        counts = result_qasm.get_counts(circuit)
+        counts = result_qasm.get_counts(compiled_qasm)
 
     state_vector: Optional[Any] = None
 
     if execution_options.get("statevector"):
         # statevector simulation
-        result_state = execute(
-            circuit, backend_state
-        ).result()  # statevector simulation without shots
-        state_vector = result_state.get_statevector(circuit)
+        compiled_state = transpile(circuit, backend_state)
+        result_state = backend_state.run(compiled_state).result()
+        state_vector = result_state.get_statevector(compiled_state)
 
     metadata = {
         "jobId": None,

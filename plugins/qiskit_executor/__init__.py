@@ -31,7 +31,7 @@ QISKIT_EXECUTOR_BLP = SecurityBlueprint(
 )
 
 
-qiskit_version = "2.2.3"
+qiskit_version = "2.3.0"
 
 
 class QiskitExecutor(QHAnaPluginBase):

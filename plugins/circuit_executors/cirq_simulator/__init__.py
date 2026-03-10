@@ -45,7 +45,7 @@ class CirqSimulator(QHAnaPluginBase):
         return CIRQ_BLP
 
     def get_requirements(self) -> str:
-        return "cirq~=1.3"
+        return "cirq-core~=1.6.1"
 
 
 try:
