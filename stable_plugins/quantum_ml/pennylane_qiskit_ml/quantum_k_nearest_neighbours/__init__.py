@@ -70,13 +70,13 @@ class QKNN(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         return (
-            "qiskit~=2.2.3\n"
-            "qiskit-aer>=0.17,<0.18\n"
-            "pennylane~=0.35.1\n"
-            "pennylane-qiskit~=0.35.1\n"
-            "scikit-learn~=1.2.0\n"
+            "qiskit~=2.3.0\n"
+            "qiskit-aer~=0.17.2\n"
+            "pennylane~=0.44.0\n"
+            "pennylane-qiskit~=0.44.1\n"
+            "scikit-learn~=1.8.0\n"
             "muid~=0.5.3\n"
-            "autoray<0.8"
+            "autoray~=0.8.2"
         )
 
 

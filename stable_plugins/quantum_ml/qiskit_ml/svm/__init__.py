@@ -32,7 +32,7 @@ SVM_BLP = SecurityBlueprint(
     template_folder="templates",
 )
 
-sklearn_version = "1.2.0"
+sklearn_version = "1.8.0"
 
 
 class SVM(QHAnaPluginBase):
@@ -80,13 +80,13 @@ class SVM(QHAnaPluginBase):
 
     def get_requirements(self) -> str:
         return (
-            "qiskit~=2.2.3\n"
-            "qiskit-aer>=0.17,<0.18\n"
-            "qiskit-machine-learning~=0.8.0\n"
-            "numpy<2\n"
+            "qiskit~=2.3.0\n"
+            "qiskit-aer~=0.17.2\n"
+            "qiskit-machine-learning~=0.9.0\n"
+            "numpy~=2.4.3\n"
             f"scikit-learn~={sklearn_version}\n"
-            "plotly~=5.18.0\n"
-            "pandas~=1.5.0\n"
+            "plotly~=6.6.0\n"
+            "pandas~=2.3.3\n"
             "muid~=0.5.3"
         )
 

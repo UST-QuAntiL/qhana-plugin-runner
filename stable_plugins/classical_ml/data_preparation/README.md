@@ -2,5 +2,5 @@ This folder contains plugins that do classical data preparation like one-hot enc
 
 The following dependencies are used by these plugins:
 - muid~=0.5.3
-- pandas~=1.5.0
+- pandas~=2.3.3
 - pretty-html-table~=0.9.16

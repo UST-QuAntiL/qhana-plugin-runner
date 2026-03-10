@@ -32,8 +32,8 @@ QISKIT_QKE_BLP = SecurityBlueprint(
 )
 
 
-qiskit_version = "2.2.3"
-qiskit_ml_version = "0.8.0"
+qiskit_version = "2.3.0"
+qiskit_ml_version = "0.9.0"
 
 
 class QiskitQKE(QHAnaPluginBase):
@@ -69,9 +69,9 @@ class QiskitQKE(QHAnaPluginBase):
     def get_requirements(self) -> str:
         return (
             f"qiskit~={qiskit_version}\n"
-            "qiskit-aer>=0.17,<0.18\n"
+            "qiskit-aer~=0.17.2\n"
             f"qiskit-machine-learning~={qiskit_ml_version}\n"
-            "numpy<2\n"
+            "numpy~=2.4.3\n"
             "muid~=0.5.3"
         )
 

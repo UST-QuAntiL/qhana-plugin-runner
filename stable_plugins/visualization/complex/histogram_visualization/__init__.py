@@ -51,7 +51,7 @@ class HistogramVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nkaleido~=0.2.1\n"
+        return "pylatexenc~=2.10\nkaleido~=1.2.0\n"
 
 
 try:

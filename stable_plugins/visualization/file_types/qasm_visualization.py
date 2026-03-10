@@ -264,7 +264,7 @@ class QasmVisualization(QHAnaPluginBase):
         return QASM_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nqiskit~=2.2.3"
+        return "pylatexenc~=2.10\nqiskit~=2.3.0"
 
 
 TASK_LOGGER = get_task_logger(__name__)
