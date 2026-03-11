@@ -17,10 +17,16 @@ import qiskit
 from numpy import ndarray
 from typing import Callable
 
-from pennylane_qiskit_compat import (
-    ensure_qiskit_ibm_provider_compat,
-    pennylane_qiskit_version_override,
-)
+try:
+    from ...pennylane_qiskit_compat import (
+        ensure_qiskit_ibm_provider_compat,
+        pennylane_qiskit_version_override,
+    )
+except ImportError:
+    from pennylane_qiskit_compat import (
+        ensure_qiskit_ibm_provider_compat,
+        pennylane_qiskit_version_override,
+    )
 
 
 def get_controlled_one_qubit_unitary(U: ndarray) -> Callable[[int, int], None]:

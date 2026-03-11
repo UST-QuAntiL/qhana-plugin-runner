@@ -16,7 +16,10 @@ import numpy as np
 from abc import abstractmethod, ABCMeta
 from enum import Enum
 from typing import List, Tuple
-from pennylane import Device
+try:
+    from pennylane import Device
+except ImportError:
+    from pennylane.devices import Device
 
 
 def count_wires(wires: List[List]) -> int:

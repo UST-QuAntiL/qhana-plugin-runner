@@ -28,10 +28,16 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     IBMProvider = None
 
-from pennylane_qiskit_compat import (
-    ensure_qiskit_ibm_provider_compat,
-    pennylane_qiskit_version_override,
-)
+try:
+    from ...pennylane_qiskit_compat import (
+        ensure_qiskit_ibm_provider_compat,
+        pennylane_qiskit_version_override,
+    )
+except ImportError:
+    from pennylane_qiskit_compat import (
+        ensure_qiskit_ibm_provider_compat,
+        pennylane_qiskit_version_override,
+    )
 
 TASK_LOGGER = get_task_logger(__name__)
 

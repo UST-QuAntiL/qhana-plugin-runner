@@ -14,7 +14,10 @@
 
 from abc import abstractmethod, ABCMeta
 from typing import List, Tuple
-from pennylane import Device
+try:
+    from pennylane import Device
+except ImportError:
+    from pennylane.devices import Device
 import numpy as np
 import enum
 from celery.utils.log import get_task_logger

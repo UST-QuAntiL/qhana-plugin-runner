@@ -583,7 +583,11 @@ def load_git_plugins(c, plugins_path="./git-plugins"):
 @task
 def install_plugin_dependencies(c):
     """Install all plugin dependencies."""
-    c.run(join(["python", "-m", "flask", "install"]), echo=True, warn=True)
+    c.run(
+        join(["python", "-m", "flask", "install", "--skip-runner-dependencies"]),
+        echo=True,
+        warn=True,
+    )
 
 
 @task
