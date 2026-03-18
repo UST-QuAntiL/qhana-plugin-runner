@@ -224,7 +224,7 @@ p {
     transform: translateY(2px);
 }
 
-.pattern_headline{
+.pattern-headline{
     display:flex;
     margin-left: 2%;
     font-size: 1.8rem
@@ -400,4 +400,12 @@ p {
 .edge.highlight {
     stroke: rgba(178, 73, 252, 0.9) !important;
     stroke-width: 3;
+}
+
+.pattern-detail:not(:has(.card:not(.hidden))) {
+    display: none;
+}
+
+.hidden {
+    display: none;
 }

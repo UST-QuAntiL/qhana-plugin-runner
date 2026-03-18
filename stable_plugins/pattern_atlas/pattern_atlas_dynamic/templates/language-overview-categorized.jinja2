@@ -39,7 +39,8 @@
     </header>
 
     {%- for category, patterns in patterns_by_category.items() -%}
-    <h2 class="pattern_headline">{{ category }}</h2>
+    <details open class="pattern-detail">
+    <summary class="pattern-headline">{{ category }}</summary>
     <div class="card-grid">
         {%- for pattern in patterns -%}
         <div class="card"
@@ -51,6 +52,7 @@
         </div>
         {%- endfor -%}
     </div>
+    </details>
     {%- endfor -%}
 
     <script>
@@ -65,7 +67,11 @@
                 const tags = card.dataset.tags;
                 const categories = card.dataset.categories;
                 const visible = name.includes(query) || tags.includes(query) || categories.includes(query);
-                card.style.display = visible ? '' : 'none';
+                if (!visible){
+                    card.classList.add("hidden")
+                } else {
+                    card.classList.remove("hidden")
+                }
             });
         });
 

@@ -37,18 +37,18 @@ from .model import (
 )
 
 CATEGORY_HEADLINES = {
-    "dataencodings": "Data Encodings- How can classical data be encoded into quantum states for computation?",
+    "dataencodings": "Data Encodings - How can classical data be encoded into quantum states for computation?",
     "unitarytransformations": "Unitary Transformations - How can unitary transformations be designed and composed to build quantum algorithms?",
-    "warmstaring": "Warm-Starting- How can prior knowledge or favorable initializations be used to improve the convergence of quantum algorithms?",
-    "programflow": "Program Flow- How can computations be effectively distributed between quantum and classical hardware?",
-    "circuitcutting": "Circuit Cutting- How can large quantum circuits be partitioned into smaller, executable subcircuits to overcome hardware limitations?",
-    "errorhandling": "Error Handling- How can quantum algorithms be made robust against noise and errors in current quantum hardware?",
-    "quantumstates": "Quantum States- What are quantum states, and how are they represented and manipulated in quantum algorithms?",
-    "execution": "Execution- What best practices should be followed when developing hybrid quantum-classical applications?",
-    "development": "Development- What best practices should be followed when developing hybrid quantum-classical applications?",
-    "operations": "Operations- How can the execution, monitoring, and management of quantum applications be organized and automated?",
-    "measurement": "Measurement- How can classical information be accurately extracted from quantum states after computation?",
-    "qml": "Quantum Machine Learning- How to use quantum computing to solve machine learning problems?",
+    "warmstaring": "Warm-Starting - How can prior knowledge or favorable initializations be used to improve the convergence of quantum algorithms?",
+    "programflow": "Program Flow - How can computations be effectively distributed between quantum and classical hardware?",
+    "circuitcutting": "Circuit Cutting - How can large quantum circuits be partitioned into smaller, executable subcircuits to overcome hardware limitations?",
+    "errorhandling": "Error Handling - How can quantum algorithms be made robust against noise and errors in current quantum hardware?",
+    "quantumstates": "Quantum States - What are quantum states, and how are they represented and manipulated in quantum algorithms?",
+    "execution": "Execution - What best practices should be followed when developing hybrid quantum-classical applications?",
+    "development": "Development - What best practices should be followed when developing hybrid quantum-classical applications?",
+    "operations": "Operations - How can the execution, monitoring, and management of quantum applications be organized and automated?",
+    "measurement": "Measurement - How can classical information be accurately extracted from quantum states after computation?",
+    "qml": "Quantum Machine Learning - How to use quantum computing to solve machine learning problems?",
 }
 
 # regex for latex math
