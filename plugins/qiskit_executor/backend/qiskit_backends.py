@@ -16,7 +16,13 @@ import os
 from typing import Any, Optional
 
 from celery.utils.log import get_task_logger
-from qiskit.providers.exceptions import QiskitBackendNotFoundError
+
+try:
+    from qiskit.providers.exceptions import QiskitBackendNotFoundError
+except Exception:
+    # Allow plugin discovery and UI route registration without qiskit installed.
+    class QiskitBackendNotFoundError(Exception):
+        pass
 
 TASK_LOGGER = get_task_logger(__name__)
 
