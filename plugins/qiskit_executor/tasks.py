@@ -14,20 +14,12 @@
 
 from json import dump
 from tempfile import SpooledTemporaryFile
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import uuid4
 
 from celery import chain
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
-from qiskit import QiskitError, QuantumCircuit, execute
-from qiskit.qasm2 import loads as loads2
-from qiskit.qasm3 import QASM3ImporterError
-from qiskit.qasm3 import loads as loads3
-from qiskit.qasm3 import loads as loads3
-from qiskit.result.result import ExperimentResult, Result
-from qiskit_ibm_provider import IBMJob
-from qiskit_ibm_runtime import QiskitRuntimeService
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -36,10 +28,33 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import TASK_STEPS_CHANGED, add_step, save_task_result
 
 from . import QiskitExecutor
-from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
+from .backend.qiskit_backends import (
+    get_backend_names,
+    get_qiskit_backend,
+    get_runtime_service,
+)
 from .schemas import CircuitParameters, CircuitParameterSchema
 
 TASK_LOGGER = get_task_logger(__name__)
+
+if TYPE_CHECKING:
+    from qiskit import QuantumCircuit
+
+
+def _load_qiskit():
+    """Import qiskit lazily so plugin discovery still works without extras."""
+    try:
+        from qiskit import QiskitError, transpile
+        from qiskit.qasm2 import loads as loads2
+        from qiskit.qasm3 import QASM3ImporterError
+        from qiskit.qasm3 import loads as loads3
+    except ImportError as err:
+        raise RuntimeError(
+            "Qiskit is not installed for the qiskit-executor plugin. "
+            "Install plugin dependencies before executing this task."
+        ) from err
+
+    return QiskitError, transpile, loads2, loads3, QASM3ImporterError
 
 
 @CELERY.task(name=f"{QiskitExecutor.instance.identifier}.start_execution", bind=True)
@@ -56,6 +71,7 @@ def start_execution(self, db_id: int) -> str:
     circuit_params: CircuitParameters = CircuitParameterSchema().load(
         db_task.data["parameters"]
     )
+    QiskitError, transpile, loads2, loads3, QASM3ImporterError = _load_qiskit()
 
     backend_list = None
     if (
@@ -119,17 +135,16 @@ def start_execution(self, db_id: int) -> str:
     with open_url(circuit_params.circuit) as quasm_response:
         circuit_qasm = quasm_response.text
 
-    backend.shots = circuit_params.shots
-
-    circuit: QuantumCircuit
+    circuit: Any
     try:
         circuit = loads3(circuit_qasm)
-    except QASM3ImporterError:
+    except (QASM3ImporterError, QiskitError):
         circuit = loads2(circuit_qasm)
 
     TASK_LOGGER.info(f"Start execution with parameters: {str(circuit_params)}")
 
-    job: IBMJob = execute(circuit, backend, shots=circuit_params.shots)
+    compiled = transpile(circuit, backend)
+    job: Any = backend.run(compiled, shots=circuit_params.shots)
 
     db_task.data["job_id"] = job.job_id()
     db_task.clear_previous_step()
@@ -164,6 +179,7 @@ def result_watcher(self, db_id: int) -> str:
     # get parameters
     TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    QiskitError, _, _, _, _ = _load_qiskit()
 
     if db_task is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -174,43 +190,48 @@ def result_watcher(self, db_id: int) -> str:
     params: CircuitParameters = CircuitParameterSchema().load(db_task.data["parameters"])
     execution_options = db_task.data["options"]
 
-    service = QiskitRuntimeService(token=params.ibmqToken, channel="ibm_quantum")
+    service = get_runtime_service(params.ibmqToken)
+    if service is None:
+        raise RuntimeError("Qiskit Runtime is unavailable in this environment.")
     job = service.job(job_id)
 
     if not job.in_final_state():
         raise JobNotFinished("Job not finished yet!")  # auto-retry task on this exception
 
-    result: Result = job.result()
+    result = job.result()
     if not result.success:
         # TODO better error
         raise ValueError("Circuit could not be executed!", result)
 
-    experiment_result: ExperimentResult = result.results[0]
-    extra_metadata = result.metadata
+    experiment_result = result.results[0]
+    extra_metadata = getattr(result, "metadata", {}) or {}
 
-    time_taken = result.time_taken
+    time_taken = getattr(result, "time_taken", 0)
     time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
-    shots = experiment_result.shots
+    shots = getattr(experiment_result, "shots", params.shots)
     if isinstance(shots, tuple):
         assert (
             len(shots) == 2
         ), "If untrue, check with qiskit documentation what has changed!"
         shots = abs(shots[-1] - shots[0])
-    seed = experiment_result.seed_simulator
+    seed = getattr(experiment_result, "seed_simulator", None)
+
+    backend_name = getattr(result, "backend_name", None)
+    backend_version = getattr(result, "backend_version", None)
 
     metadata = {
         # trace ids (specific to IBM qiskit jobs)
-        "jobId": result.job_id,
-        "qobjId": result.qobj_id,
+        "jobId": getattr(result, "job_id", None),
+        "qobjId": getattr(result, "qobj_id", None),
         # QPU/Simulator information
-        "qpuType": "simulator" if "simulator" in result.backend_name else "qpu",
+        "qpuType": "simulator" if backend_name and "simulator" in backend_name else "qpu",
         "qpuVendor": "IBM",
-        "qpuName": result.backend_name,
-        "qpuVersion": result.backend_version,
+        "qpuName": backend_name,
+        "qpuVersion": backend_version,
         "seed": seed,  # only for simulators
         "shots": shots,
         # Time information
-        "date": str(result.date),
+        "date": str(getattr(result, "date", "")),
         "timeTaken": time_taken,  # total job time
         "timeTakenIdle": 0,  # idle/waiting time
         "timeTakenQpu": time_taken,  # total qpu time

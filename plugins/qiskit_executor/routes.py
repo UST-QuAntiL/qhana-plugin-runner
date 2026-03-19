@@ -14,7 +14,7 @@
 
 import os
 from http import HTTPStatus
-from typing import Mapping, Optional
+from typing import Any, Mapping, Optional
 
 from celery.utils.log import get_task_logger
 from flask import Response, redirect
@@ -48,6 +48,14 @@ from .schemas import (
 from .tasks import start_execution
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def _get_stored_parameters(db_task: ProcessingTask) -> dict[str, Any]:
+    """Return stored circuit parameters without requiring a complete task payload."""
+    parameters = db_task.data.get("parameters", {})
+    if isinstance(parameters, Mapping):
+        return dict(parameters)
+    return {}
 
 
 @QISKIT_EXECUTOR_BLP.route("/")
@@ -153,10 +161,19 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {}
 
-        if "IBMQ_BACKEND" in os.environ:
-            default_values[fields["backend"].data_key] = os.environ["IBMQ_BACKEND"]
+        backend_env = os.environ.get("QISKIT_IBM_BACKEND") or os.environ.get(
+            "IBMQ_BACKEND"
+        )
+        if backend_env:
+            default_values[fields["backend"].data_key] = backend_env
 
-        if "IBMQ_TOKEN" in os.environ:
+        token_env = os.environ.get("QISKIT_IBM_TOKEN")
+        if token_env:
+            default_values[fields["ibmqToken"].data_key] = "****"
+            TASK_LOGGER.info(
+                "Qiskit IBM token successfully loaded from environment variable"
+            )
+        elif "IBMQ_TOKEN" in os.environ:
             default_values[fields["ibmqToken"].data_key] = "****"
             TASK_LOGGER.info("IBMQ token successfully loaded from environment variable")
 
@@ -197,7 +214,12 @@ class CalcView(MethodView):
         if not arguments.shots:
             arguments.shots = options.get("shots", 1024)
         if arguments.ibmqToken == "****":
-            if "IBMQ_TOKEN" in os.environ:
+            if "QISKIT_IBM_TOKEN" in os.environ:
+                arguments.ibmqToken = os.environ["QISKIT_IBM_TOKEN"]
+                TASK_LOGGER.info(
+                    "Qiskit IBM token successfully loaded from environment variable."
+                )
+            elif "IBMQ_TOKEN" in os.environ:
                 arguments.ibmqToken = os.environ["IBMQ_TOKEN"]
                 TASK_LOGGER.info(
                     "IBMQ token successfully loaded from environment variable."
@@ -288,10 +310,10 @@ class AuthenticationFrontend(MethodView):
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
-        required=True,
+        required=False,
     )
     @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
-    def post(self, db_id, errors):
+    def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
         return self.render(db_id, request.form, errors, not errors)
 
@@ -301,16 +323,17 @@ class AuthenticationFrontend(MethodView):
             msg = f"Could not load task data with id {db_id} to read parameters!"
             raise KeyError(msg)
 
-        params: CircuitParameters = CircuitParameterSchema().load(
-            db_task.data["parameters"]
-        )
         fields = AuthenticationParameterSchema().fields
+        stored_parameters = _get_stored_parameters(db_task)
 
         # define default values
-        default_values = {}
+        default_values = dict(data)
 
-        if params.backend:
-            default_values[fields["backend"].data_key] = params.backend
+        if (
+            stored_parameters.get("backend")
+            and fields["backend"].data_key not in default_values
+        ):
+            default_values[fields["backend"].data_key] = stored_parameters["backend"]
 
         return Response(
             render_template(
@@ -391,10 +414,10 @@ class BackendSelectionFrontend(MethodView):
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
-        required=True,
+        required=False,
     )
     @QISKIT_EXECUTOR_BLP.require_jwt("jwt", optional=True)
-    def post(self, db_id, errors):
+    def post(self, errors, db_id: int):
         """Return the micro frontend with prerendered inputs."""
         return self.render(db_id, request.form, errors, not errors)
 
@@ -406,7 +429,11 @@ class BackendSelectionFrontend(MethodView):
 
         # provide backend names to template
         parameter_schema = BackendParameterSchema()
-        parameter_schema.datalists = {"backend": db_task.data["backend_names"]}
+        parameter_schema.datalists = {"backend": db_task.data.get("backend_names", [])}
+        default_values = dict(data)
+        stored_parameters = _get_stored_parameters(db_task)
+        if stored_parameters.get("backend") and "backend" not in default_values:
+            default_values["backend"] = stored_parameters["backend"]
 
         return Response(
             render_template(
@@ -414,7 +441,7 @@ class BackendSelectionFrontend(MethodView):
                 name=QiskitExecutor.instance.name,
                 version=QiskitExecutor.instance.version,
                 schema=parameter_schema,
-                values=data,
+                values=default_values,
                 valid=valid,
                 errors=errors,
                 process=url_for(

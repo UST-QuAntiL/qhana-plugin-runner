@@ -64,7 +64,7 @@ psycopg2
 
 
 # qiskit-executor@v0.1.0
-qiskit~=0.43
+qiskit~=2.2.3
 
 
 # time-tanh@v0.2.0
@@ -96,11 +96,11 @@ pandas~=1.5.0
 
 
 # mds@v0.2.0
-scikit-learn~=1.1
+scikit-learn~=1.2.0
 
 
 # pca@v0.2.1
-scikit-learn~=1.1
+scikit-learn~=1.2.0
 plotly~=5.6.0
 pandas~=1.5.0
 
@@ -111,18 +111,18 @@ scikit-learn-extra~=0.2.0
 
 
 # optics@v0.1.0
-scikit-learn~=1.1
+scikit-learn~=1.2.0
 plotly~=5.6.0
 pandas~=1.5.0
 
 
 # classical-k-means@v0.1.0
 plotly~=5.6.0
-scikit-learn~=1.1
+scikit-learn~=1.2.0
 
 
 # data-creator@v0.2.1
-numpy~=1.13
+numpy~=1.26.4
 
 
 # zip-merger@v0.2.0
@@ -142,83 +142,83 @@ minio
 
 
 # max_cut@v0.1.0
-qiskit~=0.43
-qiskit-optimization~=0.5.0
+qiskit~=2.2.3
+qiskit-optimization~=0.7.0
 git+https://github.com/pandrey-fr/maxcut.git@7ab0cf4a8131333ef6e67f23c4e43c190837c315
 plotly~=5.6.0
 pandas~=1.5.0
-networkx~=2.8
+networkx~=3.0
 
 
 # quantum-parzen-window@v0.2.0
-pennylane~=0.30
-pennylane-qiskit~=0.30
-scikit-learn~=1.1
+pennylane~=0.35.1
+pennylane-qiskit~=0.35.1
+scikit-learn~=1.2.0
 muid~=0.5.3
 
 
 # quantum-k-means@v0.2.0
-qiskit~=0.43
-pennylane~=0.30
-pennylane-qiskit~=0.30
+qiskit~=2.2.3
+pennylane~=0.35.1
+pennylane-qiskit~=0.35.1
 
 
 # quantum-k-nearest-neighbours@v0.2.0
-qiskit~=0.43
-pennylane~=0.30
-pennylane-qiskit~=0.30
-scikit-learn~=1.1
+qiskit~=2.2.3
+pennylane~=0.35.1
+pennylane-qiskit~=0.35.1
+scikit-learn~=1.2.0
 muid~=0.5.3
 
 
 # hybrid-autoencoder@v0.2.0
-qiskit~=0.43
-pennylane~=0.30
-pennylane-qiskit~=0.30
+qiskit~=2.2.3
+pennylane~=0.35.1
+pennylane-qiskit~=0.35.1
 torch~=2.0.1
 muid~=0.5.3
 
 
 # qnn@v0.1.0
 matplotlib~=3.5.1
-qiskit~=0.43
-pennylane~=0.30
-pennylane-qiskit~=0.30
-scikit-learn~=1.1
+qiskit~=2.2.3
+pennylane~=0.35.1
+pennylane-qiskit~=0.35.1
+scikit-learn~=1.2.0
 torch~=2.0.1
 muid~=0.5.3
 
 
 # quantum-kernel-estimation@v0.2.0
-qiskit~=0.43
-pennylane~=0.30
-pennylane-qiskit~=0.30
+qiskit~=2.2.3
+pennylane~=0.35.1
+pennylane-qiskit~=0.35.1
 muid~=0.5.3
 
 
 # svm@v0.1.0
-qiskit~=0.43
-qiskit-machine-learning~=0.4.0
-scikit-learn~=1.1
+qiskit~=2.2.3
+qiskit-machine-learning~=0.8.0
+scikit-learn~=1.2.0
 plotly~=5.6.0
 pandas~=1.5.0
 muid~=0.5.3
 
 
 # qiskit-quantum-kernel-estimation@v0.2.0
-qiskit~=0.43
-qiskit-machine-learning~=0.4.0
+qiskit~=2.2.3
+qiskit-machine-learning~=0.8.0
 muid~=0.5.3
 
 
 # qiskit-simulator@v0.3.0
-qiskit~=0.43
+qiskit~=2.2.3
 
 
 # vqc@v0.1.0
-qiskit~=0.43
-qiskit-machine-learning~=0.4.0
-scikit-learn~=1.1
+qiskit~=2.2.3
+qiskit-machine-learning~=0.8.0
+scikit-learn~=1.2.0
 muid~=0.5.3
 
 
@@ -230,4 +230,4 @@ muid~=0.5.3
 
 # qasm-visualization@v0.2.0
 pylatexenc~=2.10
-qiskit~=0.43
+qiskit~=2.2.3

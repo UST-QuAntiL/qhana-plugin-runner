@@ -47,14 +47,24 @@ class QCNN(QHAnaPluginBase):
         return QCNN_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\ntorch~=2.0.1\nplotly~=5.18.0\npandas~=1.5.0\nautoray<0.8"
+        return (
+            "qiskit~=2.3.0\n"
+            "qiskit-aer~=0.17.2\n"
+            "pennylane~=0.44.0\n"
+            "pennylane-qiskit~=0.44.1\n"
+            "scikit-learn~=1.8.0\n"
+            "torch~=2.10.0\n"
+            "plotly~=6.6.0\n"
+            "pandas~=2.3.3\n"
+            "autoray~=0.8.2"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

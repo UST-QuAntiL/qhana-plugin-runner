@@ -12,10 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, ZFeatureMap
-from qiskit_machine_learning.kernels import QuantumKernel
 import enum
 from typing import List
+
+from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, ZFeatureMap
+from qiskit.primitives import BackendSamplerV2, StatevectorSampler
+from qiskit.providers import BackendV2
+
+try:
+    from ...compat import ensure_qiskit_machine_learning_compat
+except ImportError:  # pragma: no cover - fallback for direct plugin imports
+    from compat import ensure_qiskit_machine_learning_compat
+
+ensure_qiskit_machine_learning_compat()
+
+from qiskit_machine_learning.kernels.fidelity_quantum_kernel import FidelityQuantumKernel
+from qiskit_machine_learning.state_fidelities import ComputeUncompute
+
+
+def _build_sampler(backend: BackendV2 | None, shots: int):
+    if isinstance(backend, BackendV2):
+        options = {"default_shots": shots} if shots else None
+        return BackendSamplerV2(backend=backend, options=options)
+    return StatevectorSampler(default_shots=shots or 1024)
 
 
 class EntanglementPatternEnum(enum.Enum):
@@ -39,7 +58,8 @@ class KernelEnum(enum.Enum):
         paulis: List[str],
         reps: int,
         entanglement_pattern: str,
-    ) -> QuantumKernel:
+        shots: int,
+    ) -> FidelityQuantumKernel:
         if self == KernelEnum.z_feature_map:
             feature_map = ZFeatureMap(
                 feature_dimension=n_qbits, reps=reps
@@ -61,4 +81,6 @@ class KernelEnum(enum.Enum):
         else:
             raise ValueError("Unkown kernel!")
 
-        return QuantumKernel(feature_map=feature_map, quantum_instance=backend)
+        sampler = _build_sampler(backend, shots)
+        fidelity = ComputeUncompute(sampler=sampler)
+        return FidelityQuantumKernel(feature_map=feature_map, fidelity=fidelity)

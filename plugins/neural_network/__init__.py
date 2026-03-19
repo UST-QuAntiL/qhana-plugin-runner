@@ -51,7 +51,7 @@ class NeuralNetwork(QHAnaPluginBase):
         return NN_BLP
 
     def get_requirements(self) -> str:
-        return "torch~=2.0.1"
+        return "torch~=2.10.0"
 
 
 try:

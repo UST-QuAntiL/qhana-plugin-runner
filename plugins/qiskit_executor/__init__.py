@@ -31,8 +31,7 @@ QISKIT_EXECUTOR_BLP = SecurityBlueprint(
 )
 
 
-qiskit_version = "0.43"
-qiskit_ibm_provider_version = "0.8"
+qiskit_version = "2.3.0"
 
 
 class QiskitExecutor(QHAnaPluginBase):
@@ -48,14 +47,14 @@ class QiskitExecutor(QHAnaPluginBase):
         return QISKIT_EXECUTOR_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~={qiskit_version}\nqiskit-ibm-provider~={qiskit_ibm_provider_version}"
+        return f"qiskit~={qiskit_version}"
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

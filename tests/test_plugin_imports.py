@@ -57,6 +57,7 @@ PLUGIN_BASE_QALIFIED = PLUGIN_BASE_MODULE + (PLUGIN_BASE_CLASS_NAME,)
 BASE_PATH = Path(sys.base_prefix)
 VENV_PATH = Path(sys.prefix)
 REPOSITORY_PATH = Path(".").resolve()
+STDLIB_MODULES = getattr(sys, "stdlib_module_names", frozenset())
 
 
 def get_plugin_roots():
@@ -177,6 +178,8 @@ def is_valid_import(module: tuple[str, ...], lineno, file_) -> bool:
         return False
     if module[0] == "":
         return True  # allow relative imports
+    if module[0] in STDLIB_MODULES or module[0] in sys.builtin_module_names:
+        return True  # stdlib and builtin modules are always fine
     if module[0] in ALLOWED_IMPORTS:
         return True  # explicitly allowed imports
     sys_module = sys.modules.get(module[0])
