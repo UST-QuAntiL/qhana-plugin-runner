@@ -33,6 +33,7 @@ Use Python 3.14 for local development and plugin installation.
 Run `poetry env use python3.14` once, then `poetry install` to install dependencies.
 
 The `pytket_qulacsBackend-simulator` plugin is disabled by default via `DISABLED_PLUGINS` because `qulacs` still has no Python 3.14 wheel.
+On Windows, `classical-k-medoids` is also disabled by default because `scikit-learn-extra` currently falls back to a native build there.
 If an environment variable specified in `.flaskenv` should be changed locally add a `.env` file with the corresponding variables set.
 
 ````{note}
@@ -137,6 +138,7 @@ poetry run flask install --dry-run
 ```
 
 To re-enable the disabled `pytket_qulacsBackend-simulator` plugin locally, remove it from `DISABLED_PLUGINS` in `.env` or `.flaskenv`. This may require extra native build dependencies because `qulacs` does not currently publish Python 3.14 wheels.
+To re-enable `classical-k-medoids` on Windows, set `AUTO_DISABLE_UNSUPPORTED_PLUGINS=false` in `.env`. This may require Microsoft C++ Build Tools because `scikit-learn-extra` does not publish a compatible wheel for that setup.
 
 
 ## What this Repository contains
