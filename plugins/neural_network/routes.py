@@ -119,7 +119,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback: CallbackUrl):
+    def get(self, errors, callback: Optional[CallbackUrl] = None):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -139,11 +139,11 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback: CallbackUrl):
+    def post(self, errors, callback: Optional[CallbackUrl] = None):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback: CallbackUrl):
+    def render(self, data: Mapping, errors: dict, callback: Optional[CallbackUrl]):
         plugin = NeuralNetwork.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -153,15 +153,18 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         # set default value
         if not data:
             data = {"number_of_neurons": 5}
+        callback_params = {}
+        if callback and callback.callback:
+            callback_params = callback_schema.dump(callback)
         process_url = url_for(
             f"{NN_BLP.name}.{SetupProcess.__name__}",
             # forward the callback url to the processing step
-            **callback_schema.dump(callback),
+            **callback_params,
         )
         example_values_url = url_for(
             f"{NN_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
             **self.example_inputs,
-            **callback_schema.dump(callback),
+            **callback_params,
         )
 
         help_text = "The number of neurons in the hidden layer."
@@ -186,10 +189,12 @@ class SetupProcess(MethodView):
     """Save the hyperparameters to the database."""
 
     @NN_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
-    @NN_BLP.arguments(CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True)
+    @NN_BLP.arguments(CallbackUrlSchema(unknown=EXCLUDE), location="query", required=False)
     @NN_BLP.response(HTTPStatus.SEE_OTHER)
     @NN_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
+    def post(
+        self, arguments: HyperparamterInputData, callback: Optional[CallbackUrl] = None
+    ):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
@@ -202,15 +207,7 @@ class SetupProcess(MethodView):
         db_task.save()
         DB.session.flush()
 
-        # add callback as webhook subscriber subscribing to all updates
-        subscription = TaskUpdateSubscription(
-            db_task,
-            webhook_href=callback.callback,
-            task_href=url_for(
-                "tasks-api.TaskView", task_id=str(db_task.id), _external=True
-            ),
-            event_type=None,
-        )
+        task_href = url_for("tasks-api.TaskView", task_id=str(db_task.id), _external=True)
 
         weights_link = TaskLink(
             db_task,
@@ -253,7 +250,14 @@ class SetupProcess(MethodView):
         DB.session.add(calc_grad_link)
         DB.session.add(calc_loss_and_grad_link)
 
-        subscription.save()
+        if callback and callback.callback:
+            subscription = TaskUpdateSubscription(
+                db_task,
+                webhook_href=callback.callback,
+                task_href=task_href,
+                event_type=None,
+            )
+            subscription.save()
 
         db_task.add_next_step(
             href=url_for(f"{NN_BLP.name}.{PassDataEndpoint.__name__}", db_id=db_task.id),
