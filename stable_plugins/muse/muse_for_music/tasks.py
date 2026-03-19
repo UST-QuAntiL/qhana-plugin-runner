@@ -36,6 +36,7 @@ from .util import (
     PersonEntity,
     SubpartEntity,
     VoiceEntity,
+    entity_to_id,
     get_attribute_metadata,
     opus_to_entity,
     part_to_entity,
@@ -84,6 +85,7 @@ def import_data(self, db_id: int) -> str:
         client.test_login()
 
         opuses = client.get_opuses()
+        opuses = [client.get_opus(entity_to_id(o).href) for o in opuses]
         serializer = tuple_serializer(OpusEntity._fields, metadata)
         serialized_opuses = [serializer(opus_to_entity(o)) for o in opuses]
 
@@ -114,6 +116,7 @@ def import_data(self, db_id: int) -> str:
             )
 
         parts = client.get_parts()
+        parts = [client.get_part(entity_to_id(p).href) for p in parts]
         serializer = tuple_serializer(PartEntity._fields, metadata)
         mapped = [part_to_entity(p) for p in parts]
         serialized_parts = [serializer(p) for p in mapped]
@@ -129,6 +132,7 @@ def import_data(self, db_id: int) -> str:
             )
 
         subparts = client.get_subparts()
+        subparts = [client.get_subpart(entity_to_id(p).href) for p in subparts]
         serializer = tuple_serializer(SubpartEntity._fields, metadata)
         mapped = [subpart_to_entity(p, part_id_to_opus_id) for p in subparts]
         serialized_subparts = [serializer(p) for p in mapped]
@@ -143,9 +147,13 @@ def import_data(self, db_id: int) -> str:
                 db_id, output, "subparts.csv", "entity/list", "text/csv"
             )
 
-        voices = []
-        for subpart in mapped:
-            voices.extend(client.get_voices(subpart.api_href))
+        try:
+            voices = client.get_all_voices()
+        except Exception:
+            voices = []
+            for subpart in mapped:
+                voices.extend(client.get_voices(subpart.api_href))
+        voices = [client.get_voice(entity_to_id(v).href) for v in voices]
         serializer = tuple_serializer(VoiceEntity._fields, metadata)
         mapped_voices = [
             voice_to_entity(v, subpart_id_to_part_id, part_id_to_opus_id) for v in voices
