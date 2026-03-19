@@ -43,7 +43,9 @@ TEST_CONFIG = {
 @pytest.fixture()
 def qiskit_executor_client(tmp_path):
     test_config = dict(TEST_CONFIG)
-    test_config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{tmp_path / 'qiskit-executor.db'}"
+    test_config["SQLALCHEMY_DATABASE_URI"] = (
+        f"sqlite:///{tmp_path / 'qiskit-executor.db'}"
+    )
 
     app = create_app(test_config, silent_log=True)
 

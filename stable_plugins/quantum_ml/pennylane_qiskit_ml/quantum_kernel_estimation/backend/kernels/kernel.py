@@ -14,6 +14,7 @@
 
 from abc import abstractmethod, ABCMeta
 from typing import List, Tuple
+
 try:
     from pennylane import Device
 except ImportError:

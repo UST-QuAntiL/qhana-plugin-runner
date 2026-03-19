@@ -16,6 +16,7 @@ import numpy as np
 from abc import abstractmethod, ABCMeta
 from enum import Enum
 from typing import List, Tuple
+
 try:
     from pennylane import Device
 except ImportError:

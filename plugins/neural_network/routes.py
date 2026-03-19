@@ -189,7 +189,9 @@ class SetupProcess(MethodView):
     """Save the hyperparameters to the database."""
 
     @NN_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
-    @NN_BLP.arguments(CallbackUrlSchema(unknown=EXCLUDE), location="query", required=False)
+    @NN_BLP.arguments(
+        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=False
+    )
     @NN_BLP.response(HTTPStatus.SEE_OTHER)
     @NN_BLP.require_jwt("jwt", optional=True)
     def post(
