@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc03"
+  targetNamespace="http://qhana/testcases">
+
+  <bpmn:process id="Process_tc03_xor_default" name="tc03 XOR (default path)" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="UserTask_Input" name="User Input (set XOR vars)">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.chooseA" label="Choose branch A? (true/false)" type="boolean" />
+          <camunda:formField id="qoutput.inputA" label="Input for hello-world A" type="string" />
+          <camunda:formField id="qoutput.inputB" label="Input for hello-world B (default)" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="XorGateway_1" name="XOR decision" default="Flow_4">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_A" name="hello-world (A conditional)">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.inputStr">${qoutput.inputA}</camunda:inputParameter>
+          <camunda:outputParameter name="result.qoutput.helloWorldResultA">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_B" name="hello-world (B default)">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.inputStr">${qoutput.inputB}</camunda:inputParameter>
+          <camunda:outputParameter name="result.qoutput.helloWorldResultB">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+
+    <bpmn:endEvent id="EndEvent_A" name="End (A)">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_B" name="End (B)">
+      <bpmn:incoming>Flow_4EndFix</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="XorGateway_1" />
+
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="XorGateway_1" targetRef="QHanaTask_A">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${qoutput.chooseA}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="XorGateway_1" targetRef="QHanaTask_B" />
+
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="QHanaTask_A" targetRef="EndEvent_A" />
+
+    <bpmn:sequenceFlow id="Flow_4EndFix" sourceRef="QHanaTask_B" targetRef="EndEvent_B" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Process_tc03_xor_default">
+    <bpmndi:BPMNPlane id="BPMNPlane_Process_tc03_xor_default" bpmnElement="Process_tc03_xor_default">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="140" y="180" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_Input" bpmnElement="UserTask_Input">
+        <dc:Bounds x="220" y="160" width="190" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_XorGateway_1" bpmnElement="XorGateway_1">
+        <dc:Bounds x="450" y="175" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_QHanaTask_A" bpmnElement="QHanaTask_A">
+        <dc:Bounds x="560" y="120" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_QHanaTask_B" bpmnElement="QHanaTask_B">
+        <dc:Bounds x="560" y="240" width="170" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_A" bpmnElement="EndEvent_A">
+        <dc:Bounds x="770" y="145" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_B" bpmnElement="EndEvent_B">
+        <dc:Bounds x="770" y="265" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_1" bpmnElement="Flow_1">
+        <di:waypoint x="176" y="198" />
+        <di:waypoint x="220" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_2" bpmnElement="Flow_2">
+        <di:waypoint x="410" y="200" />
+        <di:waypoint x="450" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_3" bpmnElement="Flow_3">
+        <di:waypoint x="500" y="200" />
+        <di:waypoint x="560" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_4" bpmnElement="Flow_4">
+        <di:waypoint x="500" y="200" />
+        <di:waypoint x="560" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_5" bpmnElement="Flow_5">
+        <di:waypoint x="730" y="160" />
+        <di:waypoint x="770" y="163" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_4EndFix" bpmnElement="Flow_4EndFix">
+        <di:waypoint x="730" y="280" />
+        <di:waypoint x="770" y="283" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_TC08_PoolLane"
+  targetNamespace="http://qhana.example/testcases">
+
+<bpmn:collaboration id="Collab_1">
+  <bpmn:participant id="Participant_1" name="Participant" processRef="tc08_pool_lane" />
+</bpmn:collaboration>
+
+<bpmn:process id="tc08_pool_lane" name="TC08 Pool + Lanes" isExecutable="true">
+  <bpmn:laneSet id="LaneSet_1">
+    <bpmn:lane id="Lane_A" name="Exec Lane">
+      <bpmn:flowNodeRef>QHanaTask_HelloWorld</bpmn:flowNodeRef>
+    </bpmn:lane>
+    <bpmn:lane id="Lane_B" name="Rest Lane">
+      <bpmn:flowNodeRef>UserTask_Input</bpmn:flowNodeRef>
+    </bpmn:lane>
+  </bpmn:laneSet>
+
+  <bpmn:startEvent id="StartEvent_1" name="Start">
+    <bpmn:outgoing>Flow_1</bpmn:outgoing>
+  </bpmn:startEvent>
+
+  <bpmn:userTask id="UserTask_Input" name="Input (UserTask)">
+    <bpmn:incoming>Flow_1</bpmn:incoming>
+    <bpmn:outgoing>Flow_2</bpmn:outgoing>
+  </bpmn:userTask>
+
+  <bpmn:serviceTask id="QHanaTask_HelloWorld" name="HelloWorld (QHAna)" camunda:type="external" camunda:topic="qhana-task">
+    <bpmn:incoming>Flow_2</bpmn:incoming>
+    <bpmn:outgoing>Flow_3</bpmn:outgoing>
+  </bpmn:serviceTask>
+
+  <bpmn:endEvent id="EndEvent_1" name="End">
+    <bpmn:incoming>Flow_3</bpmn:incoming>
+  </bpmn:endEvent>
+
+  <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+  <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_HelloWorld" />
+  <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_HelloWorld" targetRef="EndEvent_1" />
+</bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc08">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc08" bpmnElement="Collab_1">
+      <bpmndi:BPMNShape id="Participant_1_di" bpmnElement="Participant_1">
+        <dc:Bounds x="100" y="60" width="900" height="250"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_A_di" bpmnElement="Lane_A">
+        <dc:Bounds x="120" y="80" width="860" height="120"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_B_di" bpmnElement="Lane_B">
+        <dc:Bounds x="120" y="200" width="860" height="110"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="170" y="120" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <dc:Bounds x="260" y="100" width="110" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_HelloWorld_di" bpmnElement="QHanaTask_HelloWorld">
+        <dc:Bounds x="420" y="220" width="120" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="600" y="220" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="0" y="0"/><di:waypoint x="0" y="0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="0" y="0"/><di:waypoint x="0" y="0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="0" y="0"/><di:waypoint x="0" y="0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
