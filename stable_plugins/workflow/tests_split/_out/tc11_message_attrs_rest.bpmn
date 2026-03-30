@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_TC11_MessageAttrs" targetNamespace="http://qhana.example/testcases">
+
+  <message id="Message_Request" name="RequestMessage" />
+  <message id="Message_Response" name="ResponseMessage" />
+  <interface id="Interface_1" name="MessageInterface">
+    <operation id="Operation_Send" name="sendRequest">
+      <inMessageRef>Message_Request</inMessageRef>
+    </operation>
+    <operation id="Operation_Receive" name="receiveResponse">
+      <inMessageRef>Message_Response</inMessageRef>
+    </operation>
+  </interface>
+
+  <process id="tc11_message_attrs_rest" name="TC11 Send/Receive Message Attributes (rest split)" isExecutable="true">
+    <startEvent id="StartEvent_1" name="Start">
+      <outgoing>Flow_1</outgoing></startEvent>
+
+    <receiveTask id="ReceiveTask_1" name="Receive Response" messageRef="Message_Response" operationRef="Operation_Receive" instantiate="false">
+      <outgoing>SplitFlow_tc11_message_attrs_rest_1</outgoing><incoming>Flow_3</incoming></receiveTask>
+
+    <sendTask id="SendTask_1" name="Send Request" messageRef="Message_Request" operationRef="Operation_Send">
+      <outgoing>Flow_3</outgoing><incoming>Flow_2</incoming></sendTask>
+
+    <userTask id="UserTask_Input" name="Collect Input (REST)">
+      <incoming>Flow_1</incoming><outgoing>Flow_2</outgoing></userTask>
+
+    <endEvent id="EndEvent_1" name="End">
+      <incoming>SplitFlow_tc11_message_attrs_rest_1</incoming></endEvent>
+
+    <sequenceFlow id="SplitFlow_tc11_message_attrs_rest_1" sourceRef="ReceiveTask_1" targetRef="EndEvent_1" /><sequenceFlow id="Flow_3" sourceRef="SendTask_1" targetRef="ReceiveTask_1" />
+    <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="SendTask_1" />
+    </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="tc11_message_attrs_rest">
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="100" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_UserTask_Input" bpmnElement="UserTask_Input">
+        <omgdc:Bounds x="180" y="98" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_SendTask_1" bpmnElement="SendTask_1">
+        <omgdc:Bounds x="330" y="98" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_ReceiveTask_1" bpmnElement="ReceiveTask_1">
+        <omgdc:Bounds x="480" y="98" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="790" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_1" bpmnElement="Flow_1">
+        <omgdi:waypoint x="136" y="138" />
+        <omgdi:waypoint x="180" y="138" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_2" bpmnElement="Flow_2">
+        <omgdi:waypoint x="280" y="138" />
+        <omgdi:waypoint x="330" y="138" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_3" bpmnElement="Flow_3">
+        <omgdi:waypoint x="430" y="138" />
+        <omgdi:waypoint x="480" y="138" />
+      </bpmndi:BPMNEdge>
+      </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

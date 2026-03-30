@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_TC06_TaskTypes" targetNamespace="http://qhana.example/testcases">
+
+<process id="tc06_task_types_rest" name="TC06 Task Types (rest split)" isExecutable="true">
+  <startEvent id="StartEvent_1" name="Start">
+    <outgoing>Flow_1</outgoing></startEvent>
+
+  <businessRuleTask id="BusinessRuleTask_1" name="Decision Step">
+    <outgoing>Flow_5</outgoing><incoming>Flow_4</incoming></businessRuleTask>
+
+  <manualTask id="ManualTask_1" name="Manual Step">
+    <outgoing>Flow_3</outgoing><incoming>Flow_2</incoming></manualTask>
+
+  <receiveTask id="ReceiveTask_1" name="Receive Message">
+    <outgoing>SplitFlow_tc06_task_types_rest_3</outgoing><incoming>Flow_6</incoming></receiveTask>
+
+  
+  <scriptTask id="ScriptTask_1" name="Script Step" scriptFormat="python">
+    <script>result = 1</script>
+  <incoming>Flow_3</incoming><outgoing>Flow_4</outgoing></scriptTask>
+
+  <sendTask id="SendTask_1" name="Send Message">
+    <incoming>Flow_5</incoming><outgoing>Flow_6</outgoing></sendTask>
+
+  <userTask id="UserTask_Input" name="Input (UserTask)">
+    <incoming>Flow_1</incoming><outgoing>Flow_2</outgoing></userTask>
+
+  <endEvent id="EndEvent_1" name="End">
+    <incoming>SplitFlow_tc06_task_types_rest_3</incoming></endEvent>
+
+  <sequenceFlow id="Flow_5" sourceRef="BusinessRuleTask_1" targetRef="SendTask_1" />
+  <sequenceFlow id="Flow_3" sourceRef="ManualTask_1" targetRef="ScriptTask_1" />
+  <sequenceFlow id="SplitFlow_tc06_task_types_rest_3" sourceRef="ReceiveTask_1" targetRef="EndEvent_1" /><sequenceFlow id="Flow_4" sourceRef="ScriptTask_1" targetRef="BusinessRuleTask_1" />
+  <sequenceFlow id="Flow_6" sourceRef="SendTask_1" targetRef="ReceiveTask_1" />
+  <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+  <sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="ManualTask_1" />
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc06">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc06" bpmnElement="tc06_task_types_rest">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="150" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <omgdc:Bounds x="290" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ManualTask_1_di" bpmnElement="ManualTask_1">
+        <omgdc:Bounds x="430" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ScriptTask_1_di" bpmnElement="ScriptTask_1">
+        <omgdc:Bounds x="570" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BusinessRuleTask_1_di" bpmnElement="BusinessRuleTask_1">
+        <omgdc:Bounds x="710" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SendTask_1_di" bpmnElement="SendTask_1">
+        <omgdc:Bounds x="850" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReceiveTask_1_di" bpmnElement="ReceiveTask_1">
+        <omgdc:Bounds x="990" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="1270" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+      </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_TC12_LaneAssocCleanup" targetNamespace="http://qhana.example/testcases">
+
+  <category id="Category_1">
+    <categoryValue id="CategoryValue_1" value="review-group" />
+  </category>
+
+  <process id="tc12_lane_assoc_cleanup_exec" name="TC12 Lane + Association Cleanup (exec split)" isExecutable="true">
+    <laneSet id="LaneSet_1"><lane id="Lane_EXEC" name="EXEC Lane">
+        <flowNodeRef>QHanaTask_HelloWorld</flowNodeRef></lane>
+    </laneSet><startEvent id="StartEvent_1" name="Start">
+      <outgoing>SplitFlow_tc12_lane_assoc_cleanup_exec_2</outgoing></startEvent>
+
+    <serviceTask id="QHanaTask_HelloWorld" name="HelloWorld (QHAna)" camunda:type="external" camunda:topic="qhana-task" qhana:customFlag="keep-exec">
+      <outgoing>Flow_4</outgoing><incoming>SplitFlow_tc12_lane_assoc_cleanup_exec_2</incoming></serviceTask>
+
+    <endEvent id="EndEvent_1" name="End">
+      <incoming>Flow_4</incoming></endEvent>
+
+    <sequenceFlow id="Flow_4" sourceRef="QHanaTask_HelloWorld" targetRef="EndEvent_1" />
+
+    
+    <sequenceFlow id="SplitFlow_tc12_lane_assoc_cleanup_exec_2" sourceRef="StartEvent_1" targetRef="QHanaTask_HelloWorld" /><textAnnotation id="TextAnnotation_2">
+      <text>Plugin note attached to the QHAna task.</text>
+    </textAnnotation>
+    <association id="Assoc_Note_QHana" sourceRef="TextAnnotation_2" targetRef="QHanaTask_HelloWorld" />
+  </process>
+
+  <collaboration id="Collab_1">
+    <participant id="Participant_1" name="Main Participant" processRef="tc12_lane_assoc_cleanup_exec" />
+  </collaboration>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collab_1">
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="150" y="125" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_QHanaTask_HelloWorld" bpmnElement="QHanaTask_HelloWorld">
+        <omgdc:Bounds x="610" y="265" width="110" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="800" y="287" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_TextAnnotation_2" bpmnElement="TextAnnotation_2">
+        <omgdc:Bounds x="740" y="245" width="150" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_4" bpmnElement="Flow_4">
+        <omgdi:waypoint x="720" y="305" />
+        <omgdi:waypoint x="800" y="305" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_Assoc_Note_QHana" bpmnElement="Assoc_Note_QHana">
+        <omgdi:waypoint x="740" y="270" />
+        <omgdi:waypoint x="720" y="290" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

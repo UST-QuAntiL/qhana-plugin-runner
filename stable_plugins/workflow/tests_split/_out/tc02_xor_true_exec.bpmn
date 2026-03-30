@@ -1,0 +1,87 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc02" targetNamespace="http://qhana/testcases">
+
+  <process id="Process_tc02_xor_true_exec" name="tc02 XOR (condition true) (exec split)" isExecutable="true">
+    <startEvent id="StartEvent_1" name="Start">
+      <outgoing>SplitFlow_Process_tc02_xor_true_exec_3</outgoing></startEvent>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_A" name="hello-world (A)">
+      <extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.inputStr">${qoutput.inputA}</camunda:inputParameter>
+          <camunda:outputParameter name="result.qoutput.helloWorldResultA">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </extensionElements>
+    <outgoing>Flow_5</outgoing><incoming>Flow_3</incoming></qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_B" name="hello-world (B default)">
+      <extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.inputStr">${qoutput.inputB}</camunda:inputParameter>
+          <camunda:outputParameter name="result.qoutput.helloWorldResultB">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </extensionElements>
+    <outgoing>Flow_4EndFix</outgoing><incoming>Flow_4</incoming></qhana:qHAnaServiceTask>
+
+
+    <exclusiveGateway id="XorGateway_1" name="XOR decision" default="Flow_4">
+      <incoming>SplitFlow_Process_tc02_xor_true_exec_3</incoming><outgoing>Flow_3</outgoing><outgoing>Flow_4</outgoing></exclusiveGateway>
+
+    <endEvent id="EndEvent_A" name="End (A)">
+      <incoming>Flow_5</incoming></endEvent>
+
+    <endEvent id="EndEvent_B" name="End (B)">
+      <incoming>Flow_4EndFix</incoming></endEvent>
+
+    <sequenceFlow id="Flow_5" sourceRef="QHanaTask_A" targetRef="EndEvent_A" />
+
+    <sequenceFlow id="Flow_4EndFix" sourceRef="QHanaTask_B" targetRef="EndEvent_B" />
+  <sequenceFlow id="SplitFlow_Process_tc02_xor_true_exec_3" sourceRef="StartEvent_1" targetRef="XorGateway_1" /><sequenceFlow id="Flow_3" sourceRef="XorGateway_1" targetRef="QHanaTask_A">
+      <conditionExpression xsi:type="bpmn:tFormalExpression">${qoutput.chooseA}</conditionExpression>
+    </sequenceFlow>
+
+    <sequenceFlow id="Flow_4" sourceRef="XorGateway_1" targetRef="QHanaTask_B" />
+
+    </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Process_tc02_xor_true">
+    <bpmndi:BPMNPlane id="BPMNPlane_Process_tc02_xor_true" bpmnElement="Process_tc02_xor_true_exec">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="140" y="180" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_XorGateway_1" bpmnElement="XorGateway_1">
+        <omgdc:Bounds x="450" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_QHanaTask_A" bpmnElement="QHanaTask_A">
+        <omgdc:Bounds x="560" y="120" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_QHanaTask_B" bpmnElement="QHanaTask_B">
+        <omgdc:Bounds x="560" y="240" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_A" bpmnElement="EndEvent_A">
+        <omgdc:Bounds x="770" y="145" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_B" bpmnElement="EndEvent_B">
+        <omgdc:Bounds x="770" y="265" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_3" bpmnElement="Flow_3">
+        <omgdi:waypoint x="500" y="200" />
+        <omgdi:waypoint x="560" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_4" bpmnElement="Flow_4">
+        <omgdi:waypoint x="500" y="200" />
+        <omgdi:waypoint x="560" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_5" bpmnElement="Flow_5">
+        <omgdi:waypoint x="730" y="160" />
+        <omgdi:waypoint x="770" y="163" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_4EndFix" bpmnElement="Flow_4EndFix">
+        <omgdi:waypoint x="730" y="280" />
+        <omgdi:waypoint x="770" y="283" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

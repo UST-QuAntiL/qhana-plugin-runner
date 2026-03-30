@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_HelloWorld_Adhoc_Testcase" targetNamespace="http://qhana.example/testcases">
+
+  <process id="hello_world_adhoc_test_rest" name="Hello World + Ad-hoc Subprocess Test (rest split)" isExecutable="true" camunda:versionTag="0.1">
+
+    
+    <startEvent id="StartEvent_1" name="Start">
+      <outgoing>Flow_1</outgoing></startEvent>
+
+    
+    <adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc group (contains hello-world)">
+      <qhana:qHAnaServiceTask id="QHanaTask_HelloWorld" name="hello-world">
+        <extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+            
+            
+            <camunda:inputParameter name="qinput.inputStr">${qoutput.inputHelloWorld}</camunda:inputParameter>
+            <camunda:outputParameter name="result.qoutput.helloWorldResult">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </extensionElements>
+      </qhana:qHAnaServiceTask>
+    <outgoing>Flow_3</outgoing><incoming>Flow_2</incoming></adHocSubProcess>
+
+    
+    <userTask id="UserTask_Input" name="User Input">
+      <extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.inputHelloWorld" label="Input for Hello-World" type="string" />
+        </camunda:formData>
+      </extensionElements>
+    <incoming>Flow_1</incoming><outgoing>Flow_2</outgoing></userTask>
+
+    
+    <endEvent id="EndEvent_1" name="End">
+      <incoming>Flow_3</incoming></endEvent>
+
+    
+    <sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_1" targetRef="EndEvent_1" />
+
+  <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+    <sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="AdHocSubProcess_1" />
+    </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="hello_world_adhoc_test_rest">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="150" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <omgdc:Bounds x="240" y="96" width="200" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1">
+        <omgdc:Bounds x="500" y="80" width="320" height="110" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="880" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="186" y="138" />
+        <omgdi:waypoint x="240" y="136" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <omgdi:waypoint x="440" y="136" />
+        <omgdi:waypoint x="500" y="136" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="820" y="136" />
+        <omgdi:waypoint x="880" y="138" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

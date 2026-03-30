@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_TC07_Artifacts" targetNamespace="http://qhana.example/testcases">
+
+<process id="tc07_artifacts_exec" name="TC07 Artifacts + Associations (exec split)" isExecutable="true">
+  <startEvent id="StartEvent_1" name="Start">
+    <outgoing>SplitFlow_tc07_artifacts_exec_2</outgoing></startEvent>
+
+  <serviceTask id="QHanaTask_HelloWorld" name="HelloWorld (QHAna)" camunda:type="external" camunda:topic="qhana-task" qhana:customFlag="keep-me">
+    <outgoing>Flow_3</outgoing><incoming>SplitFlow_tc07_artifacts_exec_2</incoming></serviceTask>
+
+  <endEvent id="EndEvent_1" name="End">
+    <incoming>Flow_3</incoming></endEvent>
+
+  <sequenceFlow id="Flow_3" sourceRef="QHanaTask_HelloWorld" targetRef="EndEvent_1" />
+
+  
+  <sequenceFlow id="SplitFlow_tc07_artifacts_exec_2" sourceRef="StartEvent_1" targetRef="QHanaTask_HelloWorld" /><dataStoreReference id="DataStoreRef_1" name="SharedStore" />
+
+  <association id="Assoc_3" sourceRef="QHanaTask_HelloWorld" targetRef="DataStoreRef_1" />
+</process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc07">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc07" bpmnElement="tc07_artifacts_exec">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="150" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_HelloWorld_di" bpmnElement="QHanaTask_HelloWorld">
+        <omgdc:Bounds x="510" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="690" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

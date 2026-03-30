@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_TC09_DI_Extensions" targetNamespace="http://qhana.example/testcases">
+
+<process id="tc09_di_extensions_exec" name="TC09 DI + Extensions (exec split)" isExecutable="true">
+  <startEvent id="StartEvent_1">
+    <outgoing>Flow_1</outgoing></startEvent>
+
+  <serviceTask id="QHanaTask_HelloWorld" name="HelloWorld (QHAna)" camunda:type="external" camunda:topic="qhana-task" camunda:asyncBefore="true" qhana:customAttr="abc">
+    <extensionElements>
+      <camunda:inputOutput>
+        <camunda:inputParameter name="x">42</camunda:inputParameter>
+      </camunda:inputOutput>
+    </extensionElements>
+  <outgoing>Flow_2</outgoing><incoming>Flow_1</incoming></serviceTask>
+
+  <endEvent id="EndEvent_1">
+    <incoming>Flow_2</incoming></endEvent>
+
+  <sequenceFlow id="Flow_2" sourceRef="QHanaTask_HelloWorld" targetRef="EndEvent_1" />
+<sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QHanaTask_HelloWorld" />
+  </process>
+
+
+<bpmndi:BPMNDiagram id="BPMNDiagram_1">
+  <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="tc09_di_extensions_exec">
+    <bpmndi:BPMNShape id="Shape_Start" bpmnElement="StartEvent_1">
+      <omgdc:Bounds x="100" y="100" width="36" height="36" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Shape_Task" bpmnElement="QHanaTask_HelloWorld">
+      <omgdc:Bounds x="200" y="80" width="100" height="80" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Shape_End" bpmnElement="EndEvent_1">
+      <omgdc:Bounds x="350" y="100" width="36" height="36" />
+    </bpmndi:BPMNShape>
+
+    <bpmndi:BPMNEdge id="Edge_Flow_1" bpmnElement="Flow_1">
+      <omgdi:waypoint x="136" y="118" />
+      <omgdi:waypoint x="200" y="118" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Edge_Flow_2" bpmnElement="Flow_2">
+      <omgdi:waypoint x="300" y="118" />
+      <omgdi:waypoint x="350" y="118" />
+    </bpmndi:BPMNEdge>
+  </bpmndi:BPMNPlane>
+</bpmndi:BPMNDiagram>
+</definitions>

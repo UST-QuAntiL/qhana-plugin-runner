@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_TC08_PoolLane" targetNamespace="http://qhana.example/testcases">
+
+<process id="tc08_pool_lane_rest" name="TC08 Pool + Lanes (rest split)" isExecutable="true">
+  <laneSet id="LaneSet_1"><lane id="Lane_B" name="Rest Lane">
+      <flowNodeRef>UserTask_Input</flowNodeRef></lane>
+  </laneSet><startEvent id="StartEvent_1" name="Start">
+    <outgoing>Flow_1</outgoing></startEvent>
+
+  <userTask id="UserTask_Input" name="Input (UserTask)">
+    <incoming>Flow_1</incoming><outgoing>SplitFlow_tc08_pool_lane_rest_2</outgoing></userTask>
+
+  <endEvent id="EndEvent_1" name="End">
+    <incoming>SplitFlow_tc08_pool_lane_rest_2</incoming></endEvent>
+
+  <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
+  <sequenceFlow id="SplitFlow_tc08_pool_lane_rest_2" sourceRef="UserTask_Input" targetRef="EndEvent_1" /></process>
+
+  <collaboration id="Collab_1">
+  <participant id="Participant_1" name="Participant" processRef="tc08_pool_lane_rest" />
+</collaboration>
+
+<bpmndi:BPMNDiagram id="BPMNDiagram_tc08">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc08" bpmnElement="Collab_1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="170" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <omgdc:Bounds x="260" y="100" width="110" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="600" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="0" y="0" /><omgdi:waypoint x="0" y="0" />
+      </bpmndi:BPMNEdge>
+      </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

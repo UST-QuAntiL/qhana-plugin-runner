@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc05" targetNamespace="http://qhana/testcases">
+
+  <process id="Process_tc05_and_join_exec" name="tc05 AND join (exec split)" isExecutable="true">
+    <startEvent id="StartEvent_1" name="Start">
+      <outgoing>SplitFlow_Process_tc05_and_join_exec_6</outgoing></startEvent>
+
+    <parallelGateway id="AndGateway_Join" name="AND join">
+      <outgoing>Flow_7</outgoing><incoming>Flow_5</incoming><incoming>Flow_6</incoming></parallelGateway>
+
+    <parallelGateway id="AndGateway_Split" name="AND split">
+      <outgoing>Flow_3</outgoing><outgoing>Flow_4</outgoing><incoming>SplitFlow_Process_tc05_and_join_exec_6</incoming></parallelGateway>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_A" name="hello-world (A)">
+      <extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.inputStr">${qoutput.inputA}</camunda:inputParameter>
+          <camunda:outputParameter name="result.qoutput.helloWorldResultA">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </extensionElements>
+    <incoming>Flow_3</incoming><outgoing>Flow_5</outgoing></qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_B" name="hello-world (B)">
+      <extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.inputStr">${qoutput.inputB}</camunda:inputParameter>
+          <camunda:outputParameter name="result.qoutput.helloWorldResultB">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </extensionElements>
+    <incoming>Flow_4</incoming><outgoing>Flow_6</outgoing></qhana:qHAnaServiceTask>
+
+
+    <endEvent id="EndEvent_1" name="End">
+      <incoming>Flow_7</incoming></endEvent>
+
+    <sequenceFlow id="Flow_7" sourceRef="AndGateway_Join" targetRef="EndEvent_1" />
+  <sequenceFlow id="Flow_3" sourceRef="AndGateway_Split" targetRef="QHanaTask_A" />
+
+    <sequenceFlow id="Flow_4" sourceRef="AndGateway_Split" targetRef="QHanaTask_B" />
+
+    <sequenceFlow id="Flow_5" sourceRef="QHanaTask_A" targetRef="AndGateway_Join" />
+    <sequenceFlow id="Flow_6" sourceRef="QHanaTask_B" targetRef="AndGateway_Join" />
+    <sequenceFlow id="SplitFlow_Process_tc05_and_join_exec_6" sourceRef="StartEvent_1" targetRef="AndGateway_Split" /></process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Process_tc05_and_join">
+    <bpmndi:BPMNPlane id="BPMNPlane_Process_tc05_and_join" bpmnElement="Process_tc05_and_join_exec">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="120" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_AndGateway_Split" bpmnElement="AndGateway_Split">
+        <omgdc:Bounds x="430" y="195" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_QHanaTask_A" bpmnElement="QHanaTask_A">
+        <omgdc:Bounds x="540" y="140" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_QHanaTask_B" bpmnElement="QHanaTask_B">
+        <omgdc:Bounds x="540" y="260" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_AndGateway_Join" bpmnElement="AndGateway_Join">
+        <omgdc:Bounds x="740" y="215" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_1" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="870" y="225" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_3" bpmnElement="Flow_3">
+        <omgdi:waypoint x="480" y="220" />
+        <omgdi:waypoint x="540" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_4" bpmnElement="Flow_4">
+        <omgdi:waypoint x="480" y="220" />
+        <omgdi:waypoint x="540" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_5" bpmnElement="Flow_5">
+        <omgdi:waypoint x="710" y="180" />
+        <omgdi:waypoint x="740" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_6" bpmnElement="Flow_6">
+        <omgdi:waypoint x="710" y="300" />
+        <omgdi:waypoint x="740" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_7" bpmnElement="Flow_7">
+        <omgdi:waypoint x="790" y="240" />
+        <omgdi:waypoint x="870" y="243" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

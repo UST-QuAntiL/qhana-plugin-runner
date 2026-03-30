@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_TC11_MessageAttrs" targetNamespace="http://qhana.example/testcases">
+
+  <message id="Message_Request" name="RequestMessage" />
+  <message id="Message_Response" name="ResponseMessage" />
+  <interface id="Interface_1" name="MessageInterface">
+    <operation id="Operation_Send" name="sendRequest">
+      <inMessageRef>Message_Request</inMessageRef>
+    </operation>
+    <operation id="Operation_Receive" name="receiveResponse">
+      <inMessageRef>Message_Response</inMessageRef>
+    </operation>
+  </interface>
+
+  <process id="tc11_message_attrs_exec" name="TC11 Send/Receive Message Attributes (exec split)" isExecutable="true">
+    <startEvent id="StartEvent_1" name="Start">
+      <outgoing>SplitFlow_tc11_message_attrs_exec_2</outgoing></startEvent>
+
+    <serviceTask id="QHanaTask_HelloWorld" name="HelloWorld (QHAna)" camunda:type="external" camunda:topic="qhana-task">
+      <extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">hello-world</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.inputStr">${qoutput.responseText}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </extensionElements>
+    <outgoing>Flow_5</outgoing><incoming>SplitFlow_tc11_message_attrs_exec_2</incoming></serviceTask>
+
+    <endEvent id="EndEvent_1" name="End">
+      <incoming>Flow_5</incoming></endEvent>
+
+    <sequenceFlow id="Flow_5" sourceRef="QHanaTask_HelloWorld" targetRef="EndEvent_1" />
+  <sequenceFlow id="SplitFlow_tc11_message_attrs_exec_2" sourceRef="StartEvent_1" targetRef="QHanaTask_HelloWorld" /></process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="tc11_message_attrs_exec">
+      <bpmndi:BPMNShape id="Shape_StartEvent_1" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="100" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_QHanaTask_HelloWorld" bpmnElement="QHanaTask_HelloWorld">
+        <omgdc:Bounds x="630" y="98" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_EndEvent_1" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="790" y="120" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Edge_Flow_5" bpmnElement="Flow_5">
+        <omgdi:waypoint x="730" y="138" />
+        <omgdi:waypoint x="790" y="138" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
