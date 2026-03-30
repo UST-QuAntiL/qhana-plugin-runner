@@ -13,11 +13,16 @@
         border: 1px solid var(--border-color, #c7ced8);
         border-radius: 8px;
         padding: 0.8rem;
+        margin: 0;
+        min-width: 0;
         background: var(--background, #fff);
     }
-    .mfx-panel h3 {
+    .mfx-panel h3,
+    .mfx-panel legend {
         margin: 0 0 0.4rem 0;
         font-size: 1rem;
+        font-weight: 700;
+        padding: 0;
     }
     .mfx-panel p {
         margin: 0 0 0.6rem 0;
@@ -34,74 +39,74 @@
 
 {% block content %}
 <div class="qhana-microfrontend">
-    {% call forms.render_form(target="microfrontend") %}
-    <div class="mfx-layout">
-        <section class="mfx-panel">
-            <h3>Source Selection</h3>
-            <p id="mfx-mode-hint">Choose one source URL. Auto mode detects single files and ZIP batches.</p>
-            <div id="mfx-source-fields"></div>
-        </section>
-        <section class="mfx-panel">
-            <h3>Extraction Options</h3>
-            <p>Set format, ZIP limits, and error behavior.</p>
-            <div id="mfx-option-fields"></div>
-        </section>
-        <section class="mfx-panel">
-            <h3>Feature Selection</h3>
-            <p>Choose a preset or switch to custom and enable feature groups manually.</p>
-            <div id="mfx-feature-fields"></div>
-        </section>
-        <section class="mfx-panel">
-            <h3>Preflight Summary</h3>
-            {% if preflight %}
-            <p>Resolved mode: <b>{{ preflight.resolved_mode }}</b></p>
-            <ul>
-                <li>Detected files: {{ preflight.source_count }} / candidates: {{ preflight.candidate_count }}</li>
-                <li>Sample vector-ready files: {{ preflight.vector_ready_samples }} / {{ preflight.sample_count }}</li>
-                <li>Selected preset: {{ preflight.feature_preset }}</li>
-                <li>Enabled groups: {{ ", ".join(preflight.enabled_groups) if preflight.enabled_groups else "none (base only)" }}</li>
-                <li>Vector dimensions (sample): {{ preflight.dim_count }}</li>
-                <li>Truncated by max-files: {{ "yes" if preflight.truncated else "no" }}</li>
-            </ul>
-            {% if preflight.preview_names %}
-            <p><b>Preview files</b></p>
-            <ul>
-                {% for name in preflight.preview_names %}
-                <li>{{ name }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% if preflight.sample %}
-            <p><b>Sample extraction</b></p>
-            <ul>
-                {% for item in preflight.sample %}
-                <li>{{ item.source_name }} ({{ item.format }}) - vector ready: {{ "yes" if item.vector_ready else "no" }}, dims: {{ item.dim_count }}, warnings: {{ item.warning_count }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% if preflight.warnings %}
-            <p><b>Warnings</b></p>
-            <ul>
-                {% for warning in preflight.warnings %}
-                <li>{{ warning }}</li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% else %}
-            <p>Use <b>validate</b> to run a quick source check and sample extraction preview.</p>
-            {% endif %}
-        </section>
-    </div>
+    <form action="" method="post" data-target="microfrontend" class="qhana-form" enctype="multipart/form-data">
+        <div class="mfx-layout">
+            <fieldset class="mfx-panel">
+                <legend>Source Selection</legend>
+                <p id="mfx-mode-hint">Choose one source URL. Auto mode detects single files and ZIP batches.</p>
+                <div id="mfx-source-fields"></div>
+            </fieldset>
+            <fieldset class="mfx-panel">
+                <legend>Extraction Options</legend>
+                <p>Set format, ZIP limits, and error behavior.</p>
+                <div id="mfx-option-fields"></div>
+            </fieldset>
+            <fieldset class="mfx-panel">
+                <legend>Feature Selection</legend>
+                <p>Choose a preset or switch to custom and enable feature groups manually.</p>
+                <div id="mfx-feature-fields"></div>
+            </fieldset>
+            <section class="mfx-panel" aria-live="polite">
+                <h3>Preflight Summary</h3>
+                {% if preflight %}
+                <p>Resolved mode: <b>{{ preflight.resolved_mode }}</b></p>
+                <ul>
+                    <li>Detected files: {{ preflight.source_count }} / candidates: {{ preflight.candidate_count }}</li>
+                    <li>Sample vector-ready files: {{ preflight.vector_ready_samples }} / {{ preflight.sample_count }}</li>
+                    <li>Selected preset: {{ preflight.feature_preset }}</li>
+                    <li>Enabled groups: {{ ", ".join(preflight.enabled_groups) if preflight.enabled_groups else "none (base only)" }}</li>
+                    <li>Vector dimensions (sample): {{ preflight.dim_count }}</li>
+                    <li>Truncated by max-files: {{ "yes" if preflight.truncated else "no" }}</li>
+                </ul>
+                {% if preflight.preview_names %}
+                <p><b>Preview files</b></p>
+                <ul>
+                    {% for name in preflight.preview_names %}
+                    <li>{{ name }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if preflight.sample %}
+                <p><b>Sample extraction</b></p>
+                <ul>
+                    {% for item in preflight.sample %}
+                    <li>{{ item.source_name }} ({{ item.format }}) - vector ready: {{ "yes" if item.vector_ready else "no" }}, dims: {{ item.dim_count }}, warnings: {{ item.warning_count }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if preflight.warnings %}
+                <p><b>Warnings</b></p>
+                <ul>
+                    {% for warning in preflight.warnings %}
+                    <li>{{ warning }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% else %}
+                <p>Use <b>validate</b> to run a quick source check and sample extraction preview.</p>
+                {% endif %}
+            </section>
+        </div>
 
-    <div id="mfx-hidden-fields">
-        {{ forms.render_fields(schema, values=values, errors=errors) }}
-    </div>
+        <div id="mfx-hidden-fields">
+            {{ forms.render_fields(schema, values=values, errors=errors) }}
+        </div>
 
-    <div class="qhana-form-buttons">
-        {{ forms.submit("validate", target="microfrontend")}}
-        {{ forms.submit("submit", action=process)}}
-    </div>
-    {% endcall %}
+        <div class="qhana-form-buttons">
+            {{ forms.submit("validate", target="microfrontend")}}
+            {{ forms.submit("submit", action=process)}}
+        </div>
+    </form>
 </div>
 {% endblock content %}
 
