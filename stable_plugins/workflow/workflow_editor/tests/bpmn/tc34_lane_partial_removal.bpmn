@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc34_lane_partial_removal"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:collaboration id="Collaboration_tc34">
+    <bpmn:participant id="Participant_1" name="Enterprise" processRef="tc34_lane_partial_removal" />
+  </bpmn:collaboration>
+
+  <bpmn:process
+    id="tc34_lane_partial_removal"
+    name="TC34 - Lane Partial Removal"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_System" name="System Layer">
+        <bpmn:flowNodeRef>QHanaTask_AutomatedPrep</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>QHanaTask_AutomatedCleanup</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Human" name="Human Layer">
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>AdHocSubProcess_ManualAction</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_AutomatedPrep" name="prep-data">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">prep-data</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.prepData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_ManualAction" name="Manual Action" ordering="Parallel">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Review" name="review-data">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">review-data</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.reviewLog">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_AutomatedCleanup" name="cleanup-data">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">cleanup-data</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.cleanupLog">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QHanaTask_AutomatedPrep" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_AutomatedPrep" targetRef="AdHocSubProcess_ManualAction" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_ManualAction" targetRef="QHanaTask_AutomatedCleanup" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_AutomatedCleanup" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc34">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc34" bpmnElement="Collaboration_tc34">
+
+      <bpmndi:BPMNShape id="Participant_1_di" bpmnElement="Participant_1" isHorizontal="true">
+        <dc:Bounds x="50" y="50" width="1000" height="500" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="80" y="50" width="970" height="250" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Lane_Human_di" bpmnElement="Lane_Human" isHorizontal="true">
+        <dc:Bounds x="80" y="300" width="970" height="250" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="120" y="400" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_AutomatedPrep_di" bpmnElement="QHanaTask_AutomatedPrep">
+        <dc:Bounds x="250" y="130" width="150" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_ManualAction_di" bpmnElement="AdHocSubProcess_ManualAction" isExpanded="true">
+        <dc:Bounds x="480" y="330" width="200" height="180"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Review_di" bpmnElement="QHanaTask_Review">
+        <dc:Bounds x="505" y="380" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_AutomatedCleanup_di" bpmnElement="QHanaTask_AutomatedCleanup">
+        <dc:Bounds x="750" y="130" width="150" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="950" y="400" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="156" y="418"/>
+        <di:waypoint x="200" y="418"/>
+        <di:waypoint x="200" y="170"/>
+        <di:waypoint x="250" y="170"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="400" y="170"/>
+        <di:waypoint x="440" y="170"/>
+        <di:waypoint x="440" y="420"/>
+        <di:waypoint x="480" y="420"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="680" y="420"/>
+        <di:waypoint x="715" y="420"/>
+        <di:waypoint x="715" y="170"/>
+        <di:waypoint x="750" y="170"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="900" y="170"/>
+        <di:waypoint x="925" y="170"/>
+        <di:waypoint x="925" y="418"/>
+        <di:waypoint x="950" y="418"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
