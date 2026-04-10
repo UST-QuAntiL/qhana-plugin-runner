@@ -1,8 +1,31 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc26_variable_exec_to_main" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc26_variable_exec_to_main_main" name="TC26 - Variable Exec to Main" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
-      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
-
-    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:extensionElements><camunda:inputOutput><camunda:outputParameter name="qoutput.enrichedProfile">${qoutput.enrichedProfile}</camunda:outputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHocSubProcess_KYC" name="Manual KYC Review (Main)" ordering="Parallel">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc26_variable_exec_to_main" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc26_variable_exec_to_main_main" name="TC26 - Variable Exec to Main" isExecutable="true" camunda:versionTag="0.2">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc26_variable_exec_to_main-E1">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:outputParameter name="qoutput.enrichedProfile">${qoutput.enrichedProfile}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="AdHocSubProcess_KYC" name="Manual KYC Review (Main)" ordering="Parallel">
       <qhana:qHAnaServiceTask id="QHanaTask_VerifyIdentity" name="verify-identity">
         <bpmn:extensionElements>
           <camunda:inputOutput>
@@ -12,7 +35,6 @@
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </qhana:qHAnaServiceTask>
-
       <qhana:qHAnaServiceTask id="QHanaTask_CheckRisk" name="check-risk-factors">
         <bpmn:extensionElements>
           <camunda:inputOutput>
@@ -22,38 +44,48 @@
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </qhana:qHAnaServiceTask>
-    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:adHocSubProcess>
-
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
     <bpmn:endEvent id="EndEvent_1" name="End">
-      <bpmn:incoming>Flow_4</bpmn:incoming></bpmn:endEvent>
-
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHocSubProcess_KYC" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHocSubProcess_KYC" targetRef="EndEvent_1" />
-
-  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc26_variable_exec_to_main_main"><bpmndi:BPMNPlane id="BPMNPlane_tc26_variable_exec_to_main_main" bpmnElement="tc26_variable_exec_to_main_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc26_variable_exec_to_main_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc26_variable_exec_to_main_main" bpmnElement="tc26_variable_exec_to_main_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <omgdc:Bounds x="80" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="150" y="168" width="420" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHocSubProcess_KYC_di" bpmnElement="AdHocSubProcess_KYC" isExpanded="true">
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <omgdc:Bounds x="150" y="168" width="420" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocSubProcess_KYC_di" bpmnElement="AdHocSubProcess_KYC" isExpanded="true">
         <omgdc:Bounds x="620" y="123" width="420" height="190" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="QHanaTask_VerifyIdentity_di" bpmnElement="QHanaTask_VerifyIdentity">
         <omgdc:Bounds x="670" y="178" width="150" height="70" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="QHanaTask_CheckRisk_di" bpmnElement="QHanaTask_CheckRisk">
         <omgdc:Bounds x="850" y="178" width="150" height="70" />
       </bpmndi:BPMNShape>
-
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
         <omgdc:Bounds x="1100" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="116" y="218" /><omgdi:waypoint x="150" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><omgdi:waypoint x="570" y="218" /><omgdi:waypoint x="620" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="116" y="218" />
+        <omgdi:waypoint x="150" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="570" y="218" />
+        <omgdi:waypoint x="620" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
         <omgdi:waypoint x="1040" y="218" />
         <omgdi:waypoint x="1100" y="218" />
       </bpmndi:BPMNEdge>
-
-    </bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

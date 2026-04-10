@@ -59,8 +59,14 @@ def default_classifier(elem: ET.Element) -> bool:
     local = _localname(tag)
     if local == "serviceTask":
         ctype = elem.get(f"{{{CAMUNDA_NS}}}type")
-        ctopic = elem.get(f"{{{CAMUNDA_NS}}}topic")
-        return ctype == "external" and ctopic == "qhana-task"
+        ctopic = elem.get(f"{{{CAMUNDA_NS}}}topic") or ""
+        if ctype != "external":
+            return False
+        return (
+            ctopic == "qhana-task"
+            or ctopic.startswith("plugin.")
+            or ctopic.startswith("plugin-step.")
+        )
     if local in {"userTask", "task", "manualTask"}:
         return True
     return False
@@ -451,9 +457,14 @@ def _make_wrapper_adhoc(
     nodes: Dict[str, Node],
     flows: Dict[str, Flow],
     all_regions: List["Region"],
+    original_process_id: str,
 ) -> Tuple[ET.Element, List[str], List[str]]:
     fid = f"E{region.index}"
     wrapper_id = f"AdHoc_{fid}_Wrapper"
+    inner_start_id = f"StartEvent_{wrapper_id}"
+    inner_end_id = f"EndEvent_{wrapper_id}"
+    plugin_task_id = f"ServiceTask_{fid}_Plugin"
+    plugin_topic = f"plugin-step.{original_process_id}-{fid}"
 
     wrapper = ET.Element(
         _bpmn("adHocSubProcess"),
@@ -465,8 +476,21 @@ def _make_wrapper_adhoc(
     wrapper.set(_qhana("fragmentRef"), fid)
 
     inputs, outputs = _compute_region_io(region, nodes, all_regions)
+
+    inner_start = ET.SubElement(wrapper, _bpmn("startEvent"), attrib={"id": inner_start_id})
+    ET.SubElement(inner_start, _bpmn("outgoing")).text = f"Flow_{wrapper_id}_in"
+
+    plugin_task = ET.SubElement(wrapper, _bpmn("serviceTask"), attrib={
+        "id": plugin_task_id,
+        "name": f"Extracted Fragment {fid}",
+    })
+    plugin_task.set(_camunda("type"), "external")
+    plugin_task.set(_camunda("topic"), plugin_topic)
+    ET.SubElement(plugin_task, _bpmn("incoming")).text = f"Flow_{wrapper_id}_in"
+    ET.SubElement(plugin_task, _bpmn("outgoing")).text = f"Flow_{wrapper_id}_out"
+
     if inputs or outputs:
-        ext = ET.SubElement(wrapper, _bpmn("extensionElements"))
+        ext = ET.SubElement(plugin_task, _bpmn("extensionElements"))
         io = ET.SubElement(ext, _camunda("inputOutput"))
         for v in inputs:
             ip = ET.SubElement(io, _camunda("inputParameter"), attrib={"name": v})
@@ -474,6 +498,20 @@ def _make_wrapper_adhoc(
         for v in outputs:
             op = ET.SubElement(io, _camunda("outputParameter"), attrib={"name": v})
             op.text = "${" + v + "}"
+
+    inner_end = ET.SubElement(wrapper, _bpmn("endEvent"), attrib={"id": inner_end_id})
+    ET.SubElement(inner_end, _bpmn("incoming")).text = f"Flow_{wrapper_id}_out"
+
+    ET.SubElement(wrapper, _bpmn("sequenceFlow"), attrib={
+        "id": f"Flow_{wrapper_id}_in",
+        "sourceRef": inner_start_id,
+        "targetRef": plugin_task_id,
+    })
+    ET.SubElement(wrapper, _bpmn("sequenceFlow"), attrib={
+        "id": f"Flow_{wrapper_id}_out",
+        "sourceRef": plugin_task_id,
+        "targetRef": inner_end_id,
+    })
 
     return wrapper, inputs, outputs
 
@@ -507,11 +545,14 @@ def _build_main_process(
     wrapper_inputs: Dict[str, List[str]] = {}
     wrapper_outputs: Dict[str, List[str]] = {}
 
+    original_pid_for_topic = original_process.get("id") or "workflow"
     for nid in order:
         if nid in region_by_node:
             r = region_by_node[nid]
             if nid == r.node_ids[0]:
-                wrapper, inputs, outputs = _make_wrapper_adhoc(r, nodes, flows, regions)
+                wrapper, inputs, outputs = _make_wrapper_adhoc(
+                    r, nodes, flows, regions, original_pid_for_topic
+                )
                 wrapper_elements[wrapper.get("id")] = wrapper
                 wrapper_inputs[wrapper.get("id")] = inputs
                 wrapper_outputs[wrapper.get("id")] = outputs
@@ -1247,6 +1288,7 @@ def _collect_ids(elem: ET.Element) -> Set[str]:
 
 def _serialize(root: ET.Element) -> str:
     """Serialize an ElementTree to an XML string with a declaration."""
+    ET.indent(root, space="  ")
     return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode("utf-8")
 
 

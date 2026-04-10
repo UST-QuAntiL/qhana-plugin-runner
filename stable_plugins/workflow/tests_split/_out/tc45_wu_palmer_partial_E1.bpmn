@@ -1,5 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd"><bpmn:process id="Wu_Palmer_Mixed_E1" name="Extracted Fragment E1" isExecutable="true"><bpmn:startEvent id="StartEvent_E1"><bpmn:outgoing>Flow_E1_start</bpmn:outgoing></bpmn:startEvent><bpmn:serviceTask id="Activity_1do8hxs" name="Wu Palmer similarities" camunda:type="external" camunda:topic="qhana-task">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn:process id="Wu_Palmer_Mixed_E1" name="Extracted Fragment E1" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_E1">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Activity_1do8hxs" name="Wu Palmer similarities" camunda:type="external" camunda:topic="qhana-task">
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="qinput.entitiesUrl">${start_entitiesUrl}</camunda:inputParameter>
@@ -12,8 +17,9 @@
           <camunda:outputParameter name="qoutput.wuPalmer">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_E1_start</bpmn:incoming><bpmn:outgoing>Flow_13r8zml</bpmn:outgoing></bpmn:serviceTask>
-    
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_13r8zml</bpmn:outgoing>
+    </bpmn:serviceTask>
     <bpmn:serviceTask id="Activity_0tfwzt0" name="Sym Max Mean attribute comparer" camunda:type="external" camunda:topic="qhana-task">
       <bpmn:extensionElements>
         <camunda:inputOutput>
@@ -31,8 +37,9 @@
           <camunda:outputParameter name="qoutput.symMaxMean">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_13r8zml</bpmn:incoming><bpmn:outgoing>Flow_0sl6imb</bpmn:outgoing></bpmn:serviceTask>
-    
+      <bpmn:incoming>Flow_13r8zml</bpmn:incoming>
+      <bpmn:outgoing>Flow_0sl6imb</bpmn:outgoing>
+    </bpmn:serviceTask>
     <bpmn:serviceTask id="Activity_1nnwor0" name="Similarities to distances transformers" camunda:type="external" camunda:topic="qhana-task">
       <bpmn:extensionElements>
         <camunda:inputOutput>
@@ -48,8 +55,9 @@
           <camunda:outputParameter name="qoutput.distances">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_0sl6imb</bpmn:incoming><bpmn:outgoing>Flow_0w1duld</bpmn:outgoing></bpmn:serviceTask>
-    
+      <bpmn:incoming>Flow_0sl6imb</bpmn:incoming>
+      <bpmn:outgoing>Flow_0w1duld</bpmn:outgoing>
+    </bpmn:serviceTask>
     <bpmn:serviceTask id="Activity_0s7n3hs" name="Aggregators" camunda:type="external" camunda:topic="qhana-task">
       <bpmn:extensionElements>
         <camunda:inputOutput>
@@ -63,8 +71,9 @@
           <camunda:outputParameter name="qoutput.aggregated">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_0w1duld</bpmn:incoming><bpmn:outgoing>Flow_0texvqp</bpmn:outgoing></bpmn:serviceTask>
-    
+      <bpmn:incoming>Flow_0w1duld</bpmn:incoming>
+      <bpmn:outgoing>Flow_0texvqp</bpmn:outgoing>
+    </bpmn:serviceTask>
     <bpmn:serviceTask id="Activity_0itt0yf" name="Multidimensional Scaling (MDS)" camunda:type="external" camunda:topic="qhana-task">
       <bpmn:extensionElements>
         <camunda:inputOutput>
@@ -79,14 +88,22 @@
           <camunda:outputParameter name="return.qoutput.mds">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_0texvqp</bpmn:incoming><bpmn:outgoing>Flow_E1_end</bpmn:outgoing></bpmn:serviceTask>
-
-    <bpmn:endEvent id="EndEvent_E1"><bpmn:incoming>Flow_E1_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="Activity_1do8hxs" /><bpmn:sequenceFlow id="Flow_13r8zml" sourceRef="Activity_1do8hxs" targetRef="Activity_0tfwzt0" />
+      <bpmn:incoming>Flow_0texvqp</bpmn:incoming>
+      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_E1">
+      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="Activity_1do8hxs" />
+    <bpmn:sequenceFlow id="Flow_13r8zml" sourceRef="Activity_1do8hxs" targetRef="Activity_0tfwzt0" />
     <bpmn:sequenceFlow id="Flow_0sl6imb" sourceRef="Activity_0tfwzt0" targetRef="Activity_1nnwor0" />
     <bpmn:sequenceFlow id="Flow_0w1duld" sourceRef="Activity_1nnwor0" targetRef="Activity_0s7n3hs" />
     <bpmn:sequenceFlow id="Flow_0texvqp" sourceRef="Activity_0s7n3hs" targetRef="Activity_0itt0yf" />
-    
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="Activity_0itt0yf" targetRef="EndEvent_E1" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_Wu_Palmer_Mixed_E1"><bpmndi:BPMNPlane id="BPMNPlane_Wu_Palmer_Mixed_E1" bpmnElement="Wu_Palmer_Mixed_E1"><bpmndi:BPMNShape id="Activity_1tvrjsr_di" bpmnElement="Activity_1do8hxs">
+    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="Activity_0itt0yf" targetRef="EndEvent_E1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Wu_Palmer_Mixed_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_Wu_Palmer_Mixed_E1" bpmnElement="Wu_Palmer_Mixed_E1">
+      <bpmndi:BPMNShape id="Activity_1tvrjsr_di" bpmnElement="Activity_1do8hxs">
         <omgdc:Bounds x="250" y="218" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0rc13uv_di" bpmnElement="Activity_0tfwzt0">
@@ -101,8 +118,13 @@
       <bpmndi:BPMNShape id="Activity_1vvxc55_di" bpmnElement="Activity_0itt0yf">
         <omgdc:Bounds x="890" y="218" width="100" height="80" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1"><omgdc:Bounds x="170" y="240" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1"><omgdc:Bounds x="1040" y="240" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_13r8zml_di" bpmnElement="Flow_13r8zml">
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+        <omgdc:Bounds x="170" y="240" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
+        <omgdc:Bounds x="1040" y="240" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_13r8zml_di" bpmnElement="Flow_13r8zml">
         <omgdi:waypoint x="350" y="258" />
         <omgdi:waypoint x="410" y="258" />
       </bpmndi:BPMNEdge>
@@ -118,4 +140,14 @@
         <omgdi:waypoint x="830" y="258" />
         <omgdi:waypoint x="890" y="258" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start"><omgdi:waypoint x="206" y="258" /><omgdi:waypoint x="250" y="258" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end"><omgdi:waypoint x="990" y="258" /><omgdi:waypoint x="1040" y="258" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <omgdi:waypoint x="206" y="258" />
+        <omgdi:waypoint x="250" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
+        <omgdi:waypoint x="990" y="258" />
+        <omgdi:waypoint x="1040" y="258" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

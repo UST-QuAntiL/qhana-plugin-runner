@@ -1,5 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc31_receive_task" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc31_receive_task_E1" name="Extracted Fragment E1" isExecutable="true"><bpmn:startEvent id="StartEvent_E1"><bpmn:outgoing>Flow_E1_start</bpmn:outgoing></bpmn:startEvent><qhana:qHAnaServiceTask id="QHanaTask_Request" name="prepare-request">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc31_receive_task" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc31_receive_task_E1" name="Extracted Fragment E1" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_E1">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_Request" name="prepare-request">
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="qhanaName">prepare-request</camunda:inputParameter>
@@ -7,10 +12,34 @@
           <camunda:outputParameter name="qoutput.requestId">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-    <bpmn:incoming>Flow_E1_start</bpmn:incoming><bpmn:outgoing>Flow_E1_end</bpmn:outgoing></qhana:qHAnaServiceTask>
-
-    <bpmn:endEvent id="EndEvent_E1"><bpmn:incoming>Flow_E1_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_Request" /><bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_Request" targetRef="EndEvent_E1" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc31_receive_task_E1"><bpmndi:BPMNPlane id="BPMNPlane_tc31_receive_task_E1" bpmnElement="tc31_receive_task_E1"><bpmndi:BPMNShape id="QHanaTask_Request_di" bpmnElement="QHanaTask_Request">
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_E1">
+      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_Request" />
+    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_Request" targetRef="EndEvent_E1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc31_receive_task_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc31_receive_task_E1" bpmnElement="tc31_receive_task_E1">
+      <bpmndi:BPMNShape id="QHanaTask_Request_di" bpmnElement="QHanaTask_Request">
         <omgdc:Bounds x="150" y="168" width="180" height="80" />
       </bpmndi:BPMNShape>
-
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1"><omgdc:Bounds x="70" y="190" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1"><omgdc:Bounds x="380" y="190" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start"><omgdi:waypoint x="106" y="208" /><omgdi:waypoint x="150" y="208" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end"><omgdi:waypoint x="330" y="208" /><omgdi:waypoint x="380" y="208" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+        <omgdc:Bounds x="70" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
+        <omgdc:Bounds x="380" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <omgdi:waypoint x="106" y="208" />
+        <omgdi:waypoint x="150" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
+        <omgdi:waypoint x="330" y="208" />
+        <omgdi:waypoint x="380" y="208" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

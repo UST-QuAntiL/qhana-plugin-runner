@@ -1,5 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc16_and_join_after_extraction" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc16_and_join_after_extraction_E3" name="Extracted Fragment E3" isExecutable="true"><bpmn:startEvent id="StartEvent_E3"><bpmn:outgoing>Flow_E3_start</bpmn:outgoing></bpmn:startEvent><qhana:qHAnaServiceTask id="QHanaTask_GenerateReport" name="generate-audit-report">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc16_and_join_after_extraction" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc16_and_join_after_extraction_E3" name="Extracted Fragment E3" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_E3">
+      <bpmn:outgoing>Flow_E3_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_GenerateReport" name="generate-audit-report">
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="qhanaName">generate-audit-report</camunda:inputParameter>
@@ -7,11 +12,34 @@
           <camunda:outputParameter name="qoutput.auditReport">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-    <bpmn:incoming>Flow_E3_start</bpmn:incoming><bpmn:outgoing>Flow_E3_end</bpmn:outgoing></qhana:qHAnaServiceTask>
-
-    <bpmn:endEvent id="EndEvent_E3"><bpmn:incoming>Flow_E3_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E3_start" sourceRef="StartEvent_E3" targetRef="QHanaTask_GenerateReport" /><bpmn:sequenceFlow id="Flow_E3_end" sourceRef="QHanaTask_GenerateReport" targetRef="EndEvent_E3" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc16_and_join_after_extraction_E3"><bpmndi:BPMNPlane id="BPMNPlane_tc16_and_join_after_extraction_E3" bpmnElement="tc16_and_join_after_extraction_E3"><bpmndi:BPMNShape id="QHanaTask_GenerateReport_di" bpmnElement="QHanaTask_GenerateReport">
+      <bpmn:incoming>Flow_E3_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_E3_end</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_E3">
+      <bpmn:incoming>Flow_E3_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E3_start" sourceRef="StartEvent_E3" targetRef="QHanaTask_GenerateReport" />
+    <bpmn:sequenceFlow id="Flow_E3_end" sourceRef="QHanaTask_GenerateReport" targetRef="EndEvent_E3" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc16_and_join_after_extraction_E3">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc16_and_join_after_extraction_E3" bpmnElement="tc16_and_join_after_extraction_E3">
+      <bpmndi:BPMNShape id="QHanaTask_GenerateReport_di" bpmnElement="QHanaTask_GenerateReport">
         <omgdc:Bounds x="1020" y="380" width="170" height="80" />
       </bpmndi:BPMNShape>
-
-      
-      <bpmndi:BPMNShape id="StartEvent_E3_di" bpmnElement="StartEvent_E3"><omgdc:Bounds x="940" y="402" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E3_di" bpmnElement="EndEvent_E3"><omgdc:Bounds x="1240" y="402" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_E3_start_di" bpmnElement="Flow_E3_start"><omgdi:waypoint x="976" y="420" /><omgdi:waypoint x="1020" y="420" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E3_end_di" bpmnElement="Flow_E3_end"><omgdi:waypoint x="1190" y="420" /><omgdi:waypoint x="1240" y="420" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
+      <bpmndi:BPMNShape id="StartEvent_E3_di" bpmnElement="StartEvent_E3">
+        <omgdc:Bounds x="940" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E3_di" bpmnElement="EndEvent_E3">
+        <omgdc:Bounds x="1240" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E3_start_di" bpmnElement="Flow_E3_start">
+        <omgdi:waypoint x="976" y="420" />
+        <omgdi:waypoint x="1020" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E3_end_di" bpmnElement="Flow_E3_end">
+        <omgdi:waypoint x="1190" y="420" />
+        <omgdi:waypoint x="1240" y="420" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,28 +1,73 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc41_multiple_flows" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc41_multiple_flows_same_src_target_main" name="TC41 - Duplicate Flows" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1">
-      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
-
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc41_multiple_flows" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc41_multiple_flows_same_src_target_main" name="TC41 - Duplicate Flows" isExecutable="true" camunda:versionTag="0.2">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
     <bpmn:exclusiveGateway id="Gateway_Split">
-      <bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_Path_A</bpmn:outgoing><bpmn:outgoing>Flow_Path_B</bpmn:outgoing></bpmn:exclusiveGateway>
-
-    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:incoming>Flow_Path_A</bpmn:incoming><bpmn:incoming>Flow_Path_B</bpmn:incoming><bpmn:outgoing>Flow_End</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:endEvent id="EndEvent_1">
-      <bpmn:incoming>Flow_End</bpmn:incoming></bpmn:endEvent>
-
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Path_A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Path_B</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc41_multiple_flows_same_src_target-E1">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
+      <bpmn:incoming>Flow_Path_A</bpmn:incoming>
+      <bpmn:incoming>Flow_Path_B</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Gateway_Split" />
-
     <bpmn:sequenceFlow id="Flow_Path_A" name="Condition A" sourceRef="Gateway_Split" targetRef="AdHoc_E1_Wrapper">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${type == 'A'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-
     <bpmn:sequenceFlow id="Flow_Path_B" name="Condition B" sourceRef="Gateway_Split" targetRef="AdHoc_E1_Wrapper">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${type == 'B'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-
     <bpmn:sequenceFlow id="Flow_End" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_1" />
-
-  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc41_multiple_flows_same_src_target_main"><bpmndi:BPMNPlane id="BPMNPlane_tc41_multiple_flows_same_src_target_main" bpmnElement="tc41_multiple_flows_same_src_target_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1"><omgdc:Bounds x="100" y="200" width="36" height="36" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split"><omgdc:Bounds x="200" y="193" width="50" height="50" /></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="390" y="168" width="170" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1"><omgdc:Bounds x="600" y="200" width="36" height="36" /></bpmndi:BPMNShape>
-
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="136" y="218" /><omgdi:waypoint x="200" y="218" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Path_A_di" bpmnElement="Flow_Path_A"><omgdi:waypoint x="250" y="218" /><omgdi:waypoint x="390" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_Path_B_di" bpmnElement="Flow_Path_B"><omgdi:waypoint x="250" y="218" /><omgdi:waypoint x="390" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End"><omgdi:waypoint x="560" y="218" /><omgdi:waypoint x="600" y="218" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc41_multiple_flows_same_src_target_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc41_multiple_flows_same_src_target_main" bpmnElement="tc41_multiple_flows_same_src_target_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="100" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split">
+        <omgdc:Bounds x="200" y="193" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <omgdc:Bounds x="390" y="168" width="170" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="600" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="136" y="218" />
+        <omgdi:waypoint x="200" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Path_A_di" bpmnElement="Flow_Path_A">
+        <omgdi:waypoint x="250" y="218" />
+        <omgdi:waypoint x="390" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Path_B_di" bpmnElement="Flow_Path_B">
+        <omgdi:waypoint x="250" y="218" />
+        <omgdi:waypoint x="390" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
+        <omgdi:waypoint x="560" y="218" />
+        <omgdi:waypoint x="600" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
