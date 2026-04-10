@@ -34,7 +34,15 @@
     <bpmn:adHocSubProcess id="AdHoc_2" name="Manual Review" ordering="Parallel">
       <bpmn:incoming>Flow_3</bpmn:incoming>
       <bpmn:outgoing>Flow_4</bpmn:outgoing>
-      <bpmn:userTask id="Review_Task" name="Check Outputs" />
+      <bpmn:serviceTask id="Review_Task" name="Check Outputs" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">placeholder-check-outputs</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion">v0-1-0</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">Check Outputs</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
     </bpmn:adHocSubProcess>
 
     <bpmn:endEvent id="EndEvent_1" name="End">
@@ -82,6 +90,12 @@
         <di:waypoint x="750" y="218" />
         <di:waypoint x="800" y="218" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Setup_Task_di" bpmnElement="Setup_Task">
+        <dc:Bounds x="275" y="195" width="100" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Review_Task_di" bpmnElement="Review_Task">
+        <dc:Bounds x="625" y="195" width="100" height="70" />
+      </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

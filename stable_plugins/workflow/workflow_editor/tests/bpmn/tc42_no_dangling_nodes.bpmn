@@ -35,7 +35,15 @@
     <bpmn:adHocSubProcess id="AdHoc_1" name="Manual Subprocess" ordering="Parallel">
       <bpmn:incoming>Flow_3</bpmn:incoming>
       <bpmn:outgoing>Flow_5</bpmn:outgoing>
-      <bpmn:userTask id="Manual_Task" name="Review" />
+      <bpmn:serviceTask id="Manual_Task" name="Review" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">placeholder-review</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion">v0-1-0</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">Review</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
     </bpmn:adHocSubProcess>
 
     <bpmn:exclusiveGateway id="Gateway_2" name="Merge Route">
@@ -115,6 +123,9 @@
         <di:waypoint x="650" y="218" />
       </bpmndi:BPMNEdge>
 
+      <bpmndi:BPMNShape id="Manual_Task_di" bpmnElement="Manual_Task">
+        <dc:Bounds x="375" y="285" width="100" height="70" />
+      </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

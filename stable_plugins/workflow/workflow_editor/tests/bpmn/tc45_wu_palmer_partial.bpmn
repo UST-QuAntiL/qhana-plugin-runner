@@ -129,7 +129,16 @@
         </bpmn2:extensionElements>
       </bpmn2:serviceTask>
 
-      <bpmn2:userTask id="Activity_HumanReview" name="Review Plot Visuals" />
+      <bpmn2:serviceTask id="Activity_HumanReview" name="Clustered Scatter Plot Visualization" camunda:type="external" camunda:topic="plugin.cluster-scatter-visualization">
+        <bpmn2:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">cluster-scatter-visualization</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion">v1-0-0</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">Clustered Scatter Plot Visualization</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.entityPointsUrl">${return.qoutput.mds}</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn2:extensionElements>
+      </bpmn2:serviceTask>
     </bpmn2:adHocSubProcess>
 
     <bpmn2:sequenceFlow id="Flow_To_End" sourceRef="Activity_AdHocCluster" targetRef="Event_0ck8ig8" />
