@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc04_only_exec_no_adhoc" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc04_only_exec_no_adhoc" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc04_only_exec_no_adhoc_E1" name="Extracted Fragment E1" isExecutable="true">
     <bpmn:startEvent id="StartEvent_E1">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
@@ -70,49 +70,49 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc04_only_exec_no_adhoc_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc04_only_exec_no_adhoc_E1" bpmnElement="tc04_only_exec_no_adhoc_E1">
       <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
-        <omgdc:Bounds x="140" y="168" width="170" height="80" />
+        <dc:Bounds x="140" y="168" width="170" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Fetch_di" bpmnElement="QHanaTask_Fetch">
-        <omgdc:Bounds x="360" y="168" width="170" height="80" />
+        <dc:Bounds x="360" y="168" width="170" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Classify_di" bpmnElement="QHanaTask_Classify">
-        <omgdc:Bounds x="580" y="168" width="170" height="80" />
+        <dc:Bounds x="580" y="168" width="170" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Store_di" bpmnElement="QHanaTask_Store">
-        <omgdc:Bounds x="800" y="168" width="170" height="80" />
+        <dc:Bounds x="800" y="168" width="170" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Notify_di" bpmnElement="QHanaTask_Notify">
-        <omgdc:Bounds x="1020" y="168" width="170" height="80" />
+        <dc:Bounds x="1020" y="168" width="170" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
-        <omgdc:Bounds x="60" y="190" width="36" height="36" />
+        <dc:Bounds x="60" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <omgdc:Bounds x="1240" y="190" width="36" height="36" />
+        <dc:Bounds x="1240" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <omgdi:waypoint x="310" y="208" />
-        <omgdi:waypoint x="360" y="208" />
+        <di:waypoint x="310" y="208" />
+        <di:waypoint x="360" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <omgdi:waypoint x="530" y="208" />
-        <omgdi:waypoint x="580" y="208" />
+        <di:waypoint x="530" y="208" />
+        <di:waypoint x="580" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <omgdi:waypoint x="750" y="208" />
-        <omgdi:waypoint x="800" y="208" />
+        <di:waypoint x="750" y="208" />
+        <di:waypoint x="800" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <omgdi:waypoint x="970" y="208" />
-        <omgdi:waypoint x="1020" y="208" />
+        <di:waypoint x="970" y="208" />
+        <di:waypoint x="1020" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
-        <omgdi:waypoint x="96" y="208" />
-        <omgdi:waypoint x="140" y="208" />
+        <di:waypoint x="96" y="208" />
+        <di:waypoint x="140" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <omgdi:waypoint x="1190" y="208" />
-        <omgdi:waypoint x="1240" y="208" />
+        <di:waypoint x="1190" y="208" />
+        <di:waypoint x="1240" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

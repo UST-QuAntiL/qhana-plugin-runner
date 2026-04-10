@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc24_non_convertible_tasks" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc24_non_convertible_tasks" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc24_non_convertible_tasks_E2" name="Extracted Fragment E2" isExecutable="true">
     <bpmn:startEvent id="StartEvent_E2">
       <bpmn:outgoing>Flow_E2_start</bpmn:outgoing>
@@ -24,21 +24,21 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc24_non_convertible_tasks_E2">
     <bpmndi:BPMNPlane id="BPMNPlane_tc24_non_convertible_tasks_E2" bpmnElement="tc24_non_convertible_tasks_E2">
       <bpmndi:BPMNShape id="QHanaTask_Finalize_di" bpmnElement="QHanaTask_Finalize">
-        <omgdc:Bounds x="670" y="168" width="180" height="80" />
+        <dc:Bounds x="670" y="168" width="180" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E2_di" bpmnElement="StartEvent_E2">
-        <omgdc:Bounds x="590" y="190" width="36" height="36" />
+        <dc:Bounds x="590" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_E2_di" bpmnElement="EndEvent_E2">
-        <omgdc:Bounds x="900" y="190" width="36" height="36" />
+        <dc:Bounds x="900" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_E2_start_di" bpmnElement="Flow_E2_start">
-        <omgdi:waypoint x="626" y="208" />
-        <omgdi:waypoint x="670" y="208" />
+        <di:waypoint x="626" y="208" />
+        <di:waypoint x="670" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E2_end_di" bpmnElement="Flow_E2_end">
-        <omgdi:waypoint x="850" y="208" />
-        <omgdi:waypoint x="900" y="208" />
+        <di:waypoint x="850" y="208" />
+        <di:waypoint x="900" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

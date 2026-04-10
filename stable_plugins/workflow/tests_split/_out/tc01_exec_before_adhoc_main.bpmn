@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc01_exec_before_adhoc" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc01_exec_before_adhoc" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc01_exec_before_adhoc_main" name="TC01 - Executable chain before ad-hoc" isExecutable="true" camunda:versionTag="0.2">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
@@ -57,34 +57,34 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc01_exec_before_adhoc_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc01_exec_before_adhoc_main" bpmnElement="tc01_exec_before_adhoc_main">
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <omgdc:Bounds x="80" y="190" width="36" height="36" />
+        <dc:Bounds x="80" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <omgdc:Bounds x="150" y="158" width="650" height="100" />
+        <dc:Bounds x="150" y="158" width="650" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1" isExpanded="true">
-        <omgdc:Bounds x="860" y="110" width="420" height="190" />
+        <dc:Bounds x="860" y="110" width="420" height="190" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Review_di" bpmnElement="QHanaTask_Review">
-        <omgdc:Bounds x="910" y="165" width="150" height="70" />
+        <dc:Bounds x="910" y="165" width="150" height="70" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Approve_di" bpmnElement="QHanaTask_Approve">
-        <omgdc:Bounds x="1090" y="165" width="150" height="70" />
+        <dc:Bounds x="1090" y="165" width="150" height="70" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <omgdc:Bounds x="1340" y="190" width="36" height="36" />
+        <dc:Bounds x="1340" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <omgdi:waypoint x="116" y="208" />
-        <omgdi:waypoint x="150" y="208" />
+        <di:waypoint x="116" y="208" />
+        <di:waypoint x="150" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <omgdi:waypoint x="800" y="206" />
-        <omgdi:waypoint x="860" y="206" />
+        <di:waypoint x="800" y="206" />
+        <di:waypoint x="860" y="206" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <omgdi:waypoint x="1280" y="208" />
-        <omgdi:waypoint x="1340" y="208" />
+        <di:waypoint x="1280" y="208" />
+        <di:waypoint x="1340" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

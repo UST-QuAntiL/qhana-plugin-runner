@@ -1,13 +1,13 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc08_xor_exec_vs_adhoc" targetNamespace="http://qhana.example/testcases">
-  <bpmn:process id="tc08_xor_exec_vs_adhoc_E1" name="Extracted Fragment E1" isExecutable="true">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc20_nested_adhoc" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc20_nested_adhoc_E1" name="Extracted Fragment E1" isExecutable="true">
     <bpmn:startEvent id="StartEvent_E1">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:userTask id="UserTask_Input" name="Enter Loan Application">
+    <bpmn:userTask id="UserTask_Input" name="Report Incident">
       <bpmn:extensionElements>
         <camunda:formData>
-          <camunda:formField id="qoutput.applicationData" label="Application Data" type="string" />
+          <camunda:formField id="qoutput.incidentData" label="Incident Data" type="string" />
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_E1_start</bpmn:incoming>
@@ -19,24 +19,24 @@
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Input" />
     <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="UserTask_Input" targetRef="EndEvent_E1" />
   </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_tc08_xor_exec_vs_adhoc_E1">
-    <bpmndi:BPMNPlane id="BPMNPlane_tc08_xor_exec_vs_adhoc_E1" bpmnElement="tc08_xor_exec_vs_adhoc_E1">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc20_nested_adhoc_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc20_nested_adhoc_E1" bpmnElement="tc20_nested_adhoc_E1">
       <bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
-        <dc:Bounds x="160" y="228" width="170" height="80" />
+        <dc:Bounds x="160" y="178" width="170" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
-        <dc:Bounds x="80" y="250" width="36" height="36" />
+        <dc:Bounds x="80" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="380" y="250" width="36" height="36" />
+        <dc:Bounds x="380" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
-        <di:waypoint x="116" y="268" />
-        <di:waypoint x="160" y="268" />
+        <di:waypoint x="116" y="218" />
+        <di:waypoint x="160" y="218" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="330" y="268" />
-        <di:waypoint x="380" y="268" />
+        <di:waypoint x="330" y="218" />
+        <di:waypoint x="380" y="218" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

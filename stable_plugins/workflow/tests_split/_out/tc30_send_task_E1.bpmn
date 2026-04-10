@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc30_send_task" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc30_send_task" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc30_send_task_E1" name="Extracted Fragment E1" isExecutable="true">
     <bpmn:startEvent id="StartEvent_E1">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
@@ -24,21 +24,21 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc30_send_task_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc30_send_task_E1" bpmnElement="tc30_send_task_E1">
       <bpmndi:BPMNShape id="QHanaTask_PrepareMessage_di" bpmnElement="QHanaTask_PrepareMessage">
-        <omgdc:Bounds x="150" y="168" width="180" height="80" />
+        <dc:Bounds x="150" y="168" width="180" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
-        <omgdc:Bounds x="70" y="190" width="36" height="36" />
+        <dc:Bounds x="70" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <omgdc:Bounds x="380" y="190" width="36" height="36" />
+        <dc:Bounds x="380" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
-        <omgdi:waypoint x="106" y="208" />
-        <omgdi:waypoint x="150" y="208" />
+        <di:waypoint x="106" y="208" />
+        <di:waypoint x="150" y="208" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <omgdi:waypoint x="330" y="208" />
-        <omgdi:waypoint x="380" y="208" />
+        <di:waypoint x="330" y="208" />
+        <di:waypoint x="380" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

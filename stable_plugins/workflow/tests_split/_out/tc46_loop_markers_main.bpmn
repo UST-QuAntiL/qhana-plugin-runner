@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc25_user_task_as_exec_candidate" targetNamespace="http://qhana.example/testcases">
-  <bpmn:process id="tc25_user_task_as_exec_candidate_main" name="TC25 - User task as executable candidate" isExecutable="true" camunda:versionTag="0.2">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc46_loop_markers" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc46_loop_markers_main" name="TC46 - Loop markers on extractable task" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
@@ -8,7 +8,7 @@
       <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
         <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
       </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc25_user_task_as_exec_candidate-E1">
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc46_loop_markers-E1">
         <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
         <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
       </bpmn:serviceTask>
@@ -26,24 +26,24 @@
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_1" />
   </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_tc25_user_task_as_exec_candidate_main">
-    <bpmndi:BPMNPlane id="BPMNPlane_tc25_user_task_as_exec_candidate_main" bpmnElement="tc25_user_task_as_exec_candidate_main">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc46_loop_markers_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc46_loop_markers_main" bpmnElement="tc46_loop_markers_main">
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="80" y="190" width="36" height="36" />
+        <dc:Bounds x="80" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <dc:Bounds x="150" y="158" width="730" height="100" />
+        <dc:Bounds x="150" y="168" width="520" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="940" y="190" width="36" height="36" />
+        <dc:Bounds x="700" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="116" y="208" />
-        <di:waypoint x="150" y="208" />
+        <di:waypoint x="116" y="218" />
+        <di:waypoint x="150" y="218" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="880" y="208" />
-        <di:waypoint x="940" y="208" />
+        <di:waypoint x="670" y="218" />
+        <di:waypoint x="700" y="218" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

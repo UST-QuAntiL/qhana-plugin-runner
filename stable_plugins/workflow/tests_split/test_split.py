@@ -230,10 +230,24 @@ def test_canonical_tc45_wu_palmer():
     assert "adHocSubProcess[wrapper=E1]" in kinds
 
 
-def test_canonical_tc20_nested_adhoc_raises():
+def test_canonical_tc20_nested_adhoc_preserved_opaquely():
     bpmn_xml = (BPMN_DIR / "tc20_nested_adhoc.bpmn").read_text()
-    with pytest.raises(SplitNotSupported, match="[Nn]ested"):
-        split_workflow(bpmn_xml)
+    result = split_workflow(bpmn_xml)
+    root = ET.fromstring(result.main_xml)
+    outer = None
+    for adhoc in root.iter(f"{{{BPMN_NS}}}adHocSubProcess"):
+        if adhoc.get("id") == "AdHocSubProcess_Outer":
+            outer = adhoc
+            break
+    assert outer is not None, "outer ad-hoc not preserved in main"
+    nested_ids = [
+        el.get("id")
+        for el in outer.iter(f"{{{BPMN_NS}}}adHocSubProcess")
+        if el is not outer
+    ]
+    assert (
+        "AdHocSubProcess_Inner" in nested_ids
+    ), f"inner ad-hoc not preserved inside outer, found: {nested_ids}"
 
 
 def test_canonical_tc44_boundary_event_raises():

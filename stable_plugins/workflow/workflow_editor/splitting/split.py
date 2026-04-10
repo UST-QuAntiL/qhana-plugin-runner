@@ -18,8 +18,8 @@ XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
 NS = {
     "bpmn": BPMN_NS,
     "bpmndi": BPMNDI_NS,
-    "omgdc": OMGDC_NS,
-    "omgdi": OMGDI_NS,
+    "dc": OMGDC_NS,
+    "di": OMGDI_NS,
     "camunda": CAMUNDA_NS,
     "qhana": QHANA_NS,
     "xsi": XSI_NS,
@@ -218,16 +218,6 @@ def _parse_process(
         nid = child.get("id")
         if not nid:
             continue
-
-        if local == "adHocSubProcess":
-            for descendant in child.iter():
-                if descendant is child:
-                    continue
-                if _localname(descendant.tag) == "adHocSubProcess":
-                    raise SplitNotSupported(
-                        f"Nested ad-hoc subprocess not supported "
-                        f"(outer id={nid!r}, inner id={descendant.get('id')!r})."
-                    )
 
         nodes[nid] = Node(id=nid, tag=child.tag, local=local, elem=child)
         order.append(nid)
@@ -477,19 +467,13 @@ def _make_wrapper_adhoc(
 
     inputs, outputs = _compute_region_io(region, nodes, all_regions)
 
-    inner_start = ET.SubElement(
-        wrapper, _bpmn("startEvent"), attrib={"id": inner_start_id}
-    )
+    inner_start = ET.SubElement(wrapper, _bpmn("startEvent"), attrib={"id": inner_start_id})
     ET.SubElement(inner_start, _bpmn("outgoing")).text = f"Flow_{wrapper_id}_in"
 
-    plugin_task = ET.SubElement(
-        wrapper,
-        _bpmn("serviceTask"),
-        attrib={
-            "id": plugin_task_id,
-            "name": f"Extracted Fragment {fid}",
-        },
-    )
+    plugin_task = ET.SubElement(wrapper, _bpmn("serviceTask"), attrib={
+        "id": plugin_task_id,
+        "name": f"Extracted Fragment {fid}",
+    })
     plugin_task.set(_camunda("type"), "external")
     plugin_task.set(_camunda("topic"), plugin_topic)
     ET.SubElement(plugin_task, _bpmn("incoming")).text = f"Flow_{wrapper_id}_in"
@@ -508,24 +492,16 @@ def _make_wrapper_adhoc(
     inner_end = ET.SubElement(wrapper, _bpmn("endEvent"), attrib={"id": inner_end_id})
     ET.SubElement(inner_end, _bpmn("incoming")).text = f"Flow_{wrapper_id}_out"
 
-    ET.SubElement(
-        wrapper,
-        _bpmn("sequenceFlow"),
-        attrib={
-            "id": f"Flow_{wrapper_id}_in",
-            "sourceRef": inner_start_id,
-            "targetRef": plugin_task_id,
-        },
-    )
-    ET.SubElement(
-        wrapper,
-        _bpmn("sequenceFlow"),
-        attrib={
-            "id": f"Flow_{wrapper_id}_out",
-            "sourceRef": plugin_task_id,
-            "targetRef": inner_end_id,
-        },
-    )
+    ET.SubElement(wrapper, _bpmn("sequenceFlow"), attrib={
+        "id": f"Flow_{wrapper_id}_in",
+        "sourceRef": inner_start_id,
+        "targetRef": plugin_task_id,
+    })
+    ET.SubElement(wrapper, _bpmn("sequenceFlow"), attrib={
+        "id": f"Flow_{wrapper_id}_out",
+        "sourceRef": plugin_task_id,
+        "targetRef": inner_end_id,
+    })
 
     return wrapper, inputs, outputs
 
@@ -1129,7 +1105,7 @@ def _build_main_di(
                 ):
                     if did:
                         emit_shape(did)
-                elif did and dlocal in ("startEvent", "endEvent"):
+                elif did and dlocal in ("startEvent", "endEvent", "adHocSubProcess", "subProcess"):
                     emit_shape(did)
 
     for child in main_process:
@@ -1309,8 +1285,8 @@ def _serialize(root: ET.Element) -> str:
 for _prefix, _uri in (
     ("bpmn", BPMN_NS),
     ("bpmndi", BPMNDI_NS),
-    ("omgdc", OMGDC_NS),
-    ("omgdi", OMGDI_NS),
+    ("dc", OMGDC_NS),
+    ("di", OMGDI_NS),
     ("camunda", CAMUNDA_NS),
     ("qhana", QHANA_NS),
     ("xsi", XSI_NS),

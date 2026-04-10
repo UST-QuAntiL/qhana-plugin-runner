@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc40_default_flow_remap" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc40_default_flow_remap" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc40_default_flow_remap_main" name="TC40 - Default Flow Remap" isExecutable="true" camunda:versionTag="0.2">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
@@ -51,55 +51,55 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc40_default_flow_remap_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc40_default_flow_remap_main" bpmnElement="tc40_default_flow_remap_main">
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <omgdc:Bounds x="100" y="200" width="36" height="36" />
+        <dc:Bounds x="100" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split" isMarkerVisible="true">
-        <omgdc:Bounds x="200" y="193" width="50" height="50" />
+        <dc:Bounds x="200" y="193" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="190" y="163" width="70" height="14" />
+          <dc:Bounds x="190" y="163" width="70" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <omgdc:Bounds x="340" y="70" width="170" height="100" />
+        <dc:Bounds x="340" y="70" width="170" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHocSubProcess_Manual_di" bpmnElement="AdHocSubProcess_Manual" isExpanded="true">
-        <omgdc:Bounds x="350" y="250" width="350" height="150" />
+        <dc:Bounds x="350" y="250" width="350" height="150" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Manual_di" bpmnElement="QHanaTask_Manual">
-        <omgdc:Bounds x="400" y="290" width="150" height="70" />
+        <dc:Bounds x="400" y="290" width="150" height="70" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <omgdc:Bounds x="800" y="200" width="36" height="36" />
+        <dc:Bounds x="800" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <omgdi:waypoint x="136" y="218" />
-        <omgdi:waypoint x="200" y="218" />
+        <di:waypoint x="136" y="218" />
+        <di:waypoint x="200" y="218" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Target_Exec_di" bpmnElement="Flow_Target_Exec">
-        <omgdi:waypoint x="250" y="205" />
-        <omgdi:waypoint x="295" y="205" />
-        <omgdi:waypoint x="295" y="161" />
-        <omgdi:waypoint x="340" y="161" />
+        <di:waypoint x="250" y="205" />
+        <di:waypoint x="295" y="205" />
+        <di:waypoint x="295" y="161" />
+        <di:waypoint x="340" y="161" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Target_AdHoc_di" bpmnElement="Flow_Target_AdHoc">
-        <omgdi:waypoint x="225" y="243" />
-        <omgdi:waypoint x="225" y="325" />
-        <omgdi:waypoint x="350" y="325" />
+        <di:waypoint x="225" y="243" />
+        <di:waypoint x="225" y="325" />
+        <di:waypoint x="350" y="325" />
         <bpmndi:BPMNLabel>
-          <omgdc:Bounds x="240" y="335" width="65" height="14" />
+          <dc:Bounds x="240" y="335" width="65" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_EndA_di" bpmnElement="Flow_EndA">
-        <omgdi:waypoint x="510" y="141" />
-        <omgdi:waypoint x="655" y="141" />
-        <omgdi:waypoint x="655" y="213" />
-        <omgdi:waypoint x="800" y="213" />
+        <di:waypoint x="510" y="141" />
+        <di:waypoint x="655" y="141" />
+        <di:waypoint x="655" y="213" />
+        <di:waypoint x="800" y="213" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_EndB_di" bpmnElement="Flow_EndB">
-        <omgdi:waypoint x="700" y="325" />
-        <omgdi:waypoint x="750" y="325" />
-        <omgdi:waypoint x="750" y="218" />
-        <omgdi:waypoint x="800" y="218" />
+        <di:waypoint x="700" y="325" />
+        <di:waypoint x="750" y="325" />
+        <di:waypoint x="750" y="218" />
+        <di:waypoint x="800" y="218" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

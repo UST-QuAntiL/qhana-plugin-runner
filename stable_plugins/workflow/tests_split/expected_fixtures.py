@@ -727,8 +727,28 @@ EXPECTED = {
         ],
     },
     "tc20_nested_adhoc.bpmn": {
-        "nsup": "Nested ad-hoc subprocess not supported (outer id='AdHocSubProcess_Outer', inner "
-        "id='AdHocSubProcess_Inner')."
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("adHocSubProcess[original]", "AdHocSubProcess_Outer"),
+            ("endEvent", "EndEvent_1"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "AdHocSubProcess_Outer", None),
+            ("Flow_3", "AdHocSubProcess_Outer", "EndEvent_1", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc20_nested_adhoc_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": ["qoutput.incidentData"],
+                "task_ids": ["UserTask_Input"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
     },
     "tc21_adhoc_with_non_qhana_task.bpmn": {
         "main_nodes": [
@@ -1468,6 +1488,32 @@ EXPECTED = {
                     "Flow_0texvqp",
                     "Flow_E1_end",
                 ],
+            }
+        ],
+    },
+    "tc46_loop_markers.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("endEvent", "EndEvent_1"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_4", "AdHoc_E1_Wrapper", "EndEvent_1", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc46_loop_markers_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": [
+                    "ServiceTask_Prepare",
+                    "ServiceTask_Loop",
+                    "ServiceTask_Aggregate",
+                ],
+                "flow_ids": ["Flow_E1_start", "Flow_2", "Flow_3", "Flow_E1_end"],
             }
         ],
     },
