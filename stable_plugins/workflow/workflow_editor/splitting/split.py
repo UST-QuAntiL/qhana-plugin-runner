@@ -65,6 +65,7 @@ def default_classifier(elem: ET.Element) -> bool:
         return True
     return False
 
+
 def _localname(tag: str) -> str:
     return tag.split("}", 1)[1] if tag.startswith("{") else tag
 
@@ -82,8 +83,14 @@ def _camunda(name: str) -> str:
 
 
 TASK_LOCALNAMES = {
-    "task", "userTask", "serviceTask", "manualTask",
-    "scriptTask", "businessRuleTask", "sendTask", "receiveTask",
+    "task",
+    "userTask",
+    "serviceTask",
+    "manualTask",
+    "scriptTask",
+    "businessRuleTask",
+    "sendTask",
+    "receiveTask",
 }
 
 UNSUPPORTED_LOCALNAMES = {
@@ -187,8 +194,14 @@ def _parse_process(
                 flows[fid] = Flow(id=fid, source=src, target=tgt, elem=child)
             continue
 
-        if local in {"dataObject", "dataObjectReference", "dataStoreReference",
-                     "textAnnotation", "group", "association"}:
+        if local in {
+            "dataObject",
+            "dataObjectReference",
+            "dataStoreReference",
+            "textAnnotation",
+            "group",
+            "association",
+        }:
             continue
 
         if local in UNSUPPORTED_LOCALNAMES:
@@ -215,7 +228,9 @@ def _parse_process(
 
         if local == "startEvent":
             if start_id is not None:
-                raise SplitNotSupported("Multiple start events are not supported in Phase 1.")
+                raise SplitNotSupported(
+                    "Multiple start events are not supported in Phase 1."
+                )
             start_id = nid
         elif local == "endEvent":
             end_ids.append(nid)
@@ -233,9 +248,13 @@ def _classify_nodes(
     classifier: Callable[[ET.Element], bool],
 ) -> None:
     for node in nodes.values():
-        if node.local in {"startEvent", "endEvent",
-                          "exclusiveGateway", "parallelGateway",
-                          "adHocSubProcess"}:
+        if node.local in {
+            "startEvent",
+            "endEvent",
+            "exclusiveGateway",
+            "parallelGateway",
+            "adHocSubProcess",
+        }:
             node.extractable = False
             continue
         node.extractable = classifier(node.elem)
@@ -268,7 +287,6 @@ def _find_regions(
     def pred_of(nid: str) -> List[Tuple[str, str]]:
         return [(flows[fid].source, fid) for fid in in_flows.get(nid, [])]
 
-
     assigned: Set[str] = set()
     regions: List[Region] = []
     idx = 0
@@ -283,12 +301,16 @@ def _find_regions(
         cur = nid
         while True:
             preds = pred_of(cur)
-            ext_preds = [(p, f) for (p, f) in preds if nodes.get(p) and nodes[p].extractable]
+            ext_preds = [
+                (p, f) for (p, f) in preds if nodes.get(p) and nodes[p].extractable
+            ]
             if len(ext_preds) != 1:
                 break
             p, _f = ext_preds[0]
             p_succs = succ_of(p)
-            p_ext_succs = [(t, fi) for (t, fi) in p_succs if nodes.get(t) and nodes[t].extractable]
+            p_ext_succs = [
+                (t, fi) for (t, fi) in p_succs if nodes.get(t) and nodes[t].extractable
+            ]
             if len(p_ext_succs) != 1 or p_ext_succs[0][0] != cur:
                 break
             cur = p
@@ -299,12 +321,16 @@ def _find_regions(
         while True:
             last = chain[-1]
             succs = succ_of(last)
-            ext_succs = [(t, f) for (t, f) in succs if nodes.get(t) and nodes[t].extractable]
+            ext_succs = [
+                (t, f) for (t, f) in succs if nodes.get(t) and nodes[t].extractable
+            ]
             if len(ext_succs) != 1:
                 break
             t, fid = ext_succs[0]
             t_preds = pred_of(t)
-            t_ext_preds = [(p, fi) for (p, fi) in t_preds if nodes.get(p) and nodes[p].extractable]
+            t_ext_preds = [
+                (p, fi) for (p, fi) in t_preds if nodes.get(p) and nodes[p].extractable
+            ]
             if len(t_ext_preds) != 1 or t_ext_preds[0][0] != last:
                 break
             flows_last_to_t = [f for f in out_flows.get(last, []) if flows[f].target == t]
@@ -314,8 +340,12 @@ def _find_regions(
             internal_flow_ids.append(fid)
 
         chain_set = set(chain)
-        entry_flows = [f for f in in_flows.get(chain[0], []) if flows[f].source not in chain_set]
-        exit_flows = [f for f in out_flows.get(chain[-1], []) if flows[f].target not in chain_set]
+        entry_flows = [
+            f for f in in_flows.get(chain[0], []) if flows[f].source not in chain_set
+        ]
+        exit_flows = [
+            f for f in out_flows.get(chain[-1], []) if flows[f].target not in chain_set
+        ]
         if not entry_flows:
             raise SplitNotSupported(
                 f"Region starting at {chain[0]!r} has no entry flow from outside."
@@ -338,13 +368,15 @@ def _find_regions(
             )
 
         idx += 1
-        regions.append(Region(
-            index=idx,
-            node_ids=chain,
-            entry_flow_ids=entry_flows,
-            exit_flow_ids=exit_flows,
-            internal_flow_ids=internal_flow_ids,
-        ))
+        regions.append(
+            Region(
+                index=idx,
+                node_ids=chain,
+                entry_flow_ids=entry_flows,
+                exit_flow_ids=exit_flows,
+                internal_flow_ids=internal_flow_ids,
+            )
+        )
         assigned.update(chain)
 
     return regions
@@ -423,10 +455,13 @@ def _make_wrapper_adhoc(
     fid = f"E{region.index}"
     wrapper_id = f"AdHoc_{fid}_Wrapper"
 
-    wrapper = ET.Element(_bpmn("adHocSubProcess"), attrib={
-        "id": wrapper_id,
-        "name": f"Extracted Fragment {fid}",
-    })
+    wrapper = ET.Element(
+        _bpmn("adHocSubProcess"),
+        attrib={
+            "id": wrapper_id,
+            "name": f"Extracted Fragment {fid}",
+        },
+    )
     wrapper.set(_qhana("fragmentRef"), fid)
 
     inputs, outputs = _compute_region_io(region, nodes, all_regions)
@@ -590,8 +625,13 @@ def _build_main_process(
     surviving_ids = {e.get("id") for e in main.iter() if e.get("id")}
     for child in list(original_process):
         local = _localname(child.tag)
-        if local in {"dataObject", "dataObjectReference", "dataStoreReference",
-                     "textAnnotation", "group"}:
+        if local in {
+            "dataObject",
+            "dataObjectReference",
+            "dataStoreReference",
+            "textAnnotation",
+            "group",
+        }:
             main.append(copy.deepcopy(child))
             aid = child.get("id")
             if aid:
@@ -615,7 +655,9 @@ def _build_main_process(
 
     for ls in main.findall(f"{{{BPMN_NS}}}laneSet"):
         for lane in ls.findall(f"{{{BPMN_NS}}}lane"):
-            old_refs = [(r.text or "").strip() for r in lane.findall(f"{{{BPMN_NS}}}flowNodeRef")]
+            old_refs = [
+                (r.text or "").strip() for r in lane.findall(f"{{{BPMN_NS}}}flowNodeRef")
+            ]
             for r in lane.findall(f"{{{BPMN_NS}}}flowNodeRef"):
                 lane.remove(r)
             seen = set()
@@ -647,31 +689,46 @@ def _build_fragment_process(
     fragment_process_id: str,
 ) -> ET.Element:
     fid = f"E{region.index}"
-    proc = ET.Element(_bpmn("process"), attrib={
-        "id": fragment_process_id,
-        "name": f"Extracted Fragment {fid}",
-        "isExecutable": "true",
-    })
+    proc = ET.Element(
+        _bpmn("process"),
+        attrib={
+            "id": fragment_process_id,
+            "name": f"Extracted Fragment {fid}",
+            "isExecutable": "true",
+        },
+    )
 
-    start_elem = ET.SubElement(proc, _bpmn("startEvent"), attrib={
-        "id": f"StartEvent_{fid}",
-    })
+    start_elem = ET.SubElement(
+        proc,
+        _bpmn("startEvent"),
+        attrib={
+            "id": f"StartEvent_{fid}",
+        },
+    )
     task_elems: List[ET.Element] = []
     for nid in region.node_ids:
         c = copy.deepcopy(nodes[nid].elem)
         _strip_incoming_outgoing(c)
         proc.append(c)
         task_elems.append(c)
-    end_elem = ET.SubElement(proc, _bpmn("endEvent"), attrib={
-        "id": f"EndEvent_{fid}",
-    })
+    end_elem = ET.SubElement(
+        proc,
+        _bpmn("endEvent"),
+        attrib={
+            "id": f"EndEvent_{fid}",
+        },
+    )
 
     first_flow_id = f"Flow_{fid}_start"
-    sf = ET.SubElement(proc, _bpmn("sequenceFlow"), attrib={
-        "id": first_flow_id,
-        "sourceRef": f"StartEvent_{fid}",
-        "targetRef": region.node_ids[0],
-    })
+    sf = ET.SubElement(
+        proc,
+        _bpmn("sequenceFlow"),
+        attrib={
+            "id": first_flow_id,
+            "sourceRef": f"StartEvent_{fid}",
+            "targetRef": region.node_ids[0],
+        },
+    )
     _add_outgoing(start_elem, first_flow_id)
     _add_incoming(task_elems[0], first_flow_id)
 
@@ -685,11 +742,15 @@ def _build_fragment_process(
         _add_incoming(task_elems[i + 1], orig_fid)
 
     last_flow_id = f"Flow_{fid}_end"
-    sf_end = ET.SubElement(proc, _bpmn("sequenceFlow"), attrib={
-        "id": last_flow_id,
-        "sourceRef": region.node_ids[-1],
-        "targetRef": f"EndEvent_{fid}",
-    })
+    sf_end = ET.SubElement(
+        proc,
+        _bpmn("sequenceFlow"),
+        attrib={
+            "id": last_flow_id,
+            "sourceRef": region.node_ids[-1],
+            "targetRef": f"EndEvent_{fid}",
+        },
+    )
     _add_outgoing(task_elems[-1], last_flow_id)
     _add_incoming(end_elem, last_flow_id)
 
@@ -722,8 +783,9 @@ def _build_main_definitions(
 
     new_root.append(main_process)
 
-    di = _build_main_di(original_root, main_process, regions,
-                        original_process_id, new_process_id)
+    di = _build_main_di(
+        original_root, main_process, regions, original_process_id, new_process_id
+    )
     if di is not None:
         new_root.append(di)
 
@@ -806,7 +868,9 @@ def _shape_center(shape: ET.Element) -> Optional[Tuple[float, float]]:
     return (x + w / 2.0, y + h / 2.0)
 
 
-def _dock_point(shape: ET.Element, toward: Tuple[float, float]) -> Optional[Tuple[float, float]]:
+def _dock_point(
+    shape: ET.Element, toward: Tuple[float, float]
+) -> Optional[Tuple[float, float]]:
     b = _bounds_of(shape)
     if b is None:
         return None
@@ -850,33 +914,53 @@ def _docked_waypoints(
     return [src_dock, (mid_x, sy), (mid_x, ty), tgt_dock]
 
 
-def _make_shape(bpmn_element_id: str, x: float, y: float, w: float, h: float,
-                is_expanded: bool = False) -> ET.Element:
-    shape = ET.Element(f"{{{BPMNDI_NS}}}BPMNShape", attrib={
-        "id": f"{bpmn_element_id}_di",
-        "bpmnElement": bpmn_element_id,
-    })
+def _make_shape(
+    bpmn_element_id: str,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    is_expanded: bool = False,
+) -> ET.Element:
+    shape = ET.Element(
+        f"{{{BPMNDI_NS}}}BPMNShape",
+        attrib={
+            "id": f"{bpmn_element_id}_di",
+            "bpmnElement": bpmn_element_id,
+        },
+    )
     if is_expanded:
         shape.set("isExpanded", "true")
-    ET.SubElement(shape, f"{{{OMGDC_NS}}}Bounds", attrib={
-        "x": str(int(x)),
-        "y": str(int(y)),
-        "width": str(int(w)),
-        "height": str(int(h)),
-    })
+    ET.SubElement(
+        shape,
+        f"{{{OMGDC_NS}}}Bounds",
+        attrib={
+            "x": str(int(x)),
+            "y": str(int(y)),
+            "width": str(int(w)),
+            "height": str(int(h)),
+        },
+    )
     return shape
 
 
 def _make_edge(flow_id: str, waypoints: List[Tuple[float, float]]) -> ET.Element:
-    edge = ET.Element(f"{{{BPMNDI_NS}}}BPMNEdge", attrib={
-        "id": f"{flow_id}_di",
-        "bpmnElement": flow_id,
-    })
-    for (x, y) in waypoints:
-        ET.SubElement(edge, f"{{{OMGDI_NS}}}waypoint", attrib={
-            "x": str(int(x)),
-            "y": str(int(y)),
-        })
+    edge = ET.Element(
+        f"{{{BPMNDI_NS}}}BPMNEdge",
+        attrib={
+            "id": f"{flow_id}_di",
+            "bpmnElement": flow_id,
+        },
+    )
+    for x, y in waypoints:
+        ET.SubElement(
+            edge,
+            f"{{{OMGDI_NS}}}waypoint",
+            attrib={
+                "x": str(int(x)),
+                "y": str(int(y)),
+            },
+        )
     return edge
 
 
@@ -923,13 +1007,20 @@ def _build_main_di(
     for nid, sh in original_shapes.items():
         shapes_by_id[nid] = sh
 
-    diagram = ET.Element(f"{{{BPMNDI_NS}}}BPMNDiagram", attrib={
-        "id": f"BPMNDiagram_{new_process_id}",
-    })
-    plane = ET.SubElement(diagram, f"{{{BPMNDI_NS}}}BPMNPlane", attrib={
-        "id": f"BPMNPlane_{new_process_id}",
-        "bpmnElement": new_process_id,
-    })
+    diagram = ET.Element(
+        f"{{{BPMNDI_NS}}}BPMNDiagram",
+        attrib={
+            "id": f"BPMNDiagram_{new_process_id}",
+        },
+    )
+    plane = ET.SubElement(
+        diagram,
+        f"{{{BPMNDI_NS}}}BPMNPlane",
+        attrib={
+            "id": f"BPMNPlane_{new_process_id}",
+            "bpmnElement": new_process_id,
+        },
+    )
 
     emitted_shapes: Set[str] = set()
 
@@ -955,9 +1046,16 @@ def _build_main_di(
 
     for child in main_process:
         local = _localname(child.tag)
-        if local in ("sequenceFlow", "laneSet", "association",
-                     "dataObject", "dataObjectReference",
-                     "dataStoreReference", "textAnnotation", "group"):
+        if local in (
+            "sequenceFlow",
+            "laneSet",
+            "association",
+            "dataObject",
+            "dataObjectReference",
+            "dataStoreReference",
+            "textAnnotation",
+            "group",
+        ):
             continue
         cid = child.get("id")
         if not cid:
@@ -969,7 +1067,11 @@ def _build_main_di(
                     continue
                 did = desc.get("id")
                 dlocal = _localname(desc.tag)
-                if did and dlocal in TASK_LOCALNAMES or desc.tag == _qhana("qHAnaServiceTask"):
+                if (
+                    did
+                    and dlocal in TASK_LOCALNAMES
+                    or desc.tag == _qhana("qHAnaServiceTask")
+                ):
                     if did:
                         emit_shape(did)
                 elif did and dlocal in ("startEvent", "endEvent"):
@@ -977,8 +1079,13 @@ def _build_main_di(
 
     for child in main_process:
         local = _localname(child.tag)
-        if local in ("dataObject", "dataObjectReference", "dataStoreReference",
-                     "textAnnotation", "group"):
+        if local in (
+            "dataObject",
+            "dataObjectReference",
+            "dataStoreReference",
+            "textAnnotation",
+            "group",
+        ):
             cid = child.get("id")
             if cid:
                 emit_shape(cid)
@@ -1009,17 +1116,27 @@ def _build_main_di(
         if tgt_shape is None:
             tgt_shape = original_shapes.get(tgt)
         if src_shape is None or tgt_shape is None:
-            plane.append(ET.Element(f"{{{BPMNDI_NS}}}BPMNEdge", attrib={
-                "id": f"{fid}_di",
-                "bpmnElement": fid,
-            }))
+            plane.append(
+                ET.Element(
+                    f"{{{BPMNDI_NS}}}BPMNEdge",
+                    attrib={
+                        "id": f"{fid}_di",
+                        "bpmnElement": fid,
+                    },
+                )
+            )
             continue
         waypoints = _docked_waypoints(src_shape, tgt_shape)
         if waypoints is None:
-            plane.append(ET.Element(f"{{{BPMNDI_NS}}}BPMNEdge", attrib={
-                "id": f"{fid}_di",
-                "bpmnElement": fid,
-            }))
+            plane.append(
+                ET.Element(
+                    f"{{{BPMNDI_NS}}}BPMNEdge",
+                    attrib={
+                        "id": f"{fid}_di",
+                        "bpmnElement": fid,
+                    },
+                )
+            )
             continue
         plane.append(_make_edge(fid, waypoints))
 
@@ -1036,13 +1153,20 @@ def _build_fragment_di(
     fid_label = f"E{region.index}"
     frag_pid = fragment_process.get("id") or ""
 
-    diagram = ET.Element(f"{{{BPMNDI_NS}}}BPMNDiagram", attrib={
-        "id": f"BPMNDiagram_{frag_pid}",
-    })
-    plane = ET.SubElement(diagram, f"{{{BPMNDI_NS}}}BPMNPlane", attrib={
-        "id": f"BPMNPlane_{frag_pid}",
-        "bpmnElement": frag_pid,
-    })
+    diagram = ET.Element(
+        f"{{{BPMNDI_NS}}}BPMNDiagram",
+        attrib={
+            "id": f"BPMNDiagram_{frag_pid}",
+        },
+    )
+    plane = ET.SubElement(
+        diagram,
+        f"{{{BPMNDI_NS}}}BPMNPlane",
+        attrib={
+            "id": f"BPMNPlane_{frag_pid}",
+            "bpmnElement": frag_pid,
+        },
+    )
 
     bbox = _region_bounding_box(region, original_shapes)
     min_x, min_y, w, h = bbox
@@ -1060,7 +1184,9 @@ def _build_fragment_di(
             task_shape_refs.append(copied)
         else:
             idx = region.node_ids.index(nid)
-            fallback = _make_shape(nid, tasks_min_x + idx * 140, tasks_mid_y - 40, 100, 80)
+            fallback = _make_shape(
+                nid, tasks_min_x + idx * 140, tasks_mid_y - 40, 100, 80
+            )
             plane.append(fallback)
             task_shape_refs.append(fallback)
 
@@ -1171,14 +1297,16 @@ def split_workflow(
         frag_defs = _build_fragment_definitions(original_root, frag_proc, r)
         frag_xml = _serialize(frag_defs)
         inputs, outputs = _compute_region_io(r, nodes, regions)
-        fragments.append(FragmentResult(
-            fragment_id=fid,
-            process_id=frag_pid,
-            wrapper_id=f"AdHoc_{fid}_Wrapper",
-            xml=frag_xml,
-            input_variables=inputs,
-            output_variables=outputs,
-        ))
+        fragments.append(
+            FragmentResult(
+                fragment_id=fid,
+                process_id=frag_pid,
+                wrapper_id=f"AdHoc_{fid}_Wrapper",
+                xml=frag_xml,
+                input_variables=inputs,
+                output_variables=outputs,
+            )
+        )
 
     return SplitResult(main_xml=main_xml, fragments=fragments)
 

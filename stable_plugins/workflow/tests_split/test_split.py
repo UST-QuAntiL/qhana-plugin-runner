@@ -22,7 +22,9 @@ def _ln(tag: str) -> str:
     return tag.split("}", 1)[1] if tag.startswith("{") else tag
 
 
-def _fingerprint_process(xml_str: str) -> Tuple[List[Tuple[str, str]], List[Tuple[Any, ...]]]:
+def _fingerprint_process(
+    xml_str: str,
+) -> Tuple[List[Tuple[str, str]], List[Tuple[Any, ...]]]:
     """Return (nodes, flows) where nodes is a list of (kind, id) tuples in
     document order and flows is a list of (id, src, tgt, cond_or_None) tuples.
 
@@ -42,7 +44,9 @@ def _fingerprint_process(xml_str: str) -> Tuple[List[Tuple[str, str]], List[Tupl
         if local == "sequenceFlow":
             cond_elem = child.find("bpmn:conditionExpression", NS)
             cond = (cond_elem.text or "").strip() if cond_elem is not None else None
-            flows.append((child.get("id"), child.get("sourceRef"), child.get("targetRef"), cond))
+            flows.append(
+                (child.get("id"), child.get("sourceRef"), child.get("targetRef"), cond)
+            )
         elif local in ("laneSet", "association"):
             continue
         else:
@@ -82,6 +86,7 @@ def _fragment_flow_ids(xml_str: str) -> List[str]:
     proc = root.find(f"{{{BPMN_NS}}}process")
     assert proc is not None
     return [c.get("id") for c in proc if _ln(c.tag) == "sequenceFlow"]
+
 
 CASES = sorted(EXPECTED.keys())
 
@@ -127,20 +132,20 @@ def test_case(case_name: str):
 
     # ----- fragments -----
     exp_frags = expected["fragments"]
-    assert len(result.fragments) == len(exp_frags), (
-        f"[{case_name}] fragment count: expected {len(exp_frags)}, got {len(result.fragments)}"
-    )
+    assert len(result.fragments) == len(
+        exp_frags
+    ), f"[{case_name}] fragment count: expected {len(exp_frags)}, got {len(result.fragments)}"
 
     for frag, exp in zip(result.fragments, exp_frags):
-        assert frag.fragment_id == exp["fragment_id"], (
-            f"[{case_name}] fragment_id: expected {exp['fragment_id']}, got {frag.fragment_id}"
-        )
-        assert frag.process_id == exp["process_id"], (
-            f"[{case_name}] process_id mismatch on {frag.fragment_id}"
-        )
-        assert frag.wrapper_id == exp["wrapper_id"], (
-            f"[{case_name}] wrapper_id mismatch on {frag.fragment_id}"
-        )
+        assert (
+            frag.fragment_id == exp["fragment_id"]
+        ), f"[{case_name}] fragment_id: expected {exp['fragment_id']}, got {frag.fragment_id}"
+        assert (
+            frag.process_id == exp["process_id"]
+        ), f"[{case_name}] process_id mismatch on {frag.fragment_id}"
+        assert (
+            frag.wrapper_id == exp["wrapper_id"]
+        ), f"[{case_name}] wrapper_id mismatch on {frag.fragment_id}"
         assert frag.input_variables == exp["inputs"], (
             f"[{case_name}] {frag.fragment_id} input vars: "
             f"expected {exp['inputs']}, got {frag.input_variables}"
@@ -163,6 +168,7 @@ def test_case(case_name: str):
             f"  expected: {exp['flow_ids']}\n"
             f"  actual:   {actual_flow_ids}"
         )
+
 
 @pytest.mark.parametrize("case_name", CASES)
 def test_outputs_are_well_formed_xml(case_name: str):
