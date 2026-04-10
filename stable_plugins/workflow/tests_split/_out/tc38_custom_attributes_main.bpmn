@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:ns1="http://qhana.example/custom-metadata" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc38_custom_attributes" targetNamespace="http://qhana.example/testcases" ns1:suite="phase1" ns1:owner="thesis"><bpmn:process id="tc38_custom_attributes_main" name="TC38 - Custom attributes" isExecutable="true" camunda:versionTag="0.2" ns1:processCategory="metadata-preservation" ns1:priority="high"><bpmn:startEvent id="StartEvent_1" name="Start" ns1:entry="true">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:endEvent id="EndEvent_1" name="End" ns1:exit="true">
+      <bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" ns1:edgeClass="primary" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_1" ns1:edgeClass="completion" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc38_custom_attributes_main"><bpmndi:BPMNPlane id="BPMNPlane_tc38_custom_attributes_main" bpmnElement="tc38_custom_attributes_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="80" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="160" y="158" width="480" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="710" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="116" y="208" /><omgdi:waypoint x="160" y="208" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><omgdi:waypoint x="640" y="208" /><omgdi:waypoint x="710" y="208" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

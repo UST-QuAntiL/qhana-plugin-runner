@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc02_exec_after_adhoc" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc02_exec_after_adhoc_main" name="TC02 - Executable chain after ad-hoc" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc Preparation Block" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_Tag" name="tag-input">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">tag-input</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.seed">seed-text</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.taggedText">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Filter" name="filter-tagged-input">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">filter-tagged-input</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.text">${qoutput.taggedText}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.filteredText">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    <bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="qoutput.filteredText">${qoutput.filteredText}</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHocSubProcess_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHocSubProcess_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_1" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc02_exec_after_adhoc_main"><bpmndi:BPMNPlane id="BPMNPlane_tc02_exec_after_adhoc_main" bpmnElement="tc02_exec_after_adhoc_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="80" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1" isExpanded="true">
+        <omgdc:Bounds x="170" y="110" width="430" height="190" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Tag_di" bpmnElement="QHanaTask_Tag">
+        <omgdc:Bounds x="225" y="165" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Filter_di" bpmnElement="QHanaTask_Filter">
+        <omgdc:Bounds x="415" y="165" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="660" y="158" width="440" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="1150" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="116" y="208" />
+        <omgdi:waypoint x="170" y="208" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><omgdi:waypoint x="600" y="206" /><omgdi:waypoint x="660" y="206" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><omgdi:waypoint x="1100" y="208" /><omgdi:waypoint x="1150" y="208" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

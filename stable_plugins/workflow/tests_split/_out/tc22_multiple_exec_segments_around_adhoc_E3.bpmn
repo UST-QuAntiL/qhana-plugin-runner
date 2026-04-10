@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc22_multiple_exec_segments_around_adhoc" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc22_multiple_exec_segments_around_adhoc_E3" name="Extracted Fragment E3" isExecutable="true"><bpmn:startEvent id="StartEvent_E3"><bpmn:outgoing>Flow_E3_start</bpmn:outgoing></bpmn:startEvent><qhana:qHAnaServiceTask id="QHanaTask_Publish" name="publish-content">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">publish-content</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.approvalLog}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.publishUrl">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E3_start</bpmn:incoming><bpmn:outgoing>Flow_E3_end</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_E3"><bpmn:incoming>Flow_E3_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E3_start" sourceRef="StartEvent_E3" targetRef="QHanaTask_Publish" /><bpmn:sequenceFlow id="Flow_E3_end" sourceRef="QHanaTask_Publish" targetRef="EndEvent_E3" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc22_multiple_exec_segments_around_adhoc_E3"><bpmndi:BPMNPlane id="BPMNPlane_tc22_multiple_exec_segments_around_adhoc_E3" bpmnElement="tc22_multiple_exec_segments_around_adhoc_E3"><bpmndi:BPMNShape id="QHanaTask_Publish_di" bpmnElement="QHanaTask_Publish">
+        <omgdc:Bounds x="1810" y="178" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E3_di" bpmnElement="StartEvent_E3"><omgdc:Bounds x="1730" y="200" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E3_di" bpmnElement="EndEvent_E3"><omgdc:Bounds x="2030" y="200" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_E3_start_di" bpmnElement="Flow_E3_start"><omgdi:waypoint x="1766" y="218" /><omgdi:waypoint x="1810" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E3_end_di" bpmnElement="Flow_E3_end"><omgdi:waypoint x="1980" y="218" /><omgdi:waypoint x="2030" y="218" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

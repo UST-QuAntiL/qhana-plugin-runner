@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc13_and_exec_parallel" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc13_and_exec_parallel_E3" name="Extracted Fragment E3" isExecutable="true"><bpmn:startEvent id="StartEvent_E3"><bpmn:outgoing>Flow_E3_start</bpmn:outgoing></bpmn:startEvent><qhana:qHAnaServiceTask id="QHanaTask_PayrollSetup" name="setup-payroll">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">setup-payroll</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.employeeData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.payrollData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E3_start</bpmn:incoming><bpmn:outgoing>Flow_E3_end</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_E3"><bpmn:incoming>Flow_E3_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E3_start" sourceRef="StartEvent_E3" targetRef="QHanaTask_PayrollSetup" /><bpmn:sequenceFlow id="Flow_E3_end" sourceRef="QHanaTask_PayrollSetup" targetRef="EndEvent_E3" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc13_and_exec_parallel_E3"><bpmndi:BPMNPlane id="BPMNPlane_tc13_and_exec_parallel_E3" bpmnElement="tc13_and_exec_parallel_E3"><bpmndi:BPMNShape id="QHanaTask_PayrollSetup_di" bpmnElement="QHanaTask_PayrollSetup">
+        <omgdc:Bounds x="550" y="280" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E3_di" bpmnElement="StartEvent_E3"><omgdc:Bounds x="470" y="302" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E3_di" bpmnElement="EndEvent_E3"><omgdc:Bounds x="770" y="302" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_E3_start_di" bpmnElement="Flow_E3_start"><omgdi:waypoint x="506" y="320" /><omgdi:waypoint x="550" y="320" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E3_end_di" bpmnElement="Flow_E3_end"><omgdi:waypoint x="720" y="320" /><omgdi:waypoint x="770" y="320" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

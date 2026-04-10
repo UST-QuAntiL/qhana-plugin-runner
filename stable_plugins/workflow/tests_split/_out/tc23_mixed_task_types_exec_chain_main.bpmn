@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc23_mixed_task_types_exec_chain" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc23_mixed_task_types_exec_chain_main" name="TC23 - Mixed task types executable chain" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:extensionElements><camunda:inputOutput><camunda:outputParameter name="qoutput.inputA">${qoutput.inputA}</camunda:outputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:serviceTask id="ServiceTask_Resolve" name="Resolve Service" camunda:type="external" camunda:topic="resolve-service">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.value">${qoutput.inputA}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.serviceValue">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:serviceTask>
+
+    <bpmn:scriptTask id="ScriptTask_Prepare" name="Prepare Script" scriptFormat="groovy">
+      <bpmn:script>
+        execution.setVariable("scriptValue", execution.getVariable("qoutput.serviceValue"))
+      </bpmn:script>
+    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:scriptTask>
+
+    <bpmn:businessRuleTask id="BusinessRuleTask_Decide" name="Apply Rule">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.ruleInput">${scriptValue}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.ruleResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_4</bpmn:incoming><bpmn:outgoing>Flow_5</bpmn:outgoing></bpmn:businessRuleTask>
+
+    <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="qoutput.ruleResult">${qoutput.ruleResult}</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_5</bpmn:incoming><bpmn:outgoing>Flow_6</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_6</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="ServiceTask_Resolve" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_Resolve" targetRef="ScriptTask_Prepare" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="ScriptTask_Prepare" targetRef="BusinessRuleTask_Decide" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="BusinessRuleTask_Decide" targetRef="AdHoc_E2_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_1" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc23_mixed_task_types_exec_chain_main"><bpmndi:BPMNPlane id="BPMNPlane_tc23_mixed_task_types_exec_chain_main" bpmnElement="tc23_mixed_task_types_exec_chain_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="60" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="120" y="158" width="190" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="ServiceTask_Resolve_di" bpmnElement="ServiceTask_Resolve">
+        <omgdc:Bounds x="350" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="ScriptTask_Prepare_di" bpmnElement="ScriptTask_Prepare">
+        <omgdc:Bounds x="570" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="BusinessRuleTask_Decide_di" bpmnElement="BusinessRuleTask_Decide">
+        <omgdc:Bounds x="790" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true"><omgdc:Bounds x="1000" y="158" width="210" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="1260" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="96" y="208" /><omgdi:waypoint x="120" y="208" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><omgdi:waypoint x="310" y="208" /><omgdi:waypoint x="350" y="208" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="520" y="208" />
+        <omgdi:waypoint x="570" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <omgdi:waypoint x="740" y="208" />
+        <omgdi:waypoint x="790" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><omgdi:waypoint x="960" y="208" /><omgdi:waypoint x="1000" y="208" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><omgdi:waypoint x="1210" y="208" /><omgdi:waypoint x="1260" y="208" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

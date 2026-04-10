@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc34_lane_partial_removal" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc34_lane_partial_removal_E1" name="Extracted Fragment E1" isExecutable="true"><bpmn:startEvent id="StartEvent_E1"><bpmn:outgoing>Flow_E1_start</bpmn:outgoing></bpmn:startEvent><qhana:qHAnaServiceTask id="QHanaTask_AutomatedPrep" name="prep-data">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">prep-data</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.prepData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E1_start</bpmn:incoming><bpmn:outgoing>Flow_E1_end</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_E1"><bpmn:incoming>Flow_E1_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_AutomatedPrep" /><bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_AutomatedPrep" targetRef="EndEvent_E1" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc34_lane_partial_removal_E1"><bpmndi:BPMNPlane id="BPMNPlane_tc34_lane_partial_removal_E1" bpmnElement="tc34_lane_partial_removal_E1"><bpmndi:BPMNShape id="QHanaTask_AutomatedPrep_di" bpmnElement="QHanaTask_AutomatedPrep">
+        <omgdc:Bounds x="250" y="130" width="150" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1"><omgdc:Bounds x="170" y="152" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1"><omgdc:Bounds x="450" y="152" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start"><omgdi:waypoint x="206" y="170" /><omgdi:waypoint x="250" y="170" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end"><omgdi:waypoint x="400" y="170" /><omgdi:waypoint x="450" y="170" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc26_variable_exec_to_main" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc26_variable_exec_to_main_E1" name="Extracted Fragment E1" isExecutable="true"><bpmn:startEvent id="StartEvent_E1"><bpmn:outgoing>Flow_E1_start</bpmn:outgoing></bpmn:startEvent><bpmn:userTask id="UserTask_Input" name="Submit Customer ID">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.customerId" label="Customer ID" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E1_start</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:userTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_EnrichProfile" name="enrich-customer-profile">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">enrich-customer-profile</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.customerId}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.enrichedProfile">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_E1_end</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_E1"><bpmn:incoming>Flow_E1_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Input" /><bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_EnrichProfile" />
+    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_EnrichProfile" targetRef="EndEvent_E1" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc26_variable_exec_to_main_E1"><bpmndi:BPMNPlane id="BPMNPlane_tc26_variable_exec_to_main_E1" bpmnElement="tc26_variable_exec_to_main_E1"><bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <omgdc:Bounds x="160" y="178" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_EnrichProfile_di" bpmnElement="QHanaTask_EnrichProfile">
+        <omgdc:Bounds x="390" y="178" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1"><omgdc:Bounds x="80" y="200" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1"><omgdc:Bounds x="610" y="200" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <omgdi:waypoint x="330" y="218" />
+        <omgdi:waypoint x="390" y="218" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start"><omgdi:waypoint x="116" y="218" /><omgdi:waypoint x="160" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end"><omgdi:waypoint x="560" y="218" /><omgdi:waypoint x="610" y="218" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

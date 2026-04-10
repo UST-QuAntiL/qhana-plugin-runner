@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc23_mixed_task_types_exec_chain" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc23_mixed_task_types_exec_chain_E1" name="Extracted Fragment E1" isExecutable="true"><bpmn:startEvent id="StartEvent_E1"><bpmn:outgoing>Flow_E1_start</bpmn:outgoing></bpmn:startEvent><bpmn:userTask id="UserTask_Collect" name="Collect Parameters">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.inputA" label="Input A" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E1_start</bpmn:incoming><bpmn:outgoing>Flow_E1_end</bpmn:outgoing></bpmn:userTask>
+
+    <bpmn:endEvent id="EndEvent_E1"><bpmn:incoming>Flow_E1_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Collect" /><bpmn:sequenceFlow id="Flow_E1_end" sourceRef="UserTask_Collect" targetRef="EndEvent_E1" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc23_mixed_task_types_exec_chain_E1"><bpmndi:BPMNPlane id="BPMNPlane_tc23_mixed_task_types_exec_chain_E1" bpmnElement="tc23_mixed_task_types_exec_chain_E1"><bpmndi:BPMNShape id="UserTask_Collect_di" bpmnElement="UserTask_Collect">
+        <omgdc:Bounds x="130" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1"><omgdc:Bounds x="50" y="190" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1"><omgdc:Bounds x="350" y="190" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start"><omgdi:waypoint x="86" y="208" /><omgdi:waypoint x="130" y="208" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end"><omgdi:waypoint x="300" y="208" /><omgdi:waypoint x="350" y="208" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

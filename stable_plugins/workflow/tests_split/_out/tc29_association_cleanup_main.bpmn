@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc29_association_cleanup" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc29_association_cleanup_main" name="TC29 - Association Cleanup" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:extensionElements><camunda:inputOutput><camunda:outputParameter name="qoutput.filteredLogs">${qoutput.filteredLogs}</camunda:outputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHocSubProcess_Audit" name="Audit Review" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_ReviewLogs" name="review-logs">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">review-logs</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.filteredLogs}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.auditResult">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHocSubProcess_Audit" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHocSubProcess_Audit" targetRef="EndEvent_1" />
+
+  <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>Critical: This plugin will be extracted. Ensure the association line does not crash the Camunda engine by becoming a dangling edge.</bpmn:text>
+    </bpmn:textAnnotation>
+
+    <bpmn:association id="Association_1" sourceRef="AdHoc_E1_Wrapper" targetRef="TextAnnotation_1" />
+
+    </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc29_association_cleanup_main"><bpmndi:BPMNPlane id="BPMNPlane_tc29_association_cleanup_main" bpmnElement="tc29_association_cleanup_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="80" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="150" y="218" width="420" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHocSubProcess_Audit_di" bpmnElement="AdHocSubProcess_Audit" isExpanded="true">
+        <omgdc:Bounds x="620" y="173" width="420" height="190" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_ReviewLogs_di" bpmnElement="QHanaTask_ReviewLogs">
+        <omgdc:Bounds x="670" y="228" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="1100" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="TextAnnotation_1_di" bpmnElement="TextAnnotation_1">
+        <omgdc:Bounds x="420" y="80" width="220" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="116" y="268" /><omgdi:waypoint x="150" y="268" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><omgdi:waypoint x="570" y="268" /><omgdi:waypoint x="620" y="268" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <omgdi:waypoint x="1040" y="268" />
+        <omgdi:waypoint x="1100" y="268" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

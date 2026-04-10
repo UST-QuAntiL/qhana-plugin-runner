@@ -1,0 +1,90 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc04_only_exec_no_adhoc" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc04_only_exec_no_adhoc_E1" name="Extracted Fragment E1" isExecutable="true"><bpmn:startEvent id="StartEvent_E1"><bpmn:outgoing>Flow_E1_start</bpmn:outgoing></bpmn:startEvent><bpmn:userTask id="UserTask_Input" name="Enter File ID">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.fileId" label="File ID" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E1_start</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:userTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Fetch" name="fetch-file">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">fetch-file</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.fileId">${qoutput.fileId}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.fileData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Classify" name="classify-file">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">classify-file</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.file">${qoutput.fileData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.classification">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Store" name="store-result">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">store-result</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.result">${qoutput.classification}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.storedResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_4</bpmn:incoming><bpmn:outgoing>Flow_5</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Notify" name="notify-result">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">notify-result</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.result">${qoutput.storedResult}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.notification">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_5</bpmn:incoming><bpmn:outgoing>Flow_E1_end</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_E1"><bpmn:incoming>Flow_E1_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Input" /><bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_Fetch" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_Fetch" targetRef="QHanaTask_Classify" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_Classify" targetRef="QHanaTask_Store" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="QHanaTask_Store" targetRef="QHanaTask_Notify" />
+    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_Notify" targetRef="EndEvent_E1" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc04_only_exec_no_adhoc_E1"><bpmndi:BPMNPlane id="BPMNPlane_tc04_only_exec_no_adhoc_E1" bpmnElement="tc04_only_exec_no_adhoc_E1"><bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <omgdc:Bounds x="140" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Fetch_di" bpmnElement="QHanaTask_Fetch">
+        <omgdc:Bounds x="360" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Classify_di" bpmnElement="QHanaTask_Classify">
+        <omgdc:Bounds x="580" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Store_di" bpmnElement="QHanaTask_Store">
+        <omgdc:Bounds x="800" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Notify_di" bpmnElement="QHanaTask_Notify">
+        <omgdc:Bounds x="1020" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1"><omgdc:Bounds x="60" y="190" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1"><omgdc:Bounds x="1240" y="190" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <omgdi:waypoint x="310" y="208" />
+        <omgdi:waypoint x="360" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="530" y="208" />
+        <omgdi:waypoint x="580" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <omgdi:waypoint x="750" y="208" />
+        <omgdi:waypoint x="800" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <omgdi:waypoint x="970" y="208" />
+        <omgdi:waypoint x="1020" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start"><omgdi:waypoint x="96" y="208" /><omgdi:waypoint x="140" y="208" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end"><omgdi:waypoint x="1190" y="208" /><omgdi:waypoint x="1240" y="208" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

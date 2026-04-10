@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc03_exec_before_and_after_adhoc" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc03_exec_before_and_after_adhoc_main" name="TC03 - Executable before and after ad-hoc" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:extensionElements><camunda:inputOutput><camunda:outputParameter name="qoutput.normalizedDataset">${qoutput.normalizedDataset}</camunda:outputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc Inspection Block" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_Inspect" name="inspect-dataset">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">inspect-dataset</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.dataset">${qoutput.normalizedDataset}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.inspectionResult">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Comment" name="comment-on-dataset">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">comment-on-dataset</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.result">${qoutput.inspectionResult}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.annotatedDataset">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    <bpmn:incoming>Flow_4</bpmn:incoming><bpmn:outgoing>Flow_5</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="qoutput.annotatedDataset">${qoutput.annotatedDataset}</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_5</bpmn:incoming><bpmn:outgoing>Flow_7</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_7</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHocSubProcess_1" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="AdHocSubProcess_1" targetRef="AdHoc_E2_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_1" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc03_exec_before_and_after_adhoc_main"><bpmndi:BPMNPlane id="BPMNPlane_tc03_exec_before_and_after_adhoc_main" bpmnElement="tc03_exec_before_and_after_adhoc_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="60" y="205" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="120" y="173" width="630" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1" isExpanded="true">
+        <omgdc:Bounds x="800" y="120" width="430" height="210" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Inspect_di" bpmnElement="QHanaTask_Inspect">
+        <omgdc:Bounds x="855" y="190" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Comment_di" bpmnElement="QHanaTask_Comment">
+        <omgdc:Bounds x="1045" y="190" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true"><omgdc:Bounds x="1280" y="173" width="430" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="1760" y="205" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="96" y="223" /><omgdi:waypoint x="120" y="223" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><omgdi:waypoint x="750" y="224" /><omgdi:waypoint x="800" y="224" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><omgdi:waypoint x="1230" y="224" /><omgdi:waypoint x="1280" y="223" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><omgdi:waypoint x="1710" y="223" /><omgdi:waypoint x="1760" y="223" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

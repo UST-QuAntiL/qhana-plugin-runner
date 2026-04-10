@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc10_xor_exec_before_merge_then_adhoc" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc10_xor_exec_before_merge_then_adhoc_E2" name="Extracted Fragment E2" isExecutable="true"><bpmn:startEvent id="StartEvent_E2"><bpmn:outgoing>Flow_E2_start</bpmn:outgoing></bpmn:startEvent><qhana:qHAnaServiceTask id="QHanaTask_AlgoA" name="run-algorithm-a">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">run-algorithm-a</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.cleanedData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.algoResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E2_start</bpmn:incoming><bpmn:outgoing>Flow_E2_end</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    
+    <bpmn:endEvent id="EndEvent_E2"><bpmn:incoming>Flow_E2_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E2_start" sourceRef="StartEvent_E2" targetRef="QHanaTask_AlgoA" /><bpmn:sequenceFlow id="Flow_E2_end" sourceRef="QHanaTask_AlgoA" targetRef="EndEvent_E2" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc10_xor_exec_before_merge_then_adhoc_E2"><bpmndi:BPMNPlane id="BPMNPlane_tc10_xor_exec_before_merge_then_adhoc_E2" bpmnElement="tc10_xor_exec_before_merge_then_adhoc_E2"><bpmndi:BPMNShape id="QHanaTask_AlgoA_di" bpmnElement="QHanaTask_AlgoA">
+        <omgdc:Bounds x="750" y="80" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E2_di" bpmnElement="StartEvent_E2"><omgdc:Bounds x="670" y="102" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E2_di" bpmnElement="EndEvent_E2"><omgdc:Bounds x="970" y="102" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_E2_start_di" bpmnElement="Flow_E2_start"><omgdi:waypoint x="706" y="120" /><omgdi:waypoint x="750" y="120" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E2_end_di" bpmnElement="Flow_E2_end"><omgdi:waypoint x="920" y="120" /><omgdi:waypoint x="970" y="120" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

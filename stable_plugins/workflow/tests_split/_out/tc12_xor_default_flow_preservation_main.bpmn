@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc12_xor_default_flow_preservation" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc12_xor_default_flow_preservation_main" name="TC12 - XOR Default Flow Preservation" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:extensionElements><camunda:inputOutput><camunda:outputParameter name="qoutput.orderData">${qoutput.orderData}</camunda:outputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:exclusiveGateway id="Gateway_Split" name="Check Stock Availability" default="Flow_3A">
+      <bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_3A</bpmn:outgoing><bpmn:outgoing>Flow_3B</bpmn:outgoing></bpmn:exclusiveGateway>
+
+    <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2"><bpmn:extensionElements><camunda:inputOutput><camunda:inputParameter name="qoutput.orderData">${qoutput.orderData}</camunda:inputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_3A</bpmn:incoming><bpmn:outgoing>Flow_4A</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHocSubProcess_Backorder" name="Backorder Resolution" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_ContactSupplier" name="contact-supplier">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">contact-supplier</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.orderData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.supplierUpdate">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_NotifyCustomer" name="notify-customer">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">notify-customer</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.data">${qoutput.orderData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.customerUpdate">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+    <bpmn:incoming>Flow_3B</bpmn:incoming><bpmn:outgoing>Flow_4B</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Finalize Order">
+      <bpmn:incoming>Flow_4A</bpmn:incoming><bpmn:incoming>Flow_4B</bpmn:incoming><bpmn:outgoing>Flow_5</bpmn:outgoing></bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_5</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="Gateway_Split" />
+
+    <bpmn:sequenceFlow id="Flow_3A" name="Default (In Stock)" sourceRef="Gateway_Split" targetRef="AdHoc_E2_Wrapper" />
+
+    <bpmn:sequenceFlow id="Flow_3B" name="Out of Stock" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Backorder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${stock == 'Empty'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_4A" sourceRef="AdHoc_E2_Wrapper" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_4B" sourceRef="AdHocSubProcess_Backorder" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Merge" targetRef="EndEvent_1" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc12_xor_default_flow_preservation_main"><bpmndi:BPMNPlane id="BPMNPlane_tc12_xor_default_flow_preservation_main" bpmnElement="tc12_xor_default_flow_preservation_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="80" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="150" y="218" width="190" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split" isMarkerVisible="true">
+        <omgdc:Bounds x="390" y="243" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="375" y="210" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true"><omgdc:Bounds x="540" y="70" width="190" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHocSubProcess_Backorder_di" bpmnElement="AdHocSubProcess_Backorder" isExpanded="true">
+        <omgdc:Bounds x="550" y="325" width="420" height="190" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_ContactSupplier_di" bpmnElement="QHanaTask_ContactSupplier">
+        <omgdc:Bounds x="600" y="380" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_NotifyCustomer_di" bpmnElement="QHanaTask_NotifyCustomer">
+        <omgdc:Bounds x="780" y="380" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
+        <omgdc:Bounds x="1050" y="243" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="1040" y="300" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="1150" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="116" y="268" /><omgdi:waypoint x="150" y="268" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><omgdi:waypoint x="340" y="268" /><omgdi:waypoint x="390" y="268" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3A_di" bpmnElement="Flow_3A"><omgdi:waypoint x="440" y="251" /><omgdi:waypoint x="500" y="251" /><omgdi:waypoint x="500" y="170" /><omgdi:waypoint x="560" y="170" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3B_di" bpmnElement="Flow_3B">
+        <omgdi:waypoint x="415" y="293" />
+        <omgdi:waypoint x="415" y="420" />
+        <omgdi:waypoint x="550" y="420" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="430" y="430" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4A_di" bpmnElement="Flow_4A"><omgdi:waypoint x="730" y="151" /><omgdi:waypoint x="890" y="151" /><omgdi:waypoint x="890" y="259" /><omgdi:waypoint x="1050" y="259" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_4B_di" bpmnElement="Flow_4B">
+        <omgdi:waypoint x="970" y="420" />
+        <omgdi:waypoint x="1075" y="420" />
+        <omgdi:waypoint x="1075" y="293" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <omgdi:waypoint x="1100" y="268" />
+        <omgdi:waypoint x="1150" y="268" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

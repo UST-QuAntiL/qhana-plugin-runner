@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Def_tc43" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc43_start_to_end_path_main" name="TC43 - Start to End Path Validation" isExecutable="true" camunda:versionTag="0.1"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_1" name="Manual Setup" ordering="Parallel">
+      <bpmn:userTask id="Setup_Task" name="Configure Parameters" />
+    <bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHoc_2" name="Manual Review" ordering="Parallel">
+      <bpmn:userTask id="Review_Task" name="Check Outputs" />
+    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHoc_2" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHoc_2" targetRef="EndEvent_1" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc43_start_to_end_path_main"><bpmndi:BPMNPlane id="BPMNPlane_tc43_start_to_end_path_main" bpmnElement="tc43_start_to_end_path_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="150" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_1_di" bpmnElement="AdHoc_1" isExpanded="true">
+        <omgdc:Bounds x="250" y="160" width="150" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Setup_Task_di" bpmnElement="Setup_Task"><omgdc:Bounds x="100" y="100" width="100" height="60" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="440" y="170" width="120" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHoc_2_di" bpmnElement="AdHoc_2" isExpanded="true">
+        <omgdc:Bounds x="600" y="160" width="150" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Review_Task_di" bpmnElement="Review_Task"><omgdc:Bounds x="100" y="100" width="100" height="60" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="800" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="186" y="218" />
+        <omgdi:waypoint x="250" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><omgdi:waypoint x="400" y="220" /><omgdi:waypoint x="440" y="220" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><omgdi:waypoint x="560" y="220" /><omgdi:waypoint x="600" y="220" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <omgdi:waypoint x="750" y="218" />
+        <omgdi:waypoint x="800" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

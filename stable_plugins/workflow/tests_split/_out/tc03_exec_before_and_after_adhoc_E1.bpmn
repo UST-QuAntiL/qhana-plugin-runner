@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc03_exec_before_and_after_adhoc" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc03_exec_before_and_after_adhoc_E1" name="Extracted Fragment E1" isExecutable="true"><bpmn:startEvent id="StartEvent_E1"><bpmn:outgoing>Flow_E1_start</bpmn:outgoing></bpmn:startEvent><bpmn:userTask id="UserTask_Input" name="Enter Dataset ID">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="qoutput.datasetId" label="Dataset ID" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_E1_start</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:userTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Load" name="load-dataset">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">load-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.datasetId">${qoutput.datasetId}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.loadedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Normalize" name="normalize-dataset">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">normalize-dataset</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dataset">${qoutput.loadedDataset}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.normalizedDataset">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_E1_end</bpmn:outgoing></qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_E1"><bpmn:incoming>Flow_E1_end</bpmn:incoming></bpmn:endEvent><bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Input" /><bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_Load" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_Load" targetRef="QHanaTask_Normalize" />
+    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_Normalize" targetRef="EndEvent_E1" /></bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc03_exec_before_and_after_adhoc_E1"><bpmndi:BPMNPlane id="BPMNPlane_tc03_exec_before_and_after_adhoc_E1" bpmnElement="tc03_exec_before_and_after_adhoc_E1"><bpmndi:BPMNShape id="UserTask_Input_di" bpmnElement="UserTask_Input">
+        <omgdc:Bounds x="130" y="183" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Load_di" bpmnElement="QHanaTask_Load">
+        <omgdc:Bounds x="350" y="183" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Normalize_di" bpmnElement="QHanaTask_Normalize">
+        <omgdc:Bounds x="570" y="183" width="170" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1"><omgdc:Bounds x="50" y="205" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1"><omgdc:Bounds x="790" y="205" width="36" height="36" /></bpmndi:BPMNShape><bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <omgdi:waypoint x="300" y="223" />
+        <omgdi:waypoint x="350" y="223" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="520" y="223" />
+        <omgdi:waypoint x="570" y="223" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start"><omgdi:waypoint x="86" y="223" /><omgdi:waypoint x="130" y="223" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end"><omgdi:waypoint x="740" y="223" /><omgdi:waypoint x="790" y="223" /></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

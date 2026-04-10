@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Def_tc42" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc42_no_dangling_nodes_main" name="TC42 - No Dangling Nodes" isExecutable="true" camunda:versionTag="0.1"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_1" name="Split Route" default="Flow_3">
+      <bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:exclusiveGateway>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHoc_1" name="Manual Subprocess" ordering="Parallel">
+      <bpmn:userTask id="Manual_Task" name="Review" />
+    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_5</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:exclusiveGateway id="Gateway_2" name="Merge Route">
+      <bpmn:incoming>Flow_4</bpmn:incoming><bpmn:incoming>Flow_5</bpmn:incoming><bpmn:outgoing>Flow_6</bpmn:outgoing></bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_6</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Gateway_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Gateway_1" targetRef="AdHoc_E1_Wrapper">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${route == 'auto'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_1" targetRef="AdHoc_1" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHoc_E1_Wrapper" targetRef="Gateway_2" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="AdHoc_1" targetRef="Gateway_2" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_2" targetRef="EndEvent_1" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc42_no_dangling_nodes_main"><bpmndi:BPMNPlane id="BPMNPlane_tc42_no_dangling_nodes_main" bpmnElement="tc42_no_dangling_nodes_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="150" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Gateway_1_di" bpmnElement="Gateway_1" isMarkerVisible="true">
+        <omgdc:Bounds x="250" y="193" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="340" y="70" width="120" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHoc_1_di" bpmnElement="AdHoc_1" isExpanded="true">
+        <omgdc:Bounds x="350" y="250" width="150" height="120" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="Manual_Task_di" bpmnElement="Manual_Task"><omgdc:Bounds x="100" y="100" width="100" height="60" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="Gateway_2_di" bpmnElement="Gateway_2" isMarkerVisible="true">
+        <omgdc:Bounds x="550" y="193" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="650" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <omgdi:waypoint x="186" y="218" />
+        <omgdi:waypoint x="250" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><omgdi:waypoint x="300" y="198" /><omgdi:waypoint x="320" y="198" /><omgdi:waypoint x="320" y="167" /><omgdi:waypoint x="340" y="167" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="275" y="243" />
+        <omgdi:waypoint x="275" y="310" />
+        <omgdi:waypoint x="350" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><omgdi:waypoint x="460" y="153" /><omgdi:waypoint x="505" y="153" /><omgdi:waypoint x="505" y="204" /><omgdi:waypoint x="550" y="204" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <omgdi:waypoint x="500" y="310" />
+        <omgdi:waypoint x="575" y="310" />
+        <omgdi:waypoint x="575" y="243" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <omgdi:waypoint x="600" y="218" />
+        <omgdi:waypoint x="650" y="218" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

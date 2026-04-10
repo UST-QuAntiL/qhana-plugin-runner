@@ -1,0 +1,59 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc28_data_object_cross_boundary" targetNamespace="http://qhana.example/testcases"><bpmn:process id="tc28_data_object_cross_boundary_main" name="TC28 - Data Object Cross Boundary" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:extensionElements><camunda:inputOutput><camunda:outputParameter name="qoutput.contractDoc">${qoutput.contractDoc}</camunda:outputParameter></camunda:inputOutput></bpmn:extensionElements><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHocSubProcess_Review" name="Manual Review" ordering="Parallel">
+      <bpmn:dataInputAssociation id="DataInputAssociation_1">
+        <bpmn:sourceRef>DataObjectReference_Doc</bpmn:sourceRef>
+      </bpmn:dataInputAssociation>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Sign" name="sign-document">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">sign-document</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.doc">${qoutput.contractDoc}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.signedDoc">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    <bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHocSubProcess_Review" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHocSubProcess_Review" targetRef="EndEvent_1" />
+
+  <bpmn:dataObject id="DataObject_Doc" />
+    <bpmn:dataObjectReference id="DataObjectReference_Doc" name="Drafted Contract" dataObjectRef="DataObject_Doc" />
+
+    </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc28_data_object_cross_boundary_main"><bpmndi:BPMNPlane id="BPMNPlane_tc28_data_object_cross_boundary_main" bpmnElement="tc28_data_object_cross_boundary_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="80" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="150" y="168" width="420" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHocSubProcess_Review_di" bpmnElement="AdHocSubProcess_Review" isExpanded="true">
+        <omgdc:Bounds x="620" y="123" width="420" height="190" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Sign_di" bpmnElement="QHanaTask_Sign">
+        <omgdc:Bounds x="670" y="178" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="1100" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="DataObject_Doc_di" bpmnElement="DataObject_Doc"><omgdc:Bounds x="100" y="100" width="100" height="60" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="DataObjectReference_Doc_di" bpmnElement="DataObjectReference_Doc">
+        <omgdc:Bounds x="520" y="80" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <omgdc:Bounds x="500" y="137" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="116" y="218" /><omgdi:waypoint x="150" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><omgdi:waypoint x="570" y="218" /><omgdi:waypoint x="620" y="218" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <omgdi:waypoint x="1040" y="218" />
+        <omgdi:waypoint x="1100" y="218" />
+      </bpmndi:BPMNEdge>
+
+      </bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>

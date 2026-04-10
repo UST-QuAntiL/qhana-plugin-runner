@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc35_multiple_pools" targetNamespace="http://qhana.example/testcases"><bpmn:collaboration id="Collaboration_tc35">
+    <bpmn:participant id="Participant_Customer" name="Customer" />
+    <bpmn:participant id="Participant_Vendor" name="Vendor" processRef="tc35_multiple_pools_main" />
+
+    <bpmn:messageFlow id="MessageFlow_1" sourceRef="Participant_Customer" targetRef="QHanaTask_ReceiveOrder" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="tc35_multiple_pools_main" name="TC35 - Multiple Pools" isExecutable="true" camunda:versionTag="0.2"><bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:adHocSubProcess><bpmn:adHocSubProcess id="AdHocSubProcess_Fulfillment" name="Manual Fulfillment" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_PackOrder" name="pack-order">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">pack-order</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.shippingLog">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    <bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:adHocSubProcess>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHocSubProcess_Fulfillment" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_Fulfillment" targetRef="EndEvent_1" />
+
+  </bpmn:process><bpmndi:BPMNDiagram id="BPMNDiagram_tc35_multiple_pools_main"><bpmndi:BPMNPlane id="BPMNPlane_tc35_multiple_pools_main" bpmnElement="tc35_multiple_pools_main"><bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <omgdc:Bounds x="120" y="350" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true"><omgdc:Bounds x="240" y="318" width="170" height="100" /></bpmndi:BPMNShape><bpmndi:BPMNShape id="AdHocSubProcess_Fulfillment_di" bpmnElement="AdHocSubProcess_Fulfillment" isExpanded="true">
+        <omgdc:Bounds x="480" y="280" width="200" height="180" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_PackOrder_di" bpmnElement="QHanaTask_PackOrder">
+        <omgdc:Bounds x="505" y="330" width="150" height="70" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <omgdc:Bounds x="750" y="350" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><omgdi:waypoint x="156" y="368" /><omgdi:waypoint x="240" y="368" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><omgdi:waypoint x="410" y="368" /><omgdi:waypoint x="480" y="369" /></bpmndi:BPMNEdge><bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <omgdi:waypoint x="680" y="368" />
+        <omgdi:waypoint x="750" y="368" />
+      </bpmndi:BPMNEdge>
+
+      </bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
