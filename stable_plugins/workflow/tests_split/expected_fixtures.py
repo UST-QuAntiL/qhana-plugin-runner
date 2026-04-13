@@ -1744,4 +1744,132 @@ EXPECTED = {
             }
         ],
     },
+    "tc55_data_store.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("endEvent", "EndEvent_1"),
+            ("dataStoreReference", "DataStoreRef_Results"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "EndEvent_1", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc55_data_store_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Persist"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
+    },
+    "tc56_group.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("adHocSubProcess[original]", "AdHoc_Analyze"),
+            ("endEvent", "EndEvent_1"),
+            ("group", "Group_Setup"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "AdHoc_Analyze", None),
+            ("Flow_3", "AdHoc_Analyze", "EndEvent_1", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc56_group_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Prep"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
+    },
+    "tc57_escalation_end.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("exclusiveGateway", "Gateway_Severity"),
+            ("endEvent", "EndEvent_Normal"),
+            ("endEvent", "EndEvent_Escalated"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "Gateway_Severity", None),
+            (
+                "Flow_Urgent",
+                "Gateway_Severity",
+                "EndEvent_Escalated",
+                "${qoutput.severity == 'urgent'}",
+            ),
+            ("Flow_Normal", "Gateway_Severity", "EndEvent_Normal", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc57_escalation_end_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Check"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
+    },
+    "tc58_signal_end.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("endEvent", "EndEvent_SignalDone"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "EndEvent_SignalDone", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc58_signal_end_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_ProcessBatch"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
+    },
+    "tc59_non_interrupting_boundary.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("serviceTask", "ServiceTask_LongJob"),
+            ("boundaryEvent", "Boundary_Timer_NonInt"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("endEvent", "EndEvent_Main"),
+            ("endEvent", "EndEvent_Notify"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "ServiceTask_LongJob", None),
+            ("Flow_2", "ServiceTask_LongJob", "EndEvent_Main", None),
+            ("Flow_Notify", "Boundary_Timer_NonInt", "AdHoc_E1_Wrapper", None),
+            ("Flow_NotifyEnd", "AdHoc_E1_Wrapper", "EndEvent_Notify", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc59_non_interrupting_boundary_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Notify"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
+    },
 }

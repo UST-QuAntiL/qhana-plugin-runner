@@ -734,6 +734,100 @@ def _build_main_process(
                 a.set("targetRef", tgt)
                 main.append(a)
 
+    seen_visual_assocs = set()
+    for r in regions:
+        wrapper_id = wrapper_id_for_region_idx[r.index]
+        for nid in r.node_ids:
+            orig_node = nodes.get(nid)
+            if orig_node is None:
+                continue
+            for desc in orig_node.elem.iter():
+                dlocal = _localname(desc.tag)
+                if dlocal == "dataOutputAssociation":
+                    for tgt_el in desc.findall(f"{{{BPMN_NS}}}targetRef"):
+                        ref = (tgt_el.text or "").strip()
+                        if ref in surviving_ids:
+                            key = (wrapper_id, ref)
+                            if key in seen_visual_assocs:
+                                continue
+                            seen_visual_assocs.add(key)
+                            a = ET.SubElement(
+                                main,
+                                _bpmn("association"),
+                                attrib={
+                                    "id": f"Assoc_{wrapper_id}_to_{ref}",
+                                    "sourceRef": wrapper_id,
+                                    "targetRef": ref,
+                                    "associationDirection": "One",
+                                },
+                            )
+                elif dlocal == "dataInputAssociation":
+                    for src_el in desc.findall(f"{{{BPMN_NS}}}sourceRef"):
+                        ref = (src_el.text or "").strip()
+                        if ref in surviving_ids:
+                            key = (ref, wrapper_id)
+                            if key in seen_visual_assocs:
+                                continue
+                            seen_visual_assocs.add(key)
+                            a = ET.SubElement(
+                                main,
+                                _bpmn("association"),
+                                attrib={
+                                    "id": f"Assoc_{ref}_to_{wrapper_id}",
+                                    "sourceRef": ref,
+                                    "targetRef": wrapper_id,
+                                    "associationDirection": "One",
+                                },
+                            )
+
+    for block in main.iter():
+        blocal = _localname(block.tag)
+        if blocal not in ("adHocSubProcess", "subProcess"):
+            continue
+        block_id = block.get("id")
+        if not block_id or block_id in wrapper_id_for_region_idx.values():
+            continue  # skip our synthesized wrappers
+        for desc in block.iter():
+            if desc is block:
+                continue
+            dlocal = _localname(desc.tag)
+            if dlocal == "dataOutputAssociation":
+                for tgt_el in desc.findall(f"{{{BPMN_NS}}}targetRef"):
+                    ref = (tgt_el.text or "").strip()
+                    if ref in surviving_ids:
+                        key = (block_id, ref)
+                        if key in seen_visual_assocs:
+                            continue
+                        seen_visual_assocs.add(key)
+                        ET.SubElement(
+                            main,
+                            _bpmn("association"),
+                            attrib={
+                                "id": f"Assoc_{block_id}_to_{ref}",
+                                "sourceRef": block_id,
+                                "targetRef": ref,
+                                "associationDirection": "One",
+                            },
+                        )
+            elif dlocal == "dataInputAssociation":
+                for src_el in desc.findall(f"{{{BPMN_NS}}}sourceRef"):
+                    ref = (src_el.text or "").strip()
+                    if ref in surviving_ids:
+                        key = (ref, block_id)
+                        if key in seen_visual_assocs:
+                            continue
+                        seen_visual_assocs.add(key)
+                        ET.SubElement(
+                            main,
+                            _bpmn("association"),
+                            attrib={
+                                "id": f"Assoc_{ref}_to_{block_id}",
+                                "sourceRef": ref,
+                                "targetRef": block_id,
+                                "associationDirection": "One",
+                            },
+                        )
+
     for ls in main.findall(f"{{{BPMN_NS}}}laneSet"):
         for lane in ls.findall(f"{{{BPMN_NS}}}lane"):
             old_refs = [
@@ -1240,6 +1334,27 @@ def _build_main_di(
             )
             continue
         plane.append(_make_edge(fid, waypoints))
+
+    for assoc in main_process.findall(f"{{{BPMN_NS}}}association"):
+        aid = assoc.get("id") or ""
+        if not aid.startswith("Assoc_"):
+            continue
+        if aid in original_edges:
+            continue
+        src = assoc.get("sourceRef") or ""
+        tgt = assoc.get("targetRef") or ""
+        src_shape = shapes_by_id.get(src)
+        if src_shape is None:
+            src_shape = original_shapes.get(src)
+        tgt_shape = shapes_by_id.get(tgt)
+        if tgt_shape is None:
+            tgt_shape = original_shapes.get(tgt)
+        if src_shape is None or tgt_shape is None:
+            continue
+        waypoints = _docked_waypoints(src_shape, tgt_shape)
+        if waypoints is None:
+            continue
+        plane.append(_make_edge(aid, waypoints))
 
     return diagram
 

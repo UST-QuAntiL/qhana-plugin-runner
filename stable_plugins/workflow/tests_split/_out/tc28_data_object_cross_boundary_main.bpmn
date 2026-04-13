@@ -49,6 +49,8 @@
     <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHocSubProcess_Review" targetRef="EndEvent_1" />
     <bpmn:dataObject id="DataObject_Doc" />
     <bpmn:dataObjectReference id="DataObjectReference_Doc" name="Drafted Contract" dataObjectRef="DataObject_Doc" />
+    <bpmn:association id="Assoc_AdHoc_E1_Wrapper_to_DataObjectReference_Doc" sourceRef="AdHoc_E1_Wrapper" targetRef="DataObjectReference_Doc" associationDirection="One" />
+    <bpmn:association id="Assoc_DataObjectReference_Doc_to_AdHocSubProcess_Review" sourceRef="DataObjectReference_Doc" targetRef="AdHocSubProcess_Review" associationDirection="One" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc28_data_object_cross_boundary_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc28_data_object_cross_boundary_main" bpmnElement="tc28_data_object_cross_boundary_main">
@@ -87,6 +89,18 @@
       <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
         <di:waypoint x="1040" y="218" />
         <di:waypoint x="1100" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_AdHoc_E1_Wrapper_to_DataObjectReference_Doc_di" bpmnElement="Assoc_AdHoc_E1_Wrapper_to_DataObjectReference_Doc">
+        <di:waypoint x="438" y="168" />
+        <di:waypoint x="479" y="168" />
+        <di:waypoint x="479" y="116" />
+        <di:waypoint x="520" y="116" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_DataObjectReference_Doc_to_AdHocSubProcess_Review_di" bpmnElement="Assoc_DataObjectReference_Doc_to_AdHocSubProcess_Review">
+        <di:waypoint x="556" y="111" />
+        <di:waypoint x="588" y="111" />
+        <di:waypoint x="588" y="136" />
+        <di:waypoint x="620" y="136" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
