@@ -1,3 +1,5 @@
+"""Auto-generated fixtures."""
+
 EXPECTED = {
     "tc01_exec_before_adhoc.bpmn": {
         "main_nodes": [
@@ -1577,6 +1579,96 @@ EXPECTED = {
                 "task_ids": ["SubProcess_WithBoundary"],
                 "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
             }
+        ],
+    },
+    "tc51_multiple_end_events.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("exclusiveGateway", "Gateway_Split"),
+            ("adHocSubProcess[wrapper=E2]", "AdHoc_E2_Wrapper"),
+            ("adHocSubProcess[wrapper=E3]", "AdHoc_E3_Wrapper"),
+            ("endEvent", "EndEvent_Approved"),
+            ("endEvent", "EndEvent_Rejected"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "Gateway_Split", None),
+            (
+                "Flow_Approve",
+                "Gateway_Split",
+                "AdHoc_E2_Wrapper",
+                "${qoutput.verdict == 'approve'}",
+            ),
+            ("Flow_Reject", "Gateway_Split", "AdHoc_E3_Wrapper", None),
+            ("Flow_To_Approved", "AdHoc_E2_Wrapper", "EndEvent_Approved", None),
+            ("Flow_To_Rejected", "AdHoc_E3_Wrapper", "EndEvent_Rejected", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc51_multiple_end_events_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Check"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            },
+            {
+                "fragment_id": "E2",
+                "process_id": "tc51_multiple_end_events_E2",
+                "wrapper_id": "AdHoc_E2_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Approve"],
+                "flow_ids": ["Flow_E2_start", "Flow_E2_end"],
+            },
+            {
+                "fragment_id": "E3",
+                "process_id": "tc51_multiple_end_events_E3",
+                "wrapper_id": "AdHoc_E3_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Reject"],
+                "flow_ids": ["Flow_E3_start", "Flow_E3_end"],
+            },
+        ],
+    },
+    "tc52_parallel_end_events.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("parallelGateway", "Gateway_Fork"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("adHocSubProcess[wrapper=E2]", "AdHoc_E2_Wrapper"),
+            ("endEvent", "EndEvent_A"),
+            ("endEvent", "EndEvent_B"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "Gateway_Fork", None),
+            ("Flow_A", "Gateway_Fork", "AdHoc_E1_Wrapper", None),
+            ("Flow_B", "Gateway_Fork", "AdHoc_E2_Wrapper", None),
+            ("Flow_End_A", "AdHoc_E1_Wrapper", "EndEvent_A", None),
+            ("Flow_End_B", "AdHoc_E2_Wrapper", "EndEvent_B", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc52_parallel_end_events_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_ArchiveA"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            },
+            {
+                "fragment_id": "E2",
+                "process_id": "tc52_parallel_end_events_E2",
+                "wrapper_id": "AdHoc_E2_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_ArchiveB"],
+                "flow_ids": ["Flow_E2_start", "Flow_E2_end"],
+            },
         ],
     },
 }

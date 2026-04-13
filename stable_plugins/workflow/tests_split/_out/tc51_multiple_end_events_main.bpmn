@@ -1,0 +1,128 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc51_multiple_end_events" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc51_multiple_end_events_main" name="TC51 - Multiple end events per XOR branch" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc51_multiple_end_events-E1">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:exclusiveGateway id="Gateway_Split" name="Verdict" default="Flow_Reject">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approve</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Reject</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
+      <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin-step.tc51_multiple_end_events-E2">
+        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E2_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
+      <bpmn:incoming>Flow_Approve</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Approved</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="AdHoc_E3_Wrapper" name="Extracted Fragment E3" qhana:fragmentRef="E3">
+      <bpmn:startEvent id="StartEvent_AdHoc_E3_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E3_Plugin" name="Extracted Fragment E3" camunda:type="external" camunda:topic="plugin-step.tc51_multiple_end_events-E3">
+        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_out</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E3_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_in" sourceRef="StartEvent_AdHoc_E3_Wrapper" targetRef="ServiceTask_E3_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_out" sourceRef="ServiceTask_E3_Plugin" targetRef="EndEvent_AdHoc_E3_Wrapper" />
+      <bpmn:incoming>Flow_Reject</bpmn:incoming>
+      <bpmn:outgoing>Flow_To_Rejected</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="EndEvent_Approved" name="Approved">
+      <bpmn:incoming>Flow_To_Approved</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Rejected" name="Rejected">
+      <bpmn:incoming>Flow_To_Rejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="Gateway_Split" />
+    <bpmn:sequenceFlow id="Flow_Approve" sourceRef="Gateway_Split" targetRef="AdHoc_E2_Wrapper">
+      <bpmn:conditionExpression>${qoutput.verdict == 'approve'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Reject" sourceRef="Gateway_Split" targetRef="AdHoc_E3_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_To_Approved" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_Approved" />
+    <bpmn:sequenceFlow id="Flow_To_Rejected" sourceRef="AdHoc_E3_Wrapper" targetRef="EndEvent_Rejected" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc51_multiple_end_events_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc51_multiple_end_events_main" bpmnElement="tc51_multiple_end_events_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="150" y="188" width="160" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split">
+        <dc:Bounds x="340" y="213" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true">
+        <dc:Bounds x="430" y="70" width="160" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E3_Wrapper_di" bpmnElement="AdHoc_E3_Wrapper" isExpanded="true">
+        <dc:Bounds x="430" y="310" width="160" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Approved_di" bpmnElement="EndEvent_Approved">
+        <dc:Bounds x="620" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Rejected_di" bpmnElement="EndEvent_Rejected">
+        <dc:Bounds x="620" y="342" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="238" />
+        <di:waypoint x="150" y="238" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="310" y="238" />
+        <di:waypoint x="340" y="238" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approve_di" bpmnElement="Flow_Approve">
+        <di:waypoint x="390" y="217" />
+        <di:waypoint x="419" y="217" />
+        <di:waypoint x="419" y="170" />
+        <di:waypoint x="448" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Reject_di" bpmnElement="Flow_Reject">
+        <di:waypoint x="390" y="259" />
+        <di:waypoint x="420" y="259" />
+        <di:waypoint x="420" y="310" />
+        <di:waypoint x="450" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_To_Approved_di" bpmnElement="Flow_To_Approved">
+        <di:waypoint x="590" y="120" />
+        <di:waypoint x="620" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_To_Rejected_di" bpmnElement="Flow_To_Rejected">
+        <di:waypoint x="590" y="360" />
+        <di:waypoint x="620" y="360" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
