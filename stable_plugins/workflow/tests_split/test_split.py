@@ -209,27 +209,6 @@ def test_canonical_tc01_main_shape():
     assert task_ids == ["UserTask_Input", "QHanaTask_Prepare", "QHanaTask_Analyze"]
 
 
-def test_canonical_tc45_wu_palmer():
-    bpmn_xml = (BPMN_DIR / "tc45_wu_palmer_partial.bpmn").read_text()
-    result = split_workflow(bpmn_xml)
-
-    assert len(result.fragments) == 1
-    f = result.fragments[0]
-    task_ids = _fragment_task_ids(f.xml)
-    assert task_ids == [
-        "Activity_1do8hxs",
-        "Activity_0tfwzt0",
-        "Activity_1nnwor0",
-        "Activity_0s7n3hs",
-        "Activity_0itt0yf",
-    ]
-
-    nodes, _ = _fingerprint_process(result.main_xml)
-    kinds = [n[0] for n in nodes]
-    assert "adHocSubProcess[original]" in kinds
-    assert "adHocSubProcess[wrapper=E1]" in kinds
-
-
 def test_canonical_tc20_nested_adhoc_preserved_opaquely():
     bpmn_xml = (BPMN_DIR / "tc20_nested_adhoc.bpmn").read_text()
     result = split_workflow(bpmn_xml)
@@ -254,3 +233,24 @@ def test_canonical_tc44_boundary_event_raises():
     bpmn_xml = (BPMN_DIR / "tc44_no_orphan_elements.bpmn").read_text()
     with pytest.raises(SplitNotSupported, match="boundaryEvent"):
         split_workflow(bpmn_xml)
+
+
+def test_canonical_tc45_wu_palmer():
+    bpmn_xml = (BPMN_DIR / "tc45_wu_palmer_partial.bpmn").read_text()
+    result = split_workflow(bpmn_xml)
+
+    assert len(result.fragments) == 1
+    f = result.fragments[0]
+    task_ids = _fragment_task_ids(f.xml)
+    assert task_ids == [
+        "Activity_1do8hxs",
+        "Activity_0tfwzt0",
+        "Activity_1nnwor0",
+        "Activity_0s7n3hs",
+        "Activity_0itt0yf",
+    ]
+
+    nodes, _ = _fingerprint_process(result.main_xml)
+    kinds = [n[0] for n in nodes]
+    assert "adHocSubProcess[original]" in kinds
+    assert "adHocSubProcess[wrapper=E1]" in kinds

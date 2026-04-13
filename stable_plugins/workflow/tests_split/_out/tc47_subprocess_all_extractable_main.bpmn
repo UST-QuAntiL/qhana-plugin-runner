@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc47_subprocess_all_extractable" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc47_subprocess_all_extractable_main" name="tc47_subprocess_all_extractable" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc47_subprocess_all_extractable-E1">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc47_subprocess_all_extractable_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc47_subprocess_all_extractable_main" bpmnElement="tc47_subprocess_all_extractable_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="100" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="190" y="70" width="560" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="800" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="136" y="200" />
+        <di:waypoint x="190" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_end_di" bpmnElement="Flow_end">
+        <di:waypoint x="750" y="200" />
+        <di:waypoint x="800" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

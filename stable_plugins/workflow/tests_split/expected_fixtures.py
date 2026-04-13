@@ -1517,4 +1517,66 @@ EXPECTED = {
             }
         ],
     },
+    "tc47_subprocess_all_extractable.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("endEvent", "EndEvent_1"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_end", "AdHoc_E1_Wrapper", "EndEvent_1", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc47_subprocess_all_extractable_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["SubProcess_Extractable"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
+    },
+    "tc48_subprocess_all_main_side.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("subProcess", "SubProcess_MainSide"),
+            ("endEvent", "EndEvent_1"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "SubProcess_MainSide", None),
+            ("Flow_end", "SubProcess_MainSide", "EndEvent_1", None),
+        ],
+        "fragments": [],
+    },
+    "tc49_subprocess_mixed_unsupported.bpmn": {
+        "nsup": "Mixed subprocess not supported (subprocess "
+        "id='SubProcess_Mixed'): extractable tasks ['Inner_Extractable'], "
+        "main-side tasks ['Inner_Script']. A top-level subprocess must "
+        "contain only extractable or only main-side tasks."
+    },
+    "tc50_subprocess_with_boundary_event.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("endEvent", "EndEvent_1"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_end", "AdHoc_E1_Wrapper", "EndEvent_1", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc50_subprocess_with_boundary_event_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["SubProcess_WithBoundary"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
+        ],
+    },
 }

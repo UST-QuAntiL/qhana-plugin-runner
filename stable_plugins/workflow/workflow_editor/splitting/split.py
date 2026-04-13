@@ -103,7 +103,6 @@ UNSUPPORTED_LOCALNAMES = {
     "inclusiveGateway",
     "eventBasedGateway",
     "complexGateway",
-    "subProcess",
     "callActivity",
     "transaction",
     "boundaryEvent",
@@ -239,6 +238,31 @@ def _parse_process(
     return nodes, flows, order, start_id, end_ids
 
 
+def _classify_subprocess(
+    elem: ET.Element, classifier: Callable[[ET.Element], bool]
+) -> bool:
+    inner_classifications: List[Tuple[str, bool]] = []
+    for desc in elem.iter():
+        if desc is elem:
+            continue
+        dlocal = _localname(desc.tag)
+        if dlocal in TASK_LOCALNAMES or desc.tag == _qhana("qHAnaServiceTask"):
+            did = desc.get("id") or "?"
+            inner_classifications.append((did, classifier(desc)))
+    if not inner_classifications:
+        return False
+    extractable = [tid for tid, e in inner_classifications if e]
+    main_side = [tid for tid, e in inner_classifications if not e]
+    if extractable and main_side:
+        raise SplitNotSupported(
+            f"Mixed subprocess not supported (subprocess id={elem.get('id')!r}): "
+            f"extractable tasks {extractable}, main-side tasks {main_side}. "
+            "A top-level subprocess must contain only extractable or only "
+            "main-side tasks."
+        )
+    return bool(extractable)
+
+
 def _classify_nodes(
     nodes: Dict[str, Node],
     classifier: Callable[[ET.Element], bool],
@@ -252,6 +276,9 @@ def _classify_nodes(
             "adHocSubProcess",
         }:
             node.extractable = False
+            continue
+        if node.local == "subProcess":
+            node.extractable = _classify_subprocess(node.elem, classifier)
             continue
         node.extractable = classifier(node.elem)
 
@@ -1106,7 +1133,8 @@ def _build_main_di(
         if not cid:
             continue
         emit_shape(cid)
-        if local == "adHocSubProcess" and cid not in wrapper_bounds:
+        if local in ("adHocSubProcess", "subProcess") and cid not in wrapper_bounds:
+            emitted_ids_local = set(emitted_shapes)
             for desc in child.iter():
                 if desc is child:
                     continue
@@ -1124,8 +1152,22 @@ def _build_main_di(
                     "endEvent",
                     "adHocSubProcess",
                     "subProcess",
+                    "boundaryEvent",
+                    "intermediateCatchEvent",
+                    "intermediateThrowEvent",
                 ):
                     emit_shape(did)
+                elif did and dlocal == "sequenceFlow":
+                    orig_edge = original_edges.get(did)
+                    if orig_edge is not None:
+                        edge_copy = copy.deepcopy(orig_edge)
+                        already = any(
+                            _localname(e.tag) == "BPMNEdge"
+                            and e.get("bpmnElement") == did
+                            for e in plane
+                        )
+                        if not already:
+                            plane.append(edge_copy)
 
     for child in main_process:
         local = _localname(child.tag)
@@ -1239,6 +1281,57 @@ def _build_fragment_di(
             )
             plane.append(fallback)
             task_shape_refs.append(fallback)
+
+    region_node_elems = {nid: None for nid in region.node_ids}
+    for nid in region.node_ids:
+        region_node_elems[nid] = None
+    emitted_frag_ids = {
+        s.get("bpmnElement") for s in plane if _localname(s.tag) == "BPMNShape"
+    }
+    for nid in region.node_ids:
+        node_elem = None
+        for n in region_node_elems:
+            pass
+        for child in region_node_elems:
+            pass
+    for proc in original_root.iter(f"{{{BPMN_NS}}}process"):
+        for child in proc.iter():
+            cid = child.get("id")
+            if cid not in region.node_ids:
+                continue
+            clocal = _localname(child.tag)
+            if clocal not in ("subProcess", "adHocSubProcess"):
+                continue
+            for desc in child.iter():
+                if desc is child:
+                    continue
+                did = desc.get("id")
+                if not did or did in emitted_frag_ids:
+                    continue
+                dlocal = _localname(desc.tag)
+                if (
+                    dlocal in TASK_LOCALNAMES
+                    or desc.tag == _qhana("qHAnaServiceTask")
+                    or dlocal
+                    in (
+                        "startEvent",
+                        "endEvent",
+                        "adHocSubProcess",
+                        "subProcess",
+                        "boundaryEvent",
+                        "intermediateCatchEvent",
+                        "intermediateThrowEvent",
+                    )
+                ):
+                    orig = original_shapes.get(did)
+                    if orig is not None:
+                        plane.append(copy.deepcopy(orig))
+                        emitted_frag_ids.add(did)
+                elif dlocal == "sequenceFlow":
+                    orig_edge = original_edges.get(did)
+                    if orig_edge is not None:
+                        plane.append(copy.deepcopy(orig_edge))
+                        emitted_frag_ids.add(did)
 
     first_task = task_shape_refs[0]
     last_task = task_shape_refs[-1]
