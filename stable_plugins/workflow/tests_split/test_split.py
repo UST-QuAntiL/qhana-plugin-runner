@@ -229,10 +229,15 @@ def test_canonical_tc20_nested_adhoc_preserved_opaquely():
     ), f"inner ad-hoc not preserved inside outer, found: {nested_ids}"
 
 
-def test_canonical_tc44_boundary_event_raises():
+def test_canonical_tc44_boundary_event_preserved_main_side():
     bpmn_xml = (BPMN_DIR / "tc44_no_orphan_elements.bpmn").read_text()
-    with pytest.raises(SplitNotSupported, match="boundaryEvent"):
-        split_workflow(bpmn_xml)
+    result = split_workflow(bpmn_xml)
+    assert len(result.fragments) == 0, "host task must stay main-side"
+    root = ET.fromstring(result.main_xml)
+    ids = {e.get("id") for e in root.iter() if e.get("id")}
+    assert "BoundaryEvent_1" in ids
+    assert "Task_Exec" in ids
+    assert "EndEvent_Error" in ids
 
 
 def test_canonical_tc45_wu_palmer():

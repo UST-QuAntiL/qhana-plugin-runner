@@ -1,5 +1,3 @@
-"""Auto-generated fixtures."""
-
 EXPECTED = {
     "tc01_exec_before_adhoc.bpmn": {
         "main_nodes": [
@@ -1448,7 +1446,19 @@ EXPECTED = {
         ],
     },
     "tc44_no_orphan_elements.bpmn": {
-        "nsup": "Unsupported Phase 2/3 element 'boundaryEvent' (id='BoundaryEvent_1')."
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("qHAnaServiceTask", "Task_Exec"),
+            ("endEvent", "EndEvent_1"),
+            ("boundaryEvent", "BoundaryEvent_1"),
+            ("endEvent", "EndEvent_Error"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "Task_Exec", None),
+            ("Flow_2", "Task_Exec", "EndEvent_1", None),
+            ("Flow_3", "BoundaryEvent_1", "EndEvent_Error", None),
+        ],
+        "fragments": [],
     },
     "tc45_wu_palmer_partial.bpmn": {
         "main_nodes": [
@@ -1669,6 +1679,69 @@ EXPECTED = {
                 "task_ids": ["ServiceTask_ArchiveB"],
                 "flow_ids": ["Flow_E2_start", "Flow_E2_end"],
             },
+        ],
+    },
+    "tc53_intermediate_events.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("intermediateCatchEvent", "Catch_Timer"),
+            ("adHocSubProcess[wrapper=E2]", "AdHoc_E2_Wrapper"),
+            ("intermediateThrowEvent", "Throw_Signal"),
+            ("endEvent", "EndEvent_1"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "Catch_Timer", None),
+            ("Flow_3", "Catch_Timer", "AdHoc_E2_Wrapper", None),
+            ("Flow_4", "AdHoc_E2_Wrapper", "Throw_Signal", None),
+            ("Flow_5", "Throw_Signal", "EndEvent_1", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc53_intermediate_events_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Before"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            },
+            {
+                "fragment_id": "E2",
+                "process_id": "tc53_intermediate_events_E2",
+                "wrapper_id": "AdHoc_E2_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_After"],
+                "flow_ids": ["Flow_E2_start", "Flow_E2_end"],
+            },
+        ],
+    },
+    "tc54_specialized_end_events.bpmn": {
+        "main_nodes": [
+            ("startEvent", "StartEvent_1"),
+            ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
+            ("exclusiveGateway", "Gateway_Split"),
+            ("endEvent", "EndEvent_Message"),
+            ("endEvent", "EndEvent_Error"),
+        ],
+        "main_flows": [
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_2", "AdHoc_E1_Wrapper", "Gateway_Split", None),
+            ("Flow_Ok", "Gateway_Split", "EndEvent_Message", "${qoutput.status == 'ok'}"),
+            ("Flow_Fail", "Gateway_Split", "EndEvent_Error", None),
+        ],
+        "fragments": [
+            {
+                "fragment_id": "E1",
+                "process_id": "tc54_specialized_end_events_E1",
+                "wrapper_id": "AdHoc_E1_Wrapper",
+                "inputs": [],
+                "outputs": [],
+                "task_ids": ["ServiceTask_Run"],
+                "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
+            }
         ],
     },
 }

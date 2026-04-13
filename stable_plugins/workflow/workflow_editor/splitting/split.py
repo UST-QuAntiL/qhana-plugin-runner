@@ -105,9 +105,6 @@ UNSUPPORTED_LOCALNAMES = {
     "complexGateway",
     "callActivity",
     "transaction",
-    "boundaryEvent",
-    "intermediateCatchEvent",
-    "intermediateThrowEvent",
 }
 
 
@@ -267,6 +264,12 @@ def _classify_nodes(
     nodes: Dict[str, Node],
     classifier: Callable[[ET.Element], bool],
 ) -> None:
+    attached_host_ids: Set[str] = set()
+    for node in nodes.values():
+        if node.local == "boundaryEvent":
+            host = node.elem.get("attachedToRef")
+            if host:
+                attached_host_ids.add(host)
     for node in nodes.values():
         if node.local in {
             "startEvent",
@@ -274,11 +277,17 @@ def _classify_nodes(
             "exclusiveGateway",
             "parallelGateway",
             "adHocSubProcess",
+            "boundaryEvent",
+            "intermediateCatchEvent",
+            "intermediateThrowEvent",
         }:
             node.extractable = False
             continue
         if node.local == "subProcess":
             node.extractable = _classify_subprocess(node.elem, classifier)
+            continue
+        if node.id in attached_host_ids:
+            node.extractable = False
             continue
         node.extractable = classifier(node.elem)
 
