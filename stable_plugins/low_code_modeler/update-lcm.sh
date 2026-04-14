@@ -29,12 +29,9 @@ fi
 type git
 type pnpm
 
-stashed=""
-git diff --cached --quiet || stashed=1
-if test -n "$stashed"; then
-  echo "stashing local changes" 1>&2
-  echo "if this script fails, you have to undo this with git stash pop" 1>&2
-  git stash
+if ! git diff --cached --quiet; then
+  echo "you have local staged changes, please stash them before running this script" 1>&2
+  exit 1
 fi
 
 git rm -rf static
@@ -50,7 +47,3 @@ printf "%s" "$commit" > static/.git-revision
 git add static
 
 git commit -m "low-code-modeler: update static files to commit $commit (using update-lcm.sh)"
-
-if test -n "$stashed"; then
-  git stash pop
-fi
