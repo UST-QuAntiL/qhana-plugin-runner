@@ -525,7 +525,7 @@ class QCAtlasClient:
 
                 try_out_list = [
                     TryOutButton(
-                        name=implementation_package.description,
+                        name=identifier.replace("-", " ").title(),
                         identifier=identifier,
                         parameters={},
                     )
