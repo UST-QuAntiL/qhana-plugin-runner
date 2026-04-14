@@ -77,7 +77,7 @@ class PluginRootView(MethodView):
     @PA_BLP.require_jwt("jwt", optional=True)
     def get(self):
         return PluginMetadata(
-            title="PA",
+            title="Pattern Atlas",
             description=PatternAtlas.instance.description,
             name=PatternAtlas.instance.name,
             version=PatternAtlas.instance.version,
