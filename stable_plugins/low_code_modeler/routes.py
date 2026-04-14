@@ -31,7 +31,7 @@ class PluginRootView(MethodView):
     @LCM_BLP.require_jwt("jwt", optional=True)
     def get(self):
         return PluginMetadata(
-            title="LCM",
+            title="Quantum Low-Code Modeler",
             description=LowCodeModeler.instance.description,
             name=LowCodeModeler.instance.name,
             version=LowCodeModeler.instance.version,
