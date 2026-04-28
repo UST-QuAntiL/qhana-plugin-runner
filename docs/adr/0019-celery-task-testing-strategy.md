@@ -1,6 +1,6 @@
 # Celery Task Testing Strategy
 
-* Status: [accepted]
+* Status: [proposed]
 * Deciders: [Fabian Bühler, EnPro 2026 Team]
 * Date: [2026-04-28]
 
