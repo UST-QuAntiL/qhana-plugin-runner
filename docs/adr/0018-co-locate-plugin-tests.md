@@ -1,7 +1,8 @@
 # Co-locate plugin tests with plugin code
 
-* Status: proposed
-* Date: 2026-04-27
+* Status: [proposed]
+* Deciders [Fabian Bühler, EnPro 2026 Team]
+* Date: [2026-04-27]
 
 ## Context and Problem Statement
 
