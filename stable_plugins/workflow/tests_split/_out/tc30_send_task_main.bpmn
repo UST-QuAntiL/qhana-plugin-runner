@@ -12,11 +12,6 @@
       <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc30_send_task-E1">
         <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
         <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
-        <bpmn:extensionElements>
-          <camunda:inputOutput>
-            <camunda:outputParameter name="qoutput.messagePayload">${qoutput.messagePayload}</camunda:outputParameter>
-          </camunda:inputOutput>
-        </bpmn:extensionElements>
       </bpmn:serviceTask>
       <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
         <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
@@ -24,46 +19,13 @@
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_Main_End</bpmn:outgoing>
     </bpmn:adHocSubProcess>
-    <bpmn:sendTask id="SendTask_Notify" name="Send Notification" implementation="##WebService" messageRef="Message_Notification" operationRef="Operation_SendNotification">
-      <bpmn:extensionElements>
-        <camunda:inputOutput>
-          <camunda:inputParameter name="qinput.payload">${qoutput.messagePayload}</camunda:inputParameter>
-          <camunda:outputParameter name="qoutput.sentMarker">sent</camunda:outputParameter>
-        </camunda:inputOutput>
-      </bpmn:extensionElements>
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_3</bpmn:outgoing>
-    </bpmn:sendTask>
-    <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
-      <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin-step.tc30_send_task-E2">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
-        <bpmn:extensionElements>
-          <camunda:inputOutput>
-            <camunda:inputParameter name="qoutput.sentMarker">${qoutput.sentMarker}</camunda:inputParameter>
-          </camunda:inputOutput>
-        </bpmn:extensionElements>
-      </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E2_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
-      <bpmn:incoming>Flow_3</bpmn:incoming>
-      <bpmn:outgoing>Flow_4</bpmn:outgoing>
-    </bpmn:adHocSubProcess>
-    <bpmn:endEvent id="EndEvent_1" name="End">
-      <bpmn:incoming>Flow_4</bpmn:incoming>
-    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="SendTask_Notify" />
-    <bpmn:sequenceFlow id="Flow_3" sourceRef="SendTask_Notify" targetRef="AdHoc_E2_Wrapper" />
-    <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_to_Main_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_to_Main_End" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc30_send_task_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc30_send_task_main" bpmnElement="tc30_send_task_main">
@@ -71,32 +33,18 @@
         <dc:Bounds x="70" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <dc:Bounds x="140" y="158" width="200" height="100" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="SendTask_Notify_di" bpmnElement="SendTask_Notify">
-        <dc:Bounds x="400" y="168" width="180" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true">
-        <dc:Bounds x="640" y="158" width="200" height="100" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="900" y="190" width="36" height="36" />
+        <dc:Bounds x="140" y="158" width="806" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="106" y="208" />
         <di:waypoint x="140" y="208" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="340" y="208" />
-        <di:waypoint x="400" y="208" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="580" y="208" />
-        <di:waypoint x="640" y="208" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="840" y="208" />
-        <di:waypoint x="900" y="208" />
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="1006" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_di" bpmnElement="Flow_to_Main_End">
+        <di:waypoint x="946" y="208" />
+        <di:waypoint x="1006" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

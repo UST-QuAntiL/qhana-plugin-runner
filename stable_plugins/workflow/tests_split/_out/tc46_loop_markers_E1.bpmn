@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc46_loop_markers" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc46_loop_markers_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:serviceTask id="ServiceTask_Prepare" name="prepare-batch" camunda:type="external" camunda:topic="qhana-task">
@@ -40,15 +40,15 @@
         <bpmn:loopCondition>${retries &lt; 3}</bpmn:loopCondition>
       </bpmn:standardLoopCharacteristics>
       <bpmn:incoming>Flow_3</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="ServiceTask_Prepare" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Prepare" targetRef="ServiceTask_Loop" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_Loop" targetRef="ServiceTask_Aggregate" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="ServiceTask_Aggregate" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="ServiceTask_Aggregate" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc46_loop_markers_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc46_loop_markers_E1" bpmnElement="tc46_loop_markers_E1">
@@ -61,11 +61,11 @@
       <bpmndi:BPMNShape id="ServiceTask_Aggregate_di" bpmnElement="ServiceTask_Aggregate">
         <dc:Bounds x="520" y="178" width="140" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="700" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="80" y="200" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="710" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
         <di:waypoint x="300" y="218" />
@@ -75,13 +75,13 @@
         <di:waypoint x="480" y="218" />
         <di:waypoint x="520" y="218" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="660" y="218" />
+        <di:waypoint x="700" y="218" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="116" y="218" />
         <di:waypoint x="160" y="218" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="660" y="218" />
-        <di:waypoint x="710" y="218" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

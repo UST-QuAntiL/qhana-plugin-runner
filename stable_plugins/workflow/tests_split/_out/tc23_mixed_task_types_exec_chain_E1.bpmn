@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc23_mixed_task_types_exec_chain" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc23_mixed_task_types_exec_chain" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc23_mixed_task_types_exec_chain_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="UserTask_Collect" name="Collect Parameters">
@@ -11,32 +11,102 @@
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_E1_start</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:serviceTask id="ServiceTask_Resolve" name="Resolve Service" camunda:type="external" camunda:topic="resolve-service">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.value">${qoutput.inputA}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.serviceValue">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:scriptTask id="ScriptTask_Prepare" name="Prepare Script" scriptFormat="groovy">
+      <bpmn:script>
+        execution.setVariable("scriptValue", execution.getVariable("qoutput.serviceValue"))
+      </bpmn:script>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:businessRuleTask id="BusinessRuleTask_Decide" name="Apply Rule">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.ruleInput">${scriptValue}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.ruleResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <qhana:qHAnaServiceTask id="QHanaTask_Finalize" name="finalize-mixed-chain">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">finalize-mixed-chain</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.result">${qoutput.ruleResult}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.finalMixedResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Collect" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="UserTask_Collect" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Collect" targetRef="ServiceTask_Resolve" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_Resolve" targetRef="ScriptTask_Prepare" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="ScriptTask_Prepare" targetRef="BusinessRuleTask_Decide" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="BusinessRuleTask_Decide" targetRef="QHanaTask_Finalize" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="QHanaTask_Finalize" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc23_mixed_task_types_exec_chain_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc23_mixed_task_types_exec_chain_E1" bpmnElement="tc23_mixed_task_types_exec_chain_E1">
       <bpmndi:BPMNShape id="UserTask_Collect_di" bpmnElement="UserTask_Collect">
         <dc:Bounds x="130" y="168" width="170" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_Resolve_di" bpmnElement="ServiceTask_Resolve">
+        <dc:Bounds x="350" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ScriptTask_Prepare_di" bpmnElement="ScriptTask_Prepare">
+        <dc:Bounds x="570" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BusinessRuleTask_Decide_di" bpmnElement="BusinessRuleTask_Decide">
+        <dc:Bounds x="790" y="168" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_Finalize_di" bpmnElement="QHanaTask_Finalize">
+        <dc:Bounds x="1010" y="168" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1260" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="50" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="350" y="190" width="36" height="36" />
-      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="300" y="208" />
+        <di:waypoint x="350" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="520" y="208" />
+        <di:waypoint x="570" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="740" y="208" />
+        <di:waypoint x="790" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="960" y="208" />
+        <di:waypoint x="1010" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1200" y="208" />
+        <di:waypoint x="1260" y="208" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="86" y="208" />
         <di:waypoint x="130" y="208" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="300" y="208" />
-        <di:waypoint x="350" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -1,9 +1,19 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc32_message_inside_exec_vs_main" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc32_message_inside_exec_vs_main_E2" name="Extracted Fragment E2" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E2">
+    <bpmn:startEvent id="StartEvent_E2" name="Start">
       <bpmn:outgoing>Flow_E2_start</bpmn:outgoing>
     </bpmn:startEvent>
+    <bpmn:sendTask id="SendTask_Update" name="Send Update" implementation="##WebService" messageRef="Message_Update" operationRef="Operation_SendUpdate">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.payload">${qoutput.approvedUpdate}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.sentUpdate">sent</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E2_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:sendTask>
     <qhana:qHAnaServiceTask id="QHanaTask_Finalize" name="finalize-update">
       <bpmn:extensionElements>
         <camunda:inputOutput>
@@ -12,33 +22,41 @@
           <camunda:outputParameter name="qoutput.finalUpdateState">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_E2_start</bpmn:incoming>
-      <bpmn:outgoing>Flow_E2_end</bpmn:outgoing>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
     </qhana:qHAnaServiceTask>
-    <bpmn:endEvent id="EndEvent_E2">
-      <bpmn:incoming>Flow_E2_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E2_start" sourceRef="StartEvent_E2" targetRef="QHanaTask_Finalize" />
-    <bpmn:sequenceFlow id="Flow_E2_end" sourceRef="QHanaTask_Finalize" targetRef="EndEvent_E2" />
+    <bpmn:sequenceFlow id="Flow_E2_start" sourceRef="StartEvent_E2" targetRef="SendTask_Update" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="SendTask_Update" targetRef="QHanaTask_Finalize" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="QHanaTask_Finalize" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc32_message_inside_exec_vs_main_E2">
     <bpmndi:BPMNPlane id="BPMNPlane_tc32_message_inside_exec_vs_main_E2" bpmnElement="tc32_message_inside_exec_vs_main_E2">
+      <bpmndi:BPMNShape id="SendTask_Update_di" bpmnElement="SendTask_Update">
+        <dc:Bounds x="870" y="188" width="180" height="80" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Finalize_di" bpmnElement="QHanaTask_Finalize">
         <dc:Bounds x="1120" y="188" width="180" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1360" y="210" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E2_di" bpmnElement="StartEvent_E2">
-        <dc:Bounds x="1040" y="210" width="36" height="36" />
+        <dc:Bounds x="790" y="210" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E2_di" bpmnElement="EndEvent_E2">
-        <dc:Bounds x="1350" y="210" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_E2_start_di" bpmnElement="Flow_E2_start">
-        <di:waypoint x="1076" y="228" />
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="1050" y="228" />
         <di:waypoint x="1120" y="228" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E2_end_di" bpmnElement="Flow_E2_end">
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
         <di:waypoint x="1300" y="228" />
-        <di:waypoint x="1350" y="228" />
+        <di:waypoint x="1360" y="228" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E2_start_di" bpmnElement="Flow_E2_start">
+        <di:waypoint x="826" y="228" />
+        <di:waypoint x="870" y="228" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc12_xor_default_flow_preservation" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc12_xor_default_flow_preservation_E2" name="Extracted Fragment E2" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E2">
+    <bpmn:startEvent id="StartEvent_E2" name="Start">
       <bpmn:outgoing>Flow_E2_start</bpmn:outgoing>
     </bpmn:startEvent>
     <qhana:qHAnaServiceTask id="QHanaTask_ProcessPayment" name="process-payment">
@@ -15,7 +15,7 @@
       <bpmn:incoming>Flow_E2_start</bpmn:incoming>
       <bpmn:outgoing>Flow_E2_end</bpmn:outgoing>
     </qhana:qHAnaServiceTask>
-    <bpmn:endEvent id="EndEvent_E2">
+    <bpmn:endEvent id="EndEvent_E2" name="End">
       <bpmn:incoming>Flow_E2_end</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E2_start" sourceRef="StartEvent_E2" targetRef="QHanaTask_ProcessPayment" />

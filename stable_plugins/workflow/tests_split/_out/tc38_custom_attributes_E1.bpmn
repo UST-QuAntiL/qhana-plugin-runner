@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:ns1="http://qhana.example/custom-metadata" xmlns:qhana="https://github.com/qhana" id="Definitions_tc38_custom_attributes" targetNamespace="http://qhana.example/testcases" ns1:suite="phase1" ns1:owner="thesis">
   <bpmn:process id="tc38_custom_attributes_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <qhana:qHAnaServiceTask id="QHanaTask_Metadata" name="metadata-task" ns1:customTag="alpha" ns1:pluginFamily="demo">
@@ -22,14 +22,14 @@
         </camunda:formData>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_1" name="End" ns1:exit="true">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_Metadata" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_Metadata" targetRef="UserTask_Confirm" ns1:edgeClass="handover" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="UserTask_Confirm" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="UserTask_Confirm" targetRef="EndEvent_1" ns1:edgeClass="completion" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc38_custom_attributes_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc38_custom_attributes_E1" bpmnElement="tc38_custom_attributes_E1">
@@ -39,23 +39,23 @@
       <bpmndi:BPMNShape id="UserTask_Confirm_di" bpmnElement="UserTask_Confirm">
         <dc:Bounds x="440" y="168" width="190" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="710" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="90" y="190" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="680" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
         <di:waypoint x="360" y="208" />
         <di:waypoint x="440" y="208" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="630" y="208" />
+        <di:waypoint x="710" y="208" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="126" y="208" />
         <di:waypoint x="170" y="208" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="630" y="208" />
-        <di:waypoint x="680" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

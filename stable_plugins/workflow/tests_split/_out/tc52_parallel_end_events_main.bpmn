@@ -23,7 +23,7 @@
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_A</bpmn:incoming>
-      <bpmn:outgoing>Flow_End_A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_Main_End_1</bpmn:outgoing>
     </bpmn:adHocSubProcess>
     <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
       <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
@@ -39,19 +39,17 @@
       <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
       <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
       <bpmn:incoming>Flow_B</bpmn:incoming>
-      <bpmn:outgoing>Flow_End_B</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_Main_End_0</bpmn:outgoing>
     </bpmn:adHocSubProcess>
-    <bpmn:endEvent id="EndEvent_A" name="End A">
-      <bpmn:incoming>Flow_End_A</bpmn:incoming>
-    </bpmn:endEvent>
-    <bpmn:endEvent id="EndEvent_B" name="End B">
-      <bpmn:incoming>Flow_End_B</bpmn:incoming>
-    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Gateway_Fork" />
     <bpmn:sequenceFlow id="Flow_A" sourceRef="Gateway_Fork" targetRef="AdHoc_E1_Wrapper" />
     <bpmn:sequenceFlow id="Flow_B" sourceRef="Gateway_Fork" targetRef="AdHoc_E2_Wrapper" />
-    <bpmn:sequenceFlow id="Flow_End_A" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_A" />
-    <bpmn:sequenceFlow id="Flow_End_B" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_B" />
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_to_Main_End_0</bpmn:incoming>
+      <bpmn:incoming>Flow_to_Main_End_1</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_to_Main_End_0" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_Main" />
+    <bpmn:sequenceFlow id="Flow_to_Main_End_1" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc52_parallel_end_events_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc52_parallel_end_events_main" bpmnElement="tc52_parallel_end_events_main">
@@ -62,40 +60,39 @@
         <dc:Bounds x="160" y="213" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <dc:Bounds x="260" y="70" width="160" height="100" />
+        <dc:Bounds x="260" y="70" width="236" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true">
-        <dc:Bounds x="260" y="310" width="160" height="100" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_A_di" bpmnElement="EndEvent_A">
-        <dc:Bounds x="450" y="102" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_B_di" bpmnElement="EndEvent_B">
-        <dc:Bounds x="450" y="342" width="36" height="36" />
+        <dc:Bounds x="260" y="310" width="236" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="116" y="238" />
         <di:waypoint x="160" y="238" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_A_di" bpmnElement="Flow_A">
-        <di:waypoint x="210" y="218" />
-        <di:waypoint x="242" y="218" />
-        <di:waypoint x="242" y="170" />
-        <di:waypoint x="274" y="170" />
+        <di:waypoint x="210" y="222" />
+        <di:waypoint x="253" y="222" />
+        <di:waypoint x="253" y="170" />
+        <di:waypoint x="296" y="170" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_B_di" bpmnElement="Flow_B">
-        <di:waypoint x="210" y="257" />
-        <di:waypoint x="243" y="257" />
-        <di:waypoint x="243" y="310" />
-        <di:waypoint x="276" y="310" />
+        <di:waypoint x="210" y="253" />
+        <di:waypoint x="254" y="253" />
+        <di:waypoint x="254" y="310" />
+        <di:waypoint x="298" y="310" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_End_A_di" bpmnElement="Flow_End_A">
-        <di:waypoint x="420" y="120" />
-        <di:waypoint x="450" y="120" />
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="556" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_0_di" bpmnElement="Flow_to_Main_End_0">
+        <di:waypoint x="418" y="310" />
+        <di:waypoint x="489" y="310" />
+        <di:waypoint x="489" y="138" />
+        <di:waypoint x="559" y="138" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_End_B_di" bpmnElement="Flow_End_B">
-        <di:waypoint x="420" y="360" />
-        <di:waypoint x="450" y="360" />
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_1_di" bpmnElement="Flow_to_Main_End_1">
+        <di:waypoint x="496" y="120" />
+        <di:waypoint x="556" y="120" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

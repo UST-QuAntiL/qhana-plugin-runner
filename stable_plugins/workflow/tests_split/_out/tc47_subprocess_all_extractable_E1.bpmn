@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc47_subprocess_all_extractable" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc47_subprocess_all_extractable_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:subProcess id="SubProcess_Extractable" name="Extractable Subprocess">
@@ -35,18 +35,21 @@
       <bpmn:sequenceFlow id="Inner_Flow_2" sourceRef="Inner_Prepare" targetRef="Inner_Analyze" />
       <bpmn:sequenceFlow id="Inner_Flow_3" sourceRef="Inner_Analyze" targetRef="Inner_End" />
       <bpmn:incoming>Flow_E1_start</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
     </bpmn:subProcess>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="SubProcess_Extractable" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="SubProcess_Extractable" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="SubProcess_Extractable" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc47_subprocess_all_extractable_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc47_subprocess_all_extractable_E1" bpmnElement="tc47_subprocess_all_extractable_E1">
       <bpmndi:BPMNShape id="SubProcess_Extractable_di" bpmnElement="SubProcess_Extractable" isExpanded="true">
         <dc:Bounds x="200" y="80" width="540" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="800" y="182" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Inner_Start_di" bpmnElement="Inner_Start">
         <dc:Bounds x="240" y="182" width="36" height="36" />
@@ -75,16 +78,13 @@
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="120" y="182" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="790" y="182" width="36" height="36" />
-      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_end_di" bpmnElement="Flow_end">
+        <di:waypoint x="740" y="200" />
+        <di:waypoint x="800" y="200" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="156" y="200" />
         <di:waypoint x="200" y="200" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="740" y="200" />
-        <di:waypoint x="790" y="200" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

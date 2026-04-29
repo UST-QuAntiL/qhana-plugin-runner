@@ -1,14 +1,14 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc37_extension_preservation" targetNamespace="http://qhana.example/testcases">
-  <bpmn:process id="tc37_extension_preservation_main" name="TC37 - Extension preservation" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
-    <bpmn:startEvent id="StartEvent_1" name="Start" camunda:asyncBefore="true">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc49_subprocess_mixed_unsupported" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc49_subprocess_mixed_unsupported_main" name="tc49_subprocess_mixed_unsupported" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
       <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
         <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
       </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc37_extension_preservation-E1">
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc49_subprocess_mixed_unsupported-E1">
         <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
         <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
       </bpmn:serviceTask>
@@ -26,24 +26,24 @@
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_to_Main_End" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
   </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_tc37_extension_preservation_main">
-    <bpmndi:BPMNPlane id="BPMNPlane_tc37_extension_preservation_main" bpmnElement="tc37_extension_preservation_main">
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc49_subprocess_mixed_unsupported_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc49_subprocess_mixed_unsupported_main" bpmnElement="tc49_subprocess_mixed_unsupported_main">
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="80" y="190" width="36" height="36" />
+        <dc:Bounds x="100" y="182" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <dc:Bounds x="160" y="158" width="606" height="100" />
+        <dc:Bounds x="190" y="70" width="708" height="260" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="116" y="208" />
-        <di:waypoint x="160" y="208" />
+        <di:waypoint x="136" y="200" />
+        <di:waypoint x="190" y="200" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
-        <dc:Bounds x="826" y="190" width="36" height="36" />
+        <dc:Bounds x="958" y="182" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_to_Main_End_di" bpmnElement="Flow_to_Main_End">
-        <di:waypoint x="766" y="208" />
-        <di:waypoint x="826" y="208" />
+        <di:waypoint x="898" y="200" />
+        <di:waypoint x="958" y="200" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

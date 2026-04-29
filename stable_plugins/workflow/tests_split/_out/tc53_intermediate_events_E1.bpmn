@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc53_intermediate_events" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc53_intermediate_events_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:serviceTask id="ServiceTask_Before" name="preprocess" camunda:type="external" camunda:topic="qhana-task">
@@ -12,32 +12,78 @@
         </camunda:inputOutput>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_E1_start</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:intermediateCatchEvent id="Catch_Timer" name="Wait 5m">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration>PT5M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="ServiceTask_After" name="postprocess" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-post</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.postprocessed">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateThrowEvent id="Throw_Signal" name="Notify done">
+      <bpmn:signalEventDefinition signalRef="Signal_Done" />
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="ServiceTask_Before" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="ServiceTask_Before" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Before" targetRef="Catch_Timer" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Catch_Timer" targetRef="ServiceTask_After" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="ServiceTask_After" targetRef="Throw_Signal" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Throw_Signal" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc53_intermediate_events_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc53_intermediate_events_E1" bpmnElement="tc53_intermediate_events_E1">
       <bpmndi:BPMNShape id="ServiceTask_Before_di" bpmnElement="ServiceTask_Before">
         <dc:Bounds x="160" y="178" width="140" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Timer_di" bpmnElement="Catch_Timer">
+        <dc:Bounds x="340" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_After_di" bpmnElement="ServiceTask_After">
+        <dc:Bounds x="420" y="178" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Throw_Signal_di" bpmnElement="Throw_Signal">
+        <dc:Bounds x="600" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="680" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="80" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="350" y="200" width="36" height="36" />
-      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="300" y="218" />
+        <di:waypoint x="340" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="376" y="218" />
+        <di:waypoint x="420" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="560" y="218" />
+        <di:waypoint x="600" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="636" y="218" />
+        <di:waypoint x="680" y="218" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="116" y="218" />
         <di:waypoint x="160" y="218" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="300" y="218" />
-        <di:waypoint x="350" y="218" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

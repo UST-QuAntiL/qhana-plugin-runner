@@ -23,7 +23,7 @@
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_Target_Exec</bpmn:incoming>
-      <bpmn:outgoing>Flow_EndA</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_Main_End_1</bpmn:outgoing>
     </bpmn:adHocSubProcess>
     <bpmn:adHocSubProcess id="AdHocSubProcess_Manual" name="Manual Repair" ordering="Parallel">
       <qhana:qHAnaServiceTask id="QHanaTask_Manual" name="manual-repair">
@@ -34,19 +34,19 @@
         </bpmn:extensionElements>
       </qhana:qHAnaServiceTask>
       <bpmn:incoming>Flow_Target_AdHoc</bpmn:incoming>
-      <bpmn:outgoing>Flow_EndB</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_Main_End_0</bpmn:outgoing>
     </bpmn:adHocSubProcess>
-    <bpmn:endEvent id="EndEvent_1" name="End">
-      <bpmn:incoming>Flow_EndA</bpmn:incoming>
-      <bpmn:incoming>Flow_EndB</bpmn:incoming>
-    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Gateway_Split" />
     <bpmn:sequenceFlow id="Flow_Target_Exec" name="Default" sourceRef="Gateway_Split" targetRef="AdHoc_E1_Wrapper" />
     <bpmn:sequenceFlow id="Flow_Target_AdHoc" name="Failed Check" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Manual">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${quality == 'fail'}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_EndA" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_1" />
-    <bpmn:sequenceFlow id="Flow_EndB" sourceRef="AdHocSubProcess_Manual" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_to_Main_End_0</bpmn:incoming>
+      <bpmn:incoming>Flow_to_Main_End_1</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_to_Main_End_0" sourceRef="AdHocSubProcess_Manual" targetRef="EndEvent_Main" />
+    <bpmn:sequenceFlow id="Flow_to_Main_End_1" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc40_default_flow_remap_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc40_default_flow_remap_main" bpmnElement="tc40_default_flow_remap_main">
@@ -60,7 +60,7 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <dc:Bounds x="340" y="70" width="170" height="100" />
+        <dc:Bounds x="340" y="70" width="506" height="176" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHocSubProcess_Manual_di" bpmnElement="AdHocSubProcess_Manual" isExpanded="true">
         <dc:Bounds x="350" y="250" width="350" height="150" />
@@ -68,18 +68,15 @@
       <bpmndi:BPMNShape id="QHanaTask_Manual_di" bpmnElement="QHanaTask_Manual">
         <dc:Bounds x="400" y="290" width="150" height="70" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="800" y="200" width="36" height="36" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="136" y="218" />
         <di:waypoint x="200" y="218" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Target_Exec_di" bpmnElement="Flow_Target_Exec">
-        <di:waypoint x="250" y="205" />
-        <di:waypoint x="295" y="205" />
-        <di:waypoint x="295" y="161" />
-        <di:waypoint x="340" y="161" />
+        <di:waypoint x="250" y="213" />
+        <di:waypoint x="295" y="213" />
+        <di:waypoint x="295" y="199" />
+        <di:waypoint x="340" y="199" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Target_AdHoc_di" bpmnElement="Flow_Target_AdHoc">
         <di:waypoint x="225" y="243" />
@@ -89,17 +86,18 @@
           <dc:Bounds x="240" y="335" width="65" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_EndA_di" bpmnElement="Flow_EndA">
-        <di:waypoint x="510" y="141" />
-        <di:waypoint x="655" y="141" />
-        <di:waypoint x="655" y="213" />
-        <di:waypoint x="800" y="213" />
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="906" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_0_di" bpmnElement="Flow_to_Main_End_0">
+        <di:waypoint x="700" y="251" />
+        <di:waypoint x="803" y="251" />
+        <di:waypoint x="803" y="165" />
+        <di:waypoint x="906" y="165" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_EndB_di" bpmnElement="Flow_EndB">
-        <di:waypoint x="700" y="325" />
-        <di:waypoint x="750" y="325" />
-        <di:waypoint x="750" y="218" />
-        <di:waypoint x="800" y="218" />
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_1_di" bpmnElement="Flow_to_Main_End_1">
+        <di:waypoint x="846" y="158" />
+        <di:waypoint x="906" y="158" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

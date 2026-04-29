@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc58_signal_end" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc58_signal_end_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:serviceTask id="ServiceTask_ProcessBatch" name="process-batch" camunda:type="external" camunda:topic="qhana-task">
@@ -12,32 +12,33 @@
         </camunda:inputOutput>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_E1_start</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_SignalDone" name="End">
+      <bpmn:signalEventDefinition signalRef="Signal_BatchDone" />
+      <bpmn:incoming>Flow_2</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="ServiceTask_ProcessBatch" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="ServiceTask_ProcessBatch" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_ProcessBatch" targetRef="EndEvent_SignalDone" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc58_signal_end_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc58_signal_end_E1" bpmnElement="tc58_signal_end_E1">
       <bpmndi:BPMNShape id="ServiceTask_ProcessBatch_di" bpmnElement="ServiceTask_ProcessBatch">
         <dc:Bounds x="160" y="178" width="140" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_SignalDone_di" bpmnElement="EndEvent_SignalDone">
+        <dc:Bounds x="360" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="80" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="350" y="200" width="36" height="36" />
-      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="300" y="218" />
+        <di:waypoint x="360" y="218" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="116" y="218" />
         <di:waypoint x="160" y="218" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="300" y="218" />
-        <di:waypoint x="350" y="218" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

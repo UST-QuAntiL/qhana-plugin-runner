@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc07_xor_exec_vs_exec" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc07_xor_exec_vs_exec" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc07_xor_exec_vs_exec_main" name="TC07 - XOR Exec vs Exec" isExecutable="true" camunda:versionTag="0.2">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
@@ -11,11 +11,6 @@
       <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc07_xor_exec_vs_exec-E1">
         <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
         <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
-        <bpmn:extensionElements>
-          <camunda:inputOutput>
-            <camunda:outputParameter name="qoutput.inputText">${qoutput.inputText}</camunda:outputParameter>
-          </camunda:inputOutput>
-        </bpmn:extensionElements>
       </bpmn:serviceTask>
       <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
         <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
@@ -23,72 +18,13 @@
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
       <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_to_Main_End</bpmn:outgoing>
     </bpmn:adHocSubProcess>
-    <bpmn:exclusiveGateway id="Gateway_Split" name="Choose Language (XOR)" default="Flow_3B">
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_3A</bpmn:outgoing>
-      <bpmn:outgoing>Flow_3B</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-    <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
-      <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin-step.tc07_xor_exec_vs_exec-E2">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
-        <bpmn:extensionElements>
-          <camunda:inputOutput>
-            <camunda:inputParameter name="qoutput.inputText">${qoutput.inputText}</camunda:inputParameter>
-          </camunda:inputOutput>
-        </bpmn:extensionElements>
-      </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E2_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
-      <bpmn:incoming>Flow_3A</bpmn:incoming>
-      <bpmn:outgoing>Flow_4A</bpmn:outgoing>
-    </bpmn:adHocSubProcess>
-    <bpmn:adHocSubProcess id="AdHoc_E3_Wrapper" name="Extracted Fragment E3" qhana:fragmentRef="E3">
-      <bpmn:startEvent id="StartEvent_AdHoc_E3_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E3_Plugin" name="Extracted Fragment E3" camunda:type="external" camunda:topic="plugin-step.tc07_xor_exec_vs_exec-E3">
-        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_out</bpmn:outgoing>
-        <bpmn:extensionElements>
-          <camunda:inputOutput>
-            <camunda:inputParameter name="qoutput.inputText">${qoutput.inputText}</camunda:inputParameter>
-          </camunda:inputOutput>
-        </bpmn:extensionElements>
-      </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E3_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_in" sourceRef="StartEvent_AdHoc_E3_Wrapper" targetRef="ServiceTask_E3_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_out" sourceRef="ServiceTask_E3_Plugin" targetRef="EndEvent_AdHoc_E3_Wrapper" />
-      <bpmn:incoming>Flow_3B</bpmn:incoming>
-      <bpmn:outgoing>Flow_4B</bpmn:outgoing>
-    </bpmn:adHocSubProcess>
-    <bpmn:exclusiveGateway id="Gateway_Merge" name="Merge Translations">
-      <bpmn:incoming>Flow_4A</bpmn:incoming>
-      <bpmn:incoming>Flow_4B</bpmn:incoming>
-      <bpmn:outgoing>Flow_5</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-    <bpmn:endEvent id="EndEvent_1" name="End">
-      <bpmn:incoming>Flow_5</bpmn:incoming>
-    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="Gateway_Split" />
-    <bpmn:sequenceFlow id="Flow_3A" name="If French" sourceRef="Gateway_Split" targetRef="AdHoc_E2_Wrapper">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${language == 'FR'}</bpmn:conditionExpression>
-    </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_3B" name="Default (Spanish)" sourceRef="Gateway_Split" targetRef="AdHoc_E3_Wrapper" />
-    <bpmn:sequenceFlow id="Flow_4A" sourceRef="AdHoc_E2_Wrapper" targetRef="Gateway_Merge" />
-    <bpmn:sequenceFlow id="Flow_4B" sourceRef="AdHoc_E3_Wrapper" targetRef="Gateway_Merge" />
-    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Merge" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_to_Main_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_to_Main_End" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc07_xor_exec_vs_exec_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc07_xor_exec_vs_exec_main" bpmnElement="tc07_xor_exec_vs_exec_main">
@@ -96,64 +32,18 @@
         <dc:Bounds x="80" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
-        <dc:Bounds x="150" y="168" width="190" height="100" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split" isMarkerVisible="true">
-        <dc:Bounds x="390" y="193" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="375" y="160" width="80" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true">
-        <dc:Bounds x="540" y="70" width="190" height="100" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="AdHoc_E3_Wrapper_di" bpmnElement="AdHoc_E3_Wrapper" isExpanded="true">
-        <dc:Bounds x="540" y="270" width="190" height="100" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
-        <dc:Bounds x="810" y="193" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="805" y="250" width="60" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="920" y="200" width="36" height="36" />
+        <dc:Bounds x="150" y="70" width="816" height="300" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="116" y="218" />
         <di:waypoint x="150" y="218" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="340" y="218" />
-        <di:waypoint x="390" y="218" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_3A_di" bpmnElement="Flow_3A">
-        <di:waypoint x="440" y="206" />
-        <di:waypoint x="490" y="206" />
-        <di:waypoint x="490" y="162" />
-        <di:waypoint x="540" y="162" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_3B_di" bpmnElement="Flow_3B">
-        <di:waypoint x="440" y="229" />
-        <di:waypoint x="490" y="229" />
-        <di:waypoint x="490" y="275" />
-        <di:waypoint x="540" y="275" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_4A_di" bpmnElement="Flow_4A">
-        <di:waypoint x="730" y="166" />
-        <di:waypoint x="770" y="166" />
-        <di:waypoint x="770" y="205" />
-        <di:waypoint x="810" y="205" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_4B_di" bpmnElement="Flow_4B">
-        <di:waypoint x="730" y="271" />
-        <di:waypoint x="770" y="271" />
-        <di:waypoint x="770" y="230" />
-        <di:waypoint x="810" y="230" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <di:waypoint x="860" y="218" />
-        <di:waypoint x="920" y="218" />
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="1026" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_di" bpmnElement="Flow_to_Main_End">
+        <di:waypoint x="966" y="220" />
+        <di:waypoint x="1026" y="220" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

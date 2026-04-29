@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc25_user_task_as_exec_candidate" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc25_user_task_as_exec_candidate_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="UserTask_SelectOption" name="Select Processing Option">
@@ -33,15 +33,15 @@
         </camunda:inputOutput>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_3</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
     </qhana:qHAnaServiceTask>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_SelectOption" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_SelectOption" targetRef="QHanaTask_RunSelection" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_RunSelection" targetRef="QHanaTask_SaveSelection" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_SaveSelection" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_SaveSelection" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc25_user_task_as_exec_candidate_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc25_user_task_as_exec_candidate_E1" bpmnElement="tc25_user_task_as_exec_candidate_E1">
@@ -54,11 +54,11 @@
       <bpmndi:BPMNShape id="QHanaTask_SaveSelection_di" bpmnElement="QHanaTask_SaveSelection">
         <dc:Bounds x="690" y="168" width="180" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="940" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="80" y="190" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="920" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
         <di:waypoint x="350" y="208" />
@@ -68,13 +68,13 @@
         <di:waypoint x="610" y="208" />
         <di:waypoint x="690" y="208" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="870" y="208" />
+        <di:waypoint x="940" y="208" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="116" y="208" />
         <di:waypoint x="160" y="208" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="870" y="208" />
-        <di:waypoint x="920" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

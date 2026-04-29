@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc11_xor_adhoc_inside_branch" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc11_xor_adhoc_inside_branch_E4" name="Extracted Fragment E4" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E4">
+    <bpmn:startEvent id="StartEvent_E4" name="Start">
       <bpmn:outgoing>Flow_E4_start</bpmn:outgoing>
     </bpmn:startEvent>
     <qhana:qHAnaServiceTask id="QHanaTask_AutoModerate" name="auto-moderate">
@@ -15,7 +15,7 @@
       <bpmn:incoming>Flow_E4_start</bpmn:incoming>
       <bpmn:outgoing>Flow_E4_end</bpmn:outgoing>
     </qhana:qHAnaServiceTask>
-    <bpmn:endEvent id="EndEvent_E4">
+    <bpmn:endEvent id="EndEvent_E4" name="End">
       <bpmn:incoming>Flow_E4_end</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E4_start" sourceRef="StartEvent_E4" targetRef="QHanaTask_AutoModerate" />

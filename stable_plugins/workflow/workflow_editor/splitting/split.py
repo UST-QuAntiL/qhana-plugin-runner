@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import copy
 import re
 import xml.etree.ElementTree as ET
@@ -27,7 +25,7 @@ NS = {
 
 
 class SplitNotSupported(Exception):
-    """Raised when the input uses elements outside Phase 1 scope."""
+    pass
 
 
 @dataclass
@@ -47,29 +45,18 @@ class SplitResult:
 
 
 class Classifier(Protocol):
-    """Decides whether a top-level flow node is extractable at runtime."""
 
     def is_extractable(self, elem: ET.Element) -> bool: ...
 
 
 def default_classifier(elem: ET.Element) -> bool:
+    """Every task-like element is extractable.  The main workflow becomes a
+    UI template that cannot execute tasks, so all tasks belong in fragments."""
     tag = elem.tag
     if tag == f"{{{QHANA_NS}}}qHAnaServiceTask":
         return True
     local = _localname(tag)
-    if local == "serviceTask":
-        ctype = elem.get(f"{{{CAMUNDA_NS}}}type")
-        ctopic = elem.get(f"{{{CAMUNDA_NS}}}topic") or ""
-        if ctype != "external":
-            return False
-        return (
-            ctopic == "qhana-task"
-            or ctopic.startswith("plugin.")
-            or ctopic.startswith("plugin-step.")
-        )
-    if local in {"userTask", "task", "manualTask"}:
-        return True
-    return False
+    return local in TASK_LOCALNAMES
 
 
 def _localname(tag: str) -> str:
@@ -185,7 +172,12 @@ def _parse_process(
     for child in list(process):
         local = _localname(child.tag)
 
-        if local in {"laneSet", "documentation", "extensionElements", "ioSpecification"}:
+        if local in {
+            "laneSet",
+            "documentation",
+            "extensionElements",
+            "ioSpecification",
+        }:
             continue
 
         if local == "sequenceFlow":
@@ -260,34 +252,71 @@ def _classify_subprocess(
     return bool(extractable)
 
 
+def _is_qhana_task(elem: ET.Element) -> bool:
+    if elem.tag == _qhana("qHAnaServiceTask"):
+        return True
+    local = _localname(elem.tag)
+    if local == "serviceTask":
+        ctype = elem.get(f"{{{CAMUNDA_NS}}}type")
+        ctopic = elem.get(f"{{{CAMUNDA_NS}}}topic") or ""
+        if ctype != "external":
+            return False
+        return (
+            ctopic == "qhana-task"
+            or ctopic.startswith("plugin.")
+            or ctopic.startswith("plugin-step.")
+        )
+    return False
+
+
+def _validate_adhoc(elem: ET.Element, classifier: Callable[[ET.Element], bool]) -> None:
+    aid = elem.get("id") or "?"
+    for desc in elem.iter():
+        if desc is elem:
+            continue
+        dlocal = _localname(desc.tag)
+        if dlocal == "adHocSubProcess":
+            raise SplitNotSupported(
+                f"Nested ad-hoc subprocess not supported for UI template generation "
+                f"(outer id={aid!r}, inner id={desc.get('id')!r}). "
+                f"Use a standard subprocess as the outer container."
+            )
+        if dlocal in TASK_LOCALNAMES or desc.tag == _qhana("qHAnaServiceTask"):
+            if not _is_qhana_task(desc):
+                raise SplitNotSupported(
+                    f"Ad-hoc subprocess {aid!r} contains non-QHAna task "
+                    f"{desc.get('id')!r} (type={dlocal!r}). All tasks inside an "
+                    f"ad-hoc must be QHAna-recognized for UI template generation."
+                )
+
+
 def _classify_nodes(
     nodes: Dict[str, Node],
     classifier: Callable[[ET.Element], bool],
+    start_id: str,
 ) -> None:
-    attached_host_ids: Set[str] = set()
     for node in nodes.values():
-        if node.local == "boundaryEvent":
-            host = node.elem.get("attachedToRef")
-            if host:
-                attached_host_ids.add(host)
-    for node in nodes.values():
-        if node.local in {
-            "startEvent",
-            "endEvent",
-            "exclusiveGateway",
-            "parallelGateway",
-            "adHocSubProcess",
-            "boundaryEvent",
-            "intermediateCatchEvent",
-            "intermediateThrowEvent",
-        }:
+        if node.local in {"exclusiveGateway", "parallelGateway"}:
+            node.extractable = False
+            continue
+        if node.local == "adHocSubProcess":
+            _validate_adhoc(node.elem, classifier)
             node.extractable = False
             continue
         if node.local == "subProcess":
             node.extractable = _classify_subprocess(node.elem, classifier)
             continue
-        if node.id in attached_host_ids:
+        if node.local == "startEvent" and node.id == start_id:
             node.extractable = False
+            continue
+        if node.local in {
+            "startEvent",
+            "endEvent",
+            "boundaryEvent",
+            "intermediateCatchEvent",
+            "intermediateThrowEvent",
+        }:
+            node.extractable = True
             continue
         node.extractable = classifier(node.elem)
 
@@ -312,12 +341,127 @@ def _find_regions(
 
     out_flows, in_flows = _build_adjacency(flows)
 
-    def succ_of(nid: str) -> List[Tuple[str, str]]:
-        """(target_id, flow_id) pairs for successors of nid."""
+    def successors(nid: str) -> List[Tuple[str, str]]:
         return [(flows[fid].target, fid) for fid in out_flows.get(nid, [])]
 
-    def pred_of(nid: str) -> List[Tuple[str, str]]:
+    def predecessors(nid: str) -> List[Tuple[str, str]]:
         return [(flows[fid].source, fid) for fid in in_flows.get(nid, [])]
+
+    def has_extractable_continuation(nid: str, visited: Set[str]) -> bool:
+        if nid in visited:
+            return False
+        visited.add(nid)
+        node = nodes.get(nid)
+        if node is None:
+            return False
+        if not node.extractable and nid not in absorbable_gateways:
+            return False
+        succs = successors(nid)
+        if not succs:
+            return True
+        for target, _ in succs:
+            t_node = nodes.get(target)
+            if t_node is None:
+                continue
+            if t_node.extractable or target in absorbable_gateways:
+                return True
+            if not t_node.extractable:
+                continue
+        return False
+
+    def reaches_non_absorbed_gateway_upstream(
+        start_id: str, absorbable: Set[str]
+    ) -> bool:
+        visited: Set[str] = set()
+        queue = [start_id]
+        while queue:
+            cur = queue.pop(0)
+            if cur in visited:
+                continue
+            visited.add(cur)
+            for source, _ in predecessors(cur):
+                s_node = nodes.get(source)
+                if s_node is None:
+                    continue
+                if (
+                    s_node.local
+                    in {
+                        "exclusiveGateway",
+                        "parallelGateway",
+                    }
+                    and source not in absorbable
+                ):
+                    return True
+                if s_node.extractable:
+                    queue.append(source)
+        return False
+
+    absorbable_gateways: Set[str] = set()
+    for nid, node in nodes.items():
+        if node.local not in {"exclusiveGateway", "parallelGateway"}:
+            continue
+        all_ok = True
+        for target, _ in successors(nid):
+            t_node = nodes.get(target)
+            if t_node is None or not t_node.extractable:
+                all_ok = False
+                break
+            t_succs = successors(target)
+            if t_succs:
+                has_ext_cont = False
+                for tt, _ in t_succs:
+                    tt_node = nodes.get(tt)
+                    if tt_node and (
+                        tt_node.extractable
+                        or tt_node.local in {"exclusiveGateway", "parallelGateway"}
+                    ):
+                        has_ext_cont = True
+                        break
+                if not has_ext_cont:
+                    all_ok = False
+                    break
+        if not all_ok:
+            continue
+        for source, _ in predecessors(nid):
+            s_node = nodes.get(source)
+            if s_node is None:
+                all_ok = False
+                break
+            if not s_node.extractable and s_node.local not in {
+                "exclusiveGateway",
+                "parallelGateway",
+            }:
+                all_ok = False
+                break
+        if all_ok:
+            absorbable_gateways.add(nid)
+
+    changed = True
+    while changed:
+        changed = False
+        for gid in list(absorbable_gateways):
+            if reaches_non_absorbed_gateway_upstream(gid, absorbable_gateways):
+                absorbable_gateways.discard(gid)
+                changed = True
+                continue
+            keep = True
+            for target, _ in successors(gid):
+                t_node = nodes.get(target)
+                if (
+                    t_node
+                    and not t_node.extractable
+                    and target not in absorbable_gateways
+                ):
+                    keep = False
+                    break
+            if not keep:
+                absorbable_gateways.discard(gid)
+                changed = True
+
+    effectively_extractable: Set[str] = set()
+    for nid, node in nodes.items():
+        if node.extractable or nid in absorbable_gateways:
+            effectively_extractable.add(nid)
 
     assigned: Set[str] = set()
     regions: List[Region] = []
@@ -326,96 +470,94 @@ def _find_regions(
     for nid in order:
         if nid in assigned:
             continue
-        node = nodes[nid]
-        if not node.extractable:
+        if nid not in effectively_extractable:
             continue
 
-        cur = nid
-        while True:
-            preds = pred_of(cur)
-            ext_preds = [
-                (p, f) for (p, f) in preds if nodes.get(p) and nodes[p].extractable
-            ]
-            if len(ext_preds) != 1:
-                break
-            p, _f = ext_preds[0]
-            p_succs = succ_of(p)
-            p_ext_succs = [
-                (t, fi) for (t, fi) in p_succs if nodes.get(t) and nodes[t].extractable
-            ]
-            if len(p_ext_succs) != 1 or p_ext_succs[0][0] != cur:
-                break
-            cur = p
-        region_start = cur
+        component: List[str] = []
+        queue = [nid]
+        visited: Set[str] = {nid}
+        while queue:
+            cur = queue.pop(0)
+            component.append(cur)
+            for target, _ in successors(cur):
+                if target not in visited and target in effectively_extractable:
+                    visited.add(target)
+                    queue.append(target)
+            for source, _ in predecessors(cur):
+                if source not in visited and source in effectively_extractable:
+                    visited.add(source)
+                    queue.append(source)
 
-        chain: List[str] = [region_start]
+        boundary_added = True
+        while boundary_added:
+            boundary_added = False
+            for bnid, bnode in nodes.items():
+                if bnid in visited:
+                    continue
+                if bnode.local == "boundaryEvent":
+                    host = bnode.elem.get("attachedToRef")
+                    if host and host in visited:
+                        visited.add(bnid)
+                        component.append(bnid)
+                        boundary_added = True
+                        bqueue = [bnid]
+                        while bqueue:
+                            bc = bqueue.pop(0)
+                            for bt, _ in successors(bc):
+                                if bt not in visited and bt in effectively_extractable:
+                                    visited.add(bt)
+                                    component.append(bt)
+                                    bqueue.append(bt)
+
+        order_index = {nid: i for i, nid in enumerate(order)}
+        for c in component:
+            if c not in order_index:
+                host = (
+                    nodes[c].elem.get("attachedToRef")
+                    if nodes[c].local == "boundaryEvent"
+                    else None
+                )
+                order_index[c] = order_index.get(host, 99999) + 0.5
+        component.sort(key=lambda x: order_index.get(x, 99999))
+
+        component_set = set(component)
+
         internal_flow_ids: List[str] = []
-        while True:
-            last = chain[-1]
-            succs = succ_of(last)
-            ext_succs = [
-                (t, f) for (t, f) in succs if nodes.get(t) and nodes[t].extractable
-            ]
-            if len(ext_succs) != 1:
-                break
-            t, fid = ext_succs[0]
-            t_preds = pred_of(t)
-            t_ext_preds = [
-                (p, fi) for (p, fi) in t_preds if nodes.get(p) and nodes[p].extractable
-            ]
-            if len(t_ext_preds) != 1 or t_ext_preds[0][0] != last:
-                break
-            flows_last_to_t = [f for f in out_flows.get(last, []) if flows[f].target == t]
-            if len(flows_last_to_t) != 1:
-                break
-            chain.append(t)
-            internal_flow_ids.append(fid)
+        entry_flow_ids: List[str] = []
+        exit_flow_ids: List[str] = []
 
-        chain_set = set(chain)
-        entry_flows = [
-            f for f in in_flows.get(chain[0], []) if flows[f].source not in chain_set
-        ]
-        exit_flows = [
-            f for f in out_flows.get(chain[-1], []) if flows[f].target not in chain_set
-        ]
-        if not entry_flows:
-            raise SplitNotSupported(
-                f"Region starting at {chain[0]!r} has no entry flow from outside."
-            )
-        if not exit_flows:
-            raise SplitNotSupported(
-                f"Region ending at {chain[-1]!r} has no exit flow to outside."
-            )
-        entry_sources = {flows[f].source for f in entry_flows}
-        exit_targets = {flows[f].target for f in exit_flows}
-        if len(entry_sources) != 1:
-            raise SplitNotSupported(
-                f"Region starting at {chain[0]!r} has entry flows from "
-                f"{len(entry_sources)} distinct sources; Phase 1 requires one."
-            )
-        if len(exit_targets) != 1:
-            raise SplitNotSupported(
-                f"Region ending at {chain[-1]!r} has exit flows to "
-                f"{len(exit_targets)} distinct targets; Phase 1 requires one."
-            )
+        for fid, flow in flows.items():
+            src_in = flow.source in component_set
+            tgt_in = flow.target in component_set
+            if src_in and tgt_in:
+                internal_flow_ids.append(fid)
+            elif not src_in and tgt_in:
+                entry_flow_ids.append(fid)
+            elif src_in and not tgt_in:
+                exit_flow_ids.append(fid)
+
+        has_task = any(
+            nodes[c].local in TASK_LOCALNAMES
+            or nodes[c].elem.tag == _qhana("qHAnaServiceTask")
+            or nodes[c].local == "subProcess"
+            for c in component
+        )
+        if not has_task:
+            continue
 
         idx += 1
         regions.append(
             Region(
                 index=idx,
-                node_ids=chain,
-                entry_flow_ids=entry_flows,
-                exit_flow_ids=exit_flows,
+                node_ids=component,
+                entry_flow_ids=entry_flow_ids,
+                exit_flow_ids=exit_flow_ids,
                 internal_flow_ids=internal_flow_ids,
             )
         )
-        assigned.update(chain)
+        assigned.update(component)
 
     return regions
-
-
-def assigned_set(chain: List[str]) -> Set[str]:
-    return set(chain)
 
 
 VAR_PATTERN = re.compile(r"\$\{([a-zA-Z_][\w.]*)")
@@ -703,6 +845,51 @@ def _build_main_process(
         if default not in old_to_new_flow_id:
             gw.attrib.pop("default", None)
 
+    has_end = any(_localname(c.tag) == "endEvent" for c in main if c.get("id"))
+    if not has_end:
+        synth_end_id = "EndEvent_Main"
+        synth_end = ET.SubElement(
+            main, _bpmn("endEvent"), attrib={"id": synth_end_id, "name": "End"}
+        )
+
+        main_elem_ids = {c.get("id") for c in main if c.get("id")}
+        targets_of_flows = set()
+        sources_of_flows = set()
+        for sf in main:
+            if _localname(sf.tag) == "sequenceFlow":
+                targets_of_flows.add(sf.get("targetRef"))
+                sources_of_flows.add(sf.get("sourceRef"))
+
+        leaf_ids = []
+        for nid in reversed(main_order):
+            eid = nid
+            if eid in main_elem_ids and eid in sources_of_flows:
+                continue
+            if eid in main_elem_ids and eid not in sources_of_flows:
+                leaf_ids.append(eid)
+
+        if not leaf_ids:
+            if main_order:
+                leaf_ids = [main_order[-1]]
+
+        for i, leaf_id in enumerate(leaf_ids):
+            flow_id = (
+                "Flow_to_Main_End" if len(leaf_ids) == 1 else f"Flow_to_Main_End_{i}"
+            )
+            ET.SubElement(
+                main,
+                _bpmn("sequenceFlow"),
+                attrib={
+                    "id": flow_id,
+                    "sourceRef": leaf_id,
+                    "targetRef": synth_end_id,
+                },
+            )
+            leaf_elem = _find_child_by_id(main, leaf_id)
+            if leaf_elem is not None:
+                _add_outgoing(leaf_elem, flow_id)
+            _add_incoming(synth_end, flow_id)
+
     surviving_ids = {e.get("id") for e in main.iter() if e.get("id")}
     for child in list(original_process):
         local = _localname(child.tag)
@@ -873,61 +1060,153 @@ def _build_fragment_process(
         },
     )
 
-    start_elem = ET.SubElement(
-        proc,
-        _bpmn("startEvent"),
-        attrib={
-            "id": f"StartEvent_{fid}",
-        },
-    )
-    task_elems: List[ET.Element] = []
+    component_set = set(region.node_ids)
+
+    internal_flow_sources: Set[str] = set()
+    internal_flow_targets: Set[str] = set()
+    for fid_flow in region.internal_flow_ids:
+        f = flows[fid_flow]
+        internal_flow_sources.add(f.source)
+        internal_flow_targets.add(f.target)
+
+    boundary_hosts_in_region: Set[str] = set()
+    for nid in region.node_ids:
+        node = nodes[nid]
+        if node.local == "boundaryEvent":
+            host = node.elem.get("attachedToRef")
+            if host and host in component_set:
+                boundary_hosts_in_region.add(host)
+
+    entry_nodes: Set[str] = set()
+    for nid in region.node_ids:
+        if nid in internal_flow_targets:
+            continue
+        if nodes[nid].local == "boundaryEvent":
+            continue
+        entry_nodes.add(nid)
+
+    if not entry_nodes:
+        for efid in region.entry_flow_ids:
+            target = flows[efid].target
+            entry_nodes.add(target)
+            break
+
+    has_original_start = any(nodes[nid].local == "startEvent" for nid in region.node_ids)
+    has_original_end = any(nodes[nid].local == "endEvent" for nid in region.node_ids)
+
+    exit_nodes: Set[str] = set()
+    for efid in region.exit_flow_ids:
+        exit_nodes.add(flows[efid].source)
+    for nid in region.node_ids:
+        if nid not in internal_flow_sources and nid not in boundary_hosts_in_region:
+            if nodes[nid].local != "boundaryEvent":
+                exit_nodes.add(nid)
+
+    need_synth_start = not has_original_start
+    need_synth_end = not has_original_end
+
+    synth_start_id = f"StartEvent_{fid}"
+    synth_end_id = f"EndEvent_{fid}"
+
+    if need_synth_start:
+        start_elem = ET.SubElement(
+            proc, _bpmn("startEvent"), attrib={"id": synth_start_id, "name": "Start"}
+        )
+
+    elem_by_id: Dict[str, ET.Element] = {}
     for nid in region.node_ids:
         c = copy.deepcopy(nodes[nid].elem)
         _strip_incoming_outgoing(c)
         proc.append(c)
-        task_elems.append(c)
-    end_elem = ET.SubElement(
-        proc,
-        _bpmn("endEvent"),
-        attrib={
-            "id": f"EndEvent_{fid}",
-        },
-    )
+        elem_by_id[nid] = c
 
-    first_flow_id = f"Flow_{fid}_start"
-    sf = ET.SubElement(
-        proc,
-        _bpmn("sequenceFlow"),
-        attrib={
-            "id": first_flow_id,
-            "sourceRef": f"StartEvent_{fid}",
-            "targetRef": region.node_ids[0],
-        },
-    )
-    _add_outgoing(start_elem, first_flow_id)
-    _add_incoming(task_elems[0], first_flow_id)
+    if need_synth_end:
+        end_elem = ET.SubElement(
+            proc, _bpmn("endEvent"), attrib={"id": synth_end_id, "name": "End"}
+        )
 
-    for i, orig_fid in enumerate(region.internal_flow_ids):
-        orig = flows[orig_fid]
+    if need_synth_start:
+        if len(entry_nodes) == 1:
+            entry_nid = next(iter(entry_nodes))
+            flow_id = f"Flow_{fid}_start"
+            ET.SubElement(
+                proc,
+                _bpmn("sequenceFlow"),
+                attrib={
+                    "id": flow_id,
+                    "sourceRef": synth_start_id,
+                    "targetRef": entry_nid,
+                },
+            )
+            _add_outgoing(start_elem, flow_id)
+            if entry_nid in elem_by_id:
+                _add_incoming(elem_by_id[entry_nid], flow_id)
+        elif len(entry_nodes) > 1:
+            synth_fork_id = f"Gateway_{fid}_Fork"
+            fork_elem = ET.SubElement(
+                proc,
+                _bpmn("parallelGateway"),
+                attrib={"id": synth_fork_id},
+            )
+            fork_flow_id = f"Flow_{fid}_to_fork"
+            ET.SubElement(
+                proc,
+                _bpmn("sequenceFlow"),
+                attrib={
+                    "id": fork_flow_id,
+                    "sourceRef": synth_start_id,
+                    "targetRef": synth_fork_id,
+                },
+            )
+            _add_outgoing(start_elem, fork_flow_id)
+            _add_incoming(fork_elem, fork_flow_id)
+            for i, entry_nid in enumerate(sorted(entry_nodes)):
+                flow_id = f"Flow_{fid}_fork_{i}"
+                ET.SubElement(
+                    proc,
+                    _bpmn("sequenceFlow"),
+                    attrib={
+                        "id": flow_id,
+                        "sourceRef": synth_fork_id,
+                        "targetRef": entry_nid,
+                    },
+                )
+                _add_outgoing(fork_elem, flow_id)
+                if entry_nid in elem_by_id:
+                    _add_incoming(elem_by_id[entry_nid], flow_id)
+
+    for ifid in region.internal_flow_ids:
+        orig = flows[ifid]
         nf = copy.deepcopy(orig.elem)
-        nf.set("sourceRef", region.node_ids[i])
-        nf.set("targetRef", region.node_ids[i + 1])
         proc.append(nf)
-        _add_outgoing(task_elems[i], orig_fid)
-        _add_incoming(task_elems[i + 1], orig_fid)
+        if orig.source in elem_by_id:
+            _add_outgoing(elem_by_id[orig.source], ifid)
+        if orig.target in elem_by_id:
+            _add_incoming(elem_by_id[orig.target], ifid)
 
-    last_flow_id = f"Flow_{fid}_end"
-    sf_end = ET.SubElement(
-        proc,
-        _bpmn("sequenceFlow"),
-        attrib={
-            "id": last_flow_id,
-            "sourceRef": region.node_ids[-1],
-            "targetRef": f"EndEvent_{fid}",
-        },
-    )
-    _add_outgoing(task_elems[-1], last_flow_id)
-    _add_incoming(end_elem, last_flow_id)
+    if need_synth_end:
+        wire_to_end: Set[str] = set()
+        for nid in exit_nodes:
+            if nodes[nid].local == "endEvent":
+                continue
+            if nid not in internal_flow_sources:
+                wire_to_end.add(nid)
+        for i, exit_nid in enumerate(sorted(wire_to_end)):
+            flow_id = (
+                f"Flow_{fid}_end" if len(wire_to_end) == 1 else f"Flow_{fid}_end_{i}"
+            )
+            ET.SubElement(
+                proc,
+                _bpmn("sequenceFlow"),
+                attrib={
+                    "id": flow_id,
+                    "sourceRef": exit_nid,
+                    "targetRef": synth_end_id,
+                },
+            )
+            if exit_nid in elem_by_id:
+                _add_outgoing(elem_by_id[exit_nid], flow_id)
+            _add_incoming(end_elem, flow_id)
 
     return proc
 
@@ -1002,6 +1281,16 @@ def _bounds_of(shape: ET.Element) -> Optional[Tuple[float, float, float, float]]
                 )
             except ValueError:
                 return None
+    return None
+
+
+def _find_shape_in_plane(plane: ET.Element, element_id: str) -> Optional[ET.Element]:
+    for child in plane:
+        if (
+            _localname(child.tag) == "BPMNShape"
+            and child.get("bpmnElement") == element_id
+        ):
+            return child
     return None
 
 
@@ -1235,6 +1524,8 @@ def _build_main_di(
         cid = child.get("id")
         if not cid:
             continue
+        if cid == "EndEvent_Main":
+            continue
         emit_shape(cid)
         if local in ("adHocSubProcess", "subProcess") and cid not in wrapper_bounds:
             emitted_ids_local = set(emitted_shapes)
@@ -1288,6 +1579,8 @@ def _build_main_di(
     for flow_child in main_process.findall(f"{{{BPMN_NS}}}sequenceFlow"):
         fid = flow_child.get("id")
         if not fid:
+            continue
+        if fid.startswith("Flow_to_Main_End"):
             continue
         src = flow_child.get("sourceRef") or ""
         tgt = flow_child.get("targetRef") or ""
@@ -1356,7 +1649,54 @@ def _build_main_di(
             continue
         plane.append(_make_edge(aid, waypoints))
 
+    main_ids = _collect_ids(main_process)
+    if "EndEvent_Main" in main_ids:
+        max_x = 0.0
+        rightmost_shape = None
+        for s in plane:
+            if _localname(s.tag) != "BPMNShape":
+                continue
+            b = _bounds_of(s)
+            if b is not None and (b[0] + b[2]) > max_x:
+                max_x = b[0] + b[2]
+                rightmost_shape = s
+
+        end_x = max_x + 60
+        end_y = 200.0
+        if rightmost_shape is not None:
+            rb = _bounds_of(rightmost_shape)
+            if rb:
+                end_y = rb[1] + rb[3] / 2.0 - 18
+
+        end_shape = _make_shape("EndEvent_Main", end_x, end_y, 36, 36)
+        plane.append(end_shape)
+
+        for sf in main_process:
+            if _localname(sf.tag) != "sequenceFlow":
+                continue
+            fid = sf.get("id") or ""
+            if not fid.startswith("Flow_to_Main_End"):
+                continue
+            src = sf.get("sourceRef") or ""
+            src_shape = shapes_by_id.get(src)
+            if src_shape is None:
+                src_shape = original_shapes.get(src)
+            if src_shape is None:
+                continue
+            waypoints = _docked_waypoints(src_shape, end_shape)
+            if waypoints is not None:
+                plane.append(_make_edge(fid, waypoints))
+
     return diagram
+
+
+def _collect_ids(elem: ET.Element) -> Set[str]:
+    ids: Set[str] = set()
+    for e in elem.iter():
+        i = e.get("id")
+        if i:
+            ids.add(i)
+    return ids
 
 
 def _build_fragment_di(
@@ -1464,29 +1804,118 @@ def _build_fragment_di(
     fx, fy, fw, fh = first_bounds
     lx, ly, lw, lh = last_bounds
 
+    frag_ids = _collect_ids(fragment_process)
+
     start_id = f"StartEvent_{fid_label}"
     start_x = fx - 80
     start_y = fy + fh / 2.0 - 18
-    start_shape = _make_shape(start_id, start_x, start_y, 36, 36)
-    plane.append(start_shape)
+    if start_id in frag_ids:
+        start_shape = _make_shape(start_id, start_x, start_y, 36, 36)
+        plane.append(start_shape)
+    else:
+        start_shape = None
 
     end_id = f"EndEvent_{fid_label}"
     end_x = lx + lw + 50
     end_y = ly + lh / 2.0 - 18
-    end_shape = _make_shape(end_id, end_x, end_y, 36, 36)
-    plane.append(end_shape)
+    if end_id in frag_ids:
+        end_shape = _make_shape(end_id, end_x, end_y, 36, 36)
+        plane.append(end_shape)
+    else:
+        end_shape = None
 
     for orig_fid in region.internal_flow_ids:
         orig_edge = original_edges.get(orig_fid)
         if orig_edge is not None:
             plane.append(copy.deepcopy(orig_edge))
 
-    start_to_first_wp = _docked_waypoints(start_shape, first_task)
-    last_to_end_wp = _docked_waypoints(last_task, end_shape)
-    if start_to_first_wp is not None:
-        plane.append(_make_edge(f"Flow_{fid_label}_start", start_to_first_wp))
-    if last_to_end_wp is not None:
-        plane.append(_make_edge(f"Flow_{fid_label}_end", last_to_end_wp))
+    if start_shape is not None and f"Flow_{fid_label}_start" in frag_ids:
+        start_to_first_wp = _docked_waypoints(start_shape, first_task)
+        if start_to_first_wp is not None:
+            plane.append(_make_edge(f"Flow_{fid_label}_start", start_to_first_wp))
+    if end_shape is not None and f"Flow_{fid_label}_end" in frag_ids:
+        last_to_end_wp = _docked_waypoints(last_task, end_shape)
+        if last_to_end_wp is not None:
+            plane.append(_make_edge(f"Flow_{fid_label}_end", last_to_end_wp))
+
+    fork_id = f"Gateway_{fid_label}_Fork"
+    if fork_id in frag_ids and start_shape is not None:
+        entry_task_shapes = []
+        for sf in fragment_process:
+            if not sf.tag.endswith("sequenceFlow"):
+                continue
+            sfid = sf.get("id") or ""
+            if not sfid.startswith(f"Flow_{fid_label}_fork_"):
+                continue
+            tgt = sf.get("targetRef") or ""
+            tgt_shape = _find_shape_in_plane(plane, tgt)
+            if tgt_shape is None:
+                tgt_shape = original_shapes.get(tgt)
+            if tgt_shape is not None:
+                entry_task_shapes.append(tgt_shape)
+
+        if entry_task_shapes:
+            min_entry_x = min(_bounds_of(s)[0] for s in entry_task_shapes)
+            avg_entry_y = sum(
+                _bounds_of(s)[1] + _bounds_of(s)[3] / 2.0 for s in entry_task_shapes
+            ) / len(entry_task_shapes)
+
+            new_start_x = min_entry_x - 180
+            new_start_y = avg_entry_y - 18
+            new_fork_x = min_entry_x - 80
+            new_fork_y = avg_entry_y - 25
+
+            sb = start_shape.find(f"{{{OMGDC_NS}}}Bounds")
+            if sb is not None:
+                sb.set("x", str(new_start_x))
+                sb.set("y", str(new_start_y))
+
+            fork_shape = _make_shape(fork_id, new_fork_x, new_fork_y, 50, 50)
+            plane.append(fork_shape)
+        else:
+            fork_x = start_x + 80
+            fork_y = start_y - 4
+            fork_shape = _make_shape(fork_id, fork_x, fork_y, 50, 50)
+            plane.append(fork_shape)
+
+        to_fork_id = f"Flow_{fid_label}_to_fork"
+        if to_fork_id in frag_ids:
+            wp = _docked_waypoints(start_shape, fork_shape)
+            if wp is not None:
+                plane.append(_make_edge(to_fork_id, wp))
+
+        for sf in fragment_process:
+            if not sf.tag.endswith("sequenceFlow"):
+                continue
+            sfid = sf.get("id") or ""
+            if not sfid.startswith(f"Flow_{fid_label}_fork_"):
+                continue
+            tgt = sf.get("targetRef") or ""
+            tgt_shape = _find_shape_in_plane(plane, tgt)
+            if tgt_shape is None:
+                tgt_shape = original_shapes.get(tgt)
+            if tgt_shape is None:
+                continue
+            wp = _docked_waypoints(fork_shape, tgt_shape)
+            if wp is not None:
+                plane.append(_make_edge(sfid, wp))
+
+    if end_shape is not None:
+        for sf in fragment_process:
+            if not sf.tag.endswith("sequenceFlow"):
+                continue
+            sfid = sf.get("id") or ""
+            if not sfid.startswith(f"Flow_{fid_label}_end_"):
+                continue
+            src = sf.get("sourceRef") or ""
+            src_shape = _find_shape_in_plane(plane, src)
+            if src_shape is None:
+                src_shape = original_shapes.get(src)
+            if src_shape is None:
+                continue
+            wp = _docked_waypoints(src_shape, end_shape)
+            if wp is not None:
+                plane.append(_make_edge(sfid, wp))
 
     return diagram
 
@@ -1501,15 +1930,6 @@ def _build_fragment_definitions(
     di = _build_fragment_di(original_root, fragment_process, region)
     new_root.append(di)
     return new_root
-
-
-def _collect_ids(elem: ET.Element) -> Set[str]:
-    ids: Set[str] = set()
-    for e in elem.iter():
-        i = e.get("id")
-        if i:
-            ids.add(i)
-    return ids
 
 
 def _serialize(root: ET.Element) -> str:
@@ -1544,7 +1964,7 @@ def split_workflow(
     original_pid = original_process.get("id") or ""
 
     nodes, flows, order, start_id, end_ids = _parse_process(original_process)
-    _classify_nodes(nodes, classifier)
+    _classify_nodes(nodes, classifier, start_id)
     regions = _find_regions(nodes, flows, order)
 
     new_main_pid = f"{original_pid}_main"

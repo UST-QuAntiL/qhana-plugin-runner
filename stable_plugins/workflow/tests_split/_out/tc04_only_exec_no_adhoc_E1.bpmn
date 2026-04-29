@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc04_only_exec_no_adhoc" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc04_only_exec_no_adhoc_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="UserTask_Input" name="Enter File ID">
@@ -55,17 +55,17 @@
         </camunda:inputOutput>
       </bpmn:extensionElements>
       <bpmn:incoming>Flow_5</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
     </qhana:qHAnaServiceTask>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Input" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_Fetch" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_Fetch" targetRef="QHanaTask_Classify" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_Classify" targetRef="QHanaTask_Store" />
     <bpmn:sequenceFlow id="Flow_5" sourceRef="QHanaTask_Store" targetRef="QHanaTask_Notify" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_Notify" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="QHanaTask_Notify" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc04_only_exec_no_adhoc_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc04_only_exec_no_adhoc_E1" bpmnElement="tc04_only_exec_no_adhoc_E1">
@@ -84,11 +84,11 @@
       <bpmndi:BPMNShape id="QHanaTask_Notify_di" bpmnElement="QHanaTask_Notify">
         <dc:Bounds x="1020" y="168" width="170" height="80" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1250" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="60" y="190" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="1240" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
         <di:waypoint x="310" y="208" />
@@ -106,13 +106,13 @@
         <di:waypoint x="970" y="208" />
         <di:waypoint x="1020" y="208" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="1190" y="208" />
+        <di:waypoint x="1250" y="208" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="96" y="208" />
         <di:waypoint x="140" y="208" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="1190" y="208" />
-        <di:waypoint x="1240" y="208" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

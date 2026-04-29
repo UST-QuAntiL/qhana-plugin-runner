@@ -1,83 +1,49 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc48_subprocess_all_main_side" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc48_subprocess_all_main_side" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc48_subprocess_all_main_side_main" name="tc48_subprocess_all_main_side" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
-    <bpmn:subProcess id="SubProcess_MainSide" name="Main-side Subprocess">
-      <bpmn:startEvent id="Inner_Start">
-        <bpmn:outgoing>Inner_Flow_1</bpmn:outgoing>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
       </bpmn:startEvent>
-      <bpmn:scriptTask id="Inner_Script1" name="compute" scriptFormat="javascript">
-        <bpmn:incoming>Inner_Flow_1</bpmn:incoming>
-        <bpmn:outgoing>Inner_Flow_2</bpmn:outgoing>
-        <bpmn:script>var x = 1;</bpmn:script>
-      </bpmn:scriptTask>
-      <bpmn:scriptTask id="Inner_Script2" name="format" scriptFormat="javascript">
-        <bpmn:incoming>Inner_Flow_2</bpmn:incoming>
-        <bpmn:outgoing>Inner_Flow_3</bpmn:outgoing>
-        <bpmn:script>var y = 2;</bpmn:script>
-      </bpmn:scriptTask>
-      <bpmn:endEvent id="Inner_End">
-        <bpmn:incoming>Inner_Flow_3</bpmn:incoming>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc48_subprocess_all_main_side-E1">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
       </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Inner_Flow_1" sourceRef="Inner_Start" targetRef="Inner_Script1" />
-      <bpmn:sequenceFlow id="Inner_Flow_2" sourceRef="Inner_Script1" targetRef="Inner_Script2" />
-      <bpmn:sequenceFlow id="Inner_Flow_3" sourceRef="Inner_Script2" targetRef="Inner_End" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_end</bpmn:outgoing>
-    </bpmn:subProcess>
-    <bpmn:endEvent id="EndEvent_1" name="End">
-      <bpmn:incoming>Flow_end</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_Main_End</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_to_Main_End</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="SubProcess_MainSide" />
-    <bpmn:sequenceFlow id="Flow_end" sourceRef="SubProcess_MainSide" targetRef="EndEvent_1" />
+    <bpmn:sequenceFlow id="Flow_to_Main_End" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc48_subprocess_all_main_side_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc48_subprocess_all_main_side_main" bpmnElement="tc48_subprocess_all_main_side_main">
       <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="100" y="182" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="SubProcess_MainSide_di" bpmnElement="SubProcess_MainSide" isExpanded="true">
-        <dc:Bounds x="200" y="80" width="560" height="240" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Inner_Start_di" bpmnElement="Inner_Start">
-        <dc:Bounds x="240" y="182" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Inner_Script1_di" bpmnElement="Inner_Script1">
-        <dc:Bounds x="320" y="160" width="140" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Inner_Script2_di" bpmnElement="Inner_Script2">
-        <dc:Bounds x="490" y="160" width="140" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Inner_End_di" bpmnElement="Inner_End">
-        <dc:Bounds x="700" y="182" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Inner_Flow_1_di" bpmnElement="Inner_Flow_1">
-        <di:waypoint x="276" y="200" />
-        <di:waypoint x="320" y="200" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Inner_Flow_2_di" bpmnElement="Inner_Flow_2">
-        <di:waypoint x="460" y="200" />
-        <di:waypoint x="490" y="200" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Inner_Flow_3_di" bpmnElement="Inner_Flow_3">
-        <di:waypoint x="630" y="200" />
-        <di:waypoint x="700" y="200" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="852" y="182" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="860" y="218" width="20" height="14" />
-        </bpmndi:BPMNLabel>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="190" y="70" width="708" height="260" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="136" y="200" />
-        <di:waypoint x="200" y="200" />
+        <di:waypoint x="190" y="200" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_end_di" bpmnElement="Flow_end">
-        <di:waypoint x="760" y="200" />
-        <di:waypoint x="852" y="200" />
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="958" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_di" bpmnElement="Flow_to_Main_End">
+        <di:waypoint x="898" y="200" />
+        <di:waypoint x="958" y="200" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -48,16 +48,6 @@
       <bpmn:incoming>Flow_2</bpmn:incoming>
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:adHocSubProcess>
-    <bpmn:sendTask id="SendTask_Update" name="Send Update" implementation="##WebService" messageRef="Message_Update" operationRef="Operation_SendUpdate">
-      <bpmn:extensionElements>
-        <camunda:inputOutput>
-          <camunda:inputParameter name="qinput.payload">${qoutput.approvedUpdate}</camunda:inputParameter>
-          <camunda:outputParameter name="qoutput.sentUpdate">sent</camunda:outputParameter>
-        </camunda:inputOutput>
-      </bpmn:extensionElements>
-      <bpmn:incoming>Flow_3</bpmn:incoming>
-      <bpmn:outgoing>Flow_4</bpmn:outgoing>
-    </bpmn:sendTask>
     <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
       <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
         <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
@@ -67,7 +57,7 @@
         <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
         <bpmn:extensionElements>
           <camunda:inputOutput>
-            <camunda:inputParameter name="qoutput.sentUpdate">${qoutput.sentUpdate}</camunda:inputParameter>
+            <camunda:inputParameter name="qoutput.approvedUpdate">${qoutput.approvedUpdate}</camunda:inputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
@@ -76,17 +66,16 @@
       </bpmn:endEvent>
       <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
       <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
-      <bpmn:incoming>Flow_4</bpmn:incoming>
-      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_Main_End</bpmn:outgoing>
     </bpmn:adHocSubProcess>
-    <bpmn:endEvent id="EndEvent_1" name="End">
-      <bpmn:incoming>Flow_5</bpmn:incoming>
-    </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHocSubProcess_1" />
-    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_1" targetRef="SendTask_Update" />
-    <bpmn:sequenceFlow id="Flow_4" sourceRef="SendTask_Update" targetRef="AdHoc_E2_Wrapper" />
-    <bpmn:sequenceFlow id="Flow_5" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_1" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_1" targetRef="AdHoc_E2_Wrapper" />
+    <bpmn:endEvent id="EndEvent_Main" name="End">
+      <bpmn:incoming>Flow_to_Main_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_to_Main_End" sourceRef="AdHoc_E2_Wrapper" targetRef="EndEvent_Main" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc32_message_inside_exec_vs_main_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc32_message_inside_exec_vs_main_main" bpmnElement="tc32_message_inside_exec_vs_main_main">
@@ -105,14 +94,8 @@
       <bpmndi:BPMNShape id="QHanaTask_Approve_di" bpmnElement="QHanaTask_Approve">
         <dc:Bounds x="615" y="175" width="150" height="70" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="SendTask_Update_di" bpmnElement="SendTask_Update">
-        <dc:Bounds x="870" y="188" width="180" height="80" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true">
-        <dc:Bounds x="1110" y="178" width="200" height="100" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="1360" y="210" width="36" height="36" />
+        <dc:Bounds x="860" y="178" width="546" height="100" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="86" y="228" />
@@ -125,16 +108,15 @@
         <di:waypoint x="370" y="222" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-        <di:waypoint x="800" y="228" />
-        <di:waypoint x="870" y="228" />
+        <di:waypoint x="800" y="220" />
+        <di:waypoint x="860" y="221" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-        <di:waypoint x="1050" y="228" />
-        <di:waypoint x="1110" y="228" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
-        <di:waypoint x="1310" y="228" />
-        <di:waypoint x="1360" y="228" />
+      <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
+        <dc:Bounds x="1466" y="210" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_to_Main_End_di" bpmnElement="Flow_to_Main_End">
+        <di:waypoint x="1406" y="228" />
+        <di:waypoint x="1466" y="228" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

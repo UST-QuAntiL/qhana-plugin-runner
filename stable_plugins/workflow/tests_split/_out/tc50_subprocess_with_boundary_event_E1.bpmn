@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc50_subprocess_with_boundary_event" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc50_subprocess_with_boundary_event_E1" name="Extracted Fragment E1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_E1">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:subProcess id="SubProcess_WithBoundary" name="Subprocess with Boundary Event">
@@ -34,18 +34,21 @@
       <bpmn:sequenceFlow id="Inner_Flow_2" sourceRef="Inner_LongRunning" targetRef="Inner_End" />
       <bpmn:sequenceFlow id="Inner_Flow_Timeout" sourceRef="Inner_TimerBoundary" targetRef="Inner_TimeoutEnd" />
       <bpmn:incoming>Flow_E1_start</bpmn:incoming>
-      <bpmn:outgoing>Flow_E1_end</bpmn:outgoing>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
     </bpmn:subProcess>
-    <bpmn:endEvent id="EndEvent_E1">
-      <bpmn:incoming>Flow_E1_end</bpmn:incoming>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="SubProcess_WithBoundary" />
-    <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="SubProcess_WithBoundary" targetRef="EndEvent_E1" />
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="SubProcess_WithBoundary" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc50_subprocess_with_boundary_event_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc50_subprocess_with_boundary_event_E1" bpmnElement="tc50_subprocess_with_boundary_event_E1">
       <bpmndi:BPMNShape id="SubProcess_WithBoundary_di" bpmnElement="SubProcess_WithBoundary" isExpanded="true">
         <dc:Bounds x="200" y="80" width="460" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="720" y="182" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Inner_Start_di" bpmnElement="Inner_Start">
         <dc:Bounds x="240" y="182" width="36" height="36" />
@@ -78,16 +81,13 @@
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
         <dc:Bounds x="120" y="202" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">
-        <dc:Bounds x="710" y="202" width="36" height="36" />
-      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_end_di" bpmnElement="Flow_end">
+        <di:waypoint x="660" y="200" />
+        <di:waypoint x="720" y="200" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="156" y="220" />
         <di:waypoint x="200" y="220" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
-        <di:waypoint x="660" y="220" />
-        <di:waypoint x="710" y="220" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
