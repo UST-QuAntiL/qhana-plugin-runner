@@ -1258,14 +1258,11 @@ EXPECTED = {
     "tc41_multiple_flows_same_src_target.bpmn": {
         "main_nodes": [
             ("startEvent", "StartEvent_1"),
-            ("exclusiveGateway", "Gateway_Split"),
             ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
             ("endEvent", "EndEvent_Main"),
         ],
         "main_flows": [
-            ("Flow_1", "StartEvent_1", "Gateway_Split", None),
-            ("Flow_Path_A", "Gateway_Split", "AdHoc_E1_Wrapper", "${type == 'A'}"),
-            ("Flow_Path_B", "Gateway_Split", "AdHoc_E1_Wrapper", "${type == 'B'}"),
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
             ("Flow_to_Main_End", "AdHoc_E1_Wrapper", "EndEvent_Main", None),
         ],
         "fragments": [
@@ -1275,8 +1272,8 @@ EXPECTED = {
                 "wrapper_id": "AdHoc_E1_Wrapper",
                 "inputs": [],
                 "outputs": [],
-                "task_ids": ["QHanaTask_Target"],
-                "flow_ids": ["Flow_E1_start", "Flow_End"],
+                "task_ids": ["Gateway_Split", "QHanaTask_Target"],
+                "flow_ids": ["Flow_E1_start", "Flow_Path_A", "Flow_Path_B", "Flow_End"],
             }
         ],
     },
@@ -1530,17 +1527,12 @@ EXPECTED = {
     "tc52_parallel_end_events.bpmn": {
         "main_nodes": [
             ("startEvent", "StartEvent_1"),
-            ("parallelGateway", "Gateway_Fork"),
             ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
-            ("adHocSubProcess[wrapper=E2]", "AdHoc_E2_Wrapper"),
             ("endEvent", "EndEvent_Main"),
         ],
         "main_flows": [
-            ("Flow_1", "StartEvent_1", "Gateway_Fork", None),
-            ("Flow_A", "Gateway_Fork", "AdHoc_E1_Wrapper", None),
-            ("Flow_B", "Gateway_Fork", "AdHoc_E2_Wrapper", None),
-            ("Flow_to_Main_End_0", "AdHoc_E2_Wrapper", "EndEvent_Main", None),
-            ("Flow_to_Main_End_1", "AdHoc_E1_Wrapper", "EndEvent_Main", None),
+            ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
+            ("Flow_to_Main_End", "AdHoc_E1_Wrapper", "EndEvent_Main", None),
         ],
         "fragments": [
             {
@@ -1549,18 +1541,19 @@ EXPECTED = {
                 "wrapper_id": "AdHoc_E1_Wrapper",
                 "inputs": [],
                 "outputs": [],
-                "task_ids": ["ServiceTask_ArchiveA"],
-                "flow_ids": ["Flow_E1_start", "Flow_End_A"],
-            },
-            {
-                "fragment_id": "E2",
-                "process_id": "tc52_parallel_end_events_E2",
-                "wrapper_id": "AdHoc_E2_Wrapper",
-                "inputs": [],
-                "outputs": [],
-                "task_ids": ["ServiceTask_ArchiveB"],
-                "flow_ids": ["Flow_E2_start", "Flow_End_B"],
-            },
+                "task_ids": [
+                    "Gateway_Fork",
+                    "ServiceTask_ArchiveA",
+                    "ServiceTask_ArchiveB",
+                ],
+                "flow_ids": [
+                    "Flow_E1_start",
+                    "Flow_A",
+                    "Flow_B",
+                    "Flow_End_A",
+                    "Flow_End_B",
+                ],
+            }
         ],
     },
     "tc53_intermediate_events.bpmn": {

@@ -1,26 +1,41 @@
 <?xml version='1.0' encoding='utf-8'?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc41_multiple_flows" targetNamespace="http://qhana.example/testcases">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc41_multiple_flows" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc41_multiple_flows_same_src_target_E1" name="Extracted Fragment E1" isExecutable="true">
     <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Split">
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_Path_A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Path_B</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
     <qhana:qHAnaServiceTask id="QHanaTask_Target" name="process-data">
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="qhanaName">process-data</camunda:inputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:incoming>Flow_Path_A</bpmn:incoming>
+      <bpmn:incoming>Flow_Path_B</bpmn:incoming>
       <bpmn:outgoing>Flow_End</bpmn:outgoing>
     </qhana:qHAnaServiceTask>
     <bpmn:endEvent id="EndEvent_1">
       <bpmn:incoming>Flow_End</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_Target" />
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="Gateway_Split" />
+    <bpmn:sequenceFlow id="Flow_Path_A" name="Condition A" sourceRef="Gateway_Split" targetRef="QHanaTask_Target">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${type == 'A'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Path_B" name="Condition B" sourceRef="Gateway_Split" targetRef="QHanaTask_Target">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${type == 'B'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_End" sourceRef="QHanaTask_Target" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc41_multiple_flows_same_src_target_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc41_multiple_flows_same_src_target_E1" bpmnElement="tc41_multiple_flows_same_src_target_E1">
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split">
+        <dc:Bounds x="200" y="193" width="50" height="50" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="QHanaTask_Target_di" bpmnElement="QHanaTask_Target">
         <dc:Bounds x="400" y="178" width="150" height="80" />
       </bpmndi:BPMNShape>
@@ -28,15 +43,25 @@
         <dc:Bounds x="600" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
-        <dc:Bounds x="320" y="200" width="36" height="36" />
+        <dc:Bounds x="120" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Path_A_di" bpmnElement="Flow_Path_A">
+        <di:waypoint x="250" y="218" />
+        <di:waypoint x="400" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Path_B_di" bpmnElement="Flow_Path_B">
+        <di:waypoint x="225" y="193" />
+        <di:waypoint x="225" y="100" />
+        <di:waypoint x="475" y="100" />
+        <di:waypoint x="475" y="178" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
         <di:waypoint x="550" y="218" />
         <di:waypoint x="600" y="218" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
-        <di:waypoint x="356" y="218" />
-        <di:waypoint x="400" y="218" />
+        <di:waypoint x="156" y="218" />
+        <di:waypoint x="200" y="218" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

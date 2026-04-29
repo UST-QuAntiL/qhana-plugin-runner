@@ -430,6 +430,7 @@ def _find_regions(
             if not s_node.extractable and s_node.local not in {
                 "exclusiveGateway",
                 "parallelGateway",
+                "startEvent",
             }:
                 all_ok = False
                 break

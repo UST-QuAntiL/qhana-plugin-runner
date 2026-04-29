@@ -4,6 +4,11 @@
     <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
+    <bpmn:parallelGateway id="Gateway_Fork" name="Fork">
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_B</bpmn:outgoing>
+    </bpmn:parallelGateway>
     <bpmn:serviceTask id="ServiceTask_ArchiveA" name="archive-stream-a" camunda:type="external" camunda:topic="qhana-task">
       <bpmn:extensionElements>
         <camunda:inputOutput>
@@ -11,33 +16,72 @@
           <camunda:outputParameter name="qoutput.archiveA">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:incoming>Flow_A</bpmn:incoming>
       <bpmn:outgoing>Flow_End_A</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="ServiceTask_ArchiveB" name="archive-stream-b" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-archive-b</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.archiveB">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_B</bpmn:incoming>
+      <bpmn:outgoing>Flow_End_B</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:endEvent id="EndEvent_A" name="End A">
       <bpmn:incoming>Flow_End_A</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="ServiceTask_ArchiveA" />
+    <bpmn:endEvent id="EndEvent_B" name="End B">
+      <bpmn:incoming>Flow_End_B</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="Gateway_Fork" />
+    <bpmn:sequenceFlow id="Flow_A" sourceRef="Gateway_Fork" targetRef="ServiceTask_ArchiveA" />
+    <bpmn:sequenceFlow id="Flow_B" sourceRef="Gateway_Fork" targetRef="ServiceTask_ArchiveB" />
     <bpmn:sequenceFlow id="Flow_End_A" sourceRef="ServiceTask_ArchiveA" targetRef="EndEvent_A" />
+    <bpmn:sequenceFlow id="Flow_End_B" sourceRef="ServiceTask_ArchiveB" targetRef="EndEvent_B" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc52_parallel_end_events_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc52_parallel_end_events_E1" bpmnElement="tc52_parallel_end_events_E1">
+      <bpmndi:BPMNShape id="Gateway_Fork_di" bpmnElement="Gateway_Fork">
+        <dc:Bounds x="160" y="213" width="50" height="50" />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="ServiceTask_ArchiveA_di" bpmnElement="ServiceTask_ArchiveA">
         <dc:Bounds x="270" y="80" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_ArchiveB_di" bpmnElement="ServiceTask_ArchiveB">
+        <dc:Bounds x="270" y="320" width="140" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_A_di" bpmnElement="EndEvent_A">
         <dc:Bounds x="450" y="102" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
-        <dc:Bounds x="190" y="102" width="36" height="36" />
+      <bpmndi:BPMNShape id="EndEvent_B_di" bpmnElement="EndEvent_B">
+        <dc:Bounds x="450" y="342" width="36" height="36" />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+        <dc:Bounds x="80" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_A_di" bpmnElement="Flow_A">
+        <di:waypoint x="185" y="213" />
+        <di:waypoint x="185" y="120" />
+        <di:waypoint x="270" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_di" bpmnElement="Flow_B">
+        <di:waypoint x="185" y="263" />
+        <di:waypoint x="185" y="360" />
+        <di:waypoint x="270" y="360" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_End_A_di" bpmnElement="Flow_End_A">
         <di:waypoint x="410" y="120" />
         <di:waypoint x="450" y="120" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_End_B_di" bpmnElement="Flow_End_B">
+        <di:waypoint x="410" y="360" />
+        <di:waypoint x="450" y="360" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
-        <di:waypoint x="226" y="120" />
-        <di:waypoint x="270" y="120" />
+        <di:waypoint x="116" y="238" />
+        <di:waypoint x="160" y="238" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
