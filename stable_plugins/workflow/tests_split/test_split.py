@@ -2,13 +2,13 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from splitting.split import split_workflow, SplitNotSupported, write_split_outputs
-from expected_fixtures import EXPECTED
-
 try:
     import pytest
+    from splitting.split import split_workflow, SplitNotSupported, write_split_outputs
+    from expected_fixtures import EXPECTED
 except ImportError:
-    pass
+    if __name__ == "__main__":
+        raise
 
 BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 QHANA_NS = "https://github.com/qhana"

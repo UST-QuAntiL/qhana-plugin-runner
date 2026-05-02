@@ -2,7 +2,11 @@ import pprint
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from splitting.split import split_workflow, SplitNotSupported
+try:
+    from splitting.split import split_workflow, SplitNotSupported
+except ImportError:
+    if __name__ == "__main__":
+        raise
 
 BPMN = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 QHANA = "https://github.com/qhana"
