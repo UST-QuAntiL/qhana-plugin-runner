@@ -118,6 +118,16 @@
         <di:waypoint x="800" y="231" />
         <di:waypoint x="860" y="233" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1_di" bpmnElement="Association_1">
+        <di:waypoint x="226" y="120" />
+        <di:waypoint x="221" y="120" />
+        <di:waypoint x="221" y="188" />
+        <di:waypoint x="216" y="188" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_2_di" bpmnElement="Association_2">
+        <di:waypoint x="340" y="95" />
+        <di:waypoint x="470" y="120" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
         <dc:Bounds x="1226" y="220" width="36" height="36" />
       </bpmndi:BPMNShape>

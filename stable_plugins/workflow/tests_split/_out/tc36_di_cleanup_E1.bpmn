@@ -20,6 +20,10 @@
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_Prepare" />
     <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_Prepare" targetRef="EndEvent_E1" />
+    <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>Annotation linked to removable/extractable area</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="TextAnnotation_1" targetRef="QHanaTask_Prepare" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc36_di_cleanup_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc36_di_cleanup_E1" bpmnElement="tc36_di_cleanup_E1">
@@ -39,6 +43,13 @@
       <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
         <di:waypoint x="300" y="238" />
         <di:waypoint x="350" y="238" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_1_di" bpmnElement="TextAnnotation_1">
+        <dc:Bounds x="120" y="70" width="220" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_1_di" bpmnElement="Association_1">
+        <di:waypoint x="230" y="120" />
+        <di:waypoint x="210" y="198" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -25,8 +25,6 @@
       <bpmn:incoming>Flow_to_Main_End</bpmn:incoming>
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_to_Main_End" sourceRef="AdHoc_E1_Wrapper" targetRef="EndEvent_Main" />
-    <bpmn:dataStoreReference id="DataStoreRef_Results" name="Results" dataStoreRef="DataStore_Results" />
-    <bpmn:association id="Assoc_AdHoc_E1_Wrapper_to_DataStoreRef_Results" sourceRef="AdHoc_E1_Wrapper" targetRef="DataStoreRef_Results" associationDirection="One" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc55_data_store_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc55_data_store_main" bpmnElement="tc55_data_store_main">
@@ -36,18 +34,9 @@
       <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
         <dc:Bounds x="150" y="168" width="256" height="100" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="DataStoreRef_Results_di" bpmnElement="DataStoreRef_Results">
-        <dc:Bounds x="195" y="320" width="50" height="50" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="116" y="218" />
         <di:waypoint x="150" y="218" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Assoc_AdHoc_E1_Wrapper_to_DataStoreRef_Results_di" bpmnElement="Assoc_AdHoc_E1_Wrapper_to_DataStoreRef_Results">
-        <di:waypoint x="255" y="268" />
-        <di:waypoint x="243" y="268" />
-        <di:waypoint x="243" y="320" />
-        <di:waypoint x="231" y="320" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="EndEvent_Main_di" bpmnElement="EndEvent_Main">
         <dc:Bounds x="466" y="200" width="36" height="36" />

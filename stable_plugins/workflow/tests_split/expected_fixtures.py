@@ -1,3 +1,5 @@
+"""Auto-generated fixtures."""
+
 EXPECTED = {
     "tc01_exec_before_adhoc.bpmn": {
         "main_nodes": [
@@ -914,7 +916,12 @@ EXPECTED = {
                 "wrapper_id": "AdHoc_E1_Wrapper",
                 "inputs": [],
                 "outputs": ["qoutput.contractDoc"],
-                "task_ids": ["UserTask_Input", "QHanaTask_DraftContract"],
+                "task_ids": [
+                    "UserTask_Input",
+                    "QHanaTask_DraftContract",
+                    "DataObjectReference_Doc",
+                    "DataObject_Doc",
+                ],
                 "flow_ids": ["Flow_E1_start", "Flow_2", "Flow_E1_end"],
             }
         ],
@@ -925,7 +932,6 @@ EXPECTED = {
             ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
             ("adHocSubProcess[original]", "AdHocSubProcess_Audit"),
             ("endEvent", "EndEvent_1"),
-            ("textAnnotation", "TextAnnotation_1"),
         ],
         "main_flows": [
             ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
@@ -939,7 +945,11 @@ EXPECTED = {
                 "wrapper_id": "AdHoc_E1_Wrapper",
                 "inputs": [],
                 "outputs": ["qoutput.filteredLogs"],
-                "task_ids": ["UserTask_Input", "QHanaTask_FilterLogs"],
+                "task_ids": [
+                    "UserTask_Input",
+                    "QHanaTask_FilterLogs",
+                    "TextAnnotation_1",
+                ],
                 "flow_ids": ["Flow_E1_start", "Flow_2", "Flow_E1_end"],
             }
         ],
@@ -1136,7 +1146,7 @@ EXPECTED = {
                 "wrapper_id": "AdHoc_E1_Wrapper",
                 "inputs": [],
                 "outputs": ["qoutput.prepared"],
-                "task_ids": ["QHanaTask_Prepare"],
+                "task_ids": ["QHanaTask_Prepare", "TextAnnotation_1"],
                 "flow_ids": ["Flow_E1_start", "Flow_E1_end"],
             },
             {
@@ -1610,7 +1620,6 @@ EXPECTED = {
             ("startEvent", "StartEvent_1"),
             ("adHocSubProcess[wrapper=E1]", "AdHoc_E1_Wrapper"),
             ("endEvent", "EndEvent_Main"),
-            ("dataStoreReference", "DataStoreRef_Results"),
         ],
         "main_flows": [
             ("Flow_1", "StartEvent_1", "AdHoc_E1_Wrapper", None),
@@ -1623,7 +1632,7 @@ EXPECTED = {
                 "wrapper_id": "AdHoc_E1_Wrapper",
                 "inputs": [],
                 "outputs": [],
-                "task_ids": ["ServiceTask_Persist"],
+                "task_ids": ["ServiceTask_Persist", "DataStoreRef_Results"],
                 "flow_ids": ["Flow_E1_start", "Flow_2"],
             }
         ],

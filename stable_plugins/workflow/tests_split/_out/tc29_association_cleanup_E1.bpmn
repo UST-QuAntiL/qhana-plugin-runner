@@ -30,6 +30,10 @@
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Input" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_FilterLogs" />
     <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_FilterLogs" targetRef="EndEvent_E1" />
+    <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>Critical: This plugin will be extracted. Ensure the association line does not crash the Camunda engine by becoming a dangling edge.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="QHanaTask_FilterLogs" targetRef="TextAnnotation_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc29_association_cleanup_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc29_association_cleanup_E1" bpmnElement="tc29_association_cleanup_E1">
@@ -56,6 +60,13 @@
       <bpmndi:BPMNEdge id="Flow_E1_end_di" bpmnElement="Flow_E1_end">
         <di:waypoint x="560" y="268" />
         <di:waypoint x="610" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_1_di" bpmnElement="TextAnnotation_1">
+        <dc:Bounds x="420" y="80" width="220" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_1_di" bpmnElement="Association_1">
+        <di:waypoint x="475" y="228" />
+        <di:waypoint x="475" y="150" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

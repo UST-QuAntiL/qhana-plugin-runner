@@ -44,10 +44,6 @@
     <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHocSubProcess_Audit" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="AdHocSubProcess_Audit" targetRef="EndEvent_1" />
-    <bpmn:textAnnotation id="TextAnnotation_1">
-      <bpmn:text>Critical: This plugin will be extracted. Ensure the association line does not crash the Camunda engine by becoming a dangling edge.</bpmn:text>
-    </bpmn:textAnnotation>
-    <bpmn:association id="Association_1" sourceRef="AdHoc_E1_Wrapper" targetRef="TextAnnotation_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc29_association_cleanup_main">
     <bpmndi:BPMNPlane id="BPMNPlane_tc29_association_cleanup_main" bpmnElement="tc29_association_cleanup_main">
@@ -65,9 +61,6 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
         <dc:Bounds x="1100" y="250" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="TextAnnotation_1_di" bpmnElement="TextAnnotation_1">
-        <dc:Bounds x="420" y="80" width="220" height="70" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
         <di:waypoint x="116" y="268" />

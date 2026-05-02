@@ -23,6 +23,7 @@
     </bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="ServiceTask_Persist" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Persist" targetRef="EndEvent_1" />
+    <bpmn:dataStoreReference id="DataStoreRef_Results" name="Results" dataStoreRef="DataStore_Results" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc55_data_store_E1">
     <bpmndi:BPMNPlane id="BPMNPlane_tc55_data_store_E1" bpmnElement="tc55_data_store_E1">
@@ -42,6 +43,13 @@
       <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
         <di:waypoint x="116" y="218" />
         <di:waypoint x="160" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="DataStoreRef_Results_di" bpmnElement="DataStoreRef_Results">
+        <dc:Bounds x="195" y="320" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutAssoc_1_di" bpmnElement="DataOutAssoc_1">
+        <di:waypoint x="230" y="258" />
+        <di:waypoint x="220" y="320" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

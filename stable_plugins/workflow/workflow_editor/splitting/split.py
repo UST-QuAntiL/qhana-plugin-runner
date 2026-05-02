@@ -891,6 +891,42 @@ def _build_main_process(
                 _add_outgoing(leaf_elem, flow_id)
             _add_incoming(synth_end, flow_id)
 
+    data_refs_in_fragments: Set[str] = set()
+    for r in regions:
+        for nid in r.node_ids:
+            node_elem = nodes[nid].elem
+            for desc in node_elem.iter():
+                dlocal = _localname(desc.tag)
+                if dlocal == "dataOutputAssociation":
+                    for tgt_el in desc.findall(f"{{{BPMN_NS}}}targetRef"):
+                        ref = (tgt_el.text or "").strip()
+                        if ref:
+                            data_refs_in_fragments.add(ref)
+                elif dlocal == "dataInputAssociation":
+                    for src_el in desc.findall(f"{{{BPMN_NS}}}sourceRef"):
+                        ref = (src_el.text or "").strip()
+                        if ref:
+                            data_refs_in_fragments.add(ref)
+
+    data_refs_in_main: Set[str] = set()
+    main_node_ids = {e.get("id") for e in main.iter() if e.get("id")}
+    for child in original_process:
+        local = _localname(child.tag)
+        cid = child.get("id") or ""
+        if cid in main_node_ids:
+            for desc in child.iter():
+                dlocal = _localname(desc.tag)
+                if dlocal == "dataOutputAssociation":
+                    for tgt_el in desc.findall(f"{{{BPMN_NS}}}targetRef"):
+                        ref = (tgt_el.text or "").strip()
+                        if ref:
+                            data_refs_in_main.add(ref)
+                elif dlocal == "dataInputAssociation":
+                    for src_el in desc.findall(f"{{{BPMN_NS}}}sourceRef"):
+                        ref = (src_el.text or "").strip()
+                        if ref:
+                            data_refs_in_main.add(ref)
+
     surviving_ids = {e.get("id") for e in main.iter() if e.get("id")}
     for child in list(original_process):
         local = _localname(child.tag)
@@ -898,13 +934,37 @@ def _build_main_process(
             "dataObject",
             "dataObjectReference",
             "dataStoreReference",
-            "textAnnotation",
             "group",
         }:
+            cid = child.get("id") or ""
+            if cid in data_refs_in_fragments and cid not in data_refs_in_main:
+                continue
             main.append(copy.deepcopy(child))
-            aid = child.get("id")
-            if aid:
-                surviving_ids.add(aid)
+            if cid:
+                surviving_ids.add(cid)
+        elif local == "textAnnotation":
+            ann_id = child.get("id") or ""
+            all_endpoints_in_fragments = True
+            has_any_assoc = False
+            for assoc in original_process:
+                if _localname(assoc.tag) != "association":
+                    continue
+                src = assoc.get("sourceRef") or ""
+                tgt = assoc.get("targetRef") or ""
+                if src == ann_id or tgt == ann_id:
+                    has_any_assoc = True
+                    other = tgt if src == ann_id else src
+                    all_region_ids = set()
+                    for r in regions:
+                        all_region_ids.update(r.node_ids)
+                    if other not in all_region_ids:
+                        all_endpoints_in_fragments = False
+                        break
+            if has_any_assoc and all_endpoints_in_fragments:
+                continue
+            main.append(copy.deepcopy(child))
+            if ann_id:
+                surviving_ids.add(ann_id)
 
     def remap_for_assoc(ref: str) -> str:
         for r in regions:
@@ -939,7 +999,7 @@ def _build_main_process(
                             if key in seen_visual_assocs:
                                 continue
                             seen_visual_assocs.add(key)
-                            a = ET.SubElement(
+                            ET.SubElement(
                                 main,
                                 _bpmn("association"),
                                 attrib={
@@ -957,7 +1017,7 @@ def _build_main_process(
                             if key in seen_visual_assocs:
                                 continue
                             seen_visual_assocs.add(key)
-                            a = ET.SubElement(
+                            ET.SubElement(
                                 main,
                                 _bpmn("association"),
                                 attrib={
@@ -973,8 +1033,10 @@ def _build_main_process(
         if blocal not in ("adHocSubProcess", "subProcess"):
             continue
         block_id = block.get("id")
-        if not block_id or block_id in wrapper_id_for_region_idx.values():
-            continue  # skip our synthesized wrappers
+        if not block_id:
+            continue
+        if block_id in wrapper_id_for_region_idx.values():
+            continue
         for desc in block.iter():
             if desc is block:
                 continue
@@ -1050,6 +1112,7 @@ def _build_fragment_process(
     nodes: Dict[str, Node],
     flows: Dict[str, Flow],
     fragment_process_id: str,
+    original_process: ET.Element,
 ) -> ET.Element:
     fid = f"E{region.index}"
     proc = ET.Element(
@@ -1208,6 +1271,69 @@ def _build_fragment_process(
             if exit_nid in elem_by_id:
                 _add_outgoing(elem_by_id[exit_nid], flow_id)
             _add_incoming(end_elem, flow_id)
+
+    data_refs_in_fragment: Set[str] = set()
+    for nid in region.node_ids:
+        node_elem = nodes[nid].elem
+        for desc in node_elem.iter():
+            dlocal = _localname(desc.tag)
+            if dlocal == "dataOutputAssociation":
+                for tgt_el in desc.findall(f"{{{BPMN_NS}}}targetRef"):
+                    ref = (tgt_el.text or "").strip()
+                    if ref:
+                        data_refs_in_fragment.add(ref)
+            elif dlocal == "dataInputAssociation":
+                for src_el in desc.findall(f"{{{BPMN_NS}}}sourceRef"):
+                    ref = (src_el.text or "").strip()
+                    if ref:
+                        data_refs_in_fragment.add(ref)
+
+    for child in original_process:
+        local = _localname(child.tag)
+        cid = child.get("id") or ""
+        if (
+            local
+            in {
+                "dataObject",
+                "dataObjectReference",
+                "dataStoreReference",
+            }
+            and cid in data_refs_in_fragment
+        ):
+            proc.append(copy.deepcopy(child))
+            obj_ref = child.get("dataObjectRef") or child.get("dataStoreRef")
+            if obj_ref:
+                for sibling in original_process:
+                    if (
+                        _localname(sibling.tag)
+                        in {
+                            "dataObject",
+                            "dataStore",
+                        }
+                        and sibling.get("id") == obj_ref
+                    ):
+                        proc.append(copy.deepcopy(sibling))
+
+    frag_all_ids = {e.get("id") for e in proc.iter() if e.get("id")}
+    for child in original_process:
+        if _localname(child.tag) != "textAnnotation":
+            continue
+        ann_id = child.get("id")
+        for assoc in original_process:
+            if _localname(assoc.tag) != "association":
+                continue
+            src = assoc.get("sourceRef") or ""
+            tgt = assoc.get("targetRef") or ""
+            other = None
+            if src == ann_id and tgt in component_set:
+                other = tgt
+            elif tgt == ann_id and src in component_set:
+                other = src
+            if other is not None:
+                proc.append(copy.deepcopy(child))
+                a = copy.deepcopy(assoc)
+                proc.append(a)
+                break
 
     return proc
 
@@ -1631,24 +1757,38 @@ def _build_main_di(
 
     for assoc in main_process.findall(f"{{{BPMN_NS}}}association"):
         aid = assoc.get("id") or ""
-        if not aid.startswith("Assoc_"):
-            continue
-        if aid in original_edges:
-            continue
         src = assoc.get("sourceRef") or ""
         tgt = assoc.get("targetRef") or ""
-        src_shape = shapes_by_id.get(src)
-        if src_shape is None:
-            src_shape = original_shapes.get(src)
-        tgt_shape = shapes_by_id.get(tgt)
-        if tgt_shape is None:
-            tgt_shape = original_shapes.get(tgt)
-        if src_shape is None or tgt_shape is None:
-            continue
-        waypoints = _docked_waypoints(src_shape, tgt_shape)
-        if waypoints is None:
-            continue
-        plane.append(_make_edge(aid, waypoints))
+        orig_edge = original_edges.get(aid)
+        if orig_edge is not None:
+            src_shape = shapes_by_id.get(src)
+            if src_shape is None:
+                src_shape = original_shapes.get(src)
+            tgt_shape = shapes_by_id.get(tgt)
+            if tgt_shape is None:
+                tgt_shape = original_shapes.get(tgt)
+            if src_shape is not None and tgt_shape is not None:
+                if src in wrapper_bounds or tgt in wrapper_bounds:
+                    waypoints = _docked_waypoints(src_shape, tgt_shape)
+                    if waypoints is not None:
+                        plane.append(_make_edge(aid, waypoints))
+                else:
+                    plane.append(copy.deepcopy(orig_edge))
+            else:
+                plane.append(copy.deepcopy(orig_edge))
+        else:
+            src_shape = shapes_by_id.get(src)
+            if src_shape is None:
+                src_shape = original_shapes.get(src)
+            tgt_shape = shapes_by_id.get(tgt)
+            if tgt_shape is None:
+                tgt_shape = original_shapes.get(tgt)
+            if src_shape is None or tgt_shape is None:
+                continue
+            waypoints = _docked_waypoints(src_shape, tgt_shape)
+            if waypoints is None:
+                continue
+            plane.append(_make_edge(aid, waypoints))
 
     main_ids = _collect_ids(main_process)
     if "EndEvent_Main" in main_ids:
@@ -1687,6 +1827,43 @@ def _build_main_di(
             waypoints = _docked_waypoints(src_shape, end_shape)
             if waypoints is not None:
                 plane.append(_make_edge(fid, waypoints))
+
+    emitted_edge_ids = {
+        e.get("bpmnElement") for e in plane if _localname(e.tag) == "BPMNEdge"
+    }
+    for child in main_process:
+        for desc in child.iter():
+            dl = _localname(desc.tag)
+            if dl not in (
+                "dataOutputAssociation",
+                "dataInputAssociation",
+            ):
+                continue
+            did = desc.get("id") or ""
+            if did in emitted_edge_ids:
+                continue
+            orig_edge = original_edges.get(did)
+            if orig_edge is not None:
+                plane.append(copy.deepcopy(orig_edge))
+            else:
+                if dl == "dataOutputAssociation":
+                    src_id = child.get("id") or ""
+                    tgt_el = desc.find(f"{{{BPMN_NS}}}targetRef")
+                    tgt_id = (tgt_el.text or "").strip() if tgt_el is not None else ""
+                else:
+                    tgt_id = child.get("id") or ""
+                    src_el = desc.find(f"{{{BPMN_NS}}}sourceRef")
+                    src_id = (src_el.text or "").strip() if src_el is not None else ""
+                src_shape = shapes_by_id.get(src_id)
+                if src_shape is None:
+                    src_shape = original_shapes.get(src_id)
+                tgt_shape = shapes_by_id.get(tgt_id)
+                if tgt_shape is None:
+                    tgt_shape = original_shapes.get(tgt_id)
+                if src_shape is not None and tgt_shape is not None:
+                    waypoints = _docked_waypoints(src_shape, tgt_shape)
+                    if waypoints is not None:
+                        plane.append(_make_edge(did, waypoints))
 
     return diagram
 
@@ -1918,6 +2095,95 @@ def _build_fragment_di(
             if wp is not None:
                 plane.append(_make_edge(sfid, wp))
 
+    frag_proc_ids = _collect_ids(fragment_process)
+    data_ann_locals = {
+        "dataObject",
+        "dataObjectReference",
+        "dataStoreReference",
+        "textAnnotation",
+        "group",
+    }
+    for child in fragment_process:
+        local = _localname(child.tag)
+        cid = child.get("id") or ""
+        if local in data_ann_locals and cid not in emitted_frag_ids:
+            orig = original_shapes.get(cid)
+            if orig is not None:
+                shape = copy.deepcopy(orig)
+                plane.append(shape)
+                emitted_frag_ids.add(cid)
+            else:
+                b = _bounds_of(last_task) if last_task is not None else None
+                if b is not None:
+                    dx = b[0]
+                    dy = b[1] + b[3] + 40
+                else:
+                    dx, dy = tasks_min_x, tasks_mid_y + 100
+                fallback = _make_shape(cid, dx, dy, 50, 50)
+                plane.append(fallback)
+                emitted_frag_ids.add(cid)
+
+    for child in fragment_process:
+        if _localname(child.tag) != "association":
+            continue
+        aid = child.get("id") or ""
+        if aid in emitted_frag_ids:
+            continue
+        orig_edge = original_edges.get(aid)
+        if orig_edge is not None:
+            plane.append(copy.deepcopy(orig_edge))
+            emitted_frag_ids.add(aid)
+        else:
+            src = child.get("sourceRef") or ""
+            tgt = child.get("targetRef") or ""
+            src_shape = _find_shape_in_plane(plane, src)
+            if src_shape is None:
+                src_shape = original_shapes.get(src)
+            tgt_shape = _find_shape_in_plane(plane, tgt)
+            if tgt_shape is None:
+                tgt_shape = original_shapes.get(tgt)
+            if src_shape is not None and tgt_shape is not None:
+                wp = _docked_waypoints(src_shape, tgt_shape)
+                if wp is not None:
+                    plane.append(_make_edge(aid, wp))
+                    emitted_frag_ids.add(aid)
+
+    for child in fragment_process:
+        for desc in child.iter():
+            dl = _localname(desc.tag)
+            if dl not in (
+                "dataOutputAssociation",
+                "dataInputAssociation",
+            ):
+                continue
+            did = desc.get("id") or ""
+            if did in emitted_frag_ids:
+                continue
+            orig_edge = original_edges.get(did)
+            if orig_edge is not None:
+                plane.append(copy.deepcopy(orig_edge))
+                emitted_frag_ids.add(did)
+            else:
+                if dl == "dataOutputAssociation":
+                    src_id = child.get("id") or ""
+                    tgt_el = desc.find(f"{{{BPMN_NS}}}targetRef")
+                    tgt_id = (tgt_el.text or "").strip() if tgt_el is not None else ""
+                else:
+                    tgt_id = child.get("id") or ""
+                    src_el = desc.find(f"{{{BPMN_NS}}}sourceRef")
+                    src_id = (src_el.text or "").strip() if src_el is not None else ""
+                src_shape = _find_shape_in_plane(plane, src_id)
+                if src_shape is None:
+                    src_shape = original_shapes.get(src_id)
+                tgt_shape = _find_shape_in_plane(plane, tgt_id)
+                if tgt_shape is None:
+                    tgt_shape = original_shapes.get(tgt_id)
+                if src_shape is not None and tgt_shape is not None:
+                    wp = _docked_waypoints(src_shape, tgt_shape)
+                    if wp is not None:
+                        plane.append(_make_edge(did, wp))
+                        emitted_frag_ids.add(did)
+
     return diagram
 
 
@@ -1982,7 +2248,7 @@ def split_workflow(
     for r in regions:
         fid = f"E{r.index}"
         frag_pid = f"{original_pid}_{fid}"
-        frag_proc = _build_fragment_process(r, nodes, flows, frag_pid)
+        frag_proc = _build_fragment_process(r, nodes, flows, frag_pid, original_process)
         frag_defs = _build_fragment_definitions(original_root, frag_proc, r)
         frag_xml = _serialize(frag_defs)
         inputs, outputs = _compute_region_io(r, nodes, regions)

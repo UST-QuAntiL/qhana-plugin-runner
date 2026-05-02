@@ -102,6 +102,10 @@
         <di:waypoint x="588" y="136" />
         <di:waypoint x="620" y="136" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataInputAssociation_1_di" bpmnElement="DataInputAssociation_1">
+        <di:waypoint x="556" y="115" />
+        <di:waypoint x="620" y="178" />
+      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
