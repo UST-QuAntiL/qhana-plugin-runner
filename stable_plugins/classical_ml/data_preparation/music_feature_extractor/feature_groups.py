@@ -413,9 +413,7 @@ def compute_meter_tempo_group(
                 "tempo_std_norm": clamp01(std(tempo_values) / 120.0),
                 "tempo_min_norm": clamp01(min(tempo_values) / 240.0),
                 "tempo_max_norm": clamp01(max(tempo_values) / 240.0),
-                "tempo_change_count_norm": clamp01(
-                    max(len(tempo_values) - 1, 0) / 16.0
-                ),
+                "tempo_change_count_norm": clamp01(max(len(tempo_values) - 1, 0) / 16.0),
             }
         )
 
@@ -557,8 +555,7 @@ def compute_harmony_group(
         quality_counts[classify_chord_quality(quality)] += 1
 
     values = {
-        f"chord_root_pc_norm_{idx}": root_counts[idx] / event_count
-        for idx in range(12)
+        f"chord_root_pc_norm_{idx}": root_counts[idx] / event_count for idx in range(12)
     }
     values.update(
         {

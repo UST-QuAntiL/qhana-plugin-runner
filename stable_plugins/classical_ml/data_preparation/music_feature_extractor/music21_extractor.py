@@ -121,9 +121,7 @@ def extract_music21_payload_from_bytes(
                         bpm = safe_float(get_bpm())
                 if bpm is None:
                     continue
-                tempo_changes.append(
-                    {"measure": music21_measure_hint(mark), "bpm": bpm}
-                )
+                tempo_changes.append({"measure": music21_measure_hint(mark), "bpm": bpm})
 
             for meter in recurse.getElementsByClass("TimeSignature"):
                 beats = safe_int(getattr(meter, "numerator", None))

@@ -394,9 +394,7 @@ def parse_harmony_event(harmony: ET.Element) -> tuple[int | None, str | None]:
     root = harmony.find("./{*}root")
     step = get_text(root.find("./{*}root-step")) if root is not None else None
     alter = (
-        parse_int(get_text(root.find("./{*}root-alter")))
-        if root is not None
-        else None
+        parse_int(get_text(root.find("./{*}root-alter"))) if root is not None else None
     )
 
     root_pc: int | None = None

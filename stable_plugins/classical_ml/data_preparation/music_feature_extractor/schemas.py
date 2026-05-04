@@ -47,6 +47,8 @@ FEATURE_PRESET_GROUPS = {
     "full": FEATURE_GROUP_ORDER,
     "custom": (),
 }
+
+
 @dataclass
 class InputParameters:
     source_url: str
@@ -63,6 +65,7 @@ class InputParameters:
     include_dynamics: bool = False
     include_tonality: bool = False
     include_harmony: bool = False
+
 
 class InputParametersSchema(FrontendFormBaseSchema):
     source_url = FileUrl(
