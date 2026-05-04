@@ -40,7 +40,6 @@ from .feature_extractor import MusicFeatureInput, extract_music_features
 from .io_utils import load_music_sources
 from .schemas import (
     InputParametersSchema,
-    TaskResponseSchema,
     list_enabled_groups,
     resolve_feature_selection_from_values,
 )
@@ -193,7 +192,7 @@ class ProcessView(MethodView):
     @MusicFeatureExtractor_BLP.arguments(
         InputParametersSchema(unknown=EXCLUDE), location="form"
     )
-    @MusicFeatureExtractor_BLP.response(HTTPStatus.OK, TaskResponseSchema())
+    @MusicFeatureExtractor_BLP.response(HTTPStatus.SEE_OTHER)
     @MusicFeatureExtractor_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         db_task = ProcessingTask(
@@ -215,12 +214,12 @@ class ProcessView(MethodView):
 
 
 def _build_preflight(values: Mapping[str, object]) -> tuple[dict | None, str | None]:
-    source_url = str(values.get("sourceUrl") or "").strip()
-    source_mode = str(values.get("sourceMode") or "auto")
-    declared_format = str(values.get("declaredFormat") or "auto")
+    source_url = str(values.get("sourceUrl", "")).strip()
+    source_mode = str(values.get("sourceMode", "auto"))
+    declared_format = str(values.get("declaredFormat", "auto"))
     try:
-        max_files = int(values.get("maxFiles") or 1000)
-    except ValueError:
+        max_files = int(values.get("maxFiles", 1000))
+    except (TypeError, ValueError):
         max_files = 1000
     feature_preset, feature_selection = resolve_feature_selection_from_values(values)
     enabled_groups = list_enabled_groups(feature_selection)

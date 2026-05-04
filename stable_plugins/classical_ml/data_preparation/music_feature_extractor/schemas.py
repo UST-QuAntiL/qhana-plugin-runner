@@ -18,7 +18,7 @@ from typing import Mapping
 import marshmallow as ma
 from marshmallow import post_load, validate
 
-from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema, MaBaseSchema
+from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
 from .io_utils import DECLARED_FORMAT_OPTIONS, SOURCE_MODE_OPTIONS
 
@@ -47,15 +47,7 @@ FEATURE_PRESET_GROUPS = {
     "full": FEATURE_GROUP_ORDER,
     "custom": (),
 }
-
-
-class TaskResponseSchema(MaBaseSchema):
-    name = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_id = ma.fields.String(required=True, allow_none=False, dump_only=True)
-    task_result_url = ma.fields.Url(required=True, allow_none=False, dump_only=True)
-
-
-@dataclass(repr=False)
+@dataclass
 class InputParameters:
     source_url: str
     source_mode: str = "auto"
@@ -71,10 +63,6 @@ class InputParameters:
     include_dynamics: bool = False
     include_tonality: bool = False
     include_harmony: bool = False
-
-    def __str__(self):
-        return str(self.__dict__)
-
 
 class InputParametersSchema(FrontendFormBaseSchema):
     source_url = FileUrl(
@@ -330,11 +318,6 @@ def list_enabled_groups(selection: Mapping[str, bool]) -> list[str]:
 
 
 def _to_bool(value: object) -> bool:
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return False
-    if isinstance(value, (int, float)):
-        return bool(value)
-    text = str(value).strip().lower()
-    return text in {"1", "true", "yes", "on"}
+    if isinstance(value, str):
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
