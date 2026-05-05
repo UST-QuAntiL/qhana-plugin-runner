@@ -18,6 +18,7 @@ from .build import (
     _build_main_process,
     _build_fragment_process,
     _compute_region_io,
+    _ensure_history_ttl,
 )
 from .di import (
     _build_main_definitions,
@@ -47,6 +48,8 @@ def split_workflow(
         original_process, nodes, flows, order, regions, new_main_pid
     )
 
+    _ensure_history_ttl(main_process)
+
     main_defs = _build_main_definitions(
         original_root, main_process, original_pid, new_main_pid, regions
     )
@@ -57,6 +60,7 @@ def split_workflow(
         fid = f"E{r.index}"
         frag_pid = f"{original_pid}_{fid}"
         frag_proc = _build_fragment_process(r, nodes, flows, frag_pid, original_process)
+        _ensure_history_ttl(frag_proc)
         frag_defs = _build_fragment_definitions(original_root, frag_proc, r)
         frag_xml = _serialize(frag_defs)
         inputs, outputs = _compute_region_io(r, nodes, regions)

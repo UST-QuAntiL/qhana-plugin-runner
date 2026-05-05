@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc54_specialized_end_events" targetNamespace="http://qhana.example/testcases">
   <bpmn:message id="Message_Done" name="DoneMessage" />
-  <bpmn:process id="tc54_specialized_end_events_main" name="TC54 - Specialized end events" isExecutable="true">
+  <bpmn:process id="tc54_specialized_end_events_main" name="TC54 - Specialized end events" isExecutable="true" camunda:historyTimeToLive="180">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>

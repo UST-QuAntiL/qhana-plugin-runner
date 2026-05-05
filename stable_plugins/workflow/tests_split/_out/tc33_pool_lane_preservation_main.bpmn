@@ -3,7 +3,7 @@
   <bpmn:collaboration id="Collaboration_tc33">
     <bpmn:participant id="Participant_1" name="IT Department" processRef="tc33_pool_lane_preservation_main" />
   </bpmn:collaboration>
-  <bpmn:process id="tc33_pool_lane_preservation_main" name="TC33 - Pool Lane Preservation" isExecutable="true" camunda:versionTag="0.2">
+  <bpmn:process id="tc33_pool_lane_preservation_main" name="TC33 - Pool Lane Preservation" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
     <bpmn:laneSet id="LaneSet_1">
       <bpmn:lane id="Lane_1" name="System Engineers">
         <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>

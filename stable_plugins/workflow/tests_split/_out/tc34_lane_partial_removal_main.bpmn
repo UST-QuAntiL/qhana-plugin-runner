@@ -3,7 +3,7 @@
   <bpmn:collaboration id="Collaboration_tc34">
     <bpmn:participant id="Participant_1" name="Enterprise" processRef="tc34_lane_partial_removal_main" />
   </bpmn:collaboration>
-  <bpmn:process id="tc34_lane_partial_removal_main" name="TC34 - Lane Partial Removal" isExecutable="true" camunda:versionTag="0.2">
+  <bpmn:process id="tc34_lane_partial_removal_main" name="TC34 - Lane Partial Removal" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
     <bpmn:laneSet id="LaneSet_1">
       <bpmn:lane id="Lane_System" name="System Layer">
         <bpmn:flowNodeRef>AdHoc_E1_Wrapper</bpmn:flowNodeRef>

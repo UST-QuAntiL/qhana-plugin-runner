@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc39_compressed_flow_condition" targetNamespace="http://qhana.example/testcases">
-  <bpmn:process id="tc39_compressed_flow_condition_main" name="TC39 - Compressed Flow Condition" isExecutable="true" camunda:versionTag="0.2">
+  <bpmn:process id="tc39_compressed_flow_condition_main" name="TC39 - Compressed Flow Condition" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>

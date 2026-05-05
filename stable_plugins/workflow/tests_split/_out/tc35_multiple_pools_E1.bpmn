@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc35_multiple_pools" targetNamespace="http://qhana.example/testcases">
-  <bpmn:process id="tc35_multiple_pools_E1" name="Extracted Fragment E1" isExecutable="true">
+  <bpmn:process id="tc35_multiple_pools_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
     <bpmn:startEvent id="StartEvent_E1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>

@@ -803,3 +803,9 @@ def _build_fragment_process(
                 break
 
     return proc
+
+
+def _ensure_history_ttl(process: ET.Element) -> None:
+    ttl_attr = _camunda("historyTimeToLive")
+    if process.get(ttl_attr) is None:
+        process.set(ttl_attr, "180")

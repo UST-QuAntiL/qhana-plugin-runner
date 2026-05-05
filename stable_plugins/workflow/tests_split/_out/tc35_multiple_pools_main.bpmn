@@ -5,7 +5,7 @@
     <bpmn:participant id="Participant_Vendor" name="Vendor" processRef="tc35_multiple_pools_main" />
     <bpmn:messageFlow id="MessageFlow_1" sourceRef="Participant_Customer" targetRef="QHanaTask_ReceiveOrder" />
   </bpmn:collaboration>
-  <bpmn:process id="tc35_multiple_pools_main" name="TC35 - Multiple Pools" isExecutable="true" camunda:versionTag="0.2">
+  <bpmn:process id="tc35_multiple_pools_main" name="TC35 - Multiple Pools" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
     <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
