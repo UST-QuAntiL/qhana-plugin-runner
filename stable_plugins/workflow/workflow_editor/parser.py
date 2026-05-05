@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import Dict, List, Literal, Optional, Sequence, Set, Tuple, TypeAlias, Union
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
+from .splitting import split_workflow, SplitNotSupported, FragmentResult
 
 BPMN_NS = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 BPMN_DI_NS = "{http://www.omg.org/spec/BPMN/20100524/DI}"
@@ -224,14 +225,18 @@ class UiTemplateTaskGroup:
         return text
 
 
-def split_ui_template_workflow(bpmn: str) -> tuple[str, tuple[str, ...]]:
-    # root = ElementTree.fromstring(bpmn)
+def split_ui_template_workflow(
+    bpmn: str,
+) -> tuple[str, tuple[FragmentResult, ...]]:
+    try:
+        result = split_workflow(bpmn)
+    except SplitNotSupported:
+        return bpmn, tuple()
 
-    # TODO split workflow into a main workflow containing only ad-hoc task groups for the UI template
-    # and 0 or more executable workflows that need to be deployed as plugins.
-    # The main workflow should have an ad-hoc group with the plugin as placeholder for the extracted executable parts.
+    if not result.fragments:
+        return result.main_xml, tuple()
 
-    return bpmn, tuple()
+    return result.main_xml, tuple(result.fragments)
 
 
 def _compact_tree(groups: Sequence[UiTemplateTaskGroup]) -> list[UiTemplateTaskGroup]:
@@ -500,7 +505,7 @@ def _parse_bpmn(bpmn: str):
     while len(nodes) > 0:
         node, parent = nodes.popleft()
         next_parent = parent
-        if node.tag == BPMN.subProcess:
+        if node.tag in (BPMN.subProcess, BPMN.adHocSubProcess):
             next_parent = node
         for n in node:
             if n.tag in IGNORED_TAGS:
@@ -580,7 +585,7 @@ def _parse_bpmn(bpmn: str):
     # postprocess start events
     for parent_id, start_event in start_events.items():
         parent = parsed.activities[parent_id]
-        assert parent.type_ == BPMN.subProcess
+        assert parent.type_ in (BPMN.subProcess, BPMN.adHocSubProcess)
         parent.start_event = start_event
 
     # postprocess activities
