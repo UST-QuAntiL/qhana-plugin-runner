@@ -1,6 +1,6 @@
 # Co-locate plugin tests with plugin code
 
-* Status: [proposed]
+* Status: [accepted]
 * Deciders [Fabian Bühler, EnPro 2026 Team]
 * Date: [2026-04-27]
 
