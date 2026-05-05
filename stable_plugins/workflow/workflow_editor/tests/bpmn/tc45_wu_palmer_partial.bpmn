@@ -124,6 +124,8 @@
           <camunda:inputOutput>
             <camunda:inputParameter name="qinput.mdsPoints">${return.qoutput.mds}</camunda:inputParameter>
             <camunda:inputParameter name="qhanaPlugin">k-means</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaIdentifier">classical-k-means</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">K-Means Clustering</camunda:inputParameter>
             <camunda:outputParameter name="qoutput.clusters">${output}</camunda:outputParameter>
           </camunda:inputOutput>
         </bpmn2:extensionElements>

@@ -1,0 +1,213 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
+  <bpmn:process id="DataAnalysisPipeline_main" name="Data Analysis Pipeline" isExecutable="true" camunda:versionTag="v1.0" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="start_datasetType" label="Dataset Type" type="string" defaultValue="checkerboard" />
+          <camunda:formField id="start_numPoints" label="Number of Points" type="string" defaultValue="100" />
+          <camunda:formField id="start_dimensions" label="Dimensions" type="string" defaultValue="2" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_Start_to_DataCreator</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.DataAnalysisPipeline-E1">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="start_datasetType">${start_datasetType}</camunda:inputParameter>
+            <camunda:inputParameter name="start_numPoints">${start_numPoints}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.encodedData">${qoutput.encodedData}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
+      <bpmn:incoming>Flow_Start_to_DataCreator</bpmn:incoming>
+      <bpmn:outgoing>Flow_OneHot_to_AdHoc</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="AdHoc_Analysis" name="Interactive Analysis" ordering="Parallel">
+      <bpmn:serviceTask id="Task_PCA" name="PCA Visualization" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qinput.dataUrl">${qoutput.encodedData}</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPlugin">pca</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion">v0.2.2</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaIdentifier">pca</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">PCA Visualization</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.pcaResult">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Task_ScatterPlot" name="Clustered Scatter Plot Visualization" camunda:type="external" camunda:topic="qhana-task">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaPlugin">cluster-scatter-visualization</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaPluginVersion">v1-0-0</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaName">Clustered Scatter Plot Visualization</camunda:inputParameter>
+            <camunda:inputParameter name="qhanaIdentifier">cluster-scatter-visualization</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.entityPointsUrl">${return.qoutput.mds}</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:incoming>Flow_OneHot_to_AdHoc</bpmn:incoming>
+      <bpmn:outgoing>Flow_AdHoc_to_XOR</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:exclusiveGateway id="Gateway_XOR_Split" name="Classification Method?" default="Flow_XOR_to_SVM">
+      <bpmn:incoming>Flow_AdHoc_to_XOR</bpmn:incoming>
+      <bpmn:outgoing>Flow_XOR_to_KMeans</bpmn:outgoing>
+      <bpmn:outgoing>Flow_XOR_to_SVM</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
+      <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin-step.DataAnalysisPipeline-E2">
+        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qoutput.encodedData">${qoutput.encodedData}</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E2_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
+      <bpmn:incoming>Flow_XOR_to_KMeans</bpmn:incoming>
+      <bpmn:outgoing>Flow_KMeans_to_Merge</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="AdHoc_E3_Wrapper" name="Extracted Fragment E3" qhana:fragmentRef="E3">
+      <bpmn:startEvent id="StartEvent_AdHoc_E3_Wrapper">
+        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_in</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_E3_Plugin" name="Extracted Fragment E3" camunda:type="external" camunda:topic="plugin-step.DataAnalysisPipeline-E3">
+        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_in</bpmn:incoming>
+        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_out</bpmn:outgoing>
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qoutput.encodedData">${qoutput.encodedData}</camunda:inputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="EndEvent_AdHoc_E3_Wrapper">
+        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_out</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_in" sourceRef="StartEvent_AdHoc_E3_Wrapper" targetRef="ServiceTask_E3_Plugin" />
+      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_out" sourceRef="ServiceTask_E3_Plugin" targetRef="EndEvent_AdHoc_E3_Wrapper" />
+      <bpmn:incoming>Flow_XOR_to_SVM</bpmn:incoming>
+      <bpmn:outgoing>Flow_SVM_to_Merge</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:exclusiveGateway id="Gateway_XOR_Merge">
+      <bpmn:incoming>Flow_KMeans_to_Merge</bpmn:incoming>
+      <bpmn:incoming>Flow_SVM_to_Merge</bpmn:incoming>
+      <bpmn:outgoing>Flow_Merge_to_End</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_Merge_to_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_to_DataCreator" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_OneHot_to_AdHoc" sourceRef="AdHoc_E1_Wrapper" targetRef="AdHoc_Analysis" />
+    <bpmn:sequenceFlow id="Flow_AdHoc_to_XOR" sourceRef="AdHoc_Analysis" targetRef="Gateway_XOR_Split" />
+    <bpmn:sequenceFlow id="Flow_XOR_to_KMeans" sourceRef="Gateway_XOR_Split" targetRef="AdHoc_E2_Wrapper">
+      <bpmn:conditionExpression xsi:type="bpmn2:tFormalExpression">${start_datasetType == "clustered"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_XOR_to_SVM" sourceRef="Gateway_XOR_Split" targetRef="AdHoc_E3_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_KMeans_to_Merge" sourceRef="AdHoc_E2_Wrapper" targetRef="Gateway_XOR_Merge" />
+    <bpmn:sequenceFlow id="Flow_SVM_to_Merge" sourceRef="AdHoc_E3_Wrapper" targetRef="Gateway_XOR_Merge" />
+    <bpmn:sequenceFlow id="Flow_Merge_to_End" sourceRef="Gateway_XOR_Merge" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_DataAnalysisPipeline_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_DataAnalysisPipeline_main" bpmnElement="DataAnalysisPipeline_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="160" y="258" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="166" y="301" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="240" y="226" width="280" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_Analysis_di" bpmnElement="AdHoc_Analysis" isExpanded="true">
+        <dc:Bounds x="570" y="170" width="300" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PCA_di" bpmnElement="Task_PCA">
+        <dc:Bounds x="600" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ScatterPlot_di" bpmnElement="Task_ScatterPlot">
+        <dc:Bounds x="740" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_XOR_Split_di" bpmnElement="Gateway_XOR_Split" isMarkerVisible="true">
+        <dc:Bounds x="930" y="251" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="910" y="221" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E2_Wrapper_di" bpmnElement="AdHoc_E2_Wrapper" isExpanded="true">
+        <dc:Bounds x="1030" y="150" width="120" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E3_Wrapper_di" bpmnElement="AdHoc_E3_Wrapper" isExpanded="true">
+        <dc:Bounds x="1030" y="310" width="120" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_XOR_Merge_di" bpmnElement="Gateway_XOR_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1200" y="251" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1310" y="258" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1318" y="301" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_to_DataCreator_di" bpmnElement="Flow_Start_to_DataCreator">
+        <di:waypoint x="196" y="276" />
+        <di:waypoint x="240" y="276" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OneHot_to_AdHoc_di" bpmnElement="Flow_OneHot_to_AdHoc">
+        <di:waypoint x="520" y="273" />
+        <di:waypoint x="570" y="272" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AdHoc_to_XOR_di" bpmnElement="Flow_AdHoc_to_XOR">
+        <di:waypoint x="870" y="276" />
+        <di:waypoint x="930" y="276" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_XOR_to_KMeans_di" bpmnElement="Flow_XOR_to_KMeans">
+        <di:waypoint x="980" y="261" />
+        <di:waypoint x="1005" y="261" />
+        <di:waypoint x="1005" y="233" />
+        <di:waypoint x="1030" y="233" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_XOR_to_SVM_di" bpmnElement="Flow_XOR_to_SVM">
+        <di:waypoint x="980" y="291" />
+        <di:waypoint x="1005" y="291" />
+        <di:waypoint x="1005" y="322" />
+        <di:waypoint x="1030" y="322" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_KMeans_to_Merge_di" bpmnElement="Flow_KMeans_to_Merge">
+        <di:waypoint x="1150" y="233" />
+        <di:waypoint x="1175" y="233" />
+        <di:waypoint x="1175" y="261" />
+        <di:waypoint x="1200" y="261" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SVM_to_Merge_di" bpmnElement="Flow_SVM_to_Merge">
+        <di:waypoint x="1150" y="322" />
+        <di:waypoint x="1175" y="322" />
+        <di:waypoint x="1175" y="291" />
+        <di:waypoint x="1200" y="291" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Merge_to_End_di" bpmnElement="Flow_Merge_to_End">
+        <di:waypoint x="1250" y="276" />
+        <di:waypoint x="1310" y="276" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
