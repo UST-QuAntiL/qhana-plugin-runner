@@ -598,14 +598,14 @@ Aggregates attribute distances to entity distances.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|[custom/attribute-distances](data-formats/examples/custom.rst#custom-attribute-distances)|application/zip|✓|
+|custom/attribute-distances|application/zip|✓|
 
 
 **Outputs:**
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|[custom/entity-distances](data-formats/examples/custom.rst#custom-entity-distances)|application/zip|✓|
+|custom/entity-distances|application/zip|✓|
 
 
 (AmazonBraket_LocalSimulator)=
@@ -923,7 +923,7 @@ Converts distance values (distance matrix) to points in a space.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|[custom/entity-distances](data-formats/examples/custom.rst#custom-entity-distances)|application/json|✓|
+|custom/entity-distances|application/json|✓|
 
 
 **Outputs:**
@@ -1419,14 +1419,14 @@ Transforms similarities to distances.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|[custom/attribute-similarities](data-formats/examples/custom.rst#custom-attribute-similarities)|application/zip|✓|
+|custom/attribute-similarities|application/zip|✓|
 
 
 **Outputs:**
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|[custom/attribute-distances](data-formats/examples/custom.rst#custom-attribute-distances)|application/zip|✓|
+|custom/attribute-distances|application/zip|✓|
 
 
 (sym-max-mean)=
@@ -1442,14 +1442,14 @@ Compares attributes and returns similarity values.
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
 |entity/list|application/json, text/csv|✓|
-|[custom/element-similarities](data-formats/examples/custom.rst#custom-element-similarities)|application/zip|✓|
+|custom/element-similarities|application/zip|✓|
 
 
 **Outputs:**
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|[custom/attribute-similarities](data-formats/examples/custom.rst#custom-attribute-similarities)|application/zip|✓|
+|custom/attribute-similarities|application/zip|✓|
 
 
 (time-tanh)=
@@ -1511,7 +1511,7 @@ Compares elements and returns similarity values.
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|[custom/element-similarities](data-formats/examples/custom.rst#custom-element-similarities)|application/zip|✓|
+|custom/element-similarities|application/zip|✓|
 
 
 (ZX-Calculus Visualization)=
