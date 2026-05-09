@@ -28,7 +28,7 @@ How should the project organise tests so that plugin authors can place tests nex
 
 Chosen option: **Option 2, co-locate tests next to plugins**, because it satisfies the locality and ownership drivers with the smallest change to existing tooling. The remaining costs (an import-mode switch and an exclusion in the import checker) are small and easy to implement.
 
-The convention is documented for plugin authors in [`docs/testing.md`](../testing.md).
+The convention is documented for plugin authors in [`docs/testing.rst`](../testing.rst).
 
 ### Positive Consequences
 
@@ -69,7 +69,7 @@ The convention is documented for plugin authors in [`docs/testing.md`](../testin
 
 * Refines: [ADR-0007, Plugins must provide metadata](0007-plugins-must-provide-metadata.md)
 * Implementation will touch `pyproject.toml` (pytest config), the root `conftest.py` (new, replacing `tests/conftests.py`), and `tests/test_plugin_imports.py` (exclude test files from plugin-import checks).
-* Developer-facing documentation: [`docs/testing.md`](../testing.md)
+* Developer-facing documentation: [`docs/testing.rst`](../testing.rst)
 
 ---
 
