@@ -74,7 +74,10 @@ honor_noqa = true
 atomic = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "plugins", "stable_plugins"]
+pythonpath = ["tests"]
+addopts = "--import-mode=importlib"
+python_files = ["test_*.py"]
 
 [tool.sphinx]
 copyright-year = 2021

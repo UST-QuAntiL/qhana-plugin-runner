@@ -345,3 +345,27 @@ if PATCH_SPHINX_CLICK:
         return sections
 
     ClickDirective.run = new_run
+
+
+# -- Custom roles ------------------------------------------------------------
+
+_REPO_BLOB_URL = "https://github.com/UST-QuAntiL/qhana-plugin-runner/blob/main/"
+
+
+def _source_role(name, rawtext, text, lineno, inliner, options=None, content=None):
+    """Render :source:`path/in/repo` as a link to the file on GitHub.
+
+    The link text is rendered as inline ``literal`` so the path keeps its
+    monospace styling.
+    """
+    from docutils import nodes
+    from docutils.utils import unescape
+
+    path = unescape(text)
+    refnode = nodes.reference(rawtext, "", refuri=_REPO_BLOB_URL + path)
+    refnode += nodes.literal(path, path)
+    return [refnode], []
+
+
+def setup(app):
+    app.add_role("source", _source_role)

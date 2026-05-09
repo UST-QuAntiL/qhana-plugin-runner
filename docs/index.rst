@@ -16,6 +16,7 @@ Welcome to QHAna-Plugin-Runner's documentation!
 
     readme
     plugins
+    testing
     plugins-advanced
     plugin-types/index
     data-formats/index
