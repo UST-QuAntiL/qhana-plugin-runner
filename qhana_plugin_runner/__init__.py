@@ -17,13 +17,12 @@
 """Root module containing the flask app factory."""
 import os
 import re
-import sys
 from json import load as load_json
 from json import loads
 from logging import WARNING, Formatter, Handler, Logger, getLogger
 from logging.config import dictConfig
 from os import environ, makedirs
-from typing import IO, Any, Dict, Iterable, Mapping, Optional, cast
+from typing import IO, Any, Dict, Mapping, Optional, cast
 
 import click
 from flask.app import Flask
@@ -51,45 +50,10 @@ from .util.reverse_proxy_fix import apply_reverse_proxy_fix
 # must not contain any spaces!
 APP_NAME = __name__
 ENV_VAR_PREFIX = APP_NAME.upper().replace("-", "_").replace(" ", "_")
-WINDOWS_DISABLED_PLUGINS = ("classical-k-medoids",)
 
 
 def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
     return parse_toml("\n".join(file_like.readlines()))
-
-
-def parse_bool_env_var(value: str) -> bool:
-    """Parse a boolean environment variable value."""
-
-    return value.strip().lower() not in {"0", "false", "no", "off"}
-
-
-def merge_plugin_names(*plugin_lists: Iterable[str]) -> list[str]:
-    """Merge plugin names preserving order and removing duplicates."""
-
-    merged: list[str] = []
-    seen: set[str] = set()
-
-    for plugin_list in plugin_lists:
-        for plugin in plugin_list:
-            if not plugin or plugin in seen:
-                continue
-            merged.append(plugin)
-            seen.add(plugin)
-
-    return merged
-
-
-def get_platform_disabled_plugins(config: Mapping[str, Any]) -> list[str]:
-    """Return plugins that should be disabled by default on this platform."""
-
-    if not config.get("AUTO_DISABLE_UNSUPPORTED_PLUGINS", True):
-        return []
-
-    if sys.platform == "win32":
-        return list(WINDOWS_DISABLED_PLUGINS)
-
-    return []
 
 
 def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = False):
@@ -157,11 +121,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = 
                 if plugin
             ]
 
-        if "AUTO_DISABLE_UNSUPPORTED_PLUGINS" in os.environ:
-            config["AUTO_DISABLE_UNSUPPORTED_PLUGINS"] = parse_bool_env_var(
-                os.environ["AUTO_DISABLE_UNSUPPORTED_PLUGINS"]
-            )
-
         # load database URI from env vars
         if "SQLALCHEMY_DATABASE_URI" in os.environ:
             config["SQLALCHEMY_DATABASE_URI"] = os.environ["SQLALCHEMY_DATABASE_URI"]
@@ -184,11 +143,6 @@ def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = 
     else:
         # load the test config if passed in
         config.from_mapping(test_config)
-
-    config["DISABLED_PLUGINS"] = merge_plugin_names(
-        config.get("DISABLED_PLUGINS", []),
-        get_platform_disabled_plugins(config),
-    )
 
     if isinstance(config.get("URL_REWRITE_RULES"), Mapping):
         # rewrite mapping to tuple sequence and precompile regex patterns

@@ -50,7 +50,6 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     FILE_STORE_ROOT_PATH = "files"
 
     PLUGIN_REGISTRY_URL: Optional[str] = None
-    AUTO_DISABLE_UNSUPPORTED_PLUGINS = True
     DISABLED_PLUGINS: Sequence[str] = []
 
     # URL rewrite rules are (pattern, replacement) pairs that are applied

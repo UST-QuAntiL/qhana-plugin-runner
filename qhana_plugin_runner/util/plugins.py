@@ -246,7 +246,9 @@ def _load_plugins_from_folder(
 
 
 def _disable_plugins(app: Flask):
-    """Remove disabled plugins from the plugin registry before blueprint registration."""
+    """Drop plugins listed in ``DISABLED_PLUGINS`` from the in-process plugin
+    set before blueprint registration. This does not interact with the external
+    plugin registry service."""
     disabled_plugins = {
         plugin for plugin in app.config.get("DISABLED_PLUGINS", []) if plugin
     }
