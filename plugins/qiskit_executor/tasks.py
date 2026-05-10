@@ -14,12 +14,16 @@
 
 from json import dump
 from tempfile import SpooledTemporaryFile
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from celery import chain
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
+from qiskit import QiskitError, transpile
+from qiskit.qasm2 import loads as loads2
+from qiskit.qasm3 import QASM3ImporterError
+from qiskit.qasm3 import loads as loads3
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -37,25 +41,6 @@ from .schemas import CircuitParameters, CircuitParameterSchema
 
 TASK_LOGGER = get_task_logger(__name__)
 
-if TYPE_CHECKING:
-    from qiskit import QuantumCircuit
-
-
-def _load_qiskit():
-    """Import qiskit lazily so plugin discovery still works without extras."""
-    try:
-        from qiskit import QiskitError, transpile
-        from qiskit.qasm2 import loads as loads2
-        from qiskit.qasm3 import QASM3ImporterError
-        from qiskit.qasm3 import loads as loads3
-    except ImportError as err:
-        raise RuntimeError(
-            "Qiskit is not installed for the qiskit-executor plugin. "
-            "Install plugin dependencies before executing this task."
-        ) from err
-
-    return QiskitError, transpile, loads2, loads3, QASM3ImporterError
-
 
 @CELERY.task(name=f"{QiskitExecutor.instance.identifier}.start_execution", bind=True)
 def start_execution(self, db_id: int) -> str:
@@ -71,7 +56,6 @@ def start_execution(self, db_id: int) -> str:
     circuit_params: CircuitParameters = CircuitParameterSchema().load(
         db_task.data["parameters"]
     )
-    QiskitError, transpile, loads2, loads3, QASM3ImporterError = _load_qiskit()
 
     backend_list = None
     if (
@@ -179,7 +163,6 @@ def result_watcher(self, db_id: int) -> str:
     # get parameters
     TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
-    QiskitError, _, _, _, _ = _load_qiskit()
 
     if db_task is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -204,7 +187,9 @@ def result_watcher(self, db_id: int) -> str:
         raise ValueError("Circuit could not be executed!", result)
 
     experiment_result = result.results[0]
-    extra_metadata = getattr(result, "metadata", {}) or {}
+    extra_metadata = getattr(result, "metadata", None)
+    if not extra_metadata:
+        extra_metadata = {}
 
     time_taken = getattr(result, "time_taken", 0)
     time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)

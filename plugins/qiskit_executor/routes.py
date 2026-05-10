@@ -161,9 +161,7 @@ class MicroFrontend(MethodView):
         # define default values
         default_values = {}
 
-        backend_env = os.environ.get("QISKIT_IBM_BACKEND") or os.environ.get(
-            "IBMQ_BACKEND"
-        )
+        backend_env = os.environ.get("QISKIT_IBM_BACKEND", os.environ.get("IBMQ_BACKEND"))
         if backend_env:
             default_values[fields["backend"].data_key] = backend_env
 
