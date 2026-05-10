@@ -345,7 +345,9 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         result_state = None
 
     experiment_result = result_count.results[0]
-    extra_metadata = getattr(result_count, "metadata", {}) or {}
+    extra_metadata = getattr(result_count, "metadata", None)
+    if not extra_metadata:
+        extra_metadata = {}
 
     time_taken = getattr(result_count, "time_taken", 0)
     time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)

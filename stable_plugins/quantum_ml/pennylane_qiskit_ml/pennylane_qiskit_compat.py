@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 from contextlib import contextmanager
 
 
 def ensure_qiskit_ibm_provider_compat() -> None:
-    """Patch qiskit symbols needed by qiskit-ibm-provider/runtime on qiskit>=2."""
+    """Monkey-patch qiskit symbols needed by ``qiskit-ibm-provider`` and
+    ``qiskit-ibm-runtime`` on ``qiskit>=2``."""
     try:
         import qiskit.providers as providers
     except Exception:
@@ -141,6 +140,8 @@ def ensure_qiskit_ibm_provider_compat() -> None:
 
 @contextmanager
 def pennylane_qiskit_version_override():
+    """Monkey-patch ``qiskit.__version__`` so ``pennylane-qiskit`` accepts
+    ``qiskit>=2`` while still pinning to the version range it was tested with."""
     try:
         import qiskit
     except Exception:

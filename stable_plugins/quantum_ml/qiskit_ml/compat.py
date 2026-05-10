@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
-
 from typing import Any
 
 
 def ensure_qiskit_machine_learning_compat() -> None:
-    """Patch qiskit primitives for qiskit-machine-learning compatibility on qiskit>=2."""
+    """Monkey-patch ``qiskit.primitives`` so ``qiskit-machine-learning``
+    keeps working on ``qiskit>=2``."""
     try:
         import qiskit.primitives as primitives
     except Exception:
