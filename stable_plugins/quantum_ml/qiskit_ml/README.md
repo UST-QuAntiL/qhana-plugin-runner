@@ -7,3 +7,9 @@ The following dependencies are used by these plugins:
 - plotly~=6.6.0
 - pandas~=2.3.3
 - muid~=0.5.3
+
+## Compatibility
+
+`compat.py` (`ensure_qiskit_machine_learning_compat`) monkey-patches
+`qiskit.primitives` so `qiskit-machine-learning` keeps working on `qiskit>=2`.
+It is imported by the SVM, qiskit quantum kernel estimation, and VQC plugins.
