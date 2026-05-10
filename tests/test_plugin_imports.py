@@ -29,12 +29,8 @@ PLUGIN_LOCATIONS = [
 IGNORE_FOLDERS = {"__pycache__", "node_modules"}
 
 
-# Only add stdlib modules or dependencies found in pyproject.toml or poetry.lock to this set
+# Only add dependencies found in pyproject.toml or poetry.lock to this set;
 ALLOWED_IMPORTS = {
-    # python stdlib
-    "typing",
-    "http",
-    "mimetypes",
     # plugin runner
     "qhana_plugin_runner",
     # direct plugin runner dependencies
@@ -57,7 +53,7 @@ PLUGIN_BASE_QALIFIED = PLUGIN_BASE_MODULE + (PLUGIN_BASE_CLASS_NAME,)
 BASE_PATH = Path(sys.base_prefix)
 VENV_PATH = Path(sys.prefix)
 REPOSITORY_PATH = Path(".").resolve()
-STDLIB_MODULES = getattr(sys, "stdlib_module_names", frozenset())
+STDLIB_MODULES = sys.stdlib_module_names
 
 
 def get_plugin_roots():
