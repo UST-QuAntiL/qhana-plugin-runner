@@ -48,6 +48,9 @@ class Plugin(QHAnaPluginBase):
     def get_api_blueprint(self):
         return BLP
 
+    def get_requirements(self) -> str:
+        return "qiskit~=0.43"
+
 
 try:
     from . import routes
