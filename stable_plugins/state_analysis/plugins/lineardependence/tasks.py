@@ -1,3 +1,17 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import time
 from json import loads
@@ -41,7 +55,15 @@ def task(self, db_id: int) -> str:
     # Get inputs
     tolerance = params.get("tolerance", None)
     vectors = params.get("vectors", None)
+    vectors_url = params.get("vectorsUrl", None)
     qasm_input_list = params.get("qasmInputList", None)
+
+    # If a URL is provided, fetch the inline vectors from it.
+    if vectors_url and not vectors:
+        with open_url(vectors_url) as response:
+            response.raise_for_status()
+            vectors = response.json()
+
     np_vectors = generate_numpy_vectors(qasm_input_list, vectors)
 
     # Check inputs

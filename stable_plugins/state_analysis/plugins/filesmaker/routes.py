@@ -1,3 +1,17 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from http import HTTPStatus
 from json import dumps
 from typing import Mapping
@@ -8,8 +22,8 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata,
     EntryPoint,
+    InputDataMetadata,
     OutputDataMetadata,
     PluginMetadata,
     PluginMetadataSchema,
@@ -22,27 +36,30 @@ from . import BLP, Plugin
 from .schemas import Schema
 from .tasks import store_texts_task
 
+# TODO (review): the filesMaker plugin could be removed entirely
+
 _exampleInputs_ = {}
 
 _description_ = "Files Maker plugin UI "
 
 _data_input_ = [
-    DataMetadata(
-        data_type="application/json",
-        content_type=["application/json"],
+    InputDataMetadata(
+        data_type="executable/circuit",
+        content_type=["text/x-qasm"],
         required=True,
+        parameter="qasmCode",
     )
 ]
 _data_output_ = [
     OutputDataMetadata(
-        data_type="text/plain",
+        data_type="executable/circuit",
         content_type=["text/x-qasm"],
         required=True,
         name="circuit.qasm",
     )
 ]
 
-_help_text_ = "Provide QASM code and metadata. The result is two separate files."
+_help_text_ = "Provide QASM code. The result is a stored QASM file."
 
 _task_ = store_texts_task
 

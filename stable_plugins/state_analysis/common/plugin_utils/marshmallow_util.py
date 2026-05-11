@@ -1,3 +1,17 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 
 import marshmallow as ma
@@ -10,6 +24,8 @@ complex numerical data structures, including complex numbers, vectors, and sets 
 Some fields are designed to return an empty string ("") when receiving one.
 This is necessary because the frontend sends empty strings for optional fields when no input is provided.
 Handling this ensures proper backend processing and prevents unintended validation errors.
+
+TODO from comment: the generic numeric fields would benefit other plugins. The QASM-specific fields could stay in this module.
 """
 
 

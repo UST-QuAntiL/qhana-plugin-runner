@@ -98,7 +98,7 @@ class BasePluginView(MethodView):
     ``DATA_INPUT`` with plugin-specific entries.
 
     TODO: audit ``plugin.identifier`` of every plugin for URL safety. Names
-    are flowed unescaped into ``url_for`` here and a non-URL-safe identifier
+    are unescaped into ``url_for`` here and a non-URL-safe identifier
     would silently produce broken links."""
 
     PLUGIN = None  # must be set in the subclass

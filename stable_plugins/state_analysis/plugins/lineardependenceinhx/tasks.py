@@ -1,3 +1,17 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import time
 from json import loads
@@ -7,6 +21,7 @@ from typing import Optional
 import numpy as np
 from celery.utils.log import get_task_logger
 from common.algorithms import are_vectors_linearly_dependent_inhx
+from common.exceptions import PluginError, PluginExecutionError, PluginInputError
 from common.plugin_utils.task_util import generate_numpy_vectors
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -52,7 +67,7 @@ def task(self, db_id: int) -> str:
     dim = len(np_vectors[0])
 
     if dim != (2 ** (dimHR + dimHX)):
-        raise Exception(
+        raise PluginInputError(
             f"Invalid input vector dimensions for {_taskname_} calculation. "
             f"Each input vector must have a dimension of 2^(dimHR + dimHX) = {2 ** (dimHR + dimHX)}, "
             f"but the provided vectors have a dimension of {dim}. "
@@ -62,7 +77,7 @@ def task(self, db_id: int) -> str:
 
     for np_vector in np_vectors:
         if len(np_vector) != dim:
-            raise Exception(
+            raise PluginInputError(
                 f"All input vectors for {_taskname_} calculation must have the same dimension. "
                 f"The first vector had a dimension of {dim}, but the vector {np_vector} had a dimension of {len(np_vector)}."
             )
@@ -101,6 +116,8 @@ def task(self, db_id: int) -> str:
         TASK_LOGGER.info(f"{_taskname_} result: {output_data}")
         return json.dumps(output_data)
 
+    except PluginError:
+        raise
     except Exception as e:
         TASK_LOGGER.error(f"Error in '{_taskname_}' task: {e}")
-        raise
+        raise PluginExecutionError(f"Failed to compute {_taskname_}: {e}") from e
