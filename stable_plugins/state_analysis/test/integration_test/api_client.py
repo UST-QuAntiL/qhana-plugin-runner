@@ -1,12 +1,37 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
+import os
 import time
 
 import pytest
 import requests
 
+# Default plugin-runner URL for integration tests; override with the
+# QHANA_PLUGIN_RUNNER_URL environment variable when running against a
+# non-default port or remote host.
+DEFAULT_BASE_URL = os.environ.get("QHANA_PLUGIN_RUNNER_URL", "http://localhost:5005")
+
 
 class APIClient:
-    def __init__(self, base_url: str, plugin_name: str, version: str):
+    def __init__(
+        self,
+        plugin_name: str,
+        version: str,
+        base_url: str = DEFAULT_BASE_URL,
+    ):
         """
         Initializes the API client with the base URL, plugin name, and version.
         """
@@ -28,33 +53,22 @@ class APIClient:
                             status remains 'PENDING' after all retries.
         """
         try:
-            # Step 1: POST request to initiate the process
-            response = requests.post(self.api_url, data=data, allow_redirects=False)
+            # POST + follow redirect to the result URL in one step
+            response = requests.post(self.api_url, data=data)
             response.raise_for_status()
+            result_url = response.url
 
-            # Step 2: Retrieve the redirect URL from response headers
-            redirect_url = response.headers.get("Location")
-            if not redirect_url:
-                raise ValueError("No redirect URL found in the response headers.")
-
-            if not redirect_url.startswith("http"):
-                redirect_url = self.base_url + redirect_url
-
-            # Step 3: GET request to fetch the result, ggf. mehrfach pollen
-            for attempt in range(max_retries):
-                redirect_res = requests.get(redirect_url)
+            # Poll the result URL until it leaves the PENDING state
+            for _ in range(max_retries):
+                redirect_res = requests.get(result_url)
                 redirect_res.raise_for_status()
 
                 result_data = redirect_res.json()
-
-                # Wenn kein 'status' drinsteht oder wenn status != 'PENDING', direkt zurückgeben
                 if result_data.get("status") != "PENDING":
                     return result_data
 
-                # Ansonsten warten und nochmal probieren
                 time.sleep(wait_seconds)
 
-            # Falls nach allen Retries noch immer 'PENDING', Fehler werfen
             raise ValueError(f"Result is still 'PENDING' after {max_retries} retries.")
 
         except requests.RequestException as req_err:

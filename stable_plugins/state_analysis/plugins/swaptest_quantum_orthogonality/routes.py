@@ -1,3 +1,17 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from http import HTTPStatus
 from json import dumps
 from typing import Mapping, Optional
@@ -10,6 +24,7 @@ from marshmallow import EXCLUDE, fields
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
+    InputDataMetadata,
     MaBaseSchema,
     OutputDataMetadata,
     PluginDependencyMetadata,
@@ -83,7 +98,19 @@ class PluginView(MethodView):
                         tags=["circuit-executor", "qasm-2"],
                     ),
                 ],
-                data_input=[],
+                # TODO: check for missing input and metadata in all plugins
+                data_input=[
+                    InputDataMetadata(
+                        data_type="provenance/execution-options",
+                        content_type=[
+                            "text/csv",
+                            "application/json",
+                            "application/X-lines+json",
+                        ],
+                        required=False,
+                        parameter="executionOptions",
+                    ),
+                ],
                 data_output=_data_output_,
             ),
             tags=plugin.tags,

@@ -1,7 +1,22 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import io
 import json
 import time
 from json import loads
+from pathlib import PurePosixPath
 from tempfile import SpooledTemporaryFile
 from typing import Optional
 
@@ -121,26 +136,11 @@ def building_circuit_and_simulate_task(self, db_id: int) -> str:
         continue_url = task_data.data["continue_url"]
 
         # Prepare the payload based on the provided parameters.
-        if shots and execution_options_url:
-            payload = {
-                "shots": shots,
-                "circuit": swaptest_circuit_url,
-                "executionOptions": execution_options_url,
-            }
-        elif shots:
-            payload = {
-                "shots": shots,
-                "circuit": swaptest_circuit_url,
-            }
-        elif execution_options_url:
-            payload = {
-                "circuit": swaptest_circuit_url,
-                "executionOptions": execution_options_url,
-            }
-        else:
-            payload = {
-                "circuit": swaptest_circuit_url,
-            }
+        payload = {"circuit": swaptest_circuit_url}
+        if shots:
+            payload["shots"] = shots
+        if execution_options_url:
+            payload["executionOptions"] = execution_options_url
 
         result_url = call_plugin_endpoint(
             executorEndpoint,
@@ -294,15 +294,20 @@ def _interpret_restults_task(self, db_id: int) -> str:
             storage_provider="url_file_store",
         )
 
-    # Find the URL for 'result-counts.json' in the task outputs.
+    # Find the URL for the result-counts output in the task outputs. Match by
+    # stem so versioned suffixes / compressed extensions still resolve.
     result_counts_url = None
     for output in task_data.data.get("result", {}).get("outputs", []):
-        if output.get("name") == "result-counts.json":
+        name = output.get("name") or ""
+        if PurePosixPath(name).stem == "result-counts":
             result_counts_url = output.get("href")
             break
     if not result_counts_url:
         raise ValueError("result-counts.json URL not found in task outputs.")
     # Fetch the result counts data.
+    # TODO: counts should ideally be loaded as a single ``entity/numeric`` row
+    # via ``load_entities`` so downstream plugins don't reinvent the parser.
+    # Currently the upstream simulator emits plain JSON, so we read it as JSON.
     try:
         with open_url(result_counts_url) as counts_response:
             counts_response.raise_for_status()
