@@ -1,24 +1,45 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 from http import HTTPStatus
 
 from flask import Response, abort, redirect, render_template, request, url_for
 from flask.views import MethodView
+from qhana_plugin_runner.api.plugin_schemas import (
+    EntryPoint,
+    PluginMetadata,
+    PluginType,
+)
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 
 class BaseMicroFrontend(MethodView):
 
-    Plugin = None
-    SchemaClass = None
-    help_text = ""
-    example_inputs = {}
+    PLUGIN = None
+    SCHEMA_CLASS = None
+    HELP_TEXT = ""
+    EXAMPLE_INPUTS = {}
 
     def render_view(self, data, errors, valid):
-        plugin = self.Plugin.instance
+        plugin = self.PLUGIN.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
-        schema = self.SchemaClass()
+        schema = self.SCHEMA_CLASS()
+        # TODO: rework result rendering — microfrontend should follow the redirect
+        # from ProcessView to TaskView and not read ``task.result`` directly.
         result = None
         task_id = data.get("task_id")
         if task_id:
@@ -36,9 +57,9 @@ class BaseMicroFrontend(MethodView):
                 errors=errors,
                 result=result,
                 process=url_for(f"{plugin.identifier}.ProcessView"),
-                help_text=self.help_text,
+                help_text=self.HELP_TEXT,
                 example_values=url_for(
-                    f"{plugin.identifier}.MicroFrontend", **self.example_inputs
+                    f"{plugin.identifier}.MicroFrontend", **self.EXAMPLE_INPUTS
                 ),
             )
         )
@@ -71,17 +92,21 @@ class BaseProcessView(MethodView):
 
 
 class BasePluginView(MethodView):
-    """
-    Stellt eine generische Plugin-Metadaten-View bereit.
-    In den Unterklassen müssen vor allem das Plugin-Objekt und
-    gegebenenfalls plugin-spezifische Anpassungen (z.B. data_output) gesetzt werden.
-    """
+    """Generic plugin-metadata view.
 
-    Plugin = None  # Muss in der Unterklasse gesetzt werden
-    data_output = []  # Optional: Ausgabe-Daten, je nach Plugin
+    Subclasses must set ``PLUGIN`` and may override ``DATA_OUTPUT`` and
+    ``DATA_INPUT`` with plugin-specific entries.
+
+    TODO: audit ``plugin.identifier`` of every plugin for URL safety. Names
+    are flowed unescaped into ``url_for`` here and a non-URL-safe identifier
+    would silently produce broken links."""
+
+    PLUGIN = None  # must be set in the subclass
+    DATA_INPUT = []  # plugin-specific input metadata
+    DATA_OUTPUT = []  # plugin-specific output metadata
 
     def get(self):
-        plugin = self.Plugin.instance
+        plugin = self.PLUGIN.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
 
@@ -94,15 +119,9 @@ class BasePluginView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{plugin.identifier}.ProcessView"),
                 ui_href=url_for(f"{plugin.identifier}.MicroFrontend"),
-                plugin_dependencies=[],  # ggf. anpassen
-                data_input=[
-                    DataMetadata(
-                        data_type="application/json",
-                        content_type=["application/json"],
-                        required=True,
-                    )
-                ],
-                data_output=self.data_output,
+                plugin_dependencies=[],
+                data_input=self.DATA_INPUT,
+                data_output=self.DATA_OUTPUT,
             ),
             tags=plugin.tags,
         )
