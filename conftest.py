@@ -15,19 +15,17 @@
 """Tests for the db module of the plugin_utils."""
 
 from logging import INFO
+
 import pytest
-from dotenv import load_dotenv
-
-load_dotenv(".flaskenv")
-load_dotenv(".env")
-
-MODULE_NAME = "qhana_plugin_runner"
-
+from flask import Flask
 
 from qhana_plugin_runner import create_app
 from qhana_plugin_runner.db.cli import create_db_function
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.util.config.celery_config import CELERY_PRODUCTION_CONFIG
+
+MODULE_NAME = "qhana_plugin_runner"
+
 
 DEFAULT_TEST_CONFIG = {
     "SECRET_KEY": "test",
@@ -44,6 +42,9 @@ DEFAULT_TEST_CONFIG = {
     "OPENAPI_VERSION": "3.0.2",
     "OPENAPI_JSON_PATH": "api-spec.json",
     "OPENAPI_URL_PREFIX": "",
+    # ``SERVER_NAME`` lets ``flask.url_for`` build URLs without a request
+    # context, which the route-level tests in plugin test suites rely on.
+    "SERVER_NAME": "localhost.localdomain",
 }
 
 
@@ -59,3 +60,27 @@ def task_data():
         task_data = ProcessingTask(task_name="test-data")
         task_data.save(commit=True)
         yield task_data
+
+
+@pytest.fixture(scope="module")
+def app():
+    """Flask app with the plugin runner and all configured plugins loaded.
+
+    ``create_app`` discovers plugins from ``PLUGIN_FOLDERS`` (set in
+    ``.flaskenv``), so every plugin blueprint is registered automatically
+    once this fixture runs. Module-scoped to amortise the boot cost across
+    test cases in a file.
+    """
+    test_config = dict(DEFAULT_TEST_CONFIG)
+    test_config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+
+    flask_app = create_app(test_config)
+    with flask_app.app_context():
+        create_db_function(flask_app)
+        yield flask_app
+
+
+@pytest.fixture()
+def client(app: Flask):
+    """Flask test client bound to the plugin-runner app."""
+    return app.test_client()
