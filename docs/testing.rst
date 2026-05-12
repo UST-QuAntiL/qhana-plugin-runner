@@ -104,9 +104,13 @@ The fixture is function-scoped, so each test gets a fresh database.
 The ``app`` and ``client`` fixtures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``app`` is a module-scoped Flask application built via :py:func:`~qhana_plugin_runner.create_app` with the same in-memory SQLite configuration as ``task_data``. Plugin discovery runs as part of ``create_app``, so every blueprint declared under ``PLUGIN_FOLDERS`` is registered on the returned app. Module scope amortises the startup cost of plugin discovery across the test cases in a file. Use ``app`` whenever a test needs the full configured application, an application context, or :py:func:`flask.url_for` without a request context (the test configuration sets ``SERVER_NAME`` so ``url_for`` can build URLs outside a request).
+``app`` is a module-scoped Flask application built via :py:func:`~qhana_plugin_runner.create_app` with the same in-memory SQLite configuration as ``task_data``.
+Plugin discovery runs as part of ``create_app``, so every blueprint declared under ``PLUGIN_FOLDERS`` is registered on the returned app.
+Module scope amortises the startup cost of plugin discovery across the test cases in a file.
+Use ``app`` whenever a test needs the full configured application, an application context, or :py:func:`flask.url_for` without a request context (the test configuration sets ``SERVER_NAME`` so ``url_for`` can build URLs outside a request).
 
-``client`` is a function-scoped :py:meth:`flask.Flask.test_client` bound to ``app``. It is the standard entry point for HTTP-level tests and removes the need for a plugin-local Flask fixture:
+``client`` is a function-scoped :py:meth:`flask.Flask.test_client` bound to ``app``.
+It is the standard entry point for HTTP-level tests and removes the need for a plugin-local Flask fixture:
 
 .. code-block:: python
 
