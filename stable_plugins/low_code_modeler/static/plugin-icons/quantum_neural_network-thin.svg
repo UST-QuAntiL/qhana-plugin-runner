@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="206.33328"
+   height="205.33324"
+   overflow="hidden"
+   version="1.1"
+   id="svg92"
+   sodipodi:docname="quantum_neural_network-thin.svg"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview94"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.058296"
+     inkscape:cx="-252.76483"
+     inkscape:cy="44.883475"
+     inkscape:window-width="1920"
+     inkscape:window-height="1111"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g90" />
+  <defs
+     id="defs58">
+    <clipPath
+       id="clip0">
+      <rect
+         x="0"
+         y="0"
+         width="223"
+         height="223"
+         id="rect2" />
+    </clipPath>
+    <linearGradient
+       x1="112"
+       y1="78.500099"
+       x2="112"
+       y2="154.5"
+       gradientUnits="userSpaceOnUse"
+       spreadMethod="reflect"
+       id="fill1">
+      <stop
+         offset="0"
+         stop-color="#FFFFFF"
+         id="stop5" />
+      <stop
+         offset="0.04"
+         stop-color="#FEFEFE"
+         id="stop7" />
+      <stop
+         offset="0.08"
+         stop-color="#FEFEFE"
+         id="stop9" />
+      <stop
+         offset="0.12"
+         stop-color="#FEFEFE"
+         id="stop11" />
+      <stop
+         offset="0.16"
+         stop-color="#FEFEFE"
+         id="stop13" />
+      <stop
+         offset="0.2"
+         stop-color="#FDFDFD"
+         id="stop15" />
+      <stop
+         offset="0.24"
+         stop-color="#FDFDFD"
+         id="stop17" />
+      <stop
+         offset="0.28"
+         stop-color="#FCFCFC"
+         id="stop19" />
+      <stop
+         offset="0.32"
+         stop-color="#FBFBFB"
+         id="stop21" />
+      <stop
+         offset="0.36"
+         stop-color="#FBFBFB"
+         id="stop23" />
+      <stop
+         offset="0.4"
+         stop-color="#FAFAFA"
+         id="stop25" />
+      <stop
+         offset="0.44"
+         stop-color="#F9F9F9"
+         id="stop27" />
+      <stop
+         offset="0.48"
+         stop-color="#F8F8F8"
+         id="stop29" />
+      <stop
+         offset="0.52"
+         stop-color="#F7F7F7"
+         id="stop31" />
+      <stop
+         offset="0.56"
+         stop-color="#F6F6F6"
+         id="stop33" />
+      <stop
+         offset="0.6"
+         stop-color="#F5F5F5"
+         id="stop35" />
+      <stop
+         offset="0.64"
+         stop-color="#F3F3F3"
+         id="stop37" />
+      <stop
+         offset="0.68"
+         stop-color="#F2F2F2"
+         id="stop39" />
+      <stop
+         offset="0.72"
+         stop-color="#F0F0F0"
+         id="stop41" />
+      <stop
+         offset="0.76"
+         stop-color="#EFEFEF"
+         id="stop43" />
+      <stop
+         offset="0.8"
+         stop-color="#EDEDED"
+         id="stop45" />
+      <stop
+         offset="0.84"
+         stop-color="#ECECEC"
+         id="stop47" />
+      <stop
+         offset="0.88"
+         stop-color="#EAEAEA"
+         id="stop49" />
+      <stop
+         offset="0.92"
+         stop-color="#E8E8E8"
+         id="stop51" />
+      <stop
+         offset="0.96"
+         stop-color="#E6E6E6"
+         id="stop53" />
+      <stop
+         offset="1"
+         stop-color="#E5E5E5"
+         id="stop55" />
+    </linearGradient>
+  </defs>
+  <g
+     clip-path="url(#clip0)"
+     id="g90"
+     transform="translate(-8.833385,-15.833435)">
+    <path
+       d="M 9.50005,50.5008 C 9.50005,31.7227 24.7227,16.5001 43.5008,16.5001 H 180.499 C 199.277,16.5001 214.5,31.7227 214.5,50.5008 V 186.499 C 214.5,205.277 199.277,220.5 180.499,220.5 H 43.5008 C 24.7227,220.5 9.50005,205.277 9.50005,186.499 Z"
+       stroke="#000000"
+       stroke-width="1.33333"
+       stroke-miterlimit="8"
+       fill="#f2f2f2"
+       fill-rule="evenodd"
+       id="path62" />
+    <path
+       d="M 59.5001,116.5 H 165.327"
+       stroke="#000000"
+       stroke-width="1.33333"
+       stroke-miterlimit="8"
+       fill="none"
+       fill-rule="evenodd"
+       id="path64" />
+    <path
+       d="M 6.85303,7.34863 H 4.22119 V -24.4556 H 6.85303 Z"
+       transform="translate(16.3219,127)"
+       id="path66" />
+    <text
+       fill="#000000"
+       fill-opacity="0"
+       font-family="Arial, Arial_MSFontService, sans-serif"
+       font-size="31.8042px"
+       x="4.22119"
+       y="3.3731101"
+       id="text68">ȁ</text>
+    <text
+       font-family="'Cambria Math', 'Cambria Math_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="35px"
+       transform="translate(27.2886,128)"
+       id="text70">𝑥</text>
+    <path
+       d="M 3.64014,-24.541 10.459,-9.19434 V -7.92969 L 3.64014,7.43408 1.81152,6.78467 7.29736,-8.56201 1.81152,-23.9258 Z"
+       transform="translate(46.8353,127)"
+       id="path72" />
+    <text
+       fill="#000000"
+       fill-opacity="0"
+       font-family="Arial, Arial_MSFontService, sans-serif"
+       font-size="31.9751px"
+       x="1.81152"
+       y="3.4371901"
+       id="text74">ۧ</text>
+    <path
+       d="M 72.5001,88.4189 C 72.5001,82.9408 76.9408,78.5001 82.4189,78.5001 H 141.581 C 147.059,78.5001 151.5,82.9408 151.5,88.4189 V 144.581 C 151.5,150.059 147.059,154.5 141.581,154.5 H 82.4189 C 76.9408,154.5 72.5001,150.059 72.5001,144.581 Z"
+       stroke="#404040"
+       stroke-width="1.33333"
+       stroke-miterlimit="8"
+       fill="url(#fill1)"
+       fill-rule="evenodd"
+       id="path76"
+       style="fill:url(#fill1)" />
+    <text
+       font-family="Calibri, Calibri_MSFontService, sans-serif"
+       font-weight="400"
+       font-size="43px"
+       transform="translate(101.393,130)"
+       id="text78">?</text>
+    <path
+       d="M 6.85303,7.34863 H 4.22119 V -24.4556 H 6.85303 Z"
+       transform="translate(161.274,127)"
+       id="path80" />
+    <text
+       fill="#000000"
+       fill-opacity="0"
+       font-family="Arial, Arial_MSFontService, sans-serif"
+       font-size="31.8042px"
+       x="4.22119"
+       y="3.3731101"
+       id="text82">ȁ</text>
+    <text
+       font-family="'Cambria Math', 'Cambria Math_MSFontService', sans-serif"
+       font-weight="400"
+       font-size="35px"
+       transform="translate(172.241,128)"
+       id="text84">𝑦</text>
+    <path
+       d="M 3.64014,-24.541 10.459,-9.19434 V -7.92969 L 3.64014,7.43408 1.81152,6.78467 7.29736,-8.56201 1.81152,-23.9258 Z"
+       transform="translate(192.168,127)"
+       id="path86" />
+    <text
+       fill="#000000"
+       fill-opacity="0"
+       font-family="Arial, Arial_MSFontService, sans-serif"
+       font-size="31.9751px"
+       x="1.81152"
+       y="3.4371901"
+       id="text88">ۧ</text>
+  </g>
+</svg>

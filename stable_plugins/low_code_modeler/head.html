@@ -1,0 +1,58 @@
+<script defer src="/static/microfrontend.js"></script><script src="workarounds.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/forms.css" media="screen"/>
+<style>
+  :root {
+      background: white;
+  }
+
+  #root {
+      --text: black;
+      --text-primary: black;
+      --primary: black;
+      color: var(--text);
+  }
+
+  .content {
+      width: 100%;
+      height: calc(100vh - 1rem);
+      padding-block: 0.5rem;
+      position: relative;
+      background-color: white;
+      color: black;
+  }
+
+  .diagram-list {
+      max-height: 50vh;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      margin-block-end: 1rem;
+  }
+
+  .diagram-item {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+  }
+
+  .diagram-item:not(:nth-child(1)) {
+      border-top: 1px solid var(--border-color, gray);
+  }
+
+  .diagram-title {
+      font-weight: 600;
+      font-size: 120%;
+      margin-block: 0.1em;
+  }
+
+  .diagram-subtitle {
+      margin-block: 0.1em;
+  }
+
+  dialog {
+      margin: revert;
+  }
+
+</style>
