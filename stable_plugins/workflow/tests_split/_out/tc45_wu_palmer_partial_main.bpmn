@@ -2,25 +2,10 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
   <bpmn:process id="Wu_Palmer_Mixed_main" name="Wu Palmer Pipeline (Mixed Adhoc)" isExecutable="true" camunda:versionTag="v1.4" camunda:historyTimeToLive="360000">
     <bpmn:startEvent id="StartEvent_1" name="Start">
-      <bpmn:extensionElements>
-        <camunda:formData>
-          <camunda:formField id="start_entitiesUrl" label="Entities URL" type="string" defaultValue="file_url:: entity/*, text/csv" />
-          <camunda:formField id="start_entitiesMetadataUrl" label="Attribute Metadata URL" type="string" defaultValue="file_url:: entity/attribute-metadata, application/json" />
-          <camunda:formField id="start_taxonomiesZipUrl" label="Taxonomies URL" type="string" defaultValue="file_url:: graph/taxonomy, application/zip" />
-          <camunda:formField id="start_attributes" label="Attributes (1 Attribute per Line)" type="string" />
-          <camunda:formField id="start_mdsDimensions" label="Nr. of Dimensions for MDS" type="string" defaultValue="2" />
-          <camunda:formField id="start_mdsMaxIter" label="Max Iterations for MDS" type="string" defaultValue="300" />
-        </camunda:formData>
-      </bpmn:extensionElements>
       <bpmn:outgoing>Flow_05mvkgh</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
-      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.Wu_Palmer_Mixed-E1">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.Wu_Palmer_Mixed_E1">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="start_attributes">${start_attributes}</camunda:inputParameter>
@@ -32,11 +17,6 @@
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_05mvkgh</bpmn:incoming>
       <bpmn:outgoing>Flow_To_AdHoc</bpmn:outgoing>
     </bpmn:adHocSubProcess>

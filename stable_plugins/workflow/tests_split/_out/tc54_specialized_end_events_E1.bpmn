@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc54_specialized_end_events" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc54_specialized_end_events_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
-    <bpmn:startEvent id="StartEvent_E1" name="Start">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:serviceTask id="ServiceTask_Run" name="run-operation" camunda:type="external" camunda:topic="qhana-task">
@@ -27,7 +27,7 @@
       <bpmn:errorEventDefinition errorRef="Error_Failed" />
       <bpmn:incoming>Flow_Fail</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="ServiceTask_Run" />
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="ServiceTask_Run" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Run" targetRef="Gateway_Split" />
     <bpmn:sequenceFlow id="Flow_Ok" sourceRef="Gateway_Split" targetRef="EndEvent_Message">
       <bpmn:conditionExpression>${qoutput.status == 'ok'}</bpmn:conditionExpression>
@@ -48,7 +48,7 @@
       <bpmndi:BPMNShape id="EndEvent_Error_di" bpmnElement="EndEvent_Error">
         <dc:Bounds x="450" y="342" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="80" y="220" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">

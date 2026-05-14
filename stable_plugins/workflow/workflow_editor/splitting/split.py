@@ -45,7 +45,7 @@ def split_workflow(
 
     new_main_pid = f"{original_pid}_main"
     main_process, wrapper_for_node = _build_main_process(
-        original_process, nodes, flows, order, regions, new_main_pid
+        original_process, nodes, flows, order, regions, new_main_pid, start_id
     )
 
     _ensure_history_ttl(main_process)
@@ -59,7 +59,9 @@ def split_workflow(
     for r in regions:
         fid = f"E{r.index}"
         frag_pid = f"{original_pid}_{fid}"
-        frag_proc = _build_fragment_process(r, nodes, flows, frag_pid, original_process)
+        frag_proc = _build_fragment_process(
+            r, nodes, flows, frag_pid, original_process, start_id
+        )
         _ensure_history_ttl(frag_proc)
         frag_defs = _build_fragment_definitions(original_root, frag_proc, r)
         frag_xml = _serialize(frag_defs)

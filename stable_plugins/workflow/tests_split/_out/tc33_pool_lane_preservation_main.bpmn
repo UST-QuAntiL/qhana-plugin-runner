@@ -16,23 +16,13 @@
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
-      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc33_pool_lane_preservation-E1">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.tc33_pool_lane_preservation_E1">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:outputParameter name="qoutput.configResult">${qoutput.configResult}</camunda:outputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:adHocSubProcess>

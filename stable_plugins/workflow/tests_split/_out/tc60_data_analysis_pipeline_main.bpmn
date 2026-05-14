@@ -2,22 +2,10 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">
   <bpmn:process id="DataAnalysisPipeline_main" name="Data Analysis Pipeline" isExecutable="true" camunda:versionTag="v1.0" camunda:historyTimeToLive="180">
     <bpmn:startEvent id="StartEvent_1" name="Start">
-      <bpmn:extensionElements>
-        <camunda:formData>
-          <camunda:formField id="start_datasetType" label="Dataset Type" type="string" defaultValue="checkerboard" />
-          <camunda:formField id="start_numPoints" label="Number of Points" type="string" defaultValue="100" />
-          <camunda:formField id="start_dimensions" label="Dimensions" type="string" defaultValue="2" />
-        </camunda:formData>
-      </bpmn:extensionElements>
       <bpmn:outgoing>Flow_Start_to_DataCreator</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
-      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.DataAnalysisPipeline-E1">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.DataAnalysisPipeline_E1">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="start_datasetType">${start_datasetType}</camunda:inputParameter>
@@ -26,11 +14,6 @@
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_Start_to_DataCreator</bpmn:incoming>
       <bpmn:outgoing>Flow_OneHot_to_AdHoc</bpmn:outgoing>
     </bpmn:adHocSubProcess>
@@ -67,44 +50,24 @@
       <bpmn:outgoing>Flow_XOR_to_SVM</bpmn:outgoing>
     </bpmn:exclusiveGateway>
     <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
-      <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin-step.DataAnalysisPipeline-E2">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin.DataAnalysisPipeline_E2">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="qoutput.encodedData">${qoutput.encodedData}</camunda:inputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E2_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
       <bpmn:incoming>Flow_XOR_to_KMeans</bpmn:incoming>
       <bpmn:outgoing>Flow_KMeans_to_Merge</bpmn:outgoing>
     </bpmn:adHocSubProcess>
     <bpmn:adHocSubProcess id="AdHoc_E3_Wrapper" name="Extracted Fragment E3" qhana:fragmentRef="E3">
-      <bpmn:startEvent id="StartEvent_AdHoc_E3_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E3_Plugin" name="Extracted Fragment E3" camunda:type="external" camunda:topic="plugin-step.DataAnalysisPipeline-E3">
-        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E3_Plugin" name="Extracted Fragment E3" camunda:type="external" camunda:topic="plugin.DataAnalysisPipeline_E3">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="qoutput.encodedData">${qoutput.encodedData}</camunda:inputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E3_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_in" sourceRef="StartEvent_AdHoc_E3_Wrapper" targetRef="ServiceTask_E3_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_out" sourceRef="ServiceTask_E3_Plugin" targetRef="EndEvent_AdHoc_E3_Wrapper" />
       <bpmn:incoming>Flow_XOR_to_SVM</bpmn:incoming>
       <bpmn:outgoing>Flow_SVM_to_Merge</bpmn:outgoing>
     </bpmn:adHocSubProcess>

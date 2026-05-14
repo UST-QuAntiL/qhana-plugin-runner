@@ -505,7 +505,7 @@ def _parse_bpmn(bpmn: str):
     while len(nodes) > 0:
         node, parent = nodes.popleft()
         next_parent = parent
-        if node.tag in (BPMN.subProcess, BPMN.adHocSubProcess):
+        if node.tag == BPMN.subProcess:
             next_parent = node
         for n in node:
             if n.tag in IGNORED_TAGS:
@@ -585,7 +585,7 @@ def _parse_bpmn(bpmn: str):
     # postprocess start events
     for parent_id, start_event in start_events.items():
         parent = parsed.activities[parent_id]
-        assert parent.type_ in (BPMN.subProcess, BPMN.adHocSubProcess)
+        assert parent.type_ == BPMN.subProcess
         parent.start_event = start_event
 
     # postprocess activities

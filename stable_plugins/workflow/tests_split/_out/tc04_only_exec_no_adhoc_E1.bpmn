@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc04_only_exec_no_adhoc" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc04_only_exec_no_adhoc_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
-    <bpmn:startEvent id="StartEvent_E1" name="Start">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="UserTask_Input" name="Enter File ID">
@@ -60,7 +60,7 @@
     <bpmn:endEvent id="EndEvent_1" name="End">
       <bpmn:incoming>Flow_6</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="UserTask_Input" />
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="UserTask_Input" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="UserTask_Input" targetRef="QHanaTask_Fetch" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_Fetch" targetRef="QHanaTask_Classify" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="QHanaTask_Classify" targetRef="QHanaTask_Store" />
@@ -87,7 +87,7 @@
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
         <dc:Bounds x="1250" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="60" y="190" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">

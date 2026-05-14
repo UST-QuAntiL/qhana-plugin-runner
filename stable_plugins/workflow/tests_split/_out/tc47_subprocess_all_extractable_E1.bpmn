@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc47_subprocess_all_extractable" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc47_subprocess_all_extractable_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
-    <bpmn:startEvent id="StartEvent_E1" name="Start">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:subProcess id="SubProcess_Extractable" name="Extractable Subprocess">
@@ -40,7 +40,7 @@
     <bpmn:endEvent id="EndEvent_1" name="End">
       <bpmn:incoming>Flow_end</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="SubProcess_Extractable" />
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="SubProcess_Extractable" />
     <bpmn:sequenceFlow id="Flow_end" sourceRef="SubProcess_Extractable" targetRef="EndEvent_1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc47_subprocess_all_extractable_E1">
@@ -75,7 +75,7 @@
         <di:waypoint x="600" y="200" />
         <di:waypoint x="640" y="200" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="120" y="182" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_end_di" bpmnElement="Flow_end">

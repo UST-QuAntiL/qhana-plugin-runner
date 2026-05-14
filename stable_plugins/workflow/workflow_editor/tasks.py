@@ -47,6 +47,7 @@ def deploy_workflow(
     workflow_url: str,
     workflow_id,
     deploy_as: Literal["plugin", "workflow", "ui-template"] = "plugin",
+    base_url: Optional[str] = None,
 ):
     if deploy_as == "plugin":
         with PLUGIN_REGISTRY_CLIENT as client:
@@ -86,10 +87,10 @@ def deploy_workflow(
             timeout=30,
         )
     elif deploy_as == "ui-template":
-        _deploy_as_ui_template(workflow_id)
+        _deploy_as_ui_template(workflow_id, base_url=base_url)
 
 
-def _deploy_as_ui_template(workflow_id):
+def _deploy_as_ui_template(workflow_id, base_url: Optional[str] = None):
     plugin_instance = plugin.WorkflowEditor.instance
     if not plugin_instance:
         TASK_LOGGER.error("No WorkflowEditor plugin instance available.")
@@ -108,9 +109,9 @@ def _deploy_as_ui_template(workflow_id):
         original_pid = _get_main_original_pid(main_xml)
 
         for frag in fragments:
-            deployed_plugin_id = _deploy_fragment_as_plugin(frag)
+            deployed_plugin_id = _deploy_fragment_as_plugin(frag, base_url=base_url)
             if deployed_plugin_id:
-                topic = f"plugin-step.{original_pid}-{frag.fragment_id}"
+                topic = f"plugin.{original_pid}_{frag.fragment_id}"
                 topic_to_plugin_id[topic] = deployed_plugin_id
 
     if topic_to_plugin_id:
@@ -171,6 +172,7 @@ BPMN_MODEL_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 
 def _deploy_fragment_as_plugin(
     frag: FragmentResult,
+    base_url: Optional[str] = None,
 ) -> Optional[str]:
     plugin_instance = plugin.WorkflowEditor.instance
     if not plugin_instance:
@@ -185,13 +187,16 @@ def _deploy_fragment_as_plugin(
         commit=True,
     )
 
-    plugin_runner_url = current_app.config.get(
-        "PLUGIN_RUNNER_URLS", "http://localhost:5005"
-    )
-    if isinstance(plugin_runner_url, list):
-        plugin_runner_url = plugin_runner_url[0]
-    plugin_runner_url = plugin_runner_url.rstrip("/")
-    workflow_url = f"{plugin_runner_url}/plugins/{plugin_instance.identifier}/workflows/{frag_blob_id}/"
+    if base_url:
+        workflow_url = f"{base_url}{frag_blob_id}/"
+    else:
+        plugin_runner_url = current_app.config.get(
+            "PLUGIN_RUNNER_URLS", "http://localhost:5005"
+        )
+        if isinstance(plugin_runner_url, list):
+            plugin_runner_url = plugin_runner_url[0]
+        plugin_runner_url = plugin_runner_url.rstrip("/")
+        workflow_url = f"{plugin_runner_url}/plugins/{plugin_instance.identifier}/workflows/{frag_blob_id}/"
 
     with PLUGIN_REGISTRY_CLIENT as client:
         deploy_workflow_plugin = client.search_by_rel(

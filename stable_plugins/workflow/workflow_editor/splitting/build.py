@@ -97,10 +97,8 @@ def _make_wrapper_adhoc(
 ) -> Tuple[ET.Element, List[str], List[str]]:
     fid = f"E{region.index}"
     wrapper_id = f"AdHoc_{fid}_Wrapper"
-    inner_start_id = f"StartEvent_{wrapper_id}"
-    inner_end_id = f"EndEvent_{wrapper_id}"
     plugin_task_id = f"ServiceTask_{fid}_Plugin"
-    plugin_topic = f"plugin-step.{original_process_id}-{fid}"
+    plugin_topic = f"plugin.{original_process_id}_{fid}"
 
     wrapper = ET.Element(
         _bpmn("adHocSubProcess"),
@@ -113,11 +111,6 @@ def _make_wrapper_adhoc(
 
     inputs, outputs = _compute_region_io(region, nodes, all_regions)
 
-    inner_start = ET.SubElement(
-        wrapper, _bpmn("startEvent"), attrib={"id": inner_start_id}
-    )
-    ET.SubElement(inner_start, _bpmn("outgoing")).text = f"Flow_{wrapper_id}_in"
-
     plugin_task = ET.SubElement(
         wrapper,
         _bpmn("serviceTask"),
@@ -128,8 +121,6 @@ def _make_wrapper_adhoc(
     )
     plugin_task.set(_camunda("type"), "external")
     plugin_task.set(_camunda("topic"), plugin_topic)
-    ET.SubElement(plugin_task, _bpmn("incoming")).text = f"Flow_{wrapper_id}_in"
-    ET.SubElement(plugin_task, _bpmn("outgoing")).text = f"Flow_{wrapper_id}_out"
 
     if inputs or outputs:
         ext = ET.SubElement(plugin_task, _bpmn("extensionElements"))
@@ -141,28 +132,6 @@ def _make_wrapper_adhoc(
             op = ET.SubElement(io, _camunda("outputParameter"), attrib={"name": v})
             op.text = "${" + v + "}"
 
-    inner_end = ET.SubElement(wrapper, _bpmn("endEvent"), attrib={"id": inner_end_id})
-    ET.SubElement(inner_end, _bpmn("incoming")).text = f"Flow_{wrapper_id}_out"
-
-    ET.SubElement(
-        wrapper,
-        _bpmn("sequenceFlow"),
-        attrib={
-            "id": f"Flow_{wrapper_id}_in",
-            "sourceRef": inner_start_id,
-            "targetRef": plugin_task_id,
-        },
-    )
-    ET.SubElement(
-        wrapper,
-        _bpmn("sequenceFlow"),
-        attrib={
-            "id": f"Flow_{wrapper_id}_out",
-            "sourceRef": plugin_task_id,
-            "targetRef": inner_end_id,
-        },
-    )
-
     return wrapper, inputs, outputs
 
 
@@ -173,6 +142,7 @@ def _build_main_process(
     order: List[str],
     regions: List[Region],
     new_process_id: str,
+    start_id: Optional[str] = None,
 ) -> Tuple[ET.Element, Dict[str, str]]:
     main = ET.Element(original_process.tag, attrib=dict(original_process.attrib))
     main.set("id", new_process_id)
@@ -233,12 +203,23 @@ def _build_main_process(
 
     copied_nodes: Dict[str, ET.Element] = {}
 
+    start_feeds_region = False
+    if start_id is not None:
+        for f in flows.values():
+            if f.source == start_id and f.target in region_by_node:
+                start_feeds_region = True
+                break
+
     for nid in order:
         if nid in interior_of_region:
             continue
         n = nodes[nid]
         c = copy.deepcopy(n.elem)
         _strip_incoming_outgoing(c)
+        if nid == start_id and start_feeds_region:
+            for ext in list(c):
+                if _localname(ext.tag) == "extensionElements":
+                    c.remove(ext)
         copied_nodes[nid] = c
 
     inserted_wrappers: Set[str] = set()
@@ -580,6 +561,7 @@ def _build_fragment_process(
     flows: Dict[str, Flow],
     fragment_process_id: str,
     original_process: ET.Element,
+    start_id: Optional[str] = None,
 ) -> ET.Element:
     fid = f"E{region.index}"
     proc = ET.Element(
@@ -639,10 +621,23 @@ def _build_fragment_process(
     synth_start_id = f"StartEvent_{fid}"
     synth_end_id = f"EndEvent_{fid}"
 
+    entry_from_process_start = False
+    if need_synth_start and start_id is not None:
+        for efid in region.entry_flow_ids:
+            if flows[efid].source == start_id:
+                entry_from_process_start = True
+                break
+
     if need_synth_start:
-        start_elem = ET.SubElement(
-            proc, _bpmn("startEvent"), attrib={"id": synth_start_id, "name": "Start"}
-        )
+        if entry_from_process_start:
+            start_elem = copy.deepcopy(nodes[start_id].elem)
+            _strip_incoming_outgoing(start_elem)
+            synth_start_id = start_elem.get("id") or synth_start_id
+            proc.append(start_elem)
+        else:
+            start_elem = ET.SubElement(
+                proc, _bpmn("startEvent"), attrib={"id": synth_start_id, "name": "Start"}
+            )
 
     elem_by_id: Dict[str, ET.Element] = {}
     for nid in region.node_ids:

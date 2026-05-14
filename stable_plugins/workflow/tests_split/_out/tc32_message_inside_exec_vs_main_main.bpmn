@@ -6,23 +6,13 @@
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
-      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc32_message_inside_exec_vs_main-E1">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.tc32_message_inside_exec_vs_main_E1">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:outputParameter name="qoutput.updatePayload">${qoutput.updatePayload}</camunda:outputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:adHocSubProcess>
@@ -49,23 +39,13 @@
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
     </bpmn:adHocSubProcess>
     <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
-      <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin-step.tc32_message_inside_exec_vs_main-E2">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin.tc32_message_inside_exec_vs_main_E2">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="qoutput.approvedUpdate">${qoutput.approvedUpdate}</camunda:inputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E2_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
       <bpmn:incoming>Flow_3</bpmn:incoming>
       <bpmn:outgoing>Flow_to_Main_End</bpmn:outgoing>
     </bpmn:adHocSubProcess>

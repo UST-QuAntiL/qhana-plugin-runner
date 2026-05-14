@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc46_loop_markers" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc46_loop_markers_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
-    <bpmn:startEvent id="StartEvent_E1" name="Start">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:serviceTask id="ServiceTask_Prepare" name="prepare-batch" camunda:type="external" camunda:topic="qhana-task">
@@ -45,7 +45,7 @@
     <bpmn:endEvent id="EndEvent_1" name="End">
       <bpmn:incoming>Flow_4</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="ServiceTask_Prepare" />
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="ServiceTask_Prepare" />
     <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Prepare" targetRef="ServiceTask_Loop" />
     <bpmn:sequenceFlow id="Flow_3" sourceRef="ServiceTask_Loop" targetRef="ServiceTask_Aggregate" />
     <bpmn:sequenceFlow id="Flow_4" sourceRef="ServiceTask_Aggregate" targetRef="EndEvent_1" />
@@ -64,7 +64,7 @@
       <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
         <dc:Bounds x="700" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="80" y="200" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">

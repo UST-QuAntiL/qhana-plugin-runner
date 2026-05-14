@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc34_lane_partial_removal" targetNamespace="http://qhana.example/testcases">
   <bpmn:process id="tc34_lane_partial_removal_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
-    <bpmn:startEvent id="StartEvent_E1" name="Start">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
       <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
     </bpmn:startEvent>
     <qhana:qHAnaServiceTask id="QHanaTask_AutomatedPrep" name="prep-data">
@@ -17,7 +17,7 @@
     <bpmn:endEvent id="EndEvent_E1" name="End">
       <bpmn:incoming>Flow_E1_end</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_AutomatedPrep" />
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="QHanaTask_AutomatedPrep" />
     <bpmn:sequenceFlow id="Flow_E1_end" sourceRef="QHanaTask_AutomatedPrep" targetRef="EndEvent_E1" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_tc34_lane_partial_removal_E1">
@@ -25,7 +25,7 @@
       <bpmndi:BPMNShape id="QHanaTask_AutomatedPrep_di" bpmnElement="QHanaTask_AutomatedPrep">
         <dc:Bounds x="250" y="130" width="150" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
         <dc:Bounds x="170" y="152" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="EndEvent_E1_di" bpmnElement="EndEvent_E1">

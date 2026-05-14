@@ -5,23 +5,13 @@
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
-      <bpmn:startEvent id="StartEvent_AdHoc_E1_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin-step.tc17_and_duplicate_edge_case-E1">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E1_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.tc17_and_duplicate_edge_case_E1">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:outputParameter name="qoutput.processData">${qoutput.processData}</camunda:outputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E1_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E1_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_in" sourceRef="StartEvent_AdHoc_E1_Wrapper" targetRef="ServiceTask_E1_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E1_Wrapper_out" sourceRef="ServiceTask_E1_Plugin" targetRef="EndEvent_AdHoc_E1_Wrapper" />
       <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
     </bpmn:adHocSubProcess>
@@ -32,44 +22,24 @@
       <bpmn:outgoing>Flow_3C</bpmn:outgoing>
     </bpmn:parallelGateway>
     <bpmn:adHocSubProcess id="AdHoc_E2_Wrapper" name="Extracted Fragment E2" qhana:fragmentRef="E2">
-      <bpmn:startEvent id="StartEvent_AdHoc_E2_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin-step.tc17_and_duplicate_edge_case-E2">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E2_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E2_Plugin" name="Extracted Fragment E2" camunda:type="external" camunda:topic="plugin.tc17_and_duplicate_edge_case_E2">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="qoutput.processData">${qoutput.processData}</camunda:inputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E2_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E2_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_in" sourceRef="StartEvent_AdHoc_E2_Wrapper" targetRef="ServiceTask_E2_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E2_Wrapper_out" sourceRef="ServiceTask_E2_Plugin" targetRef="EndEvent_AdHoc_E2_Wrapper" />
       <bpmn:incoming>Flow_3A</bpmn:incoming>
       <bpmn:outgoing>Flow_4A</bpmn:outgoing>
     </bpmn:adHocSubProcess>
     <bpmn:adHocSubProcess id="AdHoc_E3_Wrapper" name="Extracted Fragment E3" qhana:fragmentRef="E3">
-      <bpmn:startEvent id="StartEvent_AdHoc_E3_Wrapper">
-        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_in</bpmn:outgoing>
-      </bpmn:startEvent>
-      <bpmn:serviceTask id="ServiceTask_E3_Plugin" name="Extracted Fragment E3" camunda:type="external" camunda:topic="plugin-step.tc17_and_duplicate_edge_case-E3">
-        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_in</bpmn:incoming>
-        <bpmn:outgoing>Flow_AdHoc_E3_Wrapper_out</bpmn:outgoing>
+      <bpmn:serviceTask id="ServiceTask_E3_Plugin" name="Extracted Fragment E3" camunda:type="external" camunda:topic="plugin.tc17_and_duplicate_edge_case_E3">
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="qoutput.processData">${qoutput.processData}</camunda:inputParameter>
           </camunda:inputOutput>
         </bpmn:extensionElements>
       </bpmn:serviceTask>
-      <bpmn:endEvent id="EndEvent_AdHoc_E3_Wrapper">
-        <bpmn:incoming>Flow_AdHoc_E3_Wrapper_out</bpmn:incoming>
-      </bpmn:endEvent>
-      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_in" sourceRef="StartEvent_AdHoc_E3_Wrapper" targetRef="ServiceTask_E3_Plugin" />
-      <bpmn:sequenceFlow id="Flow_AdHoc_E3_Wrapper_out" sourceRef="ServiceTask_E3_Plugin" targetRef="EndEvent_AdHoc_E3_Wrapper" />
       <bpmn:incoming>Flow_3B</bpmn:incoming>
       <bpmn:outgoing>Flow_4B</bpmn:outgoing>
     </bpmn:adHocSubProcess>

@@ -631,6 +631,10 @@ def _build_fragment_di(
     frag_ids = _collect_ids(fragment_process)
 
     start_id = f"StartEvent_{fid_label}"
+    for child in fragment_process:
+        if _localname(child.tag) == "startEvent":
+            start_id = child.get("id") or start_id
+            break
     start_x = fx - 80
     start_y = fy + fh / 2.0 - 18
     if start_id in frag_ids:
