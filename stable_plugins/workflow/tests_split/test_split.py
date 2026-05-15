@@ -1,6 +1,11 @@
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+
+_HERE = Path(__file__).parent
+sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parent / "workflow_editor"))
 
 try:
     import pytest

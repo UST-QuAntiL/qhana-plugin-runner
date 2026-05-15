@@ -1,6 +1,11 @@
 import pprint
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+_HERE = Path(__file__).parent
+sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parent / "workflow_editor"))
 
 try:
     from splitting.split import split_workflow, SplitNotSupported
