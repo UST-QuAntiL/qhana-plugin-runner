@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+  xmlns:qhana="https://github.com/qhana"
+  id="Definitions_tc32_message_inside_exec_vs_main"
+  targetNamespace="http://qhana.example/testcases">
+
+  <bpmn:message id="Message_Update" name="UpdateMessage" />
+  <bpmn:interface id="Interface_1" name="UpdateInterface">
+    <bpmn:operation id="Operation_SendUpdate" name="sendUpdate" />
+  </bpmn:interface>
+
+  <bpmn:process
+    id="tc32_message_inside_exec_vs_main"
+    name="TC32 - Message task inside exec vs main"
+    isExecutable="true"
+    camunda:versionTag="0.2">
+
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Prepare" name="prepare-before-message">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">prepare-before-message</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.seed">update-seed</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.updatePayload">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:adHocSubProcess id="AdHocSubProcess_1" name="Ad-hoc Review Block" ordering="Parallel">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Review" name="review-update">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">review-update</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.payload">${qoutput.updatePayload}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.reviewedUpdate">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+
+      <qhana:qHAnaServiceTask id="QHanaTask_Approve" name="approve-update">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">approve-update</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.payload">${qoutput.reviewedUpdate}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.approvedUpdate">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+    </bpmn:adHocSubProcess>
+
+    <bpmn:sendTask id="SendTask_Update" name="Send Update" implementation="##WebService" messageRef="Message_Update" operationRef="Operation_SendUpdate">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qinput.payload">${qoutput.approvedUpdate}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.sentUpdate">sent</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </bpmn:sendTask>
+
+    <qhana:qHAnaServiceTask id="QHanaTask_Finalize" name="finalize-update">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">finalize-update</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.marker">${qoutput.sentUpdate}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.finalUpdateState">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+    </qhana:qHAnaServiceTask>
+
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="QHanaTask_Prepare" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="QHanaTask_Prepare" targetRef="AdHocSubProcess_1" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="AdHocSubProcess_1" targetRef="SendTask_Update" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="SendTask_Update" targetRef="QHanaTask_Finalize" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="QHanaTask_Finalize" targetRef="EndEvent_1" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc32">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc32" bpmnElement="tc32_message_inside_exec_vs_main">
+
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="50" y="210" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Prepare_di" bpmnElement="QHanaTask_Prepare">
+        <dc:Bounds x="120" y="188" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="AdHocSubProcess_1_di" bpmnElement="AdHocSubProcess_1" isExpanded="true">
+        <dc:Bounds x="370" y="120" width="430" height="190"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Review_di" bpmnElement="QHanaTask_Review">
+        <dc:Bounds x="425" y="175" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Approve_di" bpmnElement="QHanaTask_Approve">
+        <dc:Bounds x="615" y="175" width="150" height="70"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="SendTask_Update_di" bpmnElement="SendTask_Update">
+        <dc:Bounds x="870" y="188" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="QHanaTask_Finalize_di" bpmnElement="QHanaTask_Finalize">
+        <dc:Bounds x="1120" y="188" width="180" height="80"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1360" y="210" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="86" y="228"/>
+        <di:waypoint x="120" y="228"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="300" y="228"/>
+        <di:waypoint x="370" y="228"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="800" y="228"/>
+        <di:waypoint x="870" y="228"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="1050" y="228"/>
+        <di:waypoint x="1120" y="228"/>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1300" y="228"/>
+        <di:waypoint x="1360" y="228"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

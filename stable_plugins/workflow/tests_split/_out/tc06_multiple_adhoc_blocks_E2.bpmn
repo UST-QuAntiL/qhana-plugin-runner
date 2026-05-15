@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc06_multiple_adhoc_blocks" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc06_multiple_adhoc_blocks_E2" name="Extracted Fragment E2" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_E2" name="Start">
+      <bpmn:outgoing>Flow_E2_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_Transform" name="transform-data">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">transform-data</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.annotatedData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.transformedData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E2_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_E2_end</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_E2" name="End">
+      <bpmn:incoming>Flow_E2_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E2_start" sourceRef="StartEvent_E2" targetRef="QHanaTask_Transform" />
+    <bpmn:sequenceFlow id="Flow_E2_end" sourceRef="QHanaTask_Transform" targetRef="EndEvent_E2" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc06_multiple_adhoc_blocks_E2">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc06_multiple_adhoc_blocks_E2" bpmnElement="tc06_multiple_adhoc_blocks_E2">
+      <bpmndi:BPMNShape id="QHanaTask_Transform_di" bpmnElement="QHanaTask_Transform">
+        <dc:Bounds x="850" y="198" width="180" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_E2_di" bpmnElement="StartEvent_E2">
+        <dc:Bounds x="770" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E2_di" bpmnElement="EndEvent_E2">
+        <dc:Bounds x="1080" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E2_start_di" bpmnElement="Flow_E2_start">
+        <di:waypoint x="806" y="238" />
+        <di:waypoint x="850" y="238" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E2_end_di" bpmnElement="Flow_E2_end">
+        <di:waypoint x="1030" y="238" />
+        <di:waypoint x="1080" y="238" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

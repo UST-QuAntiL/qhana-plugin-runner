@@ -1,6 +1,7 @@
 from collections import defaultdict
 from time import time
-from typing import Literal, Optional
+from typing import Dict, Literal, Optional
+from xml.etree import ElementTree
 
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
@@ -15,6 +16,7 @@ from . import plugin
 from .config import CONFIG_KEY, WF_STATE_KEY, get_config_from_registry
 from .parser import get_ad_hoc_tree, split_ui_template_workflow, tree_to_template_tabs
 from .util import extract_wf_properties
+from .splitting import FragmentResult
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -45,6 +47,7 @@ def deploy_workflow(
     workflow_url: str,
     workflow_id,
     deploy_as: Literal["plugin", "workflow", "ui-template"] = "plugin",
+    base_url: Optional[str] = None,
 ):
     if deploy_as == "plugin":
         with PLUGIN_REGISTRY_CLIENT as client:
@@ -84,28 +87,38 @@ def deploy_workflow(
             timeout=30,
         )
     elif deploy_as == "ui-template":
-        _deploy_as_ui_template(workflow_id)
+        _deploy_as_ui_template(workflow_id, base_url=base_url)
 
 
-def _deploy_as_ui_template(workflow_id):
+def _deploy_as_ui_template(workflow_id, base_url: Optional[str] = None):
     plugin_instance = plugin.WorkflowEditor.instance
     if not plugin_instance:
-        return  # TODO: log an error??
+        TASK_LOGGER.error("No WorkflowEditor plugin instance available.")
+        return
 
-    bpmn = DataBlob.get_value(plugin_instance.name, workflow_id, default=None)
-    if not bpmn:
-        return  # TODO: log an error??
+    bpmn_bytes = DataBlob.get_value(plugin_instance.name, workflow_id, default=None)
+    if not bpmn_bytes:
+        TASK_LOGGER.error(f"No BPMN data found for workflow_id={workflow_id!r}.")
+        return
 
-    bpmn, child_workflows = split_ui_template_workflow(bpmn.decode(encoding="utf-8"))
+    main_xml, fragments = split_ui_template_workflow(bpmn_bytes.decode(encoding="utf-8"))
 
-    if child_workflows:
-        # TODO implement!
-        raise NotImplementedError(
-            "Deploying extracted worflows as plugins is not implemented yet."
-        )
+    topic_to_plugin_id: Dict[str, str] = {}
 
-    _, name, _ = extract_wf_properties(bpmn=bpmn)
-    ad_hoc_tree = get_ad_hoc_tree(bpmn=bpmn)
+    if fragments:
+        original_pid = _get_main_original_pid(main_xml)
+
+        for frag in fragments:
+            deployed_plugin_id = _deploy_fragment_as_plugin(frag, base_url=base_url)
+            if deployed_plugin_id:
+                topic = f"plugin.{original_pid}_{frag.fragment_id}"
+                topic_to_plugin_id[topic] = deployed_plugin_id
+
+    if topic_to_plugin_id:
+        main_xml = _patch_main_xml(main_xml, topic_to_plugin_id)
+
+    _, name, _ = extract_wf_properties(bpmn=main_xml)
+    ad_hoc_tree = get_ad_hoc_tree(bpmn=main_xml)
 
     template_data = {
         "name": name,
@@ -117,12 +130,14 @@ def _deploy_as_ui_template(workflow_id):
     with PLUGIN_REGISTRY_CLIENT as client:
         response = client.search_by_rel("ui-template")
         if not response:
-            return  # TODO log error
+            TASK_LOGGER.error("Could not find ui-template API endpoint.")
+            return
 
         create_links = response.get_links_by_rel("create", "ui-template")
         create_ui_template_link = create_links[0] if create_links else None
         if not create_ui_template_link:
-            return  # TODO log error
+            TASK_LOGGER.error("No 'create' link found for ui-template.")
+            return
 
         created_response = client.fetch_by_api_link(
             create_ui_template_link, json=template_data
@@ -133,11 +148,116 @@ def _deploy_as_ui_template(workflow_id):
         create_links = template_response.get_links_by_rel("create", "ui-template-tab")
         create_tab_link = create_links[0] if create_links else None
         if not create_tab_link:
-            return  # TODO log error
+            TASK_LOGGER.error("No 'create' link found for ui-template-tab.")
+            return
 
         for tab in ui_template_tabs:
             r = client.fetch_by_api_link(create_tab_link, json=tab)
             assert r
+
+
+def _get_main_original_pid(main_xml: str) -> str:
+    root = ElementTree.fromstring(main_xml)
+    for proc in root.iter(f"{{http://www.omg.org/spec/BPMN/20100524/MODEL}}process"):
+        pid = proc.get("id") or ""
+        if pid.endswith("_main"):
+            return pid[: -len("_main")]
+        return pid
+    return "workflow"
+
+
+CAMUNDA_NS_URI = "http://camunda.org/schema/1.0/bpmn"
+BPMN_MODEL_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+
+
+def _deploy_fragment_as_plugin(
+    frag: FragmentResult,
+    base_url: Optional[str] = None,
+) -> Optional[str]:
+    plugin_instance = plugin.WorkflowEditor.instance
+    if not plugin_instance:
+        TASK_LOGGER.error("No WorkflowEditor plugin instance available.")
+        return None
+
+    frag_blob_id = f"fragment_{frag.fragment_id}_{frag.process_id}"
+    DataBlob.set_value(
+        plugin_instance.name,
+        frag_blob_id,
+        frag.xml.encode("utf-8"),
+        commit=True,
+    )
+
+    if base_url:
+        workflow_url = f"{base_url}{frag_blob_id}/"
+    else:
+        plugin_runner_url = current_app.config.get(
+            "PLUGIN_RUNNER_URLS", "http://localhost:5005"
+        )
+        if isinstance(plugin_runner_url, list):
+            plugin_runner_url = plugin_runner_url[0]
+        plugin_runner_url = plugin_runner_url.rstrip("/")
+        workflow_url = f"{plugin_runner_url}/plugins/{plugin_instance.identifier}/workflows/{frag_blob_id}/"
+
+    with PLUGIN_REGISTRY_CLIENT as client:
+        deploy_workflow_plugin = client.search_by_rel(
+            "plugin", {"name": "deploy-workflow"}, allow_collection_resource=False
+        )
+        if not deploy_workflow_plugin:
+            TASK_LOGGER.error("deploy-workflow plugin not found in registry.")
+            return None
+
+    deployment_url = deploy_workflow_plugin.data["entryPoint"]["href"]
+
+    try:
+        resp = request(
+            "post", deployment_url, data={"workflow": workflow_url}, timeout=30
+        )
+        resp.raise_for_status()
+    except Exception:
+        TASK_LOGGER.exception(
+            f"Failed to deploy fragment {frag.fragment_id} via deploy-workflow plugin."
+        )
+        return None
+
+    TASK_LOGGER.info(f"Deployed fragment {frag.fragment_id} via deploy-workflow plugin.")
+
+    return frag.process_id
+
+
+def _patch_main_xml(
+    main_xml: str,
+    topic_to_plugin_id: Dict[str, str],
+) -> str:
+    root = ElementTree.fromstring(main_xml)
+
+    for service_task in root.iter(f"{{{BPMN_MODEL_NS}}}serviceTask"):
+        topic = service_task.get(f"{{{CAMUNDA_NS_URI}}}topic") or ""
+        if topic not in topic_to_plugin_id:
+            continue
+
+        deployed_id = topic_to_plugin_id[topic]
+
+        service_task.set(f"{{{CAMUNDA_NS_URI}}}topic", f"plugin.{deployed_id}")
+
+        ext = service_task.find(f"{{{BPMN_MODEL_NS}}}extensionElements")
+        if ext is None:
+            ext = ElementTree.SubElement(
+                service_task, f"{{{BPMN_MODEL_NS}}}extensionElements"
+            )
+
+        io = ext.find(f"{{{CAMUNDA_NS_URI}}}inputOutput")
+        if io is None:
+            io = ElementTree.SubElement(ext, f"{{{CAMUNDA_NS_URI}}}inputOutput")
+
+        id_param = ElementTree.SubElement(
+            io, f"{{{CAMUNDA_NS_URI}}}inputParameter", attrib={"name": "qhanaIdentifier"}
+        )
+        id_param.text = deployed_id
+
+    ElementTree.indent(root, space="  ")
+    return ElementTree.tostring(root, encoding="utf-8", xml_declaration=True).decode(
+        "utf-8"
+    )
 
 
 @CELERY.task()

@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_tc54_specialized_end_events" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc54_specialized_end_events_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="ServiceTask_Run" name="run-operation" camunda:type="external" camunda:topic="qhana-task">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaPlugin">placeholder-run</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.status">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_Split" name="Status" default="Flow_Fail">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ok</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Fail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_Message" name="Done (message)">
+      <bpmn:messageEventDefinition messageRef="Message_Done" />
+      <bpmn:incoming>Flow_Ok</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Error" name="Failed (error)">
+      <bpmn:errorEventDefinition errorRef="Error_Failed" />
+      <bpmn:incoming>Flow_Fail</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_1" targetRef="ServiceTask_Run" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ServiceTask_Run" targetRef="Gateway_Split" />
+    <bpmn:sequenceFlow id="Flow_Ok" sourceRef="Gateway_Split" targetRef="EndEvent_Message">
+      <bpmn:conditionExpression>${qoutput.status == 'ok'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Fail" sourceRef="Gateway_Split" targetRef="EndEvent_Error" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc54_specialized_end_events_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc54_specialized_end_events_E1" bpmnElement="tc54_specialized_end_events_E1">
+      <bpmndi:BPMNShape id="ServiceTask_Run_di" bpmnElement="ServiceTask_Run">
+        <dc:Bounds x="160" y="198" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split">
+        <dc:Bounds x="340" y="213" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Message_di" bpmnElement="EndEvent_Message">
+        <dc:Bounds x="450" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Error_di" bpmnElement="EndEvent_Error">
+        <dc:Bounds x="450" y="342" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="220" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="300" y="238" />
+        <di:waypoint x="340" y="238" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ok_di" bpmnElement="Flow_Ok">
+        <di:waypoint x="365" y="213" />
+        <di:waypoint x="365" y="120" />
+        <di:waypoint x="450" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Fail_di" bpmnElement="Flow_Fail">
+        <di:waypoint x="365" y="263" />
+        <di:waypoint x="365" y="360" />
+        <di:waypoint x="450" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="116" y="238" />
+        <di:waypoint x="160" y="238" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
