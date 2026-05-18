@@ -101,6 +101,29 @@ The ``task_data`` fixture
 
 The fixture is function-scoped, so each test gets a fresh database.
 
+The ``app`` and ``client`` fixtures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``app`` is a module-scoped Flask application built via :py:func:`~qhana_plugin_runner.create_app` with the same in-memory SQLite configuration as ``task_data``.
+Plugin discovery runs as part of ``create_app``, so every blueprint declared under ``PLUGIN_FOLDERS`` is registered on the returned app.
+Module scope amortises the startup cost of plugin discovery across the test cases in a file.
+Use ``app`` whenever a test needs the full configured application, an application context, or :py:func:`flask.url_for` without a request context (the test configuration sets ``SERVER_NAME`` so ``url_for`` can build URLs outside a request).
+
+``client`` is a function-scoped :py:meth:`flask.Flask.test_client` bound to ``app``.
+It is the standard entry point for HTTP-level tests and removes the need for a plugin-local Flask fixture:
+
+.. code-block:: python
+
+    from http import HTTPStatus
+    from flask import url_for
+
+
+    def test_metadata_endpoint(client):
+        response = client.get(url_for("data-creator-v0-1-1.PluginsView"))
+        assert response.status_code == HTTPStatus.OK
+
+Both fixtures are defined in the repo-root :source:`conftest.py` and are auto-discovered.
+
 Assertion helpers in ``tests/utils.py``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -137,6 +160,21 @@ To test a plugin:
 3. Plugin source files **must use relative imports** (this is enforced by ``tests/test_plugin_imports.py`` so plugins remain relocatable, see :doc:`plugins`). Test files are excluded from this check, so plugin tests can use absolute imports.
 
 Test module names can collide across plugins (multiple plugins each having a ``test_routes.py`` is fine). ``--import-mode=importlib`` handles the disambiguation.
+
+Examples
+~~~~~~~~
+
+The :source:`stable_plugins/data_synthesis/data_creator/tests/` directory demonstrates the test types described in this guide. It uses the nested layout and relies on the ``client`` fixture from the repo-root :source:`conftest.py`. Each file covers one aspect of the plugin:
+
+* :source:`stable_plugins/data_synthesis/data_creator/tests/test_datasets.py`  
+
+  Pure unit tests and hypothesis property tests for the numpy-based dataset generators in :source:`stable_plugins/data_synthesis/data_creator/backend/datasets.py`. Demonstrates :py:func:`pytest.mark.parametrize` for shape checks across every ``DataTypeEnum`` member, and ``@given`` strategies for invariants (output length, finite values, integer label dtype, label range bounded by ``centers``). No fixtures are required because the generators have no Flask, DB, or Celery dependencies.
+* :source:`stable_plugins/data_synthesis/data_creator/tests/test_schemas.py`
+
+  Marshmallow schema tests for ``InputParametersSchema``. Covers the round-trip from JSON payload to ``InputParameters`` dataclass (including the ``camelCase`` rewriting performed by ``MaBaseSchema``), the per-type required-field rules in ``REQUIRED_FIELDS_BY_TYPE``, range validators on ``num_train_points`` / ``noise`` / ``turns`` / ``centers``, and rejection of unknown ``dataset_type`` values. Schemas are pure Python, so these tests also run without a Flask app.
+* :source:`stable_plugins/data_synthesis/data_creator/tests/test_routes.py`
+
+  HTTP-level tests using the shared ``client`` fixture. Covers the metadata endpoint (``GET /plugins/<id>/``), the micro frontend form rendering and default values, and the form's behavior on invalid input (the route uses ``validate_errors_as_result=True`` and re-renders rather than returning a 400). The ``/process/`` endpoint enqueues a Celery task and is therefore covered by Celery-aware tests instead, see :doc:`adr/0018-celery-task-testing-strategy`.
 
 For Celery tasks specifically, follow the pattern below.
 
@@ -274,6 +312,7 @@ See also
 * :doc:`adr/0006-use-celery-task-queue`
 * :doc:`adr/0018-celery-task-testing-strategy`
 * :doc:`adr/0019-co-locate-plugin-tests`
+* :source:`stable_plugins/data_synthesis/data_creator/tests/`, an example covering unit, property-based, schema, and route tests for a stable plugin.
 * :doc:`plugins`, the plugin authoring guide.
 * `pytest documentation <https://docs.pytest.org/>`_
 * `hypothesis documentation <https://hypothesis.readthedocs.io/>`_
