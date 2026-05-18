@@ -17,6 +17,8 @@ jobs:
         run: pipx install poetry
       - name: Install dependencies
         run: poetry install --no-interaction --with dev
+      - name: Install plugin dependencies (only plugins with tests)
+        run: poetry run flask install --only-with-tests --skip-runner-dependencies
       - name: Run pytest
         run: poetry run pytest --cov=qhana_plugin_runner --cov-report=html --cov-report=term
       - name: Upload coverage report

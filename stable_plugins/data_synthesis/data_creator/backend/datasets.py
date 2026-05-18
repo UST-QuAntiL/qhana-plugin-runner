@@ -14,9 +14,9 @@
 
 from enum import Enum
 from typing import List, Tuple
-from sklearn.datasets import make_blobs
 
 import numpy as np
+from sklearn.datasets import make_blobs
 
 
 class DataTypeEnum(Enum):
@@ -81,7 +81,7 @@ def checkerboard(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
 
 
 # Creates Gaussian blobs for clusering using sckit-learns make_blobs
-def blobs(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+def blobs(n_points: int, centers: int = 4, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the Blobs dataset."""
     x, y = make_blobs(
         n_samples=n_points,
@@ -110,7 +110,7 @@ def checkerboard_3d(n_points: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
 
 
 # Creates 3D Gaussian blobs for clusering using sckit-learns make_blobs
-def blobs_3d(n_points: int, centers: int, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+def blobs_3d(n_points: int, centers: int = 4, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """Returns the 3D Blobs dataset."""
     x, y = make_blobs(
         n_samples=n_points,
