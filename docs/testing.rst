@@ -165,7 +165,7 @@ Test module names can collide across plugins (multiple plugins each having a ``t
 Examples
 ~~~~~~~~
 
-The :source:`stable_plugins/data_synthesis/data_creator/tests/` directory demonstrates the test types described in this guide. It uses the nested layout and relies on the fixtures from the repo-root :source:`conftest.py`. Each file covers one aspect of the plugin:
+The :source:`stable_plugins/data_synthesis/data_creator/tests/` directory demonstrates the test types described in this guide. It uses the nested layout and relies on the ``client`` fixture from the repo-root :source:`conftest.py`. Each file covers one aspect of the plugin:
 
 * :source:`stable_plugins/data_synthesis/data_creator/tests/test_datasets.py`  
 
@@ -180,8 +180,6 @@ The :source:`stable_plugins/data_synthesis/data_creator/tests/` directory demons
 * :source:`stable_plugins/data_synthesis/data_creator/tests/test_tasks.py`
 
   End-to-end Celery tests for the ``calculation_task`` enqueued by ``/process/``. Persists a ``ProcessingTask`` the way ``routes.py`` does, calls ``calculation_task.apply_async`` against the in-memory broker, and asserts on the four output files written by the worker (file names, ``file_type``, ``mimetype``, and JSON payload shape). Also covers the ``centers`` parameter for ``DataTypeEnum.blobs`` and the ``KeyError`` raised when the ``db_id`` does not resolve to a row. Uses the ``broker_app`` and ``celery_worker`` fixtures from the repo-root :source:`conftest.py`, following the pattern described in `Testing Celery tasks`_.
-
-For Celery tasks specifically, follow the pattern below.
 
 
 Testing Celery tasks

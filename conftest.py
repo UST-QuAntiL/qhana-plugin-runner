@@ -24,9 +24,9 @@ from qhana_plugin_runner import create_app
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.cli import create_db_function
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.util.config.celery_config import CELERY_PRODUCTION_CONFIG
 
 MODULE_NAME = "qhana_plugin_runner"
-
 
 DEFAULT_TEST_CONFIG = {
     "SECRET_KEY": "test",
@@ -98,6 +98,7 @@ def app():
 def client(app: Flask):
     """Flask test client bound to the plugin-runner app."""
     return app.test_client()
+<<<<<<< HEAD
 
 
 @pytest.fixture(scope="module")
