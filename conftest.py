@@ -24,7 +24,6 @@ from qhana_plugin_runner import create_app
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.cli import create_db_function
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.util.config.celery_config import CELERY_PRODUCTION_CONFIG
 
 MODULE_NAME = "qhana_plugin_runner"
 
@@ -98,7 +97,6 @@ def app():
 def client(app: Flask):
     """Flask test client bound to the plugin-runner app."""
     return app.test_client()
-<<<<<<< HEAD
 
 
 @pytest.fixture(scope="module")
@@ -120,8 +118,6 @@ def celery_worker():
     is slow.
     """
     from celery.contrib.testing.worker import start_worker
-
-    from qhana_plugin_runner.celery import CELERY
 
     with start_worker(  # pyright: ignore[reportGeneralTypeIssues]
         CELERY,
