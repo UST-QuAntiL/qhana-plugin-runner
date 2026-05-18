@@ -18,14 +18,14 @@ from logging import INFO
 
 import pytest
 from flask import Flask
+from sqlalchemy.pool import StaticPool
 
 from qhana_plugin_runner import create_app
+from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.cli import create_db_function
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.util.config.celery_config import CELERY_PRODUCTION_CONFIG
 
 MODULE_NAME = "qhana_plugin_runner"
-
 
 DEFAULT_TEST_CONFIG = {
     "SECRET_KEY": "test",
@@ -36,7 +36,6 @@ DEFAULT_TEST_CONFIG = {
     "DEFAULT_LOG_SEVERITY": INFO,
     "DEFAULT_LOG_FORMAT_STYLE": "{",
     "DEFAULT_LOG_FORMAT": "{asctime} [{levelname:^7}] [{module:<30}] {message}    <{funcName}, {lineno}; {pathname}>",
-    "CELERY": CELERY_PRODUCTION_CONFIG,
     "DEFAULT_FILE_STORE": "local_filesystem",
     "FILE_STORE_ROOT_PATH": "files",
     "OPENAPI_VERSION": "3.0.2",
@@ -45,6 +44,20 @@ DEFAULT_TEST_CONFIG = {
     # ``SERVER_NAME`` lets ``flask.url_for`` build URLs without a request
     # context, which the route-level tests in plugin test suites rely on.
     "SERVER_NAME": "localhost.localdomain",
+    # StaticPool keeps a single connection alive across threads so the
+    # in-memory SQLite database is visible from both the test thread and
+    # the worker thread.
+    "SQLALCHEMY_ENGINE_OPTIONS": {
+        "connect_args": {"check_same_thread": False},
+        "poolclass": StaticPool,
+    },
+    "CELERY": {
+        "task_default_queue": "qhana_plugin_runner",
+        "broker_url": "memory://",
+        "result_backend": "cache+memory://",
+        "task_always_eager": False,
+        "broker_connection_retry_on_startup": True,
+    },
 }
 
 
@@ -84,3 +97,32 @@ def app():
 def client(app: Flask):
     """Flask test client bound to the plugin-runner app."""
     return app.test_client()
+
+
+@pytest.fixture(scope="module")
+def broker_app():
+    """App configured with a real Celery broker (in-memory)."""
+    app = create_app(dict(DEFAULT_TEST_CONFIG), silent_log=True)
+    with app.app_context():
+        create_db_function(app)
+        yield app
+
+
+@pytest.fixture(scope="module")
+def celery_worker():
+    """Start an in-process Celery worker thread for the test module.
+
+    ``broker_app`` is required so the CELERY singleton is reconfigured
+    against the memory broker before the worker boots. The fixture
+    is module-scoped because spinning the worker up and down per test
+    is slow.
+    """
+    from celery.contrib.testing.worker import start_worker
+
+    with start_worker(  # pyright: ignore[reportGeneralTypeIssues]
+        CELERY,
+        pool="solo",
+        perform_ping_check=False,
+        shutdown_timeout=10,
+    ) as worker:
+        yield worker
