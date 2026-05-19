@@ -181,7 +181,9 @@ def _get_plot(
         df_data[column_name] = [e.get("attributes", {}).get(attr, None) for e in ent_list]
     df = pd.DataFrame(df_data)
 
-    hover_data = {"size": False, "URL": True, "z": is_3d}
+    # The URL is kept in custom_data for the click handler, but not shown in the
+    # hover tooltip
+    hover_data = {"size": False, "URL": False, "z": is_3d}
     for column_name in attr_to_column_name.values():
         hover_data[column_name] = True
 
@@ -223,7 +225,7 @@ if (plotElement) {
     linkContainer.id = linkContainerId;
     linkContainer.style.marginTop = '0.75rem';
     linkContainer.style.fontSize = '0.9rem';
-    linkContainer.textContent = 'Selected entity link: n/a';
+    linkContainer.textContent = 'Click a point to show its entity link';
     plotElement.insertAdjacentElement('afterend', linkContainer);
   }
 
@@ -234,7 +236,7 @@ if (plotElement) {
 
     linkContainer.replaceChildren();
     if (!href) {
-      linkContainer.textContent = 'Selected entity link: n/a';
+      linkContainer.textContent = `Selected entity (${entityId}) has no link`;
       return;
     }
 
@@ -248,12 +250,7 @@ if (plotElement) {
     linkContainer.append(label, link);
   };
 
-  plotElement.on('plotly_hover', (eventData) => {
-    const point = eventData && eventData.points && eventData.points[0];
-    if (point) {
-      updateLink(point);
-    }
-  });
+  // The link reflects the selected entity
   plotElement.on('plotly_click', (eventData) => {
     const point = eventData && eventData.points && eventData.points[0];
     if (point) {
