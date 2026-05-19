@@ -137,7 +137,9 @@ def _get_plot(
                 if href:
                     diag_ent["href"] = href
                 if label_column not in ent:
-                    entity_columns = [col for col in ent.keys() if col not in {"ID", "href"}]
+                    entity_columns = [
+                        col for col in ent.keys() if col not in {"ID", "href"}
+                    ]
                     if len(entity_columns) != 1:
                         raise ValueError(
                             f"Unable to determine label column from {entity_columns}!"
@@ -176,9 +178,7 @@ def _get_plot(
         "size": [10 for _ in ent_list],
     }
     for attr, column_name in attr_to_column_name.items():
-        df_data[column_name] = [
-            e.get("attributes", {}).get(attr, None) for e in ent_list
-        ]
+        df_data[column_name] = [e.get("attributes", {}).get(attr, None) for e in ent_list]
     df = pd.DataFrame(df_data)
 
     hover_data = {"size": False, "URL": True, "z": is_3d}
