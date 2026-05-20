@@ -15,7 +15,7 @@
 from json import dumps
 from pathlib import Path
 from tempfile import SpooledTemporaryFile
-from typing import Any, Dict, Optional, Set, Tuple, Union
+from typing import Any, Dict, Optional, Set, Tuple
 
 import muid
 import pandas as pd
@@ -107,18 +107,17 @@ def _get_plot(
                 href = ent.get("href")
                 if href:
                     diag_ent["href"] = href
-                extra_data: Dict[str, Union[str, float, int, bool, None]] = {}
+                attributes_dict = diag_ent["attributes"]
                 for key, value in ent.items():
                     if key in {"ID", "href"}:
                         continue
                     if value is None or isinstance(value, (str, float, int, bool)):
-                        extra_data[str(key)] = value
+                        attributes_dict[str(key)] = value
                     else:
                         try:
-                            extra_data[str(key)] = dumps(value, sort_keys=True)
+                            attributes_dict[str(key)] = dumps(value, sort_keys=True)
                         except TypeError:
-                            extra_data[str(key)] = str(value)
-                diag_ent["attributes"].update(extra_data)
+                            attributes_dict[str(key)] = str(value)
 
     if clusters_url:
         with open_url(clusters_url) as response:
@@ -137,9 +136,7 @@ def _get_plot(
                 if href:
                     diag_ent["href"] = href
                 if label_column not in ent:
-                    entity_columns = [
-                        col for col in ent.keys() if col not in {"ID", "href"}
-                    ]
+                    entity_columns = list(ent.keys() - {"ID", "href"})
                     if len(entity_columns) != 1:
                         raise ValueError(
                             f"Unable to determine label column from {entity_columns}!"
@@ -154,18 +151,15 @@ def _get_plot(
         for attr in ent.get("attributes", {}).keys()
         if attr is not None
     }
+    # Fixed columns for the DataFrame below: identity (ID, name, URL),
+    # plot axes (x, y, z), the cluster label column, and the marker size column.
+    # User-supplied attribute names that collide with any of these are prefixed
+    # with "Entity ".
     reserved_column_names = {"ID", "name", "URL", "x", "y", "z", "Cluster ID", "size"}
-    attr_to_column_name: Dict[str, str] = {}
-    used_column_names: Set[str] = set(reserved_column_names)
-    for attr in sorted(attributes):
-        column_name = attr
-        if column_name in used_column_names:
-            index = 1
-            while f"Entity {attr} ({index})" in used_column_names:
-                index += 1
-            column_name = f"Entity {attr} ({index})"
-        attr_to_column_name[attr] = column_name
-        used_column_names.add(column_name)
+    attr_to_column_name: Dict[str, str] = {
+        attr: f"Entity {attr}" if attr in reserved_column_names else attr
+        for attr in sorted(attributes)
+    }
 
     df_data: Dict[str, Any] = {
         "ID": [e["ID"] for e in ent_list],
