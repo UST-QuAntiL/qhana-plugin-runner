@@ -12,6 +12,7 @@
             <camunda:inputParameter name="start_entitiesMetadataUrl">${start_entitiesMetadataUrl}</camunda:inputParameter>
             <camunda:inputParameter name="start_entitiesUrl">${start_entitiesUrl}</camunda:inputParameter>
             <camunda:inputParameter name="start_mdsDimensions">${start_mdsDimensions}</camunda:inputParameter>
+            <camunda:inputParameter name="start_mdsMaxIter">${start_mdsMaxIter}</camunda:inputParameter>
             <camunda:inputParameter name="start_taxonomiesZipUrl">${start_taxonomiesZipUrl}</camunda:inputParameter>
             <camunda:outputParameter name="return.qoutput.mds">${return.qoutput.mds}</camunda:outputParameter>
           </camunda:inputOutput>

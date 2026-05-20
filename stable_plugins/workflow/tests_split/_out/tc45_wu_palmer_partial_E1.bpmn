@@ -74,9 +74,11 @@
           <camunda:inputParameter name="qinput.attributeDistancesUrl">
             <camunda:map>
               <camunda:entry key="from">qoutput.distances</camunda:entry>
+              <camunda:entry key="dataType">custom/attribute-distances</camunda:entry>
             </camunda:map>
           </camunda:inputParameter>
           <camunda:inputParameter name="qinput.aggregator">mean</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.missingDataHandling">ignore</camunda:inputParameter>
           <camunda:inputParameter name="qhanaPlugin">distance-aggregator</camunda:inputParameter>
           <camunda:outputParameter name="qoutput.aggregated">${output}</camunda:outputParameter>
         </camunda:inputOutput>
@@ -90,10 +92,13 @@
           <camunda:inputParameter name="qinput.entityDistancesUrl">
             <camunda:map>
               <camunda:entry key="from">qoutput.aggregated</camunda:entry>
+              <camunda:entry key="dataType">custom/entity-distances</camunda:entry>
             </camunda:map>
           </camunda:inputParameter>
           <camunda:inputParameter name="qinput.dimensions">${start_mdsDimensions}</camunda:inputParameter>
           <camunda:inputParameter name="qinput.metric">metric_mds</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.maxIter">${start_mdsMaxIter}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.nInit">4</camunda:inputParameter>
           <camunda:inputParameter name="qhanaPlugin">mds</camunda:inputParameter>
           <camunda:outputParameter name="return.qoutput.mds">${output}</camunda:outputParameter>
         </camunda:inputOutput>

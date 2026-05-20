@@ -9,6 +9,7 @@
         <bpmn:extensionElements>
           <camunda:inputOutput>
             <camunda:inputParameter name="start_datasetType">${start_datasetType}</camunda:inputParameter>
+            <camunda:inputParameter name="start_dimensions">${start_dimensions}</camunda:inputParameter>
             <camunda:inputParameter name="start_numPoints">${start_numPoints}</camunda:inputParameter>
             <camunda:outputParameter name="qoutput.encodedData">${qoutput.encodedData}</camunda:outputParameter>
           </camunda:inputOutput>

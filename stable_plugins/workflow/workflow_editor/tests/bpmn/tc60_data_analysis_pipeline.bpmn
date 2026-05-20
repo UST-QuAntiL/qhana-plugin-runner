@@ -19,6 +19,9 @@
           <camunda:inputParameter name="qinput.datasetType">${start_datasetType}</camunda:inputParameter>
           <camunda:inputParameter name="qinput.numTrainPoints">${start_numPoints}</camunda:inputParameter>
           <camunda:inputParameter name="qinput.numTestPoints">${start_numPoints}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.dimensions">${start_dimensions}</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.turns">1</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.centers">4</camunda:inputParameter>
           <camunda:inputParameter name="qhanaPlugin">data-creator</camunda:inputParameter>
           <camunda:inputParameter name="qhanaPluginVersion">v0.2.3</camunda:inputParameter>
           <camunda:inputParameter name="qhanaName">Data Creation</camunda:inputParameter>

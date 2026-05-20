@@ -1365,6 +1365,7 @@ EXPECTED = {
                     "start_entitiesMetadataUrl",
                     "start_entitiesUrl",
                     "start_mdsDimensions",
+                    "start_mdsMaxIter",
                     "start_taxonomiesZipUrl",
                 ],
                 "outputs": ["return.qoutput.mds"],
@@ -1763,7 +1764,7 @@ EXPECTED = {
                 "fragment_id": "E1",
                 "process_id": "DataAnalysisPipeline_E1",
                 "wrapper_id": "AdHoc_E1_Wrapper",
-                "inputs": ["start_datasetType", "start_numPoints"],
+                "inputs": ["start_datasetType", "start_dimensions", "start_numPoints"],
                 "outputs": ["qoutput.encodedData"],
                 "task_ids": ["Task_DataCreator", "Task_OneHotEncoding"],
                 "flow_ids": [
