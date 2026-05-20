@@ -73,6 +73,8 @@
             if (!input) {
                 return;
             }
+            // TODO: 'change' alone should be enough and fires less often than
+            // 'input'. Keeping both for now.
             input.addEventListener("input", () => updatePreview());
             input.addEventListener("change", () => updatePreview());
         });
