@@ -102,14 +102,16 @@ def client(app: Flask):
 @pytest.fixture(scope="module")
 def broker_app():
     """App configured with a real Celery broker (in-memory)."""
-    app = create_app(dict(DEFAULT_TEST_CONFIG), silent_log=True)
+    test_config = dict(DEFAULT_TEST_CONFIG)
+    test_config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    app = create_app(test_config, silent_log=True)
     with app.app_context():
         create_db_function(app)
         yield app
 
 
 @pytest.fixture(scope="module")
-def celery_worker():
+def celery_worker(broker_app):
     """Start an in-process Celery worker thread for the test module.
 
     ``broker_app`` is required so the CELERY singleton is reconfigured

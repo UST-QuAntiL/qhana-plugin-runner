@@ -63,7 +63,7 @@ def _read_json(file_info) -> list:
         return json.load(fh)
 
 
-@pytest.mark.usefixtures("broker_app", "celery_worker")
+@pytest.mark.usefixtures("celery_worker")
 def test_calculation_task_persists_four_files():
     db_id = _enqueue_processing_task(
         InputParameters(
@@ -117,7 +117,7 @@ def test_calculation_task_persists_four_files():
             assert "label" in first
 
 
-@pytest.mark.usefixtures("broker_app", "celery_worker")
+@pytest.mark.usefixtures("celery_worker")
 def test_calculation_task_with_blobs_passes_centers():
     """``centers`` flows from ``InputParameters`` to ``make_blobs`` via ``**__dict__``."""
     db_id = _enqueue_processing_task(
@@ -152,7 +152,7 @@ def test_calculation_task_with_blobs_passes_centers():
     assert {label["label"] for label in train_labels} <= {0, 1, 2}
 
 
-@pytest.mark.usefixtures("broker_app", "celery_worker")
+@pytest.mark.usefixtures("celery_worker")
 def test_calculation_task_missing_db_id_raises():
     """Task raises ``KeyError`` when no ``ProcessingTask`` row matches the id."""
     async_result = calculation_task.apply_async(kwargs={"db_id": 99999})
