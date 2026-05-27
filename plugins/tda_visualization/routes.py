@@ -161,9 +161,7 @@ def get_plot(data: Mapping):
     url_hash = hashlib.sha256(
         (entity_url + str(homology_dimension)).encode("utf-8")
     ).hexdigest()
-    plot = DataBlob.get_value(
-        TDAVisualization.instance.identifier, url_hash, None
-    )
+    plot = DataBlob.get_value(TDAVisualization.instance.identifier, url_hash, None)
     if plot is None:
         if not (
             task_id := PluginState.get_value(
@@ -185,9 +183,7 @@ def get_plot(data: Mapping):
         try:
             task_result.get(timeout=5)
             # Retrieve the generated html
-            plot = DataBlob.get_value(
-                TDAVisualization.instance.identifier, url_hash
-            )
+            plot = DataBlob.get_value(TDAVisualization.instance.identifier, url_hash)
         except TimeoutError:
             return Response("Plot not yet created!", HTTPStatus.ACCEPTED)
     if not plot:
@@ -201,9 +197,7 @@ def get_plot(data: Mapping):
 class ProcessView(MethodView):
     """Start a long running processing task."""
 
-    @TDA_BLP.arguments(
-        TDAInputParametersSchema(unknown=EXCLUDE), location="form"
-    )
+    @TDA_BLP.arguments(TDAInputParametersSchema(unknown=EXCLUDE), location="form")
     @TDA_BLP.response(HTTPStatus.SEE_OTHER)
     @TDA_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):

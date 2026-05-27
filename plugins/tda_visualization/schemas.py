@@ -40,4 +40,3 @@ class TDAInputParametersSchema(FrontendFormBaseSchema):
             "input_type": "number",
         },
     )
-    

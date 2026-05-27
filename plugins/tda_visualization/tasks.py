@@ -48,13 +48,12 @@ class PlotNotFinishedError(Exception):
 # def get_readable_hash(s: str) -> str:
 #     return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
-def _get_plot_as_html(
-        persistence_dgm: List[np.ndarray],full_html: bool
-) -> str:
+
+def _get_plot_as_html(persistence_dgm: List[np.ndarray], full_html: bool) -> str:
     """Generate a html representation of a given persistence diagram.
 
     Args:
-        persistence_dgm: list of nd.arrays containing the points in the persistence diagram for each 
+        persistence_dgm: list of nd.arrays containing the points in the persistence diagram for each
             homology dimension
         full_html (bool): if True, produce a standalone html page, else produce
             an embeddable html snippet.
@@ -62,7 +61,7 @@ def _get_plot_as_html(
     Returns:
         str: html_content
     """
-    
+
     fig = go.Figure()
 
     for dim, diagram in enumerate(persistence_dgm):
@@ -134,21 +133,18 @@ def _get_plot(
             diagram_ent["data"] = ent.values
             diagram_ent["href"] = ent.href
             entities[ent.ID] = diagram_ent
-    
-    data_points = np.array([
-        entity["data"] for entity in entities.values()
-    ])
+
+    data_points = np.array([entity["data"] for entity in entities.values()])
     ripser_result = ripser(data_points, maxdim=homology_dimension)
     fig_html = _get_plot_as_html(ripser_result["dgms"], full_html)
 
     return fig_html, Path(name).stem
 
 
-@CELERY.task(
-    name=f"{TDAVisualization.instance.identifier}.generate_plot", bind=True
-)
-def generate_plot(self, entity_url: str, homology_dimension: Optional[int], hash_: str) -> str:
-
+@CELERY.task(name=f"{TDAVisualization.instance.identifier}.generate_plot", bind=True)
+def generate_plot(
+    self, entity_url: str, homology_dimension: Optional[int], hash_: str
+) -> str:
     TASK_LOGGER.info(
         f"Generating persistence diagram for entites {entity_url} and homology dimension {homology_dimension}..."
     )
@@ -159,18 +155,14 @@ def generate_plot(self, entity_url: str, homology_dimension: Optional[int], hash
         )
     except HTTPError:
         DataBlob.set_value(TDAVisualization.instance.identifier, hash_, b"")
-        PluginState.delete_value(
-            TDAVisualization.instance.identifier, hash_, commit=True
-        )
+        PluginState.delete_value(TDAVisualization.instance.identifier, hash_, commit=True)
         return "Invalid Entity URL!"
 
     # Html needs to be saved as bytes, so it can be stored in a DataBlob
     html_bytes = diagram.encode(encoding="utf-8")
 
     DataBlob.set_value(TDAVisualization.instance.identifier, hash_, html_bytes)
-    PluginState.delete_value(
-        TDAVisualization.instance.identifier, hash_, commit=True
-    )
+    PluginState.delete_value(TDAVisualization.instance.identifier, hash_, commit=True)
 
     return "Created plot!"
 
