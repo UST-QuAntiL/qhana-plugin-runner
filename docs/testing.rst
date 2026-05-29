@@ -38,7 +38,8 @@ Test File Locations
 
 Test files reside in three valid locations:
 
-* ``tests/`` for runner-core tests. Examples: :source:`tests/test_db.py`, :source:`tests/test_entity_marshalling.py`, :source:`tests/test_plugin_imports.py`, :source:`tests/test_celery_example.py`.
+* ``tests/`` for runner-core tests.
+  Examples: :source:`tests/test_db.py`, :source:`tests/test_entity_marshalling.py`, :source:`tests/test_plugin_imports.py`.
 * ``plugins/<name>/`` for plugin tests, in either a nested or a flat layout (see below).
 * ``stable_plugins/<theme>/<plugin>/`` for stable-plugin tests, following the same nested-or-flat convention.
 
@@ -176,7 +177,12 @@ The :source:`stable_plugins/data_synthesis/data_creator/tests/` directory demons
 
   HTTP-level tests using the shared ``client`` fixture. Covers the metadata endpoint (``GET /plugins/<id>/``), the micro frontend form rendering and default values, and the form's behavior on invalid input (the route uses ``validate_errors_as_result=True`` and re-renders rather than returning a 400). The ``/process/`` endpoint enqueues a Celery task and is therefore covered by Celery-aware tests instead, see :doc:`adr/0018-celery-task-testing-strategy`.
 
-For Celery tasks specifically, follow the pattern below.
+* :source:`stable_plugins/data_synthesis/data_creator/tests/test_tasks.py`
+
+  End-to-end Celery tests for the ``calculation_task`` enqueued by ``/process/``.
+  Persists a ``ProcessingTask`` the way ``routes.py`` does, calls ``calculation_task.apply_async`` against the in-memory broker, and asserts on the four output files written by the worker (file names, ``file_type``, ``mimetype``, and JSON payload shape).
+  Also covers the ``centers`` parameter for ``DataTypeEnum.blobs`` and the ``KeyError`` raised when the ``db_id`` does not resolve to a row.
+  Uses the ``broker_app`` and ``celery_worker`` fixtures from the repo-root :source:`conftest.py`, following the pattern described in `Testing Celery tasks`_.
 
 
 Testing Celery tasks
@@ -184,17 +190,19 @@ Testing Celery tasks
 
 Plugins use Celery for long-running work (see :doc:`adr/0006-use-celery-task-queue`). The recommended testing strategy, set out in :doc:`adr/0018-celery-task-testing-strategy`, is to run a real Celery worker thread inside the test process against an in-memory broker. This exercises the full ``apply_async`` → broker → worker round-trip (including task registration, argument serialization, result serialization, and worker-side error handling) without requiring Redis or Docker.
 
-The canonical example resides in :source:`tests/test_celery_example.py`. Plugin authors should copy the fixtures into the plugin's own test directory and import the plugin's tasks at module level so the ``CELERY`` singleton picks up the registration.
+The fixtures and test config required for this pattern can be found in the repo-root :source:`conftest.py` and are auto-discovered by pytest.
+Plugin authors do not need to copy them.
+Import the plugin's tasks at module level in the test file so the ``CELERY`` singleton picks up the registration when ``broker_app`` builds the app.
 
 Configuration
 ~~~~~~~~~~~~~
 
-The Flask + Celery test config combines an in-memory SQLite database (with a thread-safe pool) with an in-memory Celery broker:
+The Flask + Celery test config in :source:`conftest.py` combines an in-memory SQLite database (with a thread-safe pool) with an in-memory Celery broker:
 
-.. literalinclude:: ../tests/test_celery_example.py
+.. literalinclude:: ../conftest.py
     :language: python
-    :lines: 77-106
-    :emphasize-lines: 19-22, 23-29
+    :lines: 31-62
+    :emphasize-lines: 18-24, 25-31
 
 Two parts are critical:
 
@@ -204,41 +212,52 @@ Two parts are critical:
 Fixtures
 ~~~~~~~~
 
-Two module-scoped fixtures wire up the app and the worker thread:
+Two module-scoped fixtures in :source:`conftest.py` set up the app and the worker thread:
 
-.. literalinclude:: ../tests/test_celery_example.py
+.. literalinclude:: ../conftest.py
     :language: python
-    :lines: 109-135
+    :lines: 103-129
 
 * ``broker_app`` builds the Flask app with the test config and creates the database schema.
 * ``celery_worker`` starts a real in-process Celery worker via ``celery.contrib.testing.worker.start_worker``. ``pool="solo"`` keeps the worker single-threaded for simpler debugging. The fixture is module-scoped because spinning the worker up and down per test is slow.
 
+Use both fixtures in every Celery test, either by naming them as parameters or via ``@pytest.mark.usefixtures("broker_app", "celery_worker")`` when the test body does not reference them directly.
+
 Example tests
 ~~~~~~~~~~~~~
 
-A happy-path test asserts on the result returned by ``apply_async``:
+:source:`stable_plugins/data_synthesis/data_creator/tests/test_tasks.py` demonstrates this pattern for a plugin.
 
 .. code-block:: python
 
-    def test_worker_returns_value(celery_worker):
-        async_result = add.apply_async(args=(7, 35))
-        assert async_result.get(timeout=10) == 42
+    @pytest.mark.usefixtures("broker_app", "celery_worker")
+    def test_calculation_task_persists_four_files():
+        db_id = _enqueue_processing_task(...)
+        result = calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
+        assert result == "Result stored in file"
 
 Errors propagate through the result backend and can be asserted with ``pytest.raises``:
 
 .. code-block:: python
 
-    def test_worker_propagates_exception(celery_worker):
-        async_result = boom.apply_async()
-        with pytest.raises(ValueError, match="boom"):
-            async_result.get(timeout=10)
+    @pytest.mark.usefixtures("broker_app", "celery_worker")
+    def test_calculation_task_missing_db_id_raises():
+        async_result = calculation_task.apply_async(kwargs={"db_id": 99999})
+        with pytest.raises(KeyError, match="Could not load task data"):
+            async_result.get(timeout=30)
 
 A test that exercises a DB-mutating task must expire the test session before re-reading the row, otherwise SQLAlchemy returns the cached identity-mapped instance from before the worker committed:
 
-.. literalinclude:: ../tests/test_celery_example.py
-    :language: python
-    :lines: 154-169
-    :emphasize-lines: 14
+.. code-block:: python
+    :emphasize-lines: 5
+
+    @pytest.mark.usefixtures("broker_app", "celery_worker")
+    def test_reads_worker_mutation():
+        db_id = _enqueue_processing_task(...)
+        calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
+        DB.session.expire_all()
+        task = ProcessingTask.get_by_id(db_id)
+        assert task.outputs  # written by the worker thread
 
 Gotchas
 ~~~~~~~
@@ -254,7 +273,8 @@ Gotchas
 
     * :doc:`adr/0018-celery-task-testing-strategy`
     * `Celery testing guide <https://docs.celeryq.dev/en/stable/userguide/testing.html>`_
-    * Canonical example: :source:`tests/test_celery_example.py`
+    * Plugin example: :source:`stable_plugins/data_synthesis/data_creator/tests/test_tasks.py`
+    * Fixtures and test config: :source:`conftest.py`
 
 
 Property-based testing with hypothesis
