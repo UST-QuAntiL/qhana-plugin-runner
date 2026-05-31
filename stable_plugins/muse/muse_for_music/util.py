@@ -859,7 +859,12 @@ def _parse_tree_node(
     id_ = tax_item_to_id(item, tax_id)
     name = item["name"]
     entities = [
-        {"ID": id_, "tax_item_name": name, "description": item.get("description", "")}
+        {
+            "ID": id_,
+            "tax_item_name": name,
+            "description": item.get("description", ""),
+            "mapping": item.get("mapping", ""),
+        }
     ]
     relations = []
 
@@ -870,6 +875,7 @@ def _parse_tree_node(
                 "ID": na_id,
                 "tax_item_name": "na",
                 "description": na_item.get("description", ""),
+                "mapping": na_item.get("mapping", ""),
             }
         )
         # assume first node as root
@@ -889,7 +895,9 @@ def _parse_list_to_tree(
     items: List, tax_id: str, na_item: Optional[Dict] = None
 ) -> Tuple[List[dict], List[Dict[str, str]]]:
     root_id = f"{tax_id}_root"
-    entities = [{"ID": root_id, "tax_item_name": "root", "description": ""}]
+    entities = [
+        {"ID": root_id, "tax_item_name": "root", "description": "", "mapping": ""}
+    ]
     relations = []
 
     if na_item:
@@ -899,6 +907,7 @@ def _parse_list_to_tree(
                 "ID": na_id,
                 "tax_item_name": "na",
                 "description": na_item.get("description", ""),
+                "mapping": na_item.get("mapping", ""),
             }
         )
         relations.append({"source": root_id, "target": na_id})
@@ -907,7 +916,12 @@ def _parse_list_to_tree(
         id_ = tax_item_to_id(item, tax_id)
         name = item["name"]
         entities.append(
-            {"ID": id_, "tax_item_name": name, "description": item.get("description", "")}
+            {
+                "ID": id_,
+                "tax_item_name": name,
+                "description": item.get("description", ""),
+                "mapping": item.get("mapping", ""),
+            }
         )
         relations.append({"source": root_id, "target": id_})
 
