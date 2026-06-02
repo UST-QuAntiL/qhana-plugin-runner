@@ -13,22 +13,29 @@
 # limitations under the License.
 
 from collections import Counter
-from os import environ
+from os import environ, urandom
 from os import execvpe as replace_process
-from os import urandom
 from pathlib import Path
 from re import match
 from shlex import join
 from shutil import copy, copytree
 from typing import List, Optional, cast
 
-from dotenv import load_dotenv, set_key, unset_key
+from dotenv import dotenv_values, set_key, unset_key
 from invoke import UnexpectedExit, call, task
 from invoke.context import Context
 from invoke.runners import Result
 
-load_dotenv(".flaskenv")
-load_dotenv(".env")
+# Match flask's dotenv precedence so the worker sees the same config as `flask run`:
+# shell environment variables > .env > .flaskenv
+# https://flask.palletsprojects.com/en/stable/cli/#environment-variables-from-dotenv
+_dotenv_config = {
+    **dotenv_values(".flaskenv"),
+    **dotenv_values(".env"),
+}
+for _key, _value in _dotenv_config.items():
+    if _value is not None:
+        environ.setdefault(_key, _value)
 
 MODULE_NAME = "qhana_plugin_runner"
 CELERY_WORKER = f"{MODULE_NAME}.celery_worker:CELERY"
