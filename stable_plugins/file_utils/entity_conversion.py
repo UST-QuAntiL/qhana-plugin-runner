@@ -458,7 +458,9 @@ def _convert_data(db_task: ProcessingTask):
         try:
             first = next(entities)
         except StopIteration:
-            raise ValueError(f"Cannot convert an empty list of entities! (Source: {data_url})")
+            raise ValueError(
+                f"Cannot convert an empty list of entities! (Source: {data_url})"
+            )
         ent_attributes = tuple(sorted(first.keys(), key=entity_attribute_sort_key))
         entities = chain_iter([first], entities)
 
