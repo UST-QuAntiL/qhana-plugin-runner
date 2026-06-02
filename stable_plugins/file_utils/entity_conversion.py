@@ -1,4 +1,4 @@
-# Copyright 2021 QHAna plugin runner contributors.
+# Copyright 2026 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -278,7 +278,7 @@ class JsonMicroFrontend(MethodView):
         return self.render(request.form, errors, not errors)
 
     def render(self, data: Mapping, errors: dict, valid: bool):
-        plugin = CsvToJson.instance
+        plugin = JsonToCsv.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         schema = JSONInputSchema()
@@ -339,7 +339,7 @@ class JsonProcessView(MethodView):
         db_task.save(commit=True)
 
         # all tasks need to know about db id to load the db entry
-        task: chain = convert_csv.s(db_id=db_task.id) | save_task_result.s(
+        task: chain = convert_json.s(db_id=db_task.id) | save_task_result.s(
             db_id=db_task.id
         )
         # save errors to db
@@ -455,7 +455,10 @@ def _convert_data(db_task: ProcessingTask):
                     yield ent
 
         entities = load()
-        first = next(entities)
+        try:
+            first = next(entities)
+        except StopIteration:
+            raise ValueError(f"Cannot convert an empty list of entities! (Source: {data_url})")
         ent_attributes = tuple(sorted(first.keys(), key=entity_attribute_sort_key))
         entities = chain_iter([first], entities)
 
