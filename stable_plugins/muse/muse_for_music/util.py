@@ -317,7 +317,7 @@ def part_to_entity(entity: Dict):
         ui_href,
         href,
         part_name=_extract(entity, "name"),
-        opus=f'o_{_extract(entity, "opus_id", "int")}',
+        opus=f"o_{_extract(entity, 'opus_id', 'int')}",
         movement=_extract(entity, "movement", "int"),
         length=_extract(entity, "length", "int"),
         measure_start=_extract(entity, "measure_start.measure", "int"),
@@ -483,7 +483,7 @@ def subpart_to_entity(entity, part_id_to_opus_id: Dict[str, str]):
 
     ui_href = href.replace("/api/", "/").removesuffix("/")
 
-    part_id = f'p_{_extract(entity, "part_id", "int")}'
+    part_id = f"p_{_extract(entity, 'part_id', 'int')}"
     dynamic_markings = entity.get("dynamic", {}).get("dynamic_markings", [])
     harmonic_centers = entity.get("harmonics", {}).get("harmonic_centers", [])
 
@@ -656,7 +656,7 @@ def voice_to_entity(
 
     ui_href = href.replace("/api/", "/").removesuffix("/")
 
-    subpart_id = f'sp_{_extract(entity, "subpart_id", "int")}'
+    subpart_id = f"sp_{_extract(entity, 'subpart_id', 'int')}"
     part_id = subpart_id_to_part_id[subpart_id]
 
     sequences = entity.get("composition", {}).get("sequences", [])
@@ -853,29 +853,49 @@ class TaxonomyEntity(NamedTuple):
         return dictionary
 
 
+def _parse_taxonomy_mapping(mapping: str) -> List[float]:
+    nums = []
+
+    for i, tok in enumerate(mapping.strip().split(" ")):
+        tok = tok.strip()
+        if not tok:
+            continue
+
+        try:
+            nums.append(float(tok))
+        except ValueError as e:
+            raise ValueError(f"bad token at index {i}: {tok!r}") from e
+
+    return nums
+
+
 def _parse_tree_node(
     item, tax_id: str, na_item: Optional[Dict] = None
 ) -> Tuple[List[dict], List[Dict[str, str]]]:
     id_ = tax_item_to_id(item, tax_id)
     name = item["name"]
-    entities = [
+    mapping = item.get("mapping", "")
+    entities: List[Dict[str, str | List[float]]] = [
         {
             "ID": id_,
             "tax_item_name": name,
             "description": item.get("description", ""),
-            "mapping": item.get("mapping", ""),
+            "mapping": _parse_taxonomy_mapping(mapping),
+            "mapping_raw": mapping,
         }
     ]
-    relations = []
+    relations: List[Dict[str, str]] = []
 
     if na_item:
         na_id = tax_item_to_id(na_item, tax_id)
+        na_mapping = na_item.get("mapping", "")
         entities.append(
             {
                 "ID": na_id,
                 "tax_item_name": "na",
                 "description": na_item.get("description", ""),
-                "mapping": na_item.get("mapping", ""),
+                "mapping": _parse_taxonomy_mapping(na_mapping),
+                "mapping_raw": na_mapping,
             }
         )
         # assume first node as root
@@ -895,10 +915,16 @@ def _parse_list_to_tree(
     items: List, tax_id: str, na_item: Optional[Dict] = None
 ) -> Tuple[List[dict], List[Dict[str, str]]]:
     root_id = f"{tax_id}_root"
-    entities = [
-        {"ID": root_id, "tax_item_name": "root", "description": "", "mapping": ""}
+    entities: List[Dict[str, str | List[float]]] = [
+        {
+            "ID": root_id,
+            "tax_item_name": "root",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": "",
+        }
     ]
-    relations = []
+    relations: List[Dict[str, str]] = []
 
     if na_item:
         na_id = tax_item_to_id(na_item, tax_id)
@@ -907,7 +933,8 @@ def _parse_list_to_tree(
                 "ID": na_id,
                 "tax_item_name": "na",
                 "description": na_item.get("description", ""),
-                "mapping": na_item.get("mapping", ""),
+                "mapping": _parse_taxonomy_mapping(na_item.get("mapping", "")),
+                "mapping_raw": na_item.get("mapping", ""),
             }
         )
         relations.append({"source": root_id, "target": na_id})
@@ -915,12 +942,14 @@ def _parse_list_to_tree(
     for item in items:
         id_ = tax_item_to_id(item, tax_id)
         name = item["name"]
+        mapping_raw = item.get("mapping", "")
         entities.append(
             {
                 "ID": id_,
                 "tax_item_name": name,
                 "description": item.get("description", ""),
-                "mapping": item.get("mapping", ""),
+                "mapping": _parse_taxonomy_mapping(mapping_raw),
+                "mapping_raw": mapping_raw,
             }
         )
         relations.append({"source": root_id, "target": id_})
@@ -948,6 +977,11 @@ def taxonomy_to_entity(
         )
     else:
         raise ValueError(f"Unknown taxonomy type {entity['taxonomy_type']}")
+
+    mapping_dimension = max((len(e["mapping"]) for e in entities), default=0)
+    if mapping_dimension > 0:
+        for entity in entities:
+            entity["mapping"] += [0] * (mapping_dimension - len(entity["mapping"]))
 
     return TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations)
 
