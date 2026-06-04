@@ -50,11 +50,11 @@ def _by_id(entities):
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
-        pytest.param("1,2,3", [1.0, 2.0, 3.0], id="basic"),
-        pytest.param("  1 ,  2.5 , 3 ", [1.0, 2.5, 3.0], id="strips-whitespace"),
+        pytest.param("1 2 3", [1.0, 2.0, 3.0], id="basic"),
+        pytest.param("  1   2.5   3 ", [1.0, 2.5, 3.0], id="collapses-whitespace"),
         pytest.param("", [], id="empty-string"),
         pytest.param("   ", [], id="blank-string"),
-        pytest.param("1,,2,", [1.0, 2.0], id="skips-empty-tokens"),
+        pytest.param("1  2 ", [1.0, 2.0], id="skips-empty-tokens"),
     ],
 )
 def test_parse_mapping(raw, expected):
@@ -63,24 +63,24 @@ def test_parse_mapping(raw, expected):
 
 def test_parse_mapping_bad_token_raises():
     with pytest.raises(ValueError, match="bad token at index 1: 'x'"):
-        _parse_taxonomy_mapping("1,x,3")
+        _parse_taxonomy_mapping("1 x 3")
 
 
 def test_tree_mapping_parsed_and_raw_kept():
-    root = _node(1, "root", mapping="1,2,3", children=[])
+    root = _node(1, "root", mapping="1 2 3", children=[])
     result = taxonomy_to_entity(_build_taxonomy(root))
 
     entities = _by_id(result.entities)
     assert entities["t_Test_1"]["mapping"] == [1.0, 2.0, 3.0]
-    assert entities["t_Test_1"]["mapping_raw"] == "1,2,3"
+    assert entities["t_Test_1"]["mapping_raw"] == "1 2 3"
 
 
 def test_tree_mapping_padded_to_common_dimension():
     root = _node(
         1,
         "root",
-        mapping="1,2",
-        children=[_node(2, "child", mapping="3,4,5")],
+        mapping="1 2",
+        children=[_node(2, "child", mapping="3 4 5")],
     )
     result = taxonomy_to_entity(_build_taxonomy(root))
 
@@ -89,14 +89,14 @@ def test_tree_mapping_padded_to_common_dimension():
     assert entities["t_Test_1"]["mapping"] == [1.0, 2.0, 0]
     assert entities["t_Test_2"]["mapping"] == [3.0, 4.0, 5.0]
     # padding does not alter the preserved raw string
-    assert entities["t_Test_1"]["mapping_raw"] == "1,2"
+    assert entities["t_Test_1"]["mapping_raw"] == "1 2"
 
 
 def test_tree_missing_mapping_defaults_to_empty_then_padded():
     root = _node(
         1,
         "root",  # no mapping key at all
-        children=[_node(2, "child", mapping="7,8")],
+        children=[_node(2, "child", mapping="7 8")],
     )
     result = taxonomy_to_entity(_build_taxonomy(root))
 
@@ -117,7 +117,7 @@ def test_tree_no_mappings_leaves_empty_lists_unpadded():
 
 
 def test_tree_na_item_mapping_parsed_and_padded():
-    root = _node(1, "root", mapping="1,2,3", children=[])
+    root = _node(1, "root", mapping="1 2 3", children=[])
     na_item = {"id": 99, "name": "na", "mapping": "9"}
     result = taxonomy_to_entity(_build_taxonomy(root, na_item=na_item))
 
@@ -131,7 +131,7 @@ def test_tree_na_item_mapping_parsed_and_padded():
 
 
 def test_tree_bad_mapping_token_raises():
-    root = _node(1, "root", mapping="1,bad,3", children=[])
+    root = _node(1, "root", mapping="1 bad 3", children=[])
     with pytest.raises(ValueError, match="bad token at index 1"):
         taxonomy_to_entity(_build_taxonomy(root))
 
@@ -139,7 +139,7 @@ def test_tree_bad_mapping_token_raises():
 def test_list_mapping_parsed_and_padded():
     items = [
         {"id": 1, "name": "a", "mapping": "1.5"},
-        {"id": 2, "name": "b", "mapping": "2.5,3.5"},
+        {"id": 2, "name": "b", "mapping": "2.5 3.5"},
     ]
     result = taxonomy_to_entity(_build_taxonomy(items, kind="list"))
 
@@ -151,7 +151,7 @@ def test_list_mapping_parsed_and_padded():
 
 
 def test_list_na_item_mapping_parsed():
-    items = [{"id": 1, "name": "a", "mapping": "1,2"}]
+    items = [{"id": 1, "name": "a", "mapping": "1 2"}]
     na_item = {"id": 5, "name": "na", "mapping": "4"}
     result = taxonomy_to_entity(_build_taxonomy(items, na_item=na_item, kind="list"))
 
