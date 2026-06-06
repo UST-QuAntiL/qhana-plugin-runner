@@ -1014,9 +1014,10 @@ def taxonomy_to_entity(
         for entity in entities:
             entity["mapping"] += [0.0] * (mapping_dimension - len(entity["mapping"]))
 
-    return TaxonomyEntity(
-        graph_id, tax_type, ref_target, list(entities), relations
-    ), warnings
+    return (
+        TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations),
+        warnings,
+    )
 
 
 def _unwrap_optional(type_hint: type) -> type:
