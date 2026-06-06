@@ -870,7 +870,7 @@ def _parse_taxonomy_mapping(name: str, mapping: str) -> tuple[List[float], Optio
 
 def _parse_tree_node(
     item, tax_id: str, na_item: Optional[Dict] = None
-) -> Tuple[List[dict], List[Dict[str, str]], Optional[str]]:
+) -> Tuple[List[dict], List[Dict[str, str]], List[str]]:
     id_ = tax_item_to_id(item, tax_id)
     name = item["name"]
     mapping_raw = item.get("mapping", "")
@@ -909,25 +909,20 @@ def _parse_tree_node(
 
     for child in item["children"]:
         relations.append({"source": id_, "target": tax_item_to_id(child, tax_id)})
-        new_entities, new_relations, child_warning = _parse_tree_node(child, tax_id)
-        if child_warning is not None:
-            invalid_mappings.append(child_warning)
+        new_entities, new_relations, child_invalid_mappings = _parse_tree_node(
+            child, tax_id
+        )
+        if child_invalid_mappings:
+            invalid_mappings.extend(child_invalid_mappings)
         entities.extend(new_entities)
         relations.extend(new_relations)
 
-    warnings = None
-    if len(invalid_mappings) != 0:
-        warnings = (
-            f"Invalid mapping{'s' if len(invalid_mappings) != 1 else ''} for taxonomy {tax_id}:\n"
-            + "\n".join(f"  {m}" for m in invalid_mappings)
-        )
-
-    return entities, relations, warnings
+    return entities, relations, invalid_mappings
 
 
 def _parse_list_to_tree(
     items: List, tax_id: str, na_item: Optional[Dict] = None
-) -> Tuple[List[dict], List[Dict[str, str]], Optional[str]]:
+) -> Tuple[List[dict], List[Dict[str, str]], List[str]]:
     root_id = f"{tax_id}_root"
     entities: List[Dict[str, str | List[float]]] = [
         {
@@ -976,14 +971,7 @@ def _parse_list_to_tree(
         )
         relations.append({"source": root_id, "target": id_})
 
-    warnings = None
-    if len(invalid_mappings) != 0:
-        warnings = (
-            f"Invalid mapping{'s' if len(invalid_mappings) != 1 else ''} for taxonomy {tax_id}:\n"
-            + "\n".join(f"  {m}" for m in invalid_mappings)
-        )
-
-    return entities, relations, warnings
+    return entities, relations, invalid_mappings
 
 
 def taxonomy_to_entity(
@@ -998,12 +986,12 @@ def taxonomy_to_entity(
     na_item = entity.get("na_item", None)
 
     if entity["taxonomy_type"] == "tree":
-        entities, relations, warnings = _parse_tree_node(
+        entities, relations, invalid_mappings = _parse_tree_node(
             entity["items"], tax_id, na_item=na_item
         )
     elif entity["taxonomy_type"] == "list":
         # gets handled like a tree with depth 1
-        entities, relations, warnings = _parse_list_to_tree(
+        entities, relations, invalid_mappings = _parse_list_to_tree(
             entity["items"], tax_id, na_item=na_item
         )
     else:
@@ -1012,7 +1000,16 @@ def taxonomy_to_entity(
     mapping_dimension = max((len(e["mapping"]) for e in entities), default=0)
     if mapping_dimension > 0:
         for entity in entities:
-            entity["mapping"] += [0.0] * (mapping_dimension - len(entity["mapping"]))
+            entity["mapping"] += [0.0] * max(
+                mapping_dimension - len(entity["mapping"]), 0
+            )
+
+    warnings = None
+    if len(invalid_mappings) != 0:
+        warnings = (
+            f"Invalid mapping{'s' if len(invalid_mappings) != 1 else ''} for taxonomy {tax_id}:\n"
+            + "\n".join(f"  {m}" for m in invalid_mappings)
+        )
 
     return (
         TaxonomyEntity(graph_id, tax_type, ref_target, list(entities), relations),

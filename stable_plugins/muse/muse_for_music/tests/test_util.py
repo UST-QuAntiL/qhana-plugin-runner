@@ -144,6 +144,41 @@ def test_tree_bad_mapping_token_returns_warning():
     assert "1 bad 3" in warnings
 
 
+def test_tree_multiple_invalid_mappings_all_appear_in_warning():
+    root = _node(
+        1,
+        "root",
+        mapping="1 bad 3",
+        children=[
+            _node(2, "child_a", mapping="bad 1 2"),
+            _node(3, "child_b", mapping="4 5 also_bad"),
+        ],
+    )
+    _, warnings = taxonomy_to_entity(_build_taxonomy(root))
+
+    assert warnings == (
+        "Invalid mappings for taxonomy t_Test:\n"
+        "  root: 1 bad 3\n"
+        "  child_a: bad 1 2\n"
+        "  child_b: 4 5 also_bad"
+    )
+
+
+def test_list_multiple_invalid_mappings_all_appear_in_warning():
+    items = [
+        {"id": 1, "name": "item_good", "mapping": "1.0 2.0"},
+        {"id": 2, "name": "item_bad_one", "mapping": "3 oops"},
+        {"id": 3, "name": "item_bad_two", "mapping": "nope 7"},
+    ]
+    _, warnings = taxonomy_to_entity(_build_taxonomy(items, kind="list"))
+
+    assert warnings == (
+        "Invalid mappings for taxonomy t_Test:\n"
+        "  item_bad_one: 3 oops\n"
+        "  item_bad_two: nope 7"
+    )
+
+
 def test_list_mapping_parsed_and_padded():
     items = [
         {"id": 1, "name": "a", "mapping": "1.5"},
