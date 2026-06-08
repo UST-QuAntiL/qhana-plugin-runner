@@ -366,12 +366,27 @@ def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict) -> Set:
     if attribute in ancestor_nodes_dict:
         return ancestor_nodes_dict[attribute]
     else:
-        parent = parent_node_dict[attribute]
+        # the root node is never a relation target, so it has no parent entry
+        parent = parent_node_dict.get(attribute, "")
         result = get_ancestor_nodes(parent_node_dict, parent, ancestor_nodes_dict).copy()
         if parent != "":
             result.add(parent)
         ancestor_nodes_dict[attribute] = result
         return result
+
+
+def normalize_taxonomy_entity_id(node) -> str:
+    """
+    Taxonomy entities may be plain ID strings, ``(id, ...)`` tuples or dicts
+    with an ``"ID"`` key (current format). Return the entity ID in all cases.
+    """
+    if isinstance(node, str):
+        return node
+    if isinstance(node, dict):
+        return node["ID"]
+    if isinstance(node, (tuple, list)):
+        return node[0]
+    raise TypeError(f"Unsupported taxonomy entity type: {type(node)!r}")
 
 
 def compute_ancestors_and_index_dict(
@@ -389,9 +404,10 @@ def compute_ancestors_and_index_dict(
         taxonomy = taxonomies[attribute_ref_targets[attribute]]
         parent_node_dict = taxonomy_node_to_parent(taxonomy)
 
-        tax_entities = taxonomy["entities"]
-        if tax_entities[0] == "":
-            tax_entities = tax_entities[1:]
+        tax_entities = [
+            normalize_taxonomy_entity_id(node) for node in taxonomy["entities"]
+        ]
+        tax_entities = [entity for entity in tax_entities if entity != ""]
 
         attr_to_idx_dict_list.append(dict(zip(tax_entities, count(start=dim))))
         dim += len(tax_entities)
@@ -438,6 +454,9 @@ def prepare_stream_output(
                 sub_attributes.add(values)
 
             for sub_attribute in sub_attributes:
+                if sub_attribute == "":
+                    # empty value (no taxonomy entry), nothing to encode
+                    continue
                 for ancestor in taxonomies_ancestors[sub_attribute]:
                     one_hot_encodings[attr_to_idx_dict[ancestor]] = 1
 
