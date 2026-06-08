@@ -97,7 +97,7 @@ Improvements:
 
 
 _plugin_name = "one-hot-encoding"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
