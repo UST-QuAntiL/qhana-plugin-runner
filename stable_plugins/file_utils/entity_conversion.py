@@ -475,13 +475,15 @@ def _convert_data(db_task: ProcessingTask):
         elif mimetype == "text/csv":
             save_mimetype = "application/json"
             filename += ".json"
-            
-            # Helper to cast sets to lists to ensure JSON serializability 
+
+            # Helper to cast sets to lists to ensure JSON serializability
             def convert_sets(entity):
-                return {k: (list(v) if isinstance(v, set) else v) for k, v in entity.items()}
-                
+                return {
+                    k: (list(v) if isinstance(v, set) else v) for k, v in entity.items()
+                }
+
             entities = (convert_sets(e) for e in entities)
-            
+
             save_entities(entities, output, save_mimetype, ent_attributes)
         else:
             raise ValueError(f"Unsupported mimetype '{mimetype}'.")
