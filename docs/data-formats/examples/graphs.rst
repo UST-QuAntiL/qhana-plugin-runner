@@ -50,42 +50,38 @@ graph/taxonomy
 
 Same as ``graph/tree``.
 
-Taxonomy nodes carry an optional ``mapping`` field that assigns one or more
-numeric values to a node. A mapping may hold a single value, several values, or
-none at all. This lets downstream plugins attach numeric information to
-categorical taxonomy values, for example a score, a weight, or a coordinate
-vector.
+**Taxonomy Mappings**
+
+Taxonomy nodes can carry an optional ``mapping`` field that assigns one or more numeric values to a node.
+A mapping may hold a single value, several values, or none at all.
+This lets downstream plugins attach numeric information to categorical taxonomy values, for example a score, a weight, or a coordinate vector.
 
 Each node entity exposes two related fields:
 
-.. list-table::
-   :header-rows: 1
-   :widths: 20 80
+- ``mapping_raw``: The original mapping string as authored on the taxonomy item.
+  Values are separated by spaces, for example ``"1"`` or ``"-1 0 2.5"``.
 
-   * - field
-     - description
-   * - ``mapping_raw``
-     - The original mapping string as authored on the taxonomy item, preserved
-       verbatim. Values are separated by spaces, for example ``"1"`` or
-       ``"1 0 2.5"``. An empty string means no mapping was provided.
-   * - ``mapping``
-     - The parsed mapping as a list of floats. Empty tokens (from repeated or
-       trailing spaces) are dropped. A missing or empty ``mapping_raw`` yields
-       an empty list.
+- ``mapping``: The parsed mapping as a list of floats.
+  Empty tokens (from repeated or trailing spaces) are dropped. A missing or empty ``mapping_raw`` yields an empty list.
 
-When at least one node in a taxonomy defines a mapping, all ``mapping`` lists
-are padded to the same length so every node has the same number of values. The
-length is that of the longest mapping in the taxonomy, and shorter lists are
-right-padded with zeros. When no node defines a mapping, every ``mapping`` stays
-an empty list and no padding is applied.
+When at least one node in a taxonomy defines a mapping, all ``mapping`` lists are padded to the same length so every node has the same number of values. 
+The length is that of the longest mapping in the taxonomy, and shorter lists are right-padded with zeros.
+When no node defines a mapping, every ``mapping`` stays an empty list and no padding is applied.
 
 .. code-block:: json
 
    {
-       "ID": "t_Gattung_3",
+       "ID": "t_Gattung_4",
        "tax_item_name": "Sinfonie",
        "description": "",
        "mapping_raw": "1 0 2.5",
        "mapping": [1.0, 0.0, 2.5]
+   },
+   {
+       "ID": "t_Gattung_5",
+       "tax_item_name": "Sinfonietta",
+       "description": "",
+       "mapping_raw": "1 2",
+       "mapping": [1.0, 2.0, 0.0]
    }
 
