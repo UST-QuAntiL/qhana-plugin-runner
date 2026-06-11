@@ -191,10 +191,14 @@ def import_data(self, db_id: int) -> str:
         taxonomy_urls = client.get_taxonomies()
         tmp_zip_file = SpooledTemporaryFile(mode="wb")
         zip_file = ZipFile(tmp_zip_file, "w")
+        warnings: list[str] = []
 
         for taxonomy_url in taxonomy_urls:
             taxonomy = client.get_taxonomy(taxonomy_url)
-            taxonomy_entity = taxonomy_to_entity(taxonomy).to_dict()
+            taxonomy_entity, taxonomy_warnings = taxonomy_to_entity(taxonomy)
+            taxonomy_entity = taxonomy_entity.to_dict()
+            if taxonomy_warnings is not None:
+                warnings.append(taxonomy_warnings)
             zip_file.writestr(
                 taxonomy_entity["GRAPH_ID"] + ".json", json.dumps(taxonomy_entity)
             )
@@ -225,7 +229,9 @@ def import_data(self, db_id: int) -> str:
                 "application/json",
             )
 
-    return "Import finished."
+        return "Import finished." + (
+            "\nWarnings:\n" + "\n".join(f"- {w}" for w in warnings) if warnings else ""
+        )
 
 
 def get_muse_for_music_url_from_registry() -> Optional[str]:
