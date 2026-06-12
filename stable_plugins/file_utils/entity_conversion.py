@@ -17,12 +17,11 @@ from itertools import chain as chain_iter
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
-import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
 from flask.app import Flask
-from flask.globals import current_app, request
+from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -68,7 +67,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _csv_plugin_name = "csv-to-json"
 _json_plugin_name = "json-to-csv"
-__version__ = "v0.1.1"
+__version__ = "v0.1.0"
 _csv_identifier = plugin_identifier(_csv_plugin_name, __version__)
 _json_identifier = plugin_identifier(_json_plugin_name, __version__)
 
@@ -475,14 +474,6 @@ def _convert_data(db_task: ProcessingTask):
         elif mimetype == "text/csv":
             save_mimetype = "application/json"
             filename += ".json"
-
-            # Helper to cast sets to lists to ensure JSON serializability
-            def convert_sets(entity):
-                return {
-                    k: (list(v) if isinstance(v, set) else v) for k, v in entity.items()
-                }
-
-            entities = (convert_sets(e) for e in entities)
 
             save_entities(entities, output, save_mimetype, ent_attributes)
         else:
