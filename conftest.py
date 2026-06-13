@@ -15,6 +15,7 @@
 """Tests for the db module of the plugin_utils."""
 
 from logging import INFO
+from pathlib import Path
 
 import pytest
 from flask import Flask
@@ -24,6 +25,15 @@ from qhana_plugin_runner import create_app
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.cli import create_db_function
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+
+
+def _load_plugin_folders():
+    for line in Path(".flaskenv").read_text(encoding="utf-8").splitlines():
+        if line.startswith("PLUGIN_FOLDERS="):
+            value = line.split("=", 1)[1].strip()
+            return [f for f in value.split(":") if f]
+    return []
+
 
 MODULE_NAME = "qhana_plugin_runner"
 
@@ -58,6 +68,7 @@ DEFAULT_TEST_CONFIG = {
         "task_always_eager": False,
         "broker_connection_retry_on_startup": True,
     },
+    "PLUGIN_FOLDERS": _load_plugin_folders(),
 }
 
 

@@ -201,13 +201,14 @@ The Flask + Celery test config in :source:`conftest.py` combines an in-memory SQ
 
 .. literalinclude:: ../conftest.py
     :language: python
-    :lines: 31-62
-    :emphasize-lines: 18-24, 25-31
+    :lines: 41-71
+    :emphasize-lines: 20-23, 24-30, 31
 
-Two parts are critical:
+Three parts are critical:
 
 * ``SQLALCHEMY_ENGINE_OPTIONS`` uses ``StaticPool`` and ``check_same_thread=False`` so the in-memory SQLite database is visible from both the test thread and the worker thread.
 * The ``CELERY`` block uses ``broker_url = "memory://"`` and ``result_backend = "cache+memory://"`` and keeps ``task_always_eager = False`` so calls actually go through the broker.
+* ``PLUGIN_FOLDERS`` allowes to use all plugins, that are registered in the ``.flaskenv`` file, via a helper method.  
 
 Fixtures
 ~~~~~~~~
