@@ -17,11 +17,12 @@ from itertools import chain as chain_iter
 from tempfile import SpooledTemporaryFile
 from typing import Mapping, Optional
 
+import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
 from flask import abort, redirect
 from flask.app import Flask
-from flask.globals import request
+from flask.globals import current_app, request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
@@ -474,7 +475,6 @@ def _convert_data(db_task: ProcessingTask):
         elif mimetype == "text/csv":
             save_mimetype = "application/json"
             filename += ".json"
-
             save_entities(entities, output, save_mimetype, ent_attributes)
         else:
             raise ValueError(f"Unsupported mimetype '{mimetype}'.")

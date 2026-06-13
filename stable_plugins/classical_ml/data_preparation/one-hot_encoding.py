@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from http import HTTPStatus
+from itertools import chain, count
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Set, Tuple
+from typing import List, Mapping, Optional, Set, Tuple
 
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -29,31 +30,28 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
     DataMetadata,
+    EntryPoint,
     InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
-    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-import json
-from itertools import count, chain
-
 
 """ 
 This Plugin can be further improved!
@@ -366,27 +364,12 @@ def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict) -> Set:
     if attribute in ancestor_nodes_dict:
         return ancestor_nodes_dict[attribute]
     else:
-        # the root node is never a relation target, so it has no parent entry
         parent = parent_node_dict.get(attribute, "")
         result = get_ancestor_nodes(parent_node_dict, parent, ancestor_nodes_dict).copy()
         if parent != "":
             result.add(parent)
         ancestor_nodes_dict[attribute] = result
         return result
-
-
-def normalize_taxonomy_entity_id(node) -> str:
-    """
-    Taxonomy entities may be plain ID strings, ``(id, ...)`` tuples or dicts
-    with an ``"ID"`` key (current format). Return the entity ID in all cases.
-    """
-    if isinstance(node, str):
-        return node
-    if isinstance(node, dict):
-        return node["ID"]
-    if isinstance(node, (tuple, list)):
-        return node[0]
-    raise TypeError(f"Unsupported taxonomy entity type: {type(node)!r}")
 
 
 def compute_ancestors_and_index_dict(
@@ -405,9 +388,13 @@ def compute_ancestors_and_index_dict(
         parent_node_dict = taxonomy_node_to_parent(taxonomy)
 
         tax_entities = [
-            normalize_taxonomy_entity_id(node) for node in taxonomy["entities"]
+            _normalize_taxonomy_entity_id(node) for node in taxonomy["entities"]
         ]
-        tax_entities = [entity for entity in tax_entities if entity != ""]
+        # Remove the root node from the list of taxonomies.
+        # MUSE: Taxonomy root is ""
+        # MUSE4MUSIC: Taxonomy root is t_TaxonomyName_root
+        if tax_entities[0] == "" or tax_entities[0].endswith("_root"):
+            tax_entities = tax_entities[1:]
 
         attr_to_idx_dict_list.append(dict(zip(tax_entities, count(start=dim))))
         dim += len(tax_entities)
@@ -429,6 +416,16 @@ def compute_ancestors_and_index_dict(
         taxonomies_ancestors_list.append(ancestor_nodes_dict)
 
     return taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+
+
+def _normalize_taxonomy_entity_id(node) -> str:
+    if isinstance(node, str):
+        return node
+    if isinstance(node, dict):
+        return node["ID"]
+    if isinstance(node, (tuple, list)):
+        return node[0]
+    raise TypeError(f"Unsupported taxonomy entity type: {type(node)!r}")
 
 
 def prepare_stream_output(
@@ -455,7 +452,6 @@ def prepare_stream_output(
 
             for sub_attribute in sub_attributes:
                 if sub_attribute == "":
-                    # empty value (no taxonomy entry), nothing to encode
                     continue
                 for ancestor in taxonomies_ancestors[sub_attribute]:
                     one_hot_encodings[attr_to_idx_dict[ancestor]] = 1
