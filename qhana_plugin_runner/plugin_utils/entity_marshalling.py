@@ -88,7 +88,7 @@ class EntityTupleMixin:
         return cls(*iterable)
 
 
-_ENTITY_TYPE_TUPLE_CLASSES: Dict[ Tuple[str, ...], Type[NamedTuple]] = (
+_ENTITY_TYPE_TUPLE_CLASSES: Dict[Tuple[str, ...], Type[NamedTuple]] = (
     {}
 )  # TODO cache invalidation (use lru cache?)
 
