@@ -53,41 +53,41 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-""" 
+"""
 This Plugin can be further improved!
 The below comments were taken from a PR review
 
 Plugin currently works as follows:
-    Instead of doing a tree traversal to flatten the tree, the plugin simply uses the entities entry in each taxonomy as 
+    Instead of doing a tree traversal to flatten the tree, the plugin simply uses the entities entry in each taxonomy as
     the flatten version. The plugin also ignores the "" node, i.e. root, since it provides no additional information.
 
     Lets assume we have the following taxonomy a[b,c,d[e]] and the entities attribute lists them like this [a, b, c, d, e].
-    If we now have an entity that has e as an attribute, then we return the vector [1, 0, 0, 1, 1] for this entity. 
+    If we now have an entity that has e as an attribute, then we return the vector [1, 0, 0, 1, 1] for this entity.
     In other words, we also set the ancestors of e to 1 (the ancestors being a,d).
 
-    The idea of why we also set the ancestors to one becomes clear, when looking at colors. Lets assume the following 
-    taxonomy color[red, green, blue[light_blue, dark_blue]. In this case the one-hot encodings of light_blue and dark_blue 
-    should be closer to each other, than they are to the one-hot encoding of red. Therefore, we should also set each 
+    The idea of why we also set the ancestors to one becomes clear, when looking at colors. Lets assume the following
+    taxonomy color[red, green, blue[light_blue, dark_blue]. In this case the one-hot encodings of light_blue and dark_blue
+    should be closer to each other, than they are to the one-hot encoding of red. Therefore, we should also set each
     dimension of our ancestors to 1.
     That is also why the ancestors for each attribute, that we use later on, gets precomputed.
 
 Improvements:
-    So you essentially need to store the set of indices to set to one for each vector. 
+    So you essentially need to store the set of indices to set to one for each vector.
     (preferably as a tuple but the datastructure used here will not be big anyway).
-    Using the already flat entities list in the the graph as tree traversal is OK (but make sure you allow for not 
-    only entity ids to be in the entities list [see the refactored wu palmer plugin for how to read in the graph]). 
-    The only requirement is that the order is stable (which it should be). The ancestors can be built from the relations 
+    Using the already flat entities list in the the graph as tree traversal is OK (but make sure you allow for not
+    only entity ids to be in the entities list [see the refactored wu palmer plugin for how to read in the graph]).
+    The only requirement is that the order is stable (which it should be). The ancestors can be built from the relations
     of the graph (same code as in the wu-palmer plugin).
-    We may want to add an option to which depth we want to flag ancestors (or if we want them at all) to the plugin 
+    We may want to add an option to which depth we want to flag ancestors (or if we want them at all) to the plugin
     (if that makes sense for one hot encoding). [if we do this should we count from root or from the node?]
 
 
     About the depth idea:
     If I set the depth to n, then we ignore all nodes with an depth < n, right?
-    So in our previous example r[a[b,c,d[e]]] with a root r added, if we set the depth to be 1 and we don't count the 
-    root r, we get the following one-hot encoding for e [0, 0, 0, 1, 1], i.e. we ignore a. We could go even further and 
+    So in our previous example r[a[b,c,d[e]]] with a root r added, if we set the depth to be 1 and we don't count the
+    root r, we get the following one-hot encoding for e [0, 0, 0, 1, 1], i.e. we ignore a. We could go even further and
     just use [0, 0, 1, 1], completly removing a's dimension. (we always ignore the root).
-    Since we always ignore the root, not counting the root makes more sense, but I will add this information to the 
+    Since we always ignore the root, not counting the root makes more sense, but I will add this information to the
     plugin's description anyways.
 
     If adding this depth parameter is useful or not, is for the user to determine. Currently I can't think of an example.
@@ -358,15 +358,18 @@ def taxonomy_node_to_parent(taxonomy):
     return parent_dict
 
 
-def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict) -> Set:
-    if attribute == "":
-        return set()
+def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict, root_id) -> Set:
+    if attribute == root_id or attribute == "":
+        ancestor_nodes_dict[attribute] = set()
+        return ancestor_nodes_dict[attribute]
     if attribute in ancestor_nodes_dict:
         return ancestor_nodes_dict[attribute]
     else:
-        parent = parent_node_dict.get(attribute, "")
-        result = get_ancestor_nodes(parent_node_dict, parent, ancestor_nodes_dict).copy()
-        if parent != "":
+        parent = parent_node_dict[attribute]
+        result = get_ancestor_nodes(
+            parent_node_dict, parent, ancestor_nodes_dict, root_id
+        ).copy()
+        if parent != root_id and parent != "":
             result.add(parent)
         ancestor_nodes_dict[attribute] = result
         return result
@@ -374,7 +377,7 @@ def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict) -> Set:
 
 def compute_ancestors_and_index_dict(
     entities, attributes, attribute_ref_targets, taxonomies
-) -> Tuple[List, List, int]:
+) -> Tuple[List, List, List, int]:
     """
     Each entity owns certain attributes in a given taxonomy. This method computes the ancestors for each of the
     attributes in every given taxonomy.
@@ -382,19 +385,20 @@ def compute_ancestors_and_index_dict(
     """
     taxonomies_ancestors_list = []
     attr_to_idx_dict_list = []
+    root_ids = []
     dim = 0
     for attribute in attributes:
         taxonomy = taxonomies[attribute_ref_targets[attribute]]
         parent_node_dict = taxonomy_node_to_parent(taxonomy)
 
+        root_id = _find_root_entity_id(taxonomy)
+        root_ids.append(root_id)
+
         tax_entities = [
             _normalize_taxonomy_entity_id(node) for node in taxonomy["entities"]
         ]
-        # Remove the root node from the list of taxonomies.
-        # MUSE: Taxonomy root is ""
-        # MUSE4MUSIC: Taxonomy root is t_TaxonomyName_root
-        if tax_entities[0] == "" or tax_entities[0].endswith("_root"):
-            tax_entities = tax_entities[1:]
+        if root_id in tax_entities:
+            tax_entities.remove(root_id)
 
         attr_to_idx_dict_list.append(dict(zip(tax_entities, count(start=dim))))
         dim += len(tax_entities)
@@ -411,11 +415,13 @@ def compute_ancestors_and_index_dict(
                 sub_attributes.add(values)
 
             for sub_attribute in sub_attributes:
-                get_ancestor_nodes(parent_node_dict, sub_attribute, ancestor_nodes_dict)
+                get_ancestor_nodes(
+                    parent_node_dict, sub_attribute, ancestor_nodes_dict, root_id
+                )
 
         taxonomies_ancestors_list.append(ancestor_nodes_dict)
 
-    return taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+    return taxonomies_ancestors_list, attr_to_idx_dict_list, root_ids, dim
 
 
 def _normalize_taxonomy_entity_id(node) -> str:
@@ -429,7 +435,7 @@ def _normalize_taxonomy_entity_id(node) -> str:
 
 
 def prepare_stream_output(
-    entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+    entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, root_ids, dim
 ):
     """
     Transforms an entity into it's one-hot encoding and yields it.
@@ -439,8 +445,8 @@ def prepare_stream_output(
     for entity in entities:
         id = entity["ID"]
         one_hot_encodings = np.zeros((dim,))
-        for attribute, attr_to_idx_dict, taxonomies_ancestors in zip(
-            attributes, attr_to_idx_dict_list, taxonomies_ancestors_list
+        for attribute, attr_to_idx_dict, taxonomies_ancestors, root_id in zip(
+            attributes, attr_to_idx_dict_list, taxonomies_ancestors_list, root_ids
         ):
             values = entity[attribute]
 
@@ -451,14 +457,25 @@ def prepare_stream_output(
                 sub_attributes.add(values)
 
             for sub_attribute in sub_attributes:
-                if sub_attribute == "":
+                if sub_attribute == root_id or sub_attribute == "":
                     continue
+
                 for ancestor in taxonomies_ancestors[sub_attribute]:
                     one_hot_encodings[attr_to_idx_dict[ancestor]] = 1
 
                 one_hot_encodings[attr_to_idx_dict[sub_attribute]] = 1
 
         yield get_entity_dict(id, one_hot_encodings)
+
+
+def _find_root_entity_id(taxonomy) -> str:
+    for entity in taxonomy["entities"]:
+        entity_id = _normalize_taxonomy_entity_id(entity)
+        if entity_id == "":
+            return ""
+        if isinstance(entity, dict) and entity.get("tax_item_name") == "root":
+            return entity_id
+    return ""
 
 
 @CELERY.task(name=f"{OneHot.instance.identifier}.calculation_task", bind=True)
@@ -501,12 +518,18 @@ def calculation_task(self, db_id: int) -> str:
     (
         taxonomies_ancestors_list,
         attr_to_idx_dict_list,
+        root_ids,
         dim,
     ) = compute_ancestors_and_index_dict(
         entities, attributes, attribute_ref_targets, taxonomies
     )
     entity_points = prepare_stream_output(
-        entities, attributes, taxonomies_ancestors_list, attr_to_idx_dict_list, dim
+        entities,
+        attributes,
+        taxonomies_ancestors_list,
+        attr_to_idx_dict_list,
+        root_ids,
+        dim,
     )
     csv_attributes = ["ID", "href"] + [f"dim{d}" for d in range(dim)]
 
