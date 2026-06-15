@@ -101,7 +101,7 @@ def test_all_plugins_use_allowed_data_types(app, client):
 
             # Check data_input types
             for input_item in entry_point["dataInput"]:
-                data_type = input_item.get("dataType", "")
+                data_type = input_item["dataType"]
                 if data_type and not is_valid_data_type(data_type):
                     invalid_types.append(
                         {
@@ -113,7 +113,7 @@ def test_all_plugins_use_allowed_data_types(app, client):
 
             # Check data_output types
             for output_item in entry_point["dataOutput"]:
-                data_type = output_item.get("dataType", "")
+                data_type = output_item["dataType"]
                 if data_type and not is_valid_data_type(data_type):
                     invalid_types.append(
                         {
@@ -153,7 +153,7 @@ def test_all_plugins_use_allowed_content_types(app, client):
 
             # Check data_input content types
             for input_item in entry_point["dataInput"]:
-                for content_type in input_item.get("contentType", []):
+                for content_type in input_item["contentType"]:
                     if content_type and not is_valid_content_type(content_type):
                         invalid_types.append(
                             {
@@ -165,7 +165,7 @@ def test_all_plugins_use_allowed_content_types(app, client):
 
             # Check data_output content types
             for output_item in entry_point["dataOutput"]:
-                for content_type in output_item.get("contentType", []):
+                for content_type in output_item["contentType"]:
                     if content_type and not is_valid_content_type(content_type):
                         invalid_types.append(
                             {
