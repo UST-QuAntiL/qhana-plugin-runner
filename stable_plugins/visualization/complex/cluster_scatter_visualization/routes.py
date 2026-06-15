@@ -68,19 +68,19 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/vector",
-                        content_type=["application/json", "application/csv"],
+                        content_type=["application/json", "text/csv"],
                         required=True,
                         parameter="entityUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/label",
-                        content_type=["application/json", "application/csv"],
+                        content_type=["application/json", "text/csv"],
                         required=False,
                         parameter="clustersUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/*",
-                        content_type=["application/json", "application/csv"],
+                        content_type=["application/json", "text/csv"],
                         required=False,
                         parameter="entityDataUrl",
                     ),
