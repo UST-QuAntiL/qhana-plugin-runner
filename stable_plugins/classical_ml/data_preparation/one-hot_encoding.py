@@ -359,7 +359,7 @@ def taxonomy_node_to_parent(taxonomy):
 
 
 def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict, root_id) -> Set:
-    if attribute == root_id or attribute == "":
+    if attribute == root_id:
         ancestor_nodes_dict[attribute] = set()
         return ancestor_nodes_dict[attribute]
     if attribute in ancestor_nodes_dict:
@@ -369,7 +369,7 @@ def get_ancestor_nodes(parent_node_dict, attribute, ancestor_nodes_dict, root_id
         result = get_ancestor_nodes(
             parent_node_dict, parent, ancestor_nodes_dict, root_id
         ).copy()
-        if parent != root_id and parent != "":
+        if parent != root_id:
             result.add(parent)
         ancestor_nodes_dict[attribute] = result
         return result
@@ -415,6 +415,8 @@ def compute_ancestors_and_index_dict(
                 sub_attributes.add(values)
 
             for sub_attribute in sub_attributes:
+                if _attribute_is_empty_or_root(sub_attribute, root_id):
+                    continue
                 get_ancestor_nodes(
                     parent_node_dict, sub_attribute, ancestor_nodes_dict, root_id
                 )
@@ -457,7 +459,7 @@ def prepare_stream_output(
                 sub_attributes.add(values)
 
             for sub_attribute in sub_attributes:
-                if sub_attribute == root_id or sub_attribute == "":
+                if _attribute_is_empty_or_root(sub_attribute, root_id):
                     continue
 
                 for ancestor in taxonomies_ancestors[sub_attribute]:
@@ -466,6 +468,10 @@ def prepare_stream_output(
                 one_hot_encodings[attr_to_idx_dict[sub_attribute]] = 1
 
         yield get_entity_dict(id, one_hot_encodings)
+
+
+def _attribute_is_empty_or_root(attribute: str, root_id: str):
+    return attribute == "" or attribute == root_id
 
 
 def _find_root_entity_id(taxonomy) -> str:
