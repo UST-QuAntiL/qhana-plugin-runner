@@ -1,13 +1,25 @@
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
-Auto-generated module for QHAna plugin data types and content types.
-
 This module defines enums for allowed data_types and content_types used in plugin metadata.
-Types are extracted from all plugins in plugins/ and stable_plugins/.
+Types needs to be added manually to these Enums.
 
-Types are organized into:
-- Standard types: Follow namespace/name format or wildcards
-- Legacy types: Non-standard but used in plugins (backward compatibility)
-- Suspicious types: Technically allowed but semantically incorrect per standards (TODO: fix in plugins)
+The Enums are organized into:
+- Data types, that follow a specific format (namespace/name)
+- Data types, that do not follow a specific format
+- Content types, that should be RFC-compliant.
 """
 
 from enum import Enum
@@ -16,8 +28,7 @@ from enum import Enum
 class AllowedDataTypesWithFormat(Enum):
     """
     Allowed data types of the following format: namespace/name.\\
-    Data types, that are allowed, but do not follow this format
-    Also contains some data types, that DO NOT follow this format and *.
+    Types, that do not follow this format can be find in :func:`AllowedDataTypesNoFormat`.
     """
 
     # Standard data types of format namespace/name
@@ -46,7 +57,11 @@ class AllowedDataTypesWithFormat(Enum):
 
 
 class AllowedDataTypesNoFormat(Enum):
-    # Other data types
+    """
+    Allowed data types that do not follow a specific format.\\
+    Data types that use the format (namespace/name) can be found in :func:`AllowedDataTypesWithFormat`.
+    """
+
     WILDCARD = "*"
     CIRCUIT = "circuit"
     PLOT = "plot"
@@ -57,7 +72,10 @@ class AllowedDataTypesNoFormat(Enum):
 
 
 class AllowedContentTypes(Enum):
-    """Allowed content types (mimetypes): RFC-compliant."""
+    """
+    Allowed content types (mimetypes).
+    They should be RFC-compliant.
+    """
 
     WILDCARD = "*"
     AUDIO_MIDI = "audio/midi"
