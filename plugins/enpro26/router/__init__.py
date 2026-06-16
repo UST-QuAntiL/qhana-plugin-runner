@@ -18,31 +18,35 @@ from flask import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "taxonomy-router"
+_plugin_name = "router"
 __version__ = "v0.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
-TAXONOMY_ROUTER_BLP = SecurityBlueprint(
+ROUTER_BLP = SecurityBlueprint(
     _identifier, 
     __name__, 
     description="Routes entities and separates tree from non-tree taxonomies.",
     template_folder="templates",
 )
 
-class TaxonomyRouter(QHAnaPluginBase):
+class Router(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Takes an entity list and taxonomies zip, routing them based on taxonomy shape."
-    tags = ["preprocessing", "taxonomy", "routing"]
+    description = "Takes Muse4Music data and provides different routing options for the entities and taxonomies."
+    tags = ["preprocessing", "routing"]
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return TAXONOMY_ROUTER_BLP
+        return ROUTER_BLP
 
     def get_requirements(self) -> str:
         return ""
 
-from . import routes
-from . import tasks
+try:
+    from . import routes
+except Exception as e:
+    import logging
+    logging.error(f"FAILED TO LOAD ROUTER PLUGIN: {e}", exc_info=True)
+    raise
