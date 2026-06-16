@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc11_xor_adhoc_inside_branch" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc11_xor_adhoc_inside_branch_E4" name="Extracted Fragment E4" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_E4" name="Start">
+      <bpmn:outgoing>Flow_E4_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_AutoModerate" name="auto-moderate">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">auto-moderate</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.data">${qoutput.contentUrl}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.moderationResult">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E4_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_E4_end</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_E4" name="End">
+      <bpmn:incoming>Flow_E4_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E4_start" sourceRef="StartEvent_E4" targetRef="QHanaTask_AutoModerate" />
+    <bpmn:sequenceFlow id="Flow_E4_end" sourceRef="QHanaTask_AutoModerate" targetRef="EndEvent_E4" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc11_xor_adhoc_inside_branch_E4">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc11_xor_adhoc_inside_branch_E4" bpmnElement="tc11_xor_adhoc_inside_branch_E4">
+      <bpmndi:BPMNShape id="QHanaTask_AutoModerate_di" bpmnElement="QHanaTask_AutoModerate">
+        <dc:Bounds x="845" y="560" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_E4_di" bpmnElement="StartEvent_E4">
+        <dc:Bounds x="765" y="582" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_E4_di" bpmnElement="EndEvent_E4">
+        <dc:Bounds x="1065" y="582" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E4_start_di" bpmnElement="Flow_E4_start">
+        <di:waypoint x="801" y="600" />
+        <di:waypoint x="845" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E4_end_di" bpmnElement="Flow_E4_end">
+        <di:waypoint x="1015" y="600" />
+        <di:waypoint x="1065" y="600" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

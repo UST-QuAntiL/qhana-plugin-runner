@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" id="Definitions_tc18_adhoc_at_start" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc18_adhoc_at_start_E1" name="Extracted Fragment E1" isExecutable="true" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_E1" name="Start">
+      <bpmn:outgoing>Flow_E1_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <qhana:qHAnaServiceTask id="QHanaTask_Provision" name="provision-cloud-resources">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="qhanaName">provision-cloud-resources</camunda:inputParameter>
+          <camunda:inputParameter name="qinput.scope">${qoutput.scopeData}</camunda:inputParameter>
+          <camunda:outputParameter name="qoutput.cloudData">${output}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_E1_start</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </qhana:qHAnaServiceTask>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_E1_start" sourceRef="StartEvent_E1" targetRef="QHanaTask_Provision" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="QHanaTask_Provision" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc18_adhoc_at_start_E1">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc18_adhoc_at_start_E1" bpmnElement="tc18_adhoc_at_start_E1">
+      <bpmndi:BPMNShape id="QHanaTask_Provision_di" bpmnElement="QHanaTask_Provision">
+        <dc:Bounds x="670" y="178" width="170" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="910" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_E1_di" bpmnElement="StartEvent_E1">
+        <dc:Bounds x="590" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="840" y="218" />
+        <di:waypoint x="910" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E1_start_di" bpmnElement="Flow_E1_start">
+        <di:waypoint x="626" y="218" />
+        <di:waypoint x="670" y="218" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import Dict, List, Literal, Optional, Sequence, Set, Tuple, TypeAlias, Union
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
+from .splitting import split_workflow, SplitNotSupported, FragmentResult
 
 BPMN_NS = "{http://www.omg.org/spec/BPMN/20100524/MODEL}"
 BPMN_DI_NS = "{http://www.omg.org/spec/BPMN/20100524/DI}"
@@ -224,14 +225,18 @@ class UiTemplateTaskGroup:
         return text
 
 
-def split_ui_template_workflow(bpmn: str) -> tuple[str, tuple[str, ...]]:
-    # root = ElementTree.fromstring(bpmn)
+def split_ui_template_workflow(
+    bpmn: str,
+) -> tuple[str, tuple[FragmentResult, ...]]:
+    try:
+        result = split_workflow(bpmn)
+    except SplitNotSupported:
+        return bpmn, tuple()
 
-    # TODO split workflow into a main workflow containing only ad-hoc task groups for the UI template
-    # and 0 or more executable workflows that need to be deployed as plugins.
-    # The main workflow should have an ad-hoc group with the plugin as placeholder for the extracted executable parts.
+    if not result.fragments:
+        return result.main_xml, tuple()
 
-    return bpmn, tuple()
+    return result.main_xml, tuple(result.fragments)
 
 
 def _compact_tree(groups: Sequence[UiTemplateTaskGroup]) -> list[UiTemplateTaskGroup]:

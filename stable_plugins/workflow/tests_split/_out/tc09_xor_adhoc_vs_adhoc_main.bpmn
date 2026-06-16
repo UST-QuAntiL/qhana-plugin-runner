@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='utf-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:qhana="https://github.com/qhana" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_tc09_xor_adhoc_vs_adhoc" targetNamespace="http://qhana.example/testcases">
+  <bpmn:process id="tc09_xor_adhoc_vs_adhoc_main" name="TC09 - XOR Adhoc vs Adhoc" isExecutable="true" camunda:versionTag="0.2" camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="AdHoc_E1_Wrapper" name="Extracted Fragment E1" qhana:fragmentRef="E1">
+      <bpmn:serviceTask id="ServiceTask_E1_Plugin" name="Extracted Fragment E1" camunda:type="external" camunda:topic="plugin.tc09_xor_adhoc_vs_adhoc_E1">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:outputParameter name="qoutput.ticketData">${qoutput.ticketData}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:exclusiveGateway id="Gateway_Split" name="Determine Support Tier (XOR)" default="Flow_3B">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3A</bpmn:outgoing>
+      <bpmn:outgoing>Flow_3B</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Tier1" name="Tier 1 Support (Ad-hoc)" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_T1_Reset" name="reset-password">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">reset-password</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.ticket">${qoutput.ticketData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.resetLog">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <qhana:qHAnaServiceTask id="QHanaTask_T1_FAQ" name="check-faq">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">check-faq</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.ticket">${qoutput.ticketData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.faqLog">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <bpmn:incoming>Flow_3A</bpmn:incoming>
+      <bpmn:outgoing>Flow_4A</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="AdHocSubProcess_Tier2" name="Tier 2 Support (Ad-hoc)" ordering="Parallel">
+      <qhana:qHAnaServiceTask id="QHanaTask_T2_Escalate" name="escalate-to-dev">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">escalate-to-dev</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.ticket">${qoutput.ticketData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.escalationLog">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <qhana:qHAnaServiceTask id="QHanaTask_T2_Call" name="schedule-call">
+        <bpmn:extensionElements>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="qhanaName">schedule-call</camunda:inputParameter>
+            <camunda:inputParameter name="qinput.ticket">${qoutput.ticketData}</camunda:inputParameter>
+            <camunda:outputParameter name="qoutput.callLog">${output}</camunda:outputParameter>
+          </camunda:inputOutput>
+        </bpmn:extensionElements>
+      </qhana:qHAnaServiceTask>
+      <bpmn:incoming>Flow_3B</bpmn:incoming>
+      <bpmn:outgoing>Flow_4B</bpmn:outgoing>
+    </bpmn:adHocSubProcess>
+    <bpmn:exclusiveGateway id="Gateway_Merge" name="Merge Support Routes">
+      <bpmn:incoming>Flow_4A</bpmn:incoming>
+      <bpmn:incoming>Flow_4B</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="AdHoc_E1_Wrapper" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AdHoc_E1_Wrapper" targetRef="Gateway_Split" />
+    <bpmn:sequenceFlow id="Flow_3A" name="Tier 1 Issue" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Tier1">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${tier == 'Tier1'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_3B" name="Default (Tier 2)" sourceRef="Gateway_Split" targetRef="AdHocSubProcess_Tier2" />
+    <bpmn:sequenceFlow id="Flow_4A" sourceRef="AdHocSubProcess_Tier1" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_4B" sourceRef="AdHocSubProcess_Tier2" targetRef="Gateway_Merge" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Merge" targetRef="EndEvent_1" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_tc09_xor_adhoc_vs_adhoc_main">
+    <bpmndi:BPMNPlane id="BPMNPlane_tc09_xor_adhoc_vs_adhoc_main" bpmnElement="tc09_xor_adhoc_vs_adhoc_main">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="80" y="350" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHoc_E1_Wrapper_di" bpmnElement="AdHoc_E1_Wrapper" isExpanded="true">
+        <dc:Bounds x="150" y="318" width="190" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split" isMarkerVisible="true">
+        <dc:Bounds x="390" y="343" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="375" y="300" width="80" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocSubProcess_Tier1_di" bpmnElement="AdHocSubProcess_Tier1" isExpanded="true">
+        <dc:Bounds x="550" y="80" width="420" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_T1_Reset_di" bpmnElement="QHanaTask_T1_Reset">
+        <dc:Bounds x="600" y="135" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_T1_FAQ_di" bpmnElement="QHanaTask_T1_FAQ">
+        <dc:Bounds x="780" y="135" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocSubProcess_Tier2_di" bpmnElement="AdHocSubProcess_Tier2" isExpanded="true">
+        <dc:Bounds x="550" y="420" width="420" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_T2_Escalate_di" bpmnElement="QHanaTask_T2_Escalate">
+        <dc:Bounds x="600" y="475" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="QHanaTask_T2_Call_di" bpmnElement="QHanaTask_T2_Call">
+        <dc:Bounds x="780" y="475" width="150" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Merge_di" bpmnElement="Gateway_Merge" isMarkerVisible="true">
+        <dc:Bounds x="1020" y="343" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1010" y="400" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1120" y="350" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="368" />
+        <di:waypoint x="150" y="368" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="340" y="368" />
+        <di:waypoint x="390" y="368" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3A_di" bpmnElement="Flow_3A">
+        <di:waypoint x="415" y="343" />
+        <di:waypoint x="415" y="175" />
+        <di:waypoint x="550" y="175" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="430" y="155" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3B_di" bpmnElement="Flow_3B">
+        <di:waypoint x="415" y="393" />
+        <di:waypoint x="415" y="515" />
+        <di:waypoint x="550" y="515" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="430" y="525" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4A_di" bpmnElement="Flow_4A">
+        <di:waypoint x="970" y="175" />
+        <di:waypoint x="1045" y="175" />
+        <di:waypoint x="1045" y="343" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4B_di" bpmnElement="Flow_4B">
+        <di:waypoint x="970" y="515" />
+        <di:waypoint x="1045" y="515" />
+        <di:waypoint x="1045" y="393" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="1070" y="368" />
+        <di:waypoint x="1120" y="368" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
