@@ -157,6 +157,15 @@
     feature-engineering
 
     preprocessing
+* - [Music Feature Extractor (@v0.1.0)](#music-feature-extractor)
+
+    music-feature-extractor@v0-1-0
+  - processing
+  - data-preparation
+
+    feature-extraction
+
+    music
 * - [One-Hot Encoding (@v0.2.1)](#one-hot-encoding)
 
     one-hot-encoding@v0-2-1
@@ -300,6 +309,17 @@
     rest-connector@v0-1-0
   - interaction
   - rest
+* - [SQL Editor (@v0.1.0)](#sql-editor)
+
+    sql-editor@v0-1-0
+  - processing
+  - data-cleaning
+
+    duckdb
+
+    preprocessing
+
+    sql
 * - [SQL Loader (@v0.1.1)](#sql-loader)
 
     sql-loader@v0-1-1
@@ -430,6 +450,15 @@
     qasm-2
 
     qc-simulator
+* - [csv-to-json (@v0.1.0)](#csv-to-json)
+
+    csv-to-json@v0-1-0
+  - conversion
+  - conversion
+
+    csv
+
+    json
 * - [csv-visualization (@v0.1.1)](#csv-visualization)
 
     csv-visualization@v0-1-1
@@ -472,6 +501,15 @@
   - objective-function
 
     optimization
+* - [json-to-csv (@v0.1.0)](#json-to-csv)
+
+    json-to-csv@v0-1-0
+  - conversion
+  - conversion
+
+    csv
+
+    json
 * - [json-visualization (@v0.2.1)](#json-visualization)
 
     json-visualization@v0-2-1
@@ -576,10 +614,10 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-synthesizing`, `demo`, `distance-calculation`, `embedding`, `encoding`, `feature-engineering`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
 
-**Input formats:** `application/X-lines+json`, `application/csv`, `application/json`, `application/zip`, `text/csv`, `text/x-qasm`\
-**Output formats:** `*/*`, `application/csv`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
+**Input formats:** `application/X-lines+json`, `application/json`, `application/octet-stream`, `application/vnd.recordare.musicxml+xml`, `application/xml`, `application/zip`, `audio/midi`, `audio/x-midi`, `text/csv`, `text/x-qasm`, `text/xml`\
+**Output formats:** `*/*`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
 
 **Input datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/element-similarities`, `custom/entity-distances`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`\
 **Output datatypes:** `*/*`, `circuit/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
@@ -694,8 +732,9 @@ A visualization plugin that creates a scatter plot using the provided data. When
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|application/json, application/csv|✓|
-|entity/label|application/json, application/csv|✓|
+|entity/vector|application/json, text/csv|✓|
+|entity/label|application/json, text/csv|╳|
+|entity/*|application/json, text/csv|╳|
 
 
 **Outputs:**
@@ -933,6 +972,31 @@ Converts distance values (distance matrix) to points in a space.
 |entity/vector|application/json|✓|
 
 
+(music-feature-extractor)=
+### Music Feature Extractor (@v0.1.0)
+
+processing – data-preparation, feature-extraction, music\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/music_feature_extractor/__init__.py`
+
+Extracts stable feature vectors from MusicXML, MXL, and MIDI sources. The vector output follows the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|*/*|application/zip, application/xml, text/xml, application/vnd.recordare.musicxml+xml, audio/midi, audio/x-midi, application/octet-stream|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|text/csv|✓|
+|entity/vector|application/json|✓|
+|entity/attribute-metadata|application/json|✓|
+|entity/list|application/json|✓|
+
+
 (one-hot-encoding)=
 ### One-Hot Encoding (@v0.2.1)
 
@@ -954,7 +1018,7 @@ Converts Data to One-Hot Encodings
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|entity/vector|application/csv|✓|
+|entity/vector|text/csv|✓|
 
 
 (optics)=
@@ -1322,6 +1386,28 @@ interaction – rest\
 
 Integrate REST APIs as plugins.
 
+(sql-editor)=
+### SQL Editor (@v0.1.0)
+
+processing – data-cleaning, duckdb, preprocessing, sql\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/sql_editor/plugin.py`
+
+Use SQL to process or filter existing data.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|*/*|application/json, text/csv|╳|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|*/*|text/csv, application/json|✓|
+
+
 (sql-loader)=
 ### SQL Loader (@v0.1.1)
 
@@ -1601,6 +1687,28 @@ Allows execution of quantum circuits using a simulator packaged with cirq.
 |provenance/execution-options|application/json|✓|
 
 
+(csv-to-json)=
+### csv-to-json (@v0.1.0)
+
+conversion – conversion, csv, json\
+*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+
+Convert CSV files to JSON.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|*/*|text/csv|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|*/*|application/json|✓|
+
+
 (csv-visualization)=
 ### csv-visualization (@v0.1.1)
 
@@ -1696,6 +1804,28 @@ Hinge Loss objective-function plugin.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |txt/*|text/plain|✓|
+
+
+(json-to-csv)=
+### json-to-csv (@v0.1.0)
+
+conversion – conversion, csv, json\
+*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+
+Convert JSON files to CSV.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|*/*|application/json|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|*/*|text/csv|✓|
 
 
 (json-visualization)=

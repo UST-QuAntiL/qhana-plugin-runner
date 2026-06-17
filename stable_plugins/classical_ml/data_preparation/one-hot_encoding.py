@@ -209,7 +209,7 @@ class PluginsView(MethodView):
                 data_output=[
                     DataMetadata(
                         data_type="entity/vector",
-                        content_type=["application/csv"],
+                        content_type=["text/csv"],
                         required=True,
                     )
                 ],

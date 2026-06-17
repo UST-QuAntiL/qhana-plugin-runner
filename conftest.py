@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2026 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
 """Tests for the db module of the plugin_utils."""
 
 from logging import INFO
+from pathlib import Path
 
+from dotenv import dotenv_values
 import pytest
 from flask import Flask
 from sqlalchemy.pool import StaticPool
@@ -58,6 +60,9 @@ DEFAULT_TEST_CONFIG = {
         "task_always_eager": False,
         "broker_connection_retry_on_startup": True,
     },
+    "PLUGIN_FOLDERS": [
+        f for f in dotenv_values(".flaskenv")["PLUGIN_FOLDERS"].split(":") if f
+    ],
 }
 
 
