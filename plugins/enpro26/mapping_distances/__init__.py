@@ -1,4 +1,4 @@
-# Copyright 2024 QHAna plugin runner contributors.
+# Copyright 2026 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,47 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import ClassVar, Optional
 
-from flask import Flask
+from flask import Blueprint, Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "muse-for-music-loader"
-__version__ = "v1.1.0"
-_identifier = plugin_identifier(_plugin_name, __version__)
+_name = "mapping-similarity"
+_version = "v0.1.0"
+_identifier = plugin_identifier(_name, _version)
 
 
-M4MLoader_BLP = SecurityBlueprint(
-    _identifier,  # blueprint name
-    __name__,  # module import name!
-    description="MUSE4Music Loader plugin API",
-    template_folder="templates",
+MAPPING_DISTANCES_BLP = SecurityBlueprint(
+    _identifier,
+    __name__,
+    description="Taxanomy mapping to distances plugin API.",
 )
 
 
-class M4MLoaderPlugin(QHAnaPluginBase):
-    name = _plugin_name
-    version = __version__
-    description = "Load data from a MUSE4Music instance."
+class MappingDistances(QHAnaPluginBase):
+    name = _name
+    version = _version
+    description = "A plugin to create element distances for taxanomy mappings."
+    tags = ["preprocessing", "similarity-calculation"]
 
-    tags = ["MUSE4Music", "data-loading"]
+    instance: ClassVar["MappingDistances"]
+
+    _blueprint: Optional[Blueprint] = None
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
-        return M4MLoader_BLP
+        return MAPPING_DISTANCES_BLP
 
-    # def get_requirements(self) -> str:
-    #     return ""
+    def get_requirements(self) -> str:
+        return "muse-for-music-loader~=1.1.0"
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and the Plugin are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    from . import routes  # noqa: F401,E402
 except ImportError:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.
