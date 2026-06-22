@@ -13,9 +13,10 @@
 # limitations under the License.
 
 from enum import Enum
+import marshmallow as ma
 
 from qhana_plugin_runner.api.extra_fields import EnumField
-from qhana_plugin_runner.api.util import FrontendFormBaseSchema
+from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
 
 class DistanceMetricEnum(Enum):
@@ -23,6 +24,52 @@ class DistanceMetricEnum(Enum):
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
+    entities_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="entity/list",
+        data_content_types=["text/csv", "application/json"],
+        metadata={
+            "label": "Entities URL",
+            "description": "URL to a file with entities.",
+            "input_type": "text",
+        },
+    )
+    entities_metadata_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="entity/attribute-metadata",
+        data_content_types="application/json",
+        metadata={
+            "label": "Entities Attribute Metadata URL",
+            "description": "URL to a file with the attribute metadata for the entities.",
+            "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "post",
+        },
+    )
+    taxonomies_zip_url = FileUrl(
+        required=True,
+        allow_none=False,
+        data_input_type="graph/taxonomy",
+        data_content_types="application/zip",
+        metadata={
+            "label": "Taxonomies URL",
+            "description": "URL to zip file with taxonomies.",
+            "input_type": "text",
+            "related_to": "entities_url",
+            "relation": "pre",
+        },
+    )
+    attributes = ma.fields.String(
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Attributes",
+            "description": "List of attributes for which the similarity shall be computed. Separated by newlines.",
+            "input_type": "textarea",
+        },
+    )
     distance_metric = EnumField(
         DistanceMetricEnum,
         required=True,
