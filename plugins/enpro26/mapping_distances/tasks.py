@@ -18,7 +18,7 @@ from typing import Callable, Optional, Tuple, List, Dict
 
 from celery.utils.log import get_task_logger
 
-from plugins.enpro26.mapping_distances.schemas import InputParametersSchema
+from .schemas import InputParametersSchema
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import (
@@ -32,7 +32,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
-from . import plugin
+from . import MappingDistances
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -65,7 +65,7 @@ def load_input_parameters(db_id: int) -> Tuple[str, str, str, List[str], str]:
     )
 
     attributes_raw: str = params.get("attributes", "")
-    TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes}'")
+    TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes_raw}'")
     attributes: List[str] = [
         attr.strip() for attr in attributes_raw.splitlines() if attr.strip()
     ]
@@ -84,7 +84,7 @@ def load_input_parameters(db_id: int) -> Tuple[str, str, str, List[str], str]:
 
 
 @CELERY.task(
-    name=f"{plugin.MappingDistances.instance.identifier}.calculation_task",
+    name=f"{MappingDistances.instance.identifier}.calculation_task",
     bind=True,
     ignore_result=False,
 )
@@ -136,7 +136,4 @@ def calculation_task(self, db_id: str) -> dict:
 
     # TODO Implement distance calculations here
 
-    return {
-        "status": "success",
-        "message": "Data successfully loaded and ready for calculation",
-    }
+    return "Result stored in file"

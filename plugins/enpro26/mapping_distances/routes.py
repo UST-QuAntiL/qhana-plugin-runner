@@ -26,7 +26,7 @@ from flask_smorest import abort
 from marshmallow import EXCLUDE
 from werkzeug.exceptions import HTTPException
 
-from plugins.enpro26.mapping_distances.tasks import calculation_task
+from .tasks import calculation_task
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
