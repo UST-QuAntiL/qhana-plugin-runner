@@ -1,0 +1,255 @@
+<!--
+Copyright 2026 QHAna plugin runner contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+{% extends "simple_template.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+    #data_sources {
+        list-style: none;
+        margin: 0.5em 0 0.75em 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5em;
+    }
+
+    #data_sources li {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75em;
+        padding: 0.6em 0.8em;
+        border: 1px solid rgba(128, 128, 128, 0.4);
+        border-radius: 8px;
+        background: transparent;
+    }
+
+    #data_sources li p {
+        margin: 0;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        line-height: 1.4;
+    }
+
+    .chip-remove {
+        flex: 0 0 auto;
+        border-radius: 500px;
+        border: none;
+        padding-block: 0.3em;
+        padding-inline: 0.8em;
+        white-space: nowrap;
+    }
+
+    #add_data_source {
+        margin-top: 0.5em;
+    }
+
+    #data_sources_error {
+        margin-top: 0.5em;
+    }
+
+    .qhana-form-field {
+        padding: 0;
+        margin: 0;
+    }
+
+    .qhana-form-field + .qhana-form-field {
+        margin-top: 1.5em;
+    }
+
+    .qhana-form-field .qhana-form-label {
+        display: block;
+        margin: 0 0 0.6em 0;
+        padding: 0;
+    }
+
+    .qhana-form-buttons {
+        margin: 1.5em 0 0 0;
+        padding: 0;
+    }
+
+    .qhana-form-buttons .qhana-form-submit {
+        margin: 0;
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<form id="form_main" action="" method="post" data-target="api" class="qhana-form" enctype="multipart/form-data">
+    <div class="qhana-form-field">
+        <label class="qhana-form-label" for="add_data_source">Data Sources</label>
+        <ul id="data_sources" class="qhana-input-wrapper"></ul>
+        <button id="add_data_source" type="button" class="qhana-choose-file-button">
+            Select from Experiment
+        </button>
+        <input type="hidden" name="urls" id="data_sources_input" value="">
+        <p id="data_sources-description" class="qhana-input-description">
+            Select multiple data sources from the experiment to use as input.
+        </p>
+        <p id="data_sources_error" class="qhana-error-message" aria-live="assertive" hidden>
+            Please select at least two data sources.
+        </p>
+    </div>
+
+    <div class="qhana-form-field">
+        <label class="qhana-form-label" for="output_format">Output Format</label>
+        <div class="qhana-input-wrapper">
+            <select class="qhana-form-input" name="outputFormat" id="output_format" autocomplete="off">
+                <option value="csv" {% if values.get("outputFormat", "csv") == "csv" %}selected{% endif %}>CSV</option>
+                <option value="json" {% if values.get("outputFormat") == "json" %}selected{% endif %}>JSON</option>
+            </select>
+        </div>
+        <p id="output_format-description" class="qhana-input-description">
+            Choose the output format for the concatenated vector entities.
+        </p>
+    </div>
+
+    <div class="qhana-form-field">
+        <label class="qhana-form-label" for="output_suffix">Output File Suffix</label>
+        <div class="qhana-input-wrapper">
+            <input type="text" class="qhana-form-input" name="outputSuffix" id="output_suffix"
+                autocomplete="off" pattern="[A-Za-z0-9._-]+"
+                title="Only letters, digits, '.', '_' and '-'."
+                value="{{ values.get('outputSuffix', '') }}">
+        </div>
+        <p id="output_suffix-description" class="qhana-input-description">
+            Optional. Produces e.g. "concatenated_something.csv/json".
+            Leave empty for "concatenated.csv/json".
+        </p>
+        <p id="output_suffix_error" class="qhana-error-message" aria-live="assertive" hidden>
+            Suffix may only contain letters, digits, '.', '_' and '-'.
+        </p>
+    </div>
+
+    <div class="qhana-form-buttons">
+        <button class="qhana-form-submit" type="submit" formaction="{{process}}">submit</button>
+    </div>
+</form>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+
+<script>
+    function dataSourceUrls() {
+        return Array.from(document.querySelectorAll("ul#data_sources li[data-url]"))
+            .map(li => li.dataset.url);
+    }
+
+    function updateDataSourcesInput() {
+        document.querySelector("#data_sources_input").value = dataSourceUrls().join("\n");
+    }
+
+    function onChooseNewDataSource(event) {
+        event.preventDefault();
+        sendMessage({
+            type: "request-data-url",
+            inputKey: "dataSource",
+            acceptedInputType: "entity/vector",
+            acceptedContentTypes: ["text/csv", "application/json"],
+        });
+    }
+
+    function onRemoveDataSource(event) {
+        event.preventDefault();
+        event.target.closest("li[data-url]").remove();
+        updateDataSourcesInput();
+        if (window._qhana_microfrontend_state != null) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    function onDataUrlResponse(message) {
+        if (message.inputKey !== "dataSource") {
+            return;
+        }
+
+        const existingEntries = Array.from(document.querySelectorAll(`ul#data_sources li[data-url]`));
+        if (existingEntries.some(li => li.dataset.url === message.href)) {
+            return; // data source already added
+        }
+
+        const container = document.createElement("li");
+        container.dataset.url = message.href;
+        container.dataset.filename = message.filename;
+        container.dataset.version = message.version;
+        container.dataset.dataType = message.dataType;
+        container.dataset.contentType = message.contentType;
+
+        const header = document.createElement("p");
+        container.appendChild(header);
+        header.textContent = `${message.filename} (${message.version}) – ${message.dataType}; ${message.contentType}`;
+
+        const removeBtn = document.createElement("button");
+        container.appendChild(removeBtn);
+        removeBtn.type = "button";
+        removeBtn.classList.add("chip-remove");
+        removeBtn.textContent = "remove";
+        removeBtn.addEventListener("click", onRemoveDataSource);
+
+        document.querySelector("ul#data_sources").appendChild(container);
+        updateDataSourcesInput();
+
+        if (window._qhana_microfrontend_state != null) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    function messageInterceptor(event) {
+        var data = event.data;
+        if ((typeof data !== "string") && (data != null && data.type === "data-url-response")) {
+            onDataUrlResponse(data);
+            return true;
+        }
+        return false; // message event not handled, use default handling
+    }
+
+    const SUFFIX_PATTERN = /^[A-Za-z0-9._-]+$/;
+
+    function customSubmitHandler(event) {
+        if (dataSourceUrls().length < 2) {
+            event.preventDefault();
+            document.querySelector("#data_sources_error").removeAttribute("hidden");
+            return true;
+        }
+        document.querySelector("#data_sources_error").setAttribute("hidden", "hidden");
+
+        const suffix = document.querySelector("#output_suffix").value.trim();
+        const suffixError = document.querySelector("#output_suffix_error");
+        if (suffix !== "" && !SUFFIX_PATTERN.test(suffix)) {
+            event.preventDefault();
+            suffixError.removeAttribute("hidden");
+            return true;
+        }
+        suffixError.setAttribute("hidden", "hidden");
+        return false;
+    }
+
+    if (window._qhana_microfrontend_state != null) {
+        window._qhana_microfrontend_state.formSubmitHandler = customSubmitHandler;
+        window._qhana_microfrontend_state.messageHandler = messageInterceptor;
+    } else {
+        document.querySelector("form#form_main").addEventListener("submit", customSubmitHandler);
+    }
+
+    document.querySelector("button#add_data_source").addEventListener("click", onChooseNewDataSource);
+</script>
+{% endblock script %}
