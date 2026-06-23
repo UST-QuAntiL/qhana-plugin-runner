@@ -13,18 +13,14 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from json import dumps
 from typing import Mapping
 
 from celery.canvas import chain
-import celery
-from flask import Response, current_app, jsonify, redirect, render_template
+from flask import Response, redirect, render_template
 from flask.globals import request
 from flask.helpers import url_for
 from flask.views import MethodView
-from flask_smorest import abort
 from marshmallow import EXCLUDE
-from werkzeug.exceptions import HTTPException
 
 from .tasks import calculation_task
 from qhana_plugin_runner.api.plugin_schemas import (

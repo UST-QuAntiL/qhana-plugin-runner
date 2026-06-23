@@ -19,7 +19,7 @@ from flask import Blueprint, Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_name = "mapping-similarity"
+_name = "mapping-distances"
 _version = "v0.1.0"
 _identifier = plugin_identifier(_name, _version)
 
@@ -35,7 +35,7 @@ class MappingDistances(QHAnaPluginBase):
     name = _name
     version = _version
     description = "A plugin to create element distances for taxanomy mappings."
-    tags = ["preprocessing", "similarity-calculation"]
+    tags = ["preprocessing", "distance-calculation"]
 
     instance: ClassVar["MappingDistances"]
 

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from enum import Enum
 import marshmallow as ma
 
@@ -20,7 +21,19 @@ from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
 
 class DistanceMetricEnum(Enum):
-    todo = "TODO"
+    euclidean = "Euclidean"
+    manhatten = "Manhatten"
+    chebyshev = "Chebyshev"
+    cosine = "Cosine"
+
+
+@dataclass
+class InputParameters:
+    entities_url: str
+    entities_metadata_url: str
+    taxonomies_zip_url: str
+    attributes: str
+    distance_metric: DistanceMetricEnum
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -80,3 +93,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
+
+    @ma.post_load
+    def make_input_params(self, data, **kwargs) -> InputParameters:
+        return InputParameters(**data)
