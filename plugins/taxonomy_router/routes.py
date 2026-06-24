@@ -13,6 +13,7 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
     EntryPoint,
+    InputDataMetadata,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -52,8 +53,27 @@ class PluginsView(MethodView):
             entry_point=EntryPoint(
                 href=url_for(f"{TAX_ROUTER_BLP.name}.ProcessView"),
                 ui_href=url_for(f"{TAX_ROUTER_BLP.name}.MicroFrontend"),
-                data_input=[],  # TODO
-                data_output=[],  # TODO
+                data_input=[  # TODO check this
+                    InputDataMetadata(
+                        data_type="entity/list",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter="entitiesUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/attribute-metadata",
+                        content_type=["application/json"],
+                        required=True,
+                        parameter="entitiesMetadataUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="graph/taxonomy",
+                        content_type=["application/zip"],
+                        required=True,
+                        parameter="taxonomiesZipUrl",
+                    ),
+                ],
+                data_output=[],  # TODO: what comes here for multi step plugins
             ),
             tags=plugin.tags,
         )

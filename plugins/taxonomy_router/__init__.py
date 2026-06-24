@@ -22,12 +22,16 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 _plugin_name = "taxonomy-router"
 __version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
-
+_description = (  # TODO
+    "Routes entity attributes into downstream processing pipelines. The first step"
+    " selects the entities, attribute metadata, and taxonomies. The second step assigns"
+    " taxonomy attribute to a pipeline path."
+)
 
 TAX_ROUTER_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Taxonomy Router",
+    description=_description,
     template_folder="templates",
 )
 
@@ -35,12 +39,8 @@ TAX_ROUTER_BLP = SecurityBlueprint(
 class TaxonomyRouter(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = (
-        "Routes entity attributes into downstream processing pipelines. The first "
-        "step selects the entities, attribute metadata, and taxonomies. The second "
-        "step assigns each taxonomy attribute to a pipeline path."
-    )
-    tags = ["preprocessing", "router"]
+    description = _description
+    tags = ["preprocessing", "router"]  # TODO
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
@@ -50,7 +50,7 @@ class TaxonomyRouter(QHAnaPluginBase):
 
 
 try:
-    from . import routes
+    from . import routes  # noqa: F401,E402
 except ImportError:
     # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
     # installed yet.
