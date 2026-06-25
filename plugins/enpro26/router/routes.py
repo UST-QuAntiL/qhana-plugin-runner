@@ -154,6 +154,10 @@ class WebhookView(MethodView):
         event = request.args.get("event")
         
         if source_url and event == "status":
-            handle_webhook_task.delay(db_id=db_id, source_url=source_url)
-            
+            # Countdown prevent overload for backend.
+            handle_webhook_task.apply_async(
+                kwargs={"db_id": db_id, "source_url": source_url},
+                countdown=2
+            )
+           
         return "Webhook received", HTTPStatus.OK
