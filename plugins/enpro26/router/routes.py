@@ -6,7 +6,6 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
-from flask.globals import current_app
 
 from . import ROUTER_BLP, Router
 from .schemas import InputParametersSchema, MetricEnum
@@ -64,11 +63,16 @@ class PluginsView(MethodView):
                     # ),
                 ],
                 data_output=[
-                    DataMetadata(
-                        data_type="entity/vector",
-                        content_type=["application/json"],
-                        required=True,
-                    )
+                    # WU-Palmer output
+                    DataMetadata(data_type="custom/element-similarities", content_type=["application/zip"], required=True),
+                    # Sym-Max-Mean output
+                    DataMetadata(data_type="custom/attribute-similarities", content_type=["application/zip"], required=True),
+                    # Transformer output
+                    DataMetadata(data_type="custom/attribute-distances", content_type=["application/zip"], required=True),
+                    # Aggregator output
+                    DataMetadata(data_type="custom/entity-distances", content_type=["application/json"], required=True),
+                    # MDS output = final output
+                    DataMetadata(data_type="entity/vector", content_type=["application/json"], required=True)
                 ],
             ),
             tags=Router.instance.tags,
@@ -132,7 +136,7 @@ class ProcessView(MethodView):
         db_task.data["webhook_url"] = url_for(f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True)
         db_task.save(commit=True)
         
-        task = chain(route_task.s(db_id=db_task.id) | save_task_result.s(db_id=db_task.id))
+        task = route_task.s(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 

@@ -1,17 +1,14 @@
 import requests
-import time
 import traceback
-from flask import url_for
-from flask.globals import current_app
+import time
 from celery.utils.log import get_task_logger
 from urllib.parse import urljoin
-
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.requests import open_url
-from qhana_plugin_runner.tasks import TASK_STATUS_CHANGED
+from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import Router
 from .schemas import InputParametersSchema, InputParameters
@@ -25,7 +22,7 @@ MDS_URL = "http://localhost:5005/plugins/mds@v0-2-1/process/"
 
 # --- HELPER FUNCTIONS ---
 
-def subscribe_to_plugin(task_result_url: str, webhook_url: str) -> str:
+def subscribe_to_plugin(task_result_url: str, webhook_url: str):
     """Subscribes the webhook to a target plugin's task result updates."""
 
     webhook_url = webhook_url.replace("localhost", "127.0.0.1")
@@ -34,8 +31,7 @@ def subscribe_to_plugin(task_result_url: str, webhook_url: str) -> str:
     if not subscription_link:
         raise ValueError("Target plugin does not support subscriptions!")
     requests.post(subscription_link, json={"command": "subscribe", "event": "status", "webhookHref": webhook_url}).raise_for_status()
-    status_check = requests.get(task_result_url).json()
-    return status_check.get("status", "PENDING")
+
 
 def extract_output_url(outputs: list, data_type: str) -> str:
     """Finds the URL of a specific output from a plugin result based on its dataType."""
@@ -45,254 +41,215 @@ def extract_output_url(outputs: list, data_type: str) -> str:
     raise ValueError(f"Could not find output with dataType {data_type}")
 
 
-# --- TASK FUNCTION ---
-
+# --- Initial Routing Task Launcher ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.route_task", bind=True, max_retries=None)
+    name=f"{Router.instance.identifier}.route_task", bind=True)
 def route_task(self, db_id: int) -> str:
     task_data = ProcessingTask.get_by_id(id_=db_id)
-    TASK_LOGGER.info(f"Supervisor checking pipeline state for db id '{db_id}'")
+    TASK_LOGGER.info(f"Starting routing task for db id '{db_id}'")
     if not task_data:
         raise KeyError(f"Could not load task data with id {db_id}")
+    params: InputParameters = InputParametersSchema().loads(task_data.parameters)
     
-    current_step = task_data.data.get("current_step")
+    TASK_LOGGER.info("Starting Step 1: Wu-Palmer")
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": params.attributes,
+        "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower()
+    }
 
-    if current_step == "done":
-        return "Pipeline completed successfully!"
-
-    if current_step == "error":
-        error_msg = task_data.data.get("error_msg", "Unknown error in pipeline")
-        raise ValueError(f"Pipeline Failed: {error_msg}. Check the log entries above for the exact line number and traceback.")
-
-    if current_step is None:
-        TASK_LOGGER.info(f"Starting new external wu palmer task with db id '{db_id}'")
-        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-
-        if params.routing_options.value == "Wu-Palmer":
-            TASK_LOGGER.info("Starting Step 1: Wu-Palmer")
-            payload = {
-                "entitiesUrl": params.entities_url,
-                "entitiesMetadataUrl": params.entities_metadata_url,
-                "taxonomiesZipUrl": params.taxonomies_zip_url,
-                "attributes": params.attributes,
-                "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower()
-            }
-
-            response = requests.post(WU_PALMER_URL, data=payload, allow_redirects=False)
-            if response.status_code != 303:
-                raise ValueError(f"Wu-Palmer request failed with status {response.status_code}: {response.text}")
-
-            task_url = urljoin(WU_PALMER_URL, response.headers["Location"])
-
-            task_data.data["wu_palmer_url"] = task_url
-            task_data.data["current_step"] = 1 #Wu-Palmer
-            task_data.save(commit=True)
-
-            status = subscribe_to_plugin(task_url, task_data.data["webhook_url"])
-
-            if status in ["SUCCESS", "ERROR", "FAILURE"]:
-                handle_webhook_task.delay(db_id=db_id, source_url=task_url)
-            else:
-                handle_webhook_task.apply_async(kwargs={"db_id": db_id, "source_url": task_url}, countdown=5)
+    response = requests.post(WU_PALMER_URL, data=payload, allow_redirects=False)
+    task_url = urljoin(WU_PALMER_URL, response.headers["Location"])
     
-    TASK_LOGGER.info("Pipeline still running. Supervisor sleeping for 5 seconds...")
-    raise self.retry(countdown=5)
+    task_data.data["wu_palmer_url"] = task_url
+    task_data.add_task_log_entry("Started Wu-Palmer.")
+    task_data.save(commit=True)
 
+    subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+
+# --- Webhook task handles task results ---
 @CELERY.task(name=f"{Router.instance.identifier}.handle_webhook_task", bind=True)
 def handle_webhook_task(self, db_id: int, source_url: str):
-    """Triggered whenever a sub-plugin finishes its task."""
-
-    task_data = ProcessingTask.get_by_id(id_=db_id)
-    current_step = task_data.data.get("current_step")
-
-    if current_step in ["done", "error"]: return
-
-    is_wu_palmer = (source_url == task_data.data.get("wu_palmer_url"))
-    is_sym_max_mean = (source_url == task_data.data.get("sym_max_mean_url"))
-    is_transformers = (source_url == task_data.data.get("transformers_url"))
-    is_aggregators = (source_url == task_data.data.get("aggregators_url"))
+    task_data = ProcessingTask.get_by_id(db_id)
+    
+    # Identify which plugin triggered the webhook
+    is_wp = (source_url == task_data.data.get("wu_palmer_url"))
+    is_smm = (source_url == task_data.data.get("sym_max_mean_url"))
+    is_trans = (source_url == task_data.data.get("transformers_url"))
+    is_agg = (source_url == task_data.data.get("aggregators_url"))
     is_mds = (source_url == task_data.data.get("mds_url"))
 
-    # Ignore Duplicates
-    if is_wu_palmer and current_step != 1: return 
-    if is_sym_max_mean and current_step != 2: return 
-    if is_transformers and current_step != 3: return 
-    if is_aggregators and current_step != 4: return 
-    if is_mds and current_step != 5: return 
+    sub_task_result = requests.get(source_url).json()
+    status = sub_task_result.get("status", "PENDING")
 
-    if not any([is_wu_palmer, is_sym_max_mean, is_transformers, is_aggregators, is_mds]):
-        TASK_LOGGER.warning(f"Unrecognized webhook source ignored: {source_url}")
-        return "Unrecognized webhook"
+    if status == "SUCCESS":
+        # Launch the dedicated Celery task for whichever step just finished!
+        if is_wp: process_step_2_smm.delay(db_id, source_url)
+        elif is_smm: process_step_3_transformers.delay(db_id, source_url)
+        elif is_trans: process_step_4_aggregator.delay(db_id, source_url)
+        elif is_agg: process_step_5_mds.delay(db_id, source_url)
+        elif is_mds: finalize_pipeline.delay(db_id, source_url)
 
-    try:     
-        sub_task_result = requests.get(source_url).json()
-        status = sub_task_result.get("status","PENDING")
 
-        if status == "PENDING":
-            handle_webhook_task.apply_async(kwargs={"db_id": db_id, "source_url": source_url}, countdown=5)
-            return
+# --- Sym-Max-Mean Task ---
+@CELERY.task(name=f"{Router.instance.identifier}.process_step_2_smm", bind=True, max_retries=10)
+def process_step_2_smm(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting Step 2: SymMaxMean")
+    task_data = ProcessingTask.get_by_id(db_id)
+    try:
+        # 1. Download & Persist WP result
+        outputs = requests.get(source_url).json().get("outputs", [])
+        sims_url = extract_output_url(outputs, "custom/element-similarities")
+        STORE.persist_task_result(
+            db_id, open_url(sims_url).content, "wp_similarities.zip", "custom/element-similarities", "application/zip"
+        )
+
+        # 2. Launch SMM
+        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+        payload = {
+            "entitiesUrl": params.entities_url,
+            "elementSimilaritiesUrl": sims_url,
+            "attributes": params.attributes
+        }
         
-        elif status in ["ERROR", "FAILURE"]:
-            raise ValueError(f"Sub-plugin failed during {current_step}")
+        response = requests.post(SMM_URL, data=payload, allow_redirects=False)
+        task_url = urljoin(SMM_URL, response.headers["Location"])
         
-        elif status == "SUCCESS":
-            # If it succeeded, check which step just finished and start the NEXT step
-            outputs = sub_task_result.get("outputs", [])
-            params: InputParameters = InputParametersSchema().loads(task_data.parameters)
-            my_webhook_url = task_data.data["webhook_url"]
-            
-            if current_step == 1 and is_wu_palmer:
-                task_data.data["current_step"] = "transition_1_to_2"
-                task_data.save(commit=True)
-                
-                TASK_LOGGER.info("Step 1 done. Waiting 2 seconds to protect server pool...")
-                time.sleep(2) # Safe to sleep now, duplicates are blocked!
-                
-                element_sims_url = extract_output_url(outputs, "custom/element-similarities")
-                
-                payload = {
-                    "entitiesUrl": params.entities_url,
-                    "elementSimilaritiesUrl": element_sims_url,
-                    "attributes": params.attributes
-                }
-                response = requests.post(SMM_URL, data=payload, allow_redirects=False)
-                if response.status_code != 303:
-                    raise ValueError(f"Sym-Max-Mean failed with status {response.status_code}: {response.text}")
-
-                task_url = urljoin(SMM_URL, response.headers["Location"])
-                
-                # Save State
-                task_data.data["sym_max_mean_url"] = task_url
-                task_data.data["current_step"] = 2
-                task_data.add_task_log_entry("Started Sym Max Mean.")
-                task_data.save(commit=True)
-
-                status2 = subscribe_to_plugin(task_url, my_webhook_url)
-                if status2 in ["SUCCESS", "ERROR", "FAILURE"]:
-                    handle_webhook_task.delay(db_id=db_id, source_url=task_url)
-                else:
-                    handle_webhook_task.apply_async(kwargs={"db_id": db_id, "source_url": task_url}, countdown=5)
-
-            elif current_step == 2 and is_sym_max_mean:
-                task_data.data["current_step"] = "transition_2_to_3"
-                task_data.save(commit=True)
-
-                TASK_LOGGER.info("Step 2 done. Waiting 2 seconds to protect server pool...")
-                time.sleep(2)
-
-                attr_sims_url = extract_output_url(outputs, "custom/attribute-similarities")
-                payload = {
-                    "attributeSimilaritiesUrl": attr_sims_url,
-                    "attributes": params.attributes,
-                    "transformer": params.transformer.name
-                }
-
-                response = requests.post(TRANSFORMER_URL, data=payload, allow_redirects=False)
-                if response.status_code != 303:
-                    raise ValueError(f"Transformers failed with status {response.status_code}: {response.text}")
-                
-                task_url = urljoin(TRANSFORMER_URL, response.headers["Location"])
-                
-                task_data.data["transformers_url"] = task_url
-                task_data.data["current_step"] = 3
-                task_data.add_task_log_entry("Started Transformers.")
-                task_data.save(commit=True)
-
-                status2 = subscribe_to_plugin(task_url, my_webhook_url)
-
-                if status2 in ["SUCCESS", "ERROR", "FAILURE"]:
-                    handle_webhook_task.delay(db_id=db_id, source_url=task_url)
-                else:
-                    handle_webhook_task.apply_async(kwargs={"db_id": db_id, "source_url": task_url}, countdown=5)
-
-            elif current_step == 3 and is_transformers:
-                task_data.data["current_step"] = "transition_3_to_4"
-                task_data.save(commit=True)
-
-                TASK_LOGGER.info("Step 3 done. Waiting 2 seconds to protect server pool...")
-                time.sleep(2)
-
-                attr_dists_url = extract_output_url(outputs, "custom/attribute-distances")
-                
-                payload = {
-                    "attributeDistancesUrl": attr_dists_url,
-                    "aggregator": params.aggregator.name, 
-                    "missingDataHandling": params.missing_data_handling.name 
-                }
-                
-                response = requests.post(AGG_URL, data=payload, allow_redirects=False)
-                if response.status_code != 303:
-                    raise ValueError(f"Aggregator failed with status {response.status_code}: {response.text}")
-
-                task_url = urljoin(AGG_URL, response.headers["Location"])
-                
-                task_data.data["aggregators_url"] = task_url
-                task_data.data["current_step"] = 4
-                task_data.add_task_log_entry("Started Aggregator.")
-                task_data.save(commit=True)
-
-                status2 = subscribe_to_plugin(task_url, my_webhook_url)
-                if status2 in ["SUCCESS", "ERROR", "FAILURE"]:
-                    handle_webhook_task.delay(db_id=db_id, source_url=task_url)
-                else:
-                    handle_webhook_task.apply_async(kwargs={"db_id": db_id, "source_url": task_url}, countdown=5)
-            
-            elif current_step == 4 and is_aggregators:
-                task_data.data["current_step"] = "transition_4_to_5"
-                task_data.save(commit=True)
-
-                TASK_LOGGER.info("Step 4 done. Waiting 2 seconds to protect server pool...")
-                time.sleep(2)
-
-                entity_dists_url = extract_output_url(outputs, "custom/entity-distances")
-                
-                payload = {
-                    "entityDistancesUrl": entity_dists_url,
-                    "dimensions": params.dimensions, 
-                    "metric": params.metric.name,
-                    "nInit": params.n_init,
-                    "maxIter": params.max_iter,
-                }
-                
-                response = requests.post(MDS_URL, data=payload, allow_redirects=False)
-                if response.status_code != 303:
-                    raise ValueError(f"MDS failed with status {response.status_code}: {response.text}")
-
-                task_url = urljoin(MDS_URL, response.headers["Location"])
-                
-                task_data.data["mds_url"] = task_url
-                task_data.data["current_step"] = 5
-                task_data.add_task_log_entry("Started Aggregator.")
-                task_data.save(commit=True)
-
-                status2 = subscribe_to_plugin(task_url, my_webhook_url)
-                if status2 in ["SUCCESS", "ERROR", "FAILURE"]:
-                    handle_webhook_task.delay(db_id=db_id, source_url=task_url)
-                else:
-                    handle_webhook_task.apply_async(kwargs={"db_id": db_id, "source_url": task_url}, countdown=5)
-    
-            elif current_step == 5 and is_mds:
-                task_data.data["current_step"] = "transition_5_to_done"
-                task_data.save(commit=True)
-                TASK_LOGGER.info("Step 5 done. Pipeline Complete!")
-                
-                final_dists_url = extract_output_url(outputs, "entity/vector")
-                
-                # Persist the final output back to our own router task so it shows in the UI
-                STORE.persist_task_result(
-                    db_id, 
-                    open_url(final_dists_url).content, 
-                    "final_entity_distances.json", 
-                    "entity/vector", 
-                    "application/json"
-                )
-                
-                # Mark the whole pipeline as SUCCESSFUL
-                task_data.data["current_step"] = "done"
-                task_data.save(commit=True)
-
-    except Exception as e:
-        tb_str = traceback.format_exc()
-        task_data.data["current_step"] = "error"
-        task_data.data["error_msg"] = f"Webhook Task Error: Pipeline crashed:\nError Message:\n{str(e)}\n\nTraceback:\n{tb_str}"
+        task_data.data["sym_max_mean_url"] = task_url
+        task_data.add_task_log_entry("Started Sym Max Mean.")
         task_data.save(commit=True)
+        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        # If Werkzeug connection drops, gracefully retry this step in 3 seconds!
+        raise self.retry(exc=e, countdown=3)
+    except Exception as e:
+        task_data.add_task_log_entry(f"CRASH in Step 1 to 2:\n{traceback.format_exc()}")
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+
+
+# --- TRANSFORMER TASK ---
+@CELERY.task(name=f"{Router.instance.identifier}.process_step_3_transformers", bind=True, max_retries=10)
+def process_step_3_transformers(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting Step 3: Transformer")
+    task_data = ProcessingTask.get_by_id(db_id)
+    try:
+        # 1. Persist SMM result
+        outputs = requests.get(source_url).json().get("outputs", [])
+        attr_sims_url = extract_output_url(outputs, "custom/attribute-similarities")
+        STORE.persist_task_result(
+            db_id, open_url(attr_sims_url).content, "smm_similarities.zip", "custom/attribute-similarities", "application/zip"
+        )
+
+        # 2. Launch Transformers
+        params = InputParametersSchema().loads(task_data.parameters)
+        payload = {
+            "attributeSimilaritiesUrl": attr_sims_url,
+            "attributes": params.attributes,
+            "transformer": params.transformer.name
+        }
+        
+        response = requests.post(TRANSFORMER_URL, data=payload, allow_redirects=False)
+        task_url = urljoin(TRANSFORMER_URL, response.headers["Location"])
+        
+        task_data.data["transformers_url"] = task_url
+        task_data.add_task_log_entry("Started Transformers.")
+        task_data.save(commit=True)
+        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        raise self.retry(exc=e, countdown=3)
+    except Exception as e:
+        task_data.add_task_log_entry(f"CRASH in Step 2 to 3:\n{traceback.format_exc()}")
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+
+# --- AGGREGATOR TASK ---
+@CELERY.task(name=f"{Router.instance.identifier}.process_step_4_aggregator", bind=True, max_retries=10)
+def process_step_4_aggregator(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting Step 4: Aggregator")
+    task_data = ProcessingTask.get_by_id(db_id)
+    try:
+        outputs = requests.get(source_url).json().get("outputs", [])
+        attr_dists_url = extract_output_url(outputs, "custom/attribute-distances")
+        STORE.persist_task_result(
+            db_id, open_url(attr_dists_url).content, "transformer_distances.zip", "custom/attribute-distances", "application/zip"
+        )
+
+        params = InputParametersSchema().loads(task_data.parameters)
+        payload = {
+            "attributeDistancesUrl": attr_dists_url,
+            "aggregator": params.aggregator.name, 
+            "missingDataHandling": params.missing_data_handling.name 
+        }
+        
+        response = requests.post(AGG_URL, data=payload, allow_redirects=False)
+        task_url = urljoin(AGG_URL, response.headers["Location"])
+        
+        task_data.data["aggregators_url"] = task_url
+        task_data.add_task_log_entry("Started Aggregator.")
+        task_data.save(commit=True)
+        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        raise self.retry(exc=e, countdown=3)
+    except Exception as e:
+        task_data.add_task_log_entry(f"CRASH in Step 3 to 4:\n{traceback.format_exc()}")
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+
+# --- MDS TASK ---
+@CELERY.task(name=f"{Router.instance.identifier}.process_step_5_mds", bind=True, max_retries=10)
+def process_step_5_mds(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting Step 5: MDS")
+    task_data = ProcessingTask.get_by_id(db_id)
+    try:
+        outputs = requests.get(source_url).json().get("outputs", [])
+        entity_dists_url = extract_output_url(outputs, "custom/entity-distances")
+        STORE.persist_task_result(
+            db_id, open_url(entity_dists_url).content, "aggregator_distances.json", "custom/entity-distances", "application/json"
+        )
+
+        params = InputParametersSchema().loads(task_data.parameters)
+        payload = {
+            "entityDistancesUrl": entity_dists_url,
+            "dimensions": params.dimensions, 
+            "metric": params.metric.name,
+            "nInit": params.n_init,
+            "maxIter": params.max_iter,
+        }
+        
+        response = requests.post(MDS_URL, data=payload, allow_redirects=False)
+        task_url = urljoin(MDS_URL, response.headers["Location"])
+        
+        task_data.data["mds_url"] = task_url
+        task_data.add_task_log_entry("Started MDS.")
+        task_data.save(commit=True)
+        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        raise self.retry(exc=e, countdown=3)
+    except Exception as e:
+        task_data.add_task_log_entry(f"CRASH in Step 4 to 5:\n{traceback.format_exc()}")
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+
+# --- END OF PIPELINE ---
+@CELERY.task(name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, max_retries=10)
+def finalize_pipeline(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting Step 6: Finishing the Pipeline")
+    task_data = ProcessingTask.get_by_id(db_id)
+    try:
+        outputs = requests.get(source_url).json().get("outputs", [])
+        final_dists_url = extract_output_url(outputs, "entity/vector")
+        STORE.persist_task_result(
+            db_id, open_url(final_dists_url).content, "mds_final_vectors.json", "entity/vector", "application/json"
+        )
+        
+        # MANUALLY TRIGGER OFFICIAL COMPLETION - Fixes infinite pending bug!
+        save_task_result.delay("Pipeline Completed Successfully!", db_id)
+
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        raise self.retry(exc=e, countdown=3)
+    except Exception as e:
+        task_data.add_task_log_entry(f"CRASH in Final Step:\n{traceback.format_exc()}")
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
