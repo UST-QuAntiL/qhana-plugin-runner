@@ -5,9 +5,9 @@ from qhana_plugin_runner.api.util import FrontendFormBaseSchema, FileUrl
 from qhana_plugin_runner.api.extra_fields import EnumField
 
 class RoutingOptions(Enum):
-    WU_PALMER = "Wu-Palmer"
-    ONE_HOT = "One-Hot"
-    NUMMERIC_MAPPING = "Numeric Mapping"
+    wu_palmer = "Wu-Palmer"
+    one_hot = "One-Hot"
+    nummeric_mapping = "Numeric Mapping"
 
 class MerginPoint(Enum):
     TODO = "TODO"

@@ -81,6 +81,9 @@ def handle_webhook_task(self, db_id: int, source_url: str):
     is_agg = (source_url == task_data.data.get("aggregators_url"))
     is_mds = (source_url == task_data.data.get("mds_url"))
 
+    if not any([is_wp, is_smm, is_trans, is_agg, is_mds]):
+        return "Unrecognized webhook"
+
     sub_task_result = requests.get(source_url).json()
     status = sub_task_result.get("status", "PENDING")
 
