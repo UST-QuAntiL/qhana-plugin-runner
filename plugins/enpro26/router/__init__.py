@@ -1,4 +1,3 @@
-
 # Copyright 2022 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,11 +22,12 @@ __version__ = "v0.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 ROUTER_BLP = SecurityBlueprint(
-    _identifier, 
-    __name__, 
+    _identifier,
+    __name__,
     description="Routes entities and separates tree from non-tree taxonomies.",
     template_folder="templates",
 )
+
 
 class Router(QHAnaPluginBase):
     name = _plugin_name
@@ -44,9 +44,11 @@ class Router(QHAnaPluginBase):
     def get_requirements(self) -> str:
         return ""
 
+
 try:
     from . import routes
 except Exception as e:
     import logging
+
     logging.error(f"FAILED TO LOAD ROUTER PLUGIN: {e}", exc_info=True)
     raise

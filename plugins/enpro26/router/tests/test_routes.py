@@ -22,8 +22,10 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 from router import ROUTER_BLP, Router
 
+
 def _path(endpoint: str, **kwargs) -> str:
     return urlsplit(url_for(f"{ROUTER_BLP.name}.{endpoint}", **kwargs)).path
+
 
 def test_metadata_endpoint_returns_full_descriptor(client):
     resp = client.get(url_for(f"{ROUTER_BLP.name}.PluginsView"))
@@ -34,7 +36,8 @@ def test_metadata_endpoint_returns_full_descriptor(client):
 
     assert body["name"] == plugin.name
     assert body["type"] == "processing"
-    assert len(body["entryPoint"]["dataOutput"]) == 5 # Ensures all 5 files are expected
+    assert len(body["entryPoint"]["dataOutput"]) == 5  # Ensures all 5 files are expected
+
 
 def test_microfrontend_renders_form_fields(client):
     resp = client.get(url_for(f"{ROUTER_BLP.name}.MicroFrontend"))
@@ -44,6 +47,7 @@ def test_microfrontend_renders_form_fields(client):
     assert "Entities URL" in body
     assert "Routing Options" in body
     assert "Wu-Palmer" in body
+
 
 def test_process_valid_payload_redirects_to_task(client):
     valid_payload = {
@@ -58,27 +62,24 @@ def test_process_valid_payload_redirects_to_task(client):
         "dimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
-        "maxIter": 300
+        "maxIter": 300,
     }
-    
-    resp = client.post(
-        url_for(f"{ROUTER_BLP.name}.ProcessView"),
-        data=valid_payload
-    )
+
+    resp = client.post(url_for(f"{ROUTER_BLP.name}.ProcessView"), data=valid_payload)
 
     assert resp.status_code == HTTPStatus.SEE_OTHER
     assert re.fullmatch(r"/tasks/\d+/", urlsplit(resp.headers["Location"]).path)
+
 
 def test_webhook_view_accepts_status_events(client):
     # Create a dummy task in DB
     db_task = ProcessingTask(task_name="router_test")
     db_task.save(commit=True)
-    
+
     resp = client.post(
         url_for(f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id),
-        query_string={"source": "http://localhost/tasks/1/", "event": "status"}
+        query_string={"source": "http://localhost/tasks/1/", "event": "status"},
     )
-    
+
     assert resp.status_code == HTTPStatus.OK
     assert resp.get_data(as_text=True) == '"Webhook received"\n'
-    

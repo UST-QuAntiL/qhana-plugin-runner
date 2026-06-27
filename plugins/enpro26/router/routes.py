@@ -1,4 +1,3 @@
-
 from celery.canvas import chain
 from http import HTTPStatus
 from flask import Response, render_template, request, url_for, redirect
@@ -12,20 +11,29 @@ from .schemas import InputParametersSchema, MetricEnum
 from .tasks import route_task, handle_webhook_task
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    DataMetadata, 
-    EntryPoint, 
-    PluginMetadata, 
-    PluginMetadataSchema, 
-    PluginType, 
-    InputDataMetadata
+    DataMetadata,
+    EntryPoint,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
+    InputDataMetadata,
 )
+
 
 # --- HELPER FUNCTION FOR UIs ---
 def render_step(schema, data, errors, process_url):
-    return Response(render_template(
-        "simple_template.html", name=Router.instance.name, version=Router.instance.version,
-        schema=schema, values=data, errors=errors, process=process_url
-    ))
+    return Response(
+        render_template(
+            "simple_template.html",
+            name=Router.instance.name,
+            version=Router.instance.version,
+            schema=schema,
+            values=data,
+            errors=errors,
+            process=process_url,
+        )
+    )
+
 
 @ROUTER_BLP.route("/")
 class PluginsView(MethodView):
@@ -64,38 +72,71 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     # WU-Palmer output
-                    DataMetadata(data_type="custom/element-similarities", content_type=["application/zip"], required=True),
+                    DataMetadata(
+                        data_type="custom/element-similarities",
+                        content_type=["application/zip"],
+                        required=True,
+                    ),
                     # Sym-Max-Mean output
-                    DataMetadata(data_type="custom/attribute-similarities", content_type=["application/zip"], required=True),
+                    DataMetadata(
+                        data_type="custom/attribute-similarities",
+                        content_type=["application/zip"],
+                        required=True,
+                    ),
                     # Transformer output
-                    DataMetadata(data_type="custom/attribute-distances", content_type=["application/zip"], required=True),
+                    DataMetadata(
+                        data_type="custom/attribute-distances",
+                        content_type=["application/zip"],
+                        required=True,
+                    ),
                     # Aggregator output
-                    DataMetadata(data_type="custom/entity-distances", content_type=["application/json"], required=True),
+                    DataMetadata(
+                        data_type="custom/entity-distances",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
                     # MDS output = final output
-                    DataMetadata(data_type="entity/vector", content_type=["application/json"], required=True)
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
                 ],
             ),
             tags=Router.instance.tags,
         )
 
+
 @ROUTER_BLP.route("/ui/")
 class MicroFrontend(MethodView):
     """Micro frontend for the router plugin."""
 
-    @ROUTER_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the router plugin.")
-    @ROUTER_BLP.arguments(InputParametersSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True), location="query")
+    @ROUTER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the router plugin."
+    )
+    @ROUTER_BLP.arguments(
+        InputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+    )
     @ROUTER_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors): 
+    def get(self, errors):
         return self.render(data=request.args, errors=errors, valid=not errors)
 
-   
-    @ROUTER_BLP.html_response(HTTPStatus.OK, description="Micro frontend of the router plugin.")
-    @ROUTER_BLP.arguments(InputParametersSchema(partial=True, unknown=EXCLUDE, validate_errors_as_result=True), location="form")
+    @ROUTER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the router plugin."
+    )
+    @ROUTER_BLP.arguments(
+        InputParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+    )
     @ROUTER_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors): 
+    def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(data=request.form, errors=errors, valid=not errors)
-    
 
     def render(self, data, errors: dict, valid: bool):
         data_dict = dict(data)
@@ -107,7 +148,7 @@ class MicroFrontend(MethodView):
             fields["n_init"].data_key: 4,
             fields["max_iter"].data_key: 300,
         }
-         
+
         default_values.update(data_dict)
         data_dict = default_values
 
@@ -120,9 +161,10 @@ class MicroFrontend(MethodView):
                 values=data_dict,
                 valid=valid,
                 errors=errors,
-                process=url_for(f"{ROUTER_BLP.name}.ProcessView")
+                process=url_for(f"{ROUTER_BLP.name}.ProcessView"),
             )
         )
+
 
 @ROUTER_BLP.route("/process/")
 class ProcessView(MethodView):
@@ -130,34 +172,39 @@ class ProcessView(MethodView):
     @ROUTER_BLP.response(HTTPStatus.SEE_OTHER)
     @ROUTER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
-        db_task = ProcessingTask(task_name=route_task.name, parameters=InputParametersSchema().dumps(arguments))
+        db_task = ProcessingTask(
+            task_name=route_task.name, parameters=InputParametersSchema().dumps(arguments)
+        )
         db_task.save(commit=True)
-        
-        db_task.data["webhook_url"] = url_for(f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True)
+
+        db_task.data["webhook_url"] = url_for(
+            f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
+        )
         db_task.save(commit=True)
-        
+
         task = route_task.s(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
-        return redirect(url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER)
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
 
 
 # --- WEBHOOOK ---
 @ROUTER_BLP.route("/<int:db_id>/webhook/")
 class WebhookView(MethodView):
     """Endpoint to receive webhook updates from called plugins."""
-    
+
     @ROUTER_BLP.response(HTTPStatus.OK)
     def post(self, db_id: int):
         source_url = request.args.get("source")
         event = request.args.get("event")
-        
+
         if source_url and event == "status":
             # Countdown prevent overload for backend.
             handle_webhook_task.apply_async(
-                kwargs={"db_id": db_id, "source_url": source_url},
-                countdown=2
+                kwargs={"db_id": db_id, "source_url": source_url}, countdown=2
             )
-           
+
         return "Webhook received", HTTPStatus.OK
