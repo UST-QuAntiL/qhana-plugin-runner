@@ -21,6 +21,8 @@ from flask import url_for
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router import ROUTER_BLP, Router
 
+from tests.utils import mock_task_dispatch
+
 
 def _path(endpoint: str, **kwargs) -> str:
     return urlsplit(url_for(f"{ROUTER_BLP.name}.{endpoint}", **kwargs)).path
@@ -48,7 +50,8 @@ def test_microfrontend_renders_form_fields(client):
     assert "Metric" in body
 
 
-def test_process_valid_payload_redirects_to_task(client):
+def test_process_valid_payload_redirects_to_task(client, monkeypatch):
+    mock_task_dispatch(monkeypatch)
     valid_payload = {
         "entitiesUrl": "http://example.com/data.csv",
         "entitiesMetadataUrl": "http://example.com/meta.json",
@@ -82,7 +85,8 @@ def test_routing_step_frontend_renders_attribute_dropdowns(client):
     assert "Wu-Palmer" in body
 
 
-def test_routing_step_process_records_selection_and_redirects(client):
+def test_routing_step_process_records_selection_and_redirects(client, monkeypatch):
+    mock_task_dispatch(monkeypatch)
     db_task = ProcessingTask(
         task_name="router_test",
         parameters='{"entities_url": "http://example.com/data.csv"}',
@@ -102,7 +106,8 @@ def test_routing_step_process_records_selection_and_redirects(client):
     assert db_task.data["wu_palmer_attributes"] == "instrumentation"
 
 
-def test_webhook_view_accepts_status_events(client):
+def test_webhook_view_accepts_status_events(client, monkeypatch):
+    mock_task_dispatch(monkeypatch)
     # Create a dummy task in DB
     db_task = ProcessingTask(task_name="router_test")
     db_task.save(commit=True)

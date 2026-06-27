@@ -17,6 +17,7 @@ import json
 import zipfile
 from typing import Any, Dict, Optional, Sequence
 
+import requests
 from celery import Task
 
 from qhana_plugin_runner.db import DB
@@ -39,12 +40,16 @@ class MockResponse:
         text: Optional[str] = None,
         content: Optional[bytes] = None,
         headers: Optional[Dict[str, str]] = None,
+        status_code: int = 200,
+        json_data: Optional[Any] = None,
     ):
         self.url = url
         self.headers = {"Content-Type": content_type}
         if headers:
             self.headers.update(headers)
         self._text = text
+        self.status_code = status_code
+        self._json_data = json_data
         if content is not None:
             self.content = content
         else:
@@ -60,7 +65,13 @@ class MockResponse:
         pass
 
     def json(self):
+        if self._json_data is not None:
+            return self._json_data
         return json.loads(self._text)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"{self.status_code} error for {self.url}")
 
     def iter_lines(self, decode_unicode: bool = False, **kwargs):
         # ``requests.iter_lines`` yields lines without their terminators, which
@@ -75,6 +86,40 @@ class MockResponse:
             for name, text in members.items():
                 archive.writestr(name, text)
         return cls(url, "application/zip", content=buffer.getvalue())
+
+
+def run_task(task: Task, *, timeout: int = 30, **task_kwargs) -> Any:
+    """Dispatch a Celery task on the running worker and return its result.
+
+    Sends ``task_kwargs`` to the task through the broker, waits up to
+    ``timeout`` seconds for the result, and expires the test session so rows
+    mutated by the worker thread are re-read from the database.
+
+    Requires the ``celery_worker`` fixture so a worker consumes the message.
+    """
+    result = task.apply_async(kwargs=task_kwargs).get(timeout=timeout)
+    DB.session.expire_all()
+    return result
+
+
+def mock_task_dispatch(monkeypatch):
+    """Turn Celery task dispatch into a no-op for tests without a worker.
+
+    Patches ``apply_async`` on both task signatures and tasks so route-level
+    tests can exercise the HTTP layer without enqueuing messages on the shared
+    broker. Returns a dummy result object carrying an ``id``.
+    """
+    from celery.app.task import Task as CeleryTask
+    from celery.canvas import Signature
+
+    class _DummyResult:
+        id = "mock-task-id"
+
+    def _noop(self, *args, **kwargs):
+        return _DummyResult()
+
+    monkeypatch.setattr(Signature, "apply_async", _noop)
+    monkeypatch.setattr(CeleryTask, "apply_async", _noop)
 
 
 def run_plugin_task(
@@ -114,10 +159,8 @@ def run_plugin_task(
     )
     monkeypatch.setattr("qhana_plugin_runner.requests.open_url", mock_open_url)
 
-    result = task.apply_async(kwargs={"db_id": db_task.id}).get(timeout=timeout)
+    result = run_task(task, db_id=db_task.id, timeout=timeout)
     assert result == expected_result
-
-    DB.session.expire_all()
 
     task = ProcessingTask.get_by_id(db_task.id)
     assert task is not None
