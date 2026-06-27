@@ -48,7 +48,11 @@ def test_metadata_endpoint_returns_full_descriptor(client):
     assert entry_point["dataInput"] == [
         {
             "dataType": "entity/vector",
-            "contentType": ["application/json", "text/csv"],
+            "contentType": [
+                "application/json",
+                "application/X-lines+json",
+                "text/csv",
+            ],
             "required": True,
             "parameter": "urls",
         }
@@ -57,7 +61,11 @@ def test_metadata_endpoint_returns_full_descriptor(client):
     assert entry_point["dataOutput"] == [
         {
             "dataType": "entity/vector",
-            "contentType": ["text/csv", "application/json"],
+            "contentType": [
+                "text/csv",
+                "application/json",
+                "application/X-lines+json",
+            ],
             "required": True,
         }
     ]
@@ -116,7 +124,7 @@ def test_microfrontend_invalid_post_rerenders_form_without_redirect(client):
         (
             {"urls": "http://example.com/a.csv", "outputFormat": "xml"},
             "outputFormat",
-            "Must be one of: csv, json.",
+            "Must be one of: csv, json, lines.",
         ),
         (
             {"urls": "http://example.com/a.csv", "outputSuffix": "bad name"},

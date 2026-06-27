@@ -60,12 +60,16 @@ class VectorConcatSchema(FrontendFormBaseSchema):
     )
     output_format = ma.fields.String(
         missing="csv",
-        validate=ma.validate.OneOf(("csv", "json")),
+        validate=ma.validate.OneOf(("csv", "json", "lines")),
         metadata={
             "label": "Output Format",
             "description": "Format of the output data.",
             "input_type": "select",
-            "options": {"csv": "CSV", "json": "JSON"},
+            "options": {
+                "csv": "CSV",
+                "json": "JSON",
+                "lines": "JSON Lines",
+            },
         },
     )
     output_suffix = ma.fields.String(

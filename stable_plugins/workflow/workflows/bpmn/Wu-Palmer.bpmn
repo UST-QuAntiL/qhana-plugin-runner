@@ -47,7 +47,7 @@
       <bpmn2:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="qhanaPlugin">wu-palmer</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.2</camunda:inputParameter>
           <camunda:inputParameter name="qhanaName">Wu Palmer similarities</camunda:inputParameter>
           <camunda:inputParameter name="qhanaDescription">Compares elements and returns similarity values.</camunda:inputParameter>
           <camunda:inputParameter name="qinput.entitiesUrl">

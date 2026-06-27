@@ -43,7 +43,7 @@ def test_multiple_urls_valid():
     assert result["output_format"] == "csv"
 
 
-@pytest.mark.parametrize("fmt", ["csv", "json"])
+@pytest.mark.parametrize("fmt", ["csv", "json", "lines"])
 def test_output_format_accepted(fmt):
     result = VectorConcatSchema().load(_payload(VALID_URL, outputFormat=fmt))
     assert isinstance(result, dict)
@@ -60,7 +60,7 @@ def test_blank_lines_between_valid_urls_tolerated():
 def test_unknown_output_format_rejected():
     with pytest.raises(ValidationError) as exc:
         VectorConcatSchema().load(_payload(VALID_URL, outputFormat="xml"))
-    assert exc.value.messages == {"outputFormat": ["Must be one of: csv, json."]}
+    assert exc.value.messages == {"outputFormat": ["Must be one of: csv, json, lines."]}
 
 
 def test_urls_required():
