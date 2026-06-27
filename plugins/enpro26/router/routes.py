@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from http import HTTPStatus
-from json import dumps, loads
+from json import loads
 from typing import Mapping, Optional
 
 from celery.canvas import chain
@@ -43,7 +43,12 @@ from .schemas import (
     MetricEnum,
     RoutingStepParametersSchema,
 )
-from .tasks import handle_webhook_task, preprocessing_task, route_task
+from .tasks import (
+    PIPELINE_PLUGINS,
+    handle_webhook_task,
+    preprocessing_task,
+    route_task,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -297,18 +302,14 @@ class RoutingStepView(MethodView):
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
-        # Merge the routing selections into the step 1 parameters so both are
-        # available downstream.
-        parameters = loads(db_task.parameters or "{}")
-        parameters.update(arguments)
-        db_task.parameters = dumps(parameters)
-
-        # Only the Wu-Palmer pipeline is implemented. Collect the attributes
-        # routed to it and record a placeholder for the other pipelines.
+        # The routing selections are kept in ``data`` rather than merged into
+        # ``parameters``. ``route_task`` reloads ``parameters`` through
+        # ``InputParametersSchema`` which would reject the dynamic
+        # ``pipeline_<attribute>`` fields.
         prefix = "pipeline_"
         selections = {
             key[len(prefix) :]: value
-            for key, value in parameters.items()
+            for key, value in arguments.items()
             if key.startswith(prefix)
         }
         wu_palmer_attributes = [
@@ -325,6 +326,13 @@ class RoutingStepView(MethodView):
         db_task.data["webhook_url"] = url_for(
             f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
         )
+        # Resolve the pipeline plugin metadata urls here, where the request
+        # context supplies the host. The worker has no request context and
+        # SERVER_NAME is unset, so url_for(_external=True) cannot run there.
+        db_task.data["plugin_urls"] = {
+            key: url_for("plugins-api.PluginView", plugin=name, _external=True)
+            for key, name in PIPELINE_PLUGINS.items()
+        }
         db_task.clear_previous_step()
         db_task.save(commit=True)
 

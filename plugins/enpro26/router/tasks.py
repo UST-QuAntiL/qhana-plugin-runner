@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import traceback
-from json import loads
 from pathlib import PurePath
 from typing import Optional
 from urllib.parse import urljoin
@@ -28,6 +27,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
     load_entities,
 )
+from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
@@ -37,11 +37,19 @@ from . import Router
 from .schemas import InputParameters, InputParametersSchema
 
 TASK_LOGGER = get_task_logger(__name__)
-WU_PALMER_URL = "http://localhost:5005/plugins/wu-palmer@v0-2-1/process/"  # TODO: fix these hardcoded (there is a utility function for this)
-SMM_URL = "http://localhost:5005/plugins/sym-max-mean@v0-1-2/process/"
-TRANSFORMER_URL = "http://localhost:5005/plugins/sim-to-dist-transformers@v0-2-1/process/"
-AGG_URL = "http://localhost:5005/plugins/distance-aggregator@v0-2-1/process/"
-MDS_URL = "http://localhost:5005/plugins/mds@v0-2-1/process/"
+
+# Names of the plugins invoked by the routing pipeline. The runner serves
+# plugin metadata at ``/plugins/<name>/`` and redirects a bare name to the
+# newest installed version. The route handler turns these into external
+# metadata urls (see routes.py), from which the process endpoint is resolved
+# through ``get_plugin_endpoint``.
+PIPELINE_PLUGINS = {
+    "wu_palmer": "wu-palmer",
+    "sym_max_mean": "sym-max-mean",
+    "transformer": "sim-to-dist-transformers",
+    "aggregator": "distance-aggregator",
+    "mds": "mds",
+}
 
 # --- HELPER FUNCTIONS ---
 
@@ -73,6 +81,16 @@ def extract_output_url(outputs: list, data_type: str) -> str:
         if output.get("dataType") == data_type:
             return output["href"]
     raise ValueError(f"Could not find output with dataType {data_type}")
+
+
+def _plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
+    """Resolve a pipeline plugin's process endpoint from its metadata url.
+
+    The route handler stores the external metadata url per plugin in
+    ``data["plugin_urls"]``. ``get_plugin_endpoint`` follows the metadata to
+    the plugin's processing endpoint.
+    """
+    return get_plugin_endpoint(task_data.data["plugin_urls"][plugin])
 
 
 def _load_task(db_id: int) -> ProcessingTask:
@@ -119,32 +137,23 @@ def preprocessing_task(self, db_id: int) -> str:
     TASK_LOGGER.info(f"Starting router preprocessing with db id '{db_id}'")
     task_data = _load_task(db_id)
 
-    params = loads(task_data.parameters or "{}")
-    entities_url: Optional[str] = params.get("entities_url")
-    if not entities_url:
-        raise ValueError("No entities URL provided!")
-    metadata_url: Optional[str] = params.get("entities_metadata_url")
-    if not metadata_url:
-        raise ValueError("No entities metadata URL provided!")
-    taxonomies_zip_url: Optional[str] = params.get("taxonomies_zip_url")
-    if not taxonomies_zip_url:
-        raise ValueError("No taxonomies zip URL provided!")
+    params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     # The attribute metadata describes the full schema for all entity types. The
     # uploaded entities only contain a subset of those attributes, so collect the
     # attribute names actually present in the entities file.
-    entity_attributes = _load_entity_attributes(entities_url)
+    entity_attributes = _load_entity_attributes(params.entities_url)
 
     # Collect the taxonomy file names actually present in the uploaded zip.
     available_taxonomies = {
         PurePath(file_name).name
-        for _, file_name in get_files_from_zip_url(taxonomies_zip_url, mode="t")
+        for _, file_name in get_files_from_zip_url(params.taxonomies_zip_url, mode="t")
     }
 
     # Keep attributes that are present in the entities and whose referenced
     # taxonomy exists in the zip.
     taxonomy_attributes = []
-    with open_url(metadata_url) as response:
+    with open_url(params.entities_metadata_url) as response:
         mimetype = get_mimetype(response)
         for element in load_entities(response, mimetype):
             metadata = AttributeMetadata.from_dict(element)
@@ -182,8 +191,9 @@ def route_task(self, db_id: int) -> str:
         "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
     }
 
-    response = requests.post(WU_PALMER_URL, data=payload, allow_redirects=False)
-    task_url = urljoin(WU_PALMER_URL, response.headers["Location"])
+    wu_palmer_url = _plugin_process_url(task_data, "wu_palmer")
+    response = requests.post(wu_palmer_url, data=payload, allow_redirects=False)
+    task_url = urljoin(wu_palmer_url, response.headers["Location"])
 
     task_data.data["wu_palmer_url"] = task_url
     task_data.add_task_log_entry("Started Wu-Palmer.")
@@ -251,8 +261,9 @@ def process_step_2_smm(self, db_id: int, source_url: str):
             "attributes": task_data.data["wu_palmer_attributes"],
         }
 
-        response = requests.post(SMM_URL, data=payload, allow_redirects=False)
-        task_url = urljoin(SMM_URL, response.headers["Location"])
+        smm_url = _plugin_process_url(task_data, "sym_max_mean")
+        response = requests.post(smm_url, data=payload, allow_redirects=False)
+        task_url = urljoin(smm_url, response.headers["Location"])
 
         task_data.data["sym_max_mean_url"] = task_url
         task_data.add_task_log_entry("Started Sym Max Mean.")
@@ -296,8 +307,9 @@ def process_step_3_transformers(self, db_id: int, source_url: str):
             "transformer": params.transformer.name,
         }
 
-        response = requests.post(TRANSFORMER_URL, data=payload, allow_redirects=False)
-        task_url = urljoin(TRANSFORMER_URL, response.headers["Location"])
+        transformer_url = _plugin_process_url(task_data, "transformer")
+        response = requests.post(transformer_url, data=payload, allow_redirects=False)
+        task_url = urljoin(transformer_url, response.headers["Location"])
 
         task_data.data["transformers_url"] = task_url
         task_data.add_task_log_entry("Started Transformers.")
@@ -338,8 +350,9 @@ def process_step_4_aggregator(self, db_id: int, source_url: str):
             "missingDataHandling": params.missing_data_handling.name,
         }
 
-        response = requests.post(AGG_URL, data=payload, allow_redirects=False)
-        task_url = urljoin(AGG_URL, response.headers["Location"])
+        agg_url = _plugin_process_url(task_data, "aggregator")
+        response = requests.post(agg_url, data=payload, allow_redirects=False)
+        task_url = urljoin(agg_url, response.headers["Location"])
 
         task_data.data["aggregators_url"] = task_url
         task_data.add_task_log_entry("Started Aggregator.")
@@ -380,8 +393,9 @@ def process_step_5_mds(self, db_id: int, source_url: str):
             "maxIter": params.max_iter,
         }
 
-        response = requests.post(MDS_URL, data=payload, allow_redirects=False)
-        task_url = urljoin(MDS_URL, response.headers["Location"])
+        mds_url = _plugin_process_url(task_data, "mds")
+        response = requests.post(mds_url, data=payload, allow_redirects=False)
+        task_url = urljoin(mds_url, response.headers["Location"])
 
         task_data.data["mds_url"] = task_url
         task_data.add_task_log_entry("Started MDS.")

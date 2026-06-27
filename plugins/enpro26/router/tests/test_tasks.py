@@ -52,6 +52,14 @@ def _setup_mock_task() -> ProcessingTask:
     # The Wu-Palmer attribute list is computed in the routing step before the
     # pipeline tasks run.
     db_task.data["wu_palmer_attributes"] = "attr1"
+    # The routing step resolves and stores the pipeline plugin metadata urls.
+    db_task.data["plugin_urls"] = {
+        "wu_palmer": "http://localhost:5005/plugins/wu-palmer/",
+        "sym_max_mean": "http://localhost:5005/plugins/sym-max-mean/",
+        "transformer": "http://localhost:5005/plugins/sim-to-dist-transformers/",
+        "aggregator": "http://localhost:5005/plugins/distance-aggregator/",
+        "mds": "http://localhost:5005/plugins/mds/",
+    }
     db_task.save(commit=True)
     return db_task
 
@@ -88,6 +96,10 @@ def test_route_task_starts_wu_palmer(app, monkeypatch):
 
     monkeypatch.setattr("requests.post", mock_post)
     monkeypatch.setattr("requests.get", mock_get)
+    # Resolve the process endpoint from the stored metadata url without HTTP.
+    monkeypatch.setattr(
+        "router.tasks.get_plugin_endpoint", lambda base: base + "process/"
+    )
 
     # Execute Step 1
     route_task.apply(kwargs={"db_id": db_task.id}).get()
