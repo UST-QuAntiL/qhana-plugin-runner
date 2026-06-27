@@ -21,14 +21,10 @@ from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
 
-class RoutingOptions(Enum):
-    wu_palmer = "Wu-Palmer"
-    one_hot = "One-Hot"
-    nummeric_mapping = "Numeric Mapping"
+# Per-attribute pipeline options shown in the routing step.
+PIPELINE_OPTIONS = ["Wu-Palmer", "One-Hot", "Mapping"]
 
-
-class MerginPoint(Enum):
-    TODO = "TODO"
+PIPELINE_FIELD_PREFIX = "pipeline_"
 
 
 # This Enum class is copied from the transformer plugin.
@@ -71,8 +67,6 @@ class InputParameters:
         entities_url: str,
         entities_metadata_url: str,
         taxonomies_zip_url: str,
-        attributes: str,
-        routing_options: RoutingOptions,
         root_is_part_of_hierarchy: bool,
         transformer: TransformersEnum,
         aggregator: AggregatorsEnum,
@@ -85,8 +79,6 @@ class InputParameters:
         self.entities_url = entities_url
         self.entities_metadata_url = entities_metadata_url
         self.taxonomies_zip_url = taxonomies_zip_url
-        self.attributes = attributes
-        self.routing_options = routing_options
         self.root_is_part_of_hierarchy = root_is_part_of_hierarchy
         self.transformer = transformer
         self.aggregator = aggregator
@@ -120,7 +112,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "description": "URL to a file with the attribute metadata for the entities.",
             "input_type": "text",
             "related_to": "entities_url",
-            "relation": "post",
+            "relation": "post",  # TODO: remove (?)
         },
     )
     taxonomies_zip_url = FileUrl(
@@ -134,26 +126,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
             "related_to": "entities_url",
             "relation": "pre",
-        },
-    )
-
-    attributes = ma.fields.String(
-        required=True,
-        allow_none=False,
-        metadata={
-            "label": "Attributes",
-            "description": "List of attributes for which the similarity shall be computed. Separated by newlines.",
-            "input_type": "textarea",
-        },
-    )
-
-    routing_options = EnumField(
-        RoutingOptions,
-        required=True,
-        metadata={
-            "label": "Routing Options",
-            "description": "Select the routing option for similarity computation.",
-            "input_type": "select",
         },
     )
 
@@ -236,3 +208,37 @@ class InputParametersSchema(FrontendFormBaseSchema):
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
         return InputParameters(**data)
+
+
+class RoutingStepParametersSchema(FrontendFormBaseSchema):
+    """Second step schema.
+
+    The form renders one dropdown per taxonomy attribute with the field name
+    ``pipeline_<attribute>``. The attributes are only known at runtime, so the
+    fields are accepted dynamically instead of being declared statically.
+    """
+
+    @ma.validates_schema(pass_original=True)
+    def validate_entries(self, data, original_data, **kwargs):
+        errors = {}
+        for key in original_data:
+            if not key.startswith(PIPELINE_FIELD_PREFIX):
+                errors[key] = [
+                    f"Unexpected field '{key}', only "
+                    f"'{PIPELINE_FIELD_PREFIX}<attribute>' is allowed."
+                ]
+                continue
+            value = original_data[key]
+            if value and value not in PIPELINE_OPTIONS:
+                errors[key] = [f"'{value}' is not one of {PIPELINE_OPTIONS}."]
+        if errors:
+            raise ma.ValidationError(errors)
+
+    @ma.post_load(pass_original=True)
+    def add_dynamic_entries(self, data, original_data, **kwargs):
+        # Each attribute maps to a single pipeline selection, so a flat
+        # ``items()`` is sufficient for plain dicts and request MultiDicts alike.
+        for key, value in original_data.items():
+            if key.startswith(PIPELINE_FIELD_PREFIX):
+                data[key] = value
+        return data

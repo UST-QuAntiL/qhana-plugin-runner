@@ -13,8 +13,12 @@
 # limitations under the License.
 
 from http import HTTPStatus
+from json import dumps, loads
+from typing import Mapping, Optional
 
-from flask import Response, redirect, render_template, request, url_for
+from celery.canvas import chain
+from celery.utils.log import get_task_logger
+from flask import Response, current_app, redirect, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
 
@@ -26,11 +30,22 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginType,
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error
+from qhana_plugin_runner.tasks import (
+    TASK_STEPS_CHANGED,
+    add_step,
+    save_task_error,
+)
 
 from . import ROUTER_BLP, Router
-from .schemas import InputParametersSchema, MetricEnum
-from .tasks import handle_webhook_task, route_task
+from .schemas import (
+    PIPELINE_OPTIONS,
+    InputParametersSchema,
+    MetricEnum,
+    RoutingStepParametersSchema,
+)
+from .tasks import handle_webhook_task, preprocessing_task, route_task
+
+TASK_LOGGER = get_task_logger(__name__)
 
 
 # --- HELPER FUNCTION FOR UIs ---
@@ -184,22 +199,144 @@ class ProcessView(MethodView):
     @ROUTER_BLP.response(HTTPStatus.SEE_OTHER)
     @ROUTER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
+        """Discover the taxonomy attributes and queue the routing step."""
         db_task = ProcessingTask(
             task_name=route_task.name, parameters=InputParametersSchema().dumps(arguments)
         )
         db_task.save(commit=True)
 
+        step_id = "routing-step"
+        href = url_for(
+            f"{ROUTER_BLP.name}.RoutingStepView", db_id=db_task.id, _external=True
+        )
+        ui_href = url_for(
+            f"{ROUTER_BLP.name}.RoutingStepFrontend", db_id=db_task.id, _external=True
+        )
+
+        task: chain = preprocessing_task.s(db_id=db_task.id) | add_step.s(
+            db_id=db_task.id, step_id=step_id, href=href, ui_href=ui_href, prog_value=50
+        )
+        task.link_error(save_task_error.s(db_id=db_task.id))
+        task.apply_async()
+
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+        )
+
+
+@ROUTER_BLP.route("/<int:db_id>/routing-step-ui/")
+class RoutingStepFrontend(MethodView):
+    """Micro frontend for the routing step (one pipeline dropdown per attribute)."""
+
+    @ROUTER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the router routing step."
+    )
+    @ROUTER_BLP.arguments(
+        RoutingStepParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="query",
+        required=False,
+    )
+    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    def get(self, errors, db_id: int):
+        return self.render(request.args, db_id, errors, False)
+
+    @ROUTER_BLP.html_response(
+        HTTPStatus.OK, description="Micro frontend of the router routing step."
+    )
+    @ROUTER_BLP.arguments(
+        RoutingStepParametersSchema(
+            partial=True, unknown=EXCLUDE, validate_errors_as_result=True
+        ),
+        location="form",
+        required=False,
+    )
+    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    def post(self, errors, db_id: int):
+        return self.render(request.form, db_id, errors, not errors)
+
+    def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        attributes = db_task.data.get("taxonomy_attributes", [])
+        input_params = loads(db_task.parameters or "{}")
+
+        return Response(
+            render_template(
+                "routing_step.html",
+                name=Router.instance.name,
+                version=Router.instance.version,
+                schema=RoutingStepParametersSchema(),
+                attributes=attributes,
+                pipeline_options=PIPELINE_OPTIONS,
+                input_params=input_params,
+                values=data,
+                valid=valid,
+                errors=errors,
+                process=url_for(f"{ROUTER_BLP.name}.RoutingStepView", db_id=db_id),
+            )
+        )
+
+
+@ROUTER_BLP.route("/<int:db_id>/routing-step-process/")
+class RoutingStepView(MethodView):
+    """Record the per-attribute routing and launch the Wu-Palmer pipeline."""
+
+    @ROUTER_BLP.arguments(RoutingStepParametersSchema(unknown=EXCLUDE), location="form")
+    @ROUTER_BLP.response(HTTPStatus.SEE_OTHER)
+    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    def post(self, arguments, db_id: int):
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to read parameters!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        # Merge the routing selections into the step 1 parameters so both are
+        # available downstream.
+        parameters = loads(db_task.parameters or "{}")
+        parameters.update(arguments)
+        db_task.parameters = dumps(parameters)
+
+        # Only the Wu-Palmer pipeline is implemented. Collect the attributes
+        # routed to it and record a placeholder for the other pipelines.
+        prefix = "pipeline_"
+        selections = {
+            key[len(prefix) :]: value
+            for key, value in parameters.items()
+            if key.startswith(prefix)
+        }
+        wu_palmer_attributes = [
+            attr for attr, option in selections.items() if option == "Wu-Palmer"
+        ]
+        unsupported = {
+            attr: option for attr, option in selections.items() if option != "Wu-Palmer"
+        }
+        if unsupported:
+            db_task.add_task_log_entry(
+                f"Pipelines not implemented yet, attributes skipped: {unsupported}"
+            )
+        db_task.data["wu_palmer_attributes"] = "\n".join(wu_palmer_attributes)
         db_task.data["webhook_url"] = url_for(
             f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
         )
+        db_task.clear_previous_step()
         db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
         task = route_task.s(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
         return redirect(
-            url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
+            url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )
 
 

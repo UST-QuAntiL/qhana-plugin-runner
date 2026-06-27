@@ -39,8 +39,6 @@ def _setup_mock_task() -> ProcessingTask:
         "entitiesUrl": "http://mock/entities",
         "entitiesMetadataUrl": "http://mock/meta",
         "taxonomiesZipUrl": "http://mock/tax",
-        "attributes": "attr1",
-        "routingOptions": "wu_palmer",
         "transformer": "linear_inverse",
         "aggregator": "mean",
         "missingDataHandling": "ignore",
@@ -51,6 +49,9 @@ def _setup_mock_task() -> ProcessingTask:
     }
     db_task = ProcessingTask(task_name=route_task.name, parameters=json.dumps(params))
     db_task.data["webhook_url"] = "http://my-router/webhook"
+    # The Wu-Palmer attribute list is computed in the routing step before the
+    # pipeline tasks run.
+    db_task.data["wu_palmer_attributes"] = "attr1"
     db_task.save(commit=True)
     return db_task
 

@@ -14,9 +14,13 @@
 
 
 import pytest
-from marshmallow import ValidationError
+from marshmallow import EXCLUDE, ValidationError
 
-from router.schemas import InputParameters, InputParametersSchema
+from router.schemas import (
+    InputParameters,
+    InputParametersSchema,
+    RoutingStepParametersSchema,
+)
 
 VALID_URL = "http://localhost:9090/experiments/1/data.csv"
 VALID_ZIP = "http://localhost:9090/experiments/1/taxonomies.zip"
@@ -27,8 +31,6 @@ def _payload(**overrides) -> dict:
         "entitiesUrl": VALID_URL,
         "entitiesMetadataUrl": VALID_URL,
         "taxonomiesZipUrl": VALID_ZIP,
-        "attributes": "instrumentation\npitch",
-        "routingOptions": "wu_palmer",
         "transformer": "linear_inverse",
         "aggregator": "mean",
         "missingDataHandling": "ignore",
@@ -46,14 +48,32 @@ def test_valid_payload_loads_successfully():
     assert isinstance(result, InputParameters)
     assert result.entities_url == VALID_URL
     assert result.dimensions == 2
-    assert result.routing_options.name == "wu_palmer"
 
 
 def test_missing_required_fields_rejected():
     with pytest.raises(ValidationError) as exc:
         InputParametersSchema().load({})
     assert "entitiesUrl" in exc.value.messages
-    assert "attributes" in exc.value.messages
+    assert "transformer" in exc.value.messages
+
+
+def test_routing_step_accepts_pipeline_fields():
+    result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
+        {"pipeline_instrumentation": "Wu-Palmer"}
+    )
+    assert result["pipeline_instrumentation"] == "Wu-Palmer"
+
+
+def test_routing_step_rejects_unknown_field():
+    with pytest.raises(ValidationError) as exc:
+        RoutingStepParametersSchema(unknown=EXCLUDE).load({"unexpected": "Wu-Palmer"})
+    assert "unexpected" in exc.value.messages
+
+
+def test_routing_step_rejects_invalid_pipeline():
+    with pytest.raises(ValidationError) as exc:
+        RoutingStepParametersSchema(unknown=EXCLUDE).load({"pipeline_genre": "Bogus"})
+    assert "pipeline_genre" in exc.value.messages
 
 
 def test_invalid_urls_rejected():

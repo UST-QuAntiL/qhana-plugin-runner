@@ -44,8 +44,8 @@ def test_microfrontend_renders_form_fields(client):
     body = resp.get_data(as_text=True)
 
     assert "Entities URL" in body
-    assert "Routing Options" in body
-    assert "Wu-Palmer" in body
+    assert "Transformer" in body
+    assert "Metric" in body
 
 
 def test_process_valid_payload_redirects_to_task(client):
@@ -53,8 +53,6 @@ def test_process_valid_payload_redirects_to_task(client):
         "entitiesUrl": "http://example.com/data.csv",
         "entitiesMetadataUrl": "http://example.com/meta.json",
         "taxonomiesZipUrl": "http://example.com/tax.zip",
-        "attributes": "instrumentation",
-        "routingOptions": "wu_palmer",
         "transformer": "linear_inverse",
         "aggregator": "mean",
         "missingDataHandling": "ignore",
@@ -68,6 +66,40 @@ def test_process_valid_payload_redirects_to_task(client):
 
     assert resp.status_code == HTTPStatus.SEE_OTHER
     assert re.fullmatch(r"/tasks/\d+/", urlsplit(resp.headers["Location"]).path)
+
+
+def test_routing_step_frontend_renders_attribute_dropdowns(client):
+    db_task = ProcessingTask(task_name="router_test", parameters="{}")
+    db_task.data["taxonomy_attributes"] = ["instrumentation", "genre"]
+    db_task.save(commit=True)
+
+    resp = client.get(_path("RoutingStepFrontend", db_id=db_task.id))
+
+    assert resp.status_code == HTTPStatus.OK
+    body = resp.get_data(as_text=True)
+    assert 'name="pipeline_instrumentation"' in body
+    assert 'name="pipeline_genre"' in body
+    assert "Wu-Palmer" in body
+
+
+def test_routing_step_process_records_selection_and_redirects(client):
+    db_task = ProcessingTask(
+        task_name="router_test",
+        parameters='{"entities_url": "http://example.com/data.csv"}',
+    )
+    db_task.data["taxonomy_attributes"] = ["instrumentation", "genre"]
+    db_task.save(commit=True)
+
+    resp = client.post(
+        _path("RoutingStepView", db_id=db_task.id),
+        data={"pipeline_instrumentation": "Wu-Palmer", "pipeline_genre": "One-Hot"},
+    )
+
+    assert resp.status_code == HTTPStatus.SEE_OTHER
+    assert re.fullmatch(r"/tasks/\d+/", urlsplit(resp.headers["Location"]).path)
+
+    db_task = ProcessingTask.get_by_id(db_task.id)
+    assert db_task.data["wu_palmer_attributes"] == "instrumentation"
 
 
 def test_webhook_view_accepts_status_events(client):
