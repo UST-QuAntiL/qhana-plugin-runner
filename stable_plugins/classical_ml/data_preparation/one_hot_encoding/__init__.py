@@ -16,7 +16,7 @@ import json
 from http import HTTPStatus
 from itertools import chain, count
 from tempfile import SpooledTemporaryFile
-from typing import List, Mapping, Optional, Set, Tuple
+from typing import Dict, Generator, Iterable, List, Mapping, Optional, Set, Tuple
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -44,11 +44,18 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.attributes import (
+    AttributeMetadata,
+    tuple_deserializer,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    EntityTupleMixin,
+    ensure_dict,
+    load_entities,
     save_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url, retrieve_filename
+from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
@@ -95,7 +102,7 @@ Improvements:
 
 
 _plugin_name = "one-hot-encoding"
-__version__ = "v0.2.2"
+__version__ = "v0.2.3"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -125,7 +132,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types="application/json",
+        data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -136,7 +143,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/attribute-metadata",
-        data_content_types="application/json",
+        data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Entities Attribute Metadata URL",
             "description": "URL to a file with the attribute metadata for the entities.",
@@ -189,21 +196,29 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
-                        content_type=["application/json"],
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entitiesUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/attribute-metadata",
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
+                        required=True,
+                        parameter="entitiesMetadataUrl",
                     ),
                     InputDataMetadata(
                         data_type="graph/taxonomy",
                         content_type=["application/zip"],
                         required=True,
                         parameter="taxonomiesZipUrl",
-                    ),
-                    InputDataMetadata(
-                        data_type="entity/attribute-metadata",
-                        content_type=["application/json"],
-                        required=True,
-                        parameter="entitiesMetadataUrl",
                     ),
                 ],
                 data_output=[
@@ -317,14 +332,47 @@ class OneHot(QHAnaPluginBase):
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def get_attribute_ref_target(entities_attribute_metadata_url: str, attributes: List[str]):
+def load_entities_metadata(
+    entities_attribute_metadata_url: str,
+) -> Mapping[str, AttributeMetadata]:
+    with open_url(entities_attribute_metadata_url) as metadata_file:
+        return {
+            element["ID"]: AttributeMetadata.from_dict(element)
+            for element in ensure_dict(
+                load_entities(metadata_file, get_mimetype(metadata_file))
+            )
+        }
+
+
+def get_attribute_ref_target(
+    metadata: Mapping[str, AttributeMetadata], attributes: List[str]
+):
     result = dict()
-    entities_attribute_metadata = open_url(entities_attribute_metadata_url).json()
     for attribute in attributes:
-        for metadata in entities_attribute_metadata:
-            if metadata["ID"] == attribute:
-                result[attribute] = metadata["refTarget"].split(":")[1][:-5]
+        if attribute in metadata:
+            ref_target = metadata[attribute].ref_target
+            result[attribute] = ref_target.split(":")[1][:-5]
     return result
+
+
+def load_entities_as_dicts(
+    entities: Iterable, entities_metadata: Mapping[str, AttributeMetadata]
+) -> Generator[Dict, None, None]:
+    """Json entities are already dicts and are yielded unchanged. Csv entities are
+    namedtuples with raw string values. The attribute metadata deserializer parses
+    those strings and splits multi-valued attributes.
+    """
+    deserializer = None
+    for ent in entities:
+        if isinstance(ent, EntityTupleMixin):
+            if deserializer is None:
+                ent_attributes = type(ent).entity_attributes
+                deserializer = tuple_deserializer(
+                    ent_attributes, entities_metadata, tuple_=type(ent)._make
+                )
+            yield deserializer(ent).as_dict()
+        else:
+            yield ent
 
 
 def get_taxonomies_by_ref_target(attribute_ref_targets: dict, taxonomies_zip_url: str):
@@ -408,11 +456,10 @@ def compute_ancestors_and_index_dict(
         for entity in entities:
             values = entity[attribute]
 
-            sub_attributes = set()
-            if isinstance(values, list):
+            if isinstance(values, (list, set, tuple)):
                 sub_attributes = set(values)
             else:
-                sub_attributes.add(values)
+                sub_attributes = {values}
 
             for sub_attribute in sub_attributes:
                 if _attribute_is_empty_or_root(sub_attribute, root_id):
@@ -452,11 +499,10 @@ def prepare_stream_output(
         ):
             values = entity[attribute]
 
-            sub_attributes = set()
-            if isinstance(values, list):
+            if isinstance(values, (list, set, tuple)):
                 sub_attributes = set(values)
             else:
-                sub_attributes.add(values)
+                sub_attributes = {values}
 
             for sub_attribute in sub_attributes:
                 if _attribute_is_empty_or_root(sub_attribute, root_id):
@@ -511,16 +557,20 @@ def calculation_task(self, db_id: int) -> str:
 
     # load data from file
     attributes = attributes.splitlines()
+    entities_metadata = load_entities_metadata(entities_attribute_metadata_url)
     # ref target is the name of the file containing the taxonomy
-    attribute_ref_targets = get_attribute_ref_target(
-        entities_attribute_metadata_url, attributes
-    )
+    attribute_ref_targets = get_attribute_ref_target(entities_metadata, attributes)
     # load taxonomies
     taxonomies = get_taxonomies_by_ref_target(attribute_ref_targets, taxonomies_zip_url)
 
-    opened_url = open_url(entities_url)
-    entities_name = retrieve_filename(opened_url)
-    entities = opened_url.json()
+    entities_name = retrieve_filename(entities_url)
+    with open_url(entities_url) as entities_file:
+        entities = list(
+            load_entities_as_dicts(
+                load_entities(entities_file, get_mimetype(entities_file)),
+                entities_metadata,
+            )
+        )
     (
         taxonomies_ancestors_list,
         attr_to_idx_dict_list,

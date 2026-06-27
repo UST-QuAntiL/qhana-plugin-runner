@@ -310,6 +310,10 @@ def test_relative_imports():
     plugin_locations = get_plugin_roots()
     for loc in plugin_locations:
         for file_ in loc.rglob("**/*.py"):
+            # Test files are dev-only and never shipped with a relocated plugin,
+            # so they may import shared helpers (e.g. ``tests.utils``) directly.
+            if file_.name.startswith("test_") or "test" in file_.parts:
+                continue
             imports = extract_all_imports(file_.read_text(), file_)
             for module, lineno in imports:
                 if isinstance(module, int):

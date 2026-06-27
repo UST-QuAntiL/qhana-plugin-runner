@@ -21,7 +21,6 @@ from typing import Any, Dict, Iterable, Iterator, NamedTuple, Sequence, TextIO, 
 
 from hypothesis import given
 from hypothesis import strategies as st
-from utils import assert_sequence_equals, assert_sequence_partial_equals
 
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
@@ -30,6 +29,8 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     save_entities,
 )
+
+from .utils import assert_sequence_equals, assert_sequence_partial_equals
 
 CSV_UNSAFE_CHARACTERS = ["\x00"]
 
