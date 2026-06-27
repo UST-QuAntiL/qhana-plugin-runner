@@ -85,6 +85,15 @@ def calculation_task(self, db_id: int) -> str:
                 "entity/vector",
                 "application/json",
             )
+        elif output_format == "lines":
+            save_entities(combined, output, "application/X-lines+json")
+            STORE.persist_task_result(
+                db_id,
+                output,
+                f"{output_name}.jsonl",
+                "entity/vector",
+                "application/X-lines+json",
+            )
         else:
             attributes = ["ID", "href"] + [f"dim{i}" for i in range(len(combined[0]) - 2)]
             save_entities(combined, output, "text/csv", attributes=attributes)

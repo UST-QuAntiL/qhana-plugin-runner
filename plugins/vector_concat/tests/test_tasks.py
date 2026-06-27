@@ -17,206 +17,186 @@ import json
 
 import pytest
 
-from qhana_plugin_runner.db import DB
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from tests.utils import MockResponse, run_plugin_task
+
 from vector_concat.tasks import calculation_task
 
-
-# TODO: could be extracted to utilities file in root test folder if this is usefull for other plugin tests
-class _MockResponse:
-    def __init__(self, content_type: str, *, json_data=None, csv_lines=None):
-        self.headers = {"Content-Type": content_type}
-        self._json_data = json_data
-        self._csv_lines = csv_lines
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def json(self):
-        return self._json_data
-
-    def iter_lines(self, decode_unicode: bool = False, **kwargs):
-        yield from self._csv_lines or ()
+from .data import EXTENSIONS, MIMETYPES, TEST_DATA
 
 
-def _csv_response(header, rows):
-    lines = [",".join(header)]
-    lines += [",".join(str(v) for v in row) for row in rows]
-    return _MockResponse("text/csv", csv_lines=lines)
+def _input_filename(base: str, fmt: str) -> str:
+    """Filename of the ``base`` source serialized as ``fmt`` (matches data.py)."""
+    return f"{base}_lines.json" if fmt == "lines" else f"{base}.{fmt}"
 
 
-def _json_response(entities):
-    return _MockResponse("application/json", json_data=entities)
+def _response(base: str, fmt: str) -> tuple[str, MockResponse]:
+    filename = _input_filename(base, fmt)
+    url = f"http://example.com/{filename}"
+    return url, MockResponse(url, MIMETYPES[fmt], text=TEST_DATA[filename])
 
 
-def _run_task(monkeypatch, url_to_response: dict, params: dict):
-    db_task = ProcessingTask(
-        task_name=calculation_task.name,
-        parameters=json.dumps(params),
-    )
-    db_task.save(commit=True)
-
-    def mock_open_url(url, *args, **kwargs):
-        return url_to_response[url]
-
-    monkeypatch.setattr("vector_concat.tasks.open_url", mock_open_url)
-
-    result = calculation_task.apply(kwargs={"db_id": db_task.id}).get()
-    assert result == "Result stored in file"
-
-    DB.session.expire_all()
-    return db_task.id
-
-
-def _single_output(db_id: int):
-    task = ProcessingTask.get_by_id(db_id)
-    assert task is not None
-    assert len(task.outputs) == 1
-    return task.outputs[0]
-
-
-def _read_json(file_info):
-    with open(file_info.file_storage_data, "r") as fh:
-        return json.load(fh)
-
-
-def _read_csv(file_info):
-    with open(file_info.file_storage_data, "r", newline="") as fh:
+def _read_csv(output):
+    with open(output.file_storage_data, "r", newline="") as fh:
         return list(csv.DictReader(fh))
 
 
-def test_concat_two_csv_inputs_produces_combined_csv(app, monkeypatch):
-    url_a, url_b = "http://example.com/a.csv", "http://example.com/b.csv"
-    responses = {
-        url_a: _csv_response(["ID", "href", "dim0", "dim1"], [("e1", "h1", 1, 2)]),
-        url_b: _csv_response(["ID", "href", "dim0", "dim1"], [("e1", "h1", 3, 4)]),
-    }
-    db_id = _run_task(
-        monkeypatch, responses, {"urls": f"{url_a}\n{url_b}", "output_format": "csv"}
+def _read_json(output):
+    with open(output.file_storage_data, "r") as fh:
+        return json.load(fh)
+
+
+def _read_lines(output):
+    with open(output.file_storage_data, "r") as fh:
+        return [json.loads(line) for line in fh if line.strip()]
+
+
+_READERS = {"csv": _read_csv, "json": _read_json, "lines": _read_lines}
+
+
+@pytest.mark.usefixtures("celery_worker")
+@pytest.mark.parametrize("output_format", ["csv", "json", "lines"])
+def test_concat_two_inputs_per_output_format(monkeypatch, output_format):
+    url_a, response_a = _response("a", output_format)
+    url_b, response_b = _response("b", output_format)
+    responses = {url_a: response_a, url_b: response_b}
+
+    output = run_plugin_task(
+        monkeypatch,
+        calculation_task,  # pyright: ignore[reportArgumentType]
+        "vector_concat.tasks",
+        responses,
+        {"urls": f"{url_a}\n{url_b}", "output_format": output_format},
     )
 
-    output = _single_output(db_id)
-    assert output.file_name == "concatenated.csv"
+    assert output.file_name == f"concatenated.{EXTENSIONS[output_format]}"
     assert output.file_type == "entity/vector"
-    assert output.mimetype == "text/csv"
+    assert output.mimetype == MIMETYPES[output_format]
 
-    rows = _read_csv(output)
+    rows = _READERS[output_format](output)
     assert len(rows) == 1
     row = rows[0]
     assert row["ID"] == "e1"
     assert row["href"] == "h1"
-    assert [row["dim0"], row["dim1"], row["dim2"], row["dim3"]] == ["1", "2", "3", "4"]
+    # csv reads values back as strings, json and lines as ints.
+    assert [int(row[f"dim{i}"]) for i in range(4)] == [1, 2, 3, 4]
 
 
-def test_concat_two_json_inputs_produces_combined_json(app, monkeypatch):
-    url_a, url_b = "http://example.com/a.json", "http://example.com/b.json"
-    responses = {
-        url_a: _json_response([{"ID": "e1", "href": "h1", "dim0": 1, "dim1": 2}]),
-        url_b: _json_response([{"ID": "e1", "href": "h1", "dim0": 3, "dim1": 4}]),
-    }
-    db_id = _run_task(
-        monkeypatch, responses, {"urls": f"{url_a}\n{url_b}", "output_format": "json"}
+@pytest.mark.usefixtures("celery_worker")
+def test_concat_mixed_input_formats(monkeypatch):
+    """Inputs of different content types combine into one output."""
+    url_a, response_a = _response("a", "csv")
+    url_b, response_b = _response("b", "lines")
+    responses = {url_a: response_a, url_b: response_b}
+
+    output = run_plugin_task(
+        monkeypatch,
+        calculation_task,  # pyright: ignore[reportArgumentType]
+        "vector_concat.tasks",
+        responses,
+        {"urls": f"{url_a}\n{url_b}", "output_format": "json"},
     )
-
-    output = _single_output(db_id)
-    assert output.file_name == "concatenated.json"
-    assert output.file_type == "entity/vector"
-    assert output.mimetype == "application/json"
 
     entities = _read_json(output)
-    assert len(entities) == 1
-    entity = entities[0]
-    assert entity["ID"] == "e1"
-    assert entity["href"] == "h1"
-    assert [entity["dim0"], entity["dim1"], entity["dim2"], entity["dim3"]] == [
-        1,
-        2,
-        3,
-        4,
-    ]
+    assert [entities[0][f"dim{i}"] for i in range(4)] == [1, 2, 3, 4]
 
 
-def test_output_suffix_appends_to_csv_filename(app, monkeypatch):
-    url_a, url_b = "http://example.com/a.csv", "http://example.com/b.csv"
-    responses = {
-        url_a: _csv_response(["ID", "href", "dim0"], [("e1", "h1", 1)]),
-        url_b: _csv_response(["ID", "href", "dim0"], [("e1", "h1", 2)]),
-    }
-    db_id = _run_task(
+@pytest.mark.usefixtures("celery_worker")
+@pytest.mark.parametrize("output_format", ["csv", "json", "lines"])
+def test_output_suffix_appends_to_filename(monkeypatch, output_format):
+    url_a, response_a = _response("a", output_format)
+    url_b, response_b = _response("b", output_format)
+    responses = {url_a: response_a, url_b: response_b}
+
+    output = run_plugin_task(
         monkeypatch,
+        calculation_task,  # pyright: ignore[reportArgumentType]
+        "vector_concat.tasks",
         responses,
-        {"urls": f"{url_a}\n{url_b}", "output_format": "csv", "output_suffix": "run42"},
+        {
+            "urls": f"{url_a}\n{url_b}",
+            "output_format": output_format,
+            "output_suffix": "run42",
+        },
     )
 
-    output = _single_output(db_id)
-    assert output.file_name == "concatenated_run42.csv"
+    assert output.file_name == f"concatenated_run42.{EXTENSIONS[output_format]}"
 
 
-def test_output_suffix_appends_to_json_filename(app, monkeypatch):
-    url_a, url_b = "http://example.com/a.json", "http://example.com/b.json"
-    responses = {
-        url_a: _json_response([{"ID": "e1", "href": "h1", "dim0": 1}]),
-        url_b: _json_response([{"ID": "e1", "href": "h1", "dim0": 2}]),
-    }
-    db_id = _run_task(
+@pytest.mark.usefixtures("celery_worker")
+def test_empty_output_suffix_keeps_default_filename(monkeypatch):
+    url, response = _response("single", "csv")
+
+    output = run_plugin_task(
         monkeypatch,
-        responses,
-        {"urls": f"{url_a}\n{url_b}", "output_format": "json", "output_suffix": "run42"},
+        calculation_task,  # pyright: ignore[reportArgumentType]
+        "vector_concat.tasks",
+        {url: response},
+        {"urls": url, "output_suffix": "   "},
     )
 
-    output = _single_output(db_id)
-    assert output.file_name == "concatenated_run42.json"
-
-
-def test_empty_output_suffix_keeps_default_filename(app, monkeypatch):
-    url = "http://example.com/a.csv"
-    responses = {url: _csv_response(["ID", "href", "dim0"], [("e1", "h1", 5)])}
-    db_id = _run_task(monkeypatch, responses, {"urls": url, "output_suffix": "   "})
-
-    output = _single_output(db_id)
     assert output.file_name == "concatenated.csv"
 
 
-def test_output_format_defaults_to_csv(app, monkeypatch):
+@pytest.mark.usefixtures("celery_worker")
+def test_output_format_defaults_to_csv(monkeypatch):
     """When ``output_format`` is absent the task falls back to CSV output."""
-    url = "http://example.com/a.csv"
-    responses = {url: _csv_response(["ID", "href", "dim0"], [("e1", "h1", 5)])}
-    db_id = _run_task(monkeypatch, responses, {"urls": url})
+    url, response = _response("single", "csv")
 
-    output = _single_output(db_id)
+    output = run_plugin_task(
+        monkeypatch,
+        calculation_task,  # pyright: ignore[reportArgumentType]
+        "vector_concat.tasks",
+        {url: response},
+        {"urls": url},
+    )
+
     assert output.file_name == "concatenated.csv"
     assert output.mimetype == "text/csv"
 
 
-def test_mismatched_ids_raise(app, monkeypatch):
-    url_a, url_b = "http://example.com/a.csv", "http://example.com/b.csv"
+@pytest.mark.usefixtures("celery_worker")
+def test_mismatched_ids_raise(monkeypatch):
+    url_a, response_a = _response("a", "csv")
+    url_b = "http://example.com/mismatch.csv"
+    mismatch = "ID,href,dim0,dim1\ne2,h1,3,4"
     responses = {
-        url_a: _csv_response(["ID", "href", "dim0"], [("e1", "h1", 1)]),
-        url_b: _csv_response(["ID", "href", "dim0"], [("e2", "h1", 2)]),
+        url_a: response_a,
+        url_b: MockResponse(url_b, "text/csv", text=mismatch),
     }
+
     with pytest.raises(AssertionError):
-        _run_task(
-            monkeypatch, responses, {"urls": f"{url_a}\n{url_b}", "output_format": "csv"}
+        run_plugin_task(
+            monkeypatch,
+            calculation_task,  # pyright: ignore[reportArgumentType]
+            "vector_concat.tasks",
+            responses,
+            {"urls": f"{url_a}\n{url_b}", "output_format": "csv"},
         )
 
 
-def test_unequal_row_counts_raise(app, monkeypatch):
+@pytest.mark.usefixtures("celery_worker")
+def test_unequal_row_counts_raise(monkeypatch):
     """``zip(*entities_list, strict=True)`` rejects inputs of differing length."""
-    url_a, url_b = "http://example.com/a.csv", "http://example.com/b.csv"
+    url_a = "http://example.com/two_rows.csv"
+    url_b, response_b = _response("b", "csv")
+    two_rows = "ID,href,dim0,dim1\ne1,h1,1,2\ne2,h2,5,6"
     responses = {
-        url_a: _csv_response(["ID", "href", "dim0"], [("e1", "h1", 1), ("e2", "h2", 2)]),
-        url_b: _csv_response(["ID", "href", "dim0"], [("e1", "h1", 3)]),
+        url_a: MockResponse(url_a, "text/csv", text=two_rows),
+        url_b: response_b,
     }
+
     with pytest.raises(ValueError):
-        _run_task(
-            monkeypatch, responses, {"urls": f"{url_a}\n{url_b}", "output_format": "csv"}
+        run_plugin_task(
+            monkeypatch,
+            calculation_task,  # pyright: ignore[reportArgumentType]
+            "vector_concat.tasks",
+            responses,
+            {"urls": f"{url_a}\n{url_b}", "output_format": "csv"},
         )
 
 
-def test_missing_db_id_raises(app):
+@pytest.mark.usefixtures("celery_worker")
+def test_missing_db_id_raises(monkeypatch):
     """Task raises ``KeyError`` when no ``ProcessingTask`` row matches the id."""
     with pytest.raises(KeyError, match="Could not load task data"):
-        calculation_task.apply(kwargs={"db_id": 99999}).get()
+        calculation_task.apply_async(kwargs={"db_id": 99999}).get(timeout=30)
