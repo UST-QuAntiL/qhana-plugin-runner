@@ -13,11 +13,10 @@
 # limitations under the License.
 
 import json
-import pytest
+
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-
-from router.tasks import route_task, handle_webhook_task, process_step_2_smm
+from router.tasks import handle_webhook_task, route_task
 
 
 class _MockResponse:
@@ -91,6 +90,8 @@ def test_route_task_starts_wu_palmer(app, monkeypatch):
 
     # Execute Step 1
     route_task.apply(kwargs={"db_id": db_task.id}).get()
+
+    DB.session.expire_all()
 
     # Verify State Machine
     db_task = ProcessingTask.get_by_id(db_task.id)

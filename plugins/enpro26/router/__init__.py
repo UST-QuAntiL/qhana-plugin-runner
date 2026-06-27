@@ -1,4 +1,4 @@
-# Copyright 2022 QHAna plugin runner contributors.
+# Copyright 2026 QHAna plugin runner contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,24 @@
 # limitations under the License.
 
 from typing import Optional
+
 from flask import Flask
+
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "router"
-__version__ = "v0.0.1"
+__version__ = "v0.1.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
+_description = (  # TODO
+    "Routes entities and separates tree from non-tree taxonomies. "
+    "Takes Muse4Music data and provides different routing options for the entities and taxonomies."
+)
 
 ROUTER_BLP = SecurityBlueprint(
     _identifier,
     __name__,
-    description="Routes entities and separates tree from non-tree taxonomies.",
+    description=_description,
     template_folder="templates",
 )
 
@@ -32,7 +38,7 @@ ROUTER_BLP = SecurityBlueprint(
 class Router(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Takes Muse4Music data and provides different routing options for the entities and taxonomies."
+    description = _description
     tags = ["preprocessing", "routing"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -41,14 +47,10 @@ class Router(QHAnaPluginBase):
     def get_api_blueprint(self):
         return ROUTER_BLP
 
-    def get_requirements(self) -> str:
-        return ""
-
 
 try:
-    from . import routes
-except Exception as e:
-    import logging
-
-    logging.error(f"FAILED TO LOAD ROUTER PLUGIN: {e}", exc_info=True)
-    raise
+    from . import routes  # noqa: F401,E402
+except ImportError:
+    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
+    # installed yet.
+    pass

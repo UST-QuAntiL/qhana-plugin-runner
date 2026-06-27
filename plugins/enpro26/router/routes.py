@@ -1,14 +1,22 @@
-from celery.canvas import chain
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from http import HTTPStatus
-from flask import Response, render_template, request, url_for, redirect
+
+from flask import Response, redirect, render_template, request, url_for
 from flask.views import MethodView
 from marshmallow import EXCLUDE
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
-
-from . import ROUTER_BLP, Router
-from .schemas import InputParametersSchema, MetricEnum
-from .tasks import route_task, handle_webhook_task
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -16,8 +24,13 @@ from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
-    InputDataMetadata,
 )
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.tasks import save_task_error
+
+from . import ROUTER_BLP, Router
+from .schemas import InputParametersSchema, MetricEnum
+from .tasks import handle_webhook_task, route_task
 
 
 # --- HELPER FUNCTION FOR UIs ---
@@ -37,7 +50,6 @@ def render_step(schema, data, errors, process_url):
 
 @ROUTER_BLP.route("/")
 class PluginsView(MethodView):
-
     @ROUTER_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
     @ROUTER_BLP.require_jwt("jwt", optional=True)
     def get(self):

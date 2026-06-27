@@ -1,20 +1,34 @@
-import requests
+# Copyright 2026 QHAna plugin runner contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import traceback
-import time
-from celery.utils.log import get_task_logger
 from urllib.parse import urljoin
+
+import requests
+from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import Router
-from .schemas import InputParametersSchema, InputParameters
+from .schemas import InputParameters, InputParametersSchema
 
 TASK_LOGGER = get_task_logger(__name__)
-WU_PALMER_URL = "http://localhost:5005/plugins/wu-palmer@v0-2-1/process/"
+WU_PALMER_URL = "http://localhost:5005/plugins/wu-palmer@v0-2-1/process/"  # TODO: fix these hardcoded (there is a utility function for this)
 SMM_URL = "http://localhost:5005/plugins/sym-max-mean@v0-1-2/process/"
 TRANSFORMER_URL = "http://localhost:5005/plugins/sim-to-dist-transformers@v0-2-1/process/"
 AGG_URL = "http://localhost:5005/plugins/distance-aggregator@v0-2-1/process/"

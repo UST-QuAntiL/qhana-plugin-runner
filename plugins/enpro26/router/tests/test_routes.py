@@ -16,10 +16,9 @@ import re
 from http import HTTPStatus
 from urllib.parse import urlsplit
 
-import pytest
 from flask import url_for
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router import ROUTER_BLP, Router
 
 

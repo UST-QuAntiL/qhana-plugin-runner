@@ -15,7 +15,8 @@
 
 import pytest
 from marshmallow import ValidationError
-from router.schemas import InputParametersSchema, InputParameters
+
+from router.schemas import InputParameters, InputParametersSchema
 
 VALID_URL = "http://localhost:9090/experiments/1/data.csv"
 VALID_ZIP = "http://localhost:9090/experiments/1/taxonomies.zip"
