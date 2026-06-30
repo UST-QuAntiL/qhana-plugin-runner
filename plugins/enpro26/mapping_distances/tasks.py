@@ -22,8 +22,6 @@ from zipfile import ZipFile
 from celery.utils.log import get_task_logger
 from scipy.spatial import distance
 
-from stable_plugins.file_utils.zip_merger import get_readable_hash
-
 from .schemas import InputParametersSchema, InputParameters, DistanceMetricEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -126,7 +124,7 @@ def get_element_list(
 
 
 def calculate_vector_distance(
-    v1: List[float], v2: List[float], metric: DistanceMetricEnum, db_id: str
+    v1: List[float], v2: List[float], metric: DistanceMetricEnum, db_id: int
 ) -> float:
     """
     Calculates the distance between two coordinate vectors based on the selected metric.
@@ -157,6 +155,12 @@ def calculate_vector_distance(
         return distance.cosine(v1, v2)
     else:
         raise ValueError(f"Unknown distance metric: {metric}")
+
+
+def get_readable_hash(s: str) -> str:
+    import muid
+
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(
