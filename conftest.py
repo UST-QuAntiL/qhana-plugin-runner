@@ -126,10 +126,20 @@ def celery_worker(broker_app):
     """
     from celery.contrib.testing.worker import start_worker
 
-    with start_worker(  # pyright: ignore[reportGeneralTypeIssues]
-        CELERY,
-        pool="solo",
-        perform_ping_check=False,
-        shutdown_timeout=10,
-    ) as worker:
-        yield worker
+    # The ``memory://`` broker and ``cache+memory://`` result backend are
+    # process-global and shared across every module's worker. Route-level
+    # tests that call ``apply_async`` without a running worker leave messages
+    # in that shared queue. Purge before starting so this worker does not run
+    # foreign tasks against its own in-memory database, and purge afterwards so
+    # this module's leftovers do not reach a later module's worker.
+    CELERY.control.purge()
+    try:
+        with start_worker(  # pyright: ignore[reportGeneralTypeIssues]
+            CELERY,
+            pool="solo",
+            perform_ping_check=False,
+            shutdown_timeout=10,
+        ) as worker:
+            yield worker
+    finally:
+        CELERY.control.purge()
