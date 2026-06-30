@@ -121,9 +121,9 @@
     low-code-modeler@v0-0-0
   - interaction
   - low-code-modeler
-* - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
+* - [MUSE4Music Loader (@v1.1.0)](#muse-for-music-loader)
 
-    muse-for-music-loader@v1-0-0
+    muse-for-music-loader@v1-1-0
   - dataloader
   - MUSE4Music
 
@@ -380,6 +380,13 @@
   - preprocessing
 
     similarity-calculation
+* - [Taxanomy mapping to distances (@v0.1.0)](#mapping-distances)
+
+    mapping-distances@v0-1-0
+  - processing
+  - distance-calculation
+
+    preprocessing
 * - [Time tanh similarities (@v0.2.1)](#time-tanh)
 
     time-tanh@v0-2-1
@@ -620,7 +627,7 @@
 **Output formats:** `*/*`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
 
 **Input datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/element-similarities`, `custom/entity-distances`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`\
-**Output datatypes:** `*/*`, `circuit/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
+**Output datatypes:** `*/*`, `circuit/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-distances`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
 
 ## Plugins
 
@@ -889,7 +896,7 @@ interaction – low-code-modeler\
 low code modeler plugin
 
 (muse-for-music-loader)=
-### MUSE4Music Loader (@v1.0.0)
+### MUSE4Music Loader (@v1.1.0)
 
 dataloader – MUSE4Music, data-loading\
 *Path:* {file}`stable_plugins/muse/muse_for_music/__init__.py`
@@ -1536,6 +1543,30 @@ Compares attributes and returns similarity values.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |custom/attribute-similarities|application/zip|✓|
+
+
+(mapping-distances)=
+### Taxanomy mapping to distances (@v0.1.0)
+
+processing – distance-calculation, preprocessing\
+*Path:* {file}`plugins/enpro26/mapping_distances/__init__.py`
+
+A plugin to create pairwise element distances for taxanomy mappings.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json|✓|
+|entity/attribute-metadata|application/json|✓|
+|graph/taxonomy|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|custom/element-distances|application/zip|✓|
 
 
 (time-tanh)=

@@ -34,7 +34,7 @@ MAPPING_DISTANCES_BLP = SecurityBlueprint(
 class MappingDistances(QHAnaPluginBase):
     name = _name
     version = _version
-    description = "A plugin to create element distances for taxanomy mappings."
+    description = "A plugin to create pairwise element distances for taxanomy mappings."
     tags = ["preprocessing", "distance-calculation"]
 
     instance: ClassVar["MappingDistances"]

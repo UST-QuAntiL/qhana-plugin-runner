@@ -13,13 +13,14 @@
 # limitations under the License.
 
 import json
-import math
 from io import StringIO
+import sys
 from tempfile import SpooledTemporaryFile
 from typing import Callable, Optional, Tuple, List, Dict, Any
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
+from scipy.spatial import distance
 
 from stable_plugins.file_utils.zip_merger import get_readable_hash
 
@@ -93,7 +94,7 @@ def load_input_parameters(
 
 
 def extract_tax_name(attrib_meta: AttributeMetadata) -> str:
-    """Extracts the taxanomy name from the attribute metadata"""
+    """Extracts the taxonomy name from the attribute metadata"""
     tax_name = ""
     if (
         attrib_meta
@@ -113,7 +114,9 @@ def get_element_list(
     val = entity.get(attribute)
     if val is None:
         return []
-    if isinstance(val, list):
+    if isinstance(val, (set, list, dict)) and not val:
+        return []
+    if isinstance(val, (set, list)):
         return [str(v) for v in val if v]
     if isinstance(val, str):
         if metadata.multiple and metadata.separator:
@@ -122,81 +125,36 @@ def get_element_list(
     return [str(val)]
 
 
-def calculate_distance(
-    elements1: List[str],
-    elements2: List[str],
-    tax_map: Dict[str, List[float]],
-    distance_metric: DistanceMetricEnum,
-):
-    """
-    Calculates the pairwise distances between the two elements based on the metric.\\
-    Returns the average of the average of both sums of distances.\\
-    Returns 0 if one or both elements are empty.
-    """
-    # symmetric max-mean inspired distance aggregation for sets of coordinates
-    if not elements1 or not elements2:
-        return 0.0
-    else:
-
-        # Forward pass: distances from e1 to closest e2
-        sum1 = 0.0
-        for e1 in elements1:
-            v1 = tax_map.get(e1, [])
-            min_d = min(
-                [
-                    calculate_vector_distance(v1, tax_map.get(e2, []), distance_metric)
-                    for e2 in elements2
-                ]
-            )
-            sum1 += min_d
-        avg1 = sum1 / len(elements1)
-
-        # Backward pass: distances from e2 to closest e1
-        sum2 = 0.0
-        for e2 in elements2:
-            v2 = tax_map.get(e2, [])
-            min_d = min(
-                [
-                    calculate_vector_distance(v2, tax_map.get(e1, []), distance_metric)
-                    for e1 in elements1
-                ]
-            )
-            sum2 += min_d
-        avg2 = sum2 / len(elements2)
-
-        return (avg1 + avg2) / 2.0
-
-
 def calculate_vector_distance(
-    vec1: List[float], vec2: List[float], metric: DistanceMetricEnum
+    v1: List[float], v2: List[float], metric: DistanceMetricEnum, db_id: str
 ) -> float:
-    """Calculates the distance between two coordinate vectors based on the selected metric."""
-    if len(vec1) != len(vec2):
-        # Fallback padding with zeros if vectors mismatched in dimensionality
-        max_len = max(len(vec1), len(vec2))
-        vec1 = vec1 + [0.0] * (max_len - len(vec1))
-        vec2 = vec2 + [0.0] * (max_len - len(vec2))
+    """
+    Calculates the distance between two coordinate vectors based on the selected metric.
 
-    if not vec1:
-        return 0.0
+    Returns ``sys.float_info.max`` if the vectors are empty, i.e. no mapping is assigned.
+
+    Throws a ``ValueError`` if the mapping vectors do not have the same size.
+    """
+    if len(v1) != len(v2):
+        msg = f"Vectors do not have the same length in mapping_distances plugin task with db_id '{db_id}'"
+        TASK_LOGGER.error(msg)
+        raise ValueError(msg)
+
+    if not v1 or not v2:
+        return sys.float_info.max
 
     if metric == DistanceMetricEnum.euclidean:
-        return math.sqrt(sum((a - b) ** 2 for a, b in zip(vec1, vec2)))
-
+        return distance.euclidean(v1, v2)
     elif metric == DistanceMetricEnum.manhatten:
-        return sum(abs(a - b) for a, b in zip(vec1, vec2))
-
+        return distance.cityblock(v1, v2)
     elif metric == DistanceMetricEnum.chebyshev:
-        return max(abs(a - b) for a, b in zip(vec1, vec2))
-
+        return distance.chebyshev(v1, v2)
     elif metric == DistanceMetricEnum.cosine:
-        dot_product = sum(a * b for a, b in zip(vec1, vec2))
-        norm_a = math.sqrt(sum(a**2 for a in vec1))
-        norm_b = math.sqrt(sum(b**2 for b in vec2))
-        if norm_a == 0 or norm_b == 0:
-            return 1.0
-        return 1.0 - (dot_product / (norm_a * norm_b))
-
+        if all(v == 0 for v in v1) or all(v == 0 for v in v2):
+            # If one vector is a zero-vector, the cosine similarity/distance can't be calculated.
+            # 2 is the maximum value, that the cosine distance outputs.
+            return 2
+        return distance.cosine(v1, v2)
     else:
         raise ValueError(f"Unknown distance metric: {metric}")
 
@@ -206,12 +164,12 @@ def calculate_vector_distance(
     bind=True,
     ignore_result=False,
 )
-def calculation_task(self, db_id: str) -> str:
+def calculation_task(self, db_id: int) -> str:
     """
-    1. Loads the data, similar to the wu_palmer plugin.\\
-    2. Extracts the mappings per taxanomy\\
-    3. Calculates pairwise distances between all entities per attribute via helper methods\\
-    4. Saves the attribute distance data as json files in a zip archive. 
+    1. Loads the data, similar to the wu_palmer plugin, see :func:`load_input_parameters`
+    2. Extracts the mappings per taxonomy
+    3. Calculates pairwise distances between all active unique elements within each attribute, see :func:`calculate_vector_distance`
+    4. Saves the element distance data as json files in a zip archive.
     """
     (
         entities_url,
@@ -219,7 +177,7 @@ def calculation_task(self, db_id: str) -> str:
         taxonomies_zip_url,
         attributes,
         distance_metric,
-    ) = load_input_parameters(int(db_id))
+    ) = load_input_parameters(db_id)
 
     with open_url(entities_metadata_url) as entities_metadata_file:
         entities_metadata_list = list(
@@ -265,37 +223,37 @@ def calculation_task(self, db_id: str) -> str:
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     with ZipFile(tmp_zip_file, "w") as zip_file:
         for attribute in attributes:
-            attrib_meta = entities_metadata.get(attribute)
-            attribute_distances = []
+            element_distances = []
 
+            attrib_meta = entities_metadata.get(attribute)
             tax_name = extract_tax_name(attrib_meta)
             tax_map = taxonomy_mappings.get(tax_name, {})
 
-            # Pairwise distance calculation across all entity instances
-            for i in range(len(entities)):
-                for j in range(i, len(entities)):
+            unique_elements = set()
+            for entitiy in entities:
+                entity_names = get_element_list(entitiy, attribute, attrib_meta)
+                unique_elements.update(entity_names)
 
-                    ent1 = entities[i]
-                    ent2 = entities[j]
+            elements = sorted(list(unique_elements))
+            for e1 in elements:
+                for e2 in elements:
+                    v1 = tax_map[e1]
+                    v2 = tax_map[e2]
 
-                    elements1 = get_element_list(ent1, attribute, attrib_meta)
-                    elements2 = get_element_list(ent2, attribute, attrib_meta)
-                    dist = calculate_distance(
-                        elements1, elements2, tax_map, distance_metric
-                    )
+                    dist = calculate_vector_distance(v1, v2, distance_metric, db_id)
 
-                    attribute_distances.append(
+                    element_distances.append(
                         {
-                            "ID": f"{ent1['ID']}__{ent2['ID']}___{attribute}",
-                            "entity_1_ID": ent1["ID"],
-                            "entity_2_ID": ent2["ID"],
+                            "ID": f"{e1}__{e2}___{attribute}",
+                            "source": e1,
+                            "target": e2,
                             "href": "",
                             "distance": dist,
                         }
                     )
 
             with StringIO() as file:
-                save_entities(attribute_distances, file, "application/json")
+                save_entities(element_distances, file, "application/json")
                 file.seek(0)
                 zip_file.writestr(f"{attribute}.json", file.read())
 
@@ -310,7 +268,7 @@ def calculation_task(self, db_id: str) -> str:
         db_id,
         tmp_zip_file,
         f"mapping_distances_with_metric_{distance_metric.name}_from_{filenames_hash}.zip",
-        "custom/attribute-distances",
+        "custom/element-distances",
         "application/zip",
     )
 
