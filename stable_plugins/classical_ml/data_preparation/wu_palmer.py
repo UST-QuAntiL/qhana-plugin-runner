@@ -62,7 +62,6 @@ from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimety
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from stable_plugins.file_utils.zip_merger import get_readable_hash
 
 _plugin_name = "wu-palmer"
 __version__ = "v0.2.1"
@@ -282,6 +281,12 @@ class WuPalmer(QHAnaPluginBase):
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def get_readable_hash(s: str) -> str:
+    import muid
+
+    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
