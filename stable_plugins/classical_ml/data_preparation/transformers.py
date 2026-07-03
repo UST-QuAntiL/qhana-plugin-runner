@@ -55,15 +55,15 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 from qhana_plugin_runner.requests import retrieve_filename
 
-_plugin_name = "sim-to-dist-transformers"
-__version__ = "v0.2.1"
+_plugin_name = "attr-sim-to-attr-dist-transformers"
+__version__ = "v0.3.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
 TRANSFORMERS_BLP = SecurityBlueprint(
     _identifier,  # blueprint name
     __name__,  # module import name!
-    description="Similarity to distance transformers plugin API.",
+    description="Attribute similarity to attribute distances transformers plugin API.",
 )
 
 
@@ -133,7 +133,7 @@ class PluginsView(MethodView):
     def get(self):
         """Transformers endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Similarities to distances transformers",
+            title="Attribute similarities to attribute distances transformers",
             description=Transformers.instance.description,
             name=Transformers.instance.name,
             version=Transformers.instance.version,
@@ -253,7 +253,7 @@ class CalcSimilarityView(MethodView):
 class Transformers(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Transforms similarities to distances."
+    description = "Transforms attribute similarities to attribute distances."
     tags = ["preprocessing", "similarity-calculation", "distance-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
