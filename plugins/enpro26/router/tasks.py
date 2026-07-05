@@ -334,12 +334,12 @@ def process_step_4_aggregator(self, db_id: int, source_url: str):
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
-        attr_dists_url = extract_output_url(outputs, "custom/attribute-distances")
+        attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
         STORE.persist_task_result(
             db_id,
             open_url(attr_dists_url).content,
             "transformer_distances.zip",
-            "custom/attribute-distances",
+            "relation/attribute-distances",
             "application/zip",
         )
 
@@ -375,12 +375,12 @@ def process_step_5_mds(self, db_id: int, source_url: str):
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
-        entity_dists_url = extract_output_url(outputs, "custom/entity-distances")
+        entity_dists_url = extract_output_url(outputs, "relation/entity-distances")
         STORE.persist_task_result(
             db_id,
             open_url(entity_dists_url).content,
             "aggregator_distances.json",
-            "custom/entity-distances",
+            "relation/entity-distances",
             "application/json",
         )
 

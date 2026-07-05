@@ -150,7 +150,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/attribute-distances",
+                        data_type="relation/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -332,10 +332,8 @@ def calculation_task(self, db_id: int) -> str:
 
             attribute_distances.append(
                 {
-                    "ID": f"{source}__{target}__{attribute}",
-                    "entity_1_ID": sim_entity["source"],
-                    "entity_2_ID": sim_entity["target"],
-                    "href": "",
+                    "source": sim_entity["source"],
+                    "target": sim_entity["target"],
                     "distance": dist,
                 }
             )
@@ -354,7 +352,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"transformers_attr_dist{info_str}.zip",
-        "custom/attribute-distances",
+        "relation/attribute-distances",
         "application/zip",
     )
 

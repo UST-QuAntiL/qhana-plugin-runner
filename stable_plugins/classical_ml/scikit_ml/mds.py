@@ -52,7 +52,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "mds"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -88,7 +88,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     entity_distances_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="custom/entity-distances",
+        data_input_type="relation/entity-distances",
         data_content_types="application/json",
         metadata={
             "label": "Entity distances URL",
@@ -158,7 +158,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{MDS_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="custom/entity-distances",
+                        data_type="relation/entity-distances",
                         content_type=["application/json"],
                         required=True,
                         parameter="entityDistancesUrl",
@@ -330,15 +330,15 @@ def calculation_task(self, db_id: int) -> str:
     idx = 0
 
     for ent_dist in entity_distances:
-        if ent_dist["entity_1_ID"] not in id_to_idx:
-            id_to_idx[ent_dist["entity_1_ID"]] = idx
+        if ent_dist["source"] not in id_to_idx:
+            id_to_idx[ent_dist["source"]] = idx
             idx += 1
 
     distance_matrix = np.zeros((len(id_to_idx), len(id_to_idx)))
 
     for ent_dist in entity_distances:
-        ent_1_id = ent_dist["entity_1_ID"]
-        ent_2_id = ent_dist["entity_2_ID"]
+        ent_1_id = ent_dist["source"]
+        ent_2_id = ent_dist["target"]
         dist = ent_dist["distance"]
 
         ent_1_idx = id_to_idx[ent_1_id]

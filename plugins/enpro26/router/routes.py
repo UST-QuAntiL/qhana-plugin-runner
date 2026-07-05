@@ -117,13 +117,13 @@ class PluginsView(MethodView):
                     ),
                     # Transformer output
                     DataMetadata(
-                        data_type="custom/attribute-distances",
+                        data_type="relation/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                     ),
                     # Aggregator output
                     DataMetadata(
-                        data_type="custom/entity-distances",
+                        data_type="relation/entity-distances",
                         content_type=["application/json"],
                         required=True,
                     ),
