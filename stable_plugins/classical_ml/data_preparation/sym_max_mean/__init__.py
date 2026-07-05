@@ -62,7 +62,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sym-max-mean"
-__version__ = "v0.1.4"
+__version__ = "v0.1.5"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -146,7 +146,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/attribute-similarities",
+                        data_type="relation/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -414,10 +414,8 @@ def calculation_task(self, db_id: int) -> str:
 
                 attribute_similarities.append(
                     {
-                        "ID": ent1["ID"] + "__" + ent2["ID"] + "__" + attribute,
-                        "entity_1_ID": ent1["ID"],
-                        "entity_2_ID": ent2["ID"],
-                        "href": "",
+                        "source": ent1["ID"],
+                        "target": ent2["ID"],
                         "similarity": sym_max_mean,
                     }
                 )
@@ -438,7 +436,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"sym_max_mean{info_str}.zip",
-        "custom/attribute-similarities",
+        "relation/attribute-similarities",
         "application/zip",
     )
 

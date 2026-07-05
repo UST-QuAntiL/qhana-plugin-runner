@@ -111,7 +111,7 @@ class PluginsView(MethodView):
                     ),
                     # Sym-Max-Mean output
                     DataMetadata(
-                        data_type="custom/attribute-similarities",
+                        data_type="relation/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                     ),

@@ -290,12 +290,12 @@ def process_step_3_transformers(self, db_id: int, source_url: str):
     try:
         # 1. Persist SMM result
         outputs = requests.get(source_url).json().get("outputs", [])
-        attr_sims_url = extract_output_url(outputs, "custom/attribute-similarities")
+        attr_sims_url = extract_output_url(outputs, "relation/attribute-similarities")
         STORE.persist_task_result(
             db_id,
             open_url(attr_sims_url).content,
             "smm_similarities.zip",
-            "custom/attribute-similarities",
+            "relation/attribute-similarities",
             "application/zip",
         )
 
