@@ -105,7 +105,7 @@ class PluginsView(MethodView):
                 data_output=[
                     # WU-Palmer output
                     DataMetadata(
-                        data_type="custom/element-similarities",
+                        data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     ),

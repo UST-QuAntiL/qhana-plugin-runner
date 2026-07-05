@@ -35,7 +35,6 @@ class AllowedDataTypesWithFormat(Enum):
     CUSTOM_ATTRIBUTE_DISTANCES = "custom/attribute-distances"
     CUSTOM_ATTRIBUTE_SIMILARITIES = "custom/attribute-similarities"
     CUSTOM_CLUSTERS = "custom/clusters"
-    CUSTOM_ELEMENT_SIMILARITIES = "custom/element-similarities"
     CUSTOM_ENTITY_DISTANCES = "custom/entity-distances"
     CUSTOM_HELLO_WORLD_OUTPUT = "custom/hello-world-output"
     CUSTOM_KERNEL_MATRIX = "custom/kernel-matrix"
@@ -53,6 +52,7 @@ class AllowedDataTypesWithFormat(Enum):
     IMAGE_HTML = "image/html"
     PROVENANCE_EXECUTION_OPTIONS = "provenance/execution-options"
     PROVENANCE_TRACE = "provenance/trace"
+    RELATION_ELEMENT_SIMILARITIES = "relation/element-similarities"
     TABLE_HTML = "table/html"
 
 

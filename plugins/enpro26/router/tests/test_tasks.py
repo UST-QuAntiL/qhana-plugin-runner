@@ -122,7 +122,7 @@ def test_handle_webhook_routes_to_step_2(monkeypatch):
                 "status": "SUCCESS",
                 "outputs": [
                     {
-                        "dataType": "custom/element-similarities",
+                        "dataType": "relation/element-similarities",
                         "href": "http://mock/sims.zip",
                     }
                 ],

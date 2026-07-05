@@ -244,12 +244,12 @@ def process_step_2_smm(self, db_id: int, source_url: str):
     try:
         # 1. Download & Persist WP result
         outputs = requests.get(source_url).json().get("outputs", [])
-        sims_url = extract_output_url(outputs, "custom/element-similarities")
+        sims_url = extract_output_url(outputs, "relation/element-similarities")
         STORE.persist_task_result(
             db_id,
             open_url(sims_url).content,
             "wp_similarities.zip",
-            "custom/element-similarities",
+            "relation/element-similarities",
             "application/zip",
         )
 

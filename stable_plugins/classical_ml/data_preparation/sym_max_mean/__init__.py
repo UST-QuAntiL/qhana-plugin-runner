@@ -62,7 +62,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sym-max-mean"
-__version__ = "v0.1.3"
+__version__ = "v0.1.4"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -88,7 +88,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     element_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="custom/element-similarities",
+        data_input_type="relation/element-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Element similarities URL",
@@ -138,7 +138,7 @@ class PluginsView(MethodView):
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="custom/element-similarities",
+                        data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                         parameter="elementSimilaritiesUrl",

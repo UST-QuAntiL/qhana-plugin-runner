@@ -36,7 +36,7 @@
           <camunda:inputParameter name="qinput.taxonomiesZipUrl">${start_taxonomiesZipUrl}</camunda:inputParameter>
           <camunda:inputParameter name="qinput.attributes">${start_attributes}</camunda:inputParameter>
           <camunda:inputParameter name="qhanaPlugin">wu-palmer</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaPluginVersion">v0.2.2</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.3</camunda:inputParameter>
           <camunda:inputParameter name="qhanaName">Wu Palmer similarities</camunda:inputParameter>
           <camunda:inputParameter name="qhanaDescription">Compares elements and returns similarity values.</camunda:inputParameter>
           <camunda:outputParameter name="qoutput.wuPalmer">${output}</camunda:outputParameter>
@@ -53,12 +53,12 @@
             <camunda:map>
               <camunda:entry key="from">qoutput.wuPalmer</camunda:entry>
               <camunda:entry key="name">wu_palmer*.zip</camunda:entry>
-              <camunda:entry key="dataType">custom/element-similarities</camunda:entry>
+              <camunda:entry key="dataType">relation/element-similarities</camunda:entry>
             </camunda:map>
           </camunda:inputParameter>
           <camunda:inputParameter name="qinput.attributes">${start_attributes}</camunda:inputParameter>
           <camunda:inputParameter name="qhanaPlugin">sym-max-mean</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaPluginVersion">v0.1.3</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.1.4</camunda:inputParameter>
           <camunda:inputParameter name="qhanaName">Sym Max Mean attribute comparer</camunda:inputParameter>
           <camunda:inputParameter name="qhanaDescription">Compares attributes and returns similarity values.</camunda:inputParameter>
           <camunda:outputParameter name="qoutput.symMaxMean">${output}</camunda:outputParameter>
