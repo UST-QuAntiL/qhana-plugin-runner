@@ -148,7 +148,7 @@
               <camunda:inputParameter name="qinput.input_0">
                 <camunda:map>
                   <camunda:entry key="value" />
-                  <camunda:entry key="dataType">custom/entity-distances</camunda:entry>
+                  <camunda:entry key="dataType">relation/entity-distances</camunda:entry>
                   <camunda:entry key="required">"true"</camunda:entry>
                   <camunda:entry key="parameter">entityDistancesUrl</camunda:entry>
                   <camunda:entry key="contentType">["application/json"]</camunda:entry>

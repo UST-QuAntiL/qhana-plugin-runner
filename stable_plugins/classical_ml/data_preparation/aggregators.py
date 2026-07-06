@@ -53,7 +53,7 @@ from qhana_plugin_runner.requests import retrieve_filename
 
 
 _plugin_name = "distance-aggregator"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -93,7 +93,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     attribute_distances_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="custom/attribute-distances",
+        data_input_type="relation/attribute-distances",
         data_content_types="application/zip",
         metadata={
             "label": "Attribute distances URL",
@@ -148,7 +148,7 @@ class PluginsView(MethodView):
                 ui_href=url_for(f"{AGGREGATOR_BLP.name}.MicroFrontend"),
                 data_input=[
                     InputDataMetadata(
-                        data_type="custom/attribute-distances",
+                        data_type="relation/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                         parameter="attributeDistancesUrl",
@@ -156,8 +156,8 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/entity-distances",
-                        content_type=["application/zip"],
+                        data_type="relation/entity-distances",
+                        content_type=["application/json"],
                         required=True,
                     )
                 ],
@@ -343,7 +343,7 @@ def calculation_task(self, db_id: int) -> str:
 
     for attr_dist in attribute_distances.values():
         for ent in attr_dist:
-            ent_ids = (ent["entity_1_ID"], ent["entity_2_ID"])
+            ent_ids = (ent["source"], ent["target"])
 
             if ent_ids in entity_distance_lists:
                 entity_distance_lists[ent_ids].append(ent)
@@ -356,8 +356,8 @@ def calculation_task(self, db_id: int) -> str:
         ent_dist = 0.0
         dist_list = [ent["distance"] for ent in ent_dist_list]
 
-        ent_1_id = ent_dist_list[0]["entity_1_ID"]
-        ent_2_id = ent_dist_list[0]["entity_2_ID"]
+        ent_1_id = ent_dist_list[0]["source"]
+        ent_2_id = ent_dist_list[0]["target"]
 
         if len(dist_list) == 0:
             raise ValueError(
@@ -388,10 +388,8 @@ def calculation_task(self, db_id: int) -> str:
 
         entity_distances.append(
             {
-                "ID": ent_1_id + "_" + ent_2_id,
-                "entity_1_ID": ent_1_id,
-                "entity_2_ID": ent_2_id,
-                "href": "",
+                "source": ent_1_id,
+                "target": ent_2_id,
                 "distance": ent_dist,
             }
         )
@@ -405,7 +403,7 @@ def calculation_task(self, db_id: int) -> str:
             db_id,
             output,
             f"entity_distances_{info_str}.json",
-            "custom/entity-distances",
+            "relation/entity-distances",
             "application/json",
         )
 

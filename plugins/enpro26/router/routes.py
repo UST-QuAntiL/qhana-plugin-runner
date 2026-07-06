@@ -105,25 +105,25 @@ class PluginsView(MethodView):
                 data_output=[
                     # WU-Palmer output
                     DataMetadata(
-                        data_type="custom/element-similarities",
+                        data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     ),
                     # Sym-Max-Mean output
                     DataMetadata(
-                        data_type="custom/attribute-similarities",
+                        data_type="relation/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                     ),
                     # Transformer output
                     DataMetadata(
-                        data_type="custom/attribute-distances",
+                        data_type="relation/attribute-distances",
                         content_type=["application/zip"],
                         required=True,
                     ),
                     # Aggregator output
                     DataMetadata(
-                        data_type="custom/entity-distances",
+                        data_type="relation/entity-distances",
                         content_type=["application/json"],
                         required=True,
                     ),
