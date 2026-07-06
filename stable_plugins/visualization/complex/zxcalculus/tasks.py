@@ -14,7 +14,6 @@
 
 from tempfile import SpooledTemporaryFile
 
-import muid
 import pyzx as zx
 from celery.utils.log import get_task_logger
 from matplotlib.figure import Figure
@@ -32,10 +31,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 class ImageNotFinishedError(Exception):
     pass
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(
