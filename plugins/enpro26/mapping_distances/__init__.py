@@ -34,7 +34,20 @@ MAPPING_DISTANCES_BLP = SecurityBlueprint(
 class MappingDistances(QHAnaPluginBase):
     name = _name
     version = _version
-    description = "A plugin to create pairwise element distances for taxanomy mappings."
+    description = (
+        "A plugin to create pairwise element distances for taxanomy mappings.<br /><br />\n"
+        "Returns the distance between all attribute mappings that are in the entity dataset "
+        "according to a selected distance metric.<br />\n"
+        "Returns the max float value if the vectors are empty, i.e. no mapping is assigned.<br />\n"
+        "Throws an error if the mapping vectors do not have the same size.<br /><br />\n"
+        "Different available metrics:<br />\n"
+        "**Euclidean Distance:** Length of vector (L2 norm) between two vectors: "
+        "$||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$<br />\n"
+        "**Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$<br />\n"
+        "**Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$<br />\n"
+        "**Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): "
+        "$1 - \cos(\\theta) = 1 - \\frac{a \cdot b}{||a||\cdot||b||}$"
+    )
     tags = ["preprocessing", "distance-calculation"]
 
     instance: ClassVar["MappingDistances"]
