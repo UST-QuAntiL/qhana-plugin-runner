@@ -248,10 +248,8 @@ def calculation_task(self, db_id: int) -> str:
 
                     element_distances.append(
                         {
-                            "ID": f"{e1}__{e2}___{attribute}",
                             "source": e1,
                             "target": e2,
-                            "href": "",
                             "distance": dist,
                         }
                     )
@@ -272,7 +270,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"mapping_distances_with_metric_{distance_metric.name}_from_{filenames_hash}.zip",
-        "custom/element-distances",
+        "relation/element-distances",
         "application/zip",
     )
 

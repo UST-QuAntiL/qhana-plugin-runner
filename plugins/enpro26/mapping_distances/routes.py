@@ -78,7 +78,7 @@ class PluginRootView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/element-distances",
+                        data_type="relation/element-distances",
                         content_type=["application/zip"],
                         required=True,
                     )

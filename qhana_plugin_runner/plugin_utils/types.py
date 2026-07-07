@@ -51,6 +51,7 @@ class AllowedDataTypesWithFormat(Enum):
     PROVENANCE_TRACE = "provenance/trace"
     RELATION_ATTRIBUTE_DISTANCES = "relation/attribute-distances"
     RELATION_ATTRIBUTE_SIMILARITIES = "relation/attribute-similarities"
+    RELATION_ELEMENT_DISTANCES = "relation/element-distances"
     RELATION_ELEMENT_SIMILARITIES = "relation/element-similarities"
     RELATION_ENTITY_DISTANCES = "relation/entity-distances"
     TABLE_HTML = "table/html"

@@ -88,7 +88,7 @@ def _read_result_zip(task: ProcessingTask) -> Dict[str, List[dict]]:
     """Read the single zip output and return a mapping ``file name -> entities``."""
     assert len(task.outputs) == 1
     output = task.outputs[0]
-    assert output.file_type == "custom/element-distances"
+    assert output.file_type == "relation/element-distances"
     assert output.mimetype == "application/zip"
 
     contents: Dict[str, List[dict]] = {}
@@ -197,9 +197,7 @@ def test_calculation_task_entry_shape_and_ids(tmp_path):
 
     entries = _read_result_zip(task)["color.json"]
     for entry in entries:
-        assert {"ID", "source", "target", "href", "distance"} <= entry.keys()
-        # ID encodes the pair and the originating attribute.
-        assert entry["ID"] == f"{entry['source']}__{entry['target']}___color"
+        assert {"source", "target", "distance"} <= entry.keys()
 
 
 @pytest.mark.usefixtures("celery_worker")
