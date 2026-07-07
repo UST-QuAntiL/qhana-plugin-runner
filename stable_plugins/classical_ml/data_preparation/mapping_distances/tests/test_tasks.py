@@ -36,12 +36,14 @@ import pytest
 from celery.app.task import Task
 from typing import cast
 
-from mapping_distances.schemas import (
+from stable_plugins.classical_ml.data_preparation.mapping_distances.schemas import (
     DistanceMetricEnum,
     InputParameters,
     InputParametersSchema,
 )
-from mapping_distances.tasks import calculation_task as _calculation_task_fn
+from mapping_distances.tasks import (
+    calculation_task as _calculation_task_fn,
+)
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
