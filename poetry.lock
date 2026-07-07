@@ -439,6 +439,17 @@ files = [
 markers = {main = "platform_system == \"Windows\"", dev = "platform_system == \"Windows\" or sys_platform == \"win32\""}
 
 [[package]]
+name = "contexttimer"
+version = "0.3.3"
+description = "A timer context manager measuring the clock wall time of the code block it contains."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "contexttimer-0.3.3.tar.gz", hash = "sha256:35a1efd389af3f1ca509f33ff23e17d98b66c8fde5ba2a4eb8a8b7fa456598a5"},
+]
+
+[[package]]
 name = "coverage"
 version = "7.13.5"
 description = "Code coverage measurement for Python"
@@ -1324,6 +1335,21 @@ files = [
     {file = "mistune-2.0.5-py2.py3-none-any.whl", hash = "sha256:bad7f5d431886fcbaf5f758118ecff70d31f75231b34024a1341120340a65ce8"},
     {file = "mistune-2.0.5.tar.gz", hash = "sha256:0246113cb2492db875c6be56974a7c893333bf26cd92891c85f63151cee09d34"},
 ]
+
+[[package]]
+name = "muid"
+version = "0.5.3"
+description = "Memorable Unique Identifier"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "muid-0.5.3-py3-none-any.whl", hash = "sha256:164da2e8e33bc5e57bde6b879dd80963788e98ce93a82b2d3b33c6485a90e56b"},
+    {file = "muid-0.5.3.tar.gz", hash = "sha256:707bb649aa7c82745f64d25d91b532aacf0e468fe04421c19e268a2c9f856f24"},
+]
+
+[package.dependencies]
+contexttimer = "*"
 
 [[package]]
 name = "mypy-extensions"
@@ -2578,4 +2604,4 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "1fb7ca7363860a6c8518644909ac693b24dae10b64020903531bbedca860c02c"
+content-hash = "30917332596a9136a93be9436573a695bb83e46f22258b703e59346b859705ee"

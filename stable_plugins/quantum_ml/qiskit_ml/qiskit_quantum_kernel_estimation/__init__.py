@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "qiskit-quantum-kernel-estimation"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -58,7 +58,7 @@ class QiskitQKE(QHAnaPluginBase):
         return QISKIT_QKE_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}\nmuid~=0.5.3"
+        return f"qiskit~={qiskit_version}\nqiskit-machine-learning~={qiskit_ml_version}"
 
 
 try:

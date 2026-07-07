@@ -57,6 +57,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
@@ -64,7 +65,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "wu-palmer"
-__version__ = "v0.2.3"
+__version__ = "v0.2.4"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -284,17 +285,8 @@ class WuPalmer(QHAnaPluginBase):
     def get_api_blueprint(self):
         return WU_PALMER_BLP
 
-    def get_requirements(self) -> str:
-        return "muid~=0.5.3"
-
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    import muid
-
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
