@@ -61,7 +61,7 @@ class MappingDistances(QHAnaPluginBase):
         return MAPPING_DISTANCES_BLP
 
     def get_requirements(self) -> str:
-        return "muse-for-music-loader~=1.1.0"
+        return "numpy~=1.13\nscipy~=1.10"
 
 
 try:
