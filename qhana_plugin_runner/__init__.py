@@ -15,13 +15,19 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Root module containing the flask app factory."""
+
+import base64
+import hashlib
+import io
 import os
 import re
+import tarfile
 from json import load as load_json
 from json import loads
 from logging import WARNING, Formatter, Handler, Logger, getLogger
 from logging.config import dictConfig
 from os import environ, makedirs
+from pathlib import Path
 from typing import IO, Any, Dict, Mapping, Optional, cast
 
 import click
@@ -50,10 +56,69 @@ from .util.reverse_proxy_fix import apply_reverse_proxy_fix
 # must not contain any spaces!
 APP_NAME = __name__
 ENV_VAR_PREFIX = APP_NAME.upper().replace("-", "_").replace(" ", "_")
+MATHJAX_TGZ_HASH = (
+    "sha384-YX0aQfgsztN33UJH8sLOBH/+aJx5hhPpRupYKw3+G+L1EgqoC0/083Yy6omnOQs0"
+)
 
 
 def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
     return parse_toml("\n".join(file_like.readlines()))
+
+
+def validate_hash(response: requests.Response, expected_hash):
+    content = response.content
+    # (Achtung: Bei stream=True musst du aufpassen, response.content lädt alles in den Speicher.
+    # Da du io.BytesIO(response.content) nutzt, hast du es eh schon im Speicher.)
+
+    sha384_hash = hashlib.sha384(content).digest()
+    actual_hash = f"sha384-{base64.b64encode(sha384_hash).decode('utf-8')}"
+
+    if actual_hash != expected_hash:
+        raise ValueError(
+            f"Invalid hash. Expected: {expected_hash}, Actual: {actual_hash}"
+        )
+
+
+def download_mathjax(app, expected_hash=MATHJAX_TGZ_HASH):
+    mathjax_dir = Path(app.static_folder) / "mathjax"
+    marker = mathjax_dir / "es5" / "tex-mml-chtml.js"
+
+    if marker.exists():
+        return
+
+    mathjax_dir.mkdir(parents=True, exist_ok=True)
+
+    version = "3.2.2"
+    tarball_url = f"https://registry.npmjs.org/mathjax/-/mathjax-{version}.tgz"
+
+    response = requests.open_url(tarball_url, raise_on_error_status=True, stream=True)
+    validate_hash(response, expected_hash)
+
+    try:
+        with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as archive:
+            package_prefix = "package/"
+            for member in archive.getmembers():
+                if not member.name.startswith(package_prefix):
+                    continue
+
+                relative_path = member.name[len(package_prefix) :]
+                if not relative_path or relative_path.startswith("."):
+                    continue
+
+                target_path = mathjax_dir / relative_path
+                if member.isdir():
+                    target_path.mkdir(parents=True, exist_ok=True)
+                    continue
+
+                if member.isfile():
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    extracted = archive.extractfile(member)
+                    if extracted is None:
+                        continue
+                    with extracted, target_path.open("wb") as output_file:
+                        output_file.write(extracted.read())
+    finally:
+        response.close()
 
 
 def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = False):
@@ -243,6 +308,8 @@ def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = 
 
         # register jinja debug extension
         app.jinja_env.add_extension("jinja2.ext.debug")
+
+    download_mathjax(app)
 
     return app
 

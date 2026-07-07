@@ -54,6 +54,12 @@
 
     {% block script %}
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
+
+    <script>window.MathJax = { tex: { inlineMath: [["$", "$"]] } };</script>
+    <script src="{{ url_for('static', filename='mathjax/es5/tex-mml-chtml.js') }}"
+        integrity="sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei" crossorigin="anonymous"
+        async>
+        </script>
     {% endblock script %}
 
 </body>

@@ -1551,7 +1551,15 @@ Compares attributes and returns similarity values.
 processing – distance-calculation, preprocessing\
 *Path:* {file}`plugins/enpro26/mapping_distances/__init__.py`
 
-A plugin to create pairwise element distances for taxanomy mappings.
+A plugin to create pairwise element distances for taxanomy mappings.<br /><br />
+Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.<br />
+Returns the max float value if the vectors are empty, i.e. no mapping is assigned.<br />
+Throws an error if the mapping vectors do not have the same size.<br /><br />
+Different available metrics:<br />
+**Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$<br />
+**Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$<br />
+**Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$<br />
+**Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
 
 **Inputs:**
 
