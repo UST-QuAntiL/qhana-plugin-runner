@@ -30,6 +30,7 @@ PyMySQL = { version = "^1.0.2", optional = true }
 pyrfc6266 = "^1.0.2"
 blinker = "^1.6.2"
 urllib3 = "^1.26"                                   # we use this version to avoid a dependency conflict with Qiskit dependencies that don't support version 2 yet
+muid = "^0.5.3"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=25.1.0,<25.2.0"
@@ -78,7 +79,7 @@ atomic = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "plugins", "stable_plugins"]
-pythonpath = ["tests"]
+pythonpath = ["."]
 addopts = "--import-mode=importlib"
 python_files = ["test_*.py"]
 

@@ -16,14 +16,13 @@ from http import HTTPStatus
 from io import StringIO
 from json import dumps, loads
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict, Callable
+from typing import Callable, Dict, List, Mapping, Optional
 from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -32,36 +31,39 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
     DataMetadata,
+    EntryPoint,
     InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
-    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import (
-    tuple_deserializer,
     AttributeMetadata,
+    tuple_deserializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
+    EntityTupleMixin,
+    ensure_dict,
     load_entities,
+    save_entities,
 )
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
+from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "sym-max-mean"
-__version__ = "v0.1.2"
+__version__ = "v0.1.6"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -77,7 +79,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types=["application/json", "text/csv"],
+        data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -87,7 +89,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     element_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="custom/element-similarities",
+        data_input_type="relation/element-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Element similarities URL",
@@ -128,12 +130,16 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
-                        content_type=["application/json", "text/csv"],
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
-                        data_type="custom/element-similarities",
+                        data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                         parameter="elementSimilaritiesUrl",
@@ -141,7 +147,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/attribute-similarities",
+                        data_type="relation/attribute-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -242,17 +248,8 @@ class SymMaxMean(QHAnaPluginBase):
     def get_api_blueprint(self):
         return SYM_MAX_MEAN_BLP
 
-    def get_requirements(self) -> str:
-        return "muid~=0.5.3"
-
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    import muid
-
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def _get_sim(elem_sims: Dict, val1, val2) -> float:
@@ -298,32 +295,32 @@ def calculation_task(self, db_id: int) -> str:
         mimetype = get_mimetype(entities_data)
         entities = []
         deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
-        attribute_metadata: dict[str, AttributeMetadata] | None = None
+        attribute_metadata: dict[str, AttributeMetadata] = {}
 
         if "X-Attribute-Metadata" in entities_data.headers:
             attribute_metadata_url = entities_data.headers["X-Attribute-Metadata"]
-            attribute_metadata_list = open_url(attribute_metadata_url).json()
-            attribute_metadata = {}
-
-            for attr_meta in attribute_metadata_list:
-                attribute_metadata[attr_meta["ID"]] = AttributeMetadata.from_dict(
-                    attr_meta
-                )
+            with open_url(attribute_metadata_url) as attribute_metadata_file:
+                attribute_metadata = {
+                    attr_meta["ID"]: AttributeMetadata.from_dict(attr_meta)
+                    for attr_meta in ensure_dict(
+                        load_entities(
+                            attribute_metadata_file,
+                            get_mimetype(attribute_metadata_file),
+                        )
+                    )
+                }
 
         for ent in load_entities(entities_data, mimetype):
-            if hasattr(ent, "_asdict"):  # is NamedTuple
-                ent_attributes: tuple[str, ...] = ent._fields
-                ent_tuple = type(ent)
-
-                if deserializer is None and attribute_metadata is not None:
+            if isinstance(ent, EntityTupleMixin):  # is NamedTuple
+                if deserializer is None:
                     deserializer = tuple_deserializer(
-                        ent_attributes, attribute_metadata, tuple_=ent_tuple._make
+                        type(ent).entity_attributes,
+                        attribute_metadata,
+                        tuple_=type(ent)._make,
                     )
 
-                if deserializer:
-                    ent = deserializer(ent)
-
-                entities.append(ent._asdict())
+                ent = deserializer(ent)
+                entities.append(ent.as_dict())
             else:
                 entities.append(ent)
 
@@ -409,10 +406,8 @@ def calculation_task(self, db_id: int) -> str:
 
                 attribute_similarities.append(
                     {
-                        "ID": ent1["ID"] + "__" + ent2["ID"] + "__" + attribute,
-                        "entity_1_ID": ent1["ID"],
-                        "entity_2_ID": ent2["ID"],
-                        "href": "",
+                        "source": ent1["ID"],
+                        "target": ent2["ID"],
                         "similarity": sym_max_mean,
                     }
                 )
@@ -433,7 +428,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"sym_max_mean{info_str}.zip",
-        "custom/attribute-similarities",
+        "relation/attribute-similarities",
         "application/zip",
     )
 

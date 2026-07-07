@@ -12,7 +12,160 @@
 
 """Utilities for unit tests."""
 
-from typing import Any, Sequence
+import io
+import json
+import zipfile
+from typing import Any, Dict, Optional, Sequence
+
+import requests
+from celery import Task
+
+from qhana_plugin_runner.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+
+
+class MockResponse:
+    """Minimal ``requests.Response`` stand-in backed by an in-memory payload.
+
+    Implements just the surface used by ``open_url`` consumers in plugins:
+    ``headers``/``url`` for mimetype and filename detection, ``json``/
+    ``iter_lines`` for ``load_entities``, and ``content`` for the zip reader.
+    """
+
+    def __init__(
+        self,
+        url: str,
+        content_type: str,
+        *,
+        text: Optional[str] = None,
+        content: Optional[bytes] = None,
+        headers: Optional[Dict[str, str]] = None,
+        status_code: int = 200,
+        json_data: Optional[Any] = None,
+    ):
+        self.url = url
+        self.headers = {"Content-Type": content_type}
+        if headers:
+            self.headers.update(headers)
+        self._text = text
+        self.status_code = status_code
+        self._json_data = json_data
+        if content is not None:
+            self.content = content
+        else:
+            self.content = b"" if text is None else text.encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def close(self):
+        pass
+
+    def json(self):
+        if self._json_data is not None:
+            return self._json_data
+        return json.loads(self._text)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"{self.status_code} error for {self.url}")
+
+    def iter_lines(self, decode_unicode: bool = False, **kwargs):
+        # ``requests.iter_lines`` yields lines without their terminators, which
+        # matches ``str.splitlines`` and keeps csv and json inputs consistent.
+        yield from self._text.splitlines()
+
+    @classmethod
+    def from_zip(cls, url: str, members: Dict[str, str]) -> "MockResponse":
+        """Build a response whose ``content`` is a zip of ``{name: text}``."""
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            for name, text in members.items():
+                archive.writestr(name, text)
+        return cls(url, "application/zip", content=buffer.getvalue())
+
+
+def run_task(task: Task, *, timeout: int = 30, **task_kwargs) -> Any:
+    """Dispatch a Celery task on the running worker and return its result.
+
+    Sends ``task_kwargs`` to the task through the broker, waits up to
+    ``timeout`` seconds for the result, and expires the test session so rows
+    mutated by the worker thread are re-read from the database.
+
+    Requires the ``celery_worker`` fixture so a worker consumes the message.
+    """
+    result = task.apply_async(kwargs=task_kwargs).get(timeout=timeout)
+    DB.session.expire_all()
+    return result
+
+
+def mock_task_dispatch(monkeypatch):
+    """Turn Celery task dispatch into a no-op for tests without a worker.
+
+    Patches ``apply_async`` on both task signatures and tasks so route-level
+    tests can exercise the HTTP layer without enqueuing messages on the shared
+    broker. Returns a dummy result object carrying an ``id``.
+    """
+    from celery.app.task import Task as CeleryTask
+    from celery.canvas import Signature
+
+    class _DummyResult:
+        id = "mock-task-id"
+
+    def _noop(self, *args, **kwargs):
+        return _DummyResult()
+
+    monkeypatch.setattr(Signature, "apply_async", _noop)
+    monkeypatch.setattr(CeleryTask, "apply_async", _noop)
+
+
+def run_plugin_task(
+    monkeypatch,  # TODO can this be typed?
+    task: Task,
+    plugin_module: str,
+    url_to_response: Dict[str, MockResponse],
+    params: dict,
+    *,
+    expected_result: str = "Result stored in file",
+    timeout: int = 30,
+) -> TaskFile:
+    """Run a plugin calculation task against in-memory responses.
+
+    Persists a ``ProcessingTask`` with ``params``, patches every ``open_url``
+    reference the task reaches (the plugin module given by ``plugin_module``,
+    the zip reader, and ``requests``) to serve ``url_to_response``, runs the
+    task, and returns the task id.
+
+    Args:
+        task: the (cast) Celery task to run, e.g. a plugin ``calculation_task``.
+        plugin_module: import path of the plugin module that imported
+            ``open_url`` by name, e.g. ``"one_hot_encoding"``.
+    """
+    db_task = ProcessingTask(
+        task_name=task.name,
+        parameters=json.dumps(params),
+    )
+    db_task.save(commit=True)
+
+    def mock_open_url(url, *args, **kwargs):
+        return url_to_response[url]
+
+    monkeypatch.setattr(f"{plugin_module}.open_url", mock_open_url)
+    monkeypatch.setattr(
+        "qhana_plugin_runner.plugin_utils.zip_utils.open_url", mock_open_url
+    )
+    monkeypatch.setattr("qhana_plugin_runner.requests.open_url", mock_open_url)
+
+    result = run_task(task, db_id=db_task.id, timeout=timeout)
+    assert result == expected_result
+
+    task = ProcessingTask.get_by_id(db_task.id)
+    assert task is not None
+    assert len(task.outputs) == 1
+    return task.outputs[0]
 
 
 def assert_sequence_equals(expected: Sequence[Any], actual: Sequence[Any]):

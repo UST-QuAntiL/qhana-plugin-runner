@@ -414,11 +414,16 @@ def save_entities(
         ValueError: For unknown mimetypes
     """
     if mimetype == "application/json":
-        dump(list(ensure_dict(entities)), file_, separators=(",", ":"))
+        dump(
+            list(ensure_dict(entities)),
+            file_,
+            separators=(",", ":"),
+            default=_json_encoder_default,
+        )
         file_.write("\n")
     elif mimetype == "application/X-lines+json":
         for entity in ensure_dict(entities):
-            file_.write(f"{dumps(entity)}\n")
+            file_.write(f"{dumps(entity, default=_json_encoder_default)}\n")
     elif mimetype == "text/csv":
         if attributes is None:
             raise ValueError(
@@ -431,3 +436,9 @@ def save_entities(
         csv_writer.writerows(ensure_tuple(entities, tuple_=tuple_))
     else:
         raise ValueError(f"Saving entities to {mimetype} files is not implemented!")
+
+
+def _json_encoder_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError

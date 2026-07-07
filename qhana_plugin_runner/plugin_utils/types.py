@@ -32,12 +32,7 @@ class AllowedDataTypesWithFormat(Enum):
     """
 
     # Standard data types of format namespace/name
-    CUSTOM_ATTRIBUTE_DISTANCES = "custom/attribute-distances"
-    CUSTOM_ATTRIBUTE_SIMILARITIES = "custom/attribute-similarities"
     CUSTOM_CLUSTERS = "custom/clusters"
-    CUSTOM_ELEMENT_DISTANCES = "custom/element-distances"
-    CUSTOM_ELEMENT_SIMILARITIES = "custom/element-similarities"
-    CUSTOM_ENTITY_DISTANCES = "custom/entity-distances"
     CUSTOM_HELLO_WORLD_OUTPUT = "custom/hello-world-output"
     CUSTOM_KERNEL_MATRIX = "custom/kernel-matrix"
     CUSTOM_PCA_METADATA = "custom/pca-metadata"
@@ -54,6 +49,10 @@ class AllowedDataTypesWithFormat(Enum):
     IMAGE_HTML = "image/html"
     PROVENANCE_EXECUTION_OPTIONS = "provenance/execution-options"
     PROVENANCE_TRACE = "provenance/trace"
+    RELATION_ATTRIBUTE_DISTANCES = "relation/attribute-distances"
+    RELATION_ATTRIBUTE_SIMILARITIES = "relation/attribute-similarities"
+    RELATION_ELEMENT_SIMILARITIES = "relation/element-similarities"
+    RELATION_ENTITY_DISTANCES = "relation/entity-distances"
     TABLE_HTML = "table/html"
 
 

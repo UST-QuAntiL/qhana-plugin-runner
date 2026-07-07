@@ -19,7 +19,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "hybrid-autoencoder"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -48,7 +48,7 @@ class HybridAutoencoderPlugin(QHAnaPluginBase):
         return HA_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\ntorch~=2.0.1\nmuid~=0.5.3\nautoray<0.8"
+        return "qiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\ntorch~=2.0.1\nautoray<0.8"
 
 
 try:

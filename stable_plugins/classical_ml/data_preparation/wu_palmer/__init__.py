@@ -18,14 +18,13 @@ from io import StringIO
 from json import dumps, loads
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List, Dict, Tuple, Callable
+from typing import Callable, Dict, List, Mapping, Optional, Tuple
 from zipfile import ZipFile
 
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -34,37 +33,39 @@ from flask.views import MethodView
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
     DataMetadata,
+    EntryPoint,
     InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
-    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import (
-    tuple_deserializer,
     AttributeMetadata,
+    tuple_deserializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    save_entities,
-    load_entities,
     EntityTupleMixin,
+    ensure_dict,
+    load_entities,
+    save_entities,
 )
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.requests import open_url, retrieve_filename, get_mimetype
+from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "wu-palmer"
-__version__ = "v0.2.1"
+__version__ = "v0.2.4"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -80,7 +81,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/list",
-        data_content_types=["text/csv", "application/json"],
+        data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Entities URL",
             "description": "URL to a file with entities.",
@@ -91,7 +92,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/attribute-metadata",
-        data_content_types="application/json",
+        data_content_types=["application/json", "application/X-lines+json", "text/csv"],
         metadata={
             "label": "Entities Attribute Metadata URL",
             "description": "URL to a file with the attribute metadata for the entities.",
@@ -156,13 +157,21 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
-                        content_type=["application/json"],
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/attribute-metadata",
-                        content_type=["application/json"],
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entitiesMetadataUrl",
                     ),
@@ -175,7 +184,7 @@ class PluginsView(MethodView):
                 ],
                 data_output=[
                     DataMetadata(
-                        data_type="custom/element-similarities",
+                        data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     )
@@ -276,17 +285,8 @@ class WuPalmer(QHAnaPluginBase):
     def get_api_blueprint(self):
         return WU_PALMER_BLP
 
-    def get_requirements(self) -> str:
-        return "muid~=0.5.3"
-
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    import muid
-
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def load_taxonomy_as_node_paths(taxonomy: Dict) -> Dict[str, Tuple[str, ...]]:
@@ -503,7 +503,11 @@ def calculation_task(self, db_id: int) -> str:
 
     with open_url(entities_metadata_url) as entities_metadata_file:
         entities_metadata_list = list(
-            load_entities(entities_metadata_file, get_mimetype(entities_metadata_file))
+            ensure_dict(
+                load_entities(
+                    entities_metadata_file, get_mimetype(entities_metadata_file)
+                )
+            )
         )
         entities_metadata = {
             element["ID"]: AttributeMetadata.from_dict(element)
@@ -573,7 +577,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"wu_palmer{info_str}.zip",
-        "custom/element-similarities",
+        "relation/element-similarities",
         "application/zip",
     )
 

@@ -18,14 +18,6 @@ from collections import namedtuple
 
 from hypothesis import given
 from hypothesis import strategies as st
-from test_entity_marshalling import (
-    CSV_UNSAFE_CHARACTERS,
-    DEFAULT_ATTRIBUTES,
-    DEFAULT_ENTITY_STRATEGY,
-    DEFAULT_ENTITY_TUPLE,
-    DEFAULT_ENTITY_TUPLE_STRATEGY,
-)
-from utils import assert_sequence_equals, assert_sequence_partial_equals
 
 from qhana_plugin_runner.plugin_utils.attributes import (
     AttributeMetadata,
@@ -36,6 +28,15 @@ from qhana_plugin_runner.plugin_utils.attributes import (
     tuple_serializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict
+
+from .test_entity_marshalling import (
+    CSV_UNSAFE_CHARACTERS,
+    DEFAULT_ATTRIBUTES,
+    DEFAULT_ENTITY_STRATEGY,
+    DEFAULT_ENTITY_TUPLE,
+    DEFAULT_ENTITY_TUPLE_STRATEGY,
+)
+from .utils import assert_sequence_equals, assert_sequence_partial_equals
 
 ATTR_METADATA_TUPLE = namedtuple(
     "AttributeMetadataTuple",
