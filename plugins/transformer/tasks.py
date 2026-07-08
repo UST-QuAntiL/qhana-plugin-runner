@@ -29,14 +29,17 @@ from qhana_plugin_runner.requests import retrieve_filename
 from . import ElementTransformers
 from .schemas import InputParameters, InputParametersSchema, TransformersEnum
 
-
 TASK_LOGGER = get_task_logger(__name__)
 
 
-@CELERY.task(name=f"{ElementTransformers.instance.identifier}.calculation_task", bind=True)
+@CELERY.task(
+    name=f"{ElementTransformers.instance.identifier}.calculation_task", bind=True
+)
 def calculation_task(self, db_id: int) -> str:
     # get parameters
-    TASK_LOGGER.info(f"Starting new Element Distances calculation task with db id '{db_id}'")
+    TASK_LOGGER.info(
+        f"Starting new Element Distances calculation task with db id '{db_id}'"
+    )
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
@@ -46,9 +49,9 @@ def calculation_task(self, db_id: int) -> str:
 
     input_params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
-    element_similarities_url = input_params.element_similarities_url
+    similarities_url = input_params.similarities_url
     TASK_LOGGER.info(
-        f"Loaded input parameters from db: element_similarities_url='{element_similarities_url}'"
+        f"Loaded input parameters from db: similarities_url='{similarities_url}'"
     )
 
     attributes: str = input_params.attributes
@@ -60,14 +63,13 @@ def calculation_task(self, db_id: int) -> str:
     # Load Data From File
     element_similarities = {}
 
-    for file, file_name in get_files_from_zip_url(element_similarities_url):
+    for file, file_name in get_files_from_zip_url(similarities_url):
         # removes .json from file name to get the name of the attribute
         attr_name = file_name[:-5]
         element_similarities[attr_name] = json.load(file)
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     zip_file = ZipFile(tmp_zip_file, "w")
-
 
     for attribute in attributes:
         element_distances = []
@@ -94,9 +96,8 @@ def calculation_task(self, db_id: int) -> str:
                 max_sim = 1.0
                 dist = (1.0 / math.sqrt(2.0)) * math.sqrt(2.0 * max_sim - 2 * sim)
 
-         
             dist_entity = sim_entity.copy()
-            
+
             # Replace the 'similarity' key with 'distance'
             if "similarity" in dist_entity:
                 del dist_entity["similarity"]
@@ -112,7 +113,7 @@ def calculation_task(self, db_id: int) -> str:
 
     zip_file.close()
 
-    filename = retrieve_filename(element_similarities_url)
+    filename = retrieve_filename(similarities_url)
     info_str = f"_transformer_{transformer.name}_from_{filename}"
 
     STORE.persist_task_result(

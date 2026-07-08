@@ -7,6 +7,7 @@ from qhana_plugin_runner.api.util import (
 import marshmallow as ma
 from marshmallow import post_load
 
+
 class TransformersEnum(Enum):
     linear_inverse = "Linear Inverse"
     exponential_inverse = "Exponential Inverse"

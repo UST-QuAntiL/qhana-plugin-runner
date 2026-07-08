@@ -1,9 +1,7 @@
-
 from typing import Optional
 from flask.app import Flask
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-
 
 _plugin_name = "element_sim-to-element_dist-transformers"
 __version__ = "v0.0.1"
@@ -15,6 +13,7 @@ ELEMENT_TRANSFORMERS_BLP = SecurityBlueprint(
     __name__,  # module import name!
     description="Element similarities to element distances transformers plugin API.",
 )
+
 
 class ElementTransformers(QHAnaPluginBase):
     name = _plugin_name
@@ -35,7 +34,7 @@ class ElementTransformers(QHAnaPluginBase):
 try:
     from . import routes  # noqa: F401,E402
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
+    # When running `poetry run flask install`,
+    # importing the routes will fail, because the dependencies are not
     # installed yet.
     pass
-

@@ -36,6 +36,7 @@ class AllowedDataTypesWithFormat(Enum):
     CUSTOM_ATTRIBUTE_SIMILARITIES = "custom/attribute-similarities"
     CUSTOM_CLUSTERS = "custom/clusters"
     CUSTOM_ELEMENT_SIMILARITIES = "custom/element-similarities"
+    CUSTOM_ELEMENT_DISTANCES = "custom/element-distances"
     CUSTOM_ENTITY_DISTANCES = "custom/entity-distances"
     CUSTOM_HELLO_WORLD_OUTPUT = "custom/hello-world-output"
     CUSTOM_KERNEL_MATRIX = "custom/kernel-matrix"

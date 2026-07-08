@@ -1,25 +1,14 @@
-import json
-import math
-from enum import Enum
 from http import HTTPStatus
-from io import StringIO
-from tempfile import SpooledTemporaryFile
-from typing import Mapping, Optional, List
-from zipfile import ZipFile
-
-import marshmallow as ma
+from typing import Mapping
 from celery.canvas import chain
-from celery.utils.log import get_task_logger
 from flask import Response
 from flask import redirect
-from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
 from flask.templating import render_template
 from flask.views import MethodView
-from marshmallow import EXCLUDE, post_load
+from marshmallow import EXCLUDE
 
-from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
     PluginMetadataSchema,
     PluginMetadata,
@@ -28,26 +17,12 @@ from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     InputDataMetadata,
 )
-from qhana_plugin_runner.api.util import (
-    FrontendFormBaseSchema,
-    SecurityBlueprint,
-    FileUrl,
-)
-from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
-from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
-from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from qhana_plugin_runner.requests import retrieve_filename
 
 from . import ELEMENT_TRANSFORMERS_BLP, ElementTransformers
-from .schemas import (
-    InputParametersSchema
-)
+from .schemas import InputParametersSchema
 from .tasks import calculation_task
-
 
 
 @ELEMENT_TRANSFORMERS_BLP.route("/")
@@ -72,7 +47,7 @@ class PluginsView(MethodView):
                         data_type="custom/element-similarities",
                         content_type=["application/zip"],
                         required=True,
-                        parameter="elementSimilaritiesUrl",
+                        parameter="similaritiesUrl",
                     )
                 ],
                 data_output=[
@@ -140,7 +115,8 @@ class MicroFrontend(MethodView):
                 errors=errors,
                 process=url_for(f"{ELEMENT_TRANSFORMERS_BLP.name}.CalcSimilarityView"),
                 example_values=url_for(
-                    f"{ELEMENT_TRANSFORMERS_BLP.name}.MicroFrontend", **self.example_inputs
+                    f"{ELEMENT_TRANSFORMERS_BLP.name}.MicroFrontend",
+                    **self.example_inputs,
                 ),
             )
         )
@@ -150,7 +126,9 @@ class MicroFrontend(MethodView):
 class CalcSimilarityView(MethodView):
     """Start a long running processing task."""
 
-    @ELEMENT_TRANSFORMERS_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
+    @ELEMENT_TRANSFORMERS_BLP.arguments(
+        InputParametersSchema(unknown=EXCLUDE), location="form"
+    )
     @ELEMENT_TRANSFORMERS_BLP.response(HTTPStatus.SEE_OTHER)
     @ELEMENT_TRANSFORMERS_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
@@ -174,4 +152,3 @@ class CalcSimilarityView(MethodView):
         return redirect(
             url_for("tasks-api.TaskView", task_id=str(db_task.id)), HTTPStatus.SEE_OTHER
         )
-
