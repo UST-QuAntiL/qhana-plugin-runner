@@ -93,7 +93,7 @@ def test_wu_palmer_matches_expected(monkeypatch, entities_format, metadata_forma
         },
     )
 
-    assert output.file_type == "custom/element-similarities"
+    assert output.file_type == "relation/element-similarities"
     assert output.mimetype == "application/zip"
 
     with zipfile.ZipFile(output.file_storage_data) as archive:

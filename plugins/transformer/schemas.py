@@ -32,7 +32,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     element_similarities_url = FileUrl(
         required=True,
         allow_none=False,
-        data_input_type="custom/element-similarities",
+        data_input_type="relation/element-similarities",
         data_content_types="application/zip",
         metadata={
             "label": "Element similarities URL",

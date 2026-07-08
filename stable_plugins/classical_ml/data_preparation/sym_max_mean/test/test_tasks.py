@@ -97,7 +97,7 @@ def test_sym_max_mean_matches_expected(monkeypatch, entities_format, metadata_fo
         },
     )
 
-    assert output.file_type == "custom/attribute-similarities"
+    assert output.file_type == "relation/attribute-similarities"
     assert output.mimetype == "application/zip"
 
     with zipfile.ZipFile(output.file_storage_data) as archive:
