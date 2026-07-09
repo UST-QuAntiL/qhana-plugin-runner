@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import plugin_identifier, QHAnaPluginBase
 
 _plugin_name = "quantum-parzen-window"
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -54,7 +54,9 @@ class QParzenWindow(QHAnaPluginBase):
         return QParzenWindow_BLP
 
     def get_requirements(self) -> str:
-        return "pennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\nmuid~=0.5.3\nautoray<0.8"
+        return (
+            "pennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\nautoray<0.8"
+        )
 
 
 try:
