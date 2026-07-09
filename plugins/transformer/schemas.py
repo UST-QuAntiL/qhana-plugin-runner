@@ -19,17 +19,17 @@ class TransformersEnum(Enum):
 class InputParameters:
     def __init__(
         self,
-        element_similarities_url: str,
+        similarities_url: str,
         attributes: str,
         transformer: TransformersEnum,
     ):
-        self.element_similarities_url = element_similarities_url
+        self.similarities_url = similarities_url
         self.attributes = attributes
         self.transformer = transformer
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
-    element_similarities_url = FileUrl(
+    similarities_url = FileUrl(
         required=True,
         allow_none=False,
         data_input_type="relation/element-similarities",

@@ -47,7 +47,7 @@ class PluginsView(MethodView):
                         data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
-                        parameter="similaritiesUrl",
+                        parameter="similarities_url",
                     )
                 ],
                 data_output=[
