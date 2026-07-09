@@ -52,22 +52,14 @@ def _distances(values, transformer):
     return res
 
 
-_COLOR_SIMS = {
-    ("red", "red"): 1.0,
-    ("red", "blue"): 0.0,
-    ("blue", "blue"): None
-}
-_TAGS_SIMS = {
-    ("x", "x"): 1.0,
-    ("x", "y"): 0.5,
-    ("y", "y"): 1.0
-}
+_COLOR_SIMS = {("red", "red"): 1.0, ("red", "blue"): 0.0, ("blue", "blue"): None}
+_TAGS_SIMS = {("x", "x"): 1.0, ("x", "y"): 0.5, ("y", "y"): 1.0}
 TRANSFORMERS = [
     "linear_inverse",
     "exponential_inverse",
     "gaussian_inverse",
     "polynomial_inverse",
-    "square_inverse"
+    "square_inverse",
 ]
 
 EXPECTED = {}
