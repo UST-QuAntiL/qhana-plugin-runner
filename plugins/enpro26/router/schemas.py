@@ -22,7 +22,7 @@ from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
 
 # Per-attribute pipeline options shown in the routing step.
-PIPELINE_OPTIONS = ["Wu-Palmer", "One-Hot", "Mapping"]
+PIPELINE_OPTIONS = ["None", "Wu-Palmer", "One-Hot", "Mapping"]
 
 PIPELINE_FIELD_PREFIX = "pipeline_"
 
@@ -75,6 +75,7 @@ class InputParameters:
         metric: MetricEnum,
         n_init: int,
         max_iter: int,
+        include_intermediate_results_in_output: bool,
     ):
         self.entities_url = entities_url
         self.entities_metadata_url = entities_metadata_url
@@ -87,6 +88,7 @@ class InputParameters:
         self.metric = metric
         self.n_init = n_init
         self.max_iter = max_iter
+        self.include_intermediate_results_in_output = include_intermediate_results_in_output
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -202,6 +204,16 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "SMACOF max iterations",
             "description": "Maximum number of SMACOF iterations.",
             "input_type": "text",
+        },
+    )
+
+    include_intermediate_results_in_output = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Include intermediate results",
+            "description": "If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
+            "input_type": "checkbox"
         },
     )
 

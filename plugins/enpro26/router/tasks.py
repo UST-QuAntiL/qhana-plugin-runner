@@ -245,16 +245,19 @@ def process_step_2_smm(self, db_id: int, source_url: str):
         # 1. Download & Persist WP result
         outputs = requests.get(source_url).json().get("outputs", [])
         sims_url = extract_output_url(outputs, "relation/element-similarities")
-        STORE.persist_task_result(
-            db_id,
-            open_url(sims_url).content,
-            "wp_similarities.zip",
-            "relation/element-similarities",
-            "application/zip",
-        )
+        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+
+        if params.include_intermediate_results_in_output:
+            # Wu-Palmer result output
+            STORE.persist_task_result(
+                db_id,
+                open_url(sims_url).content,
+                "wp_similarities.zip",
+                "relation/element-similarities",
+                "application/zip",
+            )
 
         # 2. Launch SMM
-        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
         payload = {
             "entitiesUrl": params.entities_url,
             "elementSimilaritiesUrl": sims_url,
@@ -291,16 +294,19 @@ def process_step_3_transformers(self, db_id: int, source_url: str):
         # 1. Persist SMM result
         outputs = requests.get(source_url).json().get("outputs", [])
         attr_sims_url = extract_output_url(outputs, "relation/attribute-similarities")
-        STORE.persist_task_result(
-            db_id,
-            open_url(attr_sims_url).content,
-            "smm_similarities.zip",
-            "relation/attribute-similarities",
-            "application/zip",
-        )
+        params = InputParametersSchema().loads(task_data.parameters)
+
+        if params.include_intermediate_results_in_output:
+            # SMM result output
+            STORE.persist_task_result(
+                db_id,
+                open_url(attr_sims_url).content,
+                "smm_similarities.zip",
+                "relation/attribute-similarities",
+                "application/zip",
+            )
 
         # 2. Launch Transformers
-        params = InputParametersSchema().loads(task_data.parameters)
         payload = {
             "attributeSimilaritiesUrl": attr_sims_url,
             "attributes": task_data.data["wu_palmer_attributes"],
@@ -335,15 +341,18 @@ def process_step_4_aggregator(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
-        STORE.persist_task_result(
-            db_id,
-            open_url(attr_dists_url).content,
-            "transformer_distances.zip",
-            "relation/attribute-distances",
-            "application/zip",
-        )
-
         params = InputParametersSchema().loads(task_data.parameters)
+
+        if params.include_intermediate_results_in_output:
+            # Transformer result output
+            STORE.persist_task_result(
+                db_id,
+                open_url(attr_dists_url).content,
+                "transformer_distances.zip",
+                "relation/attribute-distances",
+                "application/zip",
+            )
+
         payload = {
             "attributeDistancesUrl": attr_dists_url,
             "aggregator": params.aggregator.name,
@@ -376,15 +385,18 @@ def process_step_5_mds(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         entity_dists_url = extract_output_url(outputs, "relation/entity-distances")
-        STORE.persist_task_result(
-            db_id,
-            open_url(entity_dists_url).content,
-            "aggregator_distances.json",
-            "relation/entity-distances",
-            "application/json",
-        )
-
         params = InputParametersSchema().loads(task_data.parameters)
+        
+        if params.include_intermediate_results_in_output:
+            # Aggregator result output
+            STORE.persist_task_result(
+                db_id,
+                open_url(entity_dists_url).content,
+                "aggregator_distances.json",
+                "relation/entity-distances",
+                "application/json",
+            )
+
         payload = {
             "entityDistancesUrl": entity_dists_url,
             "dimensions": params.dimensions,
@@ -427,7 +439,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
             "application/json",
         )
 
-        # MANUALLY TRIGGER OFFICIAL COMPLETION - Fixes infinite pending bug!
+        # TASK COMPLETIOn
         save_task_result.delay("Pipeline Completed Successfully!", db_id)
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
