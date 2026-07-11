@@ -19,11 +19,13 @@ from io import TextIOWrapper
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, run
 from tempfile import TemporaryDirectory
-from typing import Optional, cast
+from typing import cast
 
 import click
 from flask import Blueprint, Flask, current_app
 from flask.cli import AppGroup, with_appcontext
+
+from qhana_plugin_runner.util import download_mathjax
 
 from .util.logging import get_logger
 from .util.plugins import QHAnaPluginBase
@@ -97,6 +99,15 @@ def install_plugin_dependencies(
             click.echo("Installing plugin requirements failed!")
             return
         click.echo("Successfully installed all plugin requirements.")
+
+        if not dry_run:
+            click.echo("Starting frontend asset setup: MathJax...")
+            try:
+                # Wir rufen deine umgebaute download_mathjax Funktion auf
+                download_mathjax(current_app)
+                click.echo("Successfully set up MathJax assets.")
+            except Exception as e:
+                click.echo(f"Warning: MathJax setup failed: {e}", err=True)
 
 
 def append_runner_dependencies(app: Flask, requirements: TextIOWrapper):

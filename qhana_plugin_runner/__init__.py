@@ -21,6 +21,7 @@ import hashlib
 import io
 import os
 import re
+import shutil
 import tarfile
 from json import load as load_json
 from json import loads
@@ -57,7 +58,12 @@ from .util.reverse_proxy_fix import apply_reverse_proxy_fix
 APP_NAME = __name__
 ENV_VAR_PREFIX = APP_NAME.upper().replace("-", "_").replace(" ", "_")
 MATHJAX_TGZ_HASH = (
-    "sha384-YX0aQfgsztN33UJH8sLOBH/+aJx5hhPpRupYKw3+G+L1EgqoC0/083Yy6omnOQs0"
+    "sha384-8B1BPRpriS91FTAZKHz5pDOHx072oIkV9zwwLf72RkXnB/pX+yU3jkg4HIsXJKRw"
+)
+MATHJAX_SCRIPT_HASH = "old"
+MATHJAX_VERSION = "4.1.3"
+MATHJAX_TARBALL_URL = (
+    f"https://registry.npmjs.org/mathjax/-/mathjax-{MATHJAX_VERSION}.tgz"
 )
 
 
@@ -65,37 +71,103 @@ def load_toml(file_like: IO[Any]) -> Mapping[str, Any]:
     return parse_toml("\n".join(file_like.readlines()))
 
 
-def validate_hash(response: requests.Response, expected_hash):
-    content = response.content
-    # (Achtung: Bei stream=True musst du aufpassen, response.content lädt alles in den Speicher.
-    # Da du io.BytesIO(response.content) nutzt, hast du es eh schon im Speicher.)
+def _calculate_sri_hash(digest_bytes: bytes) -> str:
+    """Format a raw binary digest into a standard W3C SRI string.
 
-    sha384_hash = hashlib.sha384(content).digest()
-    actual_hash = f"sha384-{base64.b64encode(sha384_hash).decode('utf-8')}"
+    Args:
+        digest_bytes: The raw binary digest from a hashlib object.
 
-    if actual_hash != expected_hash:
+    Returns:
+        The formatted SRI hash string (e.g., 'sha384-...').
+    """
+    return f"sha384-{base64.b64encode(digest_bytes).decode('utf-8')}"
+
+
+def _validate_hash(actual_hash: bytes, expected_hash: str) -> None:
+    """Validate that the raw SHA-384 digest matches the expected SRI hash string.
+
+    This function formats the raw binary digest into the standard W3C Subresource
+    Integrity (SRI) string format (sha384-[base64]) and compares it against the
+    expected value.
+
+    Args:
+        digest_bytes: The raw binary digest from hashlib.sha384().digest().
+        expected_hash: The expected SHA-384 hash string (e.g., 'sha384-...').
+
+    Raises:
+        ValueError: If the calculated hash does not match the expected hash.
+    """
+
+    actual_sri_hash = _calculate_sri_hash(actual_hash)
+
+    if actual_sri_hash != expected_hash:
         raise ValueError(
-            f"Invalid hash. Expected: {expected_hash}, Actual: {actual_hash}"
+            f"Invalid hash. Expected: {expected_hash}, Actual: {actual_sri_hash}"
         )
 
 
-def download_mathjax(app, expected_hash=MATHJAX_TGZ_HASH):
+def _get_local_file_hash(file_path: Path) -> str:
+    """Calculate the SHA-384 SRI hash of an existing local file."""
+    sha384 = hashlib.sha384()
+    # Blockweise lesen, falls die Datei groß ist
+    with file_path.open("node_modules_style_rb" if False else "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            sha384.update(chunk)
+    return _calculate_sri_hash(sha384.digest())
+
+
+def _clear_old_mathjax_files(mathjax_dir: Path) -> None:
+    """Safely remove known MathJax files/folders."""
+    if not mathjax_dir.exists():
+        return
+
+    whitelist = {".gitignore", "check-for-tex.js"}
+
+    for path in mathjax_dir.iterdir():
+        if path.name in whitelist:
+            continue
+
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+
+
+def download_mathjax(
+    app,
+    expected_hash: str = MATHJAX_TGZ_HASH,
+    expected_script_hash: str = MATHJAX_SCRIPT_HASH,
+) -> None:
+    """Download the MathJax package from npm, validate its integrity, and extract it to the `static` folder.
+
+    Args:
+        app: The Flask application instance containing the static folder configuration.
+        expected_hash: The expected SHA-384 integrity hash of the npm tarball.
+    """
     mathjax_dir = Path(app.static_folder) / "mathjax"
     marker = mathjax_dir / "es5" / "tex-mml-chtml.js"
 
     if marker.exists():
-        return
+        if _get_local_file_hash(marker) == expected_script_hash:
+            return
+        _clear_old_mathjax_files(mathjax_dir)
 
     mathjax_dir.mkdir(parents=True, exist_ok=True)
 
-    version = "3.2.2"
-    tarball_url = f"https://registry.npmjs.org/mathjax/-/mathjax-{version}.tgz"
+    with requests.open_url(
+        MATHJAX_TARBALL_URL, raise_on_error_status=True, stream=True
+    ) as response:
+        sha384 = hashlib.sha384()
+        buffer = io.BytesIO()
+        for chunk in response.iter_content(chunk_size=65536):
+            if chunk:
+                sha384.update(chunk)
+                buffer.write(chunk)
 
-    response = requests.open_url(tarball_url, raise_on_error_status=True, stream=True)
-    validate_hash(response, expected_hash)
+        _validate_hash(sha384.digest(), expected_hash)
 
-    try:
-        with tarfile.open(fileobj=io.BytesIO(response.content), mode="r:gz") as archive:
+        buffer.seek(0)
+        with tarfile.open(fileobj=buffer, mode="r:gz") as archive:
             package_prefix = "package/"
             for member in archive.getmembers():
                 if not member.name.startswith(package_prefix):
@@ -106,6 +178,14 @@ def download_mathjax(app, expected_hash=MATHJAX_TGZ_HASH):
                     continue
 
                 target_path = mathjax_dir / relative_path
+
+                try:
+                    target_path.absolute().relative_to(mathjax_dir.absolute())
+                except ValueError:
+                    raise PermissionError(
+                        f"Malicious path detected in tarball: {member.name}"
+                    )
+
                 if member.isdir():
                     target_path.mkdir(parents=True, exist_ok=True)
                     continue
@@ -115,10 +195,8 @@ def download_mathjax(app, expected_hash=MATHJAX_TGZ_HASH):
                     extracted = archive.extractfile(member)
                     if extracted is None:
                         continue
-                    with extracted, target_path.open("wb") as output_file:
-                        output_file.write(extracted.read())
-    finally:
-        response.close()
+
+                    target_path.write_bytes(extracted.read())
 
 
 def create_app(test_config: Optional[Dict[str, Any]] = None, silent_log: bool = False):
