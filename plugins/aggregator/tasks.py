@@ -51,17 +51,23 @@ def _load_entities(entities_url: str) -> List[dict]:
         deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
         attribute_metadata: dict[str, AttributeMetadata] = {}
 
-        attribute_metadata_url = entities_data.headers["X-Attribute-Metadata"]
-        with open_url(attribute_metadata_url) as attribute_metadata_file:
-            attribute_metadata = {
-                attr_meta["ID"]: AttributeMetadata.from_dict(attr_meta)
-                for attr_meta in ensure_dict(
-                    load_entities(
-                        attribute_metadata_file,
-                        get_mimetype(attribute_metadata_file),
-                    )
+        attribute_metadata_url = entities_data.headers.get("X-Attribute-Metadata")
+        if attribute_metadata_url is None:
+            if mimetype == "text/csv":
+                raise ValueError(
+                    "entities file is text/csv but the X-Attribute-Metadata header is missing"
                 )
-            }
+        else:
+            with open_url(attribute_metadata_url) as attribute_metadata_file:
+                attribute_metadata = {
+                    attr_meta["ID"]: AttributeMetadata.from_dict(attr_meta)
+                    for attr_meta in ensure_dict(
+                        load_entities(
+                            attribute_metadata_file,
+                            get_mimetype(attribute_metadata_file),
+                        )
+                    )
+                }
 
         for ent in load_entities(entities_data, mimetype):
             if isinstance(ent, EntityTupleMixin):  # is NamedTuple
