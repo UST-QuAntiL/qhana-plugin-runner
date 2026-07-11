@@ -38,6 +38,7 @@ def _run_aggregator(
     monkeypatch,
     entities_format: str,
     element_distances: dict = None,
+    with_attribute_metadata: bool = True,
 ):
     entities_file = _ENTITY_FILES[entities_format]
     entities_url = f"http://example.com/{entities_file}"
@@ -47,12 +48,16 @@ def _run_aggregator(
     if element_distances is None:
         element_distances = TEST_DATA["element-distances"]
 
+    entities_headers = (
+        {"X-Attribute-Metadata": metadata_url} if with_attribute_metadata else {}
+    )
+
     responses = {
         entities_url: MockResponse(
             entities_url,
             _MIMETYPES[entities_format],
             text=TEST_DATA[entities_file],
-            headers={"X-Attribute-Metadata": metadata_url},
+            headers=entities_headers,
         ),
         metadata_url: MockResponse(
             metadata_url,
@@ -108,6 +113,19 @@ def _assert_matches_expected(output):
 def test_aggregator_entity_formats(monkeypatch, entities_format):
     output = _run_aggregator(monkeypatch, entities_format)
     _assert_matches_expected(output)
+
+
+@pytest.mark.usefixtures("celery_worker")
+@pytest.mark.parametrize("entities_format", ["json", "lines"])
+def test_aggregator_without_attribute_metadata(monkeypatch, entities_format):
+    output = _run_aggregator(monkeypatch, entities_format, with_attribute_metadata=False)
+    _assert_matches_expected(output)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_aggregator_csv_requires_attribute_metadata(monkeypatch):
+    with pytest.raises(ValueError, match="X-Attribute-Metadata header is missing"):
+        _run_aggregator(monkeypatch, "csv", with_attribute_metadata=False)
 
 
 @pytest.mark.usefixtures("celery_worker")
