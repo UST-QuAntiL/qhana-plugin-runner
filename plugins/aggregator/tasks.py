@@ -90,7 +90,10 @@ def _load_element_distances(
         loaded_distances = json.load(file)
 
         for dist in loaded_distances:
-            if not isinstance(dist["distance"], (int, float)):
+            # bool is a subclass of int, so JSON booleans must be rejected explicitly
+            if isinstance(dist["distance"], bool) or not isinstance(
+                dist["distance"], (int, float)
+            ):
                 raise ValueError(
                     f"element distance for attribute '{attr_name}' pair "
                     f"({dist['source']}, {dist['target']}) is not a number "
