@@ -16,7 +16,6 @@
 from tempfile import SpooledTemporaryFile
 from typing import Dict
 
-import muid
 import numpy as np
 from celery.utils.log import get_task_logger
 from flask.templating import render_template
@@ -40,10 +39,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 class ImageNotFinishedError(Exception):
     pass
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def get_confucion_matrix(  # noqa: C901

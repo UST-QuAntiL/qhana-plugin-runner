@@ -17,7 +17,6 @@ from pathlib import Path
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict, Optional, Set, Tuple
 
-import muid
 import pandas as pd
 import plotly.express as px
 from celery.utils.log import get_task_logger
@@ -40,10 +39,6 @@ TASK_LOGGER = get_task_logger(__name__)
 
 class PlotNotFinishedError(Exception):
     pass
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def _get_plot(
