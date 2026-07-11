@@ -48,7 +48,7 @@ class PluginsView(MethodView):
     def get(self):
         """Attribute distance aggregator endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Attribute distance aggregator",
+            title="Attribute Distance Aggregator",
             description=AttributeAggregator.instance.description,
             name=AttributeAggregator.instance.name,
             version=AttributeAggregator.instance.version,

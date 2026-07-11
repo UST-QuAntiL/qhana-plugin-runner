@@ -19,8 +19,7 @@ from typing import Mapping, Optional
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -30,30 +29,29 @@ from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
     DataMetadata,
+    EntryPoint,
     InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
-    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.entity_marshalling import save_entities
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
+from qhana_plugin_runner.requests import retrieve_filename
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
-from qhana_plugin_runner.requests import retrieve_filename
 
-
-_plugin_name = "distance-aggregator"
-__version__ = "v0.2.2"
+_plugin_name = "entity-distance-aggregator"
+__version__ = "v0.2.3"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -138,7 +136,7 @@ class PluginsView(MethodView):
     def get(self):
         """Aggregators endpoint returning the plugin metadata."""
         return PluginMetadata(
-            title="Aggregators",
+            title="Entity Distance Aggregator",
             name=Aggregator.instance.name,
             description=Aggregator.instance.description,
             version=Aggregator.instance.version,

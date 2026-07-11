@@ -34,11 +34,18 @@ _ENTITY_FILES = {
 }
 
 
-def _run_aggregator(monkeypatch, entities_format: str, aggregator: str, missing: str):
+def _run_aggregator(
+    monkeypatch,
+    entities_format: str,
+    element_distances: dict = None,
+):
     entities_file = _ENTITY_FILES[entities_format]
     entities_url = f"http://example.com/{entities_file}"
     metadata_url = "http://example.com/attribute_metadata.json"
     distances_url = "http://example.com/element_distances.zip"
+
+    if element_distances is None:
+        element_distances = TEST_DATA["element-distances"]
 
     responses = {
         entities_url: MockResponse(
@@ -52,9 +59,7 @@ def _run_aggregator(monkeypatch, entities_format: str, aggregator: str, missing:
             "application/json",
             text=TEST_DATA["attribute_metadata.json"],
         ),
-        distances_url: MockResponse.from_zip(
-            distances_url, TEST_DATA["element-distances"]
-        ),
+        distances_url: MockResponse.from_zip(distances_url, element_distances),
     }
 
     return run_plugin_task(
@@ -65,18 +70,15 @@ def _run_aggregator(monkeypatch, entities_format: str, aggregator: str, missing:
         {
             "entitiesUrl": entities_url,
             "elementDistancesUrl": distances_url,
-            "attributes": "color\ntags",
-            "aggregator": aggregator,
-            "missingDataHandling": missing,
         },
     )
 
 
-def _assert_matches_expected(output, aggregator: str, missing: str):
+def _assert_matches_expected(output):
     assert output.file_type == "relation/attribute-distances"
     assert output.mimetype == "application/zip"
 
-    expected_files = EXPECTED[(aggregator, missing)]
+    expected_files = EXPECTED
 
     with zipfile.ZipFile(output.file_storage_data) as archive:
         assert sorted(info.filename for info in archive.filelist) == sorted(
@@ -104,12 +106,32 @@ def _assert_matches_expected(output, aggregator: str, missing: str):
 @pytest.mark.usefixtures("celery_worker")
 @pytest.mark.parametrize("entities_format", ["csv", "json", "lines"])
 def test_aggregator_entity_formats(monkeypatch, entities_format):
-    output = _run_aggregator(monkeypatch, entities_format, "mean", "ignore")
-    _assert_matches_expected(output, "mean", "ignore")
+    output = _run_aggregator(monkeypatch, entities_format)
+    _assert_matches_expected(output)
 
 
 @pytest.mark.usefixtures("celery_worker")
-@pytest.mark.parametrize("aggregator,missing", sorted(EXPECTED))
-def test_aggregator_scenarios(monkeypatch, aggregator, missing):
-    output = _run_aggregator(monkeypatch, "json", aggregator, missing)
-    _assert_matches_expected(output, aggregator, missing)
+@pytest.mark.parametrize("bad_distance", ["null", '"0.5"', "true"])
+def test_aggregator_fails_on_non_numeric_element_distance(monkeypatch, bad_distance):
+    element_distances = dict(TEST_DATA["element-distances"])
+    element_distances["color.json"] = (
+        r'[{"source":"red","target":"red","distance":0.0},'
+        r'{"source":"red","target":"blue","distance":1.0},'
+        r'{"source":"blue","target":"blue","distance":' + bad_distance + r"}]"
+    )
+
+    with pytest.raises(ValueError, match="is not a number"):
+        _run_aggregator(monkeypatch, "json", element_distances)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_aggregator_fails_on_missing_element_pair(monkeypatch):
+    element_distances = dict(TEST_DATA["element-distances"])
+    # (x, y) is required for the (e1, e2) tags pair but absent
+    element_distances["tags.json"] = (
+        r'[{"source":"x","target":"x","distance":0.0},'
+        r'{"source":"y","target":"y","distance":0.0}]'
+    )
+
+    with pytest.raises(ValueError, match="is missing"):
+        _run_aggregator(monkeypatch, "json", element_distances)

@@ -34,7 +34,9 @@ AGGREGATOR_BLP = SecurityBlueprint(
 class AttributeAggregator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Aggregates element distances to attribute distances."
+    description = (
+        "Aggregates element distances to attribute distances for a list of entities."
+    )
     tags = ["preprocessing", "distance-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -42,9 +44,6 @@ class AttributeAggregator(QHAnaPluginBase):
 
     def get_api_blueprint(self):
         return AGGREGATOR_BLP
-
-    def get_requirements(self) -> str:
-        return "muid~=0.5.3"
 
 
 try:
