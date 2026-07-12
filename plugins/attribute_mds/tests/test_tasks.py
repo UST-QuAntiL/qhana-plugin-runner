@@ -87,7 +87,7 @@ def test_mds_output_per_attribute(monkeypatch):
     filenames_hash = get_readable_hash("attribute_distances")
     assert (
         output.file_name
-        == f"entity_points_mds_dim_2_metric_metric_from_attribute_distances_{filenames_hash}.zip"
+        == f"entity_points_mds_dim_2_metric_mean_from_attribute_distances_{filenames_hash}.zip"
     )
 
     points = _points_by_attribute(output)

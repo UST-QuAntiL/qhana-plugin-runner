@@ -124,8 +124,8 @@ def calculation_task(self, db_id: int) -> str:
     filename = retrieve_filename(params.attribute_distances_url)
     filenames_hash = get_readable_hash(filename)
     info_str = (
-        f"_mds_dim_{params.dimensions}_metric_{metric_name}"
-        f"_from_{filename}_{filenames_hash}"
+        f"_mds_dim_{params.dimensions}_{metric_name}"
+        f"_{params.missing_data_handling.name}_from_{filename}_{filenames_hash}"
     )
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
