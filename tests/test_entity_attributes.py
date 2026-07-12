@@ -27,7 +27,11 @@ from qhana_plugin_runner.plugin_utils.attributes import (
     tuple_deserializer,
     tuple_serializer,
 )
-from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ensure_dict,
+    load_entities,
+    save_entities,
+)
 
 from .test_entity_marshalling import (
     CSV_UNSAFE_CHARACTERS,
@@ -35,6 +39,7 @@ from .test_entity_marshalling import (
     DEFAULT_ENTITY_STRATEGY,
     DEFAULT_ENTITY_TUPLE,
     DEFAULT_ENTITY_TUPLE_STRATEGY,
+    ReadWriteDummy,
 )
 from .utils import assert_sequence_equals, assert_sequence_partial_equals
 
@@ -201,6 +206,79 @@ def test_dict_serialization_roundtrip_in_place(entities: list):
     deserialize = dict_deserializer(DEFAULT_ATTRIBUTES, attr_metadata, in_place=True)
     deserialized_entities = list(deserialize(entity) for entity in serialized_entities)
     assert_sequence_equals(expected=entities, actual=deserialized_entities)
+
+
+@given(entities=st.lists(DEFAULT_ENTITY_TUPLE_STRATEGY))
+def test_ensure_dict_with_metadata_deserializes_tuples(entities: list):
+    attr_metadata = parse_attribute_metadata(ensure_dict(DEFAULT_ATTR_METADATA))
+
+    serialize = tuple_serializer(
+        DEFAULT_ATTRIBUTES, attr_metadata, tuple_=DEFAULT_ENTITY_TUPLE._make
+    )
+    serialized_entities = [serialize(entity) for entity in entities]
+
+    deserialized = list(ensure_dict(serialized_entities, attr_metadata))
+    assert_sequence_equals(
+        expected=[entity.as_dict() for entity in entities], actual=deserialized
+    )
+
+
+@given(entities=st.lists(DEFAULT_ENTITY_STRATEGY))
+def test_ensure_dict_with_metadata_passes_dicts_through(entities: list):
+    attr_metadata = parse_attribute_metadata(ensure_dict(DEFAULT_ATTR_METADATA))
+
+    result = list(ensure_dict(entities, attr_metadata))
+    assert_sequence_equals(expected=entities, actual=result)
+
+
+@given(entities=st.lists(DEFAULT_ENTITY_TUPLE_STRATEGY))
+def test_ensure_dict_without_metadata_unchanged(entities: list):
+    attr_metadata = parse_attribute_metadata(ensure_dict(DEFAULT_ATTR_METADATA))
+
+    serialize = tuple_serializer(
+        DEFAULT_ATTRIBUTES, attr_metadata, tuple_=DEFAULT_ENTITY_TUPLE._make
+    )
+    serialized_entities = [serialize(entity) for entity in entities]
+
+    result = list(ensure_dict(serialized_entities))
+    assert_sequence_equals(
+        expected=[entity.as_dict() for entity in serialized_entities], actual=result
+    )
+    for ent in result:
+        for value in ent.values():
+            assert isinstance(value, str), f"Value {value} was unexpectedly deserialized!"
+
+
+@given(entities=st.lists(DEFAULT_ENTITY_TUPLE_STRATEGY, min_size=1))
+def test_ensure_dict_missing_metadata_entry(entities: list):
+    attr_metadata = parse_attribute_metadata(ensure_dict(DEFAULT_ATTR_METADATA))
+
+    serialize = tuple_serializer(
+        DEFAULT_ATTRIBUTES, attr_metadata, tuple_=DEFAULT_ENTITY_TUPLE._make
+    )
+    serialized_entities = [serialize(entity) for entity in entities]
+
+    del attr_metadata["integer"]
+    deserialized = list(ensure_dict(serialized_entities, attr_metadata))
+
+    for original, result in zip(entities, deserialized):
+        assert result["integer"] == str(original.get("integer"))
+        assert result["number"] == original.get("number")
+        assert result["boolean"] == original.get("boolean")
+
+
+@given(entities=st.lists(DEFAULT_ENTITY_TUPLE_STRATEGY))
+def test_ensure_dict_csv_roundtrip(entities: list):
+    attr_metadata = parse_attribute_metadata(ensure_dict(DEFAULT_ATTR_METADATA))
+
+    dummy_file = ReadWriteDummy()
+    save_entities(entities, dummy_file, "text/csv", attributes=DEFAULT_ATTRIBUTES)
+
+    loaded = load_entities(dummy_file, "text/csv")
+    deserialized = list(ensure_dict(loaded, attr_metadata))
+    assert_sequence_equals(
+        expected=[entity.as_dict() for entity in entities], actual=deserialized
+    )
 
 
 LIST_ENTITY_ATTRIBUTES = ["ID", "str_list", "integer_list", "number_list", "boolean_list"]
