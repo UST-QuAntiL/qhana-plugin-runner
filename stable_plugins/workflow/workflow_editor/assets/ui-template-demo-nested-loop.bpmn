@@ -97,7 +97,7 @@
       <bpmn2:adHocSubProcess id="Activity_0fidcut" name="Encoding A">
         <bpmn2:incoming>Flow_1fkufd8</bpmn2:incoming>
         <bpmn2:outgoing>Flow_1xi7htk</bpmn2:outgoing>
-        <qhana:qHAnaServiceTask id="Activity_1c86evo" name="One-Hot Encoding" qhanaIdentifier="one-hot-encoding" qhanaVersion="v0.2.1" qhanaName="One-Hot Encoding" qhanaDescription="Converts Data to One-Hot Encodings" selectedConfigurationId="one-hot-encoding">
+        <qhana:qHAnaServiceTask id="Activity_1c86evo" name="One-Hot Encoding" qhanaIdentifier="one-hot-encoding" qhanaVersion="v0.2.4" qhanaName="One-Hot Encoding" qhanaDescription="Converts Data to One-Hot Encodings" selectedConfigurationId="one-hot-encoding">
           <bpmn2:extensionElements>
             <camunda:inputOutput>
               <camunda:inputParameter name="qinput.input_0">

@@ -17,19 +17,15 @@ from io import StringIO
 from itertools import combinations
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.attributes import (
-    AttributeMetadata,
-    tuple_deserializer,
-)
+from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    EntityTupleMixin,
     ensure_dict,
     load_entities,
     save_entities,
@@ -47,8 +43,6 @@ TASK_LOGGER = get_task_logger(__name__)
 def _load_entities(entities_url: str) -> List[dict]:
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
-        entities = []
-        deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
         attribute_metadata: dict[str, AttributeMetadata] = {}
 
         attribute_metadata_url = entities_data.headers.get("X-Attribute-Metadata")
@@ -69,19 +63,9 @@ def _load_entities(entities_url: str) -> List[dict]:
                     )
                 }
 
-        for ent in load_entities(entities_data, mimetype):
-            if isinstance(ent, EntityTupleMixin):  # is NamedTuple
-                if deserializer is None:
-                    deserializer = tuple_deserializer(
-                        type(ent).entity_attributes,
-                        attribute_metadata,
-                        tuple_=type(ent)._make,
-                    )
-
-                ent = deserializer(ent)
-                entities.append(ent.as_dict())
-            else:
-                entities.append(ent)
+        entities = list(
+            ensure_dict(load_entities(entities_data, mimetype), attribute_metadata)
+        )
 
     return entities
 
