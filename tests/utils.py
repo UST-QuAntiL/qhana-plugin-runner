@@ -15,7 +15,7 @@
 import io
 import json
 import zipfile
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence, Union
 
 import requests
 from celery import Task
@@ -24,12 +24,12 @@ from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 
 
-class MockResponse:
-    """Minimal ``requests.Response`` stand-in backed by an in-memory payload.
+class MockResponse(requests.Response):
+    """``requests.Response`` backed by an in-memory payload.
 
-    Implements just the surface used by ``open_url`` consumers in plugins:
-    ``headers``/``url`` for mimetype and filename detection, ``json``/
-    ``iter_lines`` for ``load_entities``, and ``content`` for the zip reader.
+    Subclasses the real response class so ``isinstance`` checks in helpers
+    like ``retrieve_filename`` accept it. Content access (``content``,
+    ``text``, ``json``, ``iter_lines``) uses the inherited implementations.
     """
 
     def __init__(
@@ -43,40 +43,22 @@ class MockResponse:
         status_code: int = 200,
         json_data: Optional[Any] = None,
     ):
+        super().__init__()
         self.url = url
-        self.headers = {"Content-Type": content_type}
+        self.status_code = status_code
+        self.encoding = "utf-8"
+        self.headers["Content-Type"] = content_type
         if headers:
             self.headers.update(headers)
-        self._text = text
-        self.status_code = status_code
-        self._json_data = json_data
+        if json_data is not None and content is None and text is None:
+            text = json.dumps(json_data)
         if content is not None:
-            self.content = content
+            self._content = content
         else:
-            self.content = b"" if text is None else text.encode("utf-8")
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def close(self):
-        pass
-
-    def json(self):
-        if self._json_data is not None:
-            return self._json_data
-        return json.loads(self._text)
-
-    def raise_for_status(self):
-        if self.status_code >= 400:
-            raise requests.HTTPError(f"{self.status_code} error for {self.url}")
-
-    def iter_lines(self, decode_unicode: bool = False, **kwargs):
-        # ``requests.iter_lines`` yields lines without their terminators, which
-        # matches ``str.splitlines`` and keeps csv and json inputs consistent.
-        yield from self._text.splitlines()
+            self._content = b"" if text is None else text.encode("utf-8")
+        # Mark the content as consumed so ``close`` and ``iter_content`` do
+        # not touch the (absent) underlying connection.
+        self._content_consumed = True
 
     @classmethod
     def from_zip(cls, url: str, members: Dict[str, str]) -> "MockResponse":
@@ -127,7 +109,7 @@ def run_plugin_task(
     task: Task,
     plugin_module: str,
     url_to_response: Dict[str, MockResponse],
-    params: dict,
+    params: Union[dict, str],
     *,
     expected_result: str = "Result stored in file",
     timeout: int = 30,
@@ -143,10 +125,12 @@ def run_plugin_task(
         task: the (cast) Celery task to run, e.g. a plugin ``calculation_task``.
         plugin_module: import path of the plugin module that imported
             ``open_url`` by name, e.g. ``"one_hot_encoding"``.
+        params: task parameters, stored as JSON when given as a dict and
+            unchanged when given as a string.
     """
     db_task = ProcessingTask(
         task_name=task.name,
-        parameters=json.dumps(params),
+        parameters=params if isinstance(params, str) else json.dumps(params),
     )
     db_task.save(commit=True)
 
