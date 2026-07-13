@@ -37,10 +37,10 @@ from mapping_distances.schemas import (
     InputParametersSchema,
 )
 from mapping_distances.tasks import (
-    calculate_vector_distance,
-    extract_tax_name,
-    get_element_list,
-    load_input_parameters,
+    _calculate_vector_distance,
+    _extract_tax_name,
+    _get_element_list,
+    _load_input_parameters,
 )
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 
@@ -60,25 +60,26 @@ def _meta(**overrides) -> AttributeMetadata:
 class TestExtractTaxName:
     def test_ref_target_with_json_suffix(self):
         meta = _meta(ref_target="taxonomies.zip:color.json")
-        assert extract_tax_name(meta) == "color"
+        assert _extract_tax_name(meta) == "color"
 
     def test_ref_target_without_json_suffix(self):
         meta = _meta(ref_target="taxonomies.zip:color")
-        assert extract_tax_name(meta) == "color"
+        assert _extract_tax_name(meta) == "color"
 
     def test_ref_target_nested_name(self):
         meta = _meta(ref_target="taxonomies.zip:some/nested.json")
-        assert extract_tax_name(meta) == "some/nested"
+        with pytest.raises(ValueError, match="Nested taxonomy zips are not supported"):
+            _extract_tax_name(meta)
 
     def test_ref_target_none(self):
-        assert extract_tax_name(_meta(ref_target=None)) == ""
+        assert _extract_tax_name(_meta(ref_target=None)) == ""
 
     def test_ref_target_without_marker(self):
         meta = _meta(ref_target="something_else.json")
-        assert extract_tax_name(meta) == ""
+        assert _extract_tax_name(meta) == ""
 
     def test_metadata_none(self):
-        assert extract_tax_name(None) == ""
+        assert _extract_tax_name(None) == ""
 
 
 # ---------------------------------------------------------------------------
@@ -88,42 +89,42 @@ class TestExtractTaxName:
 
 class TestGetElementList:
     def test_missing_attribute_returns_empty(self):
-        assert get_element_list({"ID": "e1"}, "color", _meta()) == []
+        assert _get_element_list({"ID": "e1"}, "color", _meta()) == []
 
     def test_none_value_returns_empty(self):
-        assert get_element_list({"color": None}, "color", _meta()) == []
+        assert _get_element_list({"color": None}, "color", _meta()) == []
 
     @pytest.mark.parametrize("empty", [[], set(), {}])
     def test_empty_collection_returns_empty(self, empty):
-        assert get_element_list({"color": empty}, "color", _meta()) == []
+        assert _get_element_list({"color": empty}, "color", _meta()) == []
 
     def test_list_value_is_stringified_and_filtered(self):
-        result = get_element_list({"color": ["red", "", "blue"]}, "color", _meta())
+        result = _get_element_list({"color": ["red", "", "blue"]}, "color", _meta())
         assert result == ["red", "blue"]
 
     def test_set_value_is_stringified(self):
-        result = get_element_list({"color": {"red"}}, "color", _meta())
+        result = _get_element_list({"color": {"red"}}, "color", _meta())
         assert result == ["red"]
 
     def test_single_string_value(self):
-        result = get_element_list({"color": "red"}, "color", _meta())
+        result = _get_element_list({"color": "red"}, "color", _meta())
         assert result == ["red"]
 
     def test_blank_string_value_returns_empty(self):
-        assert get_element_list({"color": "   "}, "color", _meta()) == []
+        assert _get_element_list({"color": "   "}, "color", _meta()) == []
 
     def test_multiple_string_value_is_split_on_separator(self):
         meta = _meta(multiple=True, separator=";")
-        result = get_element_list({"color": "red; blue ;green"}, "color", meta)
+        result = _get_element_list({"color": "red; blue ;green"}, "color", meta)
         assert result == ["red", "blue", "green"]
 
     def test_multiple_without_separator_is_treated_as_single(self):
-        meta = _meta(multiple=True, separator="")
-        result = get_element_list({"color": "red;blue"}, "color", meta)
+        meta = _meta(multiple=True, separator="$")
+        result = _get_element_list({"color": "red;blue"}, "color", meta)
         assert result == ["red;blue"]
 
     def test_non_string_scalar_is_stringified(self):
-        assert get_element_list({"color": 42}, "color", _meta()) == ["42"]
+        assert _get_element_list({"color": 42}, "color", _meta()) == ["42"]
 
 
 # ---------------------------------------------------------------------------
@@ -133,59 +134,59 @@ class TestGetElementList:
 
 class TestCalculateVectorDistance:
     def test_euclidean(self):
-        dist = calculate_vector_distance(
-            [0.0, 0.0], [3.0, 4.0], DistanceMetricEnum.euclidean, 0
+        dist = _calculate_vector_distance(
+            [0.0, 0.0], [3.0, 4.0], DistanceMetricEnum.euclidean
         )
         assert dist == pytest.approx(5.0)
 
     def test_manhatten(self):
-        dist = calculate_vector_distance(
-            [0.0, 0.0], [3.0, 4.0], DistanceMetricEnum.manhatten, 0
+        dist = _calculate_vector_distance(
+            [0.0, 0.0], [3.0, 4.0], DistanceMetricEnum.manhatten
         )
         assert dist == pytest.approx(7.0)
 
     def test_chebyshev(self):
-        dist = calculate_vector_distance(
-            [0.0, 0.0], [3.0, 4.0], DistanceMetricEnum.chebyshev, 0
+        dist = _calculate_vector_distance(
+            [0.0, 0.0], [3.0, 4.0], DistanceMetricEnum.chebyshev
         )
         assert dist == pytest.approx(4.0)
 
     def test_cosine_orthogonal_vectors(self):
-        dist = calculate_vector_distance(
-            [1.0, 0.0], [0.0, 1.0], DistanceMetricEnum.cosine, 0
+        dist = _calculate_vector_distance(
+            [1.0, 0.0], [0.0, 1.0], DistanceMetricEnum.cosine
         )
         assert dist == pytest.approx(1.0)
 
     def test_cosine_identical_direction(self):
-        dist = calculate_vector_distance(
-            [1.0, 2.0], [2.0, 4.0], DistanceMetricEnum.cosine, 0
+        dist = _calculate_vector_distance(
+            [1.0, 2.0], [2.0, 4.0], DistanceMetricEnum.cosine
         )
         assert dist == pytest.approx(0.0, abs=1e-9)
 
     def test_cosine_with_zero_vector_returns_max_cosine_distance(self):
-        dist = calculate_vector_distance(
-            [0.0, 0.0], [1.0, 1.0], DistanceMetricEnum.cosine, 0
+        dist = _calculate_vector_distance(
+            [0.0, 0.0], [1.0, 1.0], DistanceMetricEnum.cosine
         )
         assert dist == 2
 
     def test_empty_vectors_return_float_max(self):
-        dist = calculate_vector_distance([], [], DistanceMetricEnum.euclidean, 0)
+        dist = _calculate_vector_distance([], [], DistanceMetricEnum.euclidean)
         assert dist == sys.float_info.max
 
     def test_mismatched_lengths_raise_value_error(self):
         with pytest.raises(ValueError, match="same length"):
-            calculate_vector_distance([1.0], [1.0, 2.0], DistanceMetricEnum.euclidean, 0)
+            _calculate_vector_distance([1.0], [1.0, 2.0], DistanceMetricEnum.euclidean)
 
     def test_unknown_metric_raises_value_error(self):
         class _FakeMetric:
             name = "fake"
 
         with pytest.raises(ValueError, match="Unknown distance metric"):
-            calculate_vector_distance([1.0], [2.0], _FakeMetric(), 0)
+            _calculate_vector_distance([1.0], [2.0], _FakeMetric())
 
     def test_euclidean_result_is_finite(self):
-        dist = calculate_vector_distance(
-            [1.5, -2.0], [0.5, 3.0], DistanceMetricEnum.euclidean, 0
+        dist = _calculate_vector_distance(
+            [1.5, -2.0], [0.5, 3.0], DistanceMetricEnum.euclidean
         )
         assert math.isfinite(dist)
 
@@ -213,7 +214,7 @@ class TestLoadInputParameters:
             taxonomies_zip_url,
             attributes,
             distance_metric,
-        ) = load_input_parameters(task_data.id)
+        ) = _load_input_parameters(task_data.id)
 
         assert entities_url == "file:///entities.json"
         assert entities_metadata_url == "file:///metadata.json"
@@ -224,4 +225,4 @@ class TestLoadInputParameters:
 
     def test_missing_db_id_raises_key_error(self, task_data):
         with pytest.raises(KeyError, match="Could not load task data"):
-            load_input_parameters(999999)
+            _load_input_parameters(999999)

@@ -28,6 +28,13 @@
     qasm-3
 
     qc-simulator
+* - [Attribute Distance Aggregator (@v0.1.1)](#attribute-distance-aggregator)
+
+    attribute-distance-aggregator@v0-1-1
+  - processing
+  - distance-calculation
+
+    preprocessing
 * - [Classical k Means (@v0.1.1)](#classical-k-means)
 
     classical-k-means@v0-1-1
@@ -121,9 +128,9 @@
     low-code-modeler@v0-0-0
   - interaction
   - low-code-modeler
-* - [MUSE4Music Loader (@v1.1.0)](#muse-for-music-loader)
+* - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
 
-    muse-for-music-loader@v1-1-0
+    muse-for-music-loader@v1-0-0
   - dataloader
   - MUSE4Music
 
@@ -166,9 +173,9 @@
     feature-extraction
 
     music
-* - [One-Hot Encoding (@v0.2.3)](#one-hot-encoding)
+* - [One-Hot Encoding (@v0.2.4)](#one-hot-encoding)
 
-    one-hot-encoding@v0-2-3
+    one-hot-encoding@v0-2-4
   - processing
   - encoding
 
@@ -380,9 +387,9 @@
     preprocessing
 
     similarity-calculation
-* - [Sym Max Mean attribute comparer (@v0.1.6)](#sym-max-mean)
+* - [Sym Max Mean attribute comparer (@v0.1.7)](#sym-max-mean)
 
-    sym-max-mean@v0-1-6
+    sym-max-mean@v0-1-7
   - processing
   - preprocessing
 
@@ -426,9 +433,9 @@
     camunda-engine
 
     workflow
-* - [Wu Palmer similarities (@v0.2.4)](#wu-palmer)
+* - [Wu Palmer similarities (@v0.2.5)](#wu-palmer)
 
-    wu-palmer@v0-2-4
+    wu-palmer@v0-2-5
   - processing
   - preprocessing
 
@@ -471,9 +478,9 @@
     qasm-2
 
     qc-simulator
-* - [csv-to-json (@v0.1.0)](#csv-to-json)
+* - [csv-to-json (@v0.1.1)](#csv-to-json)
 
-    csv-to-json@v0-1-0
+    csv-to-json@v0-1-1
   - conversion
   - conversion
 
@@ -522,9 +529,9 @@
   - objective-function
 
     optimization
-* - [json-to-csv (@v0.1.0)](#json-to-csv)
+* - [json-to-csv (@v0.1.1)](#json-to-csv)
 
-    json-to-csv@v0-1-0
+    json-to-csv@v0-1-1
   - conversion
   - conversion
 
@@ -640,7 +647,7 @@
 **Input formats:** `application/X-lines+json`, `application/json`, `application/octet-stream`, `application/vnd.recordare.musicxml+xml`, `application/xml`, `application/zip`, `audio/midi`, `audio/x-midi`, `text/csv`, `text/x-qasm`, `text/xml`\
 **Output formats:** `*/*`, `application/X-lines+json`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
 
-**Input datatypes:** `*/*`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-similarities`, `relation/entity-distances`\
+**Input datatypes:** `*/*`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-distances`, `relation/element-similarities`, `relation/entity-distances`\
 **Output datatypes:** `*/*`, `circuit/*`, `custom/clusters`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-distances`, `relation/element-similarities`, `relation/entity-distances`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
 
 ## Plugins
@@ -691,6 +698,29 @@ Allows execution of quantum circuits using a simulator packaged with braket_loca
 |entity/vector|application/json|╳|
 |provenance/trace|application/json|✓|
 |provenance/execution-options|application/json|✓|
+
+
+(attribute-distance-aggregator)=
+### Attribute Distance Aggregator (@v0.1.1)
+
+processing – distance-calculation, preprocessing\
+*Path:* {file}`plugins/aggregator/__init__.py`
+
+Aggregates element distances to attribute distances for a list of entities.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|relation/element-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/attribute-distances|application/zip|✓|
 
 
 (classical-k-means)=
@@ -910,7 +940,7 @@ interaction – low-code-modeler\
 low code modeler plugin
 
 (muse-for-music-loader)=
-### MUSE4Music Loader (@v1.1.0)
+### MUSE4Music Loader (@v1.0.0)
 
 dataloader – MUSE4Music, data-loading\
 *Path:* {file}`stable_plugins/muse/muse_for_music/__init__.py`
@@ -1019,7 +1049,7 @@ Extracts stable feature vectors from MusicXML, MXL, and MIDI sources. The vector
 
 
 (one-hot-encoding)=
-### One-Hot Encoding (@v0.2.3)
+### One-Hot Encoding (@v0.2.4)
 
 processing – encoding, one-hot-encoding, preprocessing\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/one_hot_encoding/__init__.py`
@@ -1556,7 +1586,7 @@ Transforms similarities to distances.
 
 
 (sym-max-mean)=
-### Sym Max Mean attribute comparer (@v0.1.6)
+### Sym Max Mean attribute comparer (@v0.1.7)
 
 processing – preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/sym_max_mean/__init__.py`
@@ -1582,7 +1612,7 @@ Compares attributes and returns similarity values.
 ### Taxanomy mapping to distances (@v0.1.0)
 
 processing – distance-calculation, preprocessing\
-*Path:* {file}`plugins/enpro26/mapping_distances/__init__.py`
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/mapping_distances/__init__.py`
 
 A plugin to create pairwise element distances for taxanomy mappings.<br /><br />
 Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.<br />
@@ -1671,7 +1701,7 @@ interaction – bpmn, camunda-engine, workflow\
 Manage workflows deployed in Camunda.
 
 (wu-palmer)=
-### Wu Palmer similarities (@v0.2.4)
+### Wu Palmer similarities (@v0.2.5)
 
 processing – preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/wu_palmer/__init__.py`
@@ -1782,10 +1812,10 @@ Allows execution of quantum circuits using a simulator packaged with cirq.
 
 
 (csv-to-json)=
-### csv-to-json (@v0.1.0)
+### csv-to-json (@v0.1.1)
 
 conversion – conversion, csv, json\
-*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+*Path:* {file}`stable_plugins/file_utils/entity_conversion/__init__.py`
 
 Convert CSV files to JSON.
 
@@ -1901,10 +1931,10 @@ Hinge Loss objective-function plugin.
 
 
 (json-to-csv)=
-### json-to-csv (@v0.1.0)
+### json-to-csv (@v0.1.1)
 
 conversion – conversion, csv, json\
-*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+*Path:* {file}`stable_plugins/file_utils/entity_conversion/__init__.py`
 
 Convert JSON files to CSV.
 

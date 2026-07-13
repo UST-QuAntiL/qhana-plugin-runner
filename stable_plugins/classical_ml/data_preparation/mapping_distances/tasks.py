@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import itertools
 import json
 from io import StringIO
+from pathlib import Path
 import sys
 from tempfile import SpooledTemporaryFile
-from typing import Callable, Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, List, Dict, Any
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
@@ -32,7 +34,6 @@ from qhana_plugin_runner.plugin_utils.attributes import (
     tuple_deserializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    EntityTupleMixin,
     ensure_dict,
     load_entities,
     save_entities,
@@ -46,7 +47,7 @@ from . import MappingDistances
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def load_input_parameters(
+def _load_input_parameters(
     db_id: int,
 ) -> Tuple[str, str, str, List[str], DistanceMetricEnum]:
     """Load and parse the task input parameters from the database."""
@@ -94,21 +95,27 @@ def load_input_parameters(
     )
 
 
-def extract_tax_name(attrib_meta: AttributeMetadata) -> str:
-    """Extracts the taxonomy name from the attribute metadata"""
+def _extract_tax_name(attrib_meta: AttributeMetadata) -> str:
+    """Extracts the taxonomy name from the attribute metadata.
+
+    Raises a ``ValueError`` if the referenced taxonomy is nested inside a
+    subdirectory of the zip (i.e. the name contains a path separator), since
+    nested taxonomy zips are not supported.
+    """
     tax_name = ""
-    if (
-        attrib_meta
-        and attrib_meta.ref_target
-        and "taxonomies.zip:" in attrib_meta.ref_target
-    ):
-        tax_name = attrib_meta.ref_target.split("taxonomies.zip:")[1]
-        if tax_name.endswith(".json"):
-            tax_name = tax_name[:-5]
+    if attrib_meta and attrib_meta.ref_target and ":" in attrib_meta.ref_target:
+        raw_path = attrib_meta.ref_target.split(":", 1)[1]
+
+        if "/" in raw_path or "\\" in raw_path:
+            msg = f"Nested taxonomy zips are not supported: '{raw_path}'"
+            TASK_LOGGER.error(msg)
+            raise ValueError(msg)
+
+        tax_name = Path(raw_path).stem
     return tax_name
 
 
-def get_element_list(
+def _get_element_list(
     entity: Dict[str, Any], attribute: str, metadata: AttributeMetadata
 ) -> List[str]:
     """Extracts taxonomy element IDs from an entity attribute field."""
@@ -121,27 +128,36 @@ def get_element_list(
         return [str(v) for v in val if v]
     if isinstance(val, str):
         if metadata.multiple and metadata.separator:
-            return [v.strip() for v in val.split(metadata.separator) if v.strip()]
+            return [
+                stripped for v in val.split(metadata.separator) if (stripped := v.strip())
+            ]
         return [val.strip()] if val.strip() else []
     return [str(val)]
 
 
-def calculate_vector_distance(
-    v1: List[float], v2: List[float], metric: DistanceMetricEnum, db_id: int
+def _is_empty_or_nan(val):
+    if not val:
+        return True
+    return not val or isinstance(val, str) and val.strip().lower() == "nan"
+
+
+def _calculate_vector_distance(
+    v1: List[float], v2: List[float], metric: DistanceMetricEnum
 ) -> float:
     """
     Calculates the distance between two coordinate vectors based on the selected metric.
 
-    Returns ``sys.float_info.max`` if the vectors are empty, i.e. no mapping is assigned.
+    Raises:
+        ValueError: if the mapping vectors do not have the same size.
 
-    Throws a ``ValueError`` if the mapping vectors do not have the same size.
+    Returns:
+        float: distance between two coordinate vectors based on the selected metric or
+        ``sys.float_info.max`` if the vectors are empty, i.e. no mapping is assigned.
     """
     if len(v1) != len(v2):
-        msg = f"Vectors do not have the same length in mapping_distances plugin task with db_id '{db_id}'"
-        TASK_LOGGER.error(msg)
-        raise ValueError(msg)
+        raise ValueError("Vectors do not have the same length")
 
-    if not v1 or not v2:
+    if _is_empty_or_nan(v1) or _is_empty_or_nan(v2):
         return sys.float_info.max
 
     if metric == DistanceMetricEnum.euclidean:
@@ -178,7 +194,7 @@ def calculation_task(self, db_id: int) -> str:
         taxonomies_zip_url,
         attributes,
         distance_metric,
-    ) = load_input_parameters(db_id)
+    ) = _load_input_parameters(db_id)
 
     with open_url(entities_metadata_url) as entities_metadata_file:
         entities_metadata_list = list(
@@ -214,36 +230,39 @@ def calculation_task(self, db_id: int) -> str:
             element_distances = []
 
             attrib_meta = entities_metadata.get(attribute)
-            tax_name = extract_tax_name(attrib_meta)
+            tax_name = _extract_tax_name(attrib_meta)
             tax_map = taxonomy_mappings.get(tax_name, {})
 
             unique_elements = set()
             for entitiy in entities:
-                entity_names = get_element_list(entitiy, attribute, attrib_meta)
+                entity_names = _get_element_list(entitiy, attribute, attrib_meta)
                 unique_elements.update(entity_names)
 
             elements = sorted(list(unique_elements))
-            for e1 in elements:
-                for e2 in elements:
-                    v1 = tax_map[e1]
-                    v2 = tax_map[e2]
+            for e1, e2 in itertools.product(elements, repeat=2):
+                v1 = tax_map[e1]
+                v2 = tax_map[e2]
 
-                    dist = calculate_vector_distance(v1, v2, distance_metric, db_id)
-
-                    element_distances.append(
-                        {
-                            "source": e1,
-                            "target": e2,
-                            "distance": dist,
-                        }
+                try:
+                    dist = _calculate_vector_distance(v1, v2, distance_metric)
+                except ValueError as e:
+                    TASK_LOGGER.error(
+                        f"{e} in mapping_distances plugin task with db_id '{db_id}'"
                     )
+                    raise
+
+                element_distances.append(
+                    {
+                        "source": e1,
+                        "target": e2,
+                        "distance": dist,
+                    }
+                )
 
             with StringIO() as file:
                 save_entities(element_distances, file, "application/json")
                 file.seek(0)
                 zip_file.writestr(f"{attribute}.json", file.read())
-
-    zip_file.close()
 
     concat_filenames = retrieve_filename(entities_url)
     concat_filenames += retrieve_filename(entities_metadata_url)
