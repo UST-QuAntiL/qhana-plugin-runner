@@ -20,8 +20,7 @@ import flask
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -31,17 +30,17 @@ from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
     DataMetadata,
+    EntryPoint,
     InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
-    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -113,8 +112,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Metric",
             "description": (
                 "Type of MDS that will be used. For nonmetric MDS, distances of "
-                "exactly 0 are replaced with 0.000001 because scikit-learn "
-                "treats them as missing values."
+                "exactly 0 are replaced with a small positive value below the "
+                "smallest positive distance because scikit-learn treats them "
+                "as missing values."
             ),
             "input_type": "select",
         },
@@ -282,8 +282,9 @@ class MDS(QHAnaPluginBase):
     version = __version__
     description = (
         "Converts distance values (distance matrix) to points in a space. "
-        "For nonmetric MDS, distances of exactly 0 are replaced with "
-        "0.000001 because scikit-learn treats them as missing values."
+        "For nonmetric MDS, distances of exactly 0 are replaced with a small "
+        "positive value below the smallest positive distance because "
+        "scikit-learn treats them as missing values."
     )
     tags = ["preprocessing", "distance-calculation", "feature-engineering", "embedding"]
 
@@ -299,19 +300,31 @@ class MDS(QHAnaPluginBase):
 
 TASK_LOGGER = get_task_logger(__name__)
 
-NONMETRIC_ZERO_REPLACEMENT = 0.000001
+NONMETRIC_ZERO_FACTOR = 0.000001
 
 
 def _replace_zero_distances(distance_matrix):
-    """Replace off-diagonal zeros with a small value because nonmetric MDS
-    in scikit-learn treats dissimilarities of 0 as missing values.
+    """Replace off-diagonal zeros with a value smaller than the smallest
+    distance because nonmetric MDS in scikit-learn treats dissimilarities of 0
+    as missing values.
     https://scikit-learn.org/1.1/modules/generated/sklearn.manifold.MDS.html?highlight=mds#sklearn.manifold.MDS
     """
     import numpy as np
 
     zero_mask = distance_matrix == 0
     np.fill_diagonal(zero_mask, False)
-    distance_matrix[zero_mask] = NONMETRIC_ZERO_REPLACEMENT
+    if not zero_mask.any():
+        return
+
+    positive_distances = distance_matrix[distance_matrix > 0]
+    if positive_distances.size:
+        replacement = positive_distances.min() * NONMETRIC_ZERO_FACTOR
+        if replacement == 0:
+            # the product underflowed to 0, use the smallest positive float
+            replacement = np.nextafter(0, positive_distances.min())
+    else:
+        replacement = NONMETRIC_ZERO_FACTOR
+    distance_matrix[zero_mask] = replacement
 
 
 @CELERY.task(name=f"{MDS.instance.identifier}.calculation_task", bind=True)

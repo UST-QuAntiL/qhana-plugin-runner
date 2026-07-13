@@ -51,6 +51,16 @@ ZERO_DISTANCES = {
     ),
 }
 
+TINY_DISTANCES = {
+    "color.json": _distances(
+        {
+            ("e1", "e2"): 0.0,
+            ("e1", "e3"): 5e-7,
+            ("e2", "e3"): 5e-7,
+        }
+    ),
+}
+
 INCOMPLETE_DISTANCES = {
     "color.json": _distances(
         {

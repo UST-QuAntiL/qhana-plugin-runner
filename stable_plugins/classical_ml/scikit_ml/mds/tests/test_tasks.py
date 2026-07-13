@@ -19,8 +19,13 @@ import pytest
 
 from tests.utils import MockResponse, run_plugin_task
 
-from .. import NONMETRIC_ZERO_REPLACEMENT, _replace_zero_distances, calculation_task
-from .data import ENTITY_DISTANCES, INCOMPLETE_DISTANCES, ZERO_DISTANCES
+from .. import NONMETRIC_ZERO_FACTOR, _replace_zero_distances, calculation_task
+from .data import (
+    ENTITY_DISTANCES,
+    INCOMPLETE_DISTANCES,
+    TINY_DISTANCES,
+    ZERO_DISTANCES,
+)
 
 _TOLERANCE = 0.05
 
@@ -112,20 +117,80 @@ def test_replace_zero_distances_only_off_diagonal():
 
     _replace_zero_distances(distance_matrix)
 
+    replacement = 1.5 * NONMETRIC_ZERO_FACTOR
     expected = np.array(
         [
-            [0.0, NONMETRIC_ZERO_REPLACEMENT, 1.5],
-            [NONMETRIC_ZERO_REPLACEMENT, 0.0, 2.0],
+            [0.0, replacement, 1.5],
+            [replacement, 0.0, 2.0],
             [1.5, 2.0, 0.0],
         ]
     )
     assert np.array_equal(distance_matrix, expected)
 
 
+def test_replace_zero_distances_below_smallest_positive():
+    import numpy as np
+
+    distance_matrix = np.array(
+        [
+            [0.0, 0.0, 5e-7],
+            [0.0, 0.0, 5e-7],
+            [5e-7, 5e-7, 0.0],
+        ]
+    )
+
+    _replace_zero_distances(distance_matrix)
+
+    replacement = distance_matrix[0, 1]
+    assert 0 < replacement < 5e-7
+
+
+def test_replace_zero_distances_underflow_guard():
+    import numpy as np
+
+    tiny = 1e-320
+    distance_matrix = np.array(
+        [
+            [0.0, 0.0, tiny],
+            [0.0, 0.0, tiny],
+            [tiny, tiny, 0.0],
+        ]
+    )
+
+    _replace_zero_distances(distance_matrix)
+
+    replacement = distance_matrix[0, 1]
+    assert 0 < replacement < tiny
+
+
+def test_replace_zero_distances_all_zero_fallback():
+    import numpy as np
+
+    distance_matrix = np.zeros((3, 3))
+
+    _replace_zero_distances(distance_matrix)
+
+    zero_mask = np.eye(3, dtype=bool)
+    assert np.all(distance_matrix[~zero_mask] == NONMETRIC_ZERO_FACTOR)
+    assert np.all(distance_matrix[zero_mask] == 0)
+
+
 @pytest.mark.usefixtures("celery_worker")
 def test_nonmetric_mds_handles_zero_distances(monkeypatch):
     output = _run_mds(
         monkeypatch, entity_distances=ZERO_DISTANCES, metric="nonmetric_mds"
+    )
+    points = _load_points(output)
+
+    zero_pair_distance = _embedded_distance(points, "e1", "e2")
+    assert zero_pair_distance < _embedded_distance(points, "e1", "e3")
+    assert zero_pair_distance < _embedded_distance(points, "e2", "e3")
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_nonmetric_mds_preserves_order_with_tiny_distances(monkeypatch):
+    output = _run_mds(
+        monkeypatch, entity_distances=TINY_DISTANCES, metric="nonmetric_mds"
     )
     points = _load_points(output)
 
