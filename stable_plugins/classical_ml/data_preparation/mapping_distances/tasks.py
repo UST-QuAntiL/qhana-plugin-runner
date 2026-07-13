@@ -33,6 +33,7 @@ from qhana_plugin_runner.plugin_utils.attributes import (
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
+    ensure_dict,
     load_entities,
     save_entities,
 )
@@ -188,24 +189,11 @@ def calculation_task(self, db_id: int) -> str:
             for element in entities_metadata_list
         }
 
-    deserializer: Optional[Callable[[tuple[str, ...]], tuple[any, ...]]] = None
-    entities = []
-
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
-
-        for ent in load_entities(entities_data, mimetype):
-            if isinstance(ent, EntityTupleMixin):
-                if deserializer is None:
-                    ent_attributes: tuple[str, ...] = type(ent).entity_attributes
-                    ent_tuple = type(ent)
-                    deserializer = tuple_deserializer(
-                        ent_attributes, entities_metadata, tuple_=ent_tuple._make
-                    )
-                ent = deserializer(ent)
-                entities.append(ent.as_dict())
-            else:
-                entities.append(ent)
+        entities = list(
+            ensure_dict(load_entities(entities_data, mimetype), entities_metadata)
+        )
 
     taxonomy_mappings: Dict[str, Dict[str, List[float]]] = {}
     for zipped_file, file_name in get_files_from_zip_url(taxonomies_zip_url, mode="t"):
