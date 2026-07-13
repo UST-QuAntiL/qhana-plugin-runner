@@ -60,6 +60,12 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
 
     MATHJAX_VERSION = "3.2.2"
     MATHJAX_METADATA_URL = f"https://registry.npmjs.org/mathjax/{MATHJAX_VERSION}"
+    MATHJAX_SCRIPT_LOCATION = (
+        "/static/mathjax/es5/tex-mml-chtml.js"  # may change in higher MathJax versions
+    )
+    MATHJAX_SCRIPT_INTEGRITY_HASH = (
+        "sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei"
+    )
 
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):

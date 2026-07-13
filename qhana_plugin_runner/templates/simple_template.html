@@ -55,6 +55,12 @@
     {% block script %}
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
 
+    <script>
+        window.qhanaMathJax = {
+            src: "{{ config.MATHJAX_SCRIPT_LOCATION }}",
+            integrity: "{{ config.MATHJAX_SCRIPT_INTEGRITY_HASH }}"
+        };
+    </script>
     <script src="{{ url_for('static', filename='mathjax/check-for-tex.js') }}" defer></script>
     {% endblock script %}
 

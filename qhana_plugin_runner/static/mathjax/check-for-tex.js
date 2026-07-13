@@ -12,9 +12,14 @@
         };
     }
 
+
+    const config = window.qhanaMathJax || {};
+
     const script = document.createElement('script');
-    script.src = '/static/mathjax/es5/tex-mml-chtml.js';
-    script.integrity = "sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei";
+    script.src = config.src || '/static/mathjax/es5/tex-mml-chtml.js';
+    if (config.integrity) {
+        script.integrity = config.integrity;
+    }
     script.crossOrigin = "anonymous";
     script.async = true;
     document.head.appendChild(script);
