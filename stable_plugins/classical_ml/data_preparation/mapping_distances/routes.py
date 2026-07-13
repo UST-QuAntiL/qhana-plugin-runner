@@ -59,13 +59,21 @@ class PluginRootView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
-                        content_type=["application/json"],
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entitiesUrl",
                     ),
                     InputDataMetadata(
                         data_type="entity/attribute-metadata",
-                        content_type=["application/json"],
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
                         required=True,
                         parameter="entitiesMetadataUrl",
                     ),

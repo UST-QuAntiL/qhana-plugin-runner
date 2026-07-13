@@ -198,7 +198,11 @@ def calculation_task(self, db_id: int) -> str:
 
     with open_url(entities_metadata_url) as entities_metadata_file:
         entities_metadata_list = list(
-            load_entities(entities_metadata_file, get_mimetype(entities_metadata_file))
+            ensure_dict(
+                load_entities(
+                    entities_metadata_file, get_mimetype(entities_metadata_file)
+                )
+            )
         )
         entities_metadata = {
             element["ID"]: AttributeMetadata.from_dict(element)
