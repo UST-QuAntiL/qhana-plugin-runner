@@ -60,12 +60,6 @@ class MockResponse(requests.Response):
         # not touch the (absent) underlying connection.
         self._content_consumed = True
 
-    def iter_content(self, chunk_size: int = 1, **kwargs):
-        # Mirror ``requests.iter_content`` by yielding ``content`` in chunks of
-        # ``chunk_size`` bytes, which streaming consumers rely on.
-        for start in range(0, len(self.content), chunk_size):
-            yield self.content[start : start + chunk_size]
-
     @classmethod
     def from_zip(cls, url: str, members: Dict[str, str]) -> "MockResponse":
         """Build a response whose ``content`` is a zip of ``{name: text}``."""
