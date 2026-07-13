@@ -5,18 +5,16 @@ import hashlib
 import tarfile
 import shutil
 from pathlib import Path
-import requests
 
-# Nur noch die gewünschte Version wird definiert. Keine manuellen Hashes!
-MATHJAX_VERSION = "3.2.2"
+from .. import requests
 
 
 def _clear_old_mathjax_files(mathjax_dir: Path) -> None:
-    """Safely remove known MathJax files/folders."""
+    """Safely remove known MathJax files/folders keeping whitelisted local assets."""
     if not mathjax_dir.exists():
         return
 
-    whitelist = {".gitignore", "check-for-tex.js"}
+    whitelist = {".gitignore", "check-for-tex.js", ".version.json"}
 
     for path in mathjax_dir.iterdir():
         if path.name in whitelist:
@@ -29,21 +27,29 @@ def _clear_old_mathjax_files(mathjax_dir: Path) -> None:
 
 
 def download_mathjax(app) -> None:
+    """Download and extract MathJax frontend assets from the npm registry.
+
+    Checks the local version manifest to prevent redundant downloads. If an update is
+    required, it safely clears old assets (preserving whitelisted files), fetches the
+    tarball metadata from npm, verifies the package integrity dynamically via SHA hashes,
+    and extracts the assets using path traversal protection.
+    """
+    mathjax_version = app.config.get("MATHJAX_VERSION")
     mathjax_dir = Path(app.static_folder) / "mathjax"
     version_file = mathjax_dir / ".version.json"
 
     if version_file.exists():
         try:
             metadata = json.loads(version_file.read_text(encoding="utf-8"))
-            if metadata.get("version") == MATHJAX_VERSION:
-                return  # Bereits aktuell!
+            if metadata.get("version") == mathjax_version:
+                return
         except (json.JSONDecodeError, KeyError):
             pass
 
-    metadata_url = f"https://registry.npmjs.org/mathjax/{MATHJAX_VERSION}"
-    meta_response = requests.get(metadata_url)
-    meta_response.raise_for_status()
-    pkg_data = meta_response.json()
+    with requests.open_url(
+        app.config.get("MATHJAX_METADATA_URL"), raise_on_error_status=True
+    ) as meta_response:
+        pkg_data = meta_response.json()
 
     expected_integrity = pkg_data["dist"]["integrity"]
     tarball_url = pkg_data["dist"]["tarball"]
@@ -51,9 +57,9 @@ def download_mathjax(app) -> None:
     _clear_old_mathjax_files(mathjax_dir)
     mathjax_dir.mkdir(parents=True, exist_ok=True)
 
-    with requests.get(tarball_url, stream=True) as response:
-        response.raise_for_status()
-
+    with requests.open_url(
+        tarball_url, raise_on_error_status=True, stream=True
+    ) as response:
         is_sha512 = "sha512-" in expected_integrity
         hasher = hashlib.sha512() if is_sha512 else hashlib.sha384()
         prefix = "sha512-" if is_sha512 else "sha384-"
@@ -83,7 +89,7 @@ def download_mathjax(app) -> None:
                 target_path = mathjax_dir / relative_path
                 target_path.absolute().relative_to(
                     mathjax_dir.absolute()
-                )  # Path Traversal Schutz
+                )  # Path Traversal protection
 
                 if member.isdir():
                     target_path.mkdir(parents=True, exist_ok=True)
@@ -93,5 +99,5 @@ def download_mathjax(app) -> None:
                     target_path.write_bytes(archive.extractfile(member).read())
 
         version_file.write_text(
-            json.dumps({"version": MATHJAX_VERSION}), encoding="utf-8"
+            json.dumps({"version": mathjax_version}), encoding="utf-8"
         )

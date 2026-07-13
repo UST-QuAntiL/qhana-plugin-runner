@@ -15,6 +15,7 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Module containing default config values."""
+
 import re
 from logging import INFO, WARNING
 from os import urandom
@@ -56,6 +57,9 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     URL_REWRITE_RULES: Sequence[Tuple[re.Pattern, str]] = []
 
     NISQ_ANALYZER_UI_URL = "http://localhost:4201"
+
+    MATHJAX_VERSION = "3.2.2"
+    MATHJAX_METADATA_URL = f"https://registry.npmjs.org/mathjax/{MATHJAX_VERSION}"
 
 
 class DebugConfig(ProductionConfig, SQLAchemyDebugConfig, SmorestDebugConfig):
