@@ -76,7 +76,9 @@ def _replace_missing_distances(
             dist["distance"] = replacement
 
 
-def _build_distance_matrix(distances: List[dict]) -> Tuple[Dict[str, int], Any]:
+def _build_distance_matrix(
+    distances: List[dict], attr_name: str
+) -> Tuple[Dict[str, int], Any]:
     import numpy as np
 
     id_to_idx: Dict[str, int] = {}
@@ -86,13 +88,25 @@ def _build_distance_matrix(distances: List[dict]) -> Tuple[Dict[str, int], Any]:
             if ent_id not in id_to_idx:
                 id_to_idx[ent_id] = len(id_to_idx)
 
-    distance_matrix = np.zeros((len(id_to_idx), len(id_to_idx)))
+    distance_matrix = np.full((len(id_to_idx), len(id_to_idx)), np.nan)
+    np.fill_diagonal(distance_matrix, 0)
 
     for dist in distances:
         idx_1 = id_to_idx[dist["source"]]
         idx_2 = id_to_idx[dist["target"]]
         distance_matrix[idx_1, idx_2] = dist["distance"]
         distance_matrix[idx_2, idx_1] = dist["distance"]
+
+    missing_indices = np.argwhere(np.isnan(distance_matrix))
+    if missing_indices.size:
+        idx_to_id = {idx: ent_id for ent_id, idx in id_to_idx.items()}
+        missing_pairs = sorted(
+            {tuple(sorted((idx_to_id[i], idx_to_id[j]))) for i, j in missing_indices}
+        )
+        raise ValueError(
+            f"attribute '{attr_name}' has no distance entry for entity pairs: "
+            + ", ".join(f"({source}, {target})" for source, target in missing_pairs)
+        )
 
     return id_to_idx, distance_matrix
 
@@ -133,7 +147,7 @@ def calculation_task(self, db_id: int) -> str:
 
     for attr_name, distances in attribute_distances.items():
         _replace_missing_distances(distances, params.missing_data_handling, attr_name)
-        id_to_idx, distance_matrix = _build_distance_matrix(distances)
+        id_to_idx, distance_matrix = _build_distance_matrix(distances, attr_name)
 
         mds = manifold.MDS(
             params.dimensions,

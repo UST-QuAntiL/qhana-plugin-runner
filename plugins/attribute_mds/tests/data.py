@@ -41,6 +41,15 @@ ATTRIBUTE_DISTANCES = {
     ),
 }
 
+INCOMPLETE_DISTANCES = {
+    "color.json": _distances(
+        {
+            ("e1", "e2"): 1.0,
+            ("e1", "e3"): 2.0,
+        }
+    ),
+}
+
 ALL_MISSING_DISTANCES = {
     "color.json": _distances(
         {

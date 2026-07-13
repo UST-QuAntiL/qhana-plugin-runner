@@ -23,7 +23,7 @@ from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from tests.utils import MockResponse, run_plugin_task
 
 from ..tasks import calculation_task
-from .data import ALL_MISSING_DISTANCES, ATTRIBUTE_DISTANCES
+from .data import ALL_MISSING_DISTANCES, ATTRIBUTE_DISTANCES, INCOMPLETE_DISTANCES
 
 _TOLERANCE = 0.05
 
@@ -131,6 +131,15 @@ def test_mds_missing_distance_replacement(
     assert _embedded_distance(size, "e2", "e3") == pytest.approx(
         expected_replacement, abs=_TOLERANCE
     )
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_mds_fails_when_pair_has_no_distance_entry(monkeypatch):
+    with pytest.raises(
+        ValueError,
+        match=r"attribute 'color' has no distance entry for entity pairs: \(e2, e3\)",
+    ):
+        _run_mds(monkeypatch, attribute_distances=INCOMPLETE_DISTANCES)
 
 
 @pytest.mark.usefixtures("celery_worker")
