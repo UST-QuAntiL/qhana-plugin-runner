@@ -15,6 +15,7 @@
 """Tests for the attributes module of the plugin_utils."""
 
 from collections import namedtuple
+from typing import NamedTuple, Type
 
 from hypothesis import given
 from hypothesis import strategies as st
@@ -31,14 +32,34 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     get_entity_tuple_class,
 )
 
-from .test_entity_marshalling import (
-    CSV_UNSAFE_CHARACTERS,
-    DEFAULT_ATTRIBUTES,
-    DEFAULT_ENTITY_STRATEGY,
-    DEFAULT_ENTITY_TUPLE,
-    DEFAULT_ENTITY_TUPLE_STRATEGY,
-)
 from .utils import assert_sequence_equals, assert_sequence_partial_equals
+
+CSV_UNSAFE_CHARACTERS = ["\x00"]
+
+DEFAULT_ATTRIBUTES = ["ID", "href", "integer", "number", "boolean"]
+
+DEFAULT_ENTITY_TUPLE: Type[NamedTuple] = get_entity_tuple_class(
+    DEFAULT_ATTRIBUTES, name="DefaultEntityTuple"
+)
+
+DEFAULT_ENTITY_STRATEGY = st.fixed_dictionaries(
+    {
+        "ID": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+        "href": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+        "integer": st.integers(),
+        "number": st.floats(allow_infinity=False, allow_nan=False),
+        "boolean": st.booleans(),
+    }
+)
+
+DEFAULT_ENTITY_TUPLE_STRATEGY = st.builds(
+    DEFAULT_ENTITY_TUPLE,
+    ID=st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+    href=st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+    integer=st.integers(),
+    number=st.floats(allow_infinity=False, allow_nan=False),
+    boolean=st.booleans(),
+)
 
 ATTR_METADATA_TUPLE = namedtuple(
     "AttributeMetadataTuple",
