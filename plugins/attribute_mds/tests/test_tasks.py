@@ -22,8 +22,13 @@ import pytest
 from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from tests.utils import MockResponse, run_plugin_task
 
-from ..tasks import calculation_task
-from .data import ALL_MISSING_DISTANCES, ATTRIBUTE_DISTANCES, INCOMPLETE_DISTANCES
+from ..tasks import NONMETRIC_ZERO_REPLACEMENT, _replace_zero_distances, calculation_task
+from .data import (
+    ALL_MISSING_DISTANCES,
+    ATTRIBUTE_DISTANCES,
+    INCOMPLETE_DISTANCES,
+    ZERO_DISTANCES,
+)
 
 _TOLERANCE = 0.05
 
@@ -33,6 +38,7 @@ def _run_mds(
     attribute_distances: dict = None,
     missing_data_handling: str = "mean",
     dimensions: int = 2,
+    metric: str = "metric_mds",
 ):
     distances_url = "http://example.com/attribute_distances.zip"
 
@@ -51,7 +57,7 @@ def _run_mds(
         {
             "attributeDistancesUrl": distances_url,
             "dimensions": dimensions,
-            "metric": "metric_mds",
+            "metric": metric,
             "nInit": 4,
             "maxIter": 300,
             "missingDataHandling": missing_data_handling,
@@ -131,6 +137,53 @@ def test_mds_missing_distance_replacement(
     assert _embedded_distance(size, "e2", "e3") == pytest.approx(
         expected_replacement, abs=_TOLERANCE
     )
+
+
+def test_replace_zero_distances_only_off_diagonal():
+    import numpy as np
+
+    distance_matrix = np.array(
+        [
+            [0.0, 0.0, 1.5],
+            [0.0, 0.0, 2.0],
+            [1.5, 2.0, 0.0],
+        ]
+    )
+
+    _replace_zero_distances(distance_matrix)
+
+    expected = np.array(
+        [
+            [0.0, NONMETRIC_ZERO_REPLACEMENT, 1.5],
+            [NONMETRIC_ZERO_REPLACEMENT, 0.0, 2.0],
+            [1.5, 2.0, 0.0],
+        ]
+    )
+    assert np.array_equal(distance_matrix, expected)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_nonmetric_mds_handles_zero_distances(monkeypatch):
+    output = _run_mds(
+        monkeypatch, attribute_distances=ZERO_DISTANCES, metric="nonmetric_mds"
+    )
+    points = _points_by_attribute(output)
+
+    color = points["color"]
+    zero_pair_distance = _embedded_distance(color, "e1", "e2")
+    assert zero_pair_distance < _embedded_distance(color, "e1", "e3")
+    assert zero_pair_distance < _embedded_distance(color, "e2", "e3")
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_metric_mds_keeps_zero_distances(monkeypatch):
+    output = _run_mds(monkeypatch, attribute_distances=ZERO_DISTANCES)
+    points = _points_by_attribute(output)
+
+    color = points["color"]
+    assert _embedded_distance(color, "e1", "e2") == pytest.approx(0.0, abs=_TOLERANCE)
+    assert _embedded_distance(color, "e1", "e3") == pytest.approx(1.0, abs=_TOLERANCE)
+    assert _embedded_distance(color, "e2", "e3") == pytest.approx(1.0, abs=_TOLERANCE)
 
 
 @pytest.mark.usefixtures("celery_worker")

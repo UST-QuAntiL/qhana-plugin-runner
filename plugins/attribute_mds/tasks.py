@@ -39,6 +39,8 @@ from .schemas import (
 
 TASK_LOGGER = get_task_logger(__name__)
 
+NONMETRIC_ZERO_REPLACEMENT = 0.000001
+
 
 def _load_attribute_distances(attribute_distances_url: str) -> Dict[str, List[dict]]:
     attribute_distances = {}
@@ -111,6 +113,18 @@ def _build_distance_matrix(
     return id_to_idx, distance_matrix
 
 
+def _replace_zero_distances(distance_matrix):
+    """Replace off-diagonal zeros with a small value because nonmetric MDS
+    in scikit-learn treats dissimilarities of 0 as missing values.
+    https://scikit-learn.org/1.1/modules/generated/sklearn.manifold.MDS.html?highlight=mds#sklearn.manifold.MDS
+    """
+    import numpy as np
+
+    zero_mask = distance_matrix == 0
+    np.fill_diagonal(zero_mask, False)
+    distance_matrix[zero_mask] = NONMETRIC_ZERO_REPLACEMENT
+
+
 def _get_dim_attributes(dim: int) -> List[str]:
     zero_padding = len(str(dim - 1))
     return [f"dim{d:0{zero_padding}}" for d in range(dim)]
@@ -148,6 +162,9 @@ def calculation_task(self, db_id: int) -> str:
     for attr_name, distances in attribute_distances.items():
         _replace_missing_distances(distances, params.missing_data_handling, attr_name)
         id_to_idx, distance_matrix = _build_distance_matrix(distances, attr_name)
+
+        if params.metric == MetricEnum.nonmetric_mds:
+            _replace_zero_distances(distance_matrix)
 
         mds = manifold.MDS(
             params.dimensions,

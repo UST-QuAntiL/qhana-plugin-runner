@@ -37,7 +37,9 @@ class AttributeMds(QHAnaPluginBase):
     description = (
         "Embeds entities into a vector space with multidimensional scaling, "
         "producing a zip file with one embedding per attribute from "
-        "precomputed attribute distances."
+        "precomputed attribute distances. For nonmetric MDS, distances of "
+        "exactly 0 are replaced with 0.000001 because scikit-learn treats "
+        "them as missing values."
     )
     tags = ["preprocessing", "distance-calculation", "feature-engineering", "embedding"]
 

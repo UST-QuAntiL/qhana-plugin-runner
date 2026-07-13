@@ -69,7 +69,11 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Metric",
-            "description": "Type of MDS that will be used.",
+            "description": (
+                "Type of MDS that will be used. For nonmetric MDS, distances of "
+                "exactly 0 are replaced with 0.000001 because scikit-learn "
+                "treats them as missing values."
+            ),
             "input_type": "select",
         },
     )
