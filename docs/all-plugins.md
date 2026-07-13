@@ -128,9 +128,9 @@
     low-code-modeler@v0-0-0
   - interaction
   - low-code-modeler
-* - [MUSE4Music Loader (@v1.1.0)](#muse-for-music-loader)
+* - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
 
-    muse-for-music-loader@v1-1-0
+    muse-for-music-loader@v1-0-0
   - dataloader
   - MUSE4Music
 
