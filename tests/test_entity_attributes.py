@@ -15,28 +15,51 @@
 """Tests for the attributes module of the plugin_utils."""
 
 from collections import namedtuple
+from typing import NamedTuple, Type
 
 from hypothesis import given
 from hypothesis import strategies as st
 
 from qhana_plugin_runner.plugin_utils.attributes import (
-    AttributeMetadata,
     dict_deserializer,
     dict_serializer,
     parse_attribute_metadata,
     tuple_deserializer,
     tuple_serializer,
 )
-from qhana_plugin_runner.plugin_utils.entity_marshalling import ensure_dict
-
-from .test_entity_marshalling import (
-    CSV_UNSAFE_CHARACTERS,
-    DEFAULT_ATTRIBUTES,
-    DEFAULT_ENTITY_STRATEGY,
-    DEFAULT_ENTITY_TUPLE,
-    DEFAULT_ENTITY_TUPLE_STRATEGY,
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ensure_dict,
+    get_entity_tuple_class,
 )
+
 from .utils import assert_sequence_equals, assert_sequence_partial_equals
+
+CSV_UNSAFE_CHARACTERS = ["\x00"]
+
+DEFAULT_ATTRIBUTES = ["ID", "href", "integer", "number", "boolean"]
+
+DEFAULT_ENTITY_TUPLE: Type[NamedTuple] = get_entity_tuple_class(
+    DEFAULT_ATTRIBUTES, name="DefaultEntityTuple"
+)
+
+DEFAULT_ENTITY_STRATEGY = st.fixed_dictionaries(
+    {
+        "ID": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+        "href": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+        "integer": st.integers(),
+        "number": st.floats(allow_infinity=False, allow_nan=False),
+        "boolean": st.booleans(),
+    }
+)
+
+DEFAULT_ENTITY_TUPLE_STRATEGY = st.builds(
+    DEFAULT_ENTITY_TUPLE,
+    ID=st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+    href=st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+    integer=st.integers(),
+    number=st.floats(allow_infinity=False, allow_nan=False),
+    boolean=st.booleans(),
+)
 
 ATTR_METADATA_TUPLE = namedtuple(
     "AttributeMetadataTuple",
@@ -205,17 +228,19 @@ def test_dict_serialization_roundtrip_in_place(entities: list):
 
 LIST_ENTITY_ATTRIBUTES = ["ID", "str_list", "integer_list", "number_list", "boolean_list"]
 
-LIST_ENTITY_STRATEGY = st.fixed_dictionaries(
-    {
-        "ID": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
-        "str_list": st.lists(
-            st.text(st.characters(blacklist_characters=[";"]), min_size=1)
-        ),
-        "integer_list": st.lists(st.integers()),
-        "number_list": st.lists(st.floats(allow_infinity=False, allow_nan=False)),
-        "boolean_list": st.lists(st.booleans()),
-    }
-)
+LIST_ENTITY_VALUE_STRATEGIES = {
+    "ID": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+    "str_list": st.lists(st.text(st.characters(blacklist_characters=[";"]), min_size=1)),
+    "integer_list": st.lists(st.integers()),
+    "number_list": st.lists(st.floats(allow_infinity=False, allow_nan=False)),
+    "boolean_list": st.lists(st.booleans()),
+}
+
+LIST_ENTITY_STRATEGY = st.fixed_dictionaries(LIST_ENTITY_VALUE_STRATEGIES)
+
+LIST_ENTITY_TUPLE = get_entity_tuple_class(LIST_ENTITY_ATTRIBUTES, name="ListEntityTuple")
+
+LIST_ENTITY_TUPLE_STRATEGY = st.builds(LIST_ENTITY_TUPLE, **LIST_ENTITY_VALUE_STRATEGIES)
 
 
 @given(entities=st.lists(LIST_ENTITY_STRATEGY))
@@ -246,19 +271,53 @@ def test_list_serialization_roundtrip(entities: list):
     assert_sequence_equals(expected=entities, actual=deserialized_entities)
 
 
+@given(entities=st.lists(LIST_ENTITY_TUPLE_STRATEGY))
+def test_list_tuple_serialization_roundtrip(entities: list):
+    attr_metadata = parse_attribute_metadata(ensure_dict(DEFAULT_ATTR_METADATA))
+
+    # serialize
+    serialize = tuple_serializer(
+        LIST_ENTITY_ATTRIBUTES, attr_metadata, tuple_=LIST_ENTITY_TUPLE._make
+    )
+    serialized_entities = list(serialize(entity) for entity in entities)
+    assert_sequence_partial_equals(
+        expected=entities,
+        actual=serialized_entities,
+        attributes_to_test=[
+            "ID",
+        ],
+    )
+
+    # assert all serialized
+    for ent in serialized_entities:
+        for value in ent:
+            assert isinstance(
+                value, str
+            ), f"Value {value} of entity {ent} did not get serialized correctly!"
+
+    # deserialize
+    deserialize = tuple_deserializer(
+        LIST_ENTITY_ATTRIBUTES, attr_metadata, tuple_=LIST_ENTITY_TUPLE._make
+    )
+    deserialized_entities = list(deserialize(entity) for entity in serialized_entities)
+    assert_sequence_equals(expected=entities, actual=deserialized_entities)
+
+
 SET_ENTITY_ATTRIBUTES = ["ID", "str_set", "integer_set", "number_set", "boolean_set"]
 
-SET_ENTITY_STRATEGY = st.fixed_dictionaries(
-    {
-        "ID": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
-        "str_set": st.sets(
-            st.text(st.characters(blacklist_characters=[";"]), min_size=1)
-        ),
-        "integer_set": st.sets(st.integers()),
-        "number_set": st.sets(st.floats(allow_infinity=False, allow_nan=False)),
-        "boolean_set": st.sets(st.booleans()),
-    }
-)
+SET_ENTITY_VALUE_STRATEGIES = {
+    "ID": st.text(st.characters(blacklist_characters=CSV_UNSAFE_CHARACTERS)),
+    "str_set": st.sets(st.text(st.characters(blacklist_characters=[";"]), min_size=1)),
+    "integer_set": st.sets(st.integers()),
+    "number_set": st.sets(st.floats(allow_infinity=False, allow_nan=False)),
+    "boolean_set": st.sets(st.booleans()),
+}
+
+SET_ENTITY_STRATEGY = st.fixed_dictionaries(SET_ENTITY_VALUE_STRATEGIES)
+
+SET_ENTITY_TUPLE = get_entity_tuple_class(SET_ENTITY_ATTRIBUTES, name="SetEntityTuple")
+
+SET_ENTITY_TUPLE_STRATEGY = st.builds(SET_ENTITY_TUPLE, **SET_ENTITY_VALUE_STRATEGIES)
 
 
 @given(entities=st.lists(SET_ENTITY_STRATEGY))
@@ -285,5 +344,37 @@ def test_set_serialization_roundtrip(entities: list):
 
     # deserialize
     deserialize = dict_deserializer(SET_ENTITY_ATTRIBUTES, attr_metadata, in_place=False)
+    deserialized_entities = list(deserialize(entity) for entity in serialized_entities)
+    assert_sequence_equals(expected=entities, actual=deserialized_entities)
+
+
+@given(entities=st.lists(SET_ENTITY_TUPLE_STRATEGY))
+def test_set_tuple_serialization_roundtrip(entities: list):
+    attr_metadata = parse_attribute_metadata(ensure_dict(DEFAULT_ATTR_METADATA))
+
+    # serialize
+    serialize = tuple_serializer(
+        SET_ENTITY_ATTRIBUTES, attr_metadata, tuple_=SET_ENTITY_TUPLE._make
+    )
+    serialized_entities = list(serialize(entity) for entity in entities)
+    assert_sequence_partial_equals(
+        expected=entities,
+        actual=serialized_entities,
+        attributes_to_test=[
+            "ID",
+        ],
+    )
+
+    # assert all serialized
+    for ent in serialized_entities:
+        for value in ent:
+            assert isinstance(
+                value, str
+            ), f"Value {value} of entity {ent} did not get serialized correctly!"
+
+    # deserialize
+    deserialize = tuple_deserializer(
+        SET_ENTITY_ATTRIBUTES, attr_metadata, tuple_=SET_ENTITY_TUPLE._make
+    )
     deserialized_entities = list(deserialize(entity) for entity in serialized_entities)
     assert_sequence_equals(expected=entities, actual=deserialized_entities)

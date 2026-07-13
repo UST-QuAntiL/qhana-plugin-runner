@@ -80,7 +80,7 @@
                 </camunda:map>
               </camunda:inputParameter>
               <camunda:inputParameter name="qhanaPlugin">one-hot-encoding</camunda:inputParameter>
-              <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaPluginVersion">v0.2.4</camunda:inputParameter>
               <camunda:inputParameter name="qhanaName">One-Hot Encoding</camunda:inputParameter>
               <camunda:inputParameter name="qhanaDescription">Converts Data to One-Hot Encodings</camunda:inputParameter>
               <camunda:outputParameter name="One-Hot_Encoding_output">${result}</camunda:outputParameter>
