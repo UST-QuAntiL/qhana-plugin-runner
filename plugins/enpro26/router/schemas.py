@@ -20,7 +20,6 @@ from marshmallow import post_load
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
-
 # Per-attribute pipeline options shown in the routing step.
 PIPELINE_OPTIONS = ["None", "Wu-Palmer", "One-Hot", "Mapping"]
 
@@ -88,7 +87,9 @@ class InputParameters:
         self.metric = metric
         self.n_init = n_init
         self.max_iter = max_iter
-        self.include_intermediate_results_in_output = include_intermediate_results_in_output
+        self.include_intermediate_results_in_output = (
+            include_intermediate_results_in_output
+        )
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -213,7 +214,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Include intermediate results",
             "description": "If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
-            "input_type": "checkbox"
+            "input_type": "checkbox",
         },
     )
 

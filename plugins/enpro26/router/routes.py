@@ -316,7 +316,7 @@ class RoutingStepView(MethodView):
             attr for attr, option in selections.items() if option == "Wu-Palmer"
         ]
         # TODO: Add other paths (OneHot, NumMapping)
-        
+
         unsupported = {
             attr: option for attr, option in selections.items() if option != "Wu-Palmer"
         }

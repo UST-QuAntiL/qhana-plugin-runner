@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import traceback
 from pathlib import PurePath
 from typing import Optional
@@ -46,7 +47,7 @@ TASK_LOGGER = get_task_logger(__name__)
 PIPELINE_PLUGINS = {
     "wu_palmer": "wu-palmer",
     "sym_max_mean": "sym-max-mean",
-    "transformer": "sim-to-dist-transformers",
+    "transformer": "attr-sim-to-attr-dist-transformers",
     "aggregator": "distance-aggregator",
     "mds": "mds",
 }
@@ -239,6 +240,7 @@ def handle_webhook_task(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.process_step_2_smm", bind=True, max_retries=10
 )
 def process_step_2_smm(self, db_id: int, source_url: str):
+    time.sleep(4) # Short sleep to prevent timeout errors 
     TASK_LOGGER.info("Starting Step 2: SymMaxMean")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
@@ -288,6 +290,7 @@ def process_step_2_smm(self, db_id: int, source_url: str):
     max_retries=10,
 )
 def process_step_3_transformers(self, db_id: int, source_url: str):
+    time.sleep(4) # Short sleep to prevent timeout errors
     TASK_LOGGER.info("Starting Step 3: Transformer")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
@@ -336,6 +339,7 @@ def process_step_3_transformers(self, db_id: int, source_url: str):
     max_retries=10,
 )
 def process_step_4_aggregator(self, db_id: int, source_url: str):
+    time.sleep(4) # Short sleep to prevent timeout errors
     TASK_LOGGER.info("Starting Step 4: Aggregator")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
@@ -380,13 +384,14 @@ def process_step_4_aggregator(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.process_step_5_mds", bind=True, max_retries=10
 )
 def process_step_5_mds(self, db_id: int, source_url: str):
+    time.sleep(4) # Short sleep to prevent timeout errors
     TASK_LOGGER.info("Starting Step 5: MDS")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         entity_dists_url = extract_output_url(outputs, "relation/entity-distances")
         params = InputParametersSchema().loads(task_data.parameters)
-        
+
         if params.include_intermediate_results_in_output:
             # Aggregator result output
             STORE.persist_task_result(
@@ -439,7 +444,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
             "application/json",
         )
 
-        # TASK COMPLETIOn
+        # TASK COMPLETION
         save_task_result.delay("Pipeline Completed Successfully!", db_id)
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:

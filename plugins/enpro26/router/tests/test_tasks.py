@@ -46,7 +46,7 @@ def _setup_mock_task() -> ProcessingTask:
     db_task.data["plugin_urls"] = {
         "wu_palmer": "http://localhost:5005/plugins/wu-palmer/",
         "sym_max_mean": "http://localhost:5005/plugins/sym-max-mean/",
-        "transformer": "http://localhost:5005/plugins/sim-to-dist-transformers/",
+        "transformer": "http://localhost:5005/plugins/attr-sim-to-attr-dist-transformers/",
         "aggregator": "http://localhost:5005/plugins/distance-aggregator/",
         "mds": "http://localhost:5005/plugins/mds/",
     }
