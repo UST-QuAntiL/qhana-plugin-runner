@@ -19,7 +19,7 @@ import pytest
 
 from tests.utils import MockResponse, run_plugin_task
 
-from ..tasks import calculation_task
+from ..tasks import calculation_task, compute_distance
 from .data import EXPECTED, TEST_DATA
 
 
@@ -87,3 +87,21 @@ def test_transformer_scenarios(monkeypatch, transformer):
     """Test all transformer algorithms and verify their calculated outputs."""
     output = _run_transformer(monkeypatch, transformer)
     _assert_matches_expected(output, transformer)
+
+
+def test_compute_distance_errors():
+    """Verify that improper data causes the expected ValueErrors."""
+
+    # 1. Test missing 'similarity' handling
+    bad_entity = {"source": "a", "target": "b", "similarity": None}
+    with pytest.raises(ValueError, match="Similarity value is None"):
+        compute_distance(bad_entity, "linear_inverse")
+
+    missing_key_entity = {"source": "a", "target": "b"}
+    with pytest.raises(ValueError, match="Similarity value is None"):
+        compute_distance(missing_key_entity, "linear_inverse")
+
+    # 2. Test unknown transformer fallback
+    good_entity = {"source": "a", "target": "b", "similarity": 0.5}
+    with pytest.raises(ValueError, match="Unknown transformer"):
+        compute_distance(good_entity, "unknown-transformer")

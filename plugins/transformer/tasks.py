@@ -32,6 +32,30 @@ from .schemas import InputParameters, InputParametersSchema, TransformersEnum
 TASK_LOGGER = get_task_logger(__name__)
 
 
+def compute_distance(sim_entity: dict, transformer: TransformersEnum) -> float:
+    """Calculates distance based on similarity and the chosen transformer."""
+    sim = sim_entity.get("similarity")
+
+    if sim is None:
+        raise ValueError(f"Similarity value is None for entity: {sim_entity}")
+
+    if transformer == TransformersEnum.linear_inverse:
+        return 1.0 - sim
+    elif transformer == TransformersEnum.exponential_inverse:
+        return math.exp(-sim)
+    elif transformer == TransformersEnum.gaussian_inverse:
+        return math.exp(-sim * sim)
+    elif transformer == TransformersEnum.polynomial_inverse:
+        alpha = 1.0
+        beta = 1.0
+        return 1.0 / (1.0 + pow(sim / alpha, beta))
+    elif transformer == TransformersEnum.square_inverse:
+        max_sim = 1.0
+        return (1.0 / math.sqrt(2.0)) * math.sqrt(2.0 * max_sim - 2 * sim)
+    else:
+        raise ValueError(f"Unknown transformer: {transformer}")
+
+
 @CELERY.task(
     name=f"{ElementTransformers.instance.identifier}.calculation_task", bind=True
 )
@@ -76,27 +100,8 @@ def calculation_task(self, db_id: int) -> str:
         attribute_element_sims = element_similarities[attribute]
 
         for sim_entity in attribute_element_sims:
-            sim = sim_entity["similarity"]
-            dist = None
 
-            # Apply transformation algorithms
-            if sim is None:
-                raise ValueError(f"Similarity value is None for entity: {sim_entity}")
-            elif transformer == TransformersEnum.linear_inverse:
-                dist = 1.0 - sim
-            elif transformer == TransformersEnum.exponential_inverse:
-                dist = math.exp(-sim)
-            elif transformer == TransformersEnum.gaussian_inverse:
-                dist = math.exp(-sim * sim)
-            elif transformer == TransformersEnum.polynomial_inverse:
-                alpha = 1.0
-                beta = 1.0
-                dist = 1.0 / (1.0 + pow(sim / alpha, beta))
-            elif transformer == TransformersEnum.square_inverse:
-                max_sim = 1.0
-                dist = (1.0 / math.sqrt(2.0)) * math.sqrt(2.0 * max_sim - 2 * sim)
-            else:
-                raise ValueError(f"Unknown transformer: {transformer}")
+            dist = compute_distance(sim_entity, transformer)
 
             dist_entity = sim_entity.copy()
 

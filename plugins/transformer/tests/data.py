@@ -19,7 +19,8 @@ a multi-value attribute ("tags"). The element similarities for "color" contain a
 null similarity for the (blue, blue) pair to exercise missing data handling.
 """
 
-import math
+from ..tasks import compute_distance
+from ..schemas import TransformersEnum
 
 TEST_DATA = {
     "element-similarities": {
@@ -33,38 +34,18 @@ def _distances(values, transformer):
     """Calculates the expected distances from the simulated similarity data."""
     res = []
     for (source, target), sim in values.items():
-        dist = None
-        if sim is not None:
-            if transformer == "linear_inverse":
-                dist = 1.0 - sim
-            elif transformer == "exponential_inverse":
-                dist = math.exp(-sim)
-            elif transformer == "gaussian_inverse":
-                dist = math.exp(-sim * sim)
-            elif transformer == "polynomial_inverse":
-                # alpha=1.0, beta=1.0 as hardcoded in tasks.py
-                dist = 1.0 / (1.0 + sim)
-            elif transformer == "square_inverse":
-                # max_sim = 1.0
-                dist = (1.0 / math.sqrt(2.0)) * math.sqrt(2.0 - 2 * sim)
-
+        dist = compute_distance({"similarity": sim}, transformer)
         res.append({"source": source, "target": target, "distance": dist})
     return res
 
 
 _COLOR_SIMS = {("red", "red"): 1.0, ("red", "blue"): 0.0, ("blue", "blue"): 1.0}
 _TAGS_SIMS = {("x", "x"): 1.0, ("x", "y"): 0.5, ("y", "y"): 1.0}
-TRANSFORMERS = [
-    "linear_inverse",
-    "exponential_inverse",
-    "gaussian_inverse",
-    "polynomial_inverse",
-    "square_inverse",
-]
+
 
 EXPECTED = {}
-for t in TRANSFORMERS:
-    EXPECTED[t] = {
+for t in TransformersEnum:
+    EXPECTED[t.name] = {
         "color.json": _distances(_COLOR_SIMS, t),
         "tags.json": _distances(_TAGS_SIMS, t),
     }
