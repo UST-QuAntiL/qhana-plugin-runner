@@ -16,7 +16,7 @@ import json
 from http import HTTPStatus
 from itertools import chain, count
 from tempfile import SpooledTemporaryFile
-from typing import Dict, Generator, Iterable, List, Mapping, Optional, Set, Tuple
+from typing import Dict, List, Mapping, Optional, Set, Tuple
 
 import marshmallow as ma
 from celery.canvas import chain
@@ -44,12 +44,8 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.attributes import (
-    AttributeMetadata,
-    tuple_deserializer,
-)
+from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    EntityTupleMixin,
     ensure_dict,
     load_entities,
     save_entities,
@@ -102,7 +98,7 @@ Improvements:
 
 
 _plugin_name = "one-hot-encoding"
-__version__ = "v0.2.3"
+__version__ = "v0.2.4"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -355,26 +351,6 @@ def get_attribute_ref_target(
     return result
 
 
-def load_entities_as_dicts(
-    entities: Iterable, entities_metadata: Mapping[str, AttributeMetadata]
-) -> Generator[Dict, None, None]:
-    """Json entities are already dicts and are yielded unchanged. Csv entities are
-    namedtuples with raw string values. The attribute metadata deserializer parses
-    those strings and splits multi-valued attributes.
-    """
-    deserializer = None
-    for ent in entities:
-        if isinstance(ent, EntityTupleMixin):
-            if deserializer is None:
-                ent_attributes = type(ent).entity_attributes
-                deserializer = tuple_deserializer(
-                    ent_attributes, entities_metadata, tuple_=type(ent)._make
-                )
-            yield deserializer(ent).as_dict()
-        else:
-            yield ent
-
-
 def get_taxonomies_by_ref_target(attribute_ref_targets: dict, taxonomies_zip_url: str):
     ref_targets = set()
     for ref_target in attribute_ref_targets.values():
@@ -566,7 +542,7 @@ def calculation_task(self, db_id: int) -> str:
     entities_name = retrieve_filename(entities_url)
     with open_url(entities_url) as entities_file:
         entities = list(
-            load_entities_as_dicts(
+            ensure_dict(
                 load_entities(entities_file, get_mimetype(entities_file)),
                 entities_metadata,
             )
