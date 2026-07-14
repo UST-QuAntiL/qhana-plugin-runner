@@ -20,8 +20,7 @@ import flask
 import marshmallow as ma
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
-from flask import Response
-from flask import redirect
+from flask import Response, redirect
 from flask.app import Flask
 from flask.globals import request
 from flask.helpers import url_for
@@ -31,17 +30,17 @@ from marshmallow import EXCLUDE, post_load
 
 from qhana_plugin_runner.api import EnumField
 from qhana_plugin_runner.api.plugin_schemas import (
-    PluginMetadataSchema,
-    PluginMetadata,
-    PluginType,
-    EntryPoint,
     DataMetadata,
+    EntryPoint,
     InputDataMetadata,
+    PluginMetadata,
+    PluginMetadataSchema,
+    PluginType,
 )
 from qhana_plugin_runner.api.util import (
+    FileUrl,
     FrontendFormBaseSchema,
     SecurityBlueprint,
-    FileUrl,
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -52,7 +51,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "mds"
-__version__ = "v0.2.2"
+__version__ = "v0.2.3"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -111,7 +110,12 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Metric",
-            "description": "Type of MDS that will be used.",
+            "description": (
+                "Type of MDS that will be used. For nonmetric MDS, distances of "
+                "exactly 0 are replaced with a small positive value below the "
+                "smallest positive distance because scikit-learn treats them "
+                "as missing values."
+            ),
             "input_type": "select",
         },
     )
@@ -276,7 +280,12 @@ class CalcView(MethodView):
 class MDS(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = "Converts distance values (distance matrix) to points in a space."
+    description = (
+        "Converts distance values (distance matrix) to points in a space. "
+        "For nonmetric MDS, distances of exactly 0 are replaced with a small "
+        "positive value below the smallest positive distance because "
+        "scikit-learn treats them as missing values."
+    )
     tags = ["preprocessing", "distance-calculation", "feature-engineering", "embedding"]
 
     def __init__(self, app: Optional[Flask]) -> None:
@@ -290,6 +299,32 @@ class MDS(QHAnaPluginBase):
 
 
 TASK_LOGGER = get_task_logger(__name__)
+
+NONMETRIC_ZERO_FACTOR = 0.000001
+
+
+def _replace_zero_distances(distance_matrix):
+    """Replace off-diagonal zeros with a value smaller than the smallest
+    distance because nonmetric MDS in scikit-learn treats dissimilarities of 0
+    as missing values.
+    https://scikit-learn.org/1.1/modules/generated/sklearn.manifold.MDS.html?highlight=mds#sklearn.manifold.MDS
+    """
+    import numpy as np
+
+    zero_mask = distance_matrix == 0
+    np.fill_diagonal(zero_mask, False)
+    if not zero_mask.any():
+        return
+
+    positive_distances = distance_matrix[distance_matrix > 0]
+    if positive_distances.size:
+        replacement = positive_distances.min() * NONMETRIC_ZERO_FACTOR
+        if replacement == 0:
+            # the product underflowed to 0, use the smallest positive float
+            replacement = np.nextafter(0, positive_distances.min())
+    else:
+        replacement = NONMETRIC_ZERO_FACTOR
+    distance_matrix[zero_mask] = replacement
 
 
 @CELERY.task(name=f"{MDS.instance.identifier}.calculation_task", bind=True)
@@ -327,25 +362,34 @@ def calculation_task(self, db_id: int) -> str:
     entity_distances = open_url(entity_distances_url).json()
     id_to_idx = {}
 
-    idx = 0
+    for ent_dist in entity_distances:
+        for ent_id in (ent_dist["source"], ent_dist["target"]):
+            if ent_id not in id_to_idx:
+                id_to_idx[ent_id] = len(id_to_idx)
+
+    distance_matrix = np.full((len(id_to_idx), len(id_to_idx)), np.nan)
+    np.fill_diagonal(distance_matrix, 0)
 
     for ent_dist in entity_distances:
-        if ent_dist["source"] not in id_to_idx:
-            id_to_idx[ent_dist["source"]] = idx
-            idx += 1
+        ent_1_idx = id_to_idx[ent_dist["source"]]
+        ent_2_idx = id_to_idx[ent_dist["target"]]
 
-    distance_matrix = np.zeros((len(id_to_idx), len(id_to_idx)))
+        distance_matrix[ent_1_idx, ent_2_idx] = ent_dist["distance"]
+        distance_matrix[ent_2_idx, ent_1_idx] = ent_dist["distance"]
 
-    for ent_dist in entity_distances:
-        ent_1_id = ent_dist["source"]
-        ent_2_id = ent_dist["target"]
-        dist = ent_dist["distance"]
+    missing_indices = np.argwhere(np.isnan(distance_matrix))
+    if missing_indices.size:
+        idx_to_id = {idx: ent_id for ent_id, idx in id_to_idx.items()}
+        missing_pairs = sorted(
+            {tuple(sorted((idx_to_id[i], idx_to_id[j]))) for i, j in missing_indices}
+        )
+        raise ValueError(
+            "the entity distances have no distance entry for entity pairs: "
+            + ", ".join(f"({source}, {target})" for source, target in missing_pairs)
+        )
 
-        ent_1_idx = id_to_idx[ent_1_id]
-        ent_2_idx = id_to_idx[ent_2_id]
-
-        distance_matrix[ent_1_idx, ent_2_idx] = dist
-        distance_matrix[ent_2_idx, ent_1_idx] = dist
+    if metric == MetricEnum.nonmetric_mds:
+        _replace_zero_distances(distance_matrix)
 
     mds = manifold.MDS(
         dimensions,
