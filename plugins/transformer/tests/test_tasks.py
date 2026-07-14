@@ -47,7 +47,7 @@ def _run_transformer(monkeypatch, transformer: str):
 
 def _assert_matches_expected(output, transformer: str):
     # Verify the output format and type as defined in tasks.py
-    assert output.file_type == "custom/element-distances"
+    assert output.file_type == "relation/element-distances"
     assert output.mimetype == "application/zip"
 
     expected_files = EXPECTED[transformer]

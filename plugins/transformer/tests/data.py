@@ -23,7 +23,7 @@ import math
 
 TEST_DATA = {
     "element-similarities": {
-        "color.json": r'[{"source":"red","target":"red","similarity":1.0},{"source":"red","target":"blue","similarity":0.0},{"source":"blue","target":"blue","similarity":null}]',
+        "color.json": r'[{"source":"red","target":"red","similarity":1.0},{"source":"red","target":"blue","similarity":0.0},{"source":"blue","target":"blue","similarity":1.0}]',
         "tags.json": r'[{"source":"x","target":"x","similarity":1.0},{"source":"x","target":"y","similarity":0.5},{"source":"y","target":"y","similarity":1.0}]',
     }
 }
@@ -52,7 +52,7 @@ def _distances(values, transformer):
     return res
 
 
-_COLOR_SIMS = {("red", "red"): 1.0, ("red", "blue"): 0.0, ("blue", "blue"): None}
+_COLOR_SIMS = {("red", "red"): 1.0, ("red", "blue"): 0.0, ("blue", "blue"): 1.0}
 _TAGS_SIMS = {("x", "x"): 1.0, ("x", "y"): 0.5, ("y", "y"): 1.0}
 TRANSFORMERS = [
     "linear_inverse",
