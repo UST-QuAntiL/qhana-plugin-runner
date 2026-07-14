@@ -240,7 +240,7 @@ def handle_webhook_task(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.process_step_2_smm", bind=True, max_retries=10
 )
 def process_step_2_smm(self, db_id: int, source_url: str):
-    time.sleep(4) # Short sleep to prevent timeout errors 
+    time.sleep(4)  # Short sleep to prevent timeout errors
     TASK_LOGGER.info("Starting Step 2: SymMaxMean")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
@@ -290,7 +290,7 @@ def process_step_2_smm(self, db_id: int, source_url: str):
     max_retries=10,
 )
 def process_step_3_transformers(self, db_id: int, source_url: str):
-    time.sleep(4) # Short sleep to prevent timeout errors
+    time.sleep(4)  # Short sleep to prevent timeout errors
     TASK_LOGGER.info("Starting Step 3: Transformer")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
@@ -339,7 +339,7 @@ def process_step_3_transformers(self, db_id: int, source_url: str):
     max_retries=10,
 )
 def process_step_4_aggregator(self, db_id: int, source_url: str):
-    time.sleep(4) # Short sleep to prevent timeout errors
+    time.sleep(4)  # Short sleep to prevent timeout errors
     TASK_LOGGER.info("Starting Step 4: Aggregator")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
@@ -384,7 +384,7 @@ def process_step_4_aggregator(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.process_step_5_mds", bind=True, max_retries=10
 )
 def process_step_5_mds(self, db_id: int, source_url: str):
-    time.sleep(4) # Short sleep to prevent timeout errors
+    time.sleep(4)  # Short sleep to prevent timeout errors
     TASK_LOGGER.info("Starting Step 5: MDS")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
