@@ -76,12 +76,12 @@ def calculation_task(self, db_id: int) -> str:
         attribute_element_sims = element_similarities[attribute]
 
         for sim_entity in attribute_element_sims:
-            sim = sim_entity.get("similarity")
+            sim = sim_entity["similarity"]
             dist = None
 
             # Apply transformation algorithms
             if sim is None:
-                dist = None
+                raise ValueError(f"Similarity value is None for entity: {sim_entity}")
             elif transformer == TransformersEnum.linear_inverse:
                 dist = 1.0 - sim
             elif transformer == TransformersEnum.exponential_inverse:
@@ -95,12 +95,13 @@ def calculation_task(self, db_id: int) -> str:
             elif transformer == TransformersEnum.square_inverse:
                 max_sim = 1.0
                 dist = (1.0 / math.sqrt(2.0)) * math.sqrt(2.0 * max_sim - 2 * sim)
+            else:
+                raise ValueError(f"Unknown transformer: {transformer}")
 
             dist_entity = sim_entity.copy()
 
             # Replace the 'similarity' key with 'distance'
-            if "similarity" in dist_entity:
-                del dist_entity["similarity"]
+            del dist_entity["similarity"]
             dist_entity["distance"] = dist
 
             element_distances.append(dist_entity)
@@ -120,7 +121,7 @@ def calculation_task(self, db_id: int) -> str:
         db_id,
         tmp_zip_file,
         f"transformers_elem_dist{info_str}.zip",
-        "custom/element-distances",
+        "relation/element-distances",
         "application/zip",
     )
 
