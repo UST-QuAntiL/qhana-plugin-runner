@@ -17,7 +17,7 @@ from enum import Enum
 
 import marshmallow as ma
 
-from qhana_plugin_runner.api import EnumField
+from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
 
