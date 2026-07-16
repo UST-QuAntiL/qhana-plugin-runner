@@ -69,7 +69,7 @@ def test_route_task_starts_wu_palmer(monkeypatch):
             )
         if "subscribe" in url:
             # Mock the subscription success
-            return MockResponse(url, "application/json", status_code=200)
+            return MockResponse(url, "application/zip", status_code=200)
         raise ValueError(f"Unexpected POST to {url}")
 
     def mock_get(url, **kwargs):
@@ -77,7 +77,7 @@ def test_route_task_starts_wu_palmer(monkeypatch):
             # Mock the Wu-Palmer status check for subscription
             return MockResponse(
                 url,
-                "application/json",
+                "application/zip",
                 status_code=200,
                 json_data={
                     "status": "PENDING",
@@ -144,7 +144,7 @@ def test_handle_webhook_routing_all_steps(
     def mock_get(url, **kwargs):
         return MockResponse(
             url,
-            "application/json",
+            "application/zip",
             status_code=200,
             json_data={
                 "status": "SUCCESS",

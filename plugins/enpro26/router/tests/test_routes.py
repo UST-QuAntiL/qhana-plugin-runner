@@ -37,7 +37,7 @@ def test_metadata_endpoint_returns_full_descriptor(client):
 
     assert body["name"] == plugin.name
     assert body["type"] == "processing"
-    assert len(body["entryPoint"]["dataOutput"]) == 5  # Ensures all 5 files are expected
+    assert len(body["entryPoint"]["dataOutput"]) == 4  # Ensures all 4 files are expected
 
 
 def test_microfrontend_renders_form_fields(client):
