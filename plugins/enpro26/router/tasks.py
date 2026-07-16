@@ -383,9 +383,9 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         STORE.persist_task_result(
             db_id,
             open_url(final_dists_url).content,
-            "mds_final_vectors.json",
+            "mds_final_vectors.zip",
             "entity/vector",
-            "application/json",
+            "application/zip",
         )
 
         # TASK COMPLETION
