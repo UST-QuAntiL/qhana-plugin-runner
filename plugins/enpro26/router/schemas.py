@@ -44,11 +44,13 @@ class AggregatorsEnum(Enum):
     max = "Max"
     min = "Min"
 
+
 # This Enum class is copied from the mds plugin.
 # Check the mds plugin for updates
 class MetricEnum(Enum):
     metric_mds = "Metric MDS"
     nonmetric_mds = "Nonmetric MDS"
+
 
 # This Enum class is copied from the mds plugin.
 # Check the mds plugin for updates
@@ -144,7 +146,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-   
+
     dimensions = ma.fields.Integer(
         required=True,
         allow_none=False,
@@ -193,7 +195,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "text",
         },
     )
-    
+
     missing_data_handling = EnumField(
         MissingDataHandling,
         required=True,

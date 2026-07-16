@@ -29,7 +29,7 @@ def _setup_mock_task() -> ProcessingTask:
         "entitiesUrl": "http://mock/entities",
         "entitiesMetadataUrl": "http://mock/meta",
         "taxonomiesZipUrl": "http://mock/tax",
-        "transformer": "linear_inverse", 
+        "transformer": "linear_inverse",
         "dimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
@@ -103,6 +103,7 @@ def test_route_task_starts_wu_palmer(monkeypatch):
         == "http://localhost:5005/plugins/wu-palmer@v0-2-1/tasks/999/"
     )
 
+
 @pytest.mark.parametrize(
     "source_key, mock_url, next_task_path",
     [
@@ -128,9 +129,11 @@ def test_route_task_starts_wu_palmer(monkeypatch):
         ),
     ],
 )
-def test_handle_webhook_routing_all_steps(monkeypatch, source_key, mock_url, next_task_path):
+def test_handle_webhook_routing_all_steps(
+    monkeypatch, source_key, mock_url, next_task_path
+):
     """
-    Tests that the webhook traffic cop successfully routes a SUCCESS status 
+    Tests that the webhook traffic cop successfully routes a SUCCESS status
     from a given step to the correct subsequent task using apply_async.
     """
     db_task = _setup_mock_task()

@@ -49,6 +49,7 @@ PIPELINE_PLUGINS = {
     "mds": "attribute-distance-mds",
 }
 
+
 # --- HELPER FUNCTIONS ---
 def subscribe_to_plugin(task_result_url: str, webhook_url: str):
     """Subscribes the webhook to a target plugin's task result updates."""

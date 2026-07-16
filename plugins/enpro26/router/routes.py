@@ -109,7 +109,6 @@ class PluginsView(MethodView):
                         content_type=["application/zip"],
                         required=True,
                     ),
-                
                     # Transformer output
                     DataMetadata(
                         data_type="relation/element-distances",
