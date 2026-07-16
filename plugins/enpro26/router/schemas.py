@@ -65,7 +65,6 @@ class InputParameters:
         taxonomies_zip_url: str,
         root_is_part_of_hierarchy: bool,
         transformer: TransformersEnum,
-        # aggregator: AggregatorsEnum,
         dimensions: int,
         metric: MetricEnum,
         n_init: int,
@@ -78,7 +77,6 @@ class InputParameters:
         self.taxonomies_zip_url = taxonomies_zip_url
         self.root_is_part_of_hierarchy = root_is_part_of_hierarchy
         self.transformer = transformer
-        # self.aggregator = aggregator
         self.dimensions = dimensions
         self.metric = metric
         self.n_init = n_init
@@ -146,15 +144,6 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    # aggregator = EnumField(
-    #     AggregatorsEnum,
-    #     required=True,
-    #     metadata={
-    #         "label": "Aggregator",
-    #         "description": "Aggregator that shall be used to aggregate the attribute distances to a single distance value.",
-    #         "input_type": "select",
-    #     },
-    # )
    
     dimensions = ma.fields.Integer(
         required=True,

@@ -375,7 +375,7 @@ def process_step_4_mds(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, max_retries=10
 )
 def finalize_pipeline(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Step 6: Finishing the Pipeline")
+    TASK_LOGGER.info("Starting Step 5: Finishing the Pipeline")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])

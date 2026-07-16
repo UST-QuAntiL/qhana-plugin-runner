@@ -57,12 +57,11 @@ def test_process_valid_payload_redirects_to_task(client, monkeypatch):
         "entitiesMetadataUrl": "http://example.com/meta.json",
         "taxonomiesZipUrl": "http://example.com/tax.zip",
         "transformer": "linear_inverse",
-        "aggregator": "mean",
-        "missingDataHandling": "ignore",
         "dimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
+        "missingDataHandling": "mean",
     }
 
     resp = client.post(url_for(f"{ROUTER_BLP.name}.ProcessView"), data=valid_payload)

@@ -29,13 +29,12 @@ def _setup_mock_task() -> ProcessingTask:
         "entitiesUrl": "http://mock/entities",
         "entitiesMetadataUrl": "http://mock/meta",
         "taxonomiesZipUrl": "http://mock/tax",
-        "transformer": "linear_inverse",
-        "aggregator": "mean",
-        "missingDataHandling": "ignore",
+        "transformer": "linear_inverse", 
         "dimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
+        "missingDataHandling": "mean",
     }
     db_task = ProcessingTask(task_name=route_task.name, parameters=json.dumps(params))
     db_task.data["webhook_url"] = "http://my-router/webhook"
@@ -45,10 +44,9 @@ def _setup_mock_task() -> ProcessingTask:
     # The routing step resolves and stores the pipeline plugin metadata urls.
     db_task.data["plugin_urls"] = {
         "wu_palmer": "http://localhost:5005/plugins/wu-palmer/",
-        "sym_max_mean": "http://localhost:5005/plugins/sym-max-mean/",
-        "transformer": "http://localhost:5005/plugins/attr-sim-to-attr-dist-transformers/",
-        "aggregator": "http://localhost:5005/plugins/distance-aggregator/",
-        "mds": "http://localhost:5005/plugins/mds/",
+        "transformer": "http://localhost:5005/plugins/element_sim-to-element_dist-transformers/",
+        "aggregator": "http://localhost:5005/plugins/attribute-distance-aggregator/",
+        "mds": "http://localhost:5005/plugins/attribute-distance-mds/",
     }
     db_task.save(commit=True)
     return db_task
@@ -105,11 +103,38 @@ def test_route_task_starts_wu_palmer(monkeypatch):
         == "http://localhost:5005/plugins/wu-palmer@v0-2-1/tasks/999/"
     )
 
-
-def test_handle_webhook_routes_to_step_2(monkeypatch):
+@pytest.mark.parametrize(
+    "source_key, mock_url, next_task_path",
+    [
+        (
+            "wu_palmer_url",
+            "http://mock/tasks/wp/999/",
+            "router.tasks.process_step_2_transformers.apply_async",
+        ),
+        (
+            "transformers_url",
+            "http://mock/tasks/tr/999/",
+            "router.tasks.process_step_3_aggregator.apply_async",
+        ),
+        (
+            "aggregators_url",
+            "http://mock/tasks/ag/999/",
+            "router.tasks.process_step_4_mds.apply_async",
+        ),
+        (
+            "mds_url",
+            "http://mock/tasks/mds/999/",
+            "router.tasks.finalize_pipeline.apply_async",
+        ),
+    ],
+)
+def test_handle_webhook_routing_all_steps(monkeypatch, source_key, mock_url, next_task_path):
+    """
+    Tests that the webhook traffic cop successfully routes a SUCCESS status 
+    from a given step to the correct subsequent task using apply_async.
+    """
     db_task = _setup_mock_task()
-    wu_palmer_task_url = "http://mock/tasks/999/"
-    db_task.data["wu_palmer_url"] = wu_palmer_task_url
+    db_task.data[source_key] = mock_url
     db_task.save(commit=True)
 
     # Mock the Webhook payload returning SUCCESS
@@ -122,8 +147,8 @@ def test_handle_webhook_routes_to_step_2(monkeypatch):
                 "status": "SUCCESS",
                 "outputs": [
                     {
-                        "dataType": "relation/element-similarities",
-                        "href": "http://mock/sims.zip",
+                        "dataType": "some/datatype",
+                        "href": "http://mock/data.zip",
                     }
                 ],
             },
@@ -132,18 +157,21 @@ def test_handle_webhook_routes_to_step_2(monkeypatch):
     # Mock the trigger to the next step so it doesn't actually run in this test
     triggered = []
 
-    def mock_delay(*args, **kwargs):
-        triggered.append("step_2_triggered")
+    def mock_apply_async(*args, **kwargs):
+        # We also want to assert that countdown=4 is actually being passed
+        if kwargs.get("countdown") == 4:
+            triggered.append("next_step_triggered")
 
     monkeypatch.setattr("requests.get", mock_get)
-    monkeypatch.setattr("router.tasks.process_step_2_smm.delay", mock_delay)
+    # We now mock apply_async instead of delay
+    monkeypatch.setattr(next_task_path, mock_apply_async)
 
     # Simulate webhook hitting the traffic cop
-    run_task(handle_webhook_task, db_id=db_task.id, source_url=wu_palmer_task_url)
+    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
 
     # Ensure Traffic Cop routed correctly!
     assert len(triggered) == 1
-    assert triggered[0] == "step_2_triggered"
+    assert triggered[0] == "next_step_triggered"
 
 
 def test_handle_webhook_ignores_unrecognized_source():
