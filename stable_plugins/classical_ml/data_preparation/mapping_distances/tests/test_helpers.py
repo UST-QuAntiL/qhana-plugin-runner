@@ -40,6 +40,7 @@ from mapping_distances.tasks import (
     _calculate_vector_distance,
     _extract_tax_name,
     _get_element_list,
+    _is_empty_or_nan,
     _load_input_parameters,
 )
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
@@ -189,6 +190,29 @@ class TestCalculateVectorDistance:
             [1.5, -2.0], [0.5, 3.0], DistanceMetricEnum.euclidean
         )
         assert math.isfinite(dist)
+
+
+# ---------------------------------------------------------------------------
+# is_empty_or_nan
+# ---------------------------------------------------------------------------
+
+
+class TestIsEmptyOrNan:
+    def test_empty_vector_is_flagged(self):
+        assert _is_empty_or_nan([]) is True
+
+    def test_vector_with_single_nan_is_flagged(self):
+        assert _is_empty_or_nan([1.0, math.nan]) is True
+
+    def test_vector_of_all_nan_is_flagged(self):
+        assert _is_empty_or_nan([math.nan, math.nan]) is True
+
+    def test_finite_vector_is_not_flagged(self):
+        assert _is_empty_or_nan([1.0, -2.5]) is False
+
+    def test_zero_vector_is_not_flagged(self):
+        # 0.0 is a valid mapping, not "empty".
+        assert _is_empty_or_nan([0.0, 0.0]) is False
 
 
 # ---------------------------------------------------------------------------

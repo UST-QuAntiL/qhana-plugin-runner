@@ -14,6 +14,7 @@
 
 import itertools
 import json
+import math
 from io import StringIO
 from pathlib import Path
 import sys
@@ -135,10 +136,12 @@ def _get_element_list(
     return [str(val)]
 
 
-def _is_empty_or_nan(val):
-    if not val:
+def _is_empty_or_nan(vector: List[float]) -> bool:
+    """Return ``True`` when a mapping vector is empty or contains any NaN values."""
+
+    if not vector:
         return True
-    return not val or isinstance(val, str) and val.strip().lower() == "nan"
+    return any(math.isnan(coordinate) for coordinate in vector)
 
 
 def _calculate_vector_distance(

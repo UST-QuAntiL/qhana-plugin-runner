@@ -28,6 +28,7 @@ would load remote files in production.
 
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Dict, List
 from zipfile import ZipFile
@@ -148,9 +149,50 @@ def _build_inputs(tmp_path: Path) -> InputParameters:
     )
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
+def _build_inputs_with_invalid_mapping(tmp_path: Path) -> InputParameters:
+    """Dataset where one taxonomy element carries an invalid (NaN) mapping.
+
+    ``blue`` has NaN coordinates, so ``_is_empty_or_nan`` must flag it and the
+    task must fall back to ``sys.float_info.max`` for every pair involving it,
+    while pairs between valid elements are still computed normally.
+    """
+    taxonomy = {
+        "entities": [
+            {"ID": "red", "mapping": [1.0, 0.0]},
+            {"ID": "blue", "mapping": [math.nan, math.nan]},
+        ]
+    }
+    taxonomies_zip_url = _write_taxonomy_zip(
+        tmp_path / "taxonomies.zip", {"color": taxonomy}
+    )
+
+    metadata = [
+        {
+            "ID": "color",
+            "type": "color",
+            "title": "",
+            "description": "ref",
+            "multiple": False,
+            "ordered": False,
+            "separator": ";",
+            "refTarget": "taxonomies.zip:color.json",
+        }
+    ]
+    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
+
+    entities = [
+        {"ID": "e1", "href": "", "color": "red"},
+        {"ID": "e2", "href": "", "color": "blue"},
+    ]
+    entities_url = _write_json(tmp_path / "entities.json", entities)
+
+    return InputParameters(
+        entities_url=entities_url,
+        entities_metadata_url=entities_metadata_url,
+        taxonomies_zip_url=taxonomies_zip_url,
+        attributes="color",
+        distance_metric=DistanceMetricEnum.euclidean,
+    )
 
 
 @pytest.mark.usefixtures("celery_worker")
@@ -315,3 +357,30 @@ def test_calculation_task_missing_db_id_raises():
     async_result = calculation_task.apply_async(kwargs={"db_id": 999999})
     with pytest.raises(KeyError, match="Could not load task data"):
         async_result.get(timeout=30)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_flags_invalid_mapping_vectors(tmp_path):
+    """A taxonomy element with a NaN mapping is detected by ``_is_empty_or_nan``,
+    so every distance involving it falls back to ``sys.float_info.max`` while
+    valid pairs are still computed normally.
+    """
+    db_id = _enqueue_processing_task(_build_inputs_with_invalid_mapping(tmp_path))
+
+    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
+
+    DB.session.expire_all()
+    task = ProcessingTask.get_by_id(db_id)
+    assert task is not None
+
+    distances = {
+        (entry["source"], entry["target"]): entry["distance"]
+        for entry in _read_result_zip(task)["color.json"]
+    }
+
+    # Every pair touching the invalid "blue" mapping falls back to the sentinel.
+    assert distances[("blue", "blue")] == sys.float_info.max
+    assert distances[("red", "blue")] == sys.float_info.max
+    assert distances[("blue", "red")] == sys.float_info.max
+    # The valid self-pair is computed normally.
+    assert distances[("red", "red")] == pytest.approx(0.0)
