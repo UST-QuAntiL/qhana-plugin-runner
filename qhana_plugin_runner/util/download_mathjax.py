@@ -26,6 +26,21 @@ def _clear_old_mathjax_files(mathjax_dir: Path) -> None:
             path.unlink()
 
 
+def _verify_path_traversal(target_path: Path, abs_base_directory: Path) -> None:
+    """Verifies that the target path remains inside the base directory.
+
+    Raises a ValueError if a path traversal attempt is detected.
+    """
+    # Resolve to absolute path to eliminate '..' and symlinks
+    abs_target = target_path.resolve(strict=False)
+
+    if not abs_target.is_relative_to(abs_base_directory):
+        raise ValueError(
+            f"Path traversal detected! Target path '{abs_target}' "
+            f"escapes the base directory '{abs_base_directory}'."
+        )
+
+
 def download_mathjax(app) -> None:
     """Download and extract MathJax frontend assets from the npm registry.
 
@@ -60,9 +75,14 @@ def download_mathjax(app) -> None:
     with requests.open_url(
         tarball_url, raise_on_error_status=True, stream=True
     ) as response:
-        is_sha512 = "sha512-" in expected_integrity
-        hasher = hashlib.sha512() if is_sha512 else hashlib.sha384()
-        prefix = "sha512-" if is_sha512 else "sha384-"
+        known_hashfunctions = {"sha512-": hashlib.sha512, "sha384-": hashlib.sha384}
+        prefix, hasher = None, None
+        for p, f in known_hashfunctions.items():
+            if expected_integrity.startswith(p):  # use startswith, not in!
+                prefix = p
+                hasher = f()
+        if hasher is None:
+            raise ValueError("unknon hash function")
 
         buffer = io.BytesIO()
         for chunk in response.iter_content(chunk_size=65536):
@@ -79,17 +99,19 @@ def download_mathjax(app) -> None:
         buffer.seek(0)
         with tarfile.open(fileobj=buffer, mode="r:gz") as archive:
             package_prefix = "package/"
+            abs_mathjax_dir = mathjax_dir.resolve()
             for member in archive.getmembers():
                 if not member.name.startswith(package_prefix):
                     continue
                 relative_path = member.name[len(package_prefix) :]
-                if not relative_path or relative_path.startswith("."):
+                if not relative_path:
                     continue
 
                 target_path = mathjax_dir / relative_path
-                target_path.absolute().relative_to(
-                    mathjax_dir.absolute()
-                )  # Path Traversal protection
+                _verify_path_traversal(target_path, abs_mathjax_dir)
+
+                if target_path.name.startswith("."):
+                    continue
 
                 if member.isdir():
                     target_path.mkdir(parents=True, exist_ok=True)

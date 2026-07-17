@@ -109,6 +109,7 @@ def install_plugin_dependencies(
             except Exception as e:
                 traceback.print_exc()
                 click.echo(f"Warning: MathJax setup failed: {e}", err=True)
+                return
             click.echo("Successfully installed all frontend assets.")
 
 

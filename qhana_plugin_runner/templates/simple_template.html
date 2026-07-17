@@ -59,7 +59,7 @@
         (function () {
             if (!document.body?.textContent?.match(/(?:\$|\\\(|\\\[|\\begin\{.*?})/)) return;
             
-            if (!window.MathJax) window.MathJax = window.MathJax || { tex: { inlineMath: { '[+]': [['$', '$']] } } };
+            window.MathJax = window.MathJax || { tex: { inlineMath: { '[+]': [['$', '$']] } } };
 
             const script = document.createElement('script');
             script.src = "{{ config.MATHJAX_SCRIPT_LOCATION }}";

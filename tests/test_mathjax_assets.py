@@ -3,15 +3,16 @@ import hashlib
 import io
 import json
 import tarfile
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from flask import Flask, render_template
 
-import qhana_plugin_runner
 from qhana_plugin_runner.markdown import register_markdown_filter
-from qhana_plugin_runner.util.download_mathjax import download_mathjax
+from qhana_plugin_runner.util.download_mathjax import (
+    _verify_path_traversal,
+    download_mathjax,
+)
 from qhana_plugin_runner.util.jinja_helpers import register_helpers
 from tests.utils import MockResponse
 
@@ -47,6 +48,10 @@ def template_app():
     flask_app = Flask("qhana_plugin_runner")
     register_helpers(flask_app)
     register_markdown_filter(flask_app)
+
+    flask_app.config["MATHJAX_SCRIPT_LOCATION"] = "/static/mathjax/es5/tex-mml-chtml.js"
+    flask_app.config["MATHJAX_SCRIPT_INTEGRITY_HASH"] = "sha384-test-integrity-hash"
+
     return flask_app
 
 
@@ -82,6 +87,32 @@ def integrity_for(data: bytes, algo: str = "sha512") -> str:
     """Compute an npm-style Subresource Integrity string for ``data``."""
     digest = hashlib.new(algo, data).digest()
     return f"{algo}-{base64.b64encode(digest).decode('utf-8')}"
+
+
+# --- Path Traversal Standalone Tests ---
+
+
+def test_verify_path_traversal_allows_valid_paths(tmp_path):
+    """Verify that safe paths staying inside the base directory do not raise an error."""
+    base_dir = tmp_path / "mathjax"
+    target_file = base_dir / "es5" / "tex-mml-chtml.js"
+
+    # Resolves fine because target path stays inside the base dir
+    _verify_path_traversal(target_file, base_dir.resolve())
+
+
+def test_verify_path_traversal_catches_attacks(tmp_path):
+    """Verify that any path trying to escape the base directory throws a ValueError."""
+    base_dir = tmp_path / "mathjax"
+
+    # Classic path traversal breakout payload
+    malicious_target = base_dir / "../../escaped.js"
+
+    with pytest.raises(ValueError, match="escapes the base directory"):
+        _verify_path_traversal(malicious_target, base_dir.resolve())
+
+
+# --- Download and Extraction Tests ---
 
 
 def test_download_mathjax_extracts_full_package(tmp_path, mathjax_app, monkeypatch):
@@ -129,13 +160,16 @@ def test_download_mathjax_rejects_tampered_tarball(tmp_path, mathjax_app, monkey
     assert not (tmp_path / "mathjax" / "es5" / "tex-mml-chtml.js").exists()
 
 
-def test_download_mathjax_blocks_path_traversal(tmp_path, mathjax_app, monkeypatch):
-    """A malicious tarball member that escapes the target directory (here via
-    an absolute path) must trigger the path-traversal guard and abort."""
-    # ``build_tarball`` prefixes names with ``package/``; a leading slash makes
-    # the stripped path absolute, so ``mathjax_dir / relative_path`` escapes the
-    # extraction directory and must be caught by the guard.
-    tarball = build_tarball({"/escaped.js": b"pwned"})
+def test_download_mathjax_blocks_path_traversal_integration(
+    tmp_path, mathjax_app, monkeypatch
+):
+    """An integration test to ensure a malicious tarball with traversal targets
+
+    triggers the path-traversal guard, aborts the installation, and writes absolutely
+    no files outside the directory.
+    """
+    # Malicious tarball structure attempting to write outside the mathjax directory
+    tarball = build_tarball({"../../escaped.js": b"pwned"})
     metadata = {"dist": {"integrity": integrity_for(tarball), "tarball": TARBALL_URL}}
 
     monkeypatch.setattr(
@@ -143,10 +177,10 @@ def test_download_mathjax_blocks_path_traversal(tmp_path, mathjax_app, monkeypat
         make_open_url(metadata, tarball),
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="escapes the base directory"):
         download_mathjax(mathjax_app)
 
-    # the malicious member must not have been extracted anywhere reachable
+    # Ensure the file was blocked and NEVER written to the host filesystem anywhere
     assert not (tmp_path / "mathjax" / "escaped.js").exists()
     assert not (tmp_path / "escaped.js").exists()
 
@@ -168,14 +202,13 @@ def test_download_mathjax_skips_when_version_current(tmp_path, mathjax_app, monk
     download_mathjax(mathjax_app)  # must return early without raising
 
 
-def test_simple_template_injects_mathjax_config(template_app):
-    """The template must expose the configured MathJax script location and
-    integrity hash to the browser via ``window.qhanaMathJax``."""
-    template_app.config["MATHJAX_SCRIPT_LOCATION"] = (
-        "/static/mathjax/es5/tex-mml-chtml.js"
-    )
-    template_app.config["MATHJAX_SCRIPT_INTEGRITY_HASH"] = "sha384-test-integrity-hash"
+# --- Template Rendering Tests ---
 
+
+def test_mathjax_loader_script_is_templated_correctly(template_app):
+    """Verify that the template outputs the inline MathJax loader script
+    with its browser-side safety check and configuration blocks.
+    """
     with template_app.test_request_context():
         html = render_template(
             "simple_template.html",
@@ -185,22 +218,10 @@ def test_simple_template_injects_mathjax_config(template_app):
             valid=False,
         )
 
-    assert "window.qhanaMathJax" in html
-    assert 'src: "/static/mathjax/es5/tex-mml-chtml.js"' in html
-    assert 'integrity: "sha384-test-integrity-hash"' in html
-
-
-def test_check_for_tex_consumes_injected_config():
-    """The static loader script must read the injected values from
-    ``window.qhanaMathJax`` instead of using hardcoded constants."""
-    js_path = (
-        Path(qhana_plugin_runner.__file__).parent
-        / "static"
-        / "mathjax"
-        / "check-for-tex.js"
+    assert "document.body?.textContent?.match" in html
+    assert (
+        "window.MathJax = window.MathJax || { tex: { inlineMath: { '[+]': [['$', '$']] } } }"
+        in html
     )
-    content = js_path.read_text(encoding="utf-8")
-
-    assert "window.qhanaMathJax" in content
-    assert "config.src" in content
-    assert "config.integrity" in content
+    assert 'script.src = "/static/mathjax/es5/tex-mml-chtml.js";' in html
+    assert 'script.integrity = "sha384-test-integrity-hash";' in html
