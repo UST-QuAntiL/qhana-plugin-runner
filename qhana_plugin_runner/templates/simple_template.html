@@ -56,12 +56,19 @@
     <script src="{{url_for('static', filename='microfrontend.js')}}"></script>
 
     <script>
-        window.qhanaMathJax = {
-            src: "{{ config.MATHJAX_SCRIPT_LOCATION }}",
-            integrity: "{{ config.MATHJAX_SCRIPT_INTEGRITY_HASH }}"
-        };
+        (function () {
+            if (!document.body?.textContent?.match(/(?:\$|\\\(|\\\[|\\begin\{.*?})/)) return;
+            
+            if (!window.MathJax) window.MathJax = window.MathJax || { tex: { inlineMath: { '[+]': [['$', '$']] } } };
+
+            const script = document.createElement('script');
+            script.src = "{{ config.MATHJAX_SCRIPT_LOCATION }}";
+            script.integrity = "{{ config.MATHJAX_SCRIPT_INTEGRITY_HASH }}";
+            script.crossOrigin = "anonymous";
+            script.async = true;
+            document.head.appendChild(script);
+        })();
     </script>
-    <script src="{{ url_for('static', filename='mathjax/check-for-tex.js') }}" defer></script>
     {% endblock script %}
 
 </body>

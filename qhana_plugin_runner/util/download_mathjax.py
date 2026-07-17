@@ -14,7 +14,7 @@ def _clear_old_mathjax_files(mathjax_dir: Path) -> None:
     if not mathjax_dir.exists():
         return
 
-    whitelist = {".gitignore", "check-for-tex.js", ".version.json"}
+    whitelist = {".gitignore", ".version.json"}
 
     for path in mathjax_dir.iterdir():
         if path.name in whitelist:
