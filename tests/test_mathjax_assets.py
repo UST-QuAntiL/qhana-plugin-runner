@@ -2,6 +2,7 @@ import base64
 import hashlib
 import io
 import json
+import re
 import tarfile
 from types import SimpleNamespace
 
@@ -19,6 +20,9 @@ from tests.utils import MockResponse
 MATHJAX_VERSION = "3.2.2"
 METADATA_URL = f"https://registry.npmjs.org/mathjax/{MATHJAX_VERSION}"
 TARBALL_URL = f"https://registry.npmjs.org/mathjax/-/mathjax-{MATHJAX_VERSION}.tgz"
+
+MATHJAX_SCRIPT_LOCATION = "/static/mathjax/es5/tex-mml-chtml.js"
+MATHJAX_SCRIPT_INTEGRITY_HASH = "sha384-test-integrity-hash"
 
 
 @pytest.fixture
@@ -49,8 +53,8 @@ def template_app():
     register_helpers(flask_app)
     register_markdown_filter(flask_app)
 
-    flask_app.config["MATHJAX_SCRIPT_LOCATION"] = "/static/mathjax/es5/tex-mml-chtml.js"
-    flask_app.config["MATHJAX_SCRIPT_INTEGRITY_HASH"] = "sha384-test-integrity-hash"
+    flask_app.config["MATHJAX_SCRIPT_LOCATION"] = MATHJAX_SCRIPT_LOCATION
+    flask_app.config["MATHJAX_SCRIPT_INTEGRITY_HASH"] = MATHJAX_SCRIPT_INTEGRITY_HASH
 
     return flask_app
 
@@ -223,5 +227,40 @@ def test_mathjax_loader_script_is_templated_correctly(template_app):
         "window.MathJax = window.MathJax || { tex: { inlineMath: { '[+]': [['$', '$']] } } }"
         in html
     )
-    assert 'script.src = "/static/mathjax/es5/tex-mml-chtml.js";' in html
-    assert 'script.integrity = "sha384-test-integrity-hash";' in html
+    assert f'script.src = "{MATHJAX_SCRIPT_LOCATION}";' in html
+    assert f'script.integrity = "{MATHJAX_SCRIPT_INTEGRITY_HASH}";' in html
+
+
+def extract_mathjax_trigger_regex(html: str) -> "re.Pattern[str]":
+    """Pull the delimiter-detection regex literal out of the rendered loader
+    script and compile it with Python's ``re``.
+
+    Extracting the pattern from the rendered template ties the test to the exact regex shipped
+    in ``simple_template.html``.
+    """
+    match = re.search(r"textContent\?\.match\((/.*?/)\)", html)
+    assert match is not None, "MathJax trigger regex not found in rendered template"
+
+    js_literal = match.group(1)  # e.g. /(?:\$|\\\(|\\\[|\\begin\{.*?})/
+    pattern = js_literal[1:-1]  # strip the surrounding "/" delimiters
+    return re.compile(pattern)
+
+
+def test_mathjax_trigger_regex_detects_math_but_not_plain_text(template_app):
+    """The regex embedded in the loader must fire for a body containing math
+    delimiters and stay silent for plain prose -- exactly the decision the
+    browser-side check makes before injecting MathJax.
+    """
+    with template_app.test_request_context():
+        html = render_template(
+            "simple_template.html",
+            schema=SimpleNamespace(fields={}),
+            values={},
+            errors={},
+            valid=False,
+        )
+
+    trigger = extract_mathjax_trigger_regex(html)
+
+    assert trigger.search("Here is an equation: $$E = mc^2$$")
+    assert not trigger.search("This is just regular text with no math at all.")

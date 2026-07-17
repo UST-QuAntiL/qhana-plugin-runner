@@ -14,6 +14,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
+import textwrap
 import marshmallow as ma
 
 from qhana_plugin_runner.api.extra_fields import EnumField
@@ -89,15 +90,13 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Distance Metric",
-            "description": (
-                "Metric to calculate the distances of the taxanomy mapping.<br />"
-                "**Euclidean Distance:** Length of vector (L2 norm) between two vectors: "
-                "$||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$<br />"
-                "**Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$<br />"
-                "**Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$<br />"
-                "**Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): "
-                "$1 - \cos(\\theta) = 1 - \\frac{a \cdot b}{||a||\cdot||b||}$"
-            ),
+            "description": textwrap.dedent(r"""
+                Metric to calculate the distances of the taxanomy mapping:  
+                **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
+                **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
+                **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
+                **Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
+            """).strip(),
             "input_type": "select",
         },
     )
