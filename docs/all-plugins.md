@@ -378,9 +378,9 @@
     minimizer
 
     optimization
-* - [Similarities to distances transformers (@v0.2.2)](#sim-to-dist-transformers)
+* - [Similarities to distances transformers (@v0.2.3)](#attr-sim-to-attr-dist-transformers)
 
-    sim-to-dist-transformers@v0-2-2
+    attr-sim-to-attr-dist-transformers@v0-2-3
   - processing
   - distance-calculation
 
@@ -1563,13 +1563,13 @@ This plugin provides an API to minimize a given objective function with scipy.op
 |txt/*|text/plain|✓|
 
 
-(sim-to-dist-transformers)=
-### Similarities to distances transformers (@v0.2.2)
+(attr-sim-to-attr-dist-transformers)=
+### Attribute similarities to attribute distances transformers (@v0.2.3)
 
 processing – distance-calculation, preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/transformers.py`
 
-Transforms similarities to distances.
+Transforms attribute similarities to attribute distances.
 
 **Inputs:**
 

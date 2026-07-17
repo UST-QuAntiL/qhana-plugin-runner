@@ -78,10 +78,10 @@
           </camunda:inputParameter>
           <camunda:inputParameter name="qinput.attributes">${start_attributes}</camunda:inputParameter>
           <camunda:inputParameter name="qinput.transformer">linear_inverse</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaPlugin">sim-to-dist-transformers</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaPluginVersion">v0.2.2</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaName">Similarities to distances transformers</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaDescription">Transforms similarities to distances.</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPlugin">attr-sim-to-attr-dist-transformers</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.3</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaName">Attribute similarities to attribute distances transformers</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaDescription">Transforms attribute similarities to attribute distances.</camunda:inputParameter>
           <camunda:outputParameter name="qoutput.distances">${output}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn2:extensionElements>
@@ -123,7 +123,7 @@
           <camunda:inputParameter name="qinput.nInit">4</camunda:inputParameter>
           <camunda:inputParameter name="qinput.maxIter">${start_mdsMaxIter}</camunda:inputParameter>
           <camunda:inputParameter name="qhanaPlugin">mds</camunda:inputParameter>
-          <camunda:inputParameter name="qhanaPluginVersion">v0.2.2</camunda:inputParameter>
+          <camunda:inputParameter name="qhanaPluginVersion">v0.2.3</camunda:inputParameter>
           <camunda:inputParameter name="qhanaName">Multidimensional Scaling (MDS)</camunda:inputParameter>
           <camunda:inputParameter name="qhanaDescription">Converts distance values (distance matrix) to points in a space.</camunda:inputParameter>
           <camunda:outputParameter name="return.qoutput.mds">${output}</camunda:outputParameter>

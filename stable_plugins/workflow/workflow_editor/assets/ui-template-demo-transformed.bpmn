@@ -114,7 +114,7 @@
                 </camunda:map>
               </camunda:inputParameter>
               <camunda:inputParameter name="qhanaPlugin">mds</camunda:inputParameter>
-              <camunda:inputParameter name="qhanaPluginVersion">v0.2.1</camunda:inputParameter>
+              <camunda:inputParameter name="qhanaPluginVersion">v0.2.3</camunda:inputParameter>
               <camunda:inputParameter name="qhanaName">Multidimensional Scaling (MDS)</camunda:inputParameter>
               <camunda:inputParameter name="qhanaDescription">Converts distance values (distance matrix) to points in a space.</camunda:inputParameter>
               <camunda:outputParameter name="Multidimensional_Scaling_(MDS)_output">${result}</camunda:outputParameter>

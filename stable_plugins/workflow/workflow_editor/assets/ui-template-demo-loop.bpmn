@@ -143,7 +143,7 @@
       <bpmn2:adHocSubProcess id="Activity_1uvtkfm" name="Encoding B">
         <bpmn2:incoming>Flow_0acfwk2</bpmn2:incoming>
         <bpmn2:outgoing>Flow_1ekrrz0</bpmn2:outgoing>
-        <qhana:qHAnaServiceTask id="Activity_1wgb0ms" name="Multidimensional Scaling (MDS)" qhanaIdentifier="mds" qhanaVersion="v0.2.1" qhanaName="Multidimensional Scaling (MDS)" qhanaDescription="Converts distance values (distance matrix) to points in a space." selectedConfigurationId="mds">
+        <qhana:qHAnaServiceTask id="Activity_1wgb0ms" name="Multidimensional Scaling (MDS)" qhanaIdentifier="mds" qhanaVersion="v0.2.3" qhanaName="Multidimensional Scaling (MDS)" qhanaDescription="Converts distance values (distance matrix) to points in a space." selectedConfigurationId="mds">
           <bpmn2:extensionElements>
             <camunda:inputOutput>
               <camunda:inputParameter name="qinput.input_0">
