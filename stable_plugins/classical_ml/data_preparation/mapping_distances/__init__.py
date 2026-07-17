@@ -35,7 +35,8 @@ MAPPING_DISTANCES_BLP = SecurityBlueprint(
 class MappingDistances(QHAnaPluginBase):
     name = _name
     version = _version
-    description = textwrap.dedent(r"""
+    description = textwrap.dedent(
+        r"""
     A plugin to create pairwise element distances for taxanomy mappings.
     \
     Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.  
@@ -47,7 +48,8 @@ class MappingDistances(QHAnaPluginBase):
     **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
     **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
     **Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
-""").strip()
+"""
+    ).strip()
     tags = ["preprocessing", "distance-calculation"]
 
     instance: ClassVar["MappingDistances"]
