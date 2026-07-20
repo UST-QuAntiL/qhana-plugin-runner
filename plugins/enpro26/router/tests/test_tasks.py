@@ -161,18 +161,16 @@ def test_handle_webhook_routing_all_steps(
     triggered = []
 
     def mock_apply_async(*args, **kwargs):
-        # We also want to assert that countdown=4 is actually being passed
+        # Assert that countdown=4 is being passed
         if kwargs.get("countdown") == 4:
             triggered.append("next_step_triggered")
 
     monkeypatch.setattr("requests.get", mock_get)
-    # We now mock apply_async instead of delay
     monkeypatch.setattr(next_task_path, mock_apply_async)
 
     # Simulate webhook hitting the traffic cop
     run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
 
-    # Ensure Traffic Cop routed correctly!
     assert len(triggered) == 1
     assert triggered[0] == "next_step_triggered"
 

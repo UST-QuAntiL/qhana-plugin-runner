@@ -44,7 +44,7 @@ TASK_LOGGER = get_task_logger(__name__)
 # through ``get_plugin_endpoint``.
 PIPELINE_PLUGINS = {
     "wu_palmer": "wu-palmer",
-    "transformer": "element_sim-to-element_dist-transformers",
+    "transformers": "element_sim-to-element_dist-transformers",
     "aggregator": "attribute-distance-aggregator",
     "mds": "attribute-distance-mds",
 }
@@ -235,10 +235,10 @@ def handle_webhook_task(self, db_id: int, source_url: str):
     max_retries=10,
 )
 def process_step_2_transformers(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Step 2: Transformer")
+    TASK_LOGGER.info("Starting Step 2: Transformers")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
-        # 1. Persist Transformer result
+        # 1. Persist Transformers result
         outputs = requests.get(source_url).json().get("outputs", [])
         element_sims_url = extract_output_url(outputs, "relation/element-similarities")
         params = InputParametersSchema().loads(task_data.parameters)
@@ -260,9 +260,9 @@ def process_step_2_transformers(self, db_id: int, source_url: str):
             "transformer": params.transformer.name,
         }
 
-        transformer_url = _plugin_process_url(task_data, "transformer")
-        response = requests.post(transformer_url, data=payload, allow_redirects=False)
-        task_url = urljoin(transformer_url, response.headers["Location"])
+        transformers_url = _plugin_process_url(task_data, "transformers")
+        response = requests.post(transformers_url, data=payload, allow_redirects=False)
+        task_url = urljoin(transformers_url, response.headers["Location"])
 
         task_data.data["transformers_url"] = task_url
         task_data.add_task_log_entry("Started Transformers.")
@@ -291,11 +291,11 @@ def process_step_3_aggregator(self, db_id: int, source_url: str):
         params = InputParametersSchema().loads(task_data.parameters)
 
         if params.include_intermediate_results_in_output:
-            # Transformer result output
+            # Transformers result output
             STORE.persist_task_result(
                 db_id,
                 open_url(element_dists_url).content,
-                "transformer_distances.zip",
+                "transformers_distances.zip",
                 "relation/element-distances",
                 "application/zip",
             )
