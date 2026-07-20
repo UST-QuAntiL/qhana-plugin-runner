@@ -59,7 +59,7 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "AmazonBraket_LocalSimulator"
+_plugin_name = "amazon-braket-local-simulator"
 __version__ = "v1.0.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
@@ -129,7 +129,7 @@ class PluginsView(MethodView):
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
-            title=plugin.name,
+            title="Amazon Braket Local Simulator",
             description=plugin.description,
             name=plugin.name,
             version=plugin.version,

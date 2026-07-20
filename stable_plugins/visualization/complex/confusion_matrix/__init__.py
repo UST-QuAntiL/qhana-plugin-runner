@@ -38,7 +38,7 @@ VIS_BLP = SecurityBlueprint(
 
 
 class ConfusionMatrixVisualization(QHAnaPluginBase):
-    name = "Confusion Matrix Visualization"
+    name = _plugin_name
     version = __version__
     description = (
         "A visualization plugin that creates a confusion matrix using the provided data."

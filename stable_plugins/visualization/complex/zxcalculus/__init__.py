@@ -39,7 +39,7 @@ VIS_BLP = SecurityBlueprint(
 
 
 class ZXCalculusVisualization(QHAnaPluginBase):
-    name = "ZX-Calculus Visualization"
+    name = _plugin_name
     version = __version__
     description = (
         "A visualization plugin that visualizes a provided OpenQASM circuit in the ZX-Calculus."

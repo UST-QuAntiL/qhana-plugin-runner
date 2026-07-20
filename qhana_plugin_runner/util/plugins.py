@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -22,6 +23,39 @@ from flask.blueprints import Blueprint
 from packaging.version import InvalidVersion, Version
 from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
+
+PLUGIN_NAME_REGEX = re.compile(r"[a-z][a-zA-Z0-9_-]*")
+
+
+def is_valid_plugin_name(name: str) -> bool:
+    """Check that a plugin name starts with a lowercase letter and contains only
+    letters, digits, hyphens, and underscores."""
+    return bool(PLUGIN_NAME_REGEX.fullmatch(name))
+
+
+PLUGIN_VERSION_REGEX = re.compile(
+    r"""
+    ^v?
+    (?P<major>\d+)
+    (?:\.(?P<minor>\d+)
+        (?:\.(?P<patch>\d+))?
+    )?$
+    """,
+    re.VERBOSE,
+)
+
+
+def is_valid_plugin_version(version: str) -> bool:
+    """Check that a plugin version is a numeric semantic versioning style
+    version of the form ``MAJOR[.MINOR[.PATCH]]`` with an optional ``v``
+    prefix. At least one version part must be nonzero."""
+    match = PLUGIN_VERSION_REGEX.match(version)
+    if not match:
+        return False
+    return any(
+        part is not None and int(part) != 0
+        for part in match.group("major", "minor", "patch")
+    )
 
 
 def plugin_identifier(name: str, version: str):
@@ -49,16 +83,29 @@ class QHAnaPluginBase:
                 raise ValueError("A plugin must specify a URL-safe! name.")
             if not plugin.version:
                 raise ValueError("A plugin must specify a version.")
+            if not is_valid_plugin_name(plugin.name):
+                raise ValueError(
+                    f"The plugin name '{plugin.name}' is invalid. Plugin names must "
+                    f"match the regular expression '{PLUGIN_NAME_REGEX.pattern}'."
+                )
+            if not is_valid_plugin_version(plugin.version):
+                raise ValueError(
+                    f"The plugin version '{plugin.version}' of the plugin "
+                    f"'{plugin.name}' is invalid. Plugin versions must be "
+                    "semantic versioning style versions of the form "
+                    "'MAJOR[.MINOR[.PATCH]]' with an optional 'v' prefix "
+                    "and at least one nonzero version part."
+                )
             # TODO better vetting/error checking
             QHAnaPluginBase.__plugins__[plugin.identifier] = plugin
             cls.instance = plugin
-        except Exception:
+        except Exception as err:
             if QHAnaPluginBase.__app__:
-                QHAnaPluginBase.__app__.logger.info(
-                    f"Could not load the plugin class {cls}!"
+                QHAnaPluginBase.__app__.logger.warning(
+                    f"Could not load the plugin class {cls}!", exc_info=err
                 )
             else:
-                print(f"Could not load plugin class {cls}!")
+                print(f"Could not load plugin class {cls}! Reason: {err}")
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__()

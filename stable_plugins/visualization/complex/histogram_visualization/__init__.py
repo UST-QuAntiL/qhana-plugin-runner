@@ -36,7 +36,7 @@ VIS_BLP = SecurityBlueprint(
 
 
 class HistogramVisualization(QHAnaPluginBase):
-    name = "Histogram Visualization"
+    name = _plugin_name
     version = __version__
     description = (
         "A visualization plugin for creating Historgrams using the counts of different labels."

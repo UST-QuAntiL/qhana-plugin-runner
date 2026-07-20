@@ -38,7 +38,7 @@ VIS_BLP = SecurityBlueprint(
 
 
 class ClusterScatterVisualization(QHAnaPluginBase):
-    name = "Clustered Scatter Plot Visualization"
+    name = _plugin_name
     version = __version__
     description = (
         "A visualization plugin that creates a scatter plot using the provided data."
