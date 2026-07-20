@@ -18,7 +18,7 @@ from io import StringIO
 from json import dumps, loads
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Callable, Dict, List, Mapping, Optional, Tuple
+from typing import Dict, List, Mapping, Optional, Tuple
 from zipfile import ZipFile
 
 import marshmallow as ma
@@ -47,12 +47,8 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.attributes import (
-    AttributeMetadata,
-    tuple_deserializer,
-)
+from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
-    EntityTupleMixin,
     ensure_dict,
     load_entities,
     save_entities,
@@ -65,7 +61,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "wu-palmer"
-__version__ = "v0.2.4"
+__version__ = "v0.2.5"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -499,7 +495,6 @@ def calculation_task(self, db_id: int) -> str:
         attributes,
         root_has_meaning_in_taxonomy,
     ) = load_input_parameters(db_id)
-    deserializer: Callable[[tuple[str, ...]], tuple[any, ...]] | None = None
 
     with open_url(entities_metadata_url) as entities_metadata_file:
         entities_metadata_list = list(
@@ -517,21 +512,9 @@ def calculation_task(self, db_id: int) -> str:
     # load data from file
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
-        entities = []
-
-        for ent in load_entities(entities_data, mimetype):
-            if isinstance(ent, EntityTupleMixin):  # is NamedTuple
-                if deserializer is None:
-                    ent_attributes: tuple[str, ...] = type(ent).entity_attributes
-                    ent_tuple = type(ent)
-                    deserializer = tuple_deserializer(
-                        ent_attributes, entities_metadata, tuple_=ent_tuple._make
-                    )
-
-                ent = deserializer(ent)
-                entities.append(ent.as_dict())
-            else:
-                entities.append(ent)
+        entities = list(
+            ensure_dict(load_entities(entities_data, mimetype), entities_metadata)
+        )
 
     taxonomies = {}
 

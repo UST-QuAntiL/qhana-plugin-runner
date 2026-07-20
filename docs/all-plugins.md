@@ -28,6 +28,13 @@
     qasm-3
 
     qc-simulator
+* - [Attribute Distance Aggregator (@v0.1.1)](#attribute-distance-aggregator)
+
+    attribute-distance-aggregator@v0-1-1
+  - processing
+  - distance-calculation
+
+    preprocessing
 * - [Attribute similarities to attribute distances transformers (@v0.2.3)](#attr-sim-to-attr-dist-transformers)
 
     attr-sim-to-attr-dist-transformers@v0-2-3
@@ -134,9 +141,9 @@
     preprocessing
 
     quantum
-* - [LCM (@v0.0.0)](#low-code-modeler)
+* - [LCM (@v0.0.1)](#low-code-modeler)
 
-    low-code-modeler@v0-0-0
+    low-code-modeler@v0-0-1
   - interaction
   - low-code-modeler
 * - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
@@ -164,9 +171,20 @@
     clustering
 
     quantum
-* - [Multidimensional Scaling (MDS) (@v0.2.2)](#mds)
+* - [Multidimensional Scaling (MDS) (@v0.2.3)](#mds)
 
-    mds@v0-2-2
+    mds@v0-2-3
+  - processing
+  - distance-calculation
+
+    embedding
+
+    feature-engineering
+
+    preprocessing
+* - [Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)](#attribute-distance-mds)
+
+    attribute-distance-mds@v0-1-0
   - processing
   - distance-calculation
 
@@ -184,9 +202,9 @@
     feature-extraction
 
     music
-* - [One-Hot Encoding (@v0.2.3)](#one-hot-encoding)
+* - [One-Hot Encoding (@v0.2.4)](#one-hot-encoding)
 
-    one-hot-encoding@v0-2-3
+    one-hot-encoding@v0-2-4
   - processing
   - encoding
 
@@ -327,9 +345,9 @@
     rest-connector@v0-1-0
   - interaction
   - rest
-* - [Router (@v0.1.1)](#router)
+* - [Router (@v0.1.3)](#router)
 
-    router@v0-1-1
+    router@v0-1-3
   - processing
   - preprocessing
 
@@ -389,13 +407,20 @@
     minimizer
 
     optimization
-* - [Sym Max Mean attribute comparer (@v0.1.6)](#sym-max-mean)
+* - [Sym Max Mean attribute comparer (@v0.1.7)](#sym-max-mean)
 
-    sym-max-mean@v0-1-6
+    sym-max-mean@v0-1-7
   - processing
   - preprocessing
 
     similarity-calculation
+* - [Taxanomy mapping to distances (@v0.1.0)](#mapping-distances)
+
+    mapping-distances@v0-1-0
+  - processing
+  - distance-calculation
+
+    preprocessing
 * - [Time tanh similarities (@v0.2.2)](#time-tanh)
 
     time-tanh@v0-2-2
@@ -428,9 +453,9 @@
     camunda-engine
 
     workflow
-* - [Wu Palmer similarities (@v0.2.4)](#wu-palmer)
+* - [Wu Palmer similarities (@v0.2.5)](#wu-palmer)
 
-    wu-palmer@v0-2-4
+    wu-palmer@v0-2-5
   - processing
   - preprocessing
 
@@ -473,9 +498,9 @@
     qasm-2
 
     qc-simulator
-* - [csv-to-json (@v0.1.0)](#csv-to-json)
+* - [csv-to-json (@v0.1.1)](#csv-to-json)
 
-    csv-to-json@v0-1-0
+    csv-to-json@v0-1-1
   - conversion
   - conversion
 
@@ -524,9 +549,9 @@
   - objective-function
 
     optimization
-* - [json-to-csv (@v0.1.0)](#json-to-csv)
+* - [json-to-csv (@v0.1.1)](#json-to-csv)
 
-    json-to-csv@v0-1-0
+    json-to-csv@v0-1-1
   - conversion
   - conversion
 
@@ -642,7 +667,7 @@
 **Input formats:** `application/X-lines+json`, `application/json`, `application/octet-stream`, `application/vnd.recordare.musicxml+xml`, `application/xml`, `application/zip`, `audio/midi`, `audio/x-midi`, `text/csv`, `text/x-qasm`, `text/xml`\
 **Output formats:** `*/*`, `application/X-lines+json`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
 
-**Input datatypes:** `*/*`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-similarities`, `relation/entity-distances`\
+**Input datatypes:** `*/*`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-distances`, `relation/element-similarities`, `relation/entity-distances`\
 **Output datatypes:** `*/*`, `circuit/*`, `custom/clusters`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-distances`, `relation/element-similarities`, `relation/entity-distances`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
 
 ## Plugins
@@ -693,6 +718,29 @@ Allows execution of quantum circuits using a simulator packaged with braket_loca
 |entity/vector|application/json|╳|
 |provenance/trace|application/json|✓|
 |provenance/execution-options|application/json|✓|
+
+
+(attribute-distance-aggregator)=
+### Attribute Distance Aggregator (@v0.1.1)
+
+processing – distance-calculation, preprocessing\
+*Path:* {file}`plugins/aggregator/__init__.py`
+
+Aggregates element distances to attribute distances for a list of entities.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|relation/element-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/attribute-distances|application/zip|✓|
 
 
 (attr-sim-to-attr-dist-transformers)=
@@ -948,7 +996,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (low-code-modeler)=
-### LCM (@v0.0.0)
+### LCM (@v0.0.1)
 
 interaction – low-code-modeler\
 *Path:* {file}`plugins/low_code_modeler/plugin.py`
@@ -1018,12 +1066,12 @@ Clusters data with the max cut algorithm
 
 
 (mds)=
-### Multidimensional Scaling (MDS) (@v0.2.2)
+### Multidimensional Scaling (MDS) (@v0.2.3)
 
 processing – distance-calculation, embedding, feature-engineering, preprocessing\
-*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds.py`
+*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds/__init__.py`
 
-Converts distance values (distance matrix) to points in a space.
+Converts distance values (distance matrix) to points in a space. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
 
 **Inputs:**
 
@@ -1037,6 +1085,28 @@ Converts distance values (distance matrix) to points in a space.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/vector|application/json|✓|
+
+
+(attribute-distance-mds)=
+### Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)
+
+processing – distance-calculation, embedding, feature-engineering, preprocessing\
+*Path:* {file}`plugins/attribute_mds/__init__.py`
+
+Embeds entities into a vector space with multidimensional scaling, producing a zip file with one embedding per attribute from precomputed attribute distances. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/attribute-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/zip|✓|
 
 
 (music-feature-extractor)=
@@ -1065,7 +1135,7 @@ Extracts stable feature vectors from MusicXML, MXL, and MIDI sources. The vector
 
 
 (one-hot-encoding)=
-### One-Hot Encoding (@v0.2.3)
+### One-Hot Encoding (@v0.2.4)
 
 processing – encoding, one-hot-encoding, preprocessing\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/one_hot_encoding/__init__.py`
@@ -1454,7 +1524,7 @@ interaction – rest\
 Integrate REST APIs as plugins.
 
 (router)=
-### Router (@v0.1.1)
+### Router (@v0.1.3)
 
 processing – preprocessing, routing\
 *Path:* {file}`plugins/enpro26/router/__init__.py`
@@ -1466,10 +1536,9 @@ Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music da
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |relation/element-similarities|application/zip|✓|
-|relation/attribute-similarities|application/zip|✓|
+|relation/element-distances|application/zip|✓|
 |relation/attribute-distances|application/zip|✓|
-|relation/entity-distances|application/json|✓|
-|entity/vector|application/json|✓|
+|entity/vector|application/zip|✓|
 
 
 (sql-editor)=
@@ -1580,7 +1649,7 @@ This plugin provides an API to minimize a given objective function with scipy.op
 
 
 (sym-max-mean)=
-### Sym Max Mean attribute comparer (@v0.1.6)
+### Sym Max Mean attribute comparer (@v0.1.7)
 
 processing – preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/sym_max_mean/__init__.py`
@@ -1600,6 +1669,40 @@ Compares attributes and returns similarity values.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |relation/attribute-similarities|application/zip|✓|
+
+
+(mapping-distances)=
+### Taxanomy mapping to distances (@v0.1.0)
+
+processing – distance-calculation, preprocessing\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/mapping_distances/__init__.py`
+
+A plugin to create pairwise element distances for taxanomy mappings.
+\
+Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.  
+Returns the max float value if the vectors are empty, i.e. no mapping is assigned.  
+Throws an error if the mapping vectors do not have the same size.  
+\
+Different available metrics:
+**Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
+**Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
+**Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
+**Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
+|graph/taxonomy|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/element-distances|application/zip|✓|
 
 
 (time-tanh)=
@@ -1663,7 +1766,7 @@ interaction – bpmn, camunda-engine, workflow\
 Manage workflows deployed in Camunda.
 
 (wu-palmer)=
-### Wu Palmer similarities (@v0.2.4)
+### Wu Palmer similarities (@v0.2.5)
 
 processing – preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/wu_palmer/__init__.py`
@@ -1774,10 +1877,10 @@ Allows execution of quantum circuits using a simulator packaged with cirq.
 
 
 (csv-to-json)=
-### csv-to-json (@v0.1.0)
+### csv-to-json (@v0.1.1)
 
 conversion – conversion, csv, json\
-*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+*Path:* {file}`stable_plugins/file_utils/entity_conversion/__init__.py`
 
 Convert CSV files to JSON.
 
@@ -1893,10 +1996,10 @@ Hinge Loss objective-function plugin.
 
 
 (json-to-csv)=
-### json-to-csv (@v0.1.0)
+### json-to-csv (@v0.1.1)
 
 conversion – conversion, csv, json\
-*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+*Path:* {file}`stable_plugins/file_utils/entity_conversion/__init__.py`
 
 Convert JSON files to CSV.
 

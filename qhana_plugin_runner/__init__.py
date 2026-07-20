@@ -15,6 +15,7 @@
 # originally from <https://github.com/buehlefs/flask-template/>
 
 """Root module containing the flask app factory."""
+
 import os
 import re
 from json import load as load_json

@@ -286,6 +286,10 @@ def _load_plugins_from_folder(
     for child in folder.iterdir():
         if child.name.startswith("."):
             continue
+        if child.is_file() and child.name.startswith("test_"):
+            continue
+        if child.is_dir() and child.name in {"test", "tests"}:
+            continue
         if child.is_file():
             _try_load_plugin_file(app, child)
         if child.is_dir():

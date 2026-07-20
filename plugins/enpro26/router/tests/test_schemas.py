@@ -32,12 +32,11 @@ def _payload(**overrides) -> dict:
         "entitiesMetadataUrl": VALID_URL,
         "taxonomiesZipUrl": VALID_ZIP,
         "transformer": "linear_inverse",
-        "aggregator": "mean",
-        "missingDataHandling": "ignore",
         "dimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
+        "missingDataHandling": "mean",
     }
     base.update(overrides)
     return base
@@ -84,5 +83,5 @@ def test_invalid_urls_rejected():
 
 def test_invalid_enum_rejected():
     with pytest.raises(ValidationError) as exc:
-        InputParametersSchema().load(_payload(aggregator="invalid_aggregator"))
-    assert "aggregator" in exc.value.messages
+        InputParametersSchema().load(_payload(transformer="invalid_transformer"))
+    assert "transformer" in exc.value.messages
