@@ -11,7 +11,7 @@ from flask import Flask, render_template
 
 from qhana_plugin_runner.markdown import register_markdown_filter
 from qhana_plugin_runner.util.download_mathjax import (
-    _verify_path_traversal,
+    _check_path_traversal,
     download_mathjax,
 )
 from qhana_plugin_runner.util.jinja_helpers import register_helpers
@@ -102,7 +102,7 @@ def test_verify_path_traversal_allows_valid_paths(tmp_path):
     target_file = base_dir / "es5" / "tex-mml-chtml.js"
 
     # Resolves fine because target path stays inside the base dir
-    _verify_path_traversal(target_file, base_dir.resolve())
+    _check_path_traversal(target_file, base_dir.resolve())
 
 
 def test_verify_path_traversal_catches_attacks(tmp_path):
@@ -113,7 +113,7 @@ def test_verify_path_traversal_catches_attacks(tmp_path):
     malicious_target = base_dir / "../../escaped.js"
 
     with pytest.raises(ValueError, match="escapes the base directory"):
-        _verify_path_traversal(malicious_target, base_dir.resolve())
+        _check_path_traversal(malicious_target, base_dir.resolve())
 
 
 # --- Download and Extraction Tests ---

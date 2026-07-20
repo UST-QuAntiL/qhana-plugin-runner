@@ -26,7 +26,7 @@ def _clear_old_mathjax_files(mathjax_dir: Path) -> None:
             path.unlink()
 
 
-def _verify_path_traversal(target_path: Path, abs_base_directory: Path) -> None:
+def _check_path_traversal(target_path: Path, abs_base_directory: Path) -> None:
     """Verifies that the target path remains inside the base directory.
 
     Raises a ValueError if a path traversal attempt is detected.
@@ -78,7 +78,7 @@ def download_mathjax(app) -> None:
         known_hashfunctions = {"sha512-": hashlib.sha512, "sha384-": hashlib.sha384}
         prefix, hasher = None, None
         for p, f in known_hashfunctions.items():
-            if expected_integrity.startswith(p):  # use startswith, not in!
+            if expected_integrity.startswith(p):
                 prefix = p
                 hasher = f()
         if hasher is None:
@@ -108,7 +108,7 @@ def download_mathjax(app) -> None:
                     continue
 
                 target_path = mathjax_dir / relative_path
-                _verify_path_traversal(target_path, abs_mathjax_dir)
+                _check_path_traversal(target_path, abs_mathjax_dir)
 
                 if target_path.name.startswith("."):
                     continue
