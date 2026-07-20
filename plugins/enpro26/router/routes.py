@@ -109,28 +109,22 @@ class PluginsView(MethodView):
                         content_type=["application/zip"],
                         required=True,
                     ),
-                    # Sym-Max-Mean output
-                    DataMetadata(
-                        data_type="relation/attribute-similarities",
-                        content_type=["application/zip"],
-                        required=True,
-                    ),
                     # Transformer output
                     DataMetadata(
-                        data_type="relation/attribute-distances",
+                        data_type="relation/element-distances",
                         content_type=["application/zip"],
                         required=True,
                     ),
                     # Aggregator output
                     DataMetadata(
-                        data_type="relation/entity-distances",
-                        content_type=["application/json"],
+                        data_type="relation/attribute-distances",
+                        content_type=["application/zip"],
                         required=True,
                     ),
                     # MDS output = final output
                     DataMetadata(
                         data_type="entity/vector",
-                        content_type=["application/json"],
+                        content_type=["application/zip"],
                         required=True,
                     ),
                 ],
@@ -315,8 +309,22 @@ class RoutingStepView(MethodView):
         wu_palmer_attributes = [
             attr for attr, option in selections.items() if option == "Wu-Palmer"
         ]
+        if wu_palmer_attributes:
+            db_task.add_task_log_entry(
+                f"Started Wu-Palmer Pipeline for attributes: {wu_palmer_attributes}"
+            )
+        # TODO: Add other paths (OneHot, NumMapping)
+
+        none_selected = [attr for attr, option in selections.items() if option == "None"]
+        if none_selected:
+            db_task.add_task_log_entry(
+                f"None selected attributes skipped: {none_selected}"
+            )
+
         unsupported = {
-            attr: option for attr, option in selections.items() if option != "Wu-Palmer"
+            attr: option
+            for attr, option in selections.items()
+            if option != "Wu-Palmer" and option != "None"
         }
         if unsupported:
             db_task.add_task_log_entry(
@@ -326,6 +334,7 @@ class RoutingStepView(MethodView):
         db_task.data["webhook_url"] = url_for(
             f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
         )
+
         # Resolve the pipeline plugin metadata urls here, where the request
         # context supplies the host. The worker has no request context and
         # SERVER_NAME is unset, so url_for(_external=True) cannot run there.

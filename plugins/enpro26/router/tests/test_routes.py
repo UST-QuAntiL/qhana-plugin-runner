@@ -37,7 +37,7 @@ def test_metadata_endpoint_returns_full_descriptor(client):
 
     assert body["name"] == plugin.name
     assert body["type"] == "processing"
-    assert len(body["entryPoint"]["dataOutput"]) == 5  # Ensures all 5 files are expected
+    assert len(body["entryPoint"]["dataOutput"]) == 4  # Ensures all 4 files are expected
 
 
 def test_microfrontend_renders_form_fields(client):
@@ -57,12 +57,11 @@ def test_process_valid_payload_redirects_to_task(client, monkeypatch):
         "entitiesMetadataUrl": "http://example.com/meta.json",
         "taxonomiesZipUrl": "http://example.com/tax.zip",
         "transformer": "linear_inverse",
-        "aggregator": "mean",
-        "missingDataHandling": "ignore",
         "dimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
+        "missingDataHandling": "mean",
     }
 
     resp = client.post(url_for(f"{ROUTER_BLP.name}.ProcessView"), data=valid_payload)

@@ -20,9 +20,8 @@ from marshmallow import post_load
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
-
 # Per-attribute pipeline options shown in the routing step.
-PIPELINE_OPTIONS = ["Wu-Palmer", "One-Hot", "Mapping"]
+PIPELINE_OPTIONS = ["None", "Wu-Palmer", "One-Hot", "Mapping"]
 
 PIPELINE_FIELD_PREFIX = "pipeline_"
 
@@ -46,19 +45,18 @@ class AggregatorsEnum(Enum):
     min = "Min"
 
 
-# This Enum class is copied from the aggregator plugin.
-# Check the aggregator plugin for updates
-class MissingDataHandling(Enum):
-    ignore = "ignore"
-    mean = "mean"
-    max = "max"
-
-
 # This Enum class is copied from the mds plugin.
 # Check the mds plugin for updates
 class MetricEnum(Enum):
     metric_mds = "Metric MDS"
     nonmetric_mds = "Nonmetric MDS"
+
+
+# This Enum class is copied from the mds plugin.
+# Check the mds plugin for updates
+class MissingDataHandling(Enum):
+    mean = "Replace with mean distance"
+    max = "Replace with maximum distance"
 
 
 class InputParameters:
@@ -69,24 +67,26 @@ class InputParameters:
         taxonomies_zip_url: str,
         root_is_part_of_hierarchy: bool,
         transformer: TransformersEnum,
-        aggregator: AggregatorsEnum,
-        missing_data_handling: MissingDataHandling,
         dimensions: int,
         metric: MetricEnum,
         n_init: int,
         max_iter: int,
+        missing_data_handling: MissingDataHandling,
+        include_intermediate_results_in_output: bool,
     ):
         self.entities_url = entities_url
         self.entities_metadata_url = entities_metadata_url
         self.taxonomies_zip_url = taxonomies_zip_url
         self.root_is_part_of_hierarchy = root_is_part_of_hierarchy
         self.transformer = transformer
-        self.aggregator = aggregator
-        self.missing_data_handling = missing_data_handling
         self.dimensions = dimensions
         self.metric = metric
         self.n_init = n_init
         self.max_iter = max_iter
+        self.missing_data_handling = missing_data_handling
+        self.include_intermediate_results_in_output = (
+            include_intermediate_results_in_output
+        )
 
 
 class InputParametersSchema(FrontendFormBaseSchema):
@@ -146,62 +146,77 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "input_type": "select",
         },
     )
-    aggregator = EnumField(
-        AggregatorsEnum,
-        required=True,
-        metadata={
-            "label": "Aggregator",
-            "description": "Aggregator that shall be used to aggregate the attribute distances to a single distance value.",
-            "input_type": "select",
-        },
-    )
-    missing_data_handling = EnumField(
-        MissingDataHandling,
-        required=True,
-        metadata={
-            "label": "Missing data handling",
-            "description": """Defines how a missing attribute distance should be handled.
-- ignore: null values are removed and only the not null values are used for the aggregation
-- mean: null values are replaced by the mean distance of the respective attribute
-- max: null values are replaced by the maximum distance of the respective attribute""",
-            "input_type": "select",
-        },
-    )
+
     dimensions = ma.fields.Integer(
         required=True,
         allow_none=False,
+        validate=ma.validate.Range(min=1),
         metadata={
             "label": "Dimensions",
-            "description": "Number of dimensions the output will have.",
+            "description": "Number of dimensions each output embedding will have.",
             "input_type": "text",
         },
     )
+
     metric = EnumField(
         MetricEnum,
         required=True,
         allow_none=False,
         metadata={
             "label": "Metric",
-            "description": "Type of MDS that will be used.",
+            "description": (
+                "Type of MDS that will be used. For nonmetric MDS, distances of "
+                "exactly 0 are replaced with a small positive value below the "
+                "smallest positive distance because scikit-learn treats them "
+                "as missing values."
+            ),
             "input_type": "select",
         },
     )
+
     n_init = ma.fields.Integer(
         required=True,
         allow_none=False,
+        validate=ma.validate.Range(min=1),
         metadata={
             "label": "SMACOF executions",
             "description": "Number of times SMACOF will be executed with different initial values.",
             "input_type": "text",
         },
     )
+
     max_iter = ma.fields.Integer(
         required=True,
         allow_none=False,
+        validate=ma.validate.Range(min=1),
         metadata={
             "label": "SMACOF max iterations",
             "description": "Maximum number of SMACOF iterations.",
             "input_type": "text",
+        },
+    )
+
+    missing_data_handling = EnumField(
+        MissingDataHandling,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Missing distances",
+            "description": (
+                "How missing (null) distances are replaced before MDS. "
+                "The replacement is computed from the known distances of the same attribute."
+            ),
+            "input_type": "select",
+        },
+    )
+
+    include_intermediate_results_in_output = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Include intermediate results",
+            "description": "If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
+            "input_type": "checkbox",
         },
     )
 
