@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from enum import Enum
+import textwrap
 
 import marshmallow as ma
 from marshmallow import post_load
@@ -24,6 +25,15 @@ from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 PIPELINE_OPTIONS = ["None", "Wu-Palmer", "One-Hot", "Mapping"]
 
 PIPELINE_FIELD_PREFIX = "pipeline_"
+
+
+# This Enum class is copied from the mapping distances plugin.
+# Check the mapping distances plugin for updates
+class DistanceMetricEnum(Enum):
+    euclidean = "Euclidean"
+    manhatten = "Manhatten"
+    chebyshev = "Chebyshev"
+    cosine = "Cosine"
 
 
 # This Enum class is copied from the transformer plugin.
@@ -66,6 +76,7 @@ class InputParameters:
         entities_metadata_url: str,
         taxonomies_zip_url: str,
         root_is_part_of_hierarchy: bool,
+        distance_metric: DistanceMetricEnum,
         transformer: TransformersEnum,
         dimensions: int,
         metric: MetricEnum,
@@ -78,6 +89,7 @@ class InputParameters:
         self.entities_metadata_url = entities_metadata_url
         self.taxonomies_zip_url = taxonomies_zip_url
         self.root_is_part_of_hierarchy = root_is_part_of_hierarchy
+        self.distance_metric = distance_metric
         self.transformer = transformer
         self.dimensions = dimensions
         self.metric = metric
@@ -135,6 +147,25 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=False,
         load_default=False,
         metadata={"label": "Root is part of hierarchy", "input_type": "checkbox"},
+    )
+
+    distance_metric = EnumField(
+        DistanceMetricEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Distance Metric",
+            "description": textwrap.dedent(
+                r"""
+                Metric to calculate the distances of the taxanomy mapping:  
+                **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
+                **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
+                **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
+                **Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
+            """
+            ).strip(),
+            "input_type": "select",
+        },
     )
 
     transformer = EnumField(

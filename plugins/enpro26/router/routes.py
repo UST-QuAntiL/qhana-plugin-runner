@@ -103,19 +103,19 @@ class PluginsView(MethodView):
                     # ),
                 ],
                 data_output=[
-                    # WU-Palmer output
+                    # WU-Palmer output (optional)
                     DataMetadata(
                         data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     ),
-                    # Transformer output
+                    # Transformer output (optional)
                     DataMetadata(
                         data_type="relation/element-distances",
                         content_type=["application/zip"],
                         required=True,
                     ),
-                    # Aggregator output
+                    # Aggregator output (optional)
                     DataMetadata(
                         data_type="relation/attribute-distances",
                         content_type=["application/zip"],
@@ -309,28 +309,42 @@ class RoutingStepView(MethodView):
         wu_palmer_attributes = [
             attr for attr, option in selections.items() if option == "Wu-Palmer"
         ]
+        mapping_attributes = [
+            attr for attr, option in selections.items() if option == "Mapping"
+        ]
+        one_hot_attributes = [
+            attr for attr, option in selections.items() if option == "One-Hot"
+        ]
+
+        pipeline_queue = []
         if wu_palmer_attributes:
             db_task.add_task_log_entry(
-                f"Started Wu-Palmer Pipeline for attributes: {wu_palmer_attributes}"
+                f"Queued Wu-Palmer pipeline for attributes: {wu_palmer_attributes}"
             )
-        # TODO: Add other paths (OneHot, NumMapping)
+            db_task.data["wu_palmer_attributes"] = "\n".join(wu_palmer_attributes)
+            pipeline_queue.append("wu_palmer")
 
+        if mapping_attributes:
+            db_task.add_task_log_entry(
+                f"Queued distances mapping pipeline for attributes: {mapping_attributes}"
+            )
+            db_task.data["mapping_attributes"] = "\n".join(mapping_attributes)
+            pipeline_queue.append("mapping")
+        
+        if one_hot_attributes:
+            db_task.add_task_log_entry(
+                f"One-Hot encoding not yet supported. Selected One-Hot for attributes: {mapping_attributes}"
+            )
+        
         none_selected = [attr for attr, option in selections.items() if option == "None"]
         if none_selected:
             db_task.add_task_log_entry(
                 f"None selected attributes skipped: {none_selected}"
             )
-
-        unsupported = {
-            attr: option
-            for attr, option in selections.items()
-            if option != "Wu-Palmer" and option != "None"
-        }
-        if unsupported:
-            db_task.add_task_log_entry(
-                f"Pipelines not implemented yet, attributes skipped: {unsupported}"
-            )
-        db_task.data["wu_palmer_attributes"] = "\n".join(wu_palmer_attributes)
+        
+        db_task.data["pipeline_queue"] = pipeline_queue
+        db_task.data["current_pipeline"] = None
+      
         db_task.data["webhook_url"] = url_for(
             f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
         )

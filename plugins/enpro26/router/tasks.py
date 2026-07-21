@@ -44,6 +44,7 @@ TASK_LOGGER = get_task_logger(__name__)
 # through ``get_plugin_endpoint``.
 PIPELINE_PLUGINS = {
     "wu_palmer": "wu-palmer",
+    "numerical_mapping": "mapping-distances", 
     "transformers": "element_sim-to-element_dist-transformers",
     "aggregator": "attribute-distance-aggregator",
     "mds": "attribute-distance-mds",
@@ -174,68 +175,160 @@ def preprocessing_task(self, db_id: int) -> str:
 @CELERY.task(name=f"{Router.instance.identifier}.route_task", bind=True)
 def route_task(self, db_id: int) -> str:
     task_data = ProcessingTask.get_by_id(id_=db_id)
-    TASK_LOGGER.info(f"Starting routing task for db id '{db_id}'")
     if not task_data:
         raise KeyError(f"Could not load task data with id {db_id}")
-    params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+    
+    # Evaluate attributes stored from the routing UI to build the queue
+    queue = []
+    if task_data.data.get("wu_palmer_attributes"):
+        queue.append("wu_palmer")
+    if task_data.data.get("mapping_attributes"):
+        queue.append("mapping")
 
-    TASK_LOGGER.info("Starting Step 1: Wu-Palmer")
-    payload = {
-        "entitiesUrl": params.entities_url,
-        "entitiesMetadataUrl": params.entities_metadata_url,
-        "taxonomiesZipUrl": params.taxonomies_zip_url,
-        "attributes": task_data.data["wu_palmer_attributes"],
-        "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
-    }
-
-    wu_palmer_url = _plugin_process_url(task_data, "wu_palmer")
-    response = requests.post(wu_palmer_url, data=payload, allow_redirects=False)
-    task_url = urljoin(wu_palmer_url, response.headers["Location"])
-
-    task_data.data["wu_palmer_url"] = task_url
-    task_data.add_task_log_entry("Started Wu-Palmer.")
+    task_data.data["pipeline_queue"] = queue
     task_data.save(commit=True)
 
-    subscribe_to_plugin(task_url, task_data.data["webhook_url"])
-
+    # Trigger the first pipeline
+    launch_next_pipeline(task_data)
+    return "Routing task started and pipeline queued."
 
 # --- Webhook task handles task results ---
 @CELERY.task(name=f"{Router.instance.identifier}.handle_webhook_task", bind=True)
 def handle_webhook_task(self, db_id: int, source_url: str):
     task_data = ProcessingTask.get_by_id(db_id)
-
-    # Identify which plugin triggered the webhook
-    is_wp = source_url == task_data.data.get("wu_palmer_url")
-    is_trans = source_url == task_data.data.get("transformers_url")
-    is_agg = source_url == task_data.data.get("aggregators_url")
-    is_mds = source_url == task_data.data.get("mds_url")
-
-    if not any([is_wp, is_trans, is_agg, is_mds]):
-        return "Unrecognized webhook"
-
     sub_task_result = requests.get(source_url).json()
-    status = sub_task_result.get("status", "PENDING")
 
-    if status == "SUCCESS":
-        # Launch the dedicated Celery task for whichever step just finished!
-        if is_wp:
-            process_step_2_transformers.apply_async(args=[db_id, source_url], countdown=4)
-        elif is_trans:
-            process_step_3_aggregator.apply_async(args=[db_id, source_url], countdown=4)
-        elif is_agg:
-            process_step_4_mds.apply_async(args=[db_id, source_url], countdown=4)
-        elif is_mds:
-            finalize_pipeline.apply_async(args=[db_id, source_url], countdown=4)
+    if sub_task_result.get("status", "PENDING") != "SUCCESS":
+        return "Task still pending or failed"
+    
+    current_pipeline = task_data.data.get("current_pipeline")
+
+    # Delegate to the specific pipeline's webhook handler
+    if current_pipeline == "wu_palmer":
+        handle_wu_palmer_progression(task_data, db_id, source_url)
+        
+    elif current_pipeline == "mapping":
+        pass
+        handle_mapping_progression(task_data, db_id, source_url)
+        
+    else:
+        return "Unrecognized pipeline state"
+
+
+def launch_next_pipeline(task_data: ProcessingTask):
+    """Pops the next pipeline from the queue and triggers it."""
+    queue = task_data.data.get("pipeline_queue", [])
+    
+    if not queue:
+        # Queue is empty, everything is done!
+        save_task_result.delay("All Pipelines Completed Successfully!", task_data.id)
+        return
+
+    # Pop the next pipeline and update state
+    next_pipeline = queue.pop(0)
+    task_data.data["pipeline_queue"] = queue
+    task_data.data["current_pipeline"] = next_pipeline
+    task_data.save(commit=True)
+
+    # Route to the correct starting step
+    if next_pipeline == "wu_palmer":
+        task_data.add_task_log_entry("Starting Wu-Palmer Pipeline. Includes: Wu-Palmer, Transformer, Aggregator, MDS")
+        task_data.save(commit=True)
+        start_wu_palmer.apply_async(args=[task_data.id])
+    elif next_pipeline == "mapping":
+        task_data.add_task_log_entry("Starting Distance Mapping Pipeline. Includes: Distance Mapping, Aggregator, MDS")
+        task_data.save(commit=True)
+        start_mapping.apply_async(args=[task_data.id])
+
+def handle_wu_palmer_progression(task_data: ProcessingTask, db_id: int, source_url:str):
+    # Launch the dedicated Celery task for whichever step just finished!
+    if source_url == task_data.data.get("wu_palmer_url"):
+        start_transformers.apply_async(args=[db_id, source_url], countdown=4)
+    elif source_url == task_data.data.get("transformers_url"):
+        start_aggregator.apply_async(args=[db_id, source_url], countdown=4)
+    elif source_url == task_data.data.get("aggregators_url"):
+        start_mds.apply_async(args=[db_id, source_url], countdown=4)
+    elif source_url == task_data.data.get("mds_url"):
+        finalize_pipeline.apply_async(args=[db_id, source_url], countdown=4)
+
+def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url:str):
+    if source_url == task_data.data.get("mapping_url"):
+        start_aggregator.apply_async(args=[db_id, source_url], countdown=4)
+    elif source_url == task_data.data.get("aggregators_url"):
+        start_mds.apply_async(args=[db_id, source_url], countdown=4)
+    elif source_url == task_data.data.get("mds_url"):
+        finalize_pipeline.apply_async(args=[db_id, source_url], countdown=4)
+
+@CELERY.task(name=f"{Router.instance.identifier}.start_wu_palmer", bind=True, max_retries=10)
+def start_wu_palmer(self, db_id: int):
+    TASK_LOGGER.info(f"Starting Wu-Palmer Pipeline for db id '{db_id}'")
+    task_data = ProcessingTask.get_by_id(db_id)
+    try:
+        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+        payload = {
+            "entitiesUrl": params.entities_url,
+            "entitiesMetadataUrl": params.entities_metadata_url,
+            "taxonomiesZipUrl": params.taxonomies_zip_url,
+            "attributes": task_data.data["wu_palmer_attributes"],
+            "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
+        }
+
+        wu_palmer_url = _plugin_process_url(task_data, "wu_palmer")
+        response = requests.post(wu_palmer_url, data=payload, allow_redirects=False)
+        response.raise_for_status()
+
+        task_url = urljoin(wu_palmer_url, response.headers["Location"])
+        task_data.data["wu_palmer_url"] = task_url
+        task_data.add_task_log_entry("Started Wu-Palmer.")
+        task_data.save(commit=True)
+
+        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        raise self.retry(exc=e, countdown=3)
+    except Exception as e:
+        task_data.add_task_log_entry(f"CRASH in start_wu_palmer:\n{traceback.format_exc()}")
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+
+@CELERY.task(name=f"{Router.instance.identifier}.start_mapping", bind=True, max_retries=10)
+def start_mapping(self, db_id: int):
+    TASK_LOGGER.info(f"Starting Mapping Pipeline for db id '{db_id}'")
+    task_data = ProcessingTask.get_by_id(db_id)
+    try:
+        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+        payload = {
+            "entitiesUrl": params.entities_url,
+            "entitiesMetadataUrl": params.entities_metadata_url,
+            "taxonomiesZipUrl": params.taxonomies_zip_url,
+            "attributes": task_data.data["mapping_attributes"],
+            "distanceMetric": params.distance_metric.name,
+        }
+
+        mapping_url = _plugin_process_url(task_data, "numerical_mapping")
+        response = requests.post(mapping_url, data=payload, allow_redirects=False)
+        response.raise_for_status()
+
+        task_url = urljoin(mapping_url, response.headers["Location"])
+        task_data.data["mapping_url"] = task_url
+        task_data.add_task_log_entry("Started Mapping Distances.")
+        task_data.save(commit=True)
+        
+        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+        TASK_LOGGER.info(f"Subsrcibed to plugin")
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        raise self.retry(exc=e, countdown=3)
+    except Exception as e:
+        task_data.add_task_log_entry(f"CRASH in start_mapping:\n{traceback.format_exc()}")
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
 # --- TRANSFORMER TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.process_step_2_transformers",
+    name=f"{Router.instance.identifier}.start_transformers",
     bind=True,
     max_retries=10,
 )
-def process_step_2_transformers(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Step 2: Transformers")
+def start_transformers(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting Transformers")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         # 1. Persist Transformers result
@@ -272,18 +365,18 @@ def process_step_2_transformers(self, db_id: int, source_url: str):
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in Step 2:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in Transformers Step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
 # --- AGGREGATOR TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.process_step_3_aggregator",
+    name=f"{Router.instance.identifier}.start_aggregator",
     bind=True,
     max_retries=10,
 )
-def process_step_3_aggregator(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Step 3: Aggregator")
+def start_aggregator(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting Aggregator")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
@@ -292,10 +385,11 @@ def process_step_3_aggregator(self, db_id: int, source_url: str):
 
         if params.include_intermediate_results_in_output:
             # Transformers result output
+            prefix = task_data.data.get("current_pipeline", "unknown")
             STORE.persist_task_result(
                 db_id,
                 open_url(element_dists_url).content,
-                "transformers_distances.zip",
+                f"{prefix}_element_distances.zip",
                 "relation/element-distances",
                 "application/zip",
             )
@@ -317,16 +411,16 @@ def process_step_3_aggregator(self, db_id: int, source_url: str):
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in Step 3:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in Aggreagtor Step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
 # --- MDS TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.process_step_4_mds", bind=True, max_retries=10
+    name=f"{Router.instance.identifier}.start_mds", bind=True, max_retries=10
 )
-def process_step_4_mds(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Step 4: MDS")
+def start_mds(self, db_id: int, source_url: str):
+    TASK_LOGGER.info("Starting MDS")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
@@ -335,10 +429,11 @@ def process_step_4_mds(self, db_id: int, source_url: str):
 
         if params.include_intermediate_results_in_output:
             # Aggregator result output
+            prefix = task_data.data.get("current_pipeline", "unknown")
             STORE.persist_task_result(
                 db_id,
                 open_url(attr_dists_url).content,
-                "aggregator_distances.zip",
+                f"{prefix}_attribute_distances.zip",
                 "relation/attribute-distances",
                 "application/zip",
             )
@@ -362,12 +457,11 @@ def process_step_4_mds(self, db_id: int, source_url: str):
         task_data.save(commit=True)
 
         subscribe_to_plugin(task_url, task_data.data["webhook_url"])
-        TASK_LOGGER.info("MDS subscribed")
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in Step 4:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in MDS step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
@@ -376,21 +470,23 @@ def process_step_4_mds(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, max_retries=10
 )
 def finalize_pipeline(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Step 5: Finishing the Pipeline")
+    TASK_LOGGER.info("Finishing the Pipeline")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         final_dists_url = extract_output_url(outputs, "entity/vector")
+
+        prefix = task_data.data.get("current_pipeline", "unknown")
         STORE.persist_task_result(
             db_id,
             open_url(final_dists_url).content,
-            "mds_final_vectors.zip",
+            f"{prefix}_mds_final_vectors.zip",
             "entity/vector",
             "application/zip",
         )
 
-        # TASK COMPLETION
-        save_task_result.delay("Pipeline Completed Successfully!", db_id)
+        # trigger next pipeline
+        launch_next_pipeline(task_data)
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
         raise self.retry(exc=e, countdown=3)
