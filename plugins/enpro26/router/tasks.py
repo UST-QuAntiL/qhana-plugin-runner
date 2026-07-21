@@ -220,7 +220,8 @@ def launch_next_pipeline(task_data: ProcessingTask):
     queue = task_data.data.get("pipeline_queue", [])
     
     if not queue:
-        # Queue is empty, everything is done!
+        # All pipelines have been finished.
+        # TODO: Add Dimension reduction and vector merge here
         save_task_result.delay("All Pipelines Completed Successfully!", task_data.id)
         return
 
@@ -228,7 +229,6 @@ def launch_next_pipeline(task_data: ProcessingTask):
     next_pipeline = queue.pop(0)
     task_data.data["pipeline_queue"] = queue
     task_data.data["current_pipeline"] = next_pipeline
-    task_data.save(commit=True)
 
     # Route to the correct starting step
     if next_pipeline == "wu_palmer":
@@ -261,7 +261,7 @@ def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url
 
 @CELERY.task(name=f"{Router.instance.identifier}.start_wu_palmer", bind=True, max_retries=10)
 def start_wu_palmer(self, db_id: int):
-    TASK_LOGGER.info(f"Starting Wu-Palmer Pipeline for db id '{db_id}'")
+    TASK_LOGGER.info("Starting Wu-Palmer Plugin")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         params: InputParameters = InputParametersSchema().loads(task_data.parameters)
@@ -284,14 +284,16 @@ def start_wu_palmer(self, db_id: int):
 
         subscribe_to_plugin(task_url, task_data.data["webhook_url"])
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(f"Error occured during wu-palmer plugin. Attempting to retry:\n{e}")
+        task_data.save(commit=True)
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in start_wu_palmer:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in wu_palmer step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 @CELERY.task(name=f"{Router.instance.identifier}.start_mapping", bind=True, max_retries=10)
 def start_mapping(self, db_id: int):
-    TASK_LOGGER.info(f"Starting Mapping Pipeline for db id '{db_id}'")
+    TASK_LOGGER.info("Starting Mapping Plugin")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         params: InputParameters = InputParametersSchema().loads(task_data.parameters)
@@ -313,11 +315,12 @@ def start_mapping(self, db_id: int):
         task_data.save(commit=True)
         
         subscribe_to_plugin(task_url, task_data.data["webhook_url"])
-        TASK_LOGGER.info(f"Subsrcibed to plugin")
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(f"Error occured during mapping plugin. Attempting to retry:\n{e}")
+        task_data.save(commit=True)
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in start_mapping:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in mapping step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
@@ -328,7 +331,7 @@ def start_mapping(self, db_id: int):
     max_retries=10,
 )
 def start_transformers(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Transformers")
+    TASK_LOGGER.info("Starting Transformers Plugin")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         # 1. Persist Transformers result
@@ -363,9 +366,11 @@ def start_transformers(self, db_id: int, source_url: str):
         subscribe_to_plugin(task_url, task_data.data["webhook_url"])
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(f"Error occured during transformers plugin. Attempting to retry:\n{e}")
+        task_data.save(commit=True)
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in Transformers Step:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in transformers step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
@@ -376,7 +381,7 @@ def start_transformers(self, db_id: int, source_url: str):
     max_retries=10,
 )
 def start_aggregator(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting Aggregator")
+    TASK_LOGGER.info("Starting Aggregator Plugin")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
@@ -409,9 +414,11 @@ def start_aggregator(self, db_id: int, source_url: str):
         subscribe_to_plugin(task_url, task_data.data["webhook_url"])
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(f"Error occured during aggregator step. Attempting to retry:\n{e}")
+        task_data.save(commit=True)
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in Aggreagtor Step:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in aggreagtor step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
@@ -420,7 +427,7 @@ def start_aggregator(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.start_mds", bind=True, max_retries=10
 )
 def start_mds(self, db_id: int, source_url: str):
-    TASK_LOGGER.info("Starting MDS")
+    TASK_LOGGER.info("Starting MDS Plugin")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
@@ -459,9 +466,11 @@ def start_mds(self, db_id: int, source_url: str):
         subscribe_to_plugin(task_url, task_data.data["webhook_url"])
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(f"Error occured during mds step. Attempting to retry:\n{e}")
+        task_data.save(commit=True)
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in MDS step:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in mds step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
 
@@ -489,7 +498,9 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         launch_next_pipeline(task_data)
 
     except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(f"Error occured during finalization step. Attempting to retry:\n{e}")
+        task_data.save(commit=True)
         raise self.retry(exc=e, countdown=3)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in Final Step:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(f"CRASH in final step:\n{traceback.format_exc()}")
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
