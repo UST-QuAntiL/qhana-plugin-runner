@@ -16,6 +16,7 @@ import traceback
 import requests
 from urllib.parse import urljoin
 from celery.utils.log import get_task_logger
+from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -63,7 +64,7 @@ def start_wu_palmer(self, db_id: int):
     TASK_LOGGER.info("Starting Wu-Palmer Plugin")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
-        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
         payload = {
             "entitiesUrl": params.entities_url,
             "entitiesMetadataUrl": params.entities_metadata_url,
@@ -96,7 +97,7 @@ def start_mapping(self, db_id: int):
     TASK_LOGGER.info("Starting Mapping Plugin")
     task_data = ProcessingTask.get_by_id(db_id)
     try:
-        params: InputParameters = InputParametersSchema().loads(task_data.parameters)
+        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
         payload = {
             "entitiesUrl": params.entities_url,
             "entitiesMetadataUrl": params.entities_metadata_url,
@@ -137,7 +138,7 @@ def start_transformers(self, db_id: int, source_url: str):
         # 1. Persist Transformers result
         outputs = requests.get(source_url).json().get("outputs", [])
         element_sims_url = extract_output_url(outputs, "relation/element-similarities")
-        params = InputParametersSchema().loads(task_data.parameters)
+        params = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
 
         if params.include_intermediate_results_in_output:
             # Wu-Palmer result output
@@ -186,7 +187,7 @@ def start_aggregator(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         element_dists_url = extract_output_url(outputs, "relation/element-distances")
-        params = InputParametersSchema().loads(task_data.parameters)
+        params = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
 
         if params.include_intermediate_results_in_output:
             # Transformers result output
@@ -232,7 +233,7 @@ def start_mds(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
-        params = InputParametersSchema().loads(task_data.parameters)
+        params = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
 
         if params.include_intermediate_results_in_output:
             # Aggregator result output

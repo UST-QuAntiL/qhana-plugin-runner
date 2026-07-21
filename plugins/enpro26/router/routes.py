@@ -263,6 +263,7 @@ class RoutingStepFrontend(MethodView):
             raise KeyError(msg)
 
         attributes = db_task.data.get("taxonomy_attributes", [])
+        recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
 
         return Response(
@@ -272,6 +273,7 @@ class RoutingStepFrontend(MethodView):
                 version=Router.instance.version,
                 schema=RoutingStepParametersSchema(),
                 attributes=attributes,
+                recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
                 input_params=input_params,
                 values=data,

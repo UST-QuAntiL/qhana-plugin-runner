@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 import requests
+from io import BytesIO
+from zipfile import ZipFile
 from pathlib import PurePath
 from celery.utils.log import get_task_logger
 
@@ -65,15 +67,14 @@ def preprocessing_task(self, db_id: int) -> str:
     # attribute names actually present in the entities file.
     entity_attributes = _load_entity_attributes(params.entities_url)
 
-    # Collect the taxonomy file names actually present in the uploaded zip.
-    available_taxonomies = {
-        PurePath(file_name).name
-        for _, file_name in get_files_from_zip_url(params.taxonomies_zip_url, mode="t")
-    }
+    # Collect the taxonomy present in the uploaded zip
+    zip_content = open_url(params.taxonomies_zip_url).content
+    taxonomies_zip = ZipFile(BytesIO(zip_content))
+    available_taxonomies = set(taxonomies_zip.namelist())
 
-    # Keep attributes that are present in the entities and whose referenced
-    # taxonomy exists in the zip.
     taxonomy_attributes = []
+    recommendations = {}
+
     with open_url(params.entities_metadata_url) as response:
         mimetype = get_mimetype(response)
         for element in load_entities(response, mimetype):
@@ -81,14 +82,36 @@ def preprocessing_task(self, db_id: int) -> str:
             if metadata.ID not in entity_attributes:
                 continue
             ref = _taxonomy_ref(metadata)
-            if ref and PurePath(ref).name in available_taxonomies:
-                taxonomy_attributes.append(metadata.ID)
+            if ref:
+                tax_filename = PurePath(ref).name
+                # Ensure the taxonomy file exists in the zip
+                matched_zip_path = next((name for name in available_taxonomies if name.endswith(tax_filename)), None)
+                
+                if matched_zip_path:
+                    taxonomy_attributes.append(metadata.ID)
+                    
+                    # Open the taxonomy JSON and check for mappings
+                    try:
+                        with taxonomies_zip.open(matched_zip_path) as f:
+                            tax_data = json.load(f)
+                            # Check if any entity has a non-empty mapping_raw
+                            has_mapping = any(
+                                ent.get("mapping_raw", "") != "" 
+                                for ent in tax_data.get("entities", [])
+                            )
+                            # TODO: Refine the recommendation detection (Template also allows for no recommendation)
+                            recommendations[metadata.ID] = "Mapping" if has_mapping else "Wu-Palmer"
+                    except Exception as e:
+                        TASK_LOGGER.warning(f"Could not read mapping for {metadata.ID}: {e}")
+                        recommendations[metadata.ID] = "Wu-Palmer"
 
     TASK_LOGGER.info(
         f"Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "
         f"taxonomy in the zip: {taxonomy_attributes}"
     )
+
     task_data.data["taxonomy_attributes"] = taxonomy_attributes
+    task_data.data["recommendations"] = recommendations
     task_data.save(commit=True)
 
     return f"Found {len(taxonomy_attributes)} taxonomy attribute(s)."
