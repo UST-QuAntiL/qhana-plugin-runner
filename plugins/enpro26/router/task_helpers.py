@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import requests
+import json
 from typing import Optional
+from zipfile import ZipFile
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -26,6 +28,7 @@ from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
 TASK_LOGGER = get_task_logger(__name__)
+
 
 def subscribe_to_plugin(task_result_url: str, webhook_url: str):
     """Subscribes the webhook to a target plugin's task result updates."""
@@ -101,3 +104,23 @@ def _load_entity_attributes(entities_url: str) -> set:
                 break
             attributes.update(ent.keys())
     return attributes
+
+def _calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
+    """
+    Parses the taxonomy JSON to determine the recommended pipeline.
+    Returns 'Mapping' if any mapping_raw data is present, otherwise 'Wu-Palmer'.
+    """
+    # TODO: Refine the recommendation detection (Template also allows for no recommendation)
+
+    try:
+        with taxonomies_zip.open(zip_path) as f:
+            tax_data = json.load(f)
+            # Check if any entity has a non-empty mapping_raw
+            has_mapping = any(
+                ent.get("mapping_raw", "") != ""
+                for ent in tax_data.get("entities", [])
+            )
+            return "Mapping" if has_mapping else "Wu-Palmer"
+    except Exception as e:
+        TASK_LOGGER.warning(f"Could not read mapping for {zip_path}: {e}")
+        return "Wu-Palmer"

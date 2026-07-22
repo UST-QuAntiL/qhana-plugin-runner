@@ -22,12 +22,11 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
-from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
 from . import Router
 from .schemas import InputParameters, InputParametersSchema
-from .task_helpers import _load_task, _load_entity_attributes, _taxonomy_ref
+from .task_helpers import _load_task, _load_entity_attributes, _taxonomy_ref, _calculate_recommendations
 from .pipeline_tasks import (
     CELERY_COUNTDOWN,
     launch_next_pipeline,
@@ -97,24 +96,9 @@ def preprocessing_task(self, db_id: int) -> str:
                 if matched_zip_path:
                     taxonomy_attributes.append(metadata.ID)
 
-                    # Open the taxonomy JSON and check for mappings
-                    try:
-                        with taxonomies_zip.open(matched_zip_path) as f:
-                            tax_data = json.load(f)
-                            # Check if any entity has a non-empty mapping_raw
-                            has_mapping = any(
-                                ent.get("mapping_raw", "") != ""
-                                for ent in tax_data.get("entities", [])
-                            )
-                            # TODO: Refine the recommendation detection (Template also allows for no recommendation)
-                            recommendations[metadata.ID] = (
-                                "Mapping" if has_mapping else "Wu-Palmer"
-                            )
-                    except Exception as e:
-                        TASK_LOGGER.warning(
-                            f"Could not read mapping for {metadata.ID}: {e}"
-                        )
-                        recommendations[metadata.ID] = "Wu-Palmer"
+                    recommendations[metadata.ID] = _calculate_recommendations(
+                        taxonomies_zip, matched_zip_path
+                    )
 
     TASK_LOGGER.info(
         f"Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "
