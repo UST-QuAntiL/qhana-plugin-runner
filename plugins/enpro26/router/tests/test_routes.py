@@ -106,11 +106,11 @@ def test_routing_step_process_records_selection_and_redirects(client, monkeypatc
     assert re.fullmatch(r"/tasks/\d+/", urlsplit(resp.headers["Location"]).path)
 
     db_task = ProcessingTask.get_by_id(db_task.id)
-    assert db_task.data["wu_palmer_attributes"] == "instrumentation"
-    assert db_task.data["mapping_attributes"] == "genre"
 
-    assert "wu_palmer" in db_task.data["pipeline_queue"]
-    assert "mapping" in db_task.data["pipeline_queue"]
+    assert db_task.data.get("routing_selections") == {
+        "instrumentation": "Wu-Palmer",
+        "genre": "Mapping"
+    }
 
 
 def test_webhook_view_accepts_status_events(client, monkeypatch):

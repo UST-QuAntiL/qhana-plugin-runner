@@ -123,7 +123,7 @@ def start_mapping(self, db_id: int):
             "distanceMetric": params.distance_metric.name,
         }
 
-        mapping_url = _plugin_process_url(task_data, "numerical_mapping")
+        mapping_url = _plugin_process_url(task_data, "mapping")
         response = requests.post(mapping_url, data=payload, allow_redirects=False)
         response.raise_for_status()
 

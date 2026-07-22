@@ -44,7 +44,7 @@ TASK_LOGGER = get_task_logger(__name__)
 # through ``get_plugin_endpoint``.
 PIPELINE_PLUGINS = {
     "wu_palmer": "wu-palmer",
-    "numerical_mapping": "mapping-distances",
+    "mapping": "mapping-distances",
     "transformers": "element_sim-to-element_dist-transformers",
     "aggregator": "attribute-distance-aggregator",
     "mds": "attribute-distance-mds",
@@ -54,7 +54,7 @@ PIPELINE_PLUGINS = {
 # --- Step 1: discover taxonomy attributes for the routing step ---
 @CELERY.task(name=f"{Router.instance.identifier}.preprocessing_task", bind=True)
 def preprocessing_task(self, db_id: int) -> str:
-    """Collect the taxonomy attributes presented in the routing step."""
+    """Collect the taxonomy attributes presented in the routing step view."""
     TASK_LOGGER.info(f"Starting router preprocessing with db id '{db_id}'")
     task_data = _load_task(db_id)
 
@@ -112,9 +112,53 @@ def preprocessing_task(self, db_id: int) -> str:
 
 
 # --- Initial Routing Task Launcher ---
-@CELERY.task(name=f"{Router.instance.identifier}.route_task", bind=True)
-def route_task(self, db_id: int) -> str:
+@CELERY.task(name=f"{Router.instance.identifier}.start_routing_task", bind=True)
+def start_routing_task(self, db_id: int) -> str:
+    """Starts the router. Gets the users routing selections for the attributes and puts the corresponding pipelines in a queue."""
     task_data = ProcessingTask.get_by_id(id_=db_id)
+
+    selections = task_data.data.get("routing_selections", {})
+
+    wu_palmer_attributes = [
+        attr for attr, option in selections.items() if option == "Wu-Palmer"
+    ]
+    mapping_attributes = [
+        attr for attr, option in selections.items() if option == "Mapping"
+    ]
+    one_hot_attributes = [
+        attr for attr, option in selections.items() if option == "One-Hot"
+    ]
+
+    pipeline_queue = []
+    
+    if wu_palmer_attributes:
+        task_data.add_task_log_entry(
+            f"Queued Wu-Palmer pipeline for attributes: {wu_palmer_attributes}"
+        )
+        task_data.data["wu_palmer_attributes"] = "\n".join(wu_palmer_attributes)
+        pipeline_queue.append("wu_palmer")
+
+    if mapping_attributes:
+        task_data.add_task_log_entry(
+            f"Queued distances mapping pipeline for attributes: {mapping_attributes}"
+        )
+        task_data.data["mapping_attributes"] = "\n".join(mapping_attributes)
+        pipeline_queue.append("mapping")
+
+    if one_hot_attributes:
+        task_data.add_task_log_entry(
+            f"One-Hot encoding not yet supported. Selected One-Hot for attributes: {one_hot_attributes}"
+        )
+
+    none_selected = [attr for attr, option in selections.items() if option == "None"]
+    if none_selected:
+        task_data.add_task_log_entry(
+            f"None selected attributes skipped: {none_selected}"
+        )
+
+    task_data.data["pipeline_queue"] = pipeline_queue
+    task_data.data["current_pipeline"] = None
+    task_data.save(commit=True)
 
     # Trigger the first pipeline
     launch_next_pipeline(task_data)

@@ -47,7 +47,7 @@ from .tasks import (
     PIPELINE_PLUGINS,
     handle_webhook_task,
     preprocessing_task,
-    route_task,
+    start_routing_task,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -200,7 +200,7 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Discover the taxonomy attributes and queue the routing step."""
         db_task = ProcessingTask(
-            task_name=route_task.name, parameters=InputParametersSchema().dumps(arguments)
+            task_name=start_routing_task.name, parameters=InputParametersSchema().dumps(arguments)
         )
         db_task.save(commit=True)
 
@@ -299,7 +299,7 @@ class RoutingStepView(MethodView):
             raise KeyError(msg)
 
         # The routing selections are kept in ``data`` rather than merged into
-        # ``parameters``. ``route_task`` reloads ``parameters`` through
+        # ``parameters``. ``start_routing_task`` reloads ``parameters`` through
         # ``InputParametersSchema`` which would reject the dynamic
         # ``pipeline_<attribute>`` fields.
         prefix = "pipeline_"
@@ -308,45 +308,8 @@ class RoutingStepView(MethodView):
             for key, value in arguments.items()
             if key.startswith(prefix)
         }
-        wu_palmer_attributes = [
-            attr for attr, option in selections.items() if option == "Wu-Palmer"
-        ]
-        mapping_attributes = [
-            attr for attr, option in selections.items() if option == "Mapping"
-        ]
-        one_hot_attributes = [
-            attr for attr, option in selections.items() if option == "One-Hot"
-        ]
+        db_task.data["routing_selections"] = selections
 
-        pipeline_queue = []
-        if wu_palmer_attributes:
-            db_task.add_task_log_entry(
-                f"Queued Wu-Palmer pipeline for attributes: {wu_palmer_attributes}"
-            )
-            db_task.data["wu_palmer_attributes"] = "\n".join(wu_palmer_attributes)
-            pipeline_queue.append("wu_palmer")
-
-        if mapping_attributes:
-            db_task.add_task_log_entry(
-                f"Queued distances mapping pipeline for attributes: {mapping_attributes}"
-            )
-            db_task.data["mapping_attributes"] = "\n".join(mapping_attributes)
-            pipeline_queue.append("mapping")
-        
-        if one_hot_attributes:
-            db_task.add_task_log_entry(
-                f"One-Hot encoding not yet supported. Selected One-Hot for attributes: {mapping_attributes}"
-            )
-        
-        none_selected = [attr for attr, option in selections.items() if option == "None"]
-        if none_selected:
-            db_task.add_task_log_entry(
-                f"None selected attributes skipped: {none_selected}"
-            )
-        
-        db_task.data["pipeline_queue"] = pipeline_queue
-        db_task.data["current_pipeline"] = None
-      
         db_task.data["webhook_url"] = url_for(
             f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
         )
@@ -364,7 +327,7 @@ class RoutingStepView(MethodView):
         app = current_app._get_current_object()
         TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
-        task = route_task.s(db_id=db_task.id)
+        task = start_routing_task.s(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 

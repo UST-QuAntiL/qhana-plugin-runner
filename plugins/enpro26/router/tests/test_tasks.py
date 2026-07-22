@@ -17,7 +17,7 @@ import json
 import pytest
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from router.tasks import handle_webhook_task, route_task
+from router.tasks import handle_webhook_task, start_routing_task
 from router.tasks_pipeline_steps import start_wu_palmer, start_mapping, CELERY_COUNTDOWN
 
 from tests.utils import MockResponse, run_task
@@ -38,8 +38,13 @@ def _setup_mock_task() -> ProcessingTask:
         "maxIter": 300,
         "missingDataHandling": "mean",
     }
-    db_task = ProcessingTask(task_name=route_task.name, parameters=json.dumps(params))
+    db_task = ProcessingTask(task_name=start_routing_task.name, parameters=json.dumps(params))
     db_task.data["webhook_url"] = "http://my-router/webhook"
+
+    db_task.data["routing_selections"] = {
+        "attr1": "Wu-Palmer",
+        "attr2": "Mapping"
+    }
 
     db_task.data["wu_palmer_attributes"] = "attr1"
     db_task.data["mapping_attributes"] = "attr2"
@@ -49,7 +54,7 @@ def _setup_mock_task() -> ProcessingTask:
 
     db_task.data["plugin_urls"] = {
         "wu_palmer": "http://localhost:5005/plugins/wu-palmer/",
-        "numerical_mapping": "http://localhost:5005/plugins/mapping-distances/",
+        "mapping": "http://localhost:5005/plugins/mapping-distances/",
         "transformer": "http://localhost:5005/plugins/element_sim-to-element_dist-transformers/",
         "aggregator": "http://localhost:5005/plugins/attribute-distance-aggregator/",
         "mds": "http://localhost:5005/plugins/attribute-distance-mds/",
@@ -60,6 +65,13 @@ def _setup_mock_task() -> ProcessingTask:
 
 def test_route_task_queues_and_launches(monkeypatch):
     db_task = _setup_mock_task()
+
+    # Clear out the pre-populated states so we can verify the task builds them correctly
+    db_task.data.pop("current_pipeline", None)
+    db_task.data.pop("pipeline_queue", None)
+    db_task.data.pop("wu_palmer_attributes", None)
+    db_task.data.pop("mapping_attributes", None)
+    db_task.save(commit=True)
 
     # route_task should build the queue and call start_wu_palmer.apply_async
     triggered = []
@@ -72,11 +84,14 @@ def test_route_task_queues_and_launches(monkeypatch):
     )
 
     # Execute Step 1 Routing
-    run_task(route_task, db_id=db_task.id)
+    run_task(start_routing_task, db_id=db_task.id)
 
     db_task = ProcessingTask.get_by_id(db_task.id)
+    
+    assert db_task.data["wu_palmer_attributes"] == "attr1"
+    assert db_task.data["mapping_attributes"] == "attr2"
     assert db_task.data["current_pipeline"] == "wu_palmer"
-    assert "mapping" in db_task.data["pipeline_queue"]
+    assert db_task.data["pipeline_queue"] == ["mapping"]
     assert len(triggered) == 1
 
 
