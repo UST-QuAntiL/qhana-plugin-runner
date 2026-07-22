@@ -18,7 +18,7 @@ import pytest
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router.tasks import handle_webhook_task, route_task
-from router.pipeline_tasks import start_wu_palmer, start_mapping, CELERY_COUNTDOWN
+from router.tasks_pipeline_steps import start_wu_palmer, start_mapping, CELERY_COUNTDOWN
 
 from tests.utils import MockResponse, run_task
 
@@ -68,7 +68,7 @@ def test_route_task_queues_and_launches(monkeypatch):
         triggered.append("wu_palmer_started")
 
     monkeypatch.setattr(
-        "router.pipeline_tasks.start_wu_palmer.apply_async", mock_apply_async
+        "router.tasks_pipeline_steps.start_wu_palmer.apply_async", mock_apply_async
     )
 
     # Execute Step 1 Routing
@@ -118,7 +118,7 @@ def test_start_wu_palmer_task(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
     # Resolve the process endpoint from the stored metadata url without HTTP.
     monkeypatch.setattr(
-        "router.task_helpers.get_plugin_endpoint", lambda base: base + "process/"
+        "router.tasks_helpers.get_plugin_endpoint", lambda base: base + "process/"
     )
 
     # Execute Step 1
@@ -138,22 +138,22 @@ def test_start_wu_palmer_task(monkeypatch):
         (
             "wu_palmer_url",
             "http://mock/tasks/wp/999/",
-            "router.pipeline_tasks.start_transformers.apply_async",
+            "router.tasks_pipeline_steps.start_transformers.apply_async",
         ),
         (
             "transformers_url",
             "http://mock/tasks/tr/999/",
-            "router.pipeline_tasks.start_aggregator.apply_async",
+            "router.tasks_pipeline_steps.start_aggregator.apply_async",
         ),
         (
             "aggregators_url",
             "http://mock/tasks/ag/999/",
-            "router.pipeline_tasks.start_mds.apply_async",
+            "router.tasks_pipeline_steps.start_mds.apply_async",
         ),
         (
             "mds_url",
             "http://mock/tasks/mds/999/",
-            "router.pipeline_tasks.finalize_pipeline.apply_async",
+            "router.tasks_pipeline_steps.finalize_pipeline.apply_async",
         ),
     ],
 )
@@ -236,7 +236,7 @@ def test_start_mapping_task(monkeypatch):
     monkeypatch.setattr("requests.post", mock_post)
     monkeypatch.setattr("requests.get", mock_get)
     monkeypatch.setattr(
-        "router.task_helpers.get_plugin_endpoint", lambda base: base + "process/"
+        "router.tasks_helpers.get_plugin_endpoint", lambda base: base + "process/"
     )
 
     run_task(start_mapping, db_id=db_task.id)
@@ -254,17 +254,17 @@ def test_start_mapping_task(monkeypatch):
         (
             "mapping_url",
             "http://mock/tasks/map/888/",
-            "router.pipeline_tasks.start_aggregator.apply_async",
+            "router.tasks_pipeline_steps.start_aggregator.apply_async",
         ),
         (
             "aggregators_url",
             "http://mock/tasks/ag/888/",
-            "router.pipeline_tasks.start_mds.apply_async",
+            "router.tasks_pipeline_steps.start_mds.apply_async",
         ),
         (
             "mds_url",
             "http://mock/tasks/mds/888/",
-            "router.pipeline_tasks.finalize_pipeline.apply_async",
+            "router.tasks_pipeline_steps.finalize_pipeline.apply_async",
         ),
     ],
 )
@@ -319,7 +319,6 @@ def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
     db_task.save(commit=True)
 
     def mock_get(url, **kwargs):
-        from tests.utils import MockResponse
         return MockResponse(
             url, "application/json", status_code=200, json_data={"status": "SUCCESS"}
         )

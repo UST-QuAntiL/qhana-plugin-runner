@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import requests
 from io import BytesIO
 from zipfile import ZipFile
@@ -26,8 +25,8 @@ from qhana_plugin_runner.requests import get_mimetype, open_url
 
 from . import Router
 from .schemas import InputParameters, InputParametersSchema
-from .task_helpers import _load_task, _load_entity_attributes, _taxonomy_ref, _calculate_recommendations
-from .pipeline_tasks import (
+from .tasks_helpers import _load_task, _load_entity_attributes, _taxonomy_ref, _calculate_recommendations
+from .tasks_pipeline_steps import (
     CELERY_COUNTDOWN,
     launch_next_pipeline,
     start_transformers,
