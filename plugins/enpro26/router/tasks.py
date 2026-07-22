@@ -25,7 +25,12 @@ from qhana_plugin_runner.requests import get_mimetype, open_url
 
 from . import Router
 from .schemas import InputParameters, InputParametersSchema
-from .tasks_helpers import _load_task, _load_entity_attributes, _taxonomy_ref, _calculate_recommendations
+from .tasks_helpers import (
+    _load_task,
+    _load_entity_attributes,
+    _taxonomy_ref,
+    _calculate_recommendations,
+)
 from .tasks_pipeline_steps import (
     CELERY_COUNTDOWN,
     launch_next_pipeline,
@@ -130,7 +135,7 @@ def start_routing_task(self, db_id: int) -> str:
     ]
 
     pipeline_queue = []
-    
+
     if wu_palmer_attributes:
         task_data.add_task_log_entry(
             f"Queued Wu-Palmer pipeline for attributes: {wu_palmer_attributes}"
@@ -152,9 +157,7 @@ def start_routing_task(self, db_id: int) -> str:
 
     none_selected = [attr for attr, option in selections.items() if option == "None"]
     if none_selected:
-        task_data.add_task_log_entry(
-            f"None selected attributes skipped: {none_selected}"
-        )
+        task_data.add_task_log_entry(f"None selected attributes skipped: {none_selected}")
 
     task_data.data["pipeline_queue"] = pipeline_queue
     task_data.data["current_pipeline"] = None

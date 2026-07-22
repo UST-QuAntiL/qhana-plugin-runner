@@ -200,7 +200,8 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Discover the taxonomy attributes and queue the routing step."""
         db_task = ProcessingTask(
-            task_name=start_routing_task.name, parameters=InputParametersSchema().dumps(arguments)
+            task_name=start_routing_task.name,
+            parameters=InputParametersSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 

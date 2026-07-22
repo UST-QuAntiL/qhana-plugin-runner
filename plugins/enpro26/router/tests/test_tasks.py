@@ -38,13 +38,12 @@ def _setup_mock_task() -> ProcessingTask:
         "maxIter": 300,
         "missingDataHandling": "mean",
     }
-    db_task = ProcessingTask(task_name=start_routing_task.name, parameters=json.dumps(params))
+    db_task = ProcessingTask(
+        task_name=start_routing_task.name, parameters=json.dumps(params)
+    )
     db_task.data["webhook_url"] = "http://my-router/webhook"
 
-    db_task.data["routing_selections"] = {
-        "attr1": "Wu-Palmer",
-        "attr2": "Mapping"
-    }
+    db_task.data["routing_selections"] = {"attr1": "Wu-Palmer", "attr2": "Mapping"}
 
     db_task.data["wu_palmer_attributes"] = "attr1"
     db_task.data["mapping_attributes"] = "attr2"
@@ -87,7 +86,7 @@ def test_route_task_queues_and_launches(monkeypatch):
     run_task(start_routing_task, db_id=db_task.id)
 
     db_task = ProcessingTask.get_by_id(db_task.id)
-    
+
     assert db_task.data["wu_palmer_attributes"] == "attr1"
     assert db_task.data["mapping_attributes"] == "attr2"
     assert db_task.data["current_pipeline"] == "wu_palmer"
@@ -337,11 +336,10 @@ def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
         return MockResponse(
             url, "application/json", status_code=200, json_data={"status": "SUCCESS"}
         )
+
     monkeypatch.setattr("requests.get", mock_get)
 
-    result = run_task(
-        handle_webhook_task, db_id=db_task.id, source_url=mock_url
-    )
+    result = run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
 
     assert result == "Unrecognized pipeline state"
 

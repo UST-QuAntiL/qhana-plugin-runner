@@ -105,6 +105,7 @@ def _load_entity_attributes(entities_url: str) -> set:
             attributes.update(ent.keys())
     return attributes
 
+
 def _calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
     """
     Parses the taxonomy JSON to determine the recommended pipeline.
@@ -117,8 +118,7 @@ def _calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
             tax_data = json.load(f)
             # Check if any entity has a non-empty mapping_raw
             has_mapping = any(
-                ent.get("mapping_raw", "") != ""
-                for ent in tax_data.get("entities", [])
+                ent.get("mapping_raw", "") != "" for ent in tax_data.get("entities", [])
             )
             return "Mapping" if has_mapping else "Wu-Palmer"
     except Exception as e:

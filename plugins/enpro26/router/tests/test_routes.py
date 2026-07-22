@@ -109,7 +109,7 @@ def test_routing_step_process_records_selection_and_redirects(client, monkeypatc
 
     assert db_task.data.get("routing_selections") == {
         "instrumentation": "Wu-Palmer",
-        "genre": "Mapping"
+        "genre": "Mapping",
     }
 
 
