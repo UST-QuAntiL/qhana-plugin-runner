@@ -62,6 +62,7 @@ class PluginsView(MethodView):
                             "application/json",
                             "application/X-lines+json",
                             "text/csv",
+                            "application/zip",
                         ],
                         required=True,
                         parameter="urls",

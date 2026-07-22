@@ -14,9 +14,10 @@
 
 from json import loads
 from tempfile import SpooledTemporaryFile
-from typing import Optional
+from typing import Iterator, List, Optional
 
 from celery.utils.log import get_task_logger
+from requests.models import Response
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -25,12 +26,50 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.zip_utils import get_file_responses_from_zip
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
 
 from . import VectorConcatPlugin
 
 TASK_LOGGER = get_task_logger(__name__)
+
+_ENTITY_MIMETYPES = frozenset(
+    ("application/json", "application/X-lines+json", "text/csv")
+)
+
+
+def _detect_entity_mimetype(response: Response) -> str:
+    """Determine the entity mimetype of a zip member.
+
+    The content type guessed from the file name is preferred; if it is not a
+    known entity mimetype (e.g. the member has no or an ambiguous extension),
+    the format is sniffed from the member's content.
+    """
+    mimetype = get_mimetype(response)
+    if mimetype in _ENTITY_MIMETYPES:
+        return mimetype
+
+    stripped = response.text.lstrip()
+    if stripped.startswith("["):
+        return "application/json"
+    if stripped.startswith("{"):
+        non_empty_lines = [line for line in response.text.splitlines() if line.strip()]
+        if len(non_empty_lines) > 1:
+            return "application/X-lines+json"
+        return "application/json"
+    return "text/csv"
+
+
+def _load_entities_from_zip(zip_bytes: bytes) -> Iterator[List]:
+    """Yield one entity list per file contained in the zip archive.
+
+    The content of each member may be JSON, JSON lines or CSV; the format is
+    detected dynamically from the file name or its content.
+    """
+    for response in get_file_responses_from_zip(zip_bytes):
+        mimetype = _detect_entity_mimetype(response)
+        yield list(ensure_array(load_entities(response, mimetype=mimetype), strict=True))
 
 
 @CELERY.task(name=f"{VectorConcatPlugin.instance.identifier}.calculation_task", bind=True)
@@ -55,10 +94,13 @@ def calculation_task(self, db_id: int) -> str:
             mimetype = get_mimetype(x)
             if not mimetype:
                 raise ValueError(f"Could not determine mimetype of {url}!")
-            entities = list(
-                ensure_array(load_entities(x, mimetype=mimetype), strict=True)
-            )
-            entities_list.append(entities)
+            if mimetype == "application/zip":
+                entities_list.extend(_load_entities_from_zip(x.content))
+            else:
+                entities = list(
+                    ensure_array(load_entities(x, mimetype=mimetype), strict=True)
+                )
+                entities_list.append(entities)
 
     combined = []
     for entities_tuple in zip(*entities_list, strict=True):
