@@ -37,7 +37,7 @@ def test_metadata_endpoint_returns_full_descriptor(client):
 
     assert body["name"] == plugin.name
     assert body["type"] == "processing"
-    assert len(body["entryPoint"]["dataOutput"]) == 4  # Ensures all 4 files are expected
+    assert len(body["entryPoint"]["dataOutput"]) == 4
 
 
 def test_microfrontend_renders_form_fields(client):
@@ -46,6 +46,7 @@ def test_microfrontend_renders_form_fields(client):
     body = resp.get_data(as_text=True)
 
     assert "Entities URL" in body
+    assert "Distance Metric" in body
     assert "Transformer" in body
     assert "Metric" in body
 
@@ -56,6 +57,7 @@ def test_process_valid_payload_redirects_to_task(client, monkeypatch):
         "entitiesUrl": "http://example.com/data.csv",
         "entitiesMetadataUrl": "http://example.com/meta.json",
         "taxonomiesZipUrl": "http://example.com/tax.zip",
+        "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
         "dimensions": 2,
         "metric": "metric_mds",
@@ -73,6 +75,7 @@ def test_process_valid_payload_redirects_to_task(client, monkeypatch):
 def test_routing_step_frontend_renders_attribute_dropdowns(client):
     db_task = ProcessingTask(task_name="router_test", parameters="{}")
     db_task.data["taxonomy_attributes"] = ["instrumentation", "genre"]
+    db_task.data["recommendations"] = {"genre": "Mapping"}
     db_task.save(commit=True)
 
     resp = client.get(_path("RoutingStepFrontend", db_id=db_task.id))
@@ -82,6 +85,7 @@ def test_routing_step_frontend_renders_attribute_dropdowns(client):
     assert 'name="pipeline_instrumentation"' in body
     assert 'name="pipeline_genre"' in body
     assert "Wu-Palmer" in body
+    assert "Mapping" in body
 
 
 def test_routing_step_process_records_selection_and_redirects(client, monkeypatch):
@@ -95,7 +99,7 @@ def test_routing_step_process_records_selection_and_redirects(client, monkeypatc
 
     resp = client.post(
         _path("RoutingStepView", db_id=db_task.id),
-        data={"pipeline_instrumentation": "Wu-Palmer", "pipeline_genre": "One-Hot"},
+        data={"pipeline_instrumentation": "Wu-Palmer", "pipeline_genre": "Mapping"},
     )
 
     assert resp.status_code == HTTPStatus.SEE_OTHER
@@ -103,6 +107,10 @@ def test_routing_step_process_records_selection_and_redirects(client, monkeypatc
 
     db_task = ProcessingTask.get_by_id(db_task.id)
     assert db_task.data["wu_palmer_attributes"] == "instrumentation"
+    assert db_task.data["mapping_attributes"] == "genre"
+
+    assert "wu_palmer" in db_task.data["pipeline_queue"]
+    assert "mapping" in db_task.data["pipeline_queue"]
 
 
 def test_webhook_view_accepts_status_events(client, monkeypatch):

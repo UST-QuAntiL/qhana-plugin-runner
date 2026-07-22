@@ -31,6 +31,7 @@ def _payload(**overrides) -> dict:
         "entitiesUrl": VALID_URL,
         "entitiesMetadataUrl": VALID_URL,
         "taxonomiesZipUrl": VALID_ZIP,
+        "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
         "dimensions": 2,
         "metric": "metric_mds",
@@ -54,13 +55,15 @@ def test_missing_required_fields_rejected():
         InputParametersSchema().load({})
     assert "entitiesUrl" in exc.value.messages
     assert "transformer" in exc.value.messages
+    assert "distanceMetric" in exc.value.messages
 
 
 def test_routing_step_accepts_pipeline_fields():
     result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
-        {"pipeline_instrumentation": "Wu-Palmer"}
+        {"pipeline_instrumentation": "Wu-Palmer", "pipeline_genre": "Mapping"}
     )
     assert result["pipeline_instrumentation"] == "Wu-Palmer"
+    assert result["pipeline_genre"] == "Mapping"
 
 
 def test_routing_step_rejects_unknown_field():

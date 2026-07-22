@@ -18,6 +18,7 @@ import pytest
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router.tasks import handle_webhook_task, route_task
+from router.pipeline_tasks import start_wu_palmer, start_mapping, CELERY_COUNTDOWN
 
 from tests.utils import MockResponse, run_task
 
@@ -29,6 +30,7 @@ def _setup_mock_task() -> ProcessingTask:
         "entitiesUrl": "http://mock/entities",
         "entitiesMetadataUrl": "http://mock/meta",
         "taxonomiesZipUrl": "http://mock/tax",
+        "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
         "dimensions": 2,
         "metric": "metric_mds",
@@ -38,12 +40,16 @@ def _setup_mock_task() -> ProcessingTask:
     }
     db_task = ProcessingTask(task_name=route_task.name, parameters=json.dumps(params))
     db_task.data["webhook_url"] = "http://my-router/webhook"
-    # The Wu-Palmer attribute list is computed in the routing step before the
-    # pipeline tasks run.
+
     db_task.data["wu_palmer_attributes"] = "attr1"
-    # The routing step resolves and stores the pipeline plugin metadata urls.
+    db_task.data["mapping_attributes"] = "attr2"
+
+    db_task.data["current_pipeline"] = "wu_palmer"
+    db_task.data["pipeline_queue"] = ["wu_palmer", "mapping"]
+
     db_task.data["plugin_urls"] = {
         "wu_palmer": "http://localhost:5005/plugins/wu-palmer/",
+        "numerical_mapping": "http://localhost:5005/plugins/mapping-distances/",
         "transformer": "http://localhost:5005/plugins/element_sim-to-element_dist-transformers/",
         "aggregator": "http://localhost:5005/plugins/attribute-distance-aggregator/",
         "mds": "http://localhost:5005/plugins/attribute-distance-mds/",
@@ -52,7 +58,29 @@ def _setup_mock_task() -> ProcessingTask:
     return db_task
 
 
-def test_route_task_starts_wu_palmer(monkeypatch):
+def test_route_task_queues_and_launches(monkeypatch):
+    db_task = _setup_mock_task()
+
+    # route_task should build the queue and call start_wu_palmer.apply_async
+    triggered = []
+
+    def mock_apply_async(*args, **kwargs):
+        triggered.append("wu_palmer_started")
+
+    monkeypatch.setattr(
+        "router.pipeline_tasks.start_wu_palmer.apply_async", mock_apply_async
+    )
+
+    # Execute Step 1 Routing
+    run_task(route_task, db_id=db_task.id)
+
+    db_task = ProcessingTask.get_by_id(db_task.id)
+    assert db_task.data["current_pipeline"] == "wu_palmer"
+    assert "mapping" in db_task.data["pipeline_queue"]
+    assert len(triggered) == 1
+
+
+def test_start_wu_palmer_task(monkeypatch):
     db_task = _setup_mock_task()
 
     # MOCK HTTP CALLS
@@ -90,11 +118,11 @@ def test_route_task_starts_wu_palmer(monkeypatch):
     monkeypatch.setattr("requests.get", mock_get)
     # Resolve the process endpoint from the stored metadata url without HTTP.
     monkeypatch.setattr(
-        "router.tasks.get_plugin_endpoint", lambda base: base + "process/"
+        "router.task_helpers.get_plugin_endpoint", lambda base: base + "process/"
     )
 
     # Execute Step 1
-    run_task(route_task, db_id=db_task.id)
+    run_task(start_wu_palmer, db_id=db_task.id)
 
     # Verify State Machine
     db_task = ProcessingTask.get_by_id(db_task.id)
@@ -110,33 +138,34 @@ def test_route_task_starts_wu_palmer(monkeypatch):
         (
             "wu_palmer_url",
             "http://mock/tasks/wp/999/",
-            "router.tasks.process_step_2_transformers.apply_async",
+            "router.pipeline_tasks.start_transformers.apply_async",
         ),
         (
             "transformers_url",
             "http://mock/tasks/tr/999/",
-            "router.tasks.process_step_3_aggregator.apply_async",
+            "router.pipeline_tasks.start_aggregator.apply_async",
         ),
         (
             "aggregators_url",
             "http://mock/tasks/ag/999/",
-            "router.tasks.process_step_4_mds.apply_async",
+            "router.pipeline_tasks.start_mds.apply_async",
         ),
         (
             "mds_url",
             "http://mock/tasks/mds/999/",
-            "router.tasks.finalize_pipeline.apply_async",
+            "router.pipeline_tasks.finalize_pipeline.apply_async",
         ),
     ],
 )
-def test_handle_webhook_routing_all_steps(
+def test_handle_webhook_routing_wu_palmer_progression(
     monkeypatch, source_key, mock_url, next_task_path
 ):
     """
     Tests that the webhook traffic cop successfully routes a SUCCESS status
-    from a given step to the correct subsequent task using apply_async.
+    for the Wu-Palmer pipeline state to the correct subsequent task.
     """
     db_task = _setup_mock_task()
+    db_task.data["current_pipeline"] = "wu_palmer"
     db_task.data[source_key] = mock_url
     db_task.save(commit=True)
 
@@ -161,8 +190,7 @@ def test_handle_webhook_routing_all_steps(
     triggered = []
 
     def mock_apply_async(*args, **kwargs):
-        # Assert that countdown=4 is being passed
-        if kwargs.get("countdown") == 4:
+        if kwargs.get("countdown") == CELERY_COUNTDOWN:
             triggered.append("next_step_triggered")
 
     monkeypatch.setattr("requests.get", mock_get)
@@ -175,7 +203,137 @@ def test_handle_webhook_routing_all_steps(
     assert triggered[0] == "next_step_triggered"
 
 
+def test_start_mapping_task(monkeypatch):
+    db_task = _setup_mock_task()
+
+    def mock_post(url, **kwargs):
+        if "mapping" in url:
+            return MockResponse(
+                url,
+                "text/html",
+                status_code=303,
+                headers={
+                    "Location": "http://localhost:5005/plugins/mapping-distances@v0-1-0/tasks/888/"
+                },
+            )
+        if "subscribe" in url:
+            return MockResponse(url, "application/zip", status_code=200)
+        raise ValueError(f"Unexpected POST to {url}")
+
+    def mock_get(url, **kwargs):
+        if "/tasks/888/" in url:
+            return MockResponse(
+                url,
+                "application/zip",
+                status_code=200,
+                json_data={
+                    "status": "PENDING",
+                    "links": [{"type": "subscribe", "href": "http://mock/subscribe"}],
+                },
+            )
+        raise ValueError(f"Unexpected GET to {url}")
+
+    monkeypatch.setattr("requests.post", mock_post)
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr(
+        "router.task_helpers.get_plugin_endpoint", lambda base: base + "process/"
+    )
+
+    run_task(start_mapping, db_id=db_task.id)
+
+    db_task = ProcessingTask.get_by_id(db_task.id)
+    assert (
+        db_task.data["mapping_url"]
+        == "http://localhost:5005/plugins/mapping-distances@v0-1-0/tasks/888/"
+    )
+
+
+@pytest.mark.parametrize(
+    "source_key, mock_url, next_task_path",
+    [
+        (
+            "mapping_url",
+            "http://mock/tasks/map/888/",
+            "router.pipeline_tasks.start_aggregator.apply_async",
+        ),
+        (
+            "aggregators_url",
+            "http://mock/tasks/ag/888/",
+            "router.pipeline_tasks.start_mds.apply_async",
+        ),
+        (
+            "mds_url",
+            "http://mock/tasks/mds/888/",
+            "router.pipeline_tasks.finalize_pipeline.apply_async",
+        ),
+    ],
+)
+def test_handle_webhook_routing_mapping_progression(
+    monkeypatch, source_key, mock_url, next_task_path
+):
+    """
+    Tests that the webhook traffic cop successfully routes a SUCCESS status
+    for the Mapping pipeline state to the correct subsequent task.
+    """
+    db_task = _setup_mock_task()
+    db_task.data["current_pipeline"] = "mapping"
+    db_task.data[source_key] = mock_url
+    db_task.save(commit=True)
+
+    def mock_get(url, **kwargs):
+        return MockResponse(
+            url,
+            "application/zip",
+            status_code=200,
+            json_data={
+                "status": "SUCCESS",
+                "outputs": [
+                    {"dataType": "some/datatype", "href": "http://mock/data.zip"}
+                ],
+            },
+        )
+
+    triggered = []
+
+    def mock_apply_async(*args, **kwargs):
+        if kwargs.get("countdown") == CELERY_COUNTDOWN:
+            triggered.append("next_step_triggered")
+
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr(next_task_path, mock_apply_async)
+
+    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
+
+    assert len(triggered) == 1
+    assert triggered[0] == "next_step_triggered"
+
+
+def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
+    """Verifies that a bad internal state is caught even if the URL is valid."""
+    db_task = _setup_mock_task()
+
+    mock_url = "http://mock/tasks/wp/999/"
+    db_task.data["wu_palmer_url"] = mock_url
+
+    db_task.data["current_pipeline"] = "some_unknown_state"
+    db_task.save(commit=True)
+
+    def mock_get(url, **kwargs):
+        from tests.utils import MockResponse
+        return MockResponse(
+            url, "application/json", status_code=200, json_data={"status": "SUCCESS"}
+        )
+    monkeypatch.setattr("requests.get", mock_get)
+
+    result = run_task(
+        handle_webhook_task, db_id=db_task.id, source_url=mock_url
+    )
+
+    assert result == "Unrecognized pipeline state"
+
+
 def test_handle_webhook_ignores_unrecognized_source():
+    """Verifies that an unknown URL is rejected before a network call is made."""
     db_task = _setup_mock_task()
 
     # Feed an unknown URL to the webhook
@@ -183,4 +341,4 @@ def test_handle_webhook_ignores_unrecognized_source():
         handle_webhook_task, db_id=db_task.id, source_url="http://unknown-source"
     )
 
-    assert result == "Unrecognized webhook"
+    assert result == "Unrecognized webhook source"
