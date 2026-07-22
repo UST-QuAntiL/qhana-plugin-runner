@@ -52,6 +52,7 @@ def test_metadata_endpoint_returns_full_descriptor(client):
                 "application/json",
                 "application/X-lines+json",
                 "text/csv",
+                "application/zip",
             ],
             "required": True,
             "parameter": "urls",
