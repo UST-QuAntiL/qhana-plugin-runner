@@ -22,14 +22,15 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
+from qhana_plugin_runner.tasks import save_task_result
 
 from . import Router
 from .schemas import InputParameters, InputParametersSchema
 from .tasks_helpers import (
-    _load_task,
-    _load_entity_attributes,
-    _taxonomy_ref,
-    _calculate_recommendations,
+    load_task,
+    load_entity_attributes,
+    taxonomy_ref,
+    calculate_recommendations,
 )
 from .tasks_pipeline_steps import (
     CELERY_COUNTDOWN,
@@ -61,14 +62,14 @@ PIPELINE_PLUGINS = {
 def preprocessing_task(self, db_id: int) -> str:
     """Collect the taxonomy attributes presented in the routing step view."""
     TASK_LOGGER.info(f"Starting router preprocessing with db id '{db_id}'")
-    task_data = _load_task(db_id)
+    task_data = load_task(db_id)
 
     params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     # The attribute metadata describes the full schema for all entity types. The
     # uploaded entities only contain a subset of those attributes, so collect the
     # attribute names actually present in the entities file.
-    entity_attributes = _load_entity_attributes(params.entities_url)
+    entity_attributes = load_entity_attributes(params.entities_url)
 
     # Collect the taxonomy present in the uploaded zip
     zip_content = open_url(params.taxonomies_zip_url).content
@@ -84,7 +85,7 @@ def preprocessing_task(self, db_id: int) -> str:
             metadata = AttributeMetadata.from_dict(element)
             if metadata.ID not in entity_attributes:
                 continue
-            ref = _taxonomy_ref(metadata)
+            ref = taxonomy_ref(metadata)
             if ref:
                 tax_filename = PurePath(ref).name
                 # Ensure the taxonomy file exists in the zip
@@ -100,7 +101,7 @@ def preprocessing_task(self, db_id: int) -> str:
                 if matched_zip_path:
                     taxonomy_attributes.append(metadata.ID)
 
-                    recommendations[metadata.ID] = _calculate_recommendations(
+                    recommendations[metadata.ID] = calculate_recommendations(
                         taxonomies_zip, matched_zip_path
                     )
 
@@ -168,9 +169,9 @@ def start_routing_task(self, db_id: int) -> str:
     return "Routing task started and pipeline queued."
 
 
-# --- Webhook task handles task results ---
 @CELERY.task(name=f"{Router.instance.identifier}.handle_webhook_task", bind=True)
 def handle_webhook_task(self, db_id: int, source_url: str):
+    """Handles webhook responses of the pipeline steps results"""
     task_data = ProcessingTask.get_by_id(db_id)
 
     known_urls = [
@@ -195,7 +196,6 @@ def handle_webhook_task(self, db_id: int, source_url: str):
         handle_wu_palmer_progression(task_data, db_id, source_url)
 
     elif current_pipeline == "mapping":
-        pass
         handle_mapping_progression(task_data, db_id, source_url)
 
     else:

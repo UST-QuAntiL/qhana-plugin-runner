@@ -59,7 +59,7 @@ def extract_output_url(outputs: list, data_type: str) -> str:
     raise ValueError(f"Could not find output with dataType {data_type}")
 
 
-def _plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
+def plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
     """Resolve a pipeline plugin's process endpoint from its metadata url.
 
     The route handler stores the external metadata url per plugin in
@@ -69,7 +69,7 @@ def _plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
     return get_plugin_endpoint(task_data.data["plugin_urls"][plugin])
 
 
-def _load_task(db_id: int) -> ProcessingTask:
+def load_task(db_id: int) -> ProcessingTask:
     task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -78,7 +78,7 @@ def _load_task(db_id: int) -> ProcessingTask:
     return task_data
 
 
-def _taxonomy_ref(metadata: AttributeMetadata) -> Optional[str]:
+def taxonomy_ref(metadata: AttributeMetadata) -> Optional[str]:
     """Return the referenced taxonomy file name, or ``None`` for non-taxonomy attributes.
 
     Taxonomy references point into the taxonomies zip, e.g.
@@ -93,7 +93,7 @@ def _taxonomy_ref(metadata: AttributeMetadata) -> Optional[str]:
     return ref_target.split(":", 1)[1]
 
 
-def _load_entity_attributes(entities_url: str) -> set:
+def load_entity_attributes(entities_url: str) -> set:
     """Return the set of attribute names present in the entities file."""
     attributes: set = set()
     with open_url(entities_url) as response:
@@ -106,7 +106,7 @@ def _load_entity_attributes(entities_url: str) -> set:
     return attributes
 
 
-def _calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
+def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
     """
     Parses the taxonomy JSON to determine the recommended pipeline.
     Returns 'Mapping' if any mapping_raw data is present, otherwise 'Wu-Palmer'.

@@ -26,7 +26,7 @@ from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import Router
 from .schemas import InputParameters, InputParametersSchema
-from .tasks_helpers import subscribe_to_plugin, extract_output_url, _plugin_process_url
+from .tasks_helpers import subscribe_to_plugin, extract_output_url, plugin_process_url
 
 TASK_LOGGER = get_task_logger(__name__)
 CELERY_COUNTDOWN = 3
@@ -63,7 +63,7 @@ def invoke_plugin_and_subscribe(
     url_key: str,
 ):
     """Boilerplate wrapper to construct the request, launch the plugin, and subscribe to the webhook."""
-    plugin_url = _plugin_process_url(task_data, plugin_name)
+    plugin_url = plugin_process_url(task_data, plugin_name)
     response = requests.post(plugin_url, data=payload, allow_redirects=False)
     response.raise_for_status()
 
