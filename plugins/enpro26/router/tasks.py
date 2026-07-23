@@ -27,13 +27,13 @@ from qhana_plugin_runner.tasks import save_task_result
 from . import Router
 from .schemas import InputParameters, InputParametersSchema
 from .tasks_helpers import (
+    CELERY_COUNTDOWN,
     load_task,
     load_entity_attributes,
     taxonomy_ref,
     calculate_recommendations,
 )
 from .tasks_pipeline_steps import (
-    CELERY_COUNTDOWN,
     launch_next_pipeline,
     start_transformers,
     start_aggregator,

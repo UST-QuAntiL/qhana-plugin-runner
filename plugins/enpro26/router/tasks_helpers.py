@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import requests
 import json
-from typing import Optional
-from zipfile import ZipFile
+import requests
+import traceback
 from celery.utils.log import get_task_logger
+from typing import Optional
+from urllib.parse import urljoin
+from zipfile import ZipFile
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
@@ -26,8 +28,10 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
 )
 from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint
 from qhana_plugin_runner.requests import get_mimetype, open_url
+from qhana_plugin_runner.tasks import save_task_error
 
 TASK_LOGGER = get_task_logger(__name__)
+CELERY_COUNTDOWN = 3
 
 
 def subscribe_to_plugin(task_result_url: str, webhook_url: str):
@@ -124,3 +128,38 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
     except Exception as e:
         TASK_LOGGER.warning(f"Could not read mapping for {zip_path}: {e}")
         return "Wu-Palmer"
+
+
+def run_pipeline_step(
+    celery_task,
+    db_id: int,
+    task_data: ProcessingTask,
+    plugin_name: str,
+    logging_name: str,
+    payload: dict,
+    url_key: str,
+):
+    """Boilerplate wrapper to handle task fetching, execution, retries, and error logging."""
+    TASK_LOGGER.info(f"Starting {logging_name} Step")
+    try:
+        plugin_url = plugin_process_url(task_data, plugin_name)
+        response = requests.post(plugin_url, data=payload, allow_redirects=False)
+        response.raise_for_status()
+
+        task_url = urljoin(plugin_url, response.headers["Location"])
+        task_data.data[url_key] = task_url
+        task_data.add_task_log_entry(f"Started {logging_name}.")
+        task_data.save(commit=True)
+
+        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(
+            f"Error occurred during {logging_name} step. Attempting to retry.\nError Message: {e}"
+        )
+        task_data.save(commit=True)
+        raise celery_task.retry(exc=e, countdown=CELERY_COUNTDOWN)
+    except Exception as e:
+        task_data.add_task_log_entry(
+            f"CRASH in {logging_name} step:\n{traceback.format_exc()}"
+        )
+        save_task_error.delay(failing_task_id=celery_task.request.id, db_id=db_id)
