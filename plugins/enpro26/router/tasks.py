@@ -25,7 +25,17 @@ from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.tasks import save_task_result
 
 from . import Router
-from .schemas import InputParameters, InputParametersSchema
+from .schemas import (
+    NONE_PLUGIN,
+    WU_PALMER_PLUGIN,
+    MAPPING_PLUGIN,
+    ONE_HOT_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    AGGREGATOR_PLUGIN,
+    MDS_PLUGIN,
+    InputParameters,
+    InputParametersSchema,
+)
 from .tasks_helpers import (
     CELERY_COUNTDOWN,
     load_task,
@@ -42,19 +52,6 @@ from .tasks_pipeline_steps import (
 )
 
 TASK_LOGGER = get_task_logger(__name__)
-
-# Names of the plugins invoked by the routing pipeline. The runner serves
-# plugin metadata at ``/plugins/<name>/`` and redirects a bare name to the
-# newest installed version. The route handler turns these into external
-# metadata urls (see routes.py), from which the process endpoint is resolved
-# through ``get_plugin_endpoint``.
-PIPELINE_PLUGINS = {
-    "wu_palmer": "wu-palmer",
-    "mapping": "mapping-distances",
-    "transformers": "element_sim-to-element_dist-transformers",
-    "aggregator": "attribute-distance-aggregator",
-    "mds": "attribute-distance-mds",
-}
 
 
 # --- Step 1: discover taxonomy attributes for the routing step ---
@@ -126,14 +123,15 @@ def start_routing_task(self, db_id: int) -> str:
     selections = task_data.data.get("routing_selections", {})
 
     wu_palmer_attributes = [
-        attr for attr, option in selections.items() if option == "Wu-Palmer"
+        attr for attr, option in selections.items() if option == WU_PALMER_PLUGIN
     ]
     mapping_attributes = [
-        attr for attr, option in selections.items() if option == "Mapping"
+        attr for attr, option in selections.items() if option == MAPPING_PLUGIN
     ]
     one_hot_attributes = [
-        attr for attr, option in selections.items() if option == "One-Hot"
+        attr for attr, option in selections.items() if option == ONE_HOT_PLUGIN
     ]
+    none_selected = [attr for attr, option in selections.items() if option == NONE_PLUGIN]
 
     pipeline_queue = []
 
@@ -141,22 +139,21 @@ def start_routing_task(self, db_id: int) -> str:
         task_data.add_task_log_entry(
             f"Queued Wu-Palmer pipeline for attributes: {wu_palmer_attributes}"
         )
-        task_data.data["wu_palmer_attributes"] = "\n".join(wu_palmer_attributes)
-        pipeline_queue.append("wu_palmer")
+        task_data.data[f"{WU_PALMER_PLUGIN}_attributes"] = "\n".join(wu_palmer_attributes)
+        pipeline_queue.append(WU_PALMER_PLUGIN)
 
     if mapping_attributes:
         task_data.add_task_log_entry(
             f"Queued distances mapping pipeline for attributes: {mapping_attributes}"
         )
-        task_data.data["mapping_attributes"] = "\n".join(mapping_attributes)
-        pipeline_queue.append("mapping")
+        task_data.data[f"{MAPPING_PLUGIN}_attributes"] = "\n".join(mapping_attributes)
+        pipeline_queue.append(MAPPING_PLUGIN)
 
     if one_hot_attributes:
         task_data.add_task_log_entry(
             f"One-Hot encoding not yet supported. Selected One-Hot for attributes: {one_hot_attributes}"
         )
 
-    none_selected = [attr for attr, option in selections.items() if option == "None"]
     if none_selected:
         task_data.add_task_log_entry(f"None selected attributes skipped: {none_selected}")
 
@@ -175,11 +172,11 @@ def handle_webhook_task(self, db_id: int, source_url: str):
     task_data = ProcessingTask.get_by_id(db_id)
 
     known_urls = [
-        task_data.data.get("wu_palmer_url"),
-        task_data.data.get("mapping_url"),
-        task_data.data.get("transformers_url"),
-        task_data.data.get("aggregators_url"),
-        task_data.data.get("mds_url"),
+        task_data.data.get(f"{WU_PALMER_PLUGIN}_url"),
+        task_data.data.get(f"{MAPPING_PLUGIN}_url"),
+        task_data.data.get(f"{TRANSFORMERS_PLUGIN}_url"),
+        task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"),
+        task_data.data.get(f"{MDS_PLUGIN}_url"),
     ]
 
     if not source_url or source_url not in known_urls:
@@ -192,10 +189,10 @@ def handle_webhook_task(self, db_id: int, source_url: str):
 
     current_pipeline = task_data.data.get("current_pipeline")
 
-    if current_pipeline == "wu_palmer":
+    if current_pipeline == WU_PALMER_PLUGIN:
         handle_wu_palmer_progression(task_data, db_id, source_url)
 
-    elif current_pipeline == "mapping":
+    elif current_pipeline == MAPPING_PLUGIN:
         handle_mapping_progression(task_data, db_id, source_url)
 
     else:
@@ -205,15 +202,15 @@ def handle_webhook_task(self, db_id: int, source_url: str):
 def handle_wu_palmer_progression(task_data: ProcessingTask, db_id: int, source_url: str):
     """Handle progression of the wu-palmer pipeline"""
 
-    if source_url == task_data.data.get("wu_palmer_url"):
+    if source_url == task_data.data.get(f"{WU_PALMER_PLUGIN}_url"):
         start_transformers.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
-    elif source_url == task_data.data.get("transformers_url"):
+    elif source_url == task_data.data.get(f"{TRANSFORMERS_PLUGIN}_url"):
         start_aggregator.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
-    elif source_url == task_data.data.get("aggregators_url"):
+    elif source_url == task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"):
         start_mds.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
-    elif source_url == task_data.data.get("mds_url"):
+    elif source_url == task_data.data.get(f"{MDS_PLUGIN}_url"):
         finalize_pipeline.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
@@ -222,11 +219,11 @@ def handle_wu_palmer_progression(task_data: ProcessingTask, db_id: int, source_u
 def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url: str):
     """Handle progression of the mapping pipeline"""
 
-    if source_url == task_data.data.get("mapping_url"):
+    if source_url == task_data.data.get(f"{MAPPING_PLUGIN}_url"):
         start_aggregator.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
-    elif source_url == task_data.data.get("aggregators_url"):
+    elif source_url == task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"):
         start_mds.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
-    elif source_url == task_data.data.get("mds_url"):
+    elif source_url == task_data.data.get(f"{MDS_PLUGIN}_url"):
         finalize_pipeline.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )

@@ -19,6 +19,14 @@ import pytest
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router.tasks import handle_webhook_task, start_routing_task
 from router.tasks_pipeline_steps import start_wu_palmer, start_mapping, CELERY_COUNTDOWN
+from router.schemas import (
+    WU_PALMER_PLUGIN,
+    MAPPING_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    AGGREGATOR_PLUGIN,
+    MDS_PLUGIN,
+    PIPELINE_OPTIONS,
+)
 
 from tests.utils import MockResponse, run_task
 
@@ -43,20 +51,23 @@ def _setup_mock_task() -> ProcessingTask:
     )
     db_task.data["webhook_url"] = "http://my-router/webhook"
 
-    db_task.data["routing_selections"] = {"attr1": "Wu-Palmer", "attr2": "Mapping"}
+    db_task.data["routing_selections"] = {
+        "attr1": WU_PALMER_PLUGIN,
+        "attr2": MAPPING_PLUGIN,
+    }
 
-    db_task.data["wu_palmer_attributes"] = "attr1"
-    db_task.data["mapping_attributes"] = "attr2"
+    db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] = "attr1"
+    db_task.data[f"{MAPPING_PLUGIN}_attributes"] = "attr2"
 
-    db_task.data["current_pipeline"] = "wu_palmer"
-    db_task.data["pipeline_queue"] = ["wu_palmer", "mapping"]
+    db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
+    db_task.data["pipeline_queue"] = [WU_PALMER_PLUGIN, MAPPING_PLUGIN]
 
     db_task.data["plugin_urls"] = {
-        "wu_palmer": "http://localhost:5005/plugins/wu-palmer/",
-        "mapping": "http://localhost:5005/plugins/mapping-distances/",
-        "transformer": "http://localhost:5005/plugins/element_sim-to-element_dist-transformers/",
-        "aggregator": "http://localhost:5005/plugins/attribute-distance-aggregator/",
-        "mds": "http://localhost:5005/plugins/attribute-distance-mds/",
+        WU_PALMER_PLUGIN: "http://localhost:5005/plugins/wu-palmer/",
+        MAPPING_PLUGIN: "http://localhost:5005/plugins/mapping-distances/",
+        TRANSFORMERS_PLUGIN: "http://localhost:5005/plugins/element_sim-to-element_dist-transformers/",
+        AGGREGATOR_PLUGIN: "http://localhost:5005/plugins/attribute-distance-aggregator/",
+        MDS_PLUGIN: "http://localhost:5005/plugins/attribute-distance-mds/",
     }
     db_task.save(commit=True)
     return db_task
@@ -68,8 +79,8 @@ def test_route_task_queues_and_launches(monkeypatch):
     # Clear out the pre-populated states so we can verify the task builds them correctly
     db_task.data.pop("current_pipeline", None)
     db_task.data.pop("pipeline_queue", None)
-    db_task.data.pop("wu_palmer_attributes", None)
-    db_task.data.pop("mapping_attributes", None)
+    db_task.data.pop(f"{WU_PALMER_PLUGIN}_attributes", None)
+    db_task.data.pop(f"{MAPPING_PLUGIN}_attributes", None)
     db_task.save(commit=True)
 
     # route_task should build the queue and call start_wu_palmer.apply_async
@@ -87,10 +98,10 @@ def test_route_task_queues_and_launches(monkeypatch):
 
     db_task = ProcessingTask.get_by_id(db_task.id)
 
-    assert db_task.data["wu_palmer_attributes"] == "attr1"
-    assert db_task.data["mapping_attributes"] == "attr2"
-    assert db_task.data["current_pipeline"] == "wu_palmer"
-    assert db_task.data["pipeline_queue"] == ["mapping"]
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "attr1"
+    assert db_task.data[f"{MAPPING_PLUGIN}_attributes"] == "attr2"
+    assert db_task.data["current_pipeline"] == WU_PALMER_PLUGIN
+    assert db_task.data["pipeline_queue"] == [MAPPING_PLUGIN]
     assert len(triggered) == 1
 
 
@@ -141,7 +152,7 @@ def test_start_wu_palmer_task(monkeypatch):
     # Verify State Machine
     db_task = ProcessingTask.get_by_id(db_task.id)
     assert (
-        db_task.data["wu_palmer_url"]
+        db_task.data[f"{WU_PALMER_PLUGIN}_url"]
         == "http://localhost:5005/plugins/wu-palmer@v0-2-1/tasks/999/"
     )
 
@@ -150,22 +161,22 @@ def test_start_wu_palmer_task(monkeypatch):
     "source_key, mock_url, next_task_path",
     [
         (
-            "wu_palmer_url",
+            f"{WU_PALMER_PLUGIN}_url",
             "http://mock/tasks/wp/999/",
             "router.tasks_pipeline_steps.start_transformers.apply_async",
         ),
         (
-            "transformers_url",
+            f"{TRANSFORMERS_PLUGIN}_url",
             "http://mock/tasks/tr/999/",
             "router.tasks_pipeline_steps.start_aggregator.apply_async",
         ),
         (
-            "aggregators_url",
+            f"{AGGREGATOR_PLUGIN}_url",
             "http://mock/tasks/ag/999/",
             "router.tasks_pipeline_steps.start_mds.apply_async",
         ),
         (
-            "mds_url",
+            f"{MDS_PLUGIN}_url",
             "http://mock/tasks/mds/999/",
             "router.tasks_pipeline_steps.finalize_pipeline.apply_async",
         ),
@@ -179,7 +190,7 @@ def test_handle_webhook_routing_wu_palmer_progression(
     for the Wu-Palmer pipeline state to the correct subsequent task.
     """
     db_task = _setup_mock_task()
-    db_task.data["current_pipeline"] = "wu_palmer"
+    db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
     db_task.data[source_key] = mock_url
     db_task.save(commit=True)
 
@@ -221,7 +232,7 @@ def test_start_mapping_task(monkeypatch):
     db_task = _setup_mock_task()
 
     def mock_post(url, **kwargs):
-        if "mapping" in url:
+        if MAPPING_PLUGIN in url:
             return MockResponse(
                 url,
                 "text/html",
@@ -257,7 +268,7 @@ def test_start_mapping_task(monkeypatch):
 
     db_task = ProcessingTask.get_by_id(db_task.id)
     assert (
-        db_task.data["mapping_url"]
+        db_task.data[f"{MAPPING_PLUGIN}_url"]
         == "http://localhost:5005/plugins/mapping-distances@v0-1-0/tasks/888/"
     )
 
@@ -266,17 +277,17 @@ def test_start_mapping_task(monkeypatch):
     "source_key, mock_url, next_task_path",
     [
         (
-            "mapping_url",
+            f"{MAPPING_PLUGIN}_url",
             "http://mock/tasks/map/888/",
             "router.tasks_pipeline_steps.start_aggregator.apply_async",
         ),
         (
-            "aggregators_url",
+            f"{AGGREGATOR_PLUGIN}_url",
             "http://mock/tasks/ag/888/",
             "router.tasks_pipeline_steps.start_mds.apply_async",
         ),
         (
-            "mds_url",
+            f"{MDS_PLUGIN}_url",
             "http://mock/tasks/mds/888/",
             "router.tasks_pipeline_steps.finalize_pipeline.apply_async",
         ),
@@ -290,7 +301,7 @@ def test_handle_webhook_routing_mapping_progression(
     for the Mapping pipeline state to the correct subsequent task.
     """
     db_task = _setup_mock_task()
-    db_task.data["current_pipeline"] = "mapping"
+    db_task.data["current_pipeline"] = MAPPING_PLUGIN
     db_task.data[source_key] = mock_url
     db_task.save(commit=True)
 
@@ -327,7 +338,7 @@ def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
     db_task = _setup_mock_task()
 
     mock_url = "http://mock/tasks/wp/999/"
-    db_task.data["wu_palmer_url"] = mock_url
+    db_task.data[f"{WU_PALMER_PLUGIN}_url"] = mock_url
 
     db_task.data["current_pipeline"] = "some_unknown_state"
     db_task.save(commit=True)

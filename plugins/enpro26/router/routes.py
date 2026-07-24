@@ -38,13 +38,13 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
+    PIPELINE_PLUGINS,
     PIPELINE_OPTIONS,
     InputParametersSchema,
     MetricEnum,
     RoutingStepParametersSchema,
 )
 from .tasks import (
-    PIPELINE_PLUGINS,
     handle_webhook_task,
     preprocessing_task,
     start_routing_task,

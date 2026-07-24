@@ -20,6 +20,7 @@ from flask import url_for
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router import ROUTER_BLP, Router
+from router.schemas import WU_PALMER_PLUGIN, MAPPING_PLUGIN, PIPELINE_OPTIONS
 
 from tests.utils import mock_task_dispatch
 
@@ -75,7 +76,7 @@ def test_process_valid_payload_redirects_to_task(client, monkeypatch):
 def test_routing_step_frontend_renders_attribute_dropdowns(client):
     db_task = ProcessingTask(task_name="router_test", parameters="{}")
     db_task.data["taxonomy_attributes"] = ["instrumentation", "genre"]
-    db_task.data["recommendations"] = {"genre": "Mapping"}
+    db_task.data["recommendations"] = {"genre": PIPELINE_OPTIONS[MAPPING_PLUGIN]}
     db_task.save(commit=True)
 
     resp = client.get(_path("RoutingStepFrontend", db_id=db_task.id))
@@ -84,8 +85,8 @@ def test_routing_step_frontend_renders_attribute_dropdowns(client):
     body = resp.get_data(as_text=True)
     assert 'name="pipeline_instrumentation"' in body
     assert 'name="pipeline_genre"' in body
-    assert "Wu-Palmer" in body
-    assert "Mapping" in body
+    assert PIPELINE_OPTIONS[WU_PALMER_PLUGIN] in body
+    assert PIPELINE_OPTIONS[MAPPING_PLUGIN] in body
 
 
 def test_routing_step_process_records_selection_and_redirects(client, monkeypatch):
@@ -99,7 +100,10 @@ def test_routing_step_process_records_selection_and_redirects(client, monkeypatc
 
     resp = client.post(
         _path("RoutingStepView", db_id=db_task.id),
-        data={"pipeline_instrumentation": "Wu-Palmer", "pipeline_genre": "Mapping"},
+        data={
+            "pipeline_instrumentation": WU_PALMER_PLUGIN,
+            "pipeline_genre": MAPPING_PLUGIN,
+        },
     )
 
     assert resp.status_code == HTTPStatus.SEE_OTHER
@@ -108,8 +112,8 @@ def test_routing_step_process_records_selection_and_redirects(client, monkeypatc
     db_task = ProcessingTask.get_by_id(db_task.id)
 
     assert db_task.data.get("routing_selections") == {
-        "instrumentation": "Wu-Palmer",
-        "genre": "Mapping",
+        "instrumentation": WU_PALMER_PLUGIN,
+        "genre": MAPPING_PLUGIN,
     }
 
 

@@ -21,8 +21,34 @@ from marshmallow import post_load
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
+NONE_PLUGIN = "none"
+WU_PALMER_PLUGIN = "wu_palmer"
+MAPPING_PLUGIN = "mapping"
+ONE_HOT_PLUGIN = "one_hot"
+TRANSFORMERS_PLUGIN = "transformers"
+AGGREGATOR_PLUGIN = "aggregator"
+MDS_PLUGIN = "mds"
+
+# Names of the plugins invoked by the routing pipeline. The runner serves
+# plugin metadata at ``/plugins/<name>/`` and redirects a bare name to the
+# newest installed version. The route handler turns these into external
+# metadata urls (see routes.py), from which the process endpoint is resolved
+# through ``get_plugin_endpoint``.
+PIPELINE_PLUGINS = {
+    WU_PALMER_PLUGIN: "wu-palmer",
+    MAPPING_PLUGIN: "mapping-distances",
+    TRANSFORMERS_PLUGIN: "element_sim-to-element_dist-transformers",
+    AGGREGATOR_PLUGIN: "attribute-distance-aggregator",
+    MDS_PLUGIN: "attribute-distance-mds",
+}
+
 # Per-attribute pipeline options shown in the routing step.
-PIPELINE_OPTIONS = ["None", "Wu-Palmer", "One-Hot", "Mapping"]
+PIPELINE_OPTIONS = {
+    NONE_PLUGIN: "None",
+    WU_PALMER_PLUGIN: "Wu-Palmer",
+    ONE_HOT_PLUGIN: "One-Hot",
+    MAPPING_PLUGIN: "Mapping",
+}
 
 PIPELINE_FIELD_PREFIX = "pipeline_"
 
@@ -282,7 +308,7 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
                 ]
                 continue
             value = original_data[key]
-            if value and value not in PIPELINE_OPTIONS:
+            if value and value not in PIPELINE_OPTIONS.keys():
                 errors[key] = [f"'{value}' is not one of {PIPELINE_OPTIONS}."]
         if errors:
             raise ma.ValidationError(errors)

@@ -24,7 +24,15 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import Router
-from .schemas import InputParameters, InputParametersSchema
+from .schemas import (
+    WU_PALMER_PLUGIN,
+    MAPPING_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    AGGREGATOR_PLUGIN,
+    MDS_PLUGIN,
+    InputParameters,
+    InputParametersSchema,
+)
 from .tasks_helpers import CELERY_COUNTDOWN, extract_output_url, run_pipeline_step
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -47,13 +55,13 @@ def launch_next_pipeline(task_data: ProcessingTask):
     task_data.data["current_pipeline"] = next_pipeline
 
     # Route to the correct starting step
-    if next_pipeline == "wu_palmer":
+    if next_pipeline == WU_PALMER_PLUGIN:
         task_data.add_task_log_entry(
             "Starting Wu-Palmer Pipeline. Includes: Wu-Palmer, Transformer, Aggregator, MDS"
         )
         task_data.save(commit=True)
         start_wu_palmer.apply_async(args=[task_data.id])
-    elif next_pipeline == "mapping":
+    elif next_pipeline == MAPPING_PLUGIN:
         task_data.add_task_log_entry(
             "Starting Mapping Pipeline. Includes: Mapping-Distances, Aggregator, MDS"
         )
@@ -79,7 +87,7 @@ def start_wu_palmer(self, db_id: int):
             "entitiesUrl": params.entities_url,
             "entitiesMetadataUrl": params.entities_metadata_url,
             "taxonomiesZipUrl": params.taxonomies_zip_url,
-            "attributes": task_data.data["wu_palmer_attributes"],
+            "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
             "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
         }
     except Exception as e:
@@ -93,10 +101,9 @@ def start_wu_palmer(self, db_id: int):
         celery_task=self,
         db_id=db_id,
         task_data=task_data,
-        plugin_name="wu_palmer",
+        plugin_name=WU_PALMER_PLUGIN,
         logging_name="Wu-Palmer",
         payload=payload,
-        url_key="wu_palmer_url",
     )
 
 
@@ -113,7 +120,7 @@ def start_mapping(self, db_id: int):
             "entitiesUrl": params.entities_url,
             "entitiesMetadataUrl": params.entities_metadata_url,
             "taxonomiesZipUrl": params.taxonomies_zip_url,
-            "attributes": task_data.data["mapping_attributes"],
+            "attributes": task_data.data[f"{MAPPING_PLUGIN}_attributes"],
             "distanceMetric": params.distance_metric.name,
         }
     except Exception as e:
@@ -127,10 +134,9 @@ def start_mapping(self, db_id: int):
         celery_task=self,
         db_id=db_id,
         task_data=task_data,
-        plugin_name="mapping",
+        plugin_name=MAPPING_PLUGIN,
         logging_name="Mapping Distances",
         payload=payload,
-        url_key="mapping_url",
     )
 
 
@@ -159,7 +165,7 @@ def start_transformers(self, db_id: int, source_url: str):
 
         payload = {
             "similaritiesUrl": element_sims_url,
-            "attributes": task_data.data["wu_palmer_attributes"],
+            "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
             "transformer": params.transformer.name,
         }
     except Exception as e:
@@ -173,10 +179,9 @@ def start_transformers(self, db_id: int, source_url: str):
         celery_task=self,
         db_id=db_id,
         task_data=task_data,
-        plugin_name="transformers",
+        plugin_name=TRANSFORMERS_PLUGIN,
         logging_name="Transformers",
         payload=payload,
-        url_key="transformers_url",
     )
 
 
@@ -219,10 +224,9 @@ def start_aggregator(self, db_id: int, source_url: str):
         celery_task=self,
         db_id=db_id,
         task_data=task_data,
-        plugin_name="aggregator",
+        plugin_name=AGGREGATOR_PLUGIN,
         logging_name="Aggregator",
         payload=payload,
-        url_key="aggregators_url",
     )
 
 
@@ -263,10 +267,9 @@ def start_mds(self, db_id: int, source_url: str):
         celery_task=self,
         db_id=db_id,
         task_data=task_data,
-        plugin_name="mds",
+        plugin_name=MDS_PLUGIN,
         logging_name="MDS",
         payload=payload,
-        url_key="mds_url",
     )
 
 

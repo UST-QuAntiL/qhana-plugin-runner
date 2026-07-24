@@ -30,6 +30,8 @@ from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.tasks import save_task_error
 
+from .schemas import WU_PALMER_PLUGIN, MAPPING_PLUGIN, PIPELINE_OPTIONS
+
 TASK_LOGGER = get_task_logger(__name__)
 CELERY_COUNTDOWN = 3
 
@@ -124,10 +126,10 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
             has_mapping = any(
                 ent.get("mapping_raw", "") != "" for ent in tax_data.get("entities", [])
             )
-            return "Mapping" if has_mapping else "Wu-Palmer"
+            return MAPPING_PLUGIN if has_mapping else WU_PALMER_PLUGIN
     except Exception as e:
         TASK_LOGGER.warning(f"Could not read mapping for {zip_path}: {e}")
-        return "Wu-Palmer"
+        return WU_PALMER_PLUGIN
 
 
 def run_pipeline_step(
@@ -137,7 +139,6 @@ def run_pipeline_step(
     plugin_name: str,
     logging_name: str,
     payload: dict,
-    url_key: str,
 ):
     """Boilerplate wrapper to handle task fetching, execution, retries, and error logging."""
     TASK_LOGGER.info(f"Starting {logging_name} Step")
@@ -147,7 +148,7 @@ def run_pipeline_step(
         response.raise_for_status()
 
         task_url = urljoin(plugin_url, response.headers["Location"])
-        task_data.data[url_key] = task_url
+        task_data.data[f"{plugin_name}_url"] = task_url
         task_data.add_task_log_entry(f"Started {logging_name}.")
         task_data.save(commit=True)
 
