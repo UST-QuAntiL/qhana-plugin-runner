@@ -50,6 +50,7 @@ linuxdoc = "^20221025"
 sphinxcontrib-mermaid = "^0.9.2"
 watchdog = "^4.0.1"
 dash-cytoscape = "^1.0.2"
+beautifulsoup4 = "^4.13.4"
 
 [tool.poetry.extras]
 psycopg = ["psycopg"]

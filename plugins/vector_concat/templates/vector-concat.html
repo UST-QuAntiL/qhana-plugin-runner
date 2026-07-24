@@ -71,7 +71,7 @@ limitations under the License.
         margin: 0;
     }
 
-    .qhana-form-field + .qhana-form-field {
+    .qhana-form-field+.qhana-form-field {
         margin-top: 1.5em;
     }
 
@@ -113,8 +113,14 @@ limitations under the License.
         <label class="qhana-form-label" for="output_format">Output Format</label>
         <div class="qhana-input-wrapper">
             <select class="qhana-form-input" name="outputFormat" id="output_format" autocomplete="off">
-                <option value="csv" {% if values.get("outputFormat", "csv") == "csv" %}selected{% endif %}>CSV</option>
-                <option value="json" {% if values.get("outputFormat") == "json" %}selected{% endif %}>JSON</option>
+                {% set options = schema.fields.output_format.metadata.get("options", {}) %}
+                {% set current_val = values.get("outputFormat", schema.fields.output_format.missing) %}
+
+                {% for val, label in options.items() %}
+                <option value="{{ val }}" {% if current_val==val %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
             </select>
         </div>
         <p id="output_format-description" class="qhana-input-description">
@@ -125,9 +131,8 @@ limitations under the License.
     <div class="qhana-form-field">
         <label class="qhana-form-label" for="output_suffix">Output File Suffix</label>
         <div class="qhana-input-wrapper">
-            <input type="text" class="qhana-form-input" name="outputSuffix" id="output_suffix"
-                autocomplete="off" pattern="[A-Za-z0-9._-]+"
-                title="Only letters, digits, '.', '_' and '-'."
+            <input type="text" class="qhana-form-input" name="outputSuffix" id="output_suffix" autocomplete="off"
+                pattern="[A-Za-z0-9._-]+" title="Only letters, digits, '.', '_' and '-'."
                 value="{{ values.get('outputSuffix', '') }}">
         </div>
         <p id="output_suffix-description" class="qhana-input-description">
@@ -148,6 +153,10 @@ limitations under the License.
 {% block script %}
 {{ super() }}
 
+<script type="application/json" id="accepted-content-types">
+    {{ schema.fields.urls.metadata.get("accepted_content_types", []) | tojson }}
+</script>
+
 <script>
     function dataSourceUrls() {
         return Array.from(document.querySelectorAll("ul#data_sources li[data-url]"))
@@ -158,13 +167,17 @@ limitations under the License.
         document.querySelector("#data_sources_input").value = dataSourceUrls().join("\n");
     }
 
+    const acceptedContentTypes = JSON.parse(
+        document.getElementById("accepted-content-types").textContent
+    );
+
     function onChooseNewDataSource(event) {
         event.preventDefault();
         sendMessage({
             type: "request-data-url",
             inputKey: "dataSource",
             acceptedInputType: "entity/vector",
-            acceptedContentTypes: ["text/csv", "application/json"],
+            acceptedContentTypes: acceptedContentTypes,
         });
     }
 
