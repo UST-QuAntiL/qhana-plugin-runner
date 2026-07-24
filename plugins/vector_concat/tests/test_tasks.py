@@ -152,28 +152,25 @@ def test_concat_zip_multiple_members(monkeypatch):
 
 
 @pytest.mark.usefixtures("celery_worker")
-def test_concat_zip_detects_format_by_content(monkeypatch):
-    """Zip members without a decisive extension are detected from their content."""
+def test_concat_zip_without_member_extensions_raises(monkeypatch):
+    """Zip members without an extension do not provide a mimetype."""
     zip_url = "http://example.com/vectors.zip"
     zip_response = MockResponse.from_zip(
         zip_url,
         {
-            "first": TEST_DATA["a.csv"],  # CSV content, no extension
-            "second": TEST_DATA["b.json"],  # JSON content, no extension
+            "first": TEST_DATA["a.csv"],  # No file extension
+            "second": TEST_DATA["b.json"],  # No file extension
         },
     )
 
-    output = run_plugin_task(
-        monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
-        {zip_url: zip_response},
-        {"urls": zip_url, "output_format": "json"},
-    )
-
-    entities = _read_json(output)
-    assert len(entities) == 1
-    assert [entities[0][f"dim{i}"] for i in range(4)] == [1, 2, 3, 4]
+    with pytest.raises(ValueError, match=r"No Mimetype found for zip file 'first'\."):
+        run_plugin_task(
+            monkeypatch,
+            calculation_task,  # pyright: ignore[reportArgumentType]
+            "vector_concat.tasks",
+            {zip_url: zip_response},
+            {"urls": zip_url, "output_format": "json"},
+        )
 
 
 @pytest.mark.usefixtures("celery_worker")

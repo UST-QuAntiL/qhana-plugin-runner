@@ -6,7 +6,7 @@ from zipfile import ZipFile
 
 from requests.models import Response
 
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import get_mimetype, open_url
 
 
 def get_files_from_zip_url(
@@ -27,7 +27,7 @@ def get_files_from_zip_url(
 
 
 def get_file_responses_from_zip(
-    zip_bytes: bytes, content_type: Optional[str] = None
+    zip_bytes: bytes, default_content_type: Optional[str] = None
 ) -> Generator[Response, Any, None]:
     """Yield a ``Response`` for every file in an in-memory zip.
 
@@ -55,8 +55,8 @@ def get_file_responses_from_zip(
             response.encoding = "utf-8"
             response.raw = BytesIO(zip_file.read(file_name))
 
-            mimetype = content_type or mimetypes.MimeTypes().guess_type(file_name)[0]
-            if mimetype:
-                response.headers["Content-Type"] = mimetype
+            response.headers["Content-Type"] = get_mimetype(
+                response, default=default_content_type
+            )
 
             yield response

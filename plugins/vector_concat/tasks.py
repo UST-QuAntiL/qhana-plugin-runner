@@ -17,7 +17,6 @@ from tempfile import SpooledTemporaryFile
 from typing import Iterator, List, Optional
 
 from celery.utils.log import get_task_logger
-from requests.models import Response
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -31,34 +30,9 @@ from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
 
 from . import VectorConcatPlugin
+from .schemas import ACCEPTED_CONTENT_TYPES
 
 TASK_LOGGER = get_task_logger(__name__)
-
-_ENTITY_MIMETYPES = frozenset(
-    ("application/json", "application/X-lines+json", "text/csv")
-)
-
-
-def _detect_entity_mimetype(response: Response) -> str:
-    """Determine the entity mimetype of a zip member.
-
-    The content type guessed from the file name is preferred; if it is not a
-    known entity mimetype (e.g. the member has no or an ambiguous extension),
-    the format is sniffed from the member's content.
-    """
-    mimetype = get_mimetype(response)
-    if mimetype in _ENTITY_MIMETYPES:
-        return mimetype
-
-    stripped = response.text.lstrip()
-    if stripped.startswith("["):
-        return "application/json"
-    if stripped.startswith("{"):
-        non_empty_lines = [line for line in response.text.splitlines() if line.strip()]
-        if len(non_empty_lines) > 1:
-            return "application/X-lines+json"
-        return "application/json"
-    return "text/csv"
 
 
 def _load_entities_from_zip(zip_bytes: bytes) -> Iterator[List]:
@@ -68,8 +42,19 @@ def _load_entities_from_zip(zip_bytes: bytes) -> Iterator[List]:
     detected dynamically from the file name or its content.
     """
     for response in get_file_responses_from_zip(zip_bytes):
-        mimetype = _detect_entity_mimetype(response)
-        yield list(ensure_array(load_entities(response, mimetype=mimetype), strict=True))
+        mimetype = response.headers["Content-Type"]
+        if not mimetype:
+            raise ValueError(f"No Mimetype found for zip file '{response.url}'.")
+        if mimetype not in ACCEPTED_CONTENT_TYPES:
+            raise ValueError(
+                f"Mimetype for zip file '{response.url}' is not one of {ACCEPTED_CONTENT_TYPES}"
+            )
+        yield list(
+            ensure_array(
+                load_entities(response, mimetype=mimetype),
+                strict=True,
+            )
+        )
 
 
 @CELERY.task(name=f"{VectorConcatPlugin.instance.identifier}.calculation_task", bind=True)

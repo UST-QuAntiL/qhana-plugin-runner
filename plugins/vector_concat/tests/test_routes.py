@@ -16,9 +16,11 @@ import re
 from http import HTTPStatus
 from urllib.parse import urlsplit
 
+from bs4 import BeautifulSoup
 import pytest
-from flask import url_for
+from flask import json, url_for
 
+from plugins.vector_concat.schemas import ACCEPTED_CONTENT_TYPES
 from vector_concat import VECTOR_CONCAT_BLP, VectorConcatPlugin
 
 
@@ -48,12 +50,7 @@ def test_metadata_endpoint_returns_full_descriptor(client):
     assert entry_point["dataInput"] == [
         {
             "dataType": "entity/vector",
-            "contentType": [
-                "application/json",
-                "application/X-lines+json",
-                "text/csv",
-                "application/zip",
-            ],
+            "contentType": ACCEPTED_CONTENT_TYPES,
             "required": True,
             "parameter": "urls",
         }
@@ -81,16 +78,31 @@ def test_microfrontend_renders_form_fields(client):
     assert "Data Sources" in body
     assert '<input type="hidden" name="urls" id="data_sources_input" value="">' in body
 
-    assert "Output Format" in body
-    assert '<option value="csv" selected>CSV</option>' in body
-    assert '<option value="json" >JSON</option>' in body
+    soup = BeautifulSoup(body, "html.parser")
+
+    output_format = soup.select_one("#output_format")
+    assert output_format is not None
+    selected_option = output_format.find("option", selected=True)
+    assert selected_option is not None
+    assert selected_option["value"] == "csv"
+
+    option_values = [option["value"] for option in output_format.find_all("option")]
+    assert option_values == ["csv", "json", "lines"]
 
     assert "Output File Suffix" in body
     assert 'name="outputSuffix"' in body
 
     assert f'formaction="{_path("CalcView")}"' in body
     assert 'acceptedInputType: "entity/vector"' in body
-    assert 'acceptedContentTypes: ["text/csv", "application/json"]' in body
+
+    script = soup.select_one("#accepted-content-types")
+    assert script is not None
+    assert json.loads(script.string) == [
+        "text/csv",
+        "application/json",
+        "application/X-lines+json",
+        "application/zip",
+    ]
 
 
 def test_microfrontend_post_echoes_submitted_output_format(client):
@@ -101,8 +113,13 @@ def test_microfrontend_post_echoes_submitted_output_format(client):
 
     assert resp.status_code == HTTPStatus.OK
     body = resp.get_data(as_text=True)
-    assert '<option value="json" selected>JSON</option>' in body
-    assert '<option value="csv" >CSV</option>' in body
+    soup = BeautifulSoup(body, "html.parser")
+
+    output_format = soup.select_one("#output_format")
+    assert output_format is not None
+    selected_option = output_format.find("option", selected=True)
+    assert selected_option is not None
+    assert selected_option["value"] == "json"
 
 
 def test_microfrontend_invalid_post_rerenders_form_without_redirect(client):

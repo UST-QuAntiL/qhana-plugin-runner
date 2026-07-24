@@ -64,18 +64,23 @@ class TestGetFileResponsesFromZip:
         assert by_name["b.csv"].headers["Content-Type"] == "text/csv"
 
     def test_no_content_type_for_unknown_extension(self):
-        zip_bytes = _make_zip({"member": "ID\ne1"})
+        zip_bytes = _make_zip({"member.abc": "ID\ne1", "member": "ID\ne2"})
 
-        (response,) = list(get_file_responses_from_zip(zip_bytes))
+        responses = list(get_file_responses_from_zip(zip_bytes))
 
-        assert "Content-Type" not in response.headers
+        assert {r.headers["Content-Type"] for r in responses} == {None}
 
-    def test_content_type_override_applies_to_all_members(self):
+    def test_content_type_default_applies_to_unknown_extensions(self):
         zip_bytes = _make_zip({"a.json": "[]", "member": "ID\ne1"})
 
-        responses = list(get_file_responses_from_zip(zip_bytes, content_type="text/csv"))
+        responses = list(
+            get_file_responses_from_zip(zip_bytes, default_content_type="text/csv")
+        )
 
-        assert {r.headers["Content-Type"] for r in responses} == {"text/csv"}
+        assert {r.headers["Content-Type"] for r in responses} == {
+            "application/json",  # JSON detected
+            "text/csv",
+        }
 
     def test_members_are_yielded_in_sorted_order(self):
         zip_bytes = _make_zip({"c.csv": "3", "a.csv": "1", "b.csv": "2"})

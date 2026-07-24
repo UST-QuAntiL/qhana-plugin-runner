@@ -37,7 +37,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
 from . import VECTOR_CONCAT_BLP, VectorConcatPlugin
-from .schemas import VectorConcatSchema
+from .schemas import VectorConcatSchema, ACCEPTED_CONTENT_TYPES
 from .tasks import calculation_task
 
 
@@ -58,12 +58,7 @@ class PluginsView(MethodView):
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/vector",
-                        content_type=[
-                            "application/json",
-                            "application/X-lines+json",
-                            "text/csv",
-                            "application/zip",
-                        ],
+                        content_type=ACCEPTED_CONTENT_TYPES,
                         required=True,
                         parameter="urls",
                     ),

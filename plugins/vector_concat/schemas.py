@@ -21,6 +21,14 @@ from qhana_plugin_runner.api.util import FrontendFormBaseSchema
 _VALID_SUFFIX = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
+ACCEPTED_CONTENT_TYPES = [
+    "text/csv",
+    "application/json",
+    "application/X-lines+json",
+    "application/zip",
+]
+
+
 def _validate_suffix(value: str):
     if not value:
         return
@@ -56,6 +64,7 @@ class VectorConcatSchema(FrontendFormBaseSchema):
             "label": "URLs",
             "description": "URLs of input entity/vector files",
             "input_type": "textarea",
+            "accepted_content_types": ACCEPTED_CONTENT_TYPES,
         },
     )
     output_format = ma.fields.String(

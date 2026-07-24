@@ -130,7 +130,7 @@ def get_mimetype(response: Response, default=None) -> Optional[str]:
         return response.headers["Content-Type"]
     except KeyError:
         matches = mimetypes.MimeTypes().guess_type(url=response.url)
-        if matches:
+        if matches and matches[0]:
             return matches[0]
     return default
 
