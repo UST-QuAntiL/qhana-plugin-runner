@@ -46,11 +46,15 @@
         <legend>Attributes</legend>
         {%- for attr in attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
+        {%- set recommended = recommendations.get(attr) -%} 
         <div class="attribute-row">
             <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
             <select class="qhana-form-input" name="{{field_name}}" id="{{field_name}}" autocomplete="off">
-                {%- for option in pipeline_options -%}
-                <option value="{{option}}" {% if option == values.get(field_name) %}selected{% endif %}>{{option}}</option>
+                {%- for key, display_name in pipeline_options.items() -%}
+                <option value="{{key}}" {% if key == values.get(field_name) %}selected{% endif %}>
+                    <!--If there exists a recomendation, indicate the recomended options-->
+                    {{display_name}} {% if recommended and key == recommended %}(Recommended){% endif %}
+                </option>
                 {%- endfor -%}
             </select>
         </div>

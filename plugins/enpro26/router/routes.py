@@ -38,16 +38,16 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
+    PIPELINE_PLUGINS,
     PIPELINE_OPTIONS,
     InputParametersSchema,
     MetricEnum,
     RoutingStepParametersSchema,
 )
 from .tasks import (
-    PIPELINE_PLUGINS,
     handle_webhook_task,
     preprocessing_task,
-    route_task,
+    start_routing_task,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -103,19 +103,19 @@ class PluginsView(MethodView):
                     # ),
                 ],
                 data_output=[
-                    # WU-Palmer output
+                    # WU-Palmer output (optional)
                     DataMetadata(
                         data_type="relation/element-similarities",
                         content_type=["application/zip"],
                         required=True,
                     ),
-                    # Transformer output
+                    # Transformer output (optional)
                     DataMetadata(
                         data_type="relation/element-distances",
                         content_type=["application/zip"],
                         required=True,
                     ),
-                    # Aggregator output
+                    # Aggregator output (optional)
                     DataMetadata(
                         data_type="relation/attribute-distances",
                         content_type=["application/zip"],
@@ -200,7 +200,8 @@ class ProcessView(MethodView):
     def post(self, arguments):
         """Discover the taxonomy attributes and queue the routing step."""
         db_task = ProcessingTask(
-            task_name=route_task.name, parameters=InputParametersSchema().dumps(arguments)
+            task_name=start_routing_task.name,
+            parameters=InputParametersSchema().dumps(arguments),
         )
         db_task.save(commit=True)
 
@@ -263,6 +264,7 @@ class RoutingStepFrontend(MethodView):
             raise KeyError(msg)
 
         attributes = db_task.data.get("taxonomy_attributes", [])
+        recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
 
         return Response(
@@ -272,6 +274,7 @@ class RoutingStepFrontend(MethodView):
                 version=Router.instance.version,
                 schema=RoutingStepParametersSchema(),
                 attributes=attributes,
+                recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
                 input_params=input_params,
                 values=data,
@@ -297,7 +300,7 @@ class RoutingStepView(MethodView):
             raise KeyError(msg)
 
         # The routing selections are kept in ``data`` rather than merged into
-        # ``parameters``. ``route_task`` reloads ``parameters`` through
+        # ``parameters``. ``start_routing_task`` reloads ``parameters`` through
         # ``InputParametersSchema`` which would reject the dynamic
         # ``pipeline_<attribute>`` fields.
         prefix = "pipeline_"
@@ -306,31 +309,8 @@ class RoutingStepView(MethodView):
             for key, value in arguments.items()
             if key.startswith(prefix)
         }
-        wu_palmer_attributes = [
-            attr for attr, option in selections.items() if option == "Wu-Palmer"
-        ]
-        if wu_palmer_attributes:
-            db_task.add_task_log_entry(
-                f"Started Wu-Palmer Pipeline for attributes: {wu_palmer_attributes}"
-            )
-        # TODO: Add other paths (OneHot, NumMapping)
+        db_task.data["routing_selections"] = selections
 
-        none_selected = [attr for attr, option in selections.items() if option == "None"]
-        if none_selected:
-            db_task.add_task_log_entry(
-                f"None selected attributes skipped: {none_selected}"
-            )
-
-        unsupported = {
-            attr: option
-            for attr, option in selections.items()
-            if option != "Wu-Palmer" and option != "None"
-        }
-        if unsupported:
-            db_task.add_task_log_entry(
-                f"Pipelines not implemented yet, attributes skipped: {unsupported}"
-            )
-        db_task.data["wu_palmer_attributes"] = "\n".join(wu_palmer_attributes)
         db_task.data["webhook_url"] = url_for(
             f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
         )
@@ -348,7 +328,7 @@ class RoutingStepView(MethodView):
         app = current_app._get_current_object()
         TASK_STEPS_CHANGED.send(app, task_id=db_id)
 
-        task = route_task.s(db_id=db_task.id)
+        task = start_routing_task.s(db_id=db_task.id)
         task.link_error(save_task_error.s(db_id=db_task.id))
         task.apply_async()
 
