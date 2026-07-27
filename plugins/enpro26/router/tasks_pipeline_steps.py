@@ -303,13 +303,16 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     If not finishing with vector concat, writing the final vector zip files to output."""
     TASK_LOGGER.info("Finishing the Pipeline")
     task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
 
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         final_dists_url = extract_output_url(outputs, "entity/vector")
         current_pipeline_name = task_data.data.get("current_pipeline", "unknown")
 
-        if is_store_mds_output(task_data):
+        if is_store_mds_output(params):
             STORE.persist_task_result(
                 db_id,
                 open_url(final_dists_url).content,
@@ -318,14 +321,14 @@ def finalize_pipeline(self, db_id: int, source_url: str):
                 "application/zip",
             )
 
-        # store zip urls
-        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
-        vector_zip_urls.append(final_dists_url)
-        task_data.data["vector_zip_urls"] = vector_zip_urls
-        task_data.add_task_log_entry(
-            f"Saved vector zip url of {current_pipeline_name} in task_data."
-        )
-        task_data.save(commit=True)
+        if params.concat_output:
+            vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+            vector_zip_urls.append(final_dists_url)
+            task_data.data["vector_zip_urls"] = vector_zip_urls
+            task_data.add_task_log_entry(
+                f"Saved vector zip url of {current_pipeline_name} in task_data."
+            )
+            task_data.save(commit=True)
 
         # trigger next pipeline
         launch_next_pipeline(task_data)
@@ -356,22 +359,19 @@ def start_vector_concat(self, db_id: int):
         )
         vector_zip_urls = task_data.data.get("vector_zip_urls", [])
 
-        for source_url in vector_zip_urls:
-            outputs = requests.get(source_url).json().get("outputs", [])
-            final_dists_url = extract_output_url(outputs, "entity/vector")
-
-            if params.include_intermediate_results_in_output:
+        if params.include_intermediate_results_in_output:
+            for vector_zip_url in vector_zip_urls:
                 prefix = task_data.data.get("current_pipeline", "unknown")
                 STORE.persist_task_result(
                     db_id,
-                    open_url(final_dists_url).content,
+                    vector_zip_url,
                     f"{prefix}_mds_final_vectors.zip",
                     "entity/vector",
                     "application/zip",
                 )
 
         payload = {
-            "urls": vector_zip_urls,
+            "urls": "\n".join(vector_zip_urls),
             "output_format": params.output_format,
             "output_suffix": "final_concatenated_vector",
         }

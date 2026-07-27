@@ -173,14 +173,11 @@ def run_pipeline_step(
         save_task_error.delay(failing_task_id=celery_task.request.id, db_id=db_id)
 
 
-def is_store_mds_output(task_data: ProcessingTask) -> bool:
+def is_store_mds_output(params: InputParameters) -> bool:
     """
     Returns true if the MDS output should be stored or
     the output should be concatenated and the intermediate results shall be included.
     """
-    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-        task_data.parameters or "{}"
-    )
     if params.concat_output:
         return params.include_intermediate_results_in_output
     else:
