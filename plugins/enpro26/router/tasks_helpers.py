@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+from marshmallow import EXCLUDE
 import requests
 import traceback
 from celery.utils.log import get_task_logger
@@ -30,7 +31,12 @@ from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.tasks import save_task_error
 
-from .schemas import WU_PALMER_PLUGIN, MAPPING_PLUGIN, PIPELINE_OPTIONS
+from .schemas import (
+    WU_PALMER_PLUGIN,
+    MAPPING_PLUGIN,
+    InputParameters,
+    InputParametersSchema,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 CELERY_COUNTDOWN = 3
@@ -163,4 +169,19 @@ def run_pipeline_step(
         task_data.add_task_log_entry(
             f"CRASH in {logging_name} step:\n{traceback.format_exc()}"
         )
+        task_data.save(commit=True)
         save_task_error.delay(failing_task_id=celery_task.request.id, db_id=db_id)
+
+
+def is_store_mds_output(task_data: ProcessingTask) -> bool:
+    """
+    Returns true if the MDS output should be stored or
+    the output should be concatenated and the intermediate results shall be included.
+    """
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
+    if params.concat_output:
+        return params.include_intermediate_results_in_output
+    else:
+        return True

@@ -22,7 +22,6 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
-from qhana_plugin_runner.tasks import save_task_result
 
 from . import Router
 from .schemas import (
