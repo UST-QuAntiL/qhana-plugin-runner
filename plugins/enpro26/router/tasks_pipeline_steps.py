@@ -60,6 +60,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
             )
             task_data.save(commit=True)
             start_vector_concat.apply_async(args=[task_data.id])
+            return
 
         save_task_result.delay("All Pipelines Completed Successfully!", task_data.id)
         return
@@ -340,7 +341,9 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         task_data.save(commit=True)
         raise self.retry(exc=e, countdown=CELERY_COUNTDOWN)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in final step:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(
+            f"CRASH in final pipeline step:\n{traceback.format_exc()}"
+        )
         task_data.save(commit=True)
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
 
@@ -391,3 +394,41 @@ def start_vector_concat(self, db_id: int):
         logging_name="MDS",
         payload=payload,
     )
+
+
+# --- AFTER ALL PIPELINES: finalize vector concat ---
+@CELERY.task(
+    name=f"{Router.instance.identifier}.finalize_vector_concat", bind=True, max_retries=5
+)
+def finalize_vector_concat(self, db_id: int, source_url: str):
+    """Outputs the vector that was created by the vector concat plugin."""
+    task_data = ProcessingTask.get_by_id(db_id)
+
+    try:
+        outputs = requests.get(source_url).json().get("outputs", [])
+        final_vector = extract_output_url(outputs, "entity/vector")
+        response = open_url(final_vector)
+
+        STORE.persist_task_result(
+            db_id,
+            response.content,
+            "final_vector.csv",
+            "entity/vector",
+            "text/csv",
+        )
+        save_task_result.delay(
+            "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
+        )
+
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(
+            f"Error occurred during vector concat finalization step. Attempting to retry:\n{e}"
+        )
+        task_data.save(commit=True)
+        raise self.retry(exc=e, countdown=CELERY_COUNTDOWN)
+    except Exception as e:
+        task_data.add_task_log_entry(
+            f"CRASH in final vector concat step:\n{traceback.format_exc()}"
+        )
+        task_data.save(commit=True)
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
