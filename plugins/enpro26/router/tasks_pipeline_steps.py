@@ -19,7 +19,7 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, open_url_as_file_like
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -407,15 +407,18 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         final_vector = extract_output_url(outputs, "entity/vector")
-        response = open_url(final_vector)
-
-        STORE.persist_task_result(
-            db_id,
-            response.content,
-            "final_vector.csv",
-            "entity/vector",
-            "text/csv",
-        )
+        with open_url_as_file_like(final_vector) as (
+            file_name,
+            file_like,
+            mimetype,
+        ):
+            STORE.persist_task_result(
+                db_id,
+                file_like.read(),
+                file_name,
+                "entity/vector",
+                mimetype,
+            )
         save_task_result.delay(
             "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
         )
