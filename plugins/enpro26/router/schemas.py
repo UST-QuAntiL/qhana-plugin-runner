@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from enum import Enum
+import textwrap
 
 import marshmallow as ma
 from marshmallow import post_load
@@ -20,10 +21,45 @@ from marshmallow import post_load
 from qhana_plugin_runner.api.extra_fields import EnumField
 from qhana_plugin_runner.api.util import FileUrl, FrontendFormBaseSchema
 
+NONE_PLUGIN = "none"
+WU_PALMER_PLUGIN = "wu_palmer"
+MAPPING_PLUGIN = "mapping"
+ONE_HOT_PLUGIN = "one_hot"
+TRANSFORMERS_PLUGIN = "transformers"
+AGGREGATOR_PLUGIN = "aggregator"
+MDS_PLUGIN = "mds"
+
+# Names of the plugins invoked by the routing pipeline. The runner serves
+# plugin metadata at ``/plugins/<name>/`` and redirects a bare name to the
+# newest installed version. The route handler turns these into external
+# metadata urls (see routes.py), from which the process endpoint is resolved
+# through ``get_plugin_endpoint``.
+PIPELINE_PLUGINS = {
+    WU_PALMER_PLUGIN: "wu-palmer",
+    MAPPING_PLUGIN: "mapping-distances",
+    TRANSFORMERS_PLUGIN: "element_sim-to-element_dist-transformers",
+    AGGREGATOR_PLUGIN: "attribute-distance-aggregator",
+    MDS_PLUGIN: "attribute-distance-mds",
+}
+
 # Per-attribute pipeline options shown in the routing step.
-PIPELINE_OPTIONS = ["None", "Wu-Palmer", "One-Hot", "Mapping"]
+PIPELINE_OPTIONS = {
+    NONE_PLUGIN: "None",
+    WU_PALMER_PLUGIN: "Wu-Palmer",
+    ONE_HOT_PLUGIN: "One-Hot",
+    MAPPING_PLUGIN: "Mapping",
+}
 
 PIPELINE_FIELD_PREFIX = "pipeline_"
+
+
+# This Enum class is copied from the mapping distances plugin.
+# Check the mapping distances plugin for updates
+class DistanceMetricEnum(Enum):
+    euclidean = "Euclidean"
+    manhatten = "Manhatten"
+    chebyshev = "Chebyshev"
+    cosine = "Cosine"
 
 
 # This Enum class is copied from the transformer plugin.
@@ -66,6 +102,7 @@ class InputParameters:
         entities_metadata_url: str,
         taxonomies_zip_url: str,
         root_is_part_of_hierarchy: bool,
+        distance_metric: DistanceMetricEnum,
         transformer: TransformersEnum,
         dimensions: int,
         metric: MetricEnum,
@@ -78,6 +115,7 @@ class InputParameters:
         self.entities_metadata_url = entities_metadata_url
         self.taxonomies_zip_url = taxonomies_zip_url
         self.root_is_part_of_hierarchy = root_is_part_of_hierarchy
+        self.distance_metric = distance_metric
         self.transformer = transformer
         self.dimensions = dimensions
         self.metric = metric
@@ -98,7 +136,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["text/csv", "application/json"],
         metadata={
             "label": "Entities URL",
-            "description": "URL to the entity list (e.g., subparts.csv).",
+            "description": "**[General Input]** URL to the entity list (e.g., subparts.csv).",
             "input_type": "text",
         },
     )
@@ -109,7 +147,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Entities Attribute Metadata URL",
-            "description": "URL to a file with the attribute metadata for the entities.",
+            "description": "**[General Input]** URL to a file with the attribute metadata for the entities.",
             "input_type": "text",
             "related_to": "entities_url",
             "relation": "post",  # TODO: remove (?)
@@ -122,7 +160,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/zip"],
         metadata={
             "label": "Taxonomies URL",
-            "description": "URL to zip file with taxonomies.",
+            "description": "**[General Input]** URL to zip file with taxonomies.",
             "input_type": "text",
             "related_to": "entities_url",
             "relation": "pre",
@@ -134,7 +172,33 @@ class InputParametersSchema(FrontendFormBaseSchema):
     root_is_part_of_hierarchy = ma.fields.Boolean(
         required=False,
         load_default=False,
-        metadata={"label": "Root is part of hierarchy", "input_type": "checkbox"},
+        metadata={
+            "label": "Consider root node as part of the hierarchy",
+            "description": "**[Wu-Palmer Setting]** If the root node is part of the hierarchy, then items that are direct descendants of the "
+            "root node are considered similar to a certain degree. Otherwise they will be considered as not similar. "
+            "e.g. when the root node of a color taxonomy also represents a color, it should be considered as part of "
+            "the hierarchy",
+            "input_type": "checkbox",
+        },
+    )
+
+    distance_metric = EnumField(
+        DistanceMetricEnum,
+        required=True,
+        allow_none=False,
+        metadata={
+            "label": "Distance Metric",
+            "description": textwrap.dedent(
+                r"""
+                **[Mapping Setting]** Metric to calculate the distances of the taxanomy mapping:  
+                **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
+                **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
+                **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
+                **Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
+            """
+            ).strip(),
+            "input_type": "select",
+        },
     )
 
     transformer = EnumField(
@@ -142,7 +206,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         metadata={
             "label": "Transformer",
-            "description": "Transformer that shall be used to transform the similarities to distances.",
+            "description": "**[Transformer Setting]** Transformer that shall be used to transform the similarities to distances.",
             "input_type": "select",
         },
     )
@@ -153,7 +217,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         validate=ma.validate.Range(min=1),
         metadata={
             "label": "Dimensions",
-            "description": "Number of dimensions each output embedding will have.",
+            "description": "**[MDS Setting]** Number of dimensions each output embedding will have.",
             "input_type": "text",
         },
     )
@@ -165,7 +229,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Metric",
             "description": (
-                "Type of MDS that will be used. For nonmetric MDS, distances of "
+                "**[MDS Setting]** Type of MDS that will be used. For nonmetric MDS, distances of "
                 "exactly 0 are replaced with a small positive value below the "
                 "smallest positive distance because scikit-learn treats them "
                 "as missing values."
@@ -180,7 +244,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         validate=ma.validate.Range(min=1),
         metadata={
             "label": "SMACOF executions",
-            "description": "Number of times SMACOF will be executed with different initial values.",
+            "description": "**[MDS Setting]** Number of times SMACOF will be executed with different initial values.",
             "input_type": "text",
         },
     )
@@ -191,7 +255,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         validate=ma.validate.Range(min=1),
         metadata={
             "label": "SMACOF max iterations",
-            "description": "Maximum number of SMACOF iterations.",
+            "description": "**[MDS Setting]** Maximum number of SMACOF iterations.",
             "input_type": "text",
         },
     )
@@ -203,7 +267,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Missing distances",
             "description": (
-                "How missing (null) distances are replaced before MDS. "
+                "**[MDS Setting]** How missing (null) distances are replaced before MDS. "
                 "The replacement is computed from the known distances of the same attribute."
             ),
             "input_type": "select",
@@ -215,7 +279,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         load_default=False,
         metadata={
             "label": "Include intermediate results",
-            "description": "If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
+            "description": "**[General Setting]** If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
             "input_type": "checkbox",
         },
     )
@@ -244,7 +308,7 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
                 ]
                 continue
             value = original_data[key]
-            if value and value not in PIPELINE_OPTIONS:
+            if value and value not in PIPELINE_OPTIONS.keys():
                 errors[key] = [f"'{value}' is not one of {PIPELINE_OPTIONS}."]
         if errors:
             raise ma.ValidationError(errors)

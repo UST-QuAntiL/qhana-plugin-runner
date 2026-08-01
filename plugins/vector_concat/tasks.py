@@ -14,7 +14,7 @@
 
 from json import loads
 from tempfile import SpooledTemporaryFile
-from typing import Optional
+from typing import Iterator, List, Optional
 
 from celery.utils.log import get_task_logger
 
@@ -25,12 +25,36 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     load_entities,
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.zip_utils import get_file_responses_from_zip
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
 
 from . import VectorConcatPlugin
+from .schemas import ACCEPTED_CONTENT_TYPES
 
 TASK_LOGGER = get_task_logger(__name__)
+
+
+def _load_entities_from_zip(zip_bytes: bytes) -> Iterator[List]:
+    """Yield one entity list per file contained in the zip archive.
+
+    The content of each member may be JSON, JSON lines or CSV; the format is
+    detected dynamically from the file name or its content.
+    """
+    for response in get_file_responses_from_zip(zip_bytes):
+        mimetype = response.headers["Content-Type"]
+        if not mimetype:
+            raise ValueError(f"No Mimetype found for zip file '{response.url}'.")
+        if mimetype not in ACCEPTED_CONTENT_TYPES:
+            raise ValueError(
+                f"Mimetype for zip file '{response.url}' is not one of {ACCEPTED_CONTENT_TYPES}"
+            )
+        yield list(
+            ensure_array(
+                load_entities(response, mimetype=mimetype),
+                strict=True,
+            )
+        )
 
 
 @CELERY.task(name=f"{VectorConcatPlugin.instance.identifier}.calculation_task", bind=True)
@@ -55,10 +79,13 @@ def calculation_task(self, db_id: int) -> str:
             mimetype = get_mimetype(x)
             if not mimetype:
                 raise ValueError(f"Could not determine mimetype of {url}!")
-            entities = list(
-                ensure_array(load_entities(x, mimetype=mimetype), strict=True)
-            )
-            entities_list.append(entities)
+            if mimetype == "application/zip":
+                entities_list.extend(_load_entities_from_zip(x.content))
+            else:
+                entities = list(
+                    ensure_array(load_entities(x, mimetype=mimetype), strict=True)
+                )
+                entities_list.append(entities)
 
     combined = []
     for entities_tuple in zip(*entities_list, strict=True):

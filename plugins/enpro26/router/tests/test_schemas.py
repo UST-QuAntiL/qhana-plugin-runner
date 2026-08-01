@@ -17,6 +17,8 @@ import pytest
 from marshmallow import EXCLUDE, ValidationError
 
 from router.schemas import (
+    WU_PALMER_PLUGIN,
+    MAPPING_PLUGIN,
     InputParameters,
     InputParametersSchema,
     RoutingStepParametersSchema,
@@ -31,6 +33,7 @@ def _payload(**overrides) -> dict:
         "entitiesUrl": VALID_URL,
         "entitiesMetadataUrl": VALID_URL,
         "taxonomiesZipUrl": VALID_ZIP,
+        "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
         "dimensions": 2,
         "metric": "metric_mds",
@@ -54,18 +57,22 @@ def test_missing_required_fields_rejected():
         InputParametersSchema().load({})
     assert "entitiesUrl" in exc.value.messages
     assert "transformer" in exc.value.messages
+    assert "distanceMetric" in exc.value.messages
 
 
 def test_routing_step_accepts_pipeline_fields():
     result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
-        {"pipeline_instrumentation": "Wu-Palmer"}
+        {"pipeline_instrumentation": WU_PALMER_PLUGIN, "pipeline_genre": MAPPING_PLUGIN}
     )
-    assert result["pipeline_instrumentation"] == "Wu-Palmer"
+    assert result["pipeline_instrumentation"] == WU_PALMER_PLUGIN
+    assert result["pipeline_genre"] == MAPPING_PLUGIN
 
 
 def test_routing_step_rejects_unknown_field():
     with pytest.raises(ValidationError) as exc:
-        RoutingStepParametersSchema(unknown=EXCLUDE).load({"unexpected": "Wu-Palmer"})
+        RoutingStepParametersSchema(unknown=EXCLUDE).load(
+            {"unexpected": WU_PALMER_PLUGIN}
+        )
     assert "unexpected" in exc.value.messages
 
 
