@@ -18,7 +18,8 @@ import pytest
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router.tasks import handle_webhook_task, start_routing_task
-from router.tasks_pipeline_steps import start_wu_palmer, start_mapping, CELERY_COUNTDOWN
+from router.tasks_pipeline_steps import start_wu_palmer, start_mapping
+from router.tasks_helpers import CELERY_COUNTDOWN
 from router.schemas import (
     WU_PALMER_PLUGIN,
     MAPPING_PLUGIN,

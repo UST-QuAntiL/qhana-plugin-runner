@@ -13,40 +13,88 @@
 # limitations under the License.
 
 import json
-from marshmallow import EXCLUDE
 import requests
-import traceback
+from requests.exceptions import ConnectionError, Timeout
 from celery.utils.log import get_task_logger
+from flask.globals import current_app
 from typing import Optional
 from urllib.parse import urljoin
 from zipfile import ZipFile
 
+from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
     load_entities,
 )
-from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint
+from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint, monitor_result
 from qhana_plugin_runner.requests import get_mimetype, open_url
-from qhana_plugin_runner.tasks import save_task_error
+from qhana_plugin_runner.tasks import TASK_DETAILS_CHANGED, save_task_error
 
 from .schemas import (
     WU_PALMER_PLUGIN,
     MAPPING_PLUGIN,
     InputParameters,
-    InputParametersSchema,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
 CELERY_COUNTDOWN = 3
+
+REQUEST_TIMEOUT = 10
+
+
+class PipelineTask(CELERY.Task):
+    """Base task for router pipeline steps with centralized error handling.
+
+    Transient network errors (dropped connections, timeouts) are retried
+    automatically with exponential backoff. Any other exception fails the task
+    loudly: the real traceback is logged to the console and the task log, and the
+    processing task is marked ``FAILURE``.
+    """
+
+    autoretry_for = (ConnectionError, Timeout)
+    retry_backoff = True
+    retry_backoff_max = 60
+    max_retries = 5
+
+    @staticmethod
+    def _get_db_id(args, kwargs) -> Optional[int]:
+        if "db_id" in kwargs:
+            return kwargs["db_id"]
+        if args:
+            return args[0]
+        return None
+
+    def on_retry(self, exc, task_id, args, kwargs, einfo):
+        db_id = self._get_db_id(args, kwargs)
+        error_message = (
+            f"Transient error in step '{self.name}' (db_id={db_id}); retrying: {exc!r}"
+        )
+        TASK_LOGGER.warning(error_message)
+        if db_id is not None:
+            task_data = ProcessingTask.get_by_id(db_id)
+            if task_data is not None:
+                task_data.add_task_log_entry(error_message)
+                task_data.save(commit=True)
+                app = current_app._get_current_object()
+                TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+        super().on_retry(exc, task_id, args, kwargs, einfo)
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        db_id = self._get_db_id(args, kwargs)
+        if db_id is not None:
+            save_task_error.delay(failing_task_id=task_id, db_id=db_id)
+        else:
+            TASK_LOGGER.error(f"Step '{self.name}' failed permanently: {exc!r}")
+        super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
 def subscribe_to_plugin(task_result_url: str, webhook_url: str):
     """Subscribes the webhook to a target plugin's task result updates."""
 
     webhook_url = webhook_url.replace("localhost", "127.0.0.1")
-    response = requests.get(task_result_url).json()
+    response = requests.get(task_result_url, timeout=REQUEST_TIMEOUT).json()
     subscription_link = next(
         (
             link["href"]
@@ -60,6 +108,7 @@ def subscribe_to_plugin(task_result_url: str, webhook_url: str):
     requests.post(
         subscription_link,
         json={"command": "subscribe", "event": "status", "webhookHref": webhook_url},
+        timeout=REQUEST_TIMEOUT,
     ).raise_for_status()
 
 
@@ -139,38 +188,66 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
 
 
 def run_pipeline_step(
-    celery_task,
     db_id: int,
     task_data: ProcessingTask,
     plugin_name: str,
     logging_name: str,
     payload: dict,
 ):
-    """Boilerplate wrapper to handle task fetching, execution, retries, and error logging."""
+    """Start a pipeline sub-plugin and make sure its completion is observed.
+
+    Error handling is delegated to :class:`PipelineTask`, which means that ransient
+    errors are retried automatically, everything else fails the task loudly.
+
+    Robustness:
+    * The POST is skipped if the sub-task was already started for this step
+      (``<plugin>_url`` already stored), so a retry never spawns a duplicate
+      sub-task ("started twice").
+    * Webhook subscription is the fast path; only if it fails is a polling
+      watchdog (``monitor_result``) started so a lost event cannot leave the
+      pipeline stuck in ``PENDING``.
+    """
     TASK_LOGGER.info(f"Starting {logging_name} Step")
-    try:
+
+    existing_task_url = task_data.data.get(f"{plugin_name}_url")
+    if existing_task_url:
+        task_url = existing_task_url
+        TASK_LOGGER.info(
+            f"{logging_name} sub-task already started ({task_url}); skipping re-post."
+        )
+    else:
         plugin_url = plugin_process_url(task_data, plugin_name)
-        response = requests.post(plugin_url, data=payload, allow_redirects=False)
+        response = requests.post(
+            plugin_url, data=payload, allow_redirects=False, timeout=REQUEST_TIMEOUT
+        )
         response.raise_for_status()
 
         task_url = urljoin(plugin_url, response.headers["Location"])
         task_data.data[f"{plugin_name}_url"] = task_url
         task_data.add_task_log_entry(f"Started {logging_name}.")
         task_data.save(commit=True)
+        app = current_app._get_current_object()
+        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
 
-        subscribe_to_plugin(task_url, task_data.data["webhook_url"])
-    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
-        task_data.add_task_log_entry(
-            f"Error occurred during {logging_name} step. Attempting to retry.\nError Message: {e}"
-        )
-        task_data.save(commit=True)
-        raise celery_task.retry(exc=e, countdown=CELERY_COUNTDOWN)
+    webhook_url = task_data.data["webhook_url"]
+
+    # subscribed = False
+    try:
+        subscribe_to_plugin(task_url, webhook_url)
+        # subscribed = True
+        task_data.add_task_log_entry(f"Subscribed to {logging_name} events.")
     except Exception as e:
         task_data.add_task_log_entry(
-            f"CRASH in {logging_name} step:\n{traceback.format_exc()}"
+            f"Subscription for {logging_name} failed ({e!r}); falling back to polling."
         )
-        task_data.save(commit=True)
-        save_task_error.delay(failing_task_id=celery_task.request.id, db_id=db_id)
+    task_data.save(commit=True)
+
+    # if not subscribed:
+    monitor_result.s(
+        result_url=task_url,
+        webhook_url=webhook_url,
+        monitor="status",
+    ).apply_async(countdown=CELERY_COUNTDOWN)
 
 
 def is_store_mds_output(params: InputParameters) -> bool:

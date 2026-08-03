@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 from urllib.parse import urljoin
 
 from requests import post
-from requests.exceptions import ConnectionError, RequestException
+from requests.exceptions import ConnectionError, RequestException, Timeout
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.requests import REQUEST_SESSION, open_url
@@ -303,9 +303,9 @@ def monitor_external_substep(
     name=f"{__name__}.call_webhook",
     bind=True,
     ignore_result=True,
-    autoretry_for=(ConnectionError,),
+    autoretry_for=(ConnectionError, Timeout),
     retry_backoff=True,
     max_retries=3,
 )
 def call_webhook(self, webhook_url: str, task_url: str, event_type: str):
-    post(webhook_url, params={"source": task_url, "event": event_type}, timeout=1)
+    post(webhook_url, params={"source": task_url, "event": event_type}, timeout=5)

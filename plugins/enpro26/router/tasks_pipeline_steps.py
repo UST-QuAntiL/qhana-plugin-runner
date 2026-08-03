@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import traceback
 import requests
 from celery.utils.log import get_task_logger
 from marshmallow import EXCLUDE
@@ -21,7 +20,7 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.requests import open_url, open_url_as_file_like
 from qhana_plugin_runner.storage import STORE
-from qhana_plugin_runner.tasks import save_task_error, save_task_result
+from qhana_plugin_runner.tasks import save_task_result
 
 from . import Router
 from .schemas import (
@@ -35,7 +34,8 @@ from .schemas import (
     InputParametersSchema,
 )
 from .tasks_helpers import (
-    CELERY_COUNTDOWN,
+    REQUEST_TIMEOUT,
+    PipelineTask,
     extract_output_url,
     is_store_mds_output,
     run_pipeline_step,
@@ -90,31 +90,23 @@ def launch_next_pipeline(task_data: ProcessingTask):
 
 # --- WU-PALMER TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_wu_palmer", bind=True, max_retries=5
+    name=f"{Router.instance.identifier}.start_wu_palmer", bind=True, base=PipelineTask
 )
 def start_wu_palmer(self, db_id: int):
     """Starting the Wu-Palmer plugin"""
     task_data = ProcessingTask.get_by_id(db_id)
-    try:
-        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-            task_data.parameters
-        )
-        payload = {
-            "entitiesUrl": params.entities_url,
-            "entitiesMetadataUrl": params.entities_metadata_url,
-            "taxonomiesZipUrl": params.taxonomies_zip_url,
-            "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
-            "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
-        }
-    except Exception as e:
-        task_data.add_task_log_entry(
-            f"CRASH in Wu-Palmer during input loading:\n{traceback.format_exc()}"
-        )
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
-        return
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters
+    )
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
+        "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
+    }
 
     run_pipeline_step(
-        celery_task=self,
         db_id=db_id,
         task_data=task_data,
         plugin_name=WU_PALMER_PLUGIN,
@@ -124,30 +116,24 @@ def start_wu_palmer(self, db_id: int):
 
 
 # --- MAPPING TASK ---
-@CELERY.task(name=f"{Router.instance.identifier}.start_mapping", bind=True, max_retries=5)
+@CELERY.task(
+    name=f"{Router.instance.identifier}.start_mapping", bind=True, base=PipelineTask
+)
 def start_mapping(self, db_id: int):
     """Starting the mapping-distances plugin"""
     task_data = ProcessingTask.get_by_id(db_id)
-    try:
-        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-            task_data.parameters
-        )
-        payload = {
-            "entitiesUrl": params.entities_url,
-            "entitiesMetadataUrl": params.entities_metadata_url,
-            "taxonomiesZipUrl": params.taxonomies_zip_url,
-            "attributes": task_data.data[f"{MAPPING_PLUGIN}_attributes"],
-            "distanceMetric": params.distance_metric.name,
-        }
-    except Exception as e:
-        task_data.add_task_log_entry(
-            f"CRASH in Mapping during input loading:\n{traceback.format_exc()}"
-        )
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
-        return
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters
+    )
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{MAPPING_PLUGIN}_attributes"],
+        "distanceMetric": params.distance_metric.name,
+    }
 
     run_pipeline_step(
-        celery_task=self,
         db_id=db_id,
         task_data=task_data,
         plugin_name=MAPPING_PLUGIN,
@@ -160,41 +146,33 @@ def start_mapping(self, db_id: int):
 @CELERY.task(
     name=f"{Router.instance.identifier}.start_transformers",
     bind=True,
-    max_retries=5,
+    base=PipelineTask,
 )
 def start_transformers(self, db_id: int, source_url: str):
     """Starting the element_sim-to-element_dist-transformers plugin"""
     task_data = ProcessingTask.get_by_id(db_id)
-    try:
-        outputs = requests.get(source_url).json().get("outputs", [])
-        element_sims_url = extract_output_url(outputs, "relation/element-similarities")
-        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-            task_data.parameters
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    element_sims_url = extract_output_url(outputs, "relation/element-similarities")
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters
+    )
+
+    if params.include_intermediate_results_in_output:
+        STORE.persist_task_result(
+            db_id,
+            open_url(element_sims_url).content,
+            "wu_palmer_similarities.zip",
+            "relation/element-similarities",
+            "application/zip",
         )
 
-        if params.include_intermediate_results_in_output:
-            STORE.persist_task_result(
-                db_id,
-                open_url(element_sims_url).content,
-                "wu_palmer_similarities.zip",
-                "relation/element-similarities",
-                "application/zip",
-            )
-
-        payload = {
-            "similaritiesUrl": element_sims_url,
-            "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
-            "transformer": params.transformer.name,
-        }
-    except Exception as e:
-        task_data.add_task_log_entry(
-            f"CRASH in Transformers setup:\n{traceback.format_exc()}"
-        )
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
-        return
+    payload = {
+        "similaritiesUrl": element_sims_url,
+        "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
+        "transformer": params.transformer.name,
+    }
 
     run_pipeline_step(
-        celery_task=self,
         db_id=db_id,
         task_data=task_data,
         plugin_name=TRANSFORMERS_PLUGIN,
@@ -207,41 +185,33 @@ def start_transformers(self, db_id: int, source_url: str):
 @CELERY.task(
     name=f"{Router.instance.identifier}.start_aggregator",
     bind=True,
-    max_retries=5,
+    base=PipelineTask,
 )
 def start_aggregator(self, db_id: int, source_url: str):
     """Starting the attribute-distance-aggregator plugin"""
     task_data = ProcessingTask.get_by_id(db_id)
-    try:
-        outputs = requests.get(source_url).json().get("outputs", [])
-        element_dists_url = extract_output_url(outputs, "relation/element-distances")
-        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-            task_data.parameters
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    element_dists_url = extract_output_url(outputs, "relation/element-distances")
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters
+    )
+
+    if params.include_intermediate_results_in_output:
+        prefix = task_data.data.get("current_pipeline", "unknown")
+        STORE.persist_task_result(
+            db_id,
+            open_url(element_dists_url).content,
+            f"{prefix}_element_distances.zip",
+            "relation/element-distances",
+            "application/zip",
         )
 
-        if params.include_intermediate_results_in_output:
-            prefix = task_data.data.get("current_pipeline", "unknown")
-            STORE.persist_task_result(
-                db_id,
-                open_url(element_dists_url).content,
-                f"{prefix}_element_distances.zip",
-                "relation/element-distances",
-                "application/zip",
-            )
-
-        payload = {
-            "entitiesUrl": params.entities_url,
-            "elementDistancesUrl": element_dists_url,
-        }
-    except Exception as e:
-        task_data.add_task_log_entry(
-            f"CRASH in Aggregator setup:\n{traceback.format_exc()}"
-        )
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
-        return
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "elementDistancesUrl": element_dists_url,
+    }
 
     run_pipeline_step(
-        celery_task=self,
         db_id=db_id,
         task_data=task_data,
         plugin_name=AGGREGATOR_PLUGIN,
@@ -251,42 +221,36 @@ def start_aggregator(self, db_id: int, source_url: str):
 
 
 # --- MDS TASK ---
-@CELERY.task(name=f"{Router.instance.identifier}.start_mds", bind=True, max_retries=5)
+@CELERY.task(name=f"{Router.instance.identifier}.start_mds", bind=True, base=PipelineTask)
 def start_mds(self, db_id: int, source_url: str):
     """Starting the attribute-distance-mds plugin"""
     task_data = ProcessingTask.get_by_id(db_id)
-    try:
-        outputs = requests.get(source_url).json().get("outputs", [])
-        attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
-        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-            task_data.parameters or "{}"
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
+
+    if params.include_intermediate_results_in_output:
+        prefix = task_data.data.get("current_pipeline", "unknown")
+        STORE.persist_task_result(
+            db_id,
+            open_url(attr_dists_url).content,
+            f"{prefix}_attribute_distances.zip",
+            "relation/attribute-distances",
+            "application/zip",
         )
 
-        if params.include_intermediate_results_in_output:
-            prefix = task_data.data.get("current_pipeline", "unknown")
-            STORE.persist_task_result(
-                db_id,
-                open_url(attr_dists_url).content,
-                f"{prefix}_attribute_distances.zip",
-                "relation/attribute-distances",
-                "application/zip",
-            )
-
-        payload = {
-            "attributeDistancesUrl": attr_dists_url,
-            "dimensions": params.dimensions,
-            "metric": params.metric.name,
-            "nInit": params.n_init,
-            "maxIter": params.max_iter,
-            "missingDataHandling": params.missing_data_handling.name,
-        }
-    except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in MDS setup:\n{traceback.format_exc()}")
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
-        return
+    payload = {
+        "attributeDistancesUrl": attr_dists_url,
+        "dimensions": params.dimensions,
+        "metric": params.metric.name,
+        "nInit": params.n_init,
+        "maxIter": params.max_iter,
+        "missingDataHandling": params.missing_data_handling.name,
+    }
 
     run_pipeline_step(
-        celery_task=self,
         db_id=db_id,
         task_data=task_data,
         plugin_name=MDS_PLUGIN,
@@ -297,7 +261,7 @@ def start_mds(self, db_id: int, source_url: str):
 
 # --- END OF PIPELINE ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, max_retries=5
+    name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, base=PipelineTask
 )
 def finalize_pipeline(self, db_id: int, source_url: str):
     """Finalizing the pipeline after MDS execution.
@@ -308,90 +272,67 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         task_data.parameters or "{}"
     )
 
-    try:
-        outputs = requests.get(source_url).json().get("outputs", [])
-        final_dists_url = extract_output_url(outputs, "entity/vector")
-        current_pipeline_name = task_data.data.get("current_pipeline", "unknown")
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    final_dists_url = extract_output_url(outputs, "entity/vector")
+    current_pipeline_name = task_data.data.get("current_pipeline", "unknown")
 
-        if is_store_mds_output(params):
-            STORE.persist_task_result(
-                db_id,
-                open_url(final_dists_url).content,
-                f"{current_pipeline_name}_mds_vectors.zip",
-                "entity/vector",
-                "application/zip",
-            )
+    if is_store_mds_output(params):
+        STORE.persist_task_result(
+            db_id,
+            open_url(final_dists_url).content,
+            f"{current_pipeline_name}_mds_vectors.zip",
+            "entity/vector",
+            "application/zip",
+        )
 
-        if params.concat_output:
-            vector_zip_urls = task_data.data.get("vector_zip_urls", [])
-            vector_zip_urls.append(final_dists_url)
-            task_data.data["vector_zip_urls"] = vector_zip_urls
-            task_data.add_task_log_entry(
-                f"Saved vector zip url of {current_pipeline_name} in task_data."
-            )
-            task_data.save(commit=True)
-
-        # trigger next pipeline
-        launch_next_pipeline(task_data)
-
-    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+    if params.concat_output:
+        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+        vector_zip_urls.append(final_dists_url)
+        task_data.data["vector_zip_urls"] = vector_zip_urls
         task_data.add_task_log_entry(
-            f"Error occurred during finalization step. Attempting to retry:\n{e}"
+            f"Saved vector zip url of {current_pipeline_name} in task_data."
         )
         task_data.save(commit=True)
-        raise self.retry(exc=e, countdown=CELERY_COUNTDOWN)
-    except Exception as e:
-        task_data.add_task_log_entry(
-            f"CRASH in final pipeline step:\n{traceback.format_exc()}"
-        )
-        task_data.save(commit=True)
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+
+    # trigger next pipeline
+    launch_next_pipeline(task_data)
 
 
 # --- AFTER ALL PIPELINES: Vector concat ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_vector_concat", bind=True, max_retries=5
+    name=f"{Router.instance.identifier}.start_vector_concat", bind=True, base=PipelineTask
 )
 def start_vector_concat(self, db_id: int):
     """Starting the vector concatenation of the vector urls of each pipeline."""
     task_data = ProcessingTask.get_by_id(db_id)
 
-    try:
-        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
-            task_data.parameters or "{}"
-        )
-        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
+    vector_zip_urls = task_data.data.get("vector_zip_urls", [])
 
-        if params.include_intermediate_results_in_output:
-            for vector_zip_url in vector_zip_urls:
-                prefix = task_data.data.get("current_pipeline", "unknown")
-                STORE.persist_task_result(
-                    db_id,
-                    vector_zip_url,
-                    f"{prefix}_mds_final_vectors.zip",
-                    "entity/vector",
-                    "application/zip",
-                )
+    if params.include_intermediate_results_in_output:
+        for vector_zip_url in vector_zip_urls:
+            prefix = task_data.data.get("current_pipeline", "unknown")
+            STORE.persist_task_result(
+                db_id,
+                vector_zip_url,
+                f"{prefix}_mds_final_vectors.zip",
+                "entity/vector",
+                "application/zip",
+            )
 
-        payload = {
-            "urls": "\n".join(vector_zip_urls),
-            "output_format": params.output_format,
-            "output_suffix": "final_concatenated_vector",
-        }
-    except Exception as e:
-        task_data.add_task_log_entry(
-            f"CRASH in Vector concat setup:\n{traceback.format_exc()}"
-        )
-        task_data.save(commit=True)
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
-        return
+    payload = {
+        "urls": "\n".join(vector_zip_urls),
+        "output_format": params.output_format,
+        "output_suffix": "final_concatenated_vector",
+    }
 
     run_pipeline_step(
-        celery_task=self,
         db_id=db_id,
         task_data=task_data,
         plugin_name=VECTOR_CONCAT_PLUGIN,
-        logging_name="MDS",
+        logging_name="Vector concat",
         payload=payload,
     )
 
@@ -404,34 +345,20 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
     """Outputs the vector that was created by the vector concat plugin."""
     task_data = ProcessingTask.get_by_id(db_id)
 
-    try:
-        outputs = requests.get(source_url).json().get("outputs", [])
-        final_vector = extract_output_url(outputs, "entity/vector")
-        with open_url_as_file_like(final_vector) as (
+    outputs = requests.get(source_url).json().get("outputs", [])
+    final_vector = extract_output_url(outputs, "entity/vector")
+    with open_url_as_file_like(final_vector) as (
+        file_name,
+        file_like,
+        mimetype,
+    ):
+        STORE.persist_task_result(
+            db_id,
+            file_like.read(),
             file_name,
-            file_like,
+            "entity/vector",
             mimetype,
-        ):
-            STORE.persist_task_result(
-                db_id,
-                file_like.read(),
-                file_name,
-                "entity/vector",
-                mimetype,
-            )
-        save_task_result.delay(
-            "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
         )
-
-    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
-        task_data.add_task_log_entry(
-            f"Error occurred during vector concat finalization step. Attempting to retry:\n{e}"
-        )
-        task_data.save(commit=True)
-        raise self.retry(exc=e, countdown=CELERY_COUNTDOWN)
-    except Exception as e:
-        task_data.add_task_log_entry(
-            f"CRASH in final vector concat step:\n{traceback.format_exc()}"
-        )
-        task_data.save(commit=True)
-        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+    save_task_result.delay(
+        "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
+    )

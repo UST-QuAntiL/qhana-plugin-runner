@@ -38,6 +38,8 @@ from .schemas import (
 )
 from .tasks_helpers import (
     CELERY_COUNTDOWN,
+    REQUEST_TIMEOUT,
+    PipelineTask,
     load_task,
     load_entity_attributes,
     taxonomy_ref,
@@ -167,7 +169,11 @@ def start_routing_task(self, db_id: int) -> str:
     return "Routing task started and pipeline queued."
 
 
-@CELERY.task(name=f"{Router.instance.identifier}.handle_webhook_task", bind=True)
+@CELERY.task(
+    name=f"{Router.instance.identifier}.handle_webhook_task",
+    bind=True,
+    base=PipelineTask,
+)
 def handle_webhook_task(self, db_id: int, source_url: str):
     """Handles webhook responses of the pipeline steps results"""
     task_data = ProcessingTask.get_by_id(db_id)
@@ -184,10 +190,29 @@ def handle_webhook_task(self, db_id: int, source_url: str):
     if not source_url or source_url not in known_urls:
         return "Unrecognized webhook source"
 
-    sub_task_result = requests.get(source_url).json()
+    sub_task_result = requests.get(source_url, timeout=REQUEST_TIMEOUT).json()
+    status = sub_task_result.get("status", "PENDING")
 
-    if sub_task_result.get("status", "PENDING") != "SUCCESS":
-        return "Task still pending or failed"
+    if status == "PENDING":
+        return "Sub-task still pending"
+
+    if status == "FAILURE":
+        # A sub-plugin failed. Raise so PipelineTask.on_failure marks this task
+        # FAILURE and surfaces the error instead of leaving it stuck in PENDING.
+        raise RuntimeError(
+            f"Sub-plugin step failed ({source_url}). See the failed plugin's log "
+            f"for details."
+        )
+
+    # status == "SUCCESS": guard against duplicate progression. The step
+    # completion can be delivered twice (webhook subscription and the polling
+    # watchdog), which would otherwise start the next step twice.
+    progressed_urls = task_data.data.get("progressed_urls", [])
+    if source_url in progressed_urls:
+        return "Sub-task already progressed"
+    progressed_urls.append(source_url)
+    task_data.data["progressed_urls"] = progressed_urls
+    task_data.save(commit=True)
 
     current_pipeline = task_data.data.get("current_pipeline")
 
