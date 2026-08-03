@@ -70,6 +70,17 @@ def launch_next_pipeline(task_data: ProcessingTask):
     task_data.data["pipeline_queue"] = queue
     task_data.data["current_pipeline"] = next_pipeline
 
+    # Reset progress when starting new pipeline
+    for reused_step in (
+        WU_PALMER_PLUGIN,
+        MAPPING_PLUGIN,
+        TRANSFORMERS_PLUGIN,
+        AGGREGATOR_PLUGIN,
+        MDS_PLUGIN,
+    ):
+        task_data.data.pop(f"{reused_step}_url", None)
+    task_data.data["progressed_urls"] = []
+
     # Route to the correct starting step
     if next_pipeline == WU_PALMER_PLUGIN:
         task_data.add_task_log_entry(

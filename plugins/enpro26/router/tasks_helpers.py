@@ -231,10 +231,10 @@ def run_pipeline_step(
 
     webhook_url = task_data.data["webhook_url"]
 
-    # subscribed = False
+    subscribed = False
     try:
         subscribe_to_plugin(task_url, webhook_url)
-        # subscribed = True
+        subscribed = True
         task_data.add_task_log_entry(f"Subscribed to {logging_name} events.")
     except Exception as e:
         task_data.add_task_log_entry(
@@ -242,12 +242,12 @@ def run_pipeline_step(
         )
     task_data.save(commit=True)
 
-    # if not subscribed:
-    monitor_result.s(
-        result_url=task_url,
-        webhook_url=webhook_url,
-        monitor="status",
-    ).apply_async(countdown=CELERY_COUNTDOWN)
+    if not subscribed:
+        monitor_result.s(
+            result_url=task_url,
+            webhook_url=webhook_url,
+            monitor="status",
+        ).apply_async(countdown=CELERY_COUNTDOWN)
 
 
 def is_store_mds_output(params: InputParameters) -> bool:
