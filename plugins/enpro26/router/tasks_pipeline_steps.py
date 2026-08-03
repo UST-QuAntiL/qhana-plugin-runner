@@ -366,7 +366,7 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
         STORE.persist_task_result(
             db_id,
             file_like.read(),
-            file_name,
+            "final_vector.csv",
             "entity/vector",
             mimetype,
         )
