@@ -227,7 +227,7 @@ def subscribe(
     name=f"{__name__}.monitor_result",
     bind=True,
     ignore_result=True,
-    autoretry_for=(ResultUnchangedError, ConnectionError),
+    autoretry_for=(ResultUnchangedError, ConnectionError, Timeout),
     retry_backoff=True,
     max_retries=None,
 )
@@ -266,7 +266,7 @@ def monitor_result(
     name=f"{__name__}.monitor_external_substep",
     bind=True,
     ignore_result=True,
-    autoretry_for=(ResultUnchangedError, ConnectionError),
+    autoretry_for=(ResultUnchangedError, ConnectionError, Timeout),
     retry_backoff=True,
     max_retries=None,
 )
