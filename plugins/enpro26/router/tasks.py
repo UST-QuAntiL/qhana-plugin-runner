@@ -174,7 +174,7 @@ def start_routing_task(self, db_id: int) -> str:
     bind=True,
     base=PipelineTask,
 )
-def handle_webhook_task(self, db_id: int, source_url: str):
+def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     """Handles webhook responses of the pipeline steps results"""
     task_data = ProcessingTask.get_by_id(db_id)
 
@@ -197,11 +197,8 @@ def handle_webhook_task(self, db_id: int, source_url: str):
         return "Sub-task still pending"
 
     if status == "FAILURE":
-        # A sub-plugin failed. Raise so PipelineTask.on_failure marks this task
-        # FAILURE and surfaces the error instead of leaving it stuck in PENDING.
         raise RuntimeError(
-            f"Sub-plugin step failed ({source_url}). See the failed plugin's log "
-            f"for details."
+            f"Sub-plugin step failed ({source_url}). See the failed plugin's log for details."
         )
 
     # status == "SUCCESS": guard against duplicate progression. The step
@@ -213,6 +210,10 @@ def handle_webhook_task(self, db_id: int, source_url: str):
     progressed_urls.append(source_url)
     task_data.data["progressed_urls"] = progressed_urls
     task_data.save(commit=True)
+    if via == "watchdog":
+        TASK_LOGGER.warning(
+            f"Polling watchdog recovered a lost completion event for {source_url}"
+        )
 
     current_pipeline = task_data.data.get("current_pipeline")
 

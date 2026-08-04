@@ -350,7 +350,9 @@ def start_vector_concat(self, db_id: int):
 
 # --- AFTER ALL PIPELINES: finalize vector concat ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_vector_concat", bind=True, max_retries=5
+    name=f"{Router.instance.identifier}.finalize_vector_concat",
+    bind=True,
+    base=PipelineTask,
 )
 def finalize_vector_concat(self, db_id: int, source_url: str):
     """Outputs the vector that was created by the vector concat plugin."""

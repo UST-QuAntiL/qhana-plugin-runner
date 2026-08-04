@@ -365,11 +365,11 @@ class WebhookView(MethodView):
     def post(self, db_id: int):
         source_url = request.args.get("source")
         event = request.args.get("event")
+        via = request.args.get("via")  # "watchdog" if delivered by the polling watchdog
 
         if source_url and event == "status":
-            # Countdown prevent overload for backend.
             handle_webhook_task.apply_async(
-                kwargs={"db_id": db_id, "source_url": source_url}, countdown=2
+                kwargs={"db_id": db_id, "source_url": source_url, "via": via},
+                countdown=2,
             )
-
         return "Webhook received", HTTPStatus.OK
