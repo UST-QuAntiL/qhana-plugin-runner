@@ -225,7 +225,7 @@ def test_handle_webhook_routing_wu_palmer_progression(
     monkeypatch.setattr(next_task_path, mock_apply_async)
 
     # Simulate webhook hitting the traffic cop
-    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
+    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook")
 
     assert len(triggered) == 1
     assert triggered[0] == "next_step_triggered"
@@ -330,7 +330,7 @@ def test_handle_webhook_routing_mapping_progression(
     monkeypatch.setattr("requests.get", mock_get)
     monkeypatch.setattr(next_task_path, mock_apply_async)
 
-    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
+    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook")
 
     assert len(triggered) == 1
     assert triggered[0] == "next_step_triggered"
@@ -353,7 +353,9 @@ def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
 
     monkeypatch.setattr("requests.get", mock_get)
 
-    result = run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
+    result = run_task(
+        handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook"
+    )
 
     assert result == "Unrecognized pipeline state"
 
@@ -364,7 +366,10 @@ def test_handle_webhook_ignores_unrecognized_source():
 
     # Feed an unknown URL to the webhook
     result = run_task(
-        handle_webhook_task, db_id=db_task.id, source_url="http://unknown-source"
+        handle_webhook_task,
+        db_id=db_task.id,
+        source_url="http://unknown-source",
+        via="webhook",
     )
 
     assert result == "Unrecognized webhook source"
