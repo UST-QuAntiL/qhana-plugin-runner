@@ -16,7 +16,7 @@
 Tests for plugin metadata type validation.
 
 Verifies that all plugins use allowed data_types and content_types
-as defined in qhana_plugin_runner.plugin_utils.types.
+as defined in tests.allowed_types.
 """
 
 from http import HTTPStatus
@@ -24,11 +24,9 @@ import warnings
 
 import pytest
 
-from qhana_plugin_runner.plugin_utils.types import (
-    is_valid_content_type,
-    is_valid_data_type,
-)
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
+
+from .allowed_types import is_valid_content_type, is_valid_data_type
 
 
 def _get_plugin_entry_point(plugin_id, plugin, client) -> getattr:
