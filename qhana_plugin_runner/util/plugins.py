@@ -14,6 +14,7 @@
 
 import re
 import sys
+import traceback
 from importlib import import_module
 from pathlib import Path
 from typing import ClassVar, Dict, List, Optional, Union
@@ -24,32 +25,33 @@ from packaging.version import InvalidVersion, Version
 from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
 
-PLUGIN_NAME_REGEX = re.compile(r"[a-z][a-zA-Z0-9_-]*")
+_PLUGIN_NAME_REGEX = re.compile(r"[a-z][a-zA-Z0-9_-]*")
 
 
-def is_valid_plugin_name(name: str) -> bool:
+def _is_valid_plugin_name(name: str) -> bool:
     """Check that a plugin name starts with a lowercase letter and contains only
     letters, digits, hyphens, and underscores."""
-    return bool(PLUGIN_NAME_REGEX.fullmatch(name))
+    return bool(_PLUGIN_NAME_REGEX.fullmatch(name))
 
 
-PLUGIN_VERSION_REGEX = re.compile(
+_PLUGIN_VERSION_REGEX = re.compile(
     r"""
-    ^v?
+    v?
     (?P<major>\d+)
     (?:\.(?P<minor>\d+)
         (?:\.(?P<patch>\d+))?
-    )?$
+    )?
     """,
     re.VERBOSE,
 )
 
 
-def is_valid_plugin_version(version: str) -> bool:
+def _is_valid_plugin_version(version: str) -> bool:
     """Check that a plugin version is a numeric semantic versioning style
     version of the form ``MAJOR[.MINOR[.PATCH]]`` with an optional ``v``
     prefix. At least one version part must be nonzero."""
-    match = PLUGIN_VERSION_REGEX.match(version)
+    # fullmatch instead of match, ``$`` would also match before a trailing newline
+    match = _PLUGIN_VERSION_REGEX.fullmatch(version)
     if not match:
         return False
     return any(
@@ -83,12 +85,12 @@ class QHAnaPluginBase:
                 raise ValueError("A plugin must specify a URL-safe! name.")
             if not plugin.version:
                 raise ValueError("A plugin must specify a version.")
-            if not is_valid_plugin_name(plugin.name):
+            if not _is_valid_plugin_name(plugin.name):
                 raise ValueError(
                     f"The plugin name '{plugin.name}' is invalid. Plugin names must "
-                    f"match the regular expression '{PLUGIN_NAME_REGEX.pattern}'."
+                    f"match the regular expression '{_PLUGIN_NAME_REGEX.pattern}'."
                 )
-            if not is_valid_plugin_version(plugin.version):
+            if not _is_valid_plugin_version(plugin.version):
                 raise ValueError(
                     f"The plugin version '{plugin.version}' of the plugin "
                     f"'{plugin.name}' is invalid. Plugin versions must be "
@@ -105,7 +107,8 @@ class QHAnaPluginBase:
                     f"Could not load the plugin class {cls}!", exc_info=err
                 )
             else:
-                print(f"Could not load plugin class {cls}! Reason: {err}")
+                print(f"Could not load plugin class {cls}!", file=sys.stderr)
+                traceback.print_exc()
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__()

@@ -115,12 +115,11 @@ Example of plugin metadata:
       - Stable machine readable name of the plugin. Must match the regular expression ``[a-z][a-zA-Z0-9_-]*``.
         Start the name with a lowercase letter and use only letters, digits, hyphens, and underscores.
         Whitespace is not allowed.
+        Plugins with an invalid version are not loaded.
     * - Version
       - 0.0.1
       - A numeric version of the form ``MAJOR[.MINOR[.PATCH]]`` with an optional ``v`` prefix, for example ``1.2.3`` or ``v1.0``.
         At least one version part must be nonzero, so ``0``, ``0.0``, and ``0.0.0`` are invalid.
-        This is semantic versioning without pre-release or build suffixes and is a subset of
-        <https://www.python.org/dev/peps/pep-0440/#public-version-identifiers>.
         Plugins with an invalid version are not loaded.
     * - Type
       - ``processing`` | ``visalization`` | ``conversion``
