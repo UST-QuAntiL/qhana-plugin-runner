@@ -1,0 +1,4 @@
+[
+    {"source": "paintA", "target": "paintB", "similarity": 0.8},
+    {"source": "paintB", "target": "paintA", "similarity": 0.8}
+]

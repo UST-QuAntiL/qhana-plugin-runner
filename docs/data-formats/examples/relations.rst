@@ -4,11 +4,17 @@ Relations (``relation/*``)
 +-----------------+--------------------------------------------------------------+
 | data type       | relation/*                                                   |
 +-----------------+--------------------------------------------------------------+
-| content types   | text/csv, application/json, application/X-lines+json         |
+| content types   | application/json, application/X-lines+json                   |
 +-----------------+--------------------------------------------------------------+
 
 The ``relation/*`` data type describes the most generic relation format.
 See :ref:`data-formats/data-model:relations` for more details.
+
+.. important:: Relations must be serialized as ``application/json`` or ``application/X-lines+json``
+    (one JSON object per line). ``text/csv`` is **not** supported: CSV carries no type information,
+    so a parser cannot tell whether an attribute value is a string or a number. Determining this
+    would require extra metadata (e.g. :ref:`attribute metadata
+    <data-formats/data-loader-formats:attribute metadata>`) that relation files do not carry.
 
 
 .. todo:: The examples in this document can (and should) be replaced with shortened real world examples once they are available to make testing new plugins easier.
@@ -33,12 +39,13 @@ Additional attributes should be ignored.
 
 Example:
 
-.. code-block:: text
+.. code-block:: json
 
-    source,target,distance
-    entA,entB,0.7
-    entB,entC,2
-    entB,entB,0
+    [
+        {"source": "entA", "target": "entB", "distance": 0.7},
+        {"source": "entB", "target": "entC", "distance": 2},
+        {"source": "entB", "target": "entB", "distance": 0}
+    ]
 
 
 relation/unit-distance
@@ -50,12 +57,13 @@ When converted to ``relation/distance``, all distances **must** first be convert
 
 Additional attributes should be ignored.
 
-.. code-block:: text
+.. code-block:: json
 
-    source,target,distance,unit
-    entA,entB,0.7,m
-    entB,entC,2,m
-    entB,entB,0,m
+    [
+        {"source": "entA", "target": "entB", "distance": 0.7, "unit": "m"},
+        {"source": "entB", "target": "entC", "distance": 2, "unit": "m"},
+        {"source": "entB", "target": "entB", "distance": 0, "unit": "m"}
+    ]
 
 
 relation/similarity
@@ -70,12 +78,13 @@ Additional attributes should be ignored.
 
 Example:
 
-.. code-block:: text
+.. code-block:: json
 
-    source,target,similarity
-    entA,entB,0.8
-    entB,entC,0.2
-    entB,entB,1
+    [
+        {"source": "entA", "target": "entB", "similarity": 0.8},
+        {"source": "entB", "target": "entC", "similarity": 0.2},
+        {"source": "entB", "target": "entB", "similarity": 1}
+    ]
 
 
 relation/attribute-distances
@@ -93,15 +102,12 @@ A list of objects representing pairwise distances:
 
 **Example:** Attribute ``dominanteCharaktereigenschaft`` of the MUSE dataset.
 
-.. code-block::
+.. code-block:: json
 
-    ...
-    {
-    "source": "44_21_1",
-    "target": "45_7_2",
-    "distance": 0.5
-    },
-    ...
+    [
+        {"source": "44_21_1", "target": "45_7_2", "distance": 0.5},
+        {"source": "44_21_1", "target": "45_7_3", "distance": null}
+    ]
 
 | *ID 44_21_1 is the ID of entity with dominanteCharaktereigenschaft=aktiv*
 | *ID 45_7_2 is the ID of entity with dominanteCharaktereigenschaft=gut*
@@ -127,15 +133,12 @@ A list of objects representing pairwise similarities:
 
 **Example:** Attribute ``dominanteCharaktereigenschaft`` of the MUSE dataset.
 
-.. code-block::
+.. code-block:: json
 
-    ...
-    {
-    "source": "44_21_1",
-    "target": "45_7_2",
-    "similarity": 0.5
-    },
-    ...
+    [
+        {"source": "44_21_1", "target": "45_7_2", "similarity": 0.5},
+        {"source": "44_21_1", "target": "45_7_3", "similarity": 0.25}
+    ]
 
 | *ID 44_21_1 is the ID of entity with dominanteCharaktereigenschaft=aktiv*
 | *ID 45_7_2 is the ID of entity with dominanteCharaktereigenschaft=gut*
@@ -161,15 +164,12 @@ A list of objects representing the element-to-element similarity:
 
 **Example:** Attribute ``dominanteCharaktereigenschaft`` of the MUSE dataset.
 
-.. code-block::
+.. code-block:: json
 
-    ...
-    {
-    "source": "aktiv",
-    "target": "gut",
-    "similarity": 0.5
-    },
-    ...
+    [
+        {"source": "aktiv", "target": "gut", "similarity": 0.5},
+        {"source": "aktiv", "target": "ruhig", "similarity": 0.2}
+    ]
 
 
 **Example Usage**
@@ -193,15 +193,12 @@ A list of objects representing the element-to-element distance:
 
 **Example:** Attribute ``degree_of_dissonance`` of mapping data of the Muse4Music dataset.
 
-.. code-block::
+.. code-block:: json
 
-    ...
-    {
-    "source": "t_Dissonanzgrad_2",
-    "target": "t_Dissonanzgrad_3",
-    "distance": 8.0
-    },
-    ...
+    [
+        {"source": "t_Dissonanzgrad_2", "target": "t_Dissonanzgrad_3", "distance": 8.0},
+        {"source": "t_Dissonanzgrad_2", "target": "t_Dissonanzgrad_4", "distance": 16.0}
+    ]
 
 
 **Example Usage**
@@ -224,15 +221,12 @@ A list of objects representing the aggregated entity-to-entity distance:
 
 **Example:** Attribute ``dominanteCharaktereigenschaft``, ``dominanteFarbe``, ``dominanterAlterseindruck``, ``dominanterZustand``, ``genre`` of the MUSE dataset.
 
-.. code-block::
+.. code-block:: json
 
-    ...
-    {
-    "source": "44_21_1",
-    "target": "45_7_2",
-    "distance": 0.5133333333333334
-    },
-    ...
+    [
+        {"source": "44_21_1", "target": "45_7_2", "distance": 0.5133333333333334},
+        {"source": "44_21_1", "target": "45_7_3", "distance": 0.7266666666666667}
+    ]
 
 | *ID 44_21_1 is the ID of entity with dominanteCharaktereigenschaft=aktiv*
 | *ID 45_7_2 is the ID of entity with dominanteCharaktereigenschaft=gut*
@@ -241,3 +235,30 @@ A list of objects representing the aggregated entity-to-entity distance:
 
 * Output generated by :ref:`distance-aggregator`.
 * Input needed for :ref:`mds`.
+
+
+Content Types
+-------------
+
+Relations ``application/json``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Download: :download:`relations.json <example_files/relations.json>`
+
+.. code-block:: json
+
+    [
+        {"source": "paintA", "target": "paintB", "similarity": 0.8},
+        {"source": "paintB", "target": "paintA", "similarity": 0.8}
+    ]
+
+
+Relations ``application/X-lines+json``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Download: :download:`relations-lines.json <example_files/relations-lines.json>`
+
+.. code-block:: json
+
+    {"source": "paintA", "target": "paintB", "similarity": 0.8}
+    {"source": "paintB", "target": "paintA", "similarity": 0.8}
