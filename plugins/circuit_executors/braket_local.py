@@ -59,8 +59,8 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
-_plugin_name = "amazon-braket-local-simulator"
-__version__ = "v1.0.0"
+_plugin_name = "amazonBraket_localSimulator"
+__version__ = "v1.0.1"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 

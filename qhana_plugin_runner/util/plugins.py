@@ -36,7 +36,7 @@ def _is_valid_plugin_name(name: str) -> bool:
 
 _PLUGIN_VERSION_REGEX = re.compile(
     r"""
-    v?
+    v
     (?P<major>\d+)
     (?:\.(?P<minor>\d+)
         (?:\.(?P<patch>\d+))?
@@ -48,8 +48,8 @@ _PLUGIN_VERSION_REGEX = re.compile(
 
 def _is_valid_plugin_version(version: str) -> bool:
     """Check that a plugin version is a numeric semantic versioning style
-    version of the form ``MAJOR[.MINOR[.PATCH]]`` with an optional ``v``
-    prefix. At least one version part must be nonzero."""
+    version of the form ``vMAJOR[.MINOR[.PATCH]]``. The ``v`` prefix is
+    required. At least one version part must be nonzero."""
     # fullmatch instead of match, ``$`` would also match before a trailing newline
     match = _PLUGIN_VERSION_REGEX.fullmatch(version)
     if not match:
@@ -95,7 +95,7 @@ class QHAnaPluginBase:
                     f"The plugin version '{plugin.version}' of the plugin "
                     f"'{plugin.name}' is invalid. Plugin versions must be "
                     "semantic versioning style versions of the form "
-                    "'MAJOR[.MINOR[.PATCH]]' with an optional 'v' prefix "
+                    "'vMAJOR[.MINOR[.PATCH]]' with a leading 'v' prefix "
                     "and at least one nonzero version part."
                 )
             # TODO better vetting/error checking
