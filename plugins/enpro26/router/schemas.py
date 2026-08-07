@@ -28,6 +28,7 @@ ONE_HOT_PLUGIN = "one_hot"
 TRANSFORMERS_PLUGIN = "transformers"
 AGGREGATOR_PLUGIN = "aggregator"
 MDS_PLUGIN = "mds"
+VECTOR_CONCAT_PLUGIN = "vector_concat"
 
 # Names of the plugins invoked by the routing pipeline. The runner serves
 # plugin metadata at ``/plugins/<name>/`` and redirects a bare name to the
@@ -40,6 +41,7 @@ PIPELINE_PLUGINS = {
     TRANSFORMERS_PLUGIN: "element_sim-to-element_dist-transformers",
     AGGREGATOR_PLUGIN: "attribute-distance-aggregator",
     MDS_PLUGIN: "attribute-distance-mds",
+    VECTOR_CONCAT_PLUGIN: "vector-concat",
 }
 
 # Per-attribute pipeline options shown in the routing step.
@@ -109,6 +111,8 @@ class InputParameters:
         n_init: int,
         max_iter: int,
         missing_data_handling: MissingDataHandling,
+        concat_output: bool,
+        output_format: ma.fields.String,
         include_intermediate_results_in_output: bool,
     ):
         self.entities_url = entities_url
@@ -122,6 +126,8 @@ class InputParameters:
         self.n_init = n_init
         self.max_iter = max_iter
         self.missing_data_handling = missing_data_handling
+        self.concat_output = concat_output
+        self.output_format = output_format
         self.include_intermediate_results_in_output = (
             include_intermediate_results_in_output
         )
@@ -271,6 +277,31 @@ class InputParametersSchema(FrontendFormBaseSchema):
                 "The replacement is computed from the known distances of the same attribute."
             ),
             "input_type": "select",
+        },
+    )
+
+    concat_output = ma.fields.Boolean(
+        required=False,
+        load_default=False,
+        metadata={
+            "label": "Concat output",
+            "description": "**[Vector concat Setting]** If checked, the MDS output of all pipelines will be concatenated to one vector.",
+            "input_type": "checkbox",
+        },
+    )
+
+    output_format = ma.fields.String(
+        missing="csv",
+        validate=ma.validate.OneOf(("csv", "json", "lines")),
+        metadata={
+            "label": " Output Format",
+            "description": "**[Vector concat Setting]** Format of the output data.",
+            "input_type": "select",
+            "options": {
+                "csv": "CSV",
+                "json": "JSON",
+                "lines": "JSON Lines",
+            },
         },
     )
 

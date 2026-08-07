@@ -38,7 +38,7 @@ def test_metadata_endpoint_returns_full_descriptor(client):
 
     assert body["name"] == plugin.name
     assert body["type"] == "processing"
-    assert len(body["entryPoint"]["dataOutput"]) == 4
+    assert len(body["entryPoint"]["dataOutput"]) == 5
 
 
 def test_microfrontend_renders_form_fields(client):
@@ -50,6 +50,8 @@ def test_microfrontend_renders_form_fields(client):
     assert "Distance Metric" in body
     assert "Transformer" in body
     assert "Metric" in body
+    assert "Concat output" in body
+    assert "Output Format" in body
 
 
 def test_process_valid_payload_redirects_to_task(client, monkeypatch):
