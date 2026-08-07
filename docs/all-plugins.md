@@ -15,9 +15,9 @@
   - distance-calculation
 
     preprocessing
-* - [AmazonBraket_LocalSimulator (@v1.0.0)](#AmazonBraket_LocalSimulator)
+* - [Amazon Braket Local Simulator (@v1.0.0)](#amazon-braket-local-simulator)
 
-    AmazonBraket_LocalSimulator@v1-0-0
+    amazon-braket-local-simulator@v1-0-0
   - processing
   - braket_local
 
@@ -35,6 +35,15 @@
   - distance-calculation
 
     preprocessing
+* - [Attribute similarities to attribute distances transformers (@v0.2.3)](#attr-sim-to-attr-dist-transformers)
+
+    attr-sim-to-attr-dist-transformers@v0-2-3
+  - processing
+  - distance-calculation
+
+    preprocessing
+
+    similarity-calculation
 * - [Classical k Means (@v0.1.1)](#classical-k-means)
 
     classical-k-means@v0-1-1
@@ -53,18 +62,18 @@
     classical
 
     clustering
-* - [Clustered Scatter Plot Visualization (@v1.0.1)](#Clustered Scatter Plot Visualization)
+* - [Clustered Scatter Plot Visualization (@v1.0.1)](#cluster-scatter-visualization)
 
-    Clustered Scatter Plot Visualization@v1-0-1
+    cluster-scatter-visualization@v1-0-1
   - visualization
   - cluster
 
     scatter
 
     visualization
-* - [Confusion Matrix Visualization (@v1.0.1)](#Confusion Matrix Visualization)
+* - [Confusion Matrix Visualization (@v1.0.1)](#confusion-matrix)
 
-    Confusion Matrix Visualization@v1-0-1
+    confusion-matrix@v1-0-1
   - visualization
   - cluster
 
@@ -94,6 +103,15 @@
     camunda-engine
 
     workflow
+* - [Element similarities to element distances transformers (@v0.0.1)](#element_sim-to-element_dist-transformers)
+
+    element_sim-to-element_dist-transformers@v0-0-1
+  - processing
+  - distance-calculation
+
+    preprocessing
+
+    similarity-calculation
 * - [Entity loader/filter (@v0.2.1)](#entity-filter)
 
     entity-filter@v0-2-1
@@ -103,9 +121,9 @@
     preprocessing
 
     sample
-* - [Histogram Visualization (@v1.0.2)](#Histogram Visualization)
+* - [Histogram Visualization (@v1.0.2)](#histogram-visualization)
 
-    Histogram Visualization@v1-0-2
+    histogram-visualization@v1-0-2
   - visualization
   - histogram
 
@@ -123,9 +141,9 @@
     preprocessing
 
     quantum
-* - [LCM (@v0.0.0)](#low-code-modeler)
+* - [LCM (@v0.0.1)](#low-code-modeler)
 
-    low-code-modeler@v0-0-0
+    low-code-modeler@v0-0-1
   - interaction
   - low-code-modeler
 * - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
@@ -153,9 +171,20 @@
     clustering
 
     quantum
-* - [Multidimensional Scaling (MDS) (@v0.2.2)](#mds)
+* - [Multidimensional Scaling (MDS) (@v0.2.3)](#mds)
 
-    mds@v0-2-2
+    mds@v0-2-3
+  - processing
+  - distance-calculation
+
+    embedding
+
+    feature-engineering
+
+    preprocessing
+* - [Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)](#attribute-distance-mds)
+
+    attribute-distance-mds@v0-1-0
   - processing
   - distance-calculation
 
@@ -225,7 +254,7 @@
     qc-executor
 
     qiskit
-* - [Qiskit Quantum Kernel Estimation (@v0.2.1)](#qiskit-quantum-kernel-estimation)
+* - [Qiskit Quantum Kernel Estimation (@v0.2.2)](#qiskit-quantum-kernel-estimation)
 
     qiskit-quantum-kernel-estimation@v0-2-2
   - processing
@@ -316,9 +345,9 @@
     rest-connector@v0-1-0
   - interaction
   - rest
-* - [Router (@v0.1.1)](#router)
+* - [Router (@v0.1.3)](#router)
 
-    router@v0-1-1
+    router@v0-1-3
   - processing
   - preprocessing
 
@@ -378,15 +407,6 @@
     minimizer
 
     optimization
-* - [Similarities to distances transformers (@v0.2.3)](#attr-sim-to-attr-dist-transformers)
-
-    attr-sim-to-attr-dist-transformers@v0-2-3
-  - processing
-  - distance-calculation
-
-    preprocessing
-
-    similarity-calculation
 * - [Sym Max Mean attribute comparer (@v0.1.7)](#sym-max-mean)
 
     sym-max-mean@v0-1-7
@@ -440,9 +460,9 @@
   - preprocessing
 
     similarity-calculation
-* - [ZX-Calculus Visualization (@v1.0.2)](#ZX-Calculus Visualization)
+* - [ZX-Calculus Visualization (@v1.0.2)](#zxcalculus)
 
-    ZX-Calculus Visualization@v1-0-2
+    zxcalculus@v1-0-2
   - visualization
   - circuit
 
@@ -674,8 +694,8 @@ Aggregates attribute distances to entity distances.
 |relation/entity-distances|application/json|✓|
 
 
-(AmazonBraket_LocalSimulator)=
-### AmazonBraket_LocalSimulator (@v1.0.0)
+(amazon-braket-local-simulator)=
+### Amazon Braket Local Simulator (@v1.0.0)
 
 processing – braket_local, circuit-executor, qasm, qasm-3, qc-simulator\
 *Path:* {file}`plugins/circuit_executors/braket_local.py`
@@ -714,6 +734,28 @@ Aggregates element distances to attribute distances for a list of entities.
 |-----------|--------------| :------: |
 |entity/list|application/json, application/X-lines+json, text/csv|✓|
 |relation/element-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/attribute-distances|application/zip|✓|
+
+
+(attr-sim-to-attr-dist-transformers)=
+### Attribute similarities to attribute distances transformers (@v0.2.3)
+
+processing – distance-calculation, preprocessing, similarity-calculation\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/transformers.py`
+
+Transforms attribute similarities to attribute distances.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/attribute-similarities|application/zip|✓|
 
 
 **Outputs:**
@@ -771,7 +813,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |plot/*|text/html|╳|
 
 
-(Clustered Scatter Plot Visualization)=
+(cluster-scatter-visualization)=
 ### Clustered Scatter Plot Visualization (@v1.0.1)
 
 visualization – cluster, scatter, visualization\
@@ -795,7 +837,7 @@ A visualization plugin that creates a scatter plot using the provided data. When
 |image/html|text/html|✓|
 
 
-(Confusion Matrix Visualization)=
+(confusion-matrix)=
 ### Confusion Matrix Visualization (@v1.0.1)
 
 visualization – cluster, confusion-matrix, visualization\
@@ -861,6 +903,28 @@ processing – bpmn, camunda-engine, workflow\
 
 Deploys a BPMN workflow to Camunda and exposes it as a plugin.
 
+(element_sim-to-element_dist-transformers)=
+### Element similarities to element distances transformers (@v0.0.1)
+
+processing – distance-calculation, preprocessing, similarity-calculation\
+*Path:* {file}`plugins/transformer/__init__.py`
+
+Transforms element similarities to element distances.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/element-similarities|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/element-distances|application/zip|✓|
+
+
 (entity-filter)=
 ### Entity loader/filter (@v0.2.1)
 
@@ -883,7 +947,7 @@ Loads and filters entities from a file that contains a list of entities.
 |entity/list|application/json, text/csv|✓|
 
 
-(Histogram Visualization)=
+(histogram-visualization)=
 ### Histogram Visualization (@v1.0.2)
 
 visualization – histogram, non-default, visualization\
@@ -932,7 +996,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (low-code-modeler)=
-### LCM (@v0.0.0)
+### LCM (@v0.0.1)
 
 interaction – low-code-modeler\
 *Path:* {file}`plugins/low_code_modeler/plugin.py`
@@ -1002,12 +1066,12 @@ Clusters data with the max cut algorithm
 
 
 (mds)=
-### Multidimensional Scaling (MDS) (@v0.2.2)
+### Multidimensional Scaling (MDS) (@v0.2.3)
 
 processing – distance-calculation, embedding, feature-engineering, preprocessing\
-*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds.py`
+*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds/__init__.py`
 
-Converts distance values (distance matrix) to points in a space.
+Converts distance values (distance matrix) to points in a space. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
 
 **Inputs:**
 
@@ -1021,6 +1085,28 @@ Converts distance values (distance matrix) to points in a space.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/vector|application/json|✓|
+
+
+(attribute-distance-mds)=
+### Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)
+
+processing – distance-calculation, embedding, feature-engineering, preprocessing\
+*Path:* {file}`plugins/attribute_mds/__init__.py`
+
+Embeds entities into a vector space with multidimensional scaling, producing a zip file with one embedding per attribute from precomputed attribute distances. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/attribute-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/zip|✓|
 
 
 (music-feature-extractor)=
@@ -1438,7 +1524,7 @@ interaction – rest\
 Integrate REST APIs as plugins.
 
 (router)=
-### Router (@v0.1.1)
+### Router (@v0.1.3)
 
 processing – preprocessing, routing\
 *Path:* {file}`plugins/enpro26/router/__init__.py`
@@ -1450,10 +1536,9 @@ Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music da
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |relation/element-similarities|application/zip|✓|
-|relation/attribute-similarities|application/zip|✓|
+|relation/element-distances|application/zip|✓|
 |relation/attribute-distances|application/zip|✓|
-|relation/entity-distances|application/json|✓|
-|entity/vector|application/json|✓|
+|entity/vector|application/zip|✓|
 
 
 (sql-editor)=
@@ -1561,28 +1646,6 @@ This plugin provides an API to minimize a given objective function with scipy.op
 |-----------|--------------| :----: |
 |txt/*|text/plain|✓|
 |txt/*|text/plain|✓|
-
-
-(attr-sim-to-attr-dist-transformers)=
-### Attribute similarities to attribute distances transformers (@v0.2.3)
-
-processing – distance-calculation, preprocessing, similarity-calculation\
-*Path:* {file}`stable_plugins/classical_ml/data_preparation/transformers.py`
-
-Transforms attribute similarities to attribute distances.
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|relation/attribute-similarities|application/zip|✓|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|relation/attribute-distances|application/zip|✓|
 
 
 (sym-max-mean)=
@@ -1726,7 +1789,7 @@ Compares elements and returns similarity values.
 |relation/element-similarities|application/zip|✓|
 
 
-(ZX-Calculus Visualization)=
+(zxcalculus)=
 ### ZX-Calculus Visualization (@v1.0.2)
 
 visualization – circuit, non-default, visualization, zxcalculus\

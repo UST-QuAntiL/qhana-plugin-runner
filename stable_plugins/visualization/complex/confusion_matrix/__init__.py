@@ -23,7 +23,7 @@ from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 from qhana_plugin_runner.util.plugins import plugin_identifier
 
 _plugin_name = "confusion-matrix"
-__version__ = "v1.0.1"
+__version__ = "v1.0.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 VIS_BLP = SecurityBlueprint(
@@ -38,7 +38,7 @@ VIS_BLP = SecurityBlueprint(
 
 
 class ConfusionMatrixVisualization(QHAnaPluginBase):
-    name = "Confusion Matrix Visualization"
+    name = _plugin_name
     version = __version__
     description = (
         "A visualization plugin that creates a confusion matrix using the provided data."
