@@ -43,7 +43,7 @@ Example of plugin metadata:
         "title": "Plugin Name (display title)",
         "description": "Human readable description",
         "name": "plugin-name",
-        "version": "0.0.1",
+        "version": "v0.0.1",
         "type": "data-processor",
         "tags": [
             "example-tag",
@@ -112,10 +112,16 @@ Example of plugin metadata:
       - Human readable description
     * - Name
       - my-awesome-plugin
-      - Stable machine readable name of the plugin. Must be URL-safe!
+      - Stable machine readable name of the plugin. Must match the regular expression ``[a-z][a-zA-Z0-9_-]*``.
+        Start the name with a lowercase letter and use only letters, digits, hyphens, and underscores.
+        Whitespace is not allowed.
+        Plugins with an invalid name are not loaded.
     * - Version
-      - 0.0.1
-      - A version conforming to <https://www.python.org/dev/peps/pep-0440/#public-version-identifiers>
+      - v0.0.1
+      - A numeric version of the form ``vMAJOR[.MINOR[.PATCH]]``, for example ``v1.2.3`` or ``v1.0``.
+        The ``v`` prefix is required, so ``1.2.3`` is invalid.
+        At least one version part must be nonzero, so ``0``, ``0.0``, and ``0.0.0`` are invalid.
+        Plugins with an invalid version are not loaded.
     * - Type
       - ``processing`` | ``visalization`` | ``conversion``
       - A plugin that consumes data and creates new data is a ``processing`` plugin. 
@@ -509,7 +515,7 @@ The method is allowed to throw a ``NotImplementedError`` when the plugin does no
         name = "my-plugin"
         description = "A plugin description."
         tags = ["tag"]
-        version = "1.0"
+        version = "v1.0"
 
         def __init__(self, app: Optional[Flask]) -> None:
             super().__init__(app)
