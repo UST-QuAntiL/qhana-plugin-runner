@@ -66,6 +66,12 @@ limitations under the License.
         margin-top: 0.5em;
     }
 
+    .qhana-warning-message {
+        margin-top: 0.5em;
+        margin-bottom: 0px;
+        color: yellow;
+    }
+
     .qhana-form-field {
         padding: 0;
         margin: 0;
@@ -106,6 +112,9 @@ limitations under the License.
         </p>
         <p id="data_sources_error" class="qhana-error-message" aria-live="assertive" hidden>
             Please select at least two data sources.
+        </p>
+        <p id="data_sources_warning" class="qhana-warning-message" aria-live="assertive" hidden>
+            Warning: a single zip archive was selected. This archive should contain more than one file.
         </p>
     </div>
 
@@ -167,6 +176,32 @@ limitations under the License.
         document.querySelector("#data_sources_input").value = dataSourceUrls().join("\n");
     }
 
+    function showElement(elementName) {
+        document.querySelector(elementName).removeAttribute("hidden");
+    }
+
+    function hideElement(elementName) {
+        document.querySelector(elementName).setAttribute("hidden", "hidden");
+    }
+
+    function isValidSingleZip(urls) {
+        if (urls.length !== 1) return false;
+
+        const url = urls[0];
+        const item = document.querySelector(`ul#data_sources li[data-url="${CSS.escape(url)}"]`);
+
+        return item?.dataset.contentType === "application/zip";
+    }
+
+    function updateZipWarningState() {
+        const urls = dataSourceUrls();
+        if (isValidSingleZip(urls)) {
+            showElement("#data_sources_warning");
+        } else {
+            hideElement("#data_sources_warning");
+        }
+    }
+
     const acceptedContentTypes = JSON.parse(
         document.getElementById("accepted-content-types").textContent
     );
@@ -185,6 +220,7 @@ limitations under the License.
         event.preventDefault();
         event.target.closest("li[data-url]").remove();
         updateDataSourcesInput();
+        updateZipWarningState();
         if (window._qhana_microfrontend_state != null) {
             monitorHeightChanges(window._qhana_microfrontend_state);
         }
@@ -221,6 +257,8 @@ limitations under the License.
         document.querySelector("ul#data_sources").appendChild(container);
         updateDataSourcesInput();
 
+        updateZipWarningState();
+
         if (window._qhana_microfrontend_state != null) {
             monitorHeightChanges(window._qhana_microfrontend_state);
         }
@@ -238,12 +276,13 @@ limitations under the License.
     const SUFFIX_PATTERN = /^[A-Za-z0-9._-]+$/;
 
     function customSubmitHandler(event) {
-        if (dataSourceUrls().length < 2) {
+        var urls = dataSourceUrls();
+        if (urls.length < 2 && !isValidSingleZip(urls)) {
             event.preventDefault();
-            document.querySelector("#data_sources_error").removeAttribute("hidden");
+            showElement("#data_sources_error");
             return true;
         }
-        document.querySelector("#data_sources_error").setAttribute("hidden", "hidden");
+        hideElement("#data_sources_error");
 
         const suffix = document.querySelector("#output_suffix").value.trim();
         const suffixError = document.querySelector("#output_suffix_error");
