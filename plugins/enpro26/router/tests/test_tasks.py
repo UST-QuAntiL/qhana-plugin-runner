@@ -45,9 +45,9 @@ def _setup_mock_task() -> ProcessingTask:
         "nInit": 4,
         "maxIter": 300,
         "missingDataHandling": "mean",
-        "concat_output": False,
-        "output_format": "csv",
-        "include_intermediate_results_in_output": False,
+        "concatOutput": False,
+        "outputFormat": "csv",
+        "includeIntermediateResultsInOutput": False,
     }
     db_task = ProcessingTask(
         task_name=start_routing_task.name, parameters=json.dumps(params)

@@ -18,7 +18,7 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.requests import open_url, open_url_as_file_like
+from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_result
 
@@ -42,6 +42,12 @@ from .tasks_helpers import (
 )
 
 TASK_LOGGER = get_task_logger(__name__)
+
+OUTPUT_FORMATS = {
+    "csv": (".csv", "text/csv"),
+    "json": (".json", "application/json"),
+    "lines": (".jsonl", "application/X-lines+json"),
+}
 
 
 # --- PIPELINE ORCHESTRATION ---
@@ -335,8 +341,8 @@ def start_vector_concat(self, db_id: int):
 
     payload = {
         "urls": "\n".join(vector_zip_urls),
-        "output_format": params.output_format,
-        "output_suffix": "final_concatenated_vector",
+        "outputFormat": params.output_format,
+        "outputSuffix": "final_concatenated_vector",
     }
 
     run_pipeline_step(
@@ -357,21 +363,20 @@ def start_vector_concat(self, db_id: int):
 def finalize_vector_concat(self, db_id: int, source_url: str):
     """Outputs the vector that was created by the vector concat plugin."""
     task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
+    extension, mimetype = OUTPUT_FORMATS.get(params.output_format, OUTPUT_FORMATS["csv"])
 
-    outputs = requests.get(source_url).json().get("outputs", [])
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_vector = extract_output_url(outputs, "entity/vector")
-    with open_url_as_file_like(final_vector) as (
-        file_name,
-        file_like,
+    STORE.persist_task_result(
+        db_id,
+        open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
+        f"final_vector{extension}",
+        "entity/vector",
         mimetype,
-    ):
-        STORE.persist_task_result(
-            db_id,
-            file_like.read(),
-            "final_vector.csv",
-            "entity/vector",
-            mimetype,
-        )
+    )
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
     )
