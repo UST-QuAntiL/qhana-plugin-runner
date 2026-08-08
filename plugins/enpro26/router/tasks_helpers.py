@@ -68,9 +68,10 @@ class PipelineTask(CELERY.Task):
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
         db_id = self._get_db_id(args, kwargs)
+        attempt = getattr(self.request, "retries", 0) + 1
         error_message = (
             f"Transient error in step '{self.name}' (db_id={db_id}); exception: {exc!r}\n"
-            + f"Retry execution of '{self.name}'."
+            + f"Retry execution of '{self.name}' (attempt {attempt} of {self.max_retries})."
         )
         TASK_LOGGER.warning(error_message)
         if db_id is not None:
@@ -79,10 +80,7 @@ class PipelineTask(CELERY.Task):
                 with self.app.flask_app.app_context():
                     task_data = ProcessingTask.get_by_id(db_id)
                     if task_data is not None:
-                        task_data.add_task_log_entry(error_message)
-                        task_data.save(commit=True)
-                        app = current_app._get_current_object()
-                        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+                        log_task_event(task_data, error_message, level="warning")
             except Exception as log_exc:  # Do not interrupt retry
                 TASK_LOGGER.warning(
                     f"Could not record retry of step '{self.name}' (db_id={db_id}): {log_exc!r}"
@@ -96,6 +94,15 @@ class PipelineTask(CELERY.Task):
         else:
             TASK_LOGGER.error(f"Step '{self.name}' failed permanently: {exc!r}")
         super().on_failure(exc, task_id, args, kwargs, einfo)
+
+
+def log_task_event(task_data: ProcessingTask, message: str, level: str = "info"):
+    """Log a message to the console and to the task log shown in the UI."""
+    getattr(TASK_LOGGER, level)(message)
+    task_data.add_task_log_entry(message)
+    task_data.save(commit=True)
+    app = current_app._get_current_object()
+    TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
 
 
 def subscribe_to_plugin(task_result_url: str, webhook_url: str):
@@ -211,9 +218,10 @@ def run_pipeline_step(
     * The POST is skipped if the sub-task was already started for this step
       (``<plugin>_url`` already stored), so a retry never spawns a duplicate
       sub-task ("started twice").
-    * Webhook subscription is the fast path; only if it fails is a polling
-      watchdog (``monitor_result``) started so a lost event cannot leave the
-      pipeline stuck in ``PENDING``.
+    * Webhook subscription is the fast path, but a polling watchdog
+      (``monitor_result``) is always armed as well, so a lost event cannot leave
+      the pipeline stuck in ``PENDING``. Both deliver the same completion event;
+      ``handle_webhook_task`` keeps the loser of that race a no-op.
     """
     TASK_LOGGER.info(f"Starting {logging_name} Step")
 
@@ -232,21 +240,19 @@ def run_pipeline_step(
 
         task_url = urljoin(plugin_url, response.headers["Location"])
         task_data.data[f"{plugin_name}_url"] = task_url
-        task_data.add_task_log_entry(f"Started {logging_name}.")
-        task_data.save(commit=True)
-        app = current_app._get_current_object()
-        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+        log_task_event(task_data, f"Started {logging_name}.")
 
     webhook_url = task_data.data["webhook_url"]
 
     try:
         subscribe_to_plugin(task_url, webhook_url)
-        task_data.add_task_log_entry(f"Subscribed to {logging_name} events.")
+        log_task_event(task_data, f"Subscribed to {logging_name} events.")
     except Exception as e:
-        task_data.add_task_log_entry(
-            f"Subscription for {logging_name} failed ({e!r}); falling back to polling."
+        log_task_event(
+            task_data,
+            f"Subscription for {logging_name} failed ({e!r}); relying on the polling watchdog.",
+            level="warning",
         )
-    task_data.save(commit=True)
 
     watchdog_webhook = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
     monitor_result.s(
@@ -254,6 +260,10 @@ def run_pipeline_step(
         webhook_url=watchdog_webhook,
         monitor="status",
     ).apply_async(countdown=CELERY_COUNTDOWN)
+    log_task_event(
+        task_data,
+        f"Polling watchdog armed for {logging_name} ({task_url}), first poll in {CELERY_COUNTDOWN}s.",
+    )
 
 
 def is_store_mds_output(params: InputParameters) -> bool:

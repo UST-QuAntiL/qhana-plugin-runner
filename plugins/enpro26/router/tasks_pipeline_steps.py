@@ -85,7 +85,8 @@ def launch_next_pipeline(task_data: ProcessingTask):
         MDS_PLUGIN,
     ):
         task_data.data.pop(f"{reused_step}_url", None)
-    task_data.data["progressed_urls"] = []
+    task_data.data["progressed_via"] = {}
+    task_data.data["webhook_seen"] = {}
 
     # Route to the correct starting step
     if next_pipeline == WU_PALMER_PLUGIN:

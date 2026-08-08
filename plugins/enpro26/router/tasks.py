@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import requests
+from datetime import datetime, timezone
 from io import BytesIO
 from zipfile import ZipFile
 from pathlib import PurePath
@@ -42,6 +43,7 @@ from .tasks_helpers import (
     PipelineTask,
     load_task,
     load_entity_attributes,
+    log_task_event,
     taxonomy_ref,
     calculate_recommendations,
 )
@@ -190,6 +192,20 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     if not source_url or source_url not in known_urls:
         return "Unrecognized webhook source"
 
+    delivery = via or "webhook"
+    TASK_LOGGER.info(f"Completion event for {source_url} received (via={delivery}).")
+
+    # remember the arrival before the (retryable) status request, so a slow handler
+    # can still be told apart from an event that never arrived
+    if delivery != "watchdog":
+        webhook_seen = task_data.data.get("webhook_seen", {})
+        if source_url not in webhook_seen:
+            webhook_seen[source_url] = datetime.now(timezone.utc).isoformat(
+                timespec="seconds"
+            )
+            task_data.data["webhook_seen"] = webhook_seen
+            task_data.save(commit=True)
+
     sub_task_result = requests.get(source_url, timeout=REQUEST_TIMEOUT).json()
     status = sub_task_result.get("status", "PENDING")
 
@@ -202,18 +218,36 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         )
 
     # status == "SUCCESS": guard against duplicate progression. The step
-    # completion can be delivered twice (webhook subscription and the polling
+    # completion is delivered twice (webhook subscription and the polling
     # watchdog), which would otherwise start the next step twice.
-    progressed_urls = task_data.data.get("progressed_urls", [])
-    if source_url in progressed_urls:
-        return "Sub-task already progressed"
-    progressed_urls.append(source_url)
-    task_data.data["progressed_urls"] = progressed_urls
-    task_data.save(commit=True)
-    if via == "watchdog":
-        TASK_LOGGER.warning(
-            f"Polling watchdog recovered a lost completion event for {source_url}"
+    progressed_via = task_data.data.get("progressed_via", {})
+    if source_url in progressed_via:
+        log_task_event(
+            task_data,
+            f"Duplicate completion event for {source_url} (via={delivery}); "
+            f"already progressed via {progressed_via[source_url]}.",
         )
+        return "Sub-task already progressed"
+    progressed_via[source_url] = delivery
+    task_data.data["progressed_via"] = progressed_via
+    task_data.save(commit=True)
+
+    if delivery == "watchdog":
+        seen_at = task_data.data.get("webhook_seen", {}).get(source_url)
+        if seen_at:
+            log_task_event(
+                task_data,
+                f"Polling watchdog progressed {source_url} first. The webhook event "
+                f"arrived at {seen_at}, but its handler was still retrying.",
+                level="warning",
+            )
+        else:
+            log_task_event(
+                task_data,
+                f"No webhook event arrived for {source_url}; the polling watchdog "
+                "recovered the lost completion event.",
+                level="warning",
+            )
 
     current_pipeline = task_data.data.get("current_pipeline")
 
