@@ -35,6 +35,15 @@
   - distance-calculation
 
     preprocessing
+* - [Attribute similarities to attribute distances transformers (@v0.2.3)](#attr-sim-to-attr-dist-transformers)
+
+    attr-sim-to-attr-dist-transformers@v0-2-3
+  - processing
+  - distance-calculation
+
+    preprocessing
+
+    similarity-calculation
 * - [Classical k Means (@v0.1.1)](#classical-k-means)
 
     classical-k-means@v0-1-1
@@ -94,6 +103,15 @@
     camunda-engine
 
     workflow
+* - [Element similarities to element distances transformers (@v0.0.1)](#element_sim-to-element_dist-transformers)
+
+    element_sim-to-element_dist-transformers@v0-0-1
+  - processing
+  - distance-calculation
+
+    preprocessing
+
+    similarity-calculation
 * - [Entity loader/filter (@v0.2.1)](#entity-filter)
 
     entity-filter@v0-2-1
@@ -153,9 +171,20 @@
     clustering
 
     quantum
-* - [Multidimensional Scaling (MDS) (@v0.2.2)](#mds)
+* - [Multidimensional Scaling (MDS) (@v0.2.3)](#mds)
 
-    mds@v0-2-2
+    mds@v0-2-3
+  - processing
+  - distance-calculation
+
+    embedding
+
+    feature-engineering
+
+    preprocessing
+* - [Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)](#attribute-distance-mds)
+
+    attribute-distance-mds@v0-1-0
   - processing
   - distance-calculation
 
@@ -225,7 +254,7 @@
     qc-executor
 
     qiskit
-* - [Qiskit Quantum Kernel Estimation (@v0.2.1)](#qiskit-quantum-kernel-estimation)
+* - [Qiskit Quantum Kernel Estimation (@v0.2.2)](#qiskit-quantum-kernel-estimation)
 
     qiskit-quantum-kernel-estimation@v0-2-2
   - processing
@@ -316,9 +345,9 @@
     rest-connector@v0-1-0
   - interaction
   - rest
-* - [Router (@v0.1.1)](#router)
+* - [Router (@v0.1.4)](#router)
 
-    router@v0-1-1
+    router@v0-1-4
   - processing
   - preprocessing
 
@@ -378,15 +407,6 @@
     minimizer
 
     optimization
-* - [Similarities to distances transformers (@v0.2.3)](#attr-sim-to-attr-dist-transformers)
-
-    attr-sim-to-attr-dist-transformers@v0-2-3
-  - processing
-  - distance-calculation
-
-    preprocessing
-
-    similarity-calculation
 * - [Sym Max Mean attribute comparer (@v0.1.7)](#sym-max-mean)
 
     sym-max-mean@v0-1-7
@@ -408,9 +428,9 @@
   - preprocessing
 
     similarity-calculation
-* - [Vector concationation plugin (@v0.1.1)](#vector-concat)
+* - [Vector concationation plugin (@v0.1.2)](#vector-concat)
 
-    vector-concat@v0-1-1
+    vector-concat@v0-1-2
   - processing
   - preprocessing
 
@@ -723,6 +743,28 @@ Aggregates element distances to attribute distances for a list of entities.
 |relation/attribute-distances|application/zip|✓|
 
 
+(attr-sim-to-attr-dist-transformers)=
+### Attribute similarities to attribute distances transformers (@v0.2.3)
+
+processing – distance-calculation, preprocessing, similarity-calculation\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/transformers.py`
+
+Transforms attribute similarities to attribute distances.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/attribute-similarities|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/attribute-distances|application/zip|✓|
+
+
 (classical-k-means)=
 ### Classical k Means (@v0.1.1)
 
@@ -860,6 +902,28 @@ processing – bpmn, camunda-engine, workflow\
 *Path:* {file}`stable_plugins/workflow/workflows/__init__.py`
 
 Deploys a BPMN workflow to Camunda and exposes it as a plugin.
+
+(element_sim-to-element_dist-transformers)=
+### Element similarities to element distances transformers (@v0.0.1)
+
+processing – distance-calculation, preprocessing, similarity-calculation\
+*Path:* {file}`plugins/transformer/__init__.py`
+
+Transforms element similarities to element distances.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/element-similarities|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/element-distances|application/zip|✓|
+
 
 (entity-filter)=
 ### Entity loader/filter (@v0.2.1)
@@ -1002,12 +1066,12 @@ Clusters data with the max cut algorithm
 
 
 (mds)=
-### Multidimensional Scaling (MDS) (@v0.2.2)
+### Multidimensional Scaling (MDS) (@v0.2.3)
 
 processing – distance-calculation, embedding, feature-engineering, preprocessing\
-*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds.py`
+*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds/__init__.py`
 
-Converts distance values (distance matrix) to points in a space.
+Converts distance values (distance matrix) to points in a space. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
 
 **Inputs:**
 
@@ -1021,6 +1085,28 @@ Converts distance values (distance matrix) to points in a space.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/vector|application/json|✓|
+
+
+(attribute-distance-mds)=
+### Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)
+
+processing – distance-calculation, embedding, feature-engineering, preprocessing\
+*Path:* {file}`plugins/attribute_mds/__init__.py`
+
+Embeds entities into a vector space with multidimensional scaling, producing a zip file with one embedding per attribute from precomputed attribute distances. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/attribute-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/zip|✓|
 
 
 (music-feature-extractor)=
@@ -1438,7 +1524,7 @@ interaction – rest\
 Integrate REST APIs as plugins.
 
 (router)=
-### Router (@v0.1.1)
+### Router (@v0.1.4)
 
 processing – preprocessing, routing\
 *Path:* {file}`plugins/enpro26/router/__init__.py`
@@ -1450,10 +1536,9 @@ Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music da
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |relation/element-similarities|application/zip|✓|
-|relation/attribute-similarities|application/zip|✓|
+|relation/element-distances|application/zip|✓|
 |relation/attribute-distances|application/zip|✓|
-|relation/entity-distances|application/json|✓|
-|entity/vector|application/json|✓|
+|entity/vector|application/zip|✓|
 
 
 (sql-editor)=
@@ -1563,28 +1648,6 @@ This plugin provides an API to minimize a given objective function with scipy.op
 |txt/*|text/plain|✓|
 
 
-(attr-sim-to-attr-dist-transformers)=
-### Attribute similarities to attribute distances transformers (@v0.2.3)
-
-processing – distance-calculation, preprocessing, similarity-calculation\
-*Path:* {file}`stable_plugins/classical_ml/data_preparation/transformers.py`
-
-Transforms attribute similarities to attribute distances.
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|relation/attribute-similarities|application/zip|✓|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|relation/attribute-distances|application/zip|✓|
-
-
 (sym-max-mean)=
 ### Sym Max Mean attribute comparer (@v0.1.7)
 
@@ -1665,7 +1728,7 @@ Compares elements and returns similarity values.
 
 
 (vector-concat)=
-### Vector concationation plugin (@v0.1.1)
+### Vector concationation plugin (@v0.1.2)
 
 processing – preprocessing, vector\
 *Path:* {file}`plugins/vector_concat/__init__.py`
@@ -1676,7 +1739,7 @@ Concatinate multiple entity/vector files into one
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|application/json, application/X-lines+json, text/csv|✓|
+|entity/vector|text/csv, application/json, application/X-lines+json, application/zip|✓|
 
 
 **Outputs:**
