@@ -13,9 +13,12 @@
 # limitations under the License.
 
 import json
+import threading
 
 import pytest
+from requests.exceptions import Timeout
 
+from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router.tasks import handle_webhook_task, start_routing_task
 from router.tasks_pipeline_steps import start_wu_palmer, start_mapping
@@ -358,6 +361,34 @@ def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
     )
 
     assert result == "Unrecognized pipeline state"
+
+
+def test_on_retry_logs_without_app_context():
+    """Celery calls ``on_retry`` outside of the task body, i.e. without an app context."""
+    db_task = _setup_mock_task()
+    # read before the thread starts, the expired attribute would need a session to reload
+    db_id = db_task.id
+
+    errors = []
+
+    def call_on_retry():
+        # a fresh thread has no Flask app context, just like celery's error handling
+        try:
+            start_wu_palmer.on_retry(
+                Timeout("read timed out"), "sub-task-id", (db_id,), {}, None
+            )
+        except BaseException as exc:  # noqa: BLE001 - the assertion below reports it
+            errors.append(exc)
+
+    thread = threading.Thread(target=call_on_retry)
+    thread.start()
+    thread.join()
+
+    assert not errors, f"on_retry raised {errors[0]!r}"
+
+    DB.session.expire_all()
+    reloaded = ProcessingTask.get_by_id(db_id)
+    assert "Transient error" in reloaded.task_log
 
 
 def test_handle_webhook_ignores_unrecognized_source():

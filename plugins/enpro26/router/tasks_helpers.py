@@ -69,16 +69,24 @@ class PipelineTask(CELERY.Task):
     def on_retry(self, exc, task_id, args, kwargs, einfo):
         db_id = self._get_db_id(args, kwargs)
         error_message = (
-            f"Transient error in step '{self.name}' (db_id={db_id}); retrying: {exc!r}"
+            f"Transient error in step '{self.name}' (db_id={db_id}); exception: {exc!r}\n"
+            + f"Retry execution of '{self.name}'."
         )
         TASK_LOGGER.warning(error_message)
         if db_id is not None:
-            task_data = ProcessingTask.get_by_id(db_id)
-            if task_data is not None:
-                task_data.add_task_log_entry(error_message)
-                task_data.save(commit=True)
-                app = current_app._get_current_object()
-                TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+            try:
+                # celery invokes on_retry outside of FlaskTask.__call__, so there is no app context
+                with self.app.flask_app.app_context():
+                    task_data = ProcessingTask.get_by_id(db_id)
+                    if task_data is not None:
+                        task_data.add_task_log_entry(error_message)
+                        task_data.save(commit=True)
+                        app = current_app._get_current_object()
+                        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+            except Exception as log_exc:  # Do not interrupt retry
+                TASK_LOGGER.warning(
+                    f"Could not record retry of step '{self.name}' (db_id={db_id}): {log_exc!r}"
+                )
         super().on_retry(exc, task_id, args, kwargs, einfo)
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
