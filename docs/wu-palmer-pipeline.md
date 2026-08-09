@@ -1,6 +1,12 @@
 # Wu-Palmer Pipeline
 
-This documentation describes the current Wu-Palmer pipeline in QHAna. The pipeline transforms taxonomy-based attributes step by step from categorical values into numerical vectors, which can subsequently be used, for example, for clustering methods.
+```{note}
+This page documents the **legacy Wu-Palmer pipeline**. A new Wu-Palmer pipeline will be created in the new routing plugin and will use slightly different plugin steps.
+
+For a concrete example using the MUSE dataset, see [Using the Mini MUSE dataset](https://qhana.readthedocs.io/en/latest/muse.html#using-the-mini-muse-dataset).
+```
+
+This documentation describes the legacy Wu-Palmer pipeline in QHAna. The pipeline transforms taxonomy-based attributes step by step from categorical values into numerical vectors, which can subsequently be used, for example, for clustering methods.
 
 The documentation is structured by plugins. New plugins or alternative processing steps can therefore be added as additional sections.
 
@@ -19,25 +25,33 @@ For each selected attribute, the attribute metadata must contain a `refTarget` p
 ## Pipeline Overview
 
 ```{mermaid}
-flowchart LR
-    A[Data Loader] -->|entity/list| B[Wu Palmer similarities]
+flowchart TD
+    A[Data Loader]
+    B[Wu Palmer similarities]
+    C[Sym Max Mean attribute comparer]
+    D[Similarities to distances transformers]
+    E[Aggregators]
+    F[Multidimensional Scaling]
+    G[Clustering or other ML plugins]
+
+    A -->|entity/list| B
     A -->|entity/attribute-metadata| B
     A -->|graph/taxonomy| B
-    B -->|relation/element-similarities| C[Sym Max Mean attribute comparer]
+    B -->|relation/element-similarities| C
     A -->|entity/list| C
-    C -->|relation/attribute-similarities| D[Similarities to distances transformers]
-    D -->|relation/attribute-distances| E[Aggregators]
-    E -->|relation/entity-distances| F[Multidimensional Scaling]
-    F -->|entity/vector| G[Clustering or other ML plugins]
+    C -->|relation/attribute-similarities| D
+    D -->|relation/attribute-distances| E
+    E -->|relation/entity-distances| F
+    F -->|entity/vector| G
 ```
 
-| Step | Plugin                                     | Input                                                             | Output                                               |
-| ---- | ------------------------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------- |
-| 1    | **Wu Palmer similarities**                 | Entities, attribute metadata, taxonomies, and selected attributes | Similarities between individual attribute values     |
-| 2    | **Sym Max Mean attribute comparer**        | Entities and element similarities                                 | Similarities between entity pairs for each attribute |
-| 3    | **Similarities to distances transformers** | Attribute similarities                                            | Distances between entity pairs for each attribute    |
-| 4    | **Aggregators**                            | Attribute distances                                               | One aggregated distance per entity pair              |
-| 5    | **Multidimensional Scaling (MDS)**         | Aggregated entity distances                                       | Numerical vector for each entity                     |
+| Step | Plugin                                     | Input Data Types                                             | Output Data Type                  |
+| ---- | ------------------------------------------ | ------------------------------------------------------------ | --------------------------------- |
+| 1    | **Wu Palmer similarities**                 | `entity/list`, `entity/attribute-metadata`, `graph/taxonomy` | `relation/element-similarities`   |
+| 2    | **Sym Max Mean attribute comparer**        | `entity/list`, `relation/element-similarities`               | `relation/attribute-similarities` |
+| 3    | **Similarities to distances transformers** | `relation/attribute-similarities`                            | `relation/attribute-distances`    |
+| 4    | **Aggregators**                            | `relation/attribute-distances`                               | `relation/entity-distances`       |
+| 5    | **Multidimensional Scaling (MDS)**         | `relation/entity-distances`                                  | `entity/vector`                   |
 
 ## Meaning of the Data Types
 
@@ -126,15 +140,17 @@ The ZIP archive contains one taxonomy as a JSON file for each attribute. The `re
 
 The plugin calculates the semantic similarity between individual values of a selected attribute. The calculation is based on the positions of the values in the corresponding tree taxonomy.
 
-**Inputs and Parameters**
+**Inputs, Output and Parameters**
 
-| Input or Parameter                              | Meaning                                                                                                       |
+| Input, Output or Parameter                      | Meaning                                                                                                       |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Entities URL**                                | File of type `entity/list`. It provides the attribute values that actually occur in the entities.             |
 | **Entities Attribute Metadata URL**             | File of type `entity/attribute-metadata`. The corresponding taxonomy is determined through `refTarget`.       |
 | **Taxonomies URL**                              | ZIP file of type `graph/taxonomy`.                                                                            |
 | **Attributes**                                  | Names of the attributes to process, each on a separate line.                                                  |
 | **Consider root node as part of the hierarchy** | Determines whether the root node itself has semantic meaning and should be included in the depth calculation. |
+| **Output data type**                            | `relation/element-similarities`                                                                               |
+| **Output content type**                         | `application/zip`                                                                                             |
 
 **Processing**
 
@@ -172,13 +188,15 @@ The value describes only the similarity between the two **attribute values**, no
 
 This plugin transforms element similarities into attribute similarities between two entities. This step is particularly important for multi-valued attributes because two entities can each contain sets of different attribute values.
 
-**Inputs and Parameters**
+**Inputs, Output and Parameters**
 
-| Input or Parameter           | Meaning                                                                             |
+| Input, Output or Parameter   | Meaning                                                                             |
 | ---------------------------- | ----------------------------------------------------------------------------------- |
 | **Entities URL**             | File of type `entity/list`.                                                         |
 | **Element similarities URL** | ZIP file of type `relation/element-similarities`, produced by the Wu-Palmer plugin. |
 | **Attributes**               | Attributes to compare, each on a separate line.                                     |
+| **Output data type**         | `relation/attribute-similarities`                                                   |
+| **Output content type**      | `application/zip`                                                                   |
 
 **Processing**
 
@@ -223,13 +241,15 @@ The value now describes the similarity of a complete **entity pair with respect 
 
 Many subsequent methods work with distances instead of similarities. This plugin therefore transforms each attribute similarity into an attribute distance. A high similarity should correspond to a small distance.
 
-**Inputs and Parameters**
+**Inputs, Output and Parameters**
 
-| Input or Parameter             | Meaning                                                            |
+| Input, Output or Parameter     | Meaning                                                            |
 | ------------------------------ | ------------------------------------------------------------------ |
 | **Attribute similarities URL** | ZIP file of type `relation/attribute-similarities`.                |
 | **Attributes**                 | Attributes to transform, each on a separate line.                  |
 | **Transformer**                | Mathematical function used to convert similarities into distances. |
+| **Output data type**           | `relation/attribute-distances`                                     |
+| **Output content type**        | `application/zip`                                                  |
 
 **Available Transformations**
 
@@ -267,13 +287,15 @@ The output has the data type `relation/attribute-distances` and the content type
 
 Up to this point, a separate distance exists for each attribute between two entities. The Aggregator plugin combines these attribute distances into exactly one overall distance for each entity pair.
 
-**Inputs and Parameters**
+**Inputs, Output and Parameters**
 
-| Input or Parameter          | Meaning                                                     |
+| Input, Output or Parameter  | Meaning                                                     |
 | --------------------------- | ----------------------------------------------------------- |
 | **Attribute distances URL** | ZIP file of type `relation/attribute-distances`.            |
 | **Aggregator**              | Function used to combine the available attribute distances. |
 | **Missing data handling**   | Strategy for handling `null` distances.                     |
+| **Output data type**        | `relation/entity-distances`                                 |
+| **Output content type**     | `application/json`                                          |
 
 **Aggregation Methods**
 
@@ -316,15 +338,17 @@ The output has the data type `relation/entity-distances` and the content type `a
 
 MDS creates points in a low-dimensional space from the pairwise entity distances. Entities with a small distance should be located close to each other in the result, while entities with a large distance should be farther apart.
 
-**Inputs and Parameters**
+**Inputs, Output and Parameters**
 
-| Input or Parameter        | Meaning                                                                                                      |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Entity distances URL**  | JSON file of type `relation/entity-distances`.                                                               |
-| **Dimensions**            | Number of dimensions in the resulting vector. Default value in the user interface: `2`.                      |
-| **Metric**                | **Metric MDS** considers the numerical distance values. **Nonmetric MDS** primarily considers their ranking. |
-| **SMACOF executions**     | Number of different initializations of the SMACOF optimization procedure. Default value: `4`.                |
-| **SMACOF max iterations** | Maximum number of optimization steps per execution. Default value: `300`.                                    |
+| Input, Output or Parameter | Meaning                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Entity distances URL**   | JSON file of type `relation/entity-distances`.                                                               |
+| **Dimensions**             | Number of dimensions in the resulting vector. Default value in the user interface: `2`.                      |
+| **Metric**                 | **Metric MDS** considers the numerical distance values. **Nonmetric MDS** primarily considers their ranking. |
+| **SMACOF executions**      | Number of different initializations of the SMACOF optimization procedure. Default value: `4`.                |
+| **SMACOF max iterations**  | Maximum number of optimization steps per execution. Default value: `300`.                                    |
+| **Output data type**       | `entity/vector`                                                                                              |
+| **Output content type**    | `application/json`                                                                                           |
 
 **Processing**
 
