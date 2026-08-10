@@ -1,7 +1,7 @@
 # Wu-Palmer Pipeline
 
 ```{note}
-This page documents the **legacy Wu-Palmer pipeline**. A new Wu-Palmer pipeline will be created in the new routing plugin and will use slightly different plugin steps.
+This page documents the **legacy Wu-Palmer pipeline**. A new Wu-Palmer pipeline will be created in the new {ref}`Router plugin <router>` and will use slightly different plugin steps.
 
 For a concrete example using the MUSE dataset, see [Using the Mini MUSE dataset](https://qhana.readthedocs.io/en/latest/muse.html#using-the-mini-muse-dataset).
 ```
@@ -16,11 +16,11 @@ The Wu-Palmer pipeline is suitable for attributes whose possible values are arra
 
 The pipeline requires the following input data:
 
-* a list of the entities to be compared,
+* a list of the {ref}`entities <data-formats/data-model:entities>` to be compared,
 * metadata describing the attributes of the entities,
 * a ZIP archive containing the corresponding taxonomies.
 
-For each selected attribute, the attribute metadata must contain a `refTarget` pointing to the corresponding taxonomy file. The Wu-Palmer plugin only supports taxonomies with `"type": "tree"`.
+For each selected attribute, the attribute metadata must contain a `refTarget` pointing to the corresponding taxonomy file. The {ref}`Wu Palmer similarities plugin <wu-palmer>` only supports taxonomies with `"type": "tree"`.
 
 ## Pipeline Overview
 
@@ -45,36 +45,38 @@ flowchart TD
     F -->|entity/vector| G
 ```
 
-| Step | Plugin                                     | Input Data Types                                             | Output Data Type                  |
-| ---- | ------------------------------------------ | ------------------------------------------------------------ | --------------------------------- |
-| 1    | **Wu Palmer similarities**                 | `entity/list`, `entity/attribute-metadata`, `graph/taxonomy` | `relation/element-similarities`   |
-| 2    | **Sym Max Mean attribute comparer**        | `entity/list`, `relation/element-similarities`               | `relation/attribute-similarities` |
-| 3    | **Similarities to distances transformers** | `relation/attribute-similarities`                            | `relation/attribute-distances`    |
-| 4    | **Aggregators**                            | `relation/attribute-distances`                               | `relation/entity-distances`       |
-| 5    | **Multidimensional Scaling (MDS)**         | `relation/entity-distances`                                  | `entity/vector`                   |
+| Step | Plugin                                                                             | Input Data Types                                                                                                                                                                                                                  | Output Data Type                                                                                         |
+| ---- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 1    | {ref}`Wu Palmer similarities <wu-palmer>`                                          | {ref}`entity/list <data-formats/examples/entities:entity/list>`, {ref}`entity/attribute-metadata <data-formats/examples/entities:entity/attribute-metadata>`, {ref}`graph/taxonomy <data-formats/examples/graphs:graph/taxonomy>` | {ref}`relation/element-similarities <data-formats/examples/relations:relation/element-similarities>`     |
+| 2    | {ref}`Sym Max Mean attribute comparer <sym-max-mean>`                              | {ref}`entity/list <data-formats/examples/entities:entity/list>`, {ref}`relation/element-similarities <data-formats/examples/relations:relation/element-similarities>`                                                             | {ref}`relation/attribute-similarities <data-formats/examples/relations:relation/attribute-similarities>` |
+| 3    | {ref}`Similarities to distances transformers <attr-sim-to-attr-dist-transformers>` | {ref}`relation/attribute-similarities <data-formats/examples/relations:relation/attribute-similarities>`                                                                                                                          | {ref}`relation/attribute-distances <data-formats/examples/relations:relation/attribute-distances>`       |
+| 4    | {ref}`Aggregators <distance-aggregator>`                                           | {ref}`relation/attribute-distances <data-formats/examples/relations:relation/attribute-distances>`                                                                                                                                | {ref}`relation/entity-distances <data-formats/examples/relations:relation/entity-distances>`             |
+| 5    | {ref}`Multidimensional Scaling (MDS) <mds>`                                        | {ref}`relation/entity-distances <data-formats/examples/relations:relation/entity-distances>`                                                                                                                                      | {ref}`entity/vector <data-formats/examples/entities:entity/vector>`                                      |
 
 ## Meaning of the Data Types
 
 In QHAna, the **data type** describes the semantic meaning of a file. The **content type**, on the other hand, describes its technical serialization, for example JSON or ZIP. Two files can therefore have the same content type but different data types.
 
-| Data Type                         | Content Type                                                  | Meaning                                                                                                                                |
-| --------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `entity/list`                     | `application/json`, `application/X-lines+json`, or `text/csv` | List of the actual data records. Each entity has at least a unique `ID` and the attributes to be processed.                            |
-| `entity/attribute-metadata`       | `application/json`, `application/X-lines+json`, or `text/csv` | Describes the attributes, including their type, whether they can contain multiple values, and which taxonomy they reference.           |
-| `graph/taxonomy`                  | `application/zip`                                             | ZIP archive containing one JSON file per taxonomy. For Wu-Palmer, the taxonomy must be a tree.                                         |
-| `relation/element-similarities`   | `application/zip`                                             | One JSON file per attribute containing similarities between individual attribute values.                                               |
-| `relation/attribute-similarities` | `application/zip`                                             | One JSON file per attribute containing `source`, `target`, and the similarity between the two entities with respect to this attribute. |
-| `relation/attribute-distances`    | `application/zip`                                             | One JSON file per attribute containing `source`, `target`, and the distance between the two entities.                                  |
-| `relation/entity-distances`       | `application/json`                                            | One file containing `source`, `target`, and the distance aggregated over all selected attributes for each entity pair.                 |
-| `entity/vector`                   | `application/json`                                            | Numerical vector for each entity. All attributes except `ID` and `href` are numerical dimensions.                                      |
+The general QHAna data model distinguishes between {ref}`entities <data-formats/data-model:entities>` and {ref}`relations <data-formats/data-model:relations>`. More detailed definitions and examples of the specific types used by this pipeline are linked below.
+
+| Data Type                                                                                                | Content Type                                                  | Meaning                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| {ref}`entity/list <data-formats/examples/entities:entity/list>`                                          | `application/json`, `application/X-lines+json`, or `text/csv` | List of the actual data records. Each entity has at least a unique `ID` and the attributes to be processed.                            |
+| {ref}`entity/attribute-metadata <data-formats/examples/entities:entity/attribute-metadata>`              | `application/json`, `application/X-lines+json`, or `text/csv` | Describes the attributes, including their type, whether they can contain multiple values, and which taxonomy they reference.           |
+| {ref}`graph/taxonomy <data-formats/examples/graphs:graph/taxonomy>`                                      | `application/zip`                                             | ZIP archive containing one JSON file per taxonomy. For Wu-Palmer, the taxonomy must be a tree.                                         |
+| {ref}`relation/element-similarities <data-formats/examples/relations:relation/element-similarities>`     | `application/zip`                                             | One JSON file per attribute containing similarities between individual attribute values.                                               |
+| {ref}`relation/attribute-similarities <data-formats/examples/relations:relation/attribute-similarities>` | `application/zip`                                             | One JSON file per attribute containing `source`, `target`, and the similarity between the two entities with respect to this attribute. |
+| {ref}`relation/attribute-distances <data-formats/examples/relations:relation/attribute-distances>`       | `application/zip`                                             | One JSON file per attribute containing `source`, `target`, and the distance between the two entities.                                  |
+| {ref}`relation/entity-distances <data-formats/examples/relations:relation/entity-distances>`             | `application/json`                                            | One file containing `source`, `target`, and the distance aggregated over all selected attributes for each entity pair.                 |
+| {ref}`entity/vector <data-formats/examples/entities:entity/vector>`                                      | `application/json`                                            | Numerical vector for each entity. All attributes except `ID` and `href` are numerical dimensions.                                      |
 
 ## Input Data
 
-A data loader, for example the **Costume loader**, produces the three input files required by the pipeline.
+A data loader, for example the {ref}`Costume loader <costume-loader>`, produces the three input files required by the pipeline.
 
 ### Entities: `entity/list`
 
-The file contains the entities that are actually compared. Attributes can contain either a single value or multiple values.
+The {ref}`entity/list <data-formats/examples/entities:entity/list>` file contains the entities that are actually compared. Attributes can contain either a single value or multiple values.
 
 ```json
 [
@@ -93,7 +95,7 @@ The file contains the entities that are actually compared. Attributes can contai
 
 ### Attribute Metadata: `entity/attribute-metadata`
 
-The metadata describes how an attribute should be interpreted. The following fields are particularly relevant for taxonomy-based attributes:
+The {ref}`entity/attribute-metadata <data-formats/examples/entities:entity/attribute-metadata>` describes how an attribute should be interpreted. The following fields are particularly relevant for taxonomy-based attributes:
 
 * `ID`: name of the attribute in the entity file,
 * `type`: `ref` if the values are nodes of a referenced taxonomy,
@@ -118,7 +120,7 @@ The metadata describes how an attribute should be interpreted. The following fie
 
 ### Taxonomies: `graph/taxonomy`
 
-The ZIP archive contains one taxonomy as a JSON file for each attribute. The `relations` describe directed parent-child relationships: `source` is the parent node and `target` is the child node.
+The {ref}`graph/taxonomy <data-formats/examples/graphs:graph/taxonomy>` ZIP archive contains one taxonomy as a JSON file for each attribute. The `relations` describe directed parent-child relationships: `source` is the parent node and `target` is the child node.
 
 ```json
 {
@@ -138,19 +140,19 @@ The ZIP archive contains one taxonomy as a JSON file for each attribute. The `re
 
 **Purpose**
 
-The plugin calculates the semantic similarity between individual values of a selected attribute. The calculation is based on the positions of the values in the corresponding tree taxonomy.
+The {ref}`Wu Palmer similarities plugin <wu-palmer>` calculates the semantic similarity between individual values of a selected attribute. The calculation is based on the positions of the values in the corresponding tree taxonomy.
 
 **Inputs, Output and Parameters**
 
-| Input, Output or Parameter                      | Meaning                                                                                                       |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Entities URL**                                | File of type `entity/list`. It provides the attribute values that actually occur in the entities.             |
-| **Entities Attribute Metadata URL**             | File of type `entity/attribute-metadata`. The corresponding taxonomy is determined through `refTarget`.       |
-| **Taxonomies URL**                              | ZIP file of type `graph/taxonomy`.                                                                            |
-| **Attributes**                                  | Names of the attributes to process, each on a separate line.                                                  |
-| **Consider root node as part of the hierarchy** | Determines whether the root node itself has semantic meaning and should be included in the depth calculation. |
-| **Output data type**                            | `relation/element-similarities`                                                                               |
-| **Output content type**                         | `application/zip`                                                                                             |
+| Input, Output or Parameter                      | Meaning                                                                                                                                                                 |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Entities URL**                                | File of type {ref}`entity/list <data-formats/examples/entities:entity/list>`. It provides the attribute values that actually occur in the entities.                     |
+| **Entities Attribute Metadata URL**             | File of type {ref}`entity/attribute-metadata <data-formats/examples/entities:entity/attribute-metadata>`. The corresponding taxonomy is determined through `refTarget`. |
+| **Taxonomies URL**                              | ZIP file of type {ref}`graph/taxonomy <data-formats/examples/graphs:graph/taxonomy>`.                                                                                   |
+| **Attributes**                                  | Names of the attributes to process, each on a separate line.                                                                                                            |
+| **Consider root node as part of the hierarchy** | Determines whether the root node itself has semantic meaning and should be included in the depth calculation.                                                           |
+| **Output data type**                            | {ref}`relation/element-similarities <data-formats/examples/relations:relation/element-similarities>`                                                                    |
+| **Output content type**                         | `application/zip`                                                                                                                                                       |
 
 **Processing**
 
@@ -168,7 +170,7 @@ The plugin also supports multi-valued attributes. It calculates the required sim
 
 **Output**
 
-The output has the data type `relation/element-similarities` and the content type `application/zip`. The archive contains one file named `<attribute>.json` for each selected attribute.
+The output has the data type {ref}`relation/element-similarities <data-formats/examples/relations:relation/element-similarities>` and the content type `application/zip`. The archive contains one file named `<attribute>.json` for each selected attribute.
 
 ```json
 [
@@ -186,17 +188,17 @@ The value describes only the similarity between the two **attribute values**, no
 
 **Purpose**
 
-This plugin transforms element similarities into attribute similarities between two entities. This step is particularly important for multi-valued attributes because two entities can each contain sets of different attribute values.
+The {ref}`Sym Max Mean attribute comparer <sym-max-mean>` transforms element similarities into attribute similarities between two entities. This step is particularly important for multi-valued attributes because two entities can each contain sets of different attribute values.
 
 **Inputs, Output and Parameters**
 
-| Input, Output or Parameter   | Meaning                                                                             |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| **Entities URL**             | File of type `entity/list`.                                                         |
-| **Element similarities URL** | ZIP file of type `relation/element-similarities`, produced by the Wu-Palmer plugin. |
-| **Attributes**               | Attributes to compare, each on a separate line.                                     |
-| **Output data type**         | `relation/attribute-similarities`                                                   |
-| **Output content type**      | `application/zip`                                                                   |
+| Input, Output or Parameter   | Meaning                                                                                                                                                                                  |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Entities URL**             | File of type {ref}`entity/list <data-formats/examples/entities:entity/list>`.                                                                                                            |
+| **Element similarities URL** | ZIP file of type {ref}`relation/element-similarities <data-formats/examples/relations:relation/element-similarities>`, produced by the {ref}`Wu Palmer similarities plugin <wu-palmer>`. |
+| **Attributes**               | Attributes to compare, each on a separate line.                                                                                                                                          |
+| **Output data type**         | {ref}`relation/attribute-similarities <data-formats/examples/relations:relation/attribute-similarities>`                                                                                 |
+| **Output content type**      | `application/zip`                                                                                                                                                                        |
 
 **Processing**
 
@@ -221,7 +223,7 @@ Missing values are handled as follows:
 
 **Output**
 
-The output has the data type `relation/attribute-similarities` and the content type `application/zip`. The archive again contains one JSON file per attribute.
+The output has the data type {ref}`relation/attribute-similarities <data-formats/examples/relations:relation/attribute-similarities>` and the content type `application/zip`. The archive again contains one JSON file per attribute.
 
 ```json
 [
@@ -239,17 +241,17 @@ The value now describes the similarity of a complete **entity pair with respect 
 
 **Purpose**
 
-Many subsequent methods work with distances instead of similarities. This plugin therefore transforms each attribute similarity into an attribute distance. A high similarity should correspond to a small distance.
+The {ref}`Similarities to distances transformers plugin <attr-sim-to-attr-dist-transformers>` converts each attribute similarity into an attribute distance because many subsequent methods work with distances instead of similarities. A high similarity should correspond to a small distance.
 
 **Inputs, Output and Parameters**
 
-| Input, Output or Parameter     | Meaning                                                            |
-| ------------------------------ | ------------------------------------------------------------------ |
-| **Attribute similarities URL** | ZIP file of type `relation/attribute-similarities`.                |
-| **Attributes**                 | Attributes to transform, each on a separate line.                  |
-| **Transformer**                | Mathematical function used to convert similarities into distances. |
-| **Output data type**           | `relation/attribute-distances`                                     |
-| **Output content type**        | `application/zip`                                                  |
+| Input, Output or Parameter     | Meaning                                                                                                                    |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Attribute similarities URL** | ZIP file of type {ref}`relation/attribute-similarities <data-formats/examples/relations:relation/attribute-similarities>`. |
+| **Attributes**                 | Attributes to transform, each on a separate line.                                                                          |
+| **Transformer**                | Mathematical function used to convert similarities into distances.                                                         |
+| **Output data type**           | {ref}`relation/attribute-distances <data-formats/examples/relations:relation/attribute-distances>`                         |
+| **Output content type**        | `application/zip`                                                                                                          |
 
 **Available Transformations**
 
@@ -269,7 +271,7 @@ For normalized Wu-Palmer values, **Linear Inverse** is the most direct transform
 
 **Output**
 
-The output has the data type `relation/attribute-distances` and the content type `application/zip`. The `source` and `target` fields are preserved, while the `similarity` field is replaced by `distance`.
+The output has the data type {ref}`relation/attribute-distances <data-formats/examples/relations:relation/attribute-distances>` and the content type `application/zip`. The `source` and `target` fields are preserved, while the `similarity` field is replaced by `distance`.
 
 ```json
 [
@@ -285,17 +287,17 @@ The output has the data type `relation/attribute-distances` and the content type
 
 **Purpose**
 
-Up to this point, a separate distance exists for each attribute between two entities. The Aggregator plugin combines these attribute distances into exactly one overall distance for each entity pair.
+The {ref}`Aggregators plugin <distance-aggregator>` combines the separate attribute distances between two entities into exactly one overall distance for each entity pair.
 
 **Inputs, Output and Parameters**
 
-| Input, Output or Parameter  | Meaning                                                     |
-| --------------------------- | ----------------------------------------------------------- |
-| **Attribute distances URL** | ZIP file of type `relation/attribute-distances`.            |
-| **Aggregator**              | Function used to combine the available attribute distances. |
-| **Missing data handling**   | Strategy for handling `null` distances.                     |
-| **Output data type**        | `relation/entity-distances`                                 |
-| **Output content type**     | `application/json`                                          |
+| Input, Output or Parameter  | Meaning                                                                                                              |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Attribute distances URL** | ZIP file of type {ref}`relation/attribute-distances <data-formats/examples/relations:relation/attribute-distances>`. |
+| **Aggregator**              | Function used to combine the available attribute distances.                                                          |
+| **Missing data handling**   | Strategy for handling `null` distances.                                                                              |
+| **Output data type**        | {ref}`relation/entity-distances <data-formats/examples/relations:relation/entity-distances>`                         |
+| **Output content type**     | `application/json`                                                                                                   |
 
 **Aggregation Methods**
 
@@ -320,7 +322,7 @@ If the `ignore` strategy is used and an entity pair contains only `null` distanc
 
 **Output**
 
-The output has the data type `relation/entity-distances` and the content type `application/json`. It contains exactly one aggregated distance value for each entity pair.
+The output has the data type {ref}`relation/entity-distances <data-formats/examples/relations:relation/entity-distances>` and the content type `application/json`. It contains exactly one aggregated distance value for each entity pair.
 
 ```json
 [
@@ -336,19 +338,19 @@ The output has the data type `relation/entity-distances` and the content type `a
 
 **Purpose**
 
-MDS creates points in a low-dimensional space from the pairwise entity distances. Entities with a small distance should be located close to each other in the result, while entities with a large distance should be farther apart.
+The {ref}`Multidimensional Scaling (MDS) plugin <mds>` creates points in a low-dimensional space from the pairwise entity distances. Entities with a small distance should be located close to each other in the result, while entities with a large distance should be farther apart.
 
 **Inputs, Output and Parameters**
 
-| Input, Output or Parameter | Meaning                                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Entity distances URL**   | JSON file of type `relation/entity-distances`.                                                               |
-| **Dimensions**             | Number of dimensions in the resulting vector. Default value in the user interface: `2`.                      |
-| **Metric**                 | **Metric MDS** considers the numerical distance values. **Nonmetric MDS** primarily considers their ranking. |
-| **SMACOF executions**      | Number of different initializations of the SMACOF optimization procedure. Default value: `4`.                |
-| **SMACOF max iterations**  | Maximum number of optimization steps per execution. Default value: `300`.                                    |
-| **Output data type**       | `entity/vector`                                                                                              |
-| **Output content type**    | `application/json`                                                                                           |
+| Input, Output or Parameter | Meaning                                                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Entity distances URL**   | JSON file of type {ref}`relation/entity-distances <data-formats/examples/relations:relation/entity-distances>`. |
+| **Dimensions**             | Number of dimensions in the resulting vector. Default value in the user interface: `2`.                         |
+| **Metric**                 | **Metric MDS** considers the numerical distance values. **Nonmetric MDS** primarily considers their ranking.    |
+| **SMACOF executions**      | Number of different initializations of the SMACOF optimization procedure. Default value: `4`.                   |
+| **SMACOF max iterations**  | Maximum number of optimization steps per execution. Default value: `300`.                                       |
+| **Output data type**       | {ref}`entity/vector <data-formats/examples/entities:entity/vector>`                                             |
+| **Output content type**    | `application/json`                                                                                              |
 
 **Processing**
 
@@ -360,7 +362,7 @@ The individual dimensions do not have a direct semantic meaning. The relative po
 
 **Output**
 
-The output has the data type `entity/vector` and the content type `application/json`. Each entity receives numerical dimensions such as `dim0` and `dim1`.
+The output has the data type {ref}`entity/vector <data-formats/examples/entities:entity/vector>` and the content type `application/json`. Each entity receives numerical dimensions such as `dim0` and `dim1`.
 
 ```json
 [
@@ -379,17 +381,17 @@ The output has the data type `entity/vector` and the content type `application/j
 ]
 ```
 
-These vectors can be passed directly to clustering, classification, or visualization plugins, provided that they accept `entity/vector`.
+These vectors can be passed directly to clustering, classification, or visualization plugins, provided that they accept {ref}`entity/vector <data-formats/examples/entities:entity/vector>`.
 
 ## Interpretation of the Complete Data Flow
 
 The meaning of the data changes at every step:
 
-1. `entity/list`: domain-specific data records containing categorical attribute values,
-2. `relation/element-similarities`: similarity between individual taxonomy nodes,
-3. `relation/attribute-similarities`: similarity between two entities with respect to one attribute,
-4. `relation/attribute-distances`: distance between two entities with respect to one attribute,
-5. `relation/entity-distances`: distance between two entities aggregated across all attributes,
-6. `entity/vector`: numerical position of an entity in a feature space.
+1. {ref}`entity/list <data-formats/examples/entities:entity/list>`: domain-specific data records containing categorical attribute values,
+2. {ref}`relation/element-similarities <data-formats/examples/relations:relation/element-similarities>`: similarity between individual taxonomy nodes,
+3. {ref}`relation/attribute-similarities <data-formats/examples/relations:relation/attribute-similarities>`: similarity between two entities with respect to one attribute,
+4. {ref}`relation/attribute-distances <data-formats/examples/relations:relation/attribute-distances>`: distance between two entities with respect to one attribute,
+5. {ref}`relation/entity-distances <data-formats/examples/relations:relation/entity-distances>`: distance between two entities aggregated across all attributes,
+6. {ref}`entity/vector <data-formats/examples/entities:entity/vector>`: numerical position of an entity in a feature space.
 
-Further details about the data formats can be found in the [QHAna Plugin Runner documentation](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/index.html).
+The linked data-type pages contain the corresponding schema descriptions and examples used throughout the QHAna Plugin Runner documentation.
