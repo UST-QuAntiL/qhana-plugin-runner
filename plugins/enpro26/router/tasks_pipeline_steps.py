@@ -52,7 +52,23 @@ OUTPUT_FORMATS = {
 
 # --- PIPELINE ORCHESTRATION ---
 def launch_next_pipeline(task_data: ProcessingTask):
-    """Pops the next pipeline from the queue and triggers it."""
+    """
+    Orchestrates the execution of pending pipelines within the routing queue.
+
+    Retrieves the pipeline queue from the task data, pops the next scheduled
+    pipeline, and triggers its corresponding Celery task (e.g., Wu-Palmer or Mapping).
+    If the queue is empty, it evaluates the user parameters to either trigger the
+    Vector Concatenation plugin or gracefully finalize the task.
+
+    Args:
+        task_data (ProcessingTask): The current task instance containing the pipeline
+            queue, routing selections, and saved parameters.
+
+    See Also:
+        - start_routing_task: Where the queue is initially populated.
+        - start_vector_concat: Triggered if concat_output is True.
+    """
+
     queue = task_data.data.get("pipeline_queue", [])
 
     if not queue:
@@ -110,7 +126,18 @@ def launch_next_pipeline(task_data: ProcessingTask):
     name=f"{Router.instance.identifier}.start_wu_palmer", bind=True, base=PipelineTask
 )
 def start_wu_palmer(self, db_id: int):
-    """Starting the Wu-Palmer plugin"""
+    """
+    Initiates the Wu-Palmer plugin as the first step in the Wu-Palmer pipeline.
+
+    Loads the saved input parameters and extracts the required URLs (entities, metadata,
+    and taxonomies) to construct the payload. It then delegates the execution to
+    `run_pipeline_step`.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
     task_data = ProcessingTask.get_by_id(db_id)
     params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
         task_data.parameters
@@ -137,7 +164,18 @@ def start_wu_palmer(self, db_id: int):
     name=f"{Router.instance.identifier}.start_mapping", bind=True, base=PipelineTask
 )
 def start_mapping(self, db_id: int):
-    """Starting the mapping-distances plugin"""
+    """
+    Initiates the Mapping plugin as the first step in the Mapping pipeline.
+
+    Loads the saved input parameters and extracts the required URLs (entities, metadata,
+    and taxonomies) to construct the payload. It then delegates the execution to
+    `run_pipeline_step`.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
     task_data = ProcessingTask.get_by_id(db_id)
     params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
         task_data.parameters
@@ -166,7 +204,22 @@ def start_mapping(self, db_id: int):
     base=PipelineTask,
 )
 def start_transformers(self, db_id: int, source_url: str):
-    """Starting the element_sim-to-element_dist-transformers plugin"""
+    """
+    Initiates the element_sim-to-element_dist-transformers plugin.
+
+    It fetches the element similarities output from the previous step's source URL,
+    optionally persists the intermediate zip file to the storage, and triggers
+    the transformer sub-plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'relation/element-similarities' output is missing.
+    """
+
     task_data = ProcessingTask.get_by_id(db_id)
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     element_sims_url = extract_output_url(outputs, "relation/element-similarities")
@@ -205,7 +258,22 @@ def start_transformers(self, db_id: int, source_url: str):
     base=PipelineTask,
 )
 def start_aggregator(self, db_id: int, source_url: str):
-    """Starting the attribute-distance-aggregator plugin"""
+    """
+    Initiates the attribute-distance-aggregator plugin.
+
+    Fetches the element distances output from the previous step's source URL,
+    optionally persists the intermediate zip file to the storage, and triggers
+    the aggregator sub-plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'relation/element-distances' output is missing.
+    """
+
     task_data = ProcessingTask.get_by_id(db_id)
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     element_dists_url = extract_output_url(outputs, "relation/element-distances")
@@ -240,7 +308,22 @@ def start_aggregator(self, db_id: int, source_url: str):
 # --- MDS TASK ---
 @CELERY.task(name=f"{Router.instance.identifier}.start_mds", bind=True, base=PipelineTask)
 def start_mds(self, db_id: int, source_url: str):
-    """Starting the attribute-distance-mds plugin"""
+    """
+    Initiates the attribute-distance-mds plugin.
+
+    Fetches the attribute distances output from the previous step's source URL,
+    optionally persists the intermediate zip file to the storage, and triggers
+    the MDS sub-plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'relation/attribute-distances' output is missing.
+    """
+
     task_data = ProcessingTask.get_by_id(db_id)
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
@@ -281,8 +364,20 @@ def start_mds(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, base=PipelineTask
 )
 def finalize_pipeline(self, db_id: int, source_url: str):
-    """Finalizing the pipeline after MDS execution.
-    If not finishing with vector concat, writing the final vector zip files to output."""
+    """
+    Finalizes the pipeline after MDS execution.
+    Optionally writes the final MDS vectors to storage.
+    Triggers the next pipeline in the queue or finalizes the task.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+    """
+
     TASK_LOGGER.info("Finishing the Pipeline")
     task_data = ProcessingTask.get_by_id(db_id)
     params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
@@ -320,7 +415,18 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.start_vector_concat", bind=True, base=PipelineTask
 )
 def start_vector_concat(self, db_id: int):
-    """Starting the vector concatenation of the vector urls of each pipeline."""
+    """
+    Concatenates the vector outputs from all successfully executed pipelines.
+
+    Called after all pipelines in the queue are exhausted. It retrieves all saved
+    MDS vector ZIP URLs, optionally stores them as intermediate results, and sends
+    a payload containing the newline-separated URLs to the vector-concat plugin.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
     task_data = ProcessingTask.get_by_id(db_id)
 
     params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
@@ -361,7 +467,18 @@ def start_vector_concat(self, db_id: int):
     base=PipelineTask,
 )
 def finalize_vector_concat(self, db_id: int, source_url: str):
-    """Outputs the vector that was created by the vector concat plugin."""
+    """
+    Once all pipelines have completed and the vector concat plugin has finished, this task finalizes the process.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+
+    """
     task_data = ProcessingTask.get_by_id(db_id)
     params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
         task_data.parameters or "{}"

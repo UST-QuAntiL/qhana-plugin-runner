@@ -359,7 +359,12 @@ class RoutingStepView(MethodView):
 # --- WEBHOOOK ---
 @ROUTER_BLP.route("/<int:db_id>/webhook/")
 class WebhookView(MethodView):
-    """Endpoint to receive webhook updates from called plugins."""
+    """
+    Receives and processes state update webhooks from executed sub-plugins.
+
+    Listens for 'status' events from plugins currently executing a pipeline step.
+    It triggers the `handle_webhook_task` to progress the next step.
+    """
 
     @ROUTER_BLP.response(HTTPStatus.OK)
     def post(self, db_id: int):

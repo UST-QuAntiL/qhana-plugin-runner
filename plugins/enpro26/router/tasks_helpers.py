@@ -99,7 +99,13 @@ class PipelineTask(CELERY.Task):
 
 
 def subscribe_to_plugin(task_result_url: str, webhook_url: str):
-    """Subscribes the webhook to a target plugin's task result updates."""
+    """
+    Subscribes the router to a sub-plugin's event stream.
+
+    Queries the target plugin's task URL to discover its subscription endpoint.
+    If available, it issues a POST request configuring the sub-plugin to send
+    'status' events back to the router's webhook listener.
+    """
 
     webhook_url = webhook_url.replace("localhost", "127.0.0.1")
     response = requests.get(task_result_url, timeout=REQUEST_TIMEOUT).json()
@@ -177,8 +183,11 @@ def load_entity_attributes(entities_url: str) -> set:
 
 def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
     """
-    Parses the taxonomy JSON to determine the recommended pipeline.
-    Returns 'Mapping' if any mapping_raw data is present, otherwise 'Wu-Palmer'.
+    Determines the optimal pipeline recommendation for a given taxonomy file.
+
+    Reads the taxonomy JSON inside the provided ZIP file. If any entity contains
+    non-empty 'mapping_raw' data, it recommends the Mapping plugin. Otherwise,
+    it defaults to the Wu-Palmer plugin.
     """
     # TODO: Refine the recommendation detection (Template also allows for no recommendation)
 
@@ -202,7 +211,8 @@ def run_pipeline_step(
     logging_name: str,
     payload: dict,
 ):
-    """Start a pipeline sub-plugin and make sure its completion is observed.
+    """
+    Start a pipeline sub-plugin and make sure its completion is observed.
 
     Error handling is delegated to :class:`PipelineTask`, which means that ransient
     errors are retried automatically, everything else fails the task loudly.
