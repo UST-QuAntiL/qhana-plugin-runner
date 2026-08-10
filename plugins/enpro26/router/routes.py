@@ -25,6 +25,7 @@ from marshmallow import EXCLUDE
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
     EntryPoint,
+    InputDataMetadata,
     PluginMetadata,
     PluginMetadataSchema,
     PluginType,
@@ -83,24 +84,32 @@ class PluginsView(MethodView):
                 href=url_for(f"{ROUTER_BLP.name}.{ProcessView.__name__}"),
                 ui_href=url_for(f"{ROUTER_BLP.name}.{MicroFrontend.__name__}"),
                 data_input=[
-                    # InputDataMetadata(
-                    #     data_type="entity/list",
-                    #     content_type=["application/json"],
-                    #     required=True,
-                    #     parameter="entitiesUrl",
-                    # ),
-                    # InputDataMetadata(
-                    #     data_type="entity/attribute-metadata",
-                    #     content_type=["application/json"],
-                    #     required=True,
-                    #     parameter="entitiesMetadataUrl",
-                    # ),
-                    # InputDataMetadata(
-                    #     data_type="graph/taxonomy",
-                    #     content_type=["application/zip"],
-                    #     required=True,
-                    #     parameter="taxonomiesZipUrl",
-                    # ),
+                    InputDataMetadata(
+                        data_type="entity/list",
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
+                        required=True,
+                        parameter="entitiesUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/attribute-metadata",
+                        content_type=[
+                            "application/json",
+                            "application/X-lines+json",
+                            "text/csv",
+                        ],
+                        required=True,
+                        parameter="entitiesMetadataUrl",
+                    ),
+                    InputDataMetadata(
+                        data_type="graph/taxonomy",
+                        content_type=["application/zip"],
+                        required=True,
+                        parameter="taxonomiesZipUrl",
+                    ),
                 ],
                 data_output=[
                     # WU-Palmer output (optional)
@@ -125,6 +134,16 @@ class PluginsView(MethodView):
                     DataMetadata(
                         data_type="entity/vector",
                         content_type=["application/zip"],
+                        required=True,
+                    ),
+                    # Vector concat of MDS (optional final output)
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=[
+                            "text/csv",
+                            "application/json",
+                            "application/X-lines+json",
+                        ],
                         required=True,
                     ),
                 ],

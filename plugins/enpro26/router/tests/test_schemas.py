@@ -50,6 +50,8 @@ def test_valid_payload_loads_successfully():
     assert isinstance(result, InputParameters)
     assert result.entities_url == VALID_URL
     assert result.dimensions == 2
+    assert result.concat_output is False
+    assert result.output_format == "csv"
 
 
 def test_missing_required_fields_rejected():

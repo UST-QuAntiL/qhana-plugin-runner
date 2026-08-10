@@ -22,6 +22,7 @@ Welcome to QHAna-Plugin-Runner's documentation!
     data-formats/index
     cli
     all-plugins
+    wu-palmer-pipeline
     adr/index
     source/qhana_plugin_runner
     changelog
