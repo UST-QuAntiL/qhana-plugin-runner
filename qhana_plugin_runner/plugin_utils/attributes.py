@@ -60,7 +60,7 @@ class AttributeMetadata:
     description: str = ""
     multiple: bool = False
     ordered: bool = False
-    separator: str = ";"
+    separator: str = ""
     ref_target: Optional[str] = None
     schema: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
