@@ -15,9 +15,9 @@
   - distance-calculation
 
     preprocessing
-* - [Amazon Braket Local Simulator (@v1.0.0)](#amazon-braket-local-simulator)
+* - [Amazon Braket Local Simulator (@v1.0.1)](#amazonBraket_localSimulator)
 
-    amazon-braket-local-simulator@v1-0-0
+    amazonBraket_localSimulator@v1-0-1
   - processing
   - braket_local
 
@@ -62,18 +62,18 @@
     classical
 
     clustering
-* - [Clustered Scatter Plot Visualization (@v1.0.1)](#cluster-scatter-visualization)
+* - [Clustered Scatter Plot Visualization (@v1.0.2)](#cluster-scatter-visualization)
 
-    cluster-scatter-visualization@v1-0-1
+    cluster-scatter-visualization@v1-0-2
   - visualization
   - cluster
 
     scatter
 
     visualization
-* - [Confusion Matrix Visualization (@v1.0.1)](#confusion-matrix)
+* - [Confusion Matrix Visualization (@v1.0.2)](#confusion-matrix)
 
-    confusion-matrix@v1-0-1
+    confusion-matrix@v1-0-2
   - visualization
   - cluster
 
@@ -121,9 +121,9 @@
     preprocessing
 
     sample
-* - [Histogram Visualization (@v1.0.2)](#histogram-visualization)
+* - [Histogram Visualization (@v1.0.3)](#histogram-visualization)
 
-    histogram-visualization@v1-0-2
+    histogram-visualization@v1-0-3
   - visualization
   - histogram
 
@@ -239,32 +239,6 @@
   - feature-engineering
 
     preprocessing
-* - [Qiskit Executor (@v0.1.1)](#qiskit-executor)
-
-    qiskit-executor@v0-1-1
-  - processing
-  - circuit-executor
-
-    qasm
-
-    qasm-2
-
-    qasm-3
-
-    qc-executor
-
-    qiskit
-* - [Qiskit Quantum Kernel Estimation (@v0.2.2)](#qiskit-quantum-kernel-estimation)
-
-    qiskit-quantum-kernel-estimation@v0-2-2
-  - processing
-  - QML
-
-    kernel
-
-    mapping
-
-    quantum
 * - [Quantum CNN (@v0.1.1)](#quantum-cnn@v0-1-1)
 
     quantum-cnn@v0-1-1
@@ -311,15 +285,6 @@
     quantum
 
     supervised-learning
-* - [Quantum Variational Classifier (@v0.1.2)](#vqc)
-
-    vqc@v0-1-2
-  - processing
-  - QML
-
-    classification
-
-    quantum
 * - [Quantum k Nearest Neighbours (@v0.2.2)](#quantum-k-nearest-neighbours)
 
     quantum-k-nearest-neighbours@v0-2-2
@@ -345,9 +310,9 @@
     rest-connector@v0-1-0
   - interaction
   - rest
-* - [Router (@v0.1.3)](#router)
+* - [Router (@v0.1.5)](#router)
 
-    router@v0-1-3
+    router@v0-1-5
   - processing
   - preprocessing
 
@@ -376,21 +341,6 @@
     postgresql
 
     sql
-* - [SVM (@v0.1.2)](#svm)
-
-    svm@v0-1-2
-  - processing
-  - ML
-
-    QML
-
-    classical
-
-    classification
-
-    quantum
-
-    supervised-learning
 * - [Scipy Minimizer Plugin (@v1.0.0)](#scipy-minimizer)
 
     scipy-minimizer@v1-0-0
@@ -428,9 +378,9 @@
   - preprocessing
 
     similarity-calculation
-* - [Vector concationation plugin (@v0.1.1)](#vector-concat)
+* - [Vector concationation plugin (@v0.1.3)](#vector-concat)
 
-    vector-concat@v0-1-1
+    vector-concat@v0-1-3
   - processing
   - preprocessing
 
@@ -460,9 +410,9 @@
   - preprocessing
 
     similarity-calculation
-* - [ZX-Calculus Visualization (@v1.0.2)](#zxcalculus)
+* - [ZX-Calculus Visualization (@v1.0.3)](#zxcalculus)
 
-    zxcalculus@v1-0-2
+    zxcalculus@v1-0-3
   - visualization
   - circuit
 
@@ -662,13 +612,13 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
 
 **Input formats:** `application/X-lines+json`, `application/json`, `application/octet-stream`, `application/vnd.recordare.musicxml+xml`, `application/xml`, `application/zip`, `audio/midi`, `audio/x-midi`, `text/csv`, `text/x-qasm`, `text/xml`\
 **Output formats:** `*/*`, `application/X-lines+json`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
 
 **Input datatypes:** `*/*`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-distances`, `relation/element-similarities`, `relation/entity-distances`\
-**Output datatypes:** `*/*`, `circuit/*`, `custom/clusters`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-distances`, `relation/element-similarities`, `relation/entity-distances`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
+**Output datatypes:** `*/*`, `circuit/*`, `custom/clusters`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `relation/attribute-distances`, `relation/attribute-similarities`, `relation/element-distances`, `relation/element-similarities`, `relation/entity-distances`, `representative-circuit/*`, `table/html`, `txt/*`
 
 ## Plugins
 
@@ -694,8 +644,8 @@ Aggregates attribute distances to entity distances.
 |relation/entity-distances|application/json|✓|
 
 
-(amazon-braket-local-simulator)=
-### Amazon Braket Local Simulator (@v1.0.0)
+(amazonBraket_localSimulator)=
+### Amazon Braket Local Simulator (@v1.0.1)
 
 processing – braket_local, circuit-executor, qasm, qasm-3, qc-simulator\
 *Path:* {file}`plugins/circuit_executors/braket_local.py`
@@ -814,7 +764,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (cluster-scatter-visualization)=
-### Clustered Scatter Plot Visualization (@v1.0.1)
+### Clustered Scatter Plot Visualization (@v1.0.2)
 
 visualization – cluster, scatter, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/cluster_scatter_visualization/__init__.py`
@@ -838,7 +788,7 @@ A visualization plugin that creates a scatter plot using the provided data. When
 
 
 (confusion-matrix)=
-### Confusion Matrix Visualization (@v1.0.1)
+### Confusion Matrix Visualization (@v1.0.2)
 
 visualization – cluster, confusion-matrix, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/confusion_matrix/__init__.py`
@@ -948,7 +898,7 @@ Loads and filters entities from a file that contains a list of entities.
 
 
 (histogram-visualization)=
-### Histogram Visualization (@v1.0.2)
+### Histogram Visualization (@v1.0.3)
 
 visualization – histogram, non-default, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/histogram_visualization/__init__.py`
@@ -1247,59 +1197,6 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |entity/vector|text/csv|✓|
 
 
-(qiskit-executor)=
-### Qiskit Executor (@v0.1.1)
-
-processing – circuit-executor, qasm, qasm-2, qasm-3, qc-executor, qiskit\
-*Path:* {file}`plugins/qiskit_executor/__init__.py`
-
-Allows execution of quantum circuits using IBM Quantum backends.
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|executable/circuit|text/x-qasm|✓|
-|provenance/execution-options|text/csv, application/json, application/X-lines+json|╳|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|entity/vector|application/json|✓|
-|provenance/trace|application/json|✓|
-|provenance/execution-options|application/json|✓|
-
-
-(qiskit-quantum-kernel-estimation)=
-### Qiskit Quantum Kernel Estimation (@v0.2.2)
-
-processing – QML, kernel, mapping, quantum\
-*Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/qiskit_quantum_kernel_estimation/__init__.py`
-
-Produces a kernel matrix from a quantum kernel. Specifically qiskit's feature maps are used, combined with qiskit_machine_learning.kernels.QuantumKernel. These feature maps are ZFeatureMap, ZZFeatureMap, PauliFeatureMap from qiskit.circuit.library. These feature maps all use the proposed kernel by Havlíček [0]. The following versions were used `qiskit~=0.43` and `qiskit-machine-learning~=0.4.0`.
-
-The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format. They may be stored in either a csv or a json file. The plugin ``data-creator`` can generate these entities.
-
-Source:
-[0] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|entity/vector|application/json, text/csv|✓|
-|entity/vector|application/json, text/csv|✓|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|custom/kernel-matrix|application/json|✓|
-
-
 (quantum-cnn@v0-1-1)=
 ### Quantum CNN (@v0.1.1)
 
@@ -1419,40 +1316,6 @@ Source:
 |representative-circuit/*|application/qasm|✓|
 
 
-(vqc)=
-### Quantum Variational Classifier (@v0.1.2)
-
-processing – QML, classification, quantum\
-*Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/variational_quantum_classifier/__init__.py`
-
-This plugin implements the Variational Quantum Classifier (VQC) by Qiskit [0]. It's currently using version 0.4.0 of qiskit's machine learning library.
-The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin.
-
-Source:
-[0] [Qiskit documentation, Variational Quantum Classifier](https://qiskit.org/documentation/machine-learning/stubs/qiskit_machine_learning.algorithms.VQC.html#qiskit_machine_learning.algorithms.VQC)
-[1] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|entity/vector|application/json, text/csv|✓|
-|entity/label|application/json, text/csv|✓|
-|entity/vector|application/json, text/csv|✓|
-|entity/label|application/json, text/csv|╳|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|entity/label|application/json|✓|
-|plot/*|text/html|╳|
-|plot/*|text/html|╳|
-|representative-circuit/*|application/qasm|✓|
-|vqc-metadata/*|application/json|✓|
-
-
 (quantum-k-nearest-neighbours)=
 ### Quantum k Nearest Neighbours (@v0.2.2)
 
@@ -1524,12 +1387,21 @@ interaction – rest\
 Integrate REST APIs as plugins.
 
 (router)=
-### Router (@v0.1.3)
+### Router (@v0.1.5)
 
 processing – preprocessing, routing\
 *Path:* {file}`plugins/enpro26/router/__init__.py`
 
 Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music data and provides different routing options for the entities and taxonomies.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
+|graph/taxonomy|application/zip|✓|
+
 
 **Outputs:**
 
@@ -1539,6 +1411,7 @@ Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music da
 |relation/element-distances|application/zip|✓|
 |relation/attribute-distances|application/zip|✓|
 |entity/vector|application/zip|✓|
+|entity/vector|text/csv, application/json, application/X-lines+json|✓|
 
 
 (sql-editor)=
@@ -1576,44 +1449,6 @@ Allows to manage sql databases and use them as a source.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/list|application/json|✓|
-
-
-(svm)=
-### SVM (@v0.1.2)
-
-processing – ML, QML, classical, classification, quantum, supervised-learning\
-*Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/svm/__init__.py`
-
-Classifies data with a support vector machine. This plugin uses the implementation of scikit-learn 1.1 [0]. The quantum kernels are from Qiskit [1] and the data maps are from Havlíček et al. [2] and Suzuki et al. [3].
-
-The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. A precomputed kernel matrix should be stored in the [entity/matrix](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-matrix) format. All of them may be stored in either a csv or a json file. A set of entity points and labels can be generated with the ``data-creator`` plugin. A precomputed kernel can be computed with a quantum kernel estimation plugin, given the entity points.
-
-Source:
-[0] [https://scikit-learn.org/1.1/modules/svm.html#svm](https://scikit-learn.org/1.1/modules/svm.html#svm)
-[1] Qiskit's quantum kernels [ZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZFeatureMap.html), [ZZFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.ZZFeatureMap.html) and [PauliFeatureMap](https://qiskit.org/documentation/stubs/qiskit.circuit.library.PauliFeatureMap.html)
-[2] [Havlíček, V., Córcoles, A.D., Temme, K. et al. Supervised learning with quantum-enhanced feature spaces. Nature 567, 209–212 (2019).](https://doi.org/10.1038/s41586-019-0980-2)
-[3] [Suzuki, Y., Yano, H., Gao, Q. et al. Analysis and synthesis of feature map for kernel-based quantum classifier. Quantum Mach. Intell. 2, 9 (2020).](https://doi.org/10.1007/s42484-020-00020-y)
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|entity/vector|text/csv, application/json|╳|
-|entity/label|text/csv, application/json|✓|
-|entity/vector|text/csv, application/json|╳|
-|entity/label|text/csv, application/json|╳|
-|entity/matrix|text/csv, application/json|╳|
-|entity/matrix|text/csv, application/json|╳|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|entity/label|application/json|✓|
-|plot/*|text/html|╳|
-|plot/*|text/html|╳|
-|entity/vector|application/json|✓|
 
 
 (scipy-minimizer)=
@@ -1728,7 +1563,7 @@ Compares elements and returns similarity values.
 
 
 (vector-concat)=
-### Vector concationation plugin (@v0.1.1)
+### Vector concationation plugin (@v0.1.3)
 
 processing – preprocessing, vector\
 *Path:* {file}`plugins/vector_concat/__init__.py`
@@ -1739,7 +1574,7 @@ Concatinate multiple entity/vector files into one
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/vector|application/json, application/X-lines+json, text/csv|✓|
+|entity/vector|text/csv, application/json, application/X-lines+json, application/zip|✓|
 
 
 **Outputs:**
@@ -1790,7 +1625,7 @@ Compares elements and returns similarity values.
 
 
 (zxcalculus)=
-### ZX-Calculus Visualization (@v1.0.2)
+### ZX-Calculus Visualization (@v1.0.3)
 
 visualization – circuit, non-default, visualization, zxcalculus\
 *Path:* {file}`stable_plugins/visualization/complex/zxcalculus/__init__.py`
