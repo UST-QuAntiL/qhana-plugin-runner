@@ -19,7 +19,7 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.requests import open_url, open_url_as_file_like
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 
@@ -30,10 +30,16 @@ from .schemas import (
     TRANSFORMERS_PLUGIN,
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
     InputParameters,
     InputParametersSchema,
 )
-from .tasks_helpers import CELERY_COUNTDOWN, extract_output_url, run_pipeline_step
+from .tasks_helpers import (
+    CELERY_COUNTDOWN,
+    extract_output_url,
+    is_store_mds_output,
+    run_pipeline_step,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -44,8 +50,18 @@ def launch_next_pipeline(task_data: ProcessingTask):
     queue = task_data.data.get("pipeline_queue", [])
 
     if not queue:
-        # All pipelines have been finished.
-        # TODO: Add Dimension reduction and vector merge here
+        # TODO: Add Dimension reduction here
+        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+            task_data.parameters
+        )
+        if params.concat_output:
+            task_data.add_task_log_entry(
+                "Starting Vector concat plugin after all pipelines completed successfully."
+            )
+            task_data.save(commit=True)
+            start_vector_concat.apply_async(args=[task_data.id])
+            return
+
         save_task_result.delay("All Pipelines Completed Successfully!", task_data.id)
         return
 
@@ -152,7 +168,9 @@ def start_transformers(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         element_sims_url = extract_output_url(outputs, "relation/element-similarities")
-        params = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
+        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+            task_data.parameters
+        )
 
         if params.include_intermediate_results_in_output:
             STORE.persist_task_result(
@@ -197,7 +215,9 @@ def start_aggregator(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         element_dists_url = extract_output_url(outputs, "relation/element-distances")
-        params = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
+        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+            task_data.parameters
+        )
 
         if params.include_intermediate_results_in_output:
             prefix = task_data.data.get("current_pipeline", "unknown")
@@ -238,7 +258,9 @@ def start_mds(self, db_id: int, source_url: str):
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         attr_dists_url = extract_output_url(outputs, "relation/attribute-distances")
-        params = InputParametersSchema(unknown=EXCLUDE).loads(task_data.parameters)
+        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+            task_data.parameters or "{}"
+        )
 
         if params.include_intermediate_results_in_output:
             prefix = task_data.data.get("current_pipeline", "unknown")
@@ -278,22 +300,36 @@ def start_mds(self, db_id: int, source_url: str):
     name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, max_retries=5
 )
 def finalize_pipeline(self, db_id: int, source_url: str):
-    """Finalizing the pipeline. Writing the final vector file to output"""
+    """Finalizing the pipeline after MDS execution.
+    If not finishing with vector concat, writing the final vector zip files to output."""
     TASK_LOGGER.info("Finishing the Pipeline")
     task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
 
     try:
         outputs = requests.get(source_url).json().get("outputs", [])
         final_dists_url = extract_output_url(outputs, "entity/vector")
+        current_pipeline_name = task_data.data.get("current_pipeline", "unknown")
 
-        prefix = task_data.data.get("current_pipeline", "unknown")
-        STORE.persist_task_result(
-            db_id,
-            open_url(final_dists_url).content,
-            f"{prefix}_mds_final_vectors.zip",
-            "entity/vector",
-            "application/zip",
-        )
+        if is_store_mds_output(params):
+            STORE.persist_task_result(
+                db_id,
+                open_url(final_dists_url).content,
+                f"{current_pipeline_name}_mds_vectors.zip",
+                "entity/vector",
+                "application/zip",
+            )
+
+        if params.concat_output:
+            vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+            vector_zip_urls.append(final_dists_url)
+            task_data.data["vector_zip_urls"] = vector_zip_urls
+            task_data.add_task_log_entry(
+                f"Saved vector zip url of {current_pipeline_name} in task_data."
+            )
+            task_data.save(commit=True)
 
         # trigger next pipeline
         launch_next_pipeline(task_data)
@@ -305,5 +341,97 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         task_data.save(commit=True)
         raise self.retry(exc=e, countdown=CELERY_COUNTDOWN)
     except Exception as e:
-        task_data.add_task_log_entry(f"CRASH in final step:\n{traceback.format_exc()}")
+        task_data.add_task_log_entry(
+            f"CRASH in final pipeline step:\n{traceback.format_exc()}"
+        )
+        task_data.save(commit=True)
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+
+
+# --- AFTER ALL PIPELINES: Vector concat ---
+@CELERY.task(
+    name=f"{Router.instance.identifier}.start_vector_concat", bind=True, max_retries=5
+)
+def start_vector_concat(self, db_id: int):
+    """Starting the vector concatenation of the vector urls of each pipeline."""
+    task_data = ProcessingTask.get_by_id(db_id)
+
+    try:
+        params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+            task_data.parameters or "{}"
+        )
+        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+
+        if params.include_intermediate_results_in_output:
+            for vector_zip_url in vector_zip_urls:
+                prefix = task_data.data.get("current_pipeline", "unknown")
+                STORE.persist_task_result(
+                    db_id,
+                    vector_zip_url,
+                    f"{prefix}_mds_final_vectors.zip",
+                    "entity/vector",
+                    "application/zip",
+                )
+
+        payload = {
+            "urls": "\n".join(vector_zip_urls),
+            "output_format": params.output_format,
+            "output_suffix": "final_concatenated_vector",
+        }
+    except Exception as e:
+        task_data.add_task_log_entry(
+            f"CRASH in Vector concat setup:\n{traceback.format_exc()}"
+        )
+        task_data.save(commit=True)
+        save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)
+        return
+
+    run_pipeline_step(
+        celery_task=self,
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=VECTOR_CONCAT_PLUGIN,
+        logging_name="MDS",
+        payload=payload,
+    )
+
+
+# --- AFTER ALL PIPELINES: finalize vector concat ---
+@CELERY.task(
+    name=f"{Router.instance.identifier}.finalize_vector_concat", bind=True, max_retries=5
+)
+def finalize_vector_concat(self, db_id: int, source_url: str):
+    """Outputs the vector that was created by the vector concat plugin."""
+    task_data = ProcessingTask.get_by_id(db_id)
+
+    try:
+        outputs = requests.get(source_url).json().get("outputs", [])
+        final_vector = extract_output_url(outputs, "entity/vector")
+        with open_url_as_file_like(final_vector) as (
+            file_name,
+            file_like,
+            mimetype,
+        ):
+            STORE.persist_task_result(
+                db_id,
+                file_like.read(),
+                file_name,
+                "entity/vector",
+                mimetype,
+            )
+        save_task_result.delay(
+            "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
+        )
+
+    except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as e:
+        task_data.add_task_log_entry(
+            f"Error occurred during vector concat finalization step. Attempting to retry:\n{e}"
+        )
+        task_data.save(commit=True)
+        raise self.retry(exc=e, countdown=CELERY_COUNTDOWN)
+    except Exception as e:
+        task_data.add_task_log_entry(
+            f"CRASH in final vector concat step:\n{traceback.format_exc()}"
+        )
+        task_data.save(commit=True)
         save_task_error.delay(failing_task_id=self.request.id, db_id=db_id)

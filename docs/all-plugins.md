@@ -15,9 +15,9 @@
   - distance-calculation
 
     preprocessing
-* - [AmazonBraket_LocalSimulator (@v1.0.0)](#AmazonBraket_LocalSimulator)
+* - [Amazon Braket Local Simulator (@v1.0.1)](#amazonBraket_localSimulator)
 
-    AmazonBraket_LocalSimulator@v1-0-0
+    amazonBraket_localSimulator@v1-0-1
   - processing
   - braket_local
 
@@ -62,18 +62,18 @@
     classical
 
     clustering
-* - [Clustered Scatter Plot Visualization (@v1.0.1)](#Clustered Scatter Plot Visualization)
+* - [Clustered Scatter Plot Visualization (@v1.0.2)](#cluster-scatter-visualization)
 
-    Clustered Scatter Plot Visualization@v1-0-1
+    cluster-scatter-visualization@v1-0-2
   - visualization
   - cluster
 
     scatter
 
     visualization
-* - [Confusion Matrix Visualization (@v1.0.1)](#Confusion Matrix Visualization)
+* - [Confusion Matrix Visualization (@v1.0.2)](#confusion-matrix)
 
-    Confusion Matrix Visualization@v1-0-1
+    confusion-matrix@v1-0-2
   - visualization
   - cluster
 
@@ -121,9 +121,9 @@
     preprocessing
 
     sample
-* - [Histogram Visualization (@v1.0.2)](#Histogram Visualization)
+* - [Histogram Visualization (@v1.0.3)](#histogram-visualization)
 
-    Histogram Visualization@v1-0-2
+    histogram-visualization@v1-0-3
   - visualization
   - histogram
 
@@ -141,9 +141,9 @@
     preprocessing
 
     quantum
-* - [LCM (@v0.0.0)](#low-code-modeler)
+* - [LCM (@v0.0.1)](#low-code-modeler)
 
-    low-code-modeler@v0-0-0
+    low-code-modeler@v0-0-1
   - interaction
   - low-code-modeler
 * - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
@@ -345,9 +345,9 @@
     rest-connector@v0-1-0
   - interaction
   - rest
-* - [Router (@v0.1.4)](#router)
+* - [Router (@v0.1.5)](#router)
 
-    router@v0-1-4
+    router@v0-1-5
   - processing
   - preprocessing
 
@@ -428,9 +428,9 @@
   - preprocessing
 
     similarity-calculation
-* - [Vector concationation plugin (@v0.1.2)](#vector-concat)
+* - [Vector concationation plugin (@v0.1.3)](#vector-concat)
 
-    vector-concat@v0-1-2
+    vector-concat@v0-1-3
   - processing
   - preprocessing
 
@@ -460,9 +460,9 @@
   - preprocessing
 
     similarity-calculation
-* - [ZX-Calculus Visualization (@v1.0.2)](#ZX-Calculus Visualization)
+* - [ZX-Calculus Visualization (@v1.0.3)](#zxcalculus)
 
-    ZX-Calculus Visualization@v1-0-2
+    zxcalculus@v1-0-3
   - visualization
   - circuit
 
@@ -694,8 +694,8 @@ Aggregates attribute distances to entity distances.
 |relation/entity-distances|application/json|✓|
 
 
-(AmazonBraket_LocalSimulator)=
-### AmazonBraket_LocalSimulator (@v1.0.0)
+(amazonBraket_localSimulator)=
+### Amazon Braket Local Simulator (@v1.0.1)
 
 processing – braket_local, circuit-executor, qasm, qasm-3, qc-simulator\
 *Path:* {file}`plugins/circuit_executors/braket_local.py`
@@ -813,8 +813,8 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |plot/*|text/html|╳|
 
 
-(Clustered Scatter Plot Visualization)=
-### Clustered Scatter Plot Visualization (@v1.0.1)
+(cluster-scatter-visualization)=
+### Clustered Scatter Plot Visualization (@v1.0.2)
 
 visualization – cluster, scatter, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/cluster_scatter_visualization/__init__.py`
@@ -837,8 +837,8 @@ A visualization plugin that creates a scatter plot using the provided data. When
 |image/html|text/html|✓|
 
 
-(Confusion Matrix Visualization)=
-### Confusion Matrix Visualization (@v1.0.1)
+(confusion-matrix)=
+### Confusion Matrix Visualization (@v1.0.2)
 
 visualization – cluster, confusion-matrix, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/confusion_matrix/__init__.py`
@@ -947,8 +947,8 @@ Loads and filters entities from a file that contains a list of entities.
 |entity/list|application/json, text/csv|✓|
 
 
-(Histogram Visualization)=
-### Histogram Visualization (@v1.0.2)
+(histogram-visualization)=
+### Histogram Visualization (@v1.0.3)
 
 visualization – histogram, non-default, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/histogram_visualization/__init__.py`
@@ -996,7 +996,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (low-code-modeler)=
-### LCM (@v0.0.0)
+### LCM (@v0.0.1)
 
 interaction – low-code-modeler\
 *Path:* {file}`plugins/low_code_modeler/plugin.py`
@@ -1524,12 +1524,21 @@ interaction – rest\
 Integrate REST APIs as plugins.
 
 (router)=
-### Router (@v0.1.4)
+### Router (@v0.1.5)
 
 processing – preprocessing, routing\
 *Path:* {file}`plugins/enpro26/router/__init__.py`
 
 Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music data and provides different routing options for the entities and taxonomies.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
+|graph/taxonomy|application/zip|✓|
+
 
 **Outputs:**
 
@@ -1539,6 +1548,7 @@ Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music da
 |relation/element-distances|application/zip|✓|
 |relation/attribute-distances|application/zip|✓|
 |entity/vector|application/zip|✓|
+|entity/vector|text/csv, application/json, application/X-lines+json|✓|
 
 
 (sql-editor)=
@@ -1728,7 +1738,7 @@ Compares elements and returns similarity values.
 
 
 (vector-concat)=
-### Vector concationation plugin (@v0.1.2)
+### Vector concationation plugin (@v0.1.3)
 
 processing – preprocessing, vector\
 *Path:* {file}`plugins/vector_concat/__init__.py`
@@ -1789,8 +1799,8 @@ Compares elements and returns similarity values.
 |relation/element-similarities|application/zip|✓|
 
 
-(ZX-Calculus Visualization)=
-### ZX-Calculus Visualization (@v1.0.2)
+(zxcalculus)=
+### ZX-Calculus Visualization (@v1.0.3)
 
 visualization – circuit, non-default, visualization, zxcalculus\
 *Path:* {file}`stable_plugins/visualization/complex/zxcalculus/__init__.py`

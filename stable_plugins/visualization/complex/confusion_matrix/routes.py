@@ -56,7 +56,7 @@ class PluginsView(MethodView):
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
         return PluginMetadata(
-            title=plugin.name,
+            title="Confusion Matrix Visualization",
             description=plugin.description,
             name=plugin.name,
             version=plugin.version,
