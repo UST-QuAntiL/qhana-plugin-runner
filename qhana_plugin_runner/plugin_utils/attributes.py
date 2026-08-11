@@ -52,7 +52,11 @@ CONSIDERED_FALSE: Set[str] = {"0", "false", "f", "no", "n", "off", "null", "nil"
 
 @dataclass
 class AttributeMetadata:
-    """Dataclass for entity attribute metadata."""
+    """Dataclass for entity attribute metadata.
+
+    Raises:
+        ValueError: if ``multiple`` is True but no ``separator`` is defined
+    """
 
     ID: str
     attribute_type: str

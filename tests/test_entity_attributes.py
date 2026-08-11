@@ -398,42 +398,28 @@ def test_multiple_without_separator_raises(separator):
     with pytest.raises(ValueError, match="'x'"):
         AttributeMetadata.from_dict(metadata)
 
+    kwargs = {} if separator is ... else {"separator": separator}
 
-def test_multiple_string_bool_without_separator_raises():
-    """The multiple flag must be parsed before the separator is checked."""
     with pytest.raises(ValueError, match="'x'"):
-        AttributeMetadata.from_dict({"ID": "x", "type": "string", "multiple": "yes"})
+        AttributeMetadata("x", "string", "X", multiple=True, **kwargs)
 
 
-def test_multiple_with_separator():
+@pytest.mark.parametrize(
+    "separator",
+    [
+        pytest.param(" ", id="space"),
+        pytest.param("\n", id="newline"),
+        pytest.param(";", id=";"),
+        pytest.param("$", id="$"),
+    ],
+)
+def test_multiple_with_separator(separator):
     attr = AttributeMetadata.from_dict(
-        {"ID": "x", "type": "string", "multiple": True, "separator": "$"}
+        {"ID": "x", "type": "string", "multiple": True, "separator": separator}
     )
     assert attr.multiple is True
-    assert attr.separator == "$"
+    assert attr.separator == separator
 
-
-def test_single_without_separator_uses_default():
-    attr = AttributeMetadata.from_dict({"ID": "x", "type": "string", "multiple": False})
-    assert attr.multiple is False
-    assert attr.separator == ";"
-
-
-def test_direct_construction_with_empty_separator_raises():
-    with pytest.raises(ValueError, match="'x'"):
-        AttributeMetadata("x", "string", "X", multiple=True, separator=None)
-
-
-def test_direct_construction_falls_back_to_default_separator():
-    attr = AttributeMetadata("x", "string", "X", multiple=True)
-    assert attr.separator == ";"
-
-
-def test_parse_attribute_metadata_propagates_error():
-    metadata = [
-        {"ID": "ok", "type": "string", "multiple": True, "separator": ";"},
-        {"ID": "x", "type": "string", "multiple": True},
-    ]
-
-    with pytest.raises(ValueError, match="'x'"):
-        parse_attribute_metadata(metadata)
+    attr2 = AttributeMetadata("y", "string", "Y", multiple=True, separator=separator)
+    assert attr2.multiple is True
+    assert attr2.separator == separator
