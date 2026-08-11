@@ -102,6 +102,9 @@ The computed relation ID should follow this format ``s_{source}-t_{target}``, wh
 Like entites, relations can also have additional attributes.
 The same restrictions as for entity attributes apply.
 
+Unlike entities, relations are only serialized as JSON (``application/json``) or JSON lines
+(``application/X-lines+json``), never as CSV, as CSV cannot preserve the types of the relation attributes.
+
 
 Example serializations of relations:
 """"""""""""""""""""""""""""""""""""
@@ -110,17 +113,15 @@ JSON:
 
 .. code-block:: json
 
-    {
-        "source": "paintA",
-        "target": "paintB"
-    }
+    [
+        {"source": "paintA", "target": "paintB"}
+    ]
 
-CSV:
+JSON lines:
 
-.. code-block:: text
+.. code-block:: json
 
-    source,target
-    paintA,paintB
+    {"source": "paintA", "target": "paintB"}
 
 .. seealso:: :doc:`/data-formats/examples/relations`
 
