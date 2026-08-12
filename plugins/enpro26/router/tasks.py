@@ -62,7 +62,15 @@ TASK_LOGGER = get_task_logger(__name__)
 # --- Step 1: discover taxonomy attributes for the routing step ---
 @CELERY.task(name=f"{Router.instance.identifier}.preprocessing_task", bind=True)
 def preprocessing_task(self, db_id: int) -> str:
-    """Collect the taxonomy attributes presented in the routing step view."""
+    """
+    Discovers taxonomy attributes to populate the dynamic routing step UI.
+
+    Downloads and parses the provided entities and metadata files to identify
+    attributes that have a matching taxonomy in the provided ZIP file. It also
+    parses the taxonomies to generate default pipeline recommendations
+    (e.g., Mapping vs. Wu-Palmer) for the frontend.
+    """
+
     TASK_LOGGER.info(f"Starting router preprocessing with db id '{db_id}'")
     task_data = load_task(db_id)
 
@@ -122,7 +130,15 @@ def preprocessing_task(self, db_id: int) -> str:
 # --- Initial Routing Task Launcher ---
 @CELERY.task(name=f"{Router.instance.identifier}.start_routing_task", bind=True)
 def start_routing_task(self, db_id: int) -> str:
-    """Starts the router. Gets the users routing selections for the attributes and puts the corresponding pipelines in a queue."""
+    """
+    Translates user attribute selections into an execution queue and starts the first pipeline.
+
+    Groups the attributes based on the user's selected pipeline (Wu-Palmer,
+    Mapping, One-Hot, or None). It saves these groupings into the task data,
+    generates a sequential queue of pipelines to execute, and calls
+    `launch_next_pipeline` to begin execution.
+    """
+
     task_data = ProcessingTask.get_by_id(id_=db_id)
 
     selections = task_data.data.get("routing_selections", {})
@@ -177,7 +193,15 @@ def start_routing_task(self, db_id: int) -> str:
     base=PipelineTask,
 )
 def handle_webhook_task(self, db_id: int, source_url: str, via: str):
-    """Handles webhook responses of the pipeline steps results"""
+    """
+    Evaluates webhook payloads and triggers the next step in the active pipeline.
+
+    Acts as the state machine's transition engine. It verifies the source URL,
+    checks for duplicate execution events, and delegates the progression logic
+    to the specific handler for the currently active pipeline (e.g., Wu-Palmer
+    or Mapping).
+    """
+
     task_data = ProcessingTask.get_by_id(db_id)
 
     known_urls = [
@@ -262,7 +286,10 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
 
 
 def handle_wu_palmer_progression(task_data: ProcessingTask, db_id: int, source_url: str):
-    """Handle progression of the wu-palmer pipeline"""
+    """
+    Handle progression of the wu-palmer pipeline,
+    by checking the source URL and triggering the next step in the sequence.
+    """
 
     if source_url == task_data.data.get(f"{WU_PALMER_PLUGIN}_url"):
         start_transformers.apply_async(
@@ -283,7 +310,10 @@ def handle_wu_palmer_progression(task_data: ProcessingTask, db_id: int, source_u
 
 
 def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url: str):
-    """Handle progression of the mapping pipeline"""
+    """
+    Handle progression of the mapping pipeline,
+    by checking the source URL and triggering the next step in the sequence.
+    """
 
     if source_url == task_data.data.get(f"{MAPPING_PLUGIN}_url"):
         start_aggregator.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
