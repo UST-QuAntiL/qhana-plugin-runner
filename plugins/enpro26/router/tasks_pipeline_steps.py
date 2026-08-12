@@ -101,6 +101,8 @@ def launch_next_pipeline(task_data: ProcessingTask):
         MDS_PLUGIN,
     ):
         task_data.data.pop(f"{reused_step}_url", None)
+
+    # Reset the tracking of webhook events and progress for the new pipeline
     task_data.data["progressed_via"] = {}
     task_data.data["webhook_seen"] = {}
 

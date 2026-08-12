@@ -98,6 +98,7 @@ class PipelineTask(CELERY.Task):
 
 def log_task_event(task_data: ProcessingTask, message: str, level: str = "info"):
     """Log a message to the console and to the task log shown in the UI."""
+    # TODO: Remove logging from ui and add it only to console.
     getattr(TASK_LOGGER, level)(message)
     task_data.add_task_log_entry(message)
     task_data.save(commit=True)
@@ -264,6 +265,7 @@ def run_pipeline_step(
             level="warning",
         )
 
+    # In addition to the webhook, arm a watchdog poller to recover from missed events. 
     watchdog_webhook = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
     monitor_result.s(
         result_url=task_url,

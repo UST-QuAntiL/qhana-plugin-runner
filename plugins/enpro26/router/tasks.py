@@ -200,6 +200,13 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     checks for duplicate execution events, and delegates the progression logic
     to the specific handler for the currently active pipeline (e.g., Wu-Palmer
     or Mapping).
+
+    Attributes:
+        db_id (int): The database ID of the processing task.
+        source_url (str): The URL from which the webhook event originated.
+        via (str): The method of delivery, either "webhook" or "watchdog". 
+            Webhook indicates a direct event from the sub-plugin, while watchdog indicates a recovery through polling after a missed webhook.
+            Webhook and watchdog can trigger at the same time
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
@@ -252,10 +259,12 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
             f"already progressed via {progressed_via[source_url]}.",
         )
         return "Sub-task already progressed"
+    
     progressed_via[source_url] = delivery
     task_data.data["progressed_via"] = progressed_via
     task_data.save(commit=True)
 
+    # Logging
     if delivery == "watchdog":
         seen_at = task_data.data.get("webhook_seen", {}).get(source_url)
         if seen_at:
