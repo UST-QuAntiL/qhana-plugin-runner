@@ -265,7 +265,7 @@ def run_pipeline_step(
             level="warning",
         )
 
-    # In addition to the webhook, arm a watchdog poller to recover from missed events. 
+    # In addition to the webhook, arm a watchdog poller to recover from missed events.
     watchdog_webhook = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
     monitor_result.s(
         result_url=task_url,

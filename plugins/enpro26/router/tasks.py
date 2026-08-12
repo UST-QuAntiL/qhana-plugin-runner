@@ -204,7 +204,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     Attributes:
         db_id (int): The database ID of the processing task.
         source_url (str): The URL from which the webhook event originated.
-        via (str): The method of delivery, either "webhook" or "watchdog". 
+        via (str): The method of delivery, either "webhook" or "watchdog".
             Webhook indicates a direct event from the sub-plugin, while watchdog indicates a recovery through polling after a missed webhook.
             Webhook and watchdog can trigger at the same time
     """
@@ -259,7 +259,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
             f"already progressed via {progressed_via[source_url]}.",
         )
         return "Sub-task already progressed"
-    
+
     progressed_via[source_url] = delivery
     task_data.data["progressed_via"] = progressed_via
     task_data.save(commit=True)
