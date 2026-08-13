@@ -17,10 +17,12 @@
 from collections import namedtuple
 from typing import NamedTuple, Type
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from qhana_plugin_runner.plugin_utils.attributes import (
+    AttributeMetadata,
     dict_deserializer,
     dict_serializer,
     parse_attribute_metadata,
@@ -378,3 +380,46 @@ def test_set_tuple_serialization_roundtrip(entities: list):
     )
     deserialized_entities = list(deserialize(entity) for entity in serialized_entities)
     assert_sequence_equals(expected=entities, actual=deserialized_entities)
+
+
+@pytest.mark.parametrize(
+    "separator",
+    [
+        pytest.param(..., id="missing"),
+        pytest.param(None, id="null"),
+        pytest.param("", id="empty"),
+    ],
+)
+def test_multiple_without_separator_raises(separator):
+    metadata = {"ID": "x", "type": "string", "multiple": True}
+    if separator is not ...:
+        metadata["separator"] = separator
+
+    with pytest.raises(ValueError, match="'x'"):
+        AttributeMetadata.from_dict(metadata)
+
+    kwargs = {} if separator is ... else {"separator": separator}
+
+    with pytest.raises(ValueError, match="'x'"):
+        AttributeMetadata("x", "string", "X", multiple=True, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "separator",
+    [
+        pytest.param(" ", id="space"),
+        pytest.param("\n", id="newline"),
+        pytest.param(";", id=";"),
+        pytest.param("$", id="$"),
+    ],
+)
+def test_multiple_with_separator(separator):
+    attr = AttributeMetadata.from_dict(
+        {"ID": "x", "type": "string", "multiple": True, "separator": separator}
+    )
+    assert attr.multiple is True
+    assert attr.separator == separator
+
+    attr2 = AttributeMetadata("y", "string", "Y", multiple=True, separator=separator)
+    assert attr2.multiple is True
+    assert attr2.separator == separator
