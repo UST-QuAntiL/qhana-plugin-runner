@@ -30,6 +30,7 @@ from .schemas import (
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
+    FINALIZE_STEP,
     InputParameters,
     InputParametersSchema,
 )
@@ -73,6 +74,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
 
     if not queue:
         # TODO: Add Dimension reduction here
+        task_data.data["current_pipeline"] = FINALIZE_STEP
         params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
             task_data.parameters
         )
@@ -101,10 +103,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
         MDS_PLUGIN,
     ):
         task_data.data.pop(f"{reused_step}_url", None)
-
-    # Reset the tracking of webhook events and progress for the new pipeline
-    task_data.data["progressed_via"] = {}
-    task_data.data["webhook_seen"] = {}
+    task_data.data["progressed_urls"] = []
 
     # Route to the correct starting step
     if next_pipeline == WU_PALMER_PLUGIN:
