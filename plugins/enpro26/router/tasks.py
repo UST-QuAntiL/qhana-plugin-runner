@@ -22,7 +22,6 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
-from qhana_plugin_runner.tasks import save_task_result
 
 from . import Router
 from .schemas import (
@@ -33,6 +32,7 @@ from .schemas import (
     TRANSFORMERS_PLUGIN,
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
     InputParameters,
     InputParametersSchema,
 )
@@ -49,6 +49,7 @@ from .tasks_pipeline_steps import (
     start_aggregator,
     start_mds,
     finalize_pipeline,
+    finalize_vector_concat,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -177,6 +178,7 @@ def handle_webhook_task(self, db_id: int, source_url: str):
         task_data.data.get(f"{TRANSFORMERS_PLUGIN}_url"),
         task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"),
         task_data.data.get(f"{MDS_PLUGIN}_url"),
+        task_data.data.get(f"{VECTOR_CONCAT_PLUGIN}_url"),
     ]
 
     if not source_url or source_url not in known_urls:
@@ -214,6 +216,10 @@ def handle_wu_palmer_progression(task_data: ProcessingTask, db_id: int, source_u
         finalize_pipeline.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
+    elif source_url == task_data.data.get(f"{VECTOR_CONCAT_PLUGIN}_url"):
+        finalize_vector_concat.apply_async(
+            args=[db_id, source_url], countdown=CELERY_COUNTDOWN
+        )
 
 
 def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url: str):
@@ -225,5 +231,9 @@ def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url
         start_mds.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
     elif source_url == task_data.data.get(f"{MDS_PLUGIN}_url"):
         finalize_pipeline.apply_async(
+            args=[db_id, source_url], countdown=CELERY_COUNTDOWN
+        )
+    elif source_url == task_data.data.get(f"{VECTOR_CONCAT_PLUGIN}_url"):
+        finalize_vector_concat.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )

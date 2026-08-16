@@ -52,7 +52,11 @@ CONSIDERED_FALSE: Set[str] = {"0", "false", "f", "no", "n", "off", "null", "nil"
 
 @dataclass
 class AttributeMetadata:
-    """Dataclass for entity attribute metadata."""
+    """Dataclass for entity attribute metadata.
+
+    Raises:
+        ValueError: if ``multiple`` is True but no ``separator`` is defined
+    """
 
     ID: str
     attribute_type: str
@@ -60,14 +64,27 @@ class AttributeMetadata:
     description: str = ""
     multiple: bool = False
     ordered: bool = False
-    separator: str = ";"
+    separator: str = ""
     ref_target: Optional[str] = None
     schema: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self):
+        if self.multiple and not self.separator:
+            raise ValueError(
+                f"Attribute '{self.ID}' is marked as 'multiple' but has no separator defined!"
+            )
+
     @staticmethod
     def from_dict(metadata: Dict[str, Union[str, bool]]) -> "AttributeMetadata":
-        """Create a AttributeMetadata instance from an entity dict."""
+        """Create a AttributeMetadata instance from an entity dict.
+
+        Raises:
+            ValueError: if the attribute is marked as ``multiple`` but defines no separator
+
+        Returns:
+            AttributeMetadata: the parsed attribute metadata
+        """
         mapped = {}
         extra = {}
         for key, value in metadata.items():
@@ -80,6 +97,10 @@ class AttributeMetadata:
         for bool_attr in ("multiple", "ordered"):
             if bool_attr in mapped:
                 mapped[bool_attr] = parse_bool(mapped[bool_attr])
+        if mapped.get("multiple") and not mapped.get("separator"):
+            raise ValueError(
+                f"Attribute '{mapped['ID']}' is marked as 'multiple' but has no separator defined!"
+            )
         return AttributeMetadata(**mapped, extra=extra)
 
     def to_dict(self):

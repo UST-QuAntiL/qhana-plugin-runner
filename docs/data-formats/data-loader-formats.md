@@ -112,6 +112,7 @@ ordered
 
 separator
 :   A character sequence that separates the scalar values. (only used in serialization formats that do not natively support lists for attributes e.g. csv)
+    Required (and must not be empty) if `multiple` is `True`
 
 refTarget
 :   A filename that contains the entities referenced in this attribute (when type is `ref`). If empty all entites must be searched for in all available files.
