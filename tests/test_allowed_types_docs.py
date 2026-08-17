@@ -15,15 +15,15 @@
 """
 Tests that the allowed types documentation matches the allowed types definition.
 
-``docs/data-formats/allowed-types.md`` is the human readable rendering of the enums in
-``tests/allowed_types.py``. Both are maintained by hand, so this module fails whenever they
-drift apart or whenever the anchors the plugin documentation links to would break.
+``docs/data-formats/allowed-types.md`` is the documentation of the enums in
+``tests/allowed_types.py``. Both are maintained by hand, so this module fails
+whenever they drift apart or whenever the anchors the plugin documentation links
+to would break.
 """
 
 import importlib.util
 import re
 from pathlib import Path
-from typing import Dict, Set
 
 import pytest
 
@@ -31,7 +31,6 @@ from .allowed_types import (
     AllowedContentTypes,
     AllowedDataTypesNoFormat,
     AllowedDataTypesWithFormat,
-    type_anchor,
 )
 
 REPO_ROOT = Path(__file__).parents[1]
@@ -44,10 +43,10 @@ PLUGIN_AUTODOC = REPO_ROOT / "docs" / "plugin_autodoc.py"
 _ENTRY = re.compile(r"^\((dt|ct)-(\S+?)\)=\n`([^`\n]+)`$", re.MULTILINE)
 
 
-def _documented_types() -> Dict[str, Dict[str, str]]:
+def _documented_types() -> dict[str, dict[str, str]]:
     """Map ``dt``/``ct`` to the documented types and their anchors."""
     doc = ALLOWED_TYPES_DOC.read_text(encoding="utf-8")
-    documented: Dict[str, Dict[str, str]] = {"dt": {}, "ct": {}}
+    documented: dict[str, dict[str, str]] = {"dt": {}, "ct": {}}
     for prefix, slug, value in _ENTRY.findall(doc):
         assert (
             value not in documented[prefix]
@@ -65,17 +64,17 @@ def _load_plugin_autodoc():
     return module
 
 
-def _allowed_data_types() -> Set[str]:
+def _allowed_data_types() -> set[str]:
     return {e.value for e in AllowedDataTypesWithFormat} | {
         e.value for e in AllowedDataTypesNoFormat
     }
 
 
-def _allowed_content_types() -> Set[str]:
+def _allowed_content_types() -> set[str]:
     return {e.value for e in AllowedContentTypes}
 
 
-def _assert_same(documented: Set[str], allowed: Set[str], kind: str):
+def _assert_same(documented: set[str], allowed: set[str], kind: str):
     missing = sorted(allowed - documented)
     extra = sorted(documented - allowed)
     if missing or extra:
@@ -87,9 +86,15 @@ def _assert_same(documented: Set[str], allowed: Set[str], kind: str):
         )
 
 
+def _type_anchor(value: str, prefix: str) -> str:
+    # "*" would slugify to nothing, so it is spelled out ("*" -> "wildcard",
+    # "entity/*" -> "entity-wildcard")
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower().replace("*", "wildcard")).strip("-")
+    return f"{prefix}-{slug}"
+
+
 @pytest.mark.parametrize("prefix", ["dt", "ct"])
 def test_documentation_is_not_empty(prefix):
-    """Guard against a silently failing parser that would make the other tests vacuous."""
     documented = _documented_types()[prefix]
     assert documented, (
         f"No '{prefix}' entries found in {ALLOWED_TYPES_DOC.relative_to(REPO_ROOT)}."
@@ -113,7 +118,7 @@ def test_documented_anchors_are_the_generated_anchors():
         ("ct", _allowed_content_types()),
     ):
         for value in sorted(values):
-            expected = type_anchor(value, prefix)
+            expected = _type_anchor(value, prefix)
             actual = documented[prefix].get(value)
             assert actual == expected, (
                 f"Anchor for '{value}' is '({actual})=' but the generated links in"
@@ -129,7 +134,7 @@ def test_plugin_autodoc_anchors_agree():
         ("ct", _allowed_content_types()),
     ):
         for value in sorted(values):
-            assert plugin_autodoc.type_anchor(value, prefix) == type_anchor(
+            assert plugin_autodoc.type_anchor(value, prefix) == _type_anchor(
                 value, prefix
             ), (
                 f"docs/plugin_autodoc.py and tests/allowed_types.py disagree on the anchor"

@@ -1,25 +1,22 @@
 # Allowed Data Types and Content Types
 
-This page is the complete list of the data types and content types (mimetypes) a QHAna plugin
-may declare in its `dataInput` and `dataOutput` metadata.
-
-The list is enforced. `tests/test_plugin_metadata_types.py` requests the metadata of every
-registered plugin and fails if it finds a type that is not listed here. The machine-readable
-counterpart of this page lives in {source}`tests/allowed_types.py`.
+This page contains the complete list of the data types and content types (mimetypes) a QHAna plugin may declare in its `dataInput` and `dataOutput` metadata.
 
 :::{important}
-A new type must be added in **both** places: to the enums in {source}`tests/allowed_types.py`
-and to this page. `tests/test_allowed_types_docs.py` fails if the two drift apart.
+When adding a new type, it must be registered in **both** places: the enums in
+{source}`tests/allowed_types.py` and this page. {source}`tests/test_allowed_types_docs.py`
+will fail if the two get out of sync.
 
-Before adding a type, check whether an existing one fits. The
-[data file examples](examples/index.rst) describe the formats in detail, and
-[Input Data Model](data-model.rst) explains the underlying entity, relation and graph model.
+Before adding a new type, check whether an existing one already fits your case.
+See the [data file examples](examples/index.rst) for detailed format descriptions,
+and the [Input Data Model](data-model.rst) for the underlying entity, relation, and
+graph model.
 :::
 
 ## Data Types
 
-A data type describes *what* the data means. It is independent of the serialization format,
-which is given by the content type.
+A data type describes the meaning of  data.
+It is independent of the serialization format, which is given by the content type.
 
 ### Namespaced Data Types
 
@@ -27,9 +24,8 @@ The regular form of a data type is `namespace/name`.
 
 (dt-wildcard)=
 `*`
-: Wildcard. The plugin accepts (or produces) data of any type. Use it only when the plugin
-  genuinely does not care about the meaning of the data, for example in generic file
-  conversion or SQL processing plugins.
+: Wildcard. The plugin accepts (or produces) data of any type.
+  Use it only when the plugin genuinely does not care about the meaning of the data, for example in generic file conversion or SQL processing plugins.
 
 (dt-custom-clusters)=
 `custom/clusters`
@@ -151,18 +147,16 @@ The regular form of a data type is `namespace/name`.
 
 (dt-table-html)=
 `table/html`
-: A self-contained html document rendering a table, produced by the confusion matrix
-  visualization plugin. Always served as `text/html`.
+: A self-contained html document rendering a table, produced by the confusion matrix visualization plugin.
+  Always served as `text/html`.
 
 ### Data Types Without a Namespace
 
-These types predate the `namespace/name` convention and are kept only because existing
-plugins still declare them.
+These types predate the `namespace/name` convention and are kept only because existing plugins still declare them.
 
 :::{danger}
-Do not use these types in new plugins. See
-[Current Non-Standard Custom Types](examples/custom.rst#current-non-standard-custom-types)
-for the replacements.
+Do not use these types in new plugins.
+See [Current Non-Standard Custom Types](examples/custom.rst#current-non-standard-custom-types) for the replacements.
 :::
 
 (dt-circuit)=
@@ -182,8 +176,7 @@ for the replacements.
 (dt-representative-circuit)=
 `representative-circuit`
 : An example circuit illustrating the circuit a plugin executed, usually as QASM.
-  Use [`executable/circuit`](#dt-executable-circuit) with a data name starting with
-  `representative-circuit` instead.
+  Use [`executable/circuit`](#dt-executable-circuit) with a data name starting with `representative-circuit` instead.
 
 (dt-txt)=
 `txt`
@@ -195,8 +188,8 @@ for the replacements.
 
 ## Content Types
 
-A content type is the mimetype of the serialized data. It says *how* the data is encoded, the
-data type says what it means. Content types should be RFC-compliant.
+A content type is the mimetype of the serialized data.
+It defines *how* the data is encoded.
 
 (ct-wildcard)=
 `*`
@@ -204,19 +197,16 @@ data type says what it means. Content types should be RFC-compliant.
 
 (ct-application-x-lines-json)=
 `application/X-lines+json`
-: One json object per line. The streamable counterpart of `application/json` for entity data.
+: One json object per line. The streamable counterpart of `application/json`.
   Details: [Entities application/X-lines+json](examples/entities.rst#entities-application-x-lines-json)
 
 (ct-application-json)=
 `application/json`
-: Json. The only format that can represent nested values, and therefore required for
-  provenance data.
-  Details: [Entities application/json](examples/entities.rst#entities-application-json)
+: Json. Details: [Entities application/json](examples/entities.rst#entities-application-json)
 
 (ct-application-octet-stream)=
 `application/octet-stream`
-: Binary data of unknown or unreliably reported format. Accepted by plugins that sniff the
-  format from the file contents.
+: Raw binary data.
 
 (ct-application-qasm)=
 `application/qasm`
@@ -224,7 +214,7 @@ data type says what it means. Content types should be RFC-compliant.
 
 (ct-application-vnd-recordare-musicxml-xml)=
 `application/vnd.recordare.musicxml+xml`
-: MusicXML, the registered mimetype for sheet music.
+: MusicXML.
 
 (ct-application-xml)=
 `application/xml`
@@ -232,8 +222,7 @@ data type says what it means. Content types should be RFC-compliant.
 
 (ct-application-zip)=
 `application/zip`
-: A zip archive bundling several files. Used by the data types that ship one file per
-  attribute, such as [`relation/attribute-distances`](#dt-relation-attribute-distances).
+: A zip archive bundling several files.
 
 (ct-audio-midi)=
 `audio/midi`
@@ -241,8 +230,7 @@ data type says what it means. Content types should be RFC-compliant.
 
 (ct-audio-x-midi)=
 `audio/x-midi`
-: MIDI. The unregistered variant, still emitted by some tools, so it is accepted alongside
-  [`audio/midi`](#ct-audio-midi).
+: MIDI.
 
 (ct-image-svg-xml)=
 `image/svg+xml`
@@ -250,14 +238,12 @@ data type says what it means. Content types should be RFC-compliant.
 
 (ct-text-csv)=
 `text/csv`
-: CSV with a header row. The streamable tabular format for entity data.
+: CSV with a header row. 
   Details: [Entities text/csv](examples/entities.rst#entities-text-csv)
 
 (ct-text-html)=
 `text/html`
-: A self-contained html document, used for the presentational data types
-  [`image/html`](#dt-image-html), [`table/html`](#dt-table-html) and
-  [`custom/plot`](#dt-custom-plot).
+: A html document.
 
 (ct-text-plain)=
 `text/plain`
@@ -265,9 +251,8 @@ data type says what it means. Content types should be RFC-compliant.
 
 (ct-text-xml)=
 `text/xml`
-: XML declared as text. Accepted alongside [`application/xml`](#ct-application-xml).
+: XML declared as text.
 
 (ct-text-x-qasm)=
 `text/x-qasm`
-: OpenQASM declared as text. Accepted alongside
-  [`application/qasm`](#ct-application-qasm).
+: OpenQASM declared as text.

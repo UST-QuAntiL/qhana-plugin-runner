@@ -5,29 +5,6 @@ from pathlib import Path
 ALLOWED_TYPES_DOC = "data-formats/allowed-types.md"
 
 
-def type_anchor(value: str, prefix: str) -> str:
-    """Build the documentation anchor for a data_type or content_type.
-
-    The anchors are the link targets in ``docs/data-formats/allowed-types.md``.
-    Use the prefix ``dt`` for data types and ``ct`` for content types.
-
-    ``tests/allowed_types.py`` contains a copy of this function (this script must run
-    standalone during the doc build and cannot import from the test package).
-    ``tests/test_allowed_types_docs.py`` asserts that both agree.
-    """
-    # "*" would slugify to nothing, so it is spelled out ("*" -> "wildcard",
-    # "entity/*" -> "entity-wildcard")
-    slug = re.sub(r"[^a-z0-9]+", "-", value.lower().replace("*", "wildcard")).strip("-")
-    return f"{prefix}-{slug}"
-
-
-def link_types(types, prefix: str) -> str:
-    """Render types as links into the allowed types documentation."""
-    # "#target" links resolve against the explicit MyST targets of the whole project, unlike
-    # "path.md#target" links, which MyST can only resolve for auto-generated heading anchors.
-    return ", ".join(f"[`{t}`](#{type_anchor(t, prefix)})" for t in sorted(types))
-
-
 def normalize_mimetype_like(mimetype: str):
     if not mimetype or mimetype == "*":
         return "*/*"
@@ -52,13 +29,18 @@ def prepare_data_metadata(metadata):
     return metadata
 
 
-def collect_raw_types(data_metadata):
-    """Collect the declared (not normalized) data and content types.
+def type_anchor(value: str, prefix: str) -> str:
+    # "*" would slugify to nothing, so it is spelled out
+    # ("*" -> "wildcard", "entity/*" -> "entity-wildcard")
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower().replace("*", "wildcard")).strip("-")
+    return f"{prefix}-{slug}"
 
-    ``prepare_data_metadata`` normalizes the metadata in place, so the declared values have to
-    be captured before it runs. The overview lists them verbatim to match the allowed types
-    documentation.
-    """
+
+def link_types(types, prefix: str) -> str:
+    return ", ".join(f"[`{t}`](#{type_anchor(t, prefix)})" for t in sorted(types))
+
+
+def collect_raw_types(data_metadata):
     data_types = set()
     content_types = set()
     for m in data_metadata:
