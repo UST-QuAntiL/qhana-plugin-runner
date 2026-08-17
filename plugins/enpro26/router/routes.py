@@ -359,17 +359,22 @@ class RoutingStepView(MethodView):
 # --- WEBHOOOK ---
 @ROUTER_BLP.route("/<int:db_id>/webhook/")
 class WebhookView(MethodView):
-    """Endpoint to receive webhook updates from called plugins."""
+    """
+    Receives and processes state update webhooks from executed sub-plugins.
+
+    Listens for 'status' events from plugins currently executing a pipeline step.
+    It triggers the `handle_webhook_task` to progress the next step.
+    """
 
     @ROUTER_BLP.response(HTTPStatus.OK)
     def post(self, db_id: int):
         source_url = request.args.get("source")
         event = request.args.get("event")
+        via = request.args.get("via")  # "watchdog" if delivered by the polling watchdog
 
         if source_url and event == "status":
-            # Countdown prevent overload for backend.
             handle_webhook_task.apply_async(
-                kwargs={"db_id": db_id, "source_url": source_url}, countdown=2
+                kwargs={"db_id": db_id, "source_url": source_url, "via": via},
+                countdown=2,
             )
-
         return "Webhook received", HTTPStatus.OK

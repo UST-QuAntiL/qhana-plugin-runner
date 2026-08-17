@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 from urllib.parse import urljoin
 
 from requests import post
-from requests.exceptions import ConnectionError, RequestException
+from requests.exceptions import ConnectionError, RequestException, Timeout
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.requests import REQUEST_SESSION, open_url
@@ -172,6 +172,8 @@ def subscribe(
     webhook_url: str,
     events: Union[Literal["all"], Sequence[str]] = "all",
     check_for_updates: bool = True,
+    monitor_countdown: int = 1,
+    monitor_webhook_url: Optional[str] = None,
 ) -> bool:
     """Subscribe to task result events.
 
@@ -180,6 +182,8 @@ def subscribe(
         webhook_url (str): the webhook url that will receive event notifications.
         events ("all"|Sequence[str], optional): the type of events to subscribe to. Defaults to "all".
         check_for_updates (bool, optional): whether to check for (status and steps) updates after subscribing to handle possible race conditions. Defaults to True.
+        monitor_countdown (int, optional): the number of seconds to wait before monitoring the result. Defaults to 1.
+        monitor_webhook_url (Optional[str], optional): the webhook url to use for monitoring. Defaults to None.
 
     Returns:
         bool: True if the subscription was registered
@@ -212,13 +216,13 @@ def subscribe(
         if monitor:
             task = monitor_result.s(
                 result_url=result_url,
-                webhook_url=webhook_url,
+                webhook_url=monitor_webhook_url or webhook_url,
                 monitor=monitor,
                 retry=False,
             )
 
         if task:
-            task.apply_async(delay=1)
+            task.apply_async(delay=monitor_countdown)
 
     return subscribed
 
@@ -227,7 +231,7 @@ def subscribe(
     name=f"{__name__}.monitor_result",
     bind=True,
     ignore_result=True,
-    autoretry_for=(ResultUnchangedError, ConnectionError),
+    autoretry_for=(ResultUnchangedError, ConnectionError, Timeout),
     retry_backoff=True,
     max_retries=None,
 )
@@ -266,7 +270,7 @@ def monitor_result(
     name=f"{__name__}.monitor_external_substep",
     bind=True,
     ignore_result=True,
-    autoretry_for=(ResultUnchangedError, ConnectionError),
+    autoretry_for=(ResultUnchangedError, ConnectionError, Timeout),
     retry_backoff=True,
     max_retries=None,
 )
@@ -303,9 +307,9 @@ def monitor_external_substep(
     name=f"{__name__}.call_webhook",
     bind=True,
     ignore_result=True,
-    autoretry_for=(ConnectionError,),
+    autoretry_for=(ConnectionError, Timeout),
     retry_backoff=True,
     max_retries=3,
 )
 def call_webhook(self, webhook_url: str, task_url: str, event_type: str):
-    post(webhook_url, params={"source": task_url, "event": event_type}, timeout=1)
+    post(webhook_url, params={"source": task_url, "event": event_type}, timeout=5)

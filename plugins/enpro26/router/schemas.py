@@ -30,6 +30,8 @@ AGGREGATOR_PLUGIN = "aggregator"
 MDS_PLUGIN = "mds"
 VECTOR_CONCAT_PLUGIN = "vector_concat"
 
+FINALIZE_STEP = "finalize"
+
 # Names of the plugins invoked by the routing pipeline. The runner serves
 # plugin metadata at ``/plugins/<name>/`` and redirects a bare name to the
 # newest installed version. The route handler turns these into external

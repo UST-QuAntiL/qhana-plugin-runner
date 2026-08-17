@@ -13,12 +13,16 @@
 # limitations under the License.
 
 import json
+import threading
 
 import pytest
+from requests.exceptions import Timeout
 
+from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from router.tasks import handle_webhook_task, start_routing_task
-from router.tasks_pipeline_steps import start_wu_palmer, start_mapping, CELERY_COUNTDOWN
+from router.tasks_pipeline_steps import start_wu_palmer, start_mapping
+from router.tasks_helpers import CELERY_COUNTDOWN
 from router.schemas import (
     WU_PALMER_PLUGIN,
     MAPPING_PLUGIN,
@@ -44,9 +48,9 @@ def _setup_mock_task() -> ProcessingTask:
         "nInit": 4,
         "maxIter": 300,
         "missingDataHandling": "mean",
-        "concat_output": False,
-        "output_format": "csv",
-        "include_intermediate_results_in_output": False,
+        "concatOutput": False,
+        "outputFormat": "csv",
+        "includeIntermediateResultsInOutput": False,
     }
     db_task = ProcessingTask(
         task_name=start_routing_task.name, parameters=json.dumps(params)
@@ -224,7 +228,7 @@ def test_handle_webhook_routing_wu_palmer_progression(
     monkeypatch.setattr(next_task_path, mock_apply_async)
 
     # Simulate webhook hitting the traffic cop
-    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
+    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook")
 
     assert len(triggered) == 1
     assert triggered[0] == "next_step_triggered"
@@ -329,7 +333,7 @@ def test_handle_webhook_routing_mapping_progression(
     monkeypatch.setattr("requests.get", mock_get)
     monkeypatch.setattr(next_task_path, mock_apply_async)
 
-    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
+    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook")
 
     assert len(triggered) == 1
     assert triggered[0] == "next_step_triggered"
@@ -352,9 +356,39 @@ def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
 
     monkeypatch.setattr("requests.get", mock_get)
 
-    result = run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url)
+    result = run_task(
+        handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook"
+    )
 
     assert result == "Unrecognized pipeline state"
+
+
+def test_on_retry_logs_without_app_context():
+    """Celery calls ``on_retry`` outside of the task body, i.e. without an app context."""
+    db_task = _setup_mock_task()
+    # read before the thread starts, the expired attribute would need a session to reload
+    db_id = db_task.id
+
+    errors = []
+
+    def call_on_retry():
+        # a fresh thread has no Flask app context, just like celery's error handling
+        try:
+            start_wu_palmer.on_retry(
+                Timeout("read timed out"), "sub-task-id", (db_id,), {}, None
+            )
+        except BaseException as exc:  # noqa: BLE001 - the assertion below reports it
+            errors.append(exc)
+
+    thread = threading.Thread(target=call_on_retry)
+    thread.start()
+    thread.join()
+
+    assert not errors, f"on_retry raised {errors[0]!r}"
+
+    DB.session.expire_all()
+    reloaded = ProcessingTask.get_by_id(db_id)
+    assert "Transient error" in reloaded.task_log
 
 
 def test_handle_webhook_ignores_unrecognized_source():
@@ -363,7 +397,10 @@ def test_handle_webhook_ignores_unrecognized_source():
 
     # Feed an unknown URL to the webhook
     result = run_task(
-        handle_webhook_task, db_id=db_task.id, source_url="http://unknown-source"
+        handle_webhook_task,
+        db_id=db_task.id,
+        source_url="http://unknown-source",
+        via="webhook",
     )
 
     assert result == "Unrecognized webhook source"
