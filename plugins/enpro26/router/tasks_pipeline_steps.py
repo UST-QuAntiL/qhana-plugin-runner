@@ -74,7 +74,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
 
     if not queue:
         # TODO: Add Dimension reduction here
-        task_data.data["current_pipeline"] = FINALIZE_STEP
+        
         params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
             task_data.parameters
         )
@@ -82,7 +82,9 @@ def launch_next_pipeline(task_data: ProcessingTask):
             task_data.add_task_log_entry(
                 "Starting Vector concat plugin after all pipelines completed successfully."
             )
+            task_data.data["current_pipeline"] = FINALIZE_STEP
             task_data.save(commit=True)
+
             start_vector_concat.apply_async(args=[task_data.id])
             return
 
@@ -383,16 +385,17 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         ValueError: If the required 'entity/vector' output is missing.
     """
 
-    TASK_LOGGER.info("Finishing the Pipeline")
     task_data = ProcessingTask.get_by_id(db_id)
     params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
         task_data.parameters or "{}"
     )
 
+    current_pipeline_name = task_data.data.get("current_pipeline", "unknown")
+    TASK_LOGGER.info(f"DEBUGGING: Finishing the Pipeline '{current_pipeline_name}'")
+
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_dists_url = extract_output_url(outputs, "entity/vector")
-    current_pipeline_name = task_data.data.get("current_pipeline", "unknown")
-
+    
     if is_store_mds_output(params):
         STORE.persist_task_result(
             db_id,

@@ -11,20 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from sqlite3 import IntegrityError
+
 import requests
 from datetime import datetime, timezone
 from io import BytesIO
 from zipfile import ZipFile
 from pathlib import PurePath
 from celery.utils.log import get_task_logger
+from sqlalchemy import update
+from sqlalchemy.exc import SQLAlchemyError
 
 from qhana_plugin_runner.celery import CELERY
+from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.virtual_plugins import PluginState
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
-from . import Router
+from . import Router, ROUTER_BLP
 from .schemas import (
     NONE_PLUGIN,
     WU_PALMER_PLUGIN,
@@ -117,7 +123,7 @@ def preprocessing_task(self, db_id: int) -> str:
                     )
 
     TASK_LOGGER.info(
-        f"Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "
+        f"DEBUGGING: Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "
         f"taxonomy in the zip: {taxonomy_attributes}"
     )
 
@@ -225,7 +231,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         return "Unrecognized webhook source"
 
     delivery = via or "webhook"
-    TASK_LOGGER.info(f"Completion event for {source_url} received (via={delivery}).")
+    TASK_LOGGER.info(f"DEBUGGING: Completion event for {source_url} received (via={delivery}).")
 
     # remember the arrival before the (retryable) status request, so a slow handler
     # can still be told apart from an event that never arrived
@@ -250,22 +256,53 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
             f"Sub-plugin step failed ({source_url}). See the failed plugin's log for details."
         )
 
-    # status == "SUCCESS": guard against duplicate progression. The step
-    # completion can be delivered twice (webhook subscription and the polling
-    # watchdog), which would otherwise start the next step twice.
-    progressed_via = task_data.data.get("progressed_via", {})
-    if source_url in progressed_via:
-        log_task_event(
-            task_data,
-            f"Duplicate completion event for {source_url} (via={delivery}); "
-            f"already progressed via {progressed_via[source_url]}.",
-        )
-        return "Sub-task already progressed"
+    # SNYCHRONIZATION GUARD: ensure that only one process progresses the pipeline for this source URL
+    lock_key = f"router_sync_lock_{db_id}_{source_url}"
+    plugin_id = ROUTER_BLP.name
+    my_celery_id = self.request.id
 
+    try:
+        PluginState.get_value(ROUTER_BLP.name ,lock_key)
+        TASK_LOGGER.info(f"DEBUGGING: Lock for {lock_key} already exists. Checking if it's claimed...")
+    except KeyError:
+        try:
+            PluginState.set_value(
+                plugin_id=plugin_id,
+                key=lock_key,
+                value=0,
+                commit=True
+            )
+            TASK_LOGGER.info(f"DEBUGGING: Lock for {lock_key} created. Attempting to claim it...")
+        except SQLAlchemyError:
+            # Another process already created the lock entry, so we can ignore this error.
+            DB.session.rollback()
+            TASK_LOGGER.info(f"DEBUGGING: Lock creation collision for {lock_key} safely caught. Moving to claim step.")
+   
+    stmt = (
+        update(PluginState)
+        .where(PluginState.plugin_id == plugin_id)
+        .where(PluginState.key == lock_key)
+        .where(PluginState.value == 0)
+        .values(value=my_celery_id)
+    )
+    result = DB.session.execute(stmt)
+    DB.session.commit()
+
+    if result.rowcount == 0:
+        # We lost the race. Another process already updated the value from 'unclaimed'.
+        TASK_LOGGER.info(f"DEBUGGING: Duplicate completion event for {source_url} safely ignored (via={delivery}).")
+          
+        return "Sub-task already progressed"
+    else:
+        TASK_LOGGER.info(f"DEBUGGING: Lock for {lock_key} claimed by this process. Proceeding with progression.")
+
+    # UPDATE JSON
+    progressed_via = task_data.data.get("progressed_via", {})
     progressed_via[source_url] = delivery
     task_data.data["progressed_via"] = progressed_via
+    task_data.save(commit=True)
 
-    # Logging
+    # WATCHDOG LOGGING
     if delivery == "watchdog":
         seen_at = task_data.data.get("webhook_seen", {}).get(source_url)
         if seen_at:
@@ -282,6 +319,8 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
                 "recovered the lost completion event.",
                 level="warning",
             )
+
+    # PROGRESS PIPELINE
     current_pipeline = task_data.data.get("current_pipeline")
 
     if current_pipeline == WU_PALMER_PLUGIN:

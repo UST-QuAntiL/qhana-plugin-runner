@@ -83,7 +83,7 @@ class PipelineTask(CELERY.Task):
                         log_task_event(task_data, error_message, level="warning")
             except Exception as log_exc:  # Do not interrupt retry
                 TASK_LOGGER.warning(
-                    f"Could not record retry of step '{self.name}' (db_id={db_id}): {log_exc!r}"
+                    f"DEBUGGING: Could not record retry of step '{self.name}' (db_id={db_id}): {log_exc!r}"
                 )
         super().on_retry(exc, task_id, args, kwargs, einfo)
 
@@ -92,7 +92,7 @@ class PipelineTask(CELERY.Task):
         if db_id is not None:
             save_task_error.delay(failing_task_id=task_id, db_id=db_id)
         else:
-            TASK_LOGGER.error(f"Step '{self.name}' failed permanently: {exc!r}")
+            TASK_LOGGER.error(f"DEBUGGING ERROR:Step '{self.name}' failed permanently: {exc!r}")
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
@@ -180,7 +180,7 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
             )
             return MAPPING_PLUGIN if has_mapping else WU_PALMER_PLUGIN
     except Exception as e:
-        TASK_LOGGER.warning(f"Could not read mapping for {zip_path}: {e}")
+        TASK_LOGGER.warning(f"DEBUGGING WARNING: Could not read mapping for {zip_path}: {e}")
         return WU_PALMER_PLUGIN
 
 
@@ -206,13 +206,13 @@ def run_pipeline_step(
       the pipeline stuck in ``PENDING``. Both deliver the same completion event;
       ``handle_webhook_task`` keeps the loser of that race a no-op.
     """
-    TASK_LOGGER.info(f"Starting {logging_name} Step")
+    TASK_LOGGER.info(f"DEBUGGING: Starting {logging_name} Step")
 
     existing_task_url = task_data.data.get(f"{plugin_name}_url")
     if existing_task_url:
         task_url = existing_task_url
         TASK_LOGGER.info(
-            f"{logging_name} sub-task already started ({task_url}); skipping re-post."
+            f"DEBUGGING: {logging_name} sub-task already started ({task_url}); skipping re-post."
         )
     else:
         plugin_url = plugin_process_url(task_data, plugin_name)
@@ -223,7 +223,6 @@ def run_pipeline_step(
 
         task_url = urljoin(plugin_url, response.headers["Location"])
         task_data.data[f"{plugin_name}_url"] = task_url
-        log_task_event(task_data, f"Started {logging_name}.")
 
     webhook_url = task_data.data["webhook_url"].replace("localhost", "127.0.0.1")
     monitor_url = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
