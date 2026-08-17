@@ -51,6 +51,29 @@ from .tasks import (
     start_routing_task,
 )
 
+# Sections of the micro frontend: (title, field names, expanded by default).
+INPUT_FIELD_GROUPS = (
+    (
+        "Basic Data",
+        (
+            "entities_url",
+            "entities_metadata_url",
+            "taxonomies_zip_url",
+            "include_intermediate_results_in_output",
+        ),
+        True,
+    ),
+    ("Wu-Palmer Settings", ("root_is_part_of_hierarchy",), False),
+    ("Mapping Settings", ("distance_metric",), False),
+    ("Transformer Settings", ("transformer",), False),
+    (
+        "MDS Settings",
+        ("dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
+        False,
+    ),
+    ("Vector Concatenation Settings", ("concat_output", "output_format"), True),
+)
+
 TASK_LOGGER = get_task_logger(__name__)
 
 
@@ -197,12 +220,21 @@ class MicroFrontend(MethodView):
         default_values.update(data_dict)
         data_dict = default_values
 
+        groups = [
+            {
+                "title": title,
+                "expanded": expanded,
+                "schema": InputParametersSchema(only=field_names),
+            }
+            for title, field_names, expanded in INPUT_FIELD_GROUPS
+        ]
+
         return Response(
             render_template(
-                "simple_template.html",
+                "router_form.html",
                 name=Router.instance.name,
                 version=Router.instance.version,
-                schema=InputParametersSchema(),
+                groups=groups,
                 values=data_dict,
                 valid=valid,
                 errors=errors,
