@@ -142,7 +142,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["text/csv", "application/json"],
         metadata={
             "label": "Entities URL",
-            "description": "**[General Input]** URL to the entity list (e.g., subparts.csv).",
+            "description": "URL to the entity list (e.g., subparts.csv).",
             "input_type": "text",
         },
     )
@@ -153,7 +153,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/json"],
         metadata={
             "label": "Entities Attribute Metadata URL",
-            "description": "**[General Input]** URL to a file with the attribute metadata for the entities.",
+            "description": "URL to a file with the attribute metadata for the entities.",
             "input_type": "text",
             "related_to": "entities_url",
             "relation": "post",  # TODO: remove (?)
@@ -166,7 +166,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         data_content_types=["application/zip"],
         metadata={
             "label": "Taxonomies URL",
-            "description": "**[General Input]** URL to zip file with taxonomies.",
+            "description": "URL to zip file with taxonomies.",
             "input_type": "text",
             "related_to": "entities_url",
             "relation": "pre",
@@ -180,7 +180,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         load_default=False,
         metadata={
             "label": "Consider root node as part of the hierarchy",
-            "description": "**[Wu-Palmer Setting]** If the root node is part of the hierarchy, then items that are direct descendants of the "
+            "description": "If the root node is part of the hierarchy, then items that are direct descendants of the "
             "root node are considered similar to a certain degree. Otherwise they will be considered as not similar. "
             "e.g. when the root node of a color taxonomy also represents a color, it should be considered as part of "
             "the hierarchy",
@@ -196,7 +196,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
             "label": "Distance Metric",
             "description": textwrap.dedent(
                 r"""
-                **[Mapping Setting]** Metric to calculate the distances of the taxanomy mapping:  
+                Metric to calculate the distances of the taxanomy mapping:  
                 **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
                 **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
                 **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
@@ -212,7 +212,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         required=True,
         metadata={
             "label": "Transformer",
-            "description": "**[Transformer Setting]** Transformer that shall be used to transform the similarities to distances.",
+            "description": "Transformer that shall be used to transform the similarities to distances.",
             "input_type": "select",
         },
     )
@@ -223,7 +223,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         validate=ma.validate.Range(min=1),
         metadata={
             "label": "Dimensions",
-            "description": "**[MDS Setting]** Number of dimensions each output embedding will have.",
+            "description": "Number of dimensions each output embedding will have.",
             "input_type": "text",
         },
     )
@@ -235,7 +235,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Metric",
             "description": (
-                "**[MDS Setting]** Type of MDS that will be used. For nonmetric MDS, distances of "
+                "Type of MDS that will be used. For nonmetric MDS, distances of "
                 "exactly 0 are replaced with a small positive value below the "
                 "smallest positive distance because scikit-learn treats them "
                 "as missing values."
@@ -250,7 +250,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         validate=ma.validate.Range(min=1),
         metadata={
             "label": "SMACOF executions",
-            "description": "**[MDS Setting]** Number of times SMACOF will be executed with different initial values.",
+            "description": "Number of times SMACOF will be executed with different initial values.",
             "input_type": "text",
         },
     )
@@ -261,7 +261,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         validate=ma.validate.Range(min=1),
         metadata={
             "label": "SMACOF max iterations",
-            "description": "**[MDS Setting]** Maximum number of SMACOF iterations.",
+            "description": "Maximum number of SMACOF iterations.",
             "input_type": "text",
         },
     )
@@ -273,7 +273,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Missing distances",
             "description": (
-                "**[MDS Setting]** How missing (null) distances are replaced before MDS. "
+                "How missing (null) distances are replaced before MDS. "
                 "The replacement is computed from the known distances of the same attribute."
             ),
             "input_type": "select",
@@ -285,7 +285,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         load_default=False,
         metadata={
             "label": "Concat output",
-            "description": "**[Vector concat Setting]** If checked, the MDS output of all pipelines will be concatenated to one vector.",
+            "description": "If checked, the MDS output of all pipelines will be concatenated to one vector.",
             "input_type": "checkbox",
         },
     )
@@ -295,7 +295,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         validate=ma.validate.OneOf(("csv", "json", "lines")),
         metadata={
             "label": " Output Format",
-            "description": "**[Vector concat Setting]** Format of the output data.",
+            "description": "Format of the output data.",
             "input_type": "select",
             "options": {
                 "csv": "CSV",
@@ -310,7 +310,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         load_default=False,
         metadata={
             "label": "Include intermediate results",
-            "description": "**[General Setting]** If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
+            "description": "If checked, the intermediate plugin results (e.g. Wu-Palmer) will be included in the output.",
             "input_type": "checkbox",
         },
     )
