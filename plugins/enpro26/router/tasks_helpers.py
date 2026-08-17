@@ -28,7 +28,11 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
     load_entities,
 )
-from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint, monitor_result, subscribe
+from qhana_plugin_runner.plugin_utils.interop import (
+    get_plugin_endpoint,
+    monitor_result,
+    subscribe,
+)
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.tasks import TASK_DETAILS_CHANGED, save_task_error
 
@@ -92,7 +96,9 @@ class PipelineTask(CELERY.Task):
         if db_id is not None:
             save_task_error.delay(failing_task_id=task_id, db_id=db_id)
         else:
-            TASK_LOGGER.error(f"DEBUGGING ERROR:Step '{self.name}' failed permanently: {exc!r}")
+            TASK_LOGGER.error(
+                f"DEBUGGING ERROR:Step '{self.name}' failed permanently: {exc!r}"
+            )
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
@@ -104,7 +110,7 @@ def log_task_event(task_data: ProcessingTask, message: str, level: str = "info")
     task_data.save(commit=True)
     app = current_app._get_current_object()
     TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
-    
+
 
 def extract_output_url(outputs: list, data_type: str) -> str:
     """Finds the URL of a specific output from a plugin result based on its dataType."""
@@ -180,7 +186,9 @@ def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
             )
             return MAPPING_PLUGIN if has_mapping else WU_PALMER_PLUGIN
     except Exception as e:
-        TASK_LOGGER.warning(f"DEBUGGING WARNING: Could not read mapping for {zip_path}: {e}")
+        TASK_LOGGER.warning(
+            f"DEBUGGING WARNING: Could not read mapping for {zip_path}: {e}"
+        )
         return WU_PALMER_PLUGIN
 
 
@@ -229,11 +237,11 @@ def run_pipeline_step(
 
     try:
         subscribed = subscribe(
-            result_url=task_url, 
-            webhook_url=webhook_url, 
+            result_url=task_url,
+            webhook_url=webhook_url,
             events=["status"],
             monitor_countdown=CELERY_COUNTDOWN,
-            monitor_webhook_url=monitor_url
+            monitor_webhook_url=monitor_url,
         )
 
         if subscribed:
@@ -250,6 +258,7 @@ def run_pipeline_step(
             f"Subscription for {logging_name} failed ({e!r}); relying on the polling watchdog.",
             level="warning",
         )
+
 
 def is_store_mds_output(params: InputParameters) -> bool:
     """

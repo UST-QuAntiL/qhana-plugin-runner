@@ -74,7 +74,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
 
     if not queue:
         # TODO: Add Dimension reduction here
-        
+
         params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
             task_data.parameters
         )
@@ -395,7 +395,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_dists_url = extract_output_url(outputs, "entity/vector")
-    
+
     if is_store_mds_output(params):
         STORE.persist_task_result(
             db_id,
@@ -409,9 +409,6 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         vector_zip_urls = task_data.data.get("vector_zip_urls", [])
         vector_zip_urls.append(final_dists_url)
         task_data.data["vector_zip_urls"] = vector_zip_urls
-        task_data.add_task_log_entry(
-            f"Saved vector zip url of {current_pipeline_name} in task_data."
-        )
         task_data.save(commit=True)
 
     # trigger next pipeline
@@ -441,17 +438,6 @@ def start_vector_concat(self, db_id: int):
         task_data.parameters or "{}"
     )
     vector_zip_urls = task_data.data.get("vector_zip_urls", [])
-
-    if params.include_intermediate_results_in_output:
-        for vector_zip_url in vector_zip_urls:
-            prefix = task_data.data.get("current_pipeline", "unknown")
-            STORE.persist_task_result(
-                db_id,
-                vector_zip_url,
-                f"{prefix}_mds_final_vectors.zip",
-                "entity/vector",
-                "application/zip",
-            )
 
     payload = {
         "urls": "\n".join(vector_zip_urls),

@@ -231,7 +231,9 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         return "Unrecognized webhook source"
 
     delivery = via or "webhook"
-    TASK_LOGGER.info(f"DEBUGGING: Completion event for {source_url} received (via={delivery}).")
+    TASK_LOGGER.info(
+        f"DEBUGGING: Completion event for {source_url} received (via={delivery})."
+    )
 
     # remember the arrival before the (retryable) status request, so a slow handler
     # can still be told apart from an event that never arrived
@@ -243,7 +245,6 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
             )
             task_data.data["webhook_seen"] = webhook_seen
             task_data.save(commit=True)
-
 
     sub_task_result = requests.get(source_url, timeout=REQUEST_TIMEOUT).json()
     status = sub_task_result.get("status", "PENDING")
@@ -262,22 +263,23 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     my_celery_id = self.request.id
 
     try:
-        PluginState.get_value(ROUTER_BLP.name ,lock_key)
-        TASK_LOGGER.info(f"DEBUGGING: Lock for {lock_key} already exists. Checking if it's claimed...")
+        PluginState.get_value(ROUTER_BLP.name, lock_key)
+        TASK_LOGGER.info(
+            f"DEBUGGING: Lock for {lock_key} already exists. Checking if it's claimed..."
+        )
     except KeyError:
         try:
-            PluginState.set_value(
-                plugin_id=plugin_id,
-                key=lock_key,
-                value=0,
-                commit=True
+            PluginState.set_value(plugin_id=plugin_id, key=lock_key, value=0, commit=True)
+            TASK_LOGGER.info(
+                f"DEBUGGING: Lock for {lock_key} created. Attempting to claim it..."
             )
-            TASK_LOGGER.info(f"DEBUGGING: Lock for {lock_key} created. Attempting to claim it...")
         except SQLAlchemyError:
             # Another process already created the lock entry, so we can ignore this error.
             DB.session.rollback()
-            TASK_LOGGER.info(f"DEBUGGING: Lock creation collision for {lock_key} safely caught. Moving to claim step.")
-   
+            TASK_LOGGER.info(
+                f"DEBUGGING: Lock creation collision for {lock_key} safely caught. Moving to claim step."
+            )
+
     stmt = (
         update(PluginState)
         .where(PluginState.plugin_id == plugin_id)
@@ -290,11 +292,15 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
 
     if result.rowcount == 0:
         # We lost the race. Another process already updated the value from 'unclaimed'.
-        TASK_LOGGER.info(f"DEBUGGING: Duplicate completion event for {source_url} safely ignored (via={delivery}).")
-          
+        TASK_LOGGER.info(
+            f"DEBUGGING: Duplicate completion event for {source_url} safely ignored (via={delivery})."
+        )
+
         return "Sub-task already progressed"
     else:
-        TASK_LOGGER.info(f"DEBUGGING: Lock for {lock_key} claimed by this process. Proceeding with progression.")
+        TASK_LOGGER.info(
+            f"DEBUGGING: Lock for {lock_key} claimed by this process. Proceeding with progression."
+        )
 
     # UPDATE JSON
     progressed_via = task_data.data.get("progressed_via", {})

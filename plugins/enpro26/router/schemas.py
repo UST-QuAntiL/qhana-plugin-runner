@@ -197,7 +197,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "Distance Metric",
             "description": textwrap.dedent(
-            r"""
+                r"""
                 **[Mapping Setting]** Metric to calculate the distances of the taxanomy mapping:  
                 **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
                 **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
