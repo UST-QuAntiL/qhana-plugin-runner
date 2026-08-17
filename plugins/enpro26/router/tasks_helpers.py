@@ -28,7 +28,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
     load_entities,
 )
-from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint, monitor_result
+from qhana_plugin_runner.plugin_utils.interop import get_plugin_endpoint, monitor_result, subscribe
 from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.tasks import TASK_DETAILS_CHANGED, save_task_error
 
@@ -104,35 +104,7 @@ def log_task_event(task_data: ProcessingTask, message: str, level: str = "info")
     task_data.save(commit=True)
     app = current_app._get_current_object()
     TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
-
-
-def subscribe_to_plugin(task_result_url: str, webhook_url: str):
-    """
-    Subscribes the router to a sub-plugin's event stream.
-
-    Queries the target plugin's task URL to discover its subscription endpoint.
-    If available, it issues a POST request configuring the sub-plugin to send
-    'status' events back to the router's webhook listener.
-    """
-
-    webhook_url = webhook_url.replace("localhost", "127.0.0.1")
-    response = requests.get(task_result_url, timeout=REQUEST_TIMEOUT).json()
-    subscription_link = next(
-        (
-            link["href"]
-            for link in response.get("links", [])
-            if link["type"] == "subscribe"
-        ),
-        None,
-    )
-    if not subscription_link:
-        raise ValueError("Target plugin does not support subscriptions!")
-    requests.post(
-        subscription_link,
-        json={"command": "subscribe", "event": "status", "webhookHref": webhook_url},
-        timeout=REQUEST_TIMEOUT,
-    ).raise_for_status()
-
+    
 
 def extract_output_url(outputs: list, data_type: str) -> str:
     """Finds the URL of a specific output from a plugin result based on its dataType."""
@@ -253,30 +225,32 @@ def run_pipeline_step(
         task_data.data[f"{plugin_name}_url"] = task_url
         log_task_event(task_data, f"Started {logging_name}.")
 
-    webhook_url = task_data.data["webhook_url"]
+    webhook_url = task_data.data["webhook_url"].replace("localhost", "127.0.0.1")
+    monitor_url = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
 
     try:
-        subscribe_to_plugin(task_url, webhook_url)
-        log_task_event(task_data, f"Subscribed to {logging_name} events.")
+        subscribed = subscribe(
+            result_url=task_url, 
+            webhook_url=webhook_url, 
+            events=["status"],
+            monitor_countdown=CELERY_COUNTDOWN,
+            monitor_webhook_url=monitor_url
+        )
+
+        if subscribed:
+            log_task_event(task_data, f"Subscribed to {logging_name} events.")
+        else:
+            log_task_event(
+                task_data,
+                f"Subscription for {logging_name} failed; relying on the polling watchdog.",
+                level="warning",
+            )
     except Exception as e:
         log_task_event(
             task_data,
             f"Subscription for {logging_name} failed ({e!r}); relying on the polling watchdog.",
             level="warning",
         )
-
-    # In addition to the webhook, arm a watchdog poller to recover from missed events.
-    watchdog_webhook = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"
-    monitor_result.s(
-        result_url=task_url,
-        webhook_url=watchdog_webhook,
-        monitor="status",
-    ).apply_async(countdown=CELERY_COUNTDOWN)
-    log_task_event(
-        task_data,
-        f"Polling watchdog armed for {logging_name} ({task_url}), first poll in {CELERY_COUNTDOWN}s.",
-    )
-
 
 def is_store_mds_output(params: InputParameters) -> bool:
     """

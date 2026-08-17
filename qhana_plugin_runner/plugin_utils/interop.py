@@ -172,6 +172,8 @@ def subscribe(
     webhook_url: str,
     events: Union[Literal["all"], Sequence[str]] = "all",
     check_for_updates: bool = True,
+    monitor_countdown: int = 1,
+    monitor_webhook_url: Optional[str] = None,
 ) -> bool:
     """Subscribe to task result events.
 
@@ -180,6 +182,8 @@ def subscribe(
         webhook_url (str): the webhook url that will receive event notifications.
         events ("all"|Sequence[str], optional): the type of events to subscribe to. Defaults to "all".
         check_for_updates (bool, optional): whether to check for (status and steps) updates after subscribing to handle possible race conditions. Defaults to True.
+        monitor_countdown (int, optional): the number of seconds to wait before monitoring the result. Defaults to 1.
+        monitor_webhook_url (Optional[str], optional): the webhook url to use for monitoring. Defaults to None.
 
     Returns:
         bool: True if the subscription was registered
@@ -212,13 +216,13 @@ def subscribe(
         if monitor:
             task = monitor_result.s(
                 result_url=result_url,
-                webhook_url=webhook_url,
+                webhook_url=monitor_webhook_url or webhook_url,
                 monitor=monitor,
                 retry=False,
             )
 
         if task:
-            task.apply_async(delay=1)
+            task.apply_async(delay=monitor_countdown)
 
     return subscribed
 
