@@ -1,5 +1,8 @@
+import re
 from inspect import getfile
 from pathlib import Path
+
+ALLOWED_TYPES_DOC = "data-formats/allowed-types.md"
 
 
 def normalize_mimetype_like(mimetype: str):
@@ -26,6 +29,26 @@ def prepare_data_metadata(metadata):
     return metadata
 
 
+def type_anchor(value: str, prefix: str) -> str:
+    # "*" would slugify to nothing, so it is spelled out
+    # ("*" -> "wildcard", "entity/*" -> "entity-wildcard")
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower().replace("*", "wildcard")).strip("-")
+    return f"{prefix}-{slug}"
+
+
+def link_types(types, prefix: str) -> str:
+    return ", ".join(f"[`{t}`](#{type_anchor(t, prefix)})" for t in sorted(types))
+
+
+def collect_raw_types(data_metadata):
+    data_types = set()
+    content_types = set()
+    for m in data_metadata:
+        data_types.add(m["dataType"])
+        content_types.update(m["contentType"])
+    return data_types, content_types
+
+
 def get_plugin_info(plugin, metadata, base_path):
     info = {}
     info["identifier"] = plugin.identifier
@@ -35,12 +58,12 @@ def get_plugin_info(plugin, metadata, base_path):
     info["name"] = metadata["title"]
     info["description"] = metadata["description"] if metadata["description"] else ""
     info["tags"] = sorted(metadata["tags"])
-    info["input"] = [
-        prepare_data_metadata(m) for m in metadata["entryPoint"].get("dataInput", [])
-    ]
-    info["output"] = [
-        prepare_data_metadata(m) for m in metadata["entryPoint"].get("dataOutput", [])
-    ]
+    data_input = metadata["entryPoint"].get("dataInput", [])
+    data_output = metadata["entryPoint"].get("dataOutput", [])
+    info["input_raw_types"], info["input_raw_formats"] = collect_raw_types(data_input)
+    info["output_raw_types"], info["output_raw_formats"] = collect_raw_types(data_output)
+    info["input"] = [prepare_data_metadata(m) for m in data_input]
+    info["output"] = [prepare_data_metadata(m) for m in data_output]
     info["path"] = Path(getfile(type(plugin))).relative_to(base_path)
     return info
 
@@ -87,27 +110,21 @@ def write_merged_data(doc, plugins):
 
     for p in plugins:
         tags.update(p["tags"])
-        for input_def in p["input"]:
-            input_formats.update(input_def["contentType"])
-            input_datatypes.add(input_def["dataType"])
-        for output_def in p["output"]:
-            output_formats.update(output_def["contentType"])
-            output_datatypes.add(output_def["dataType"])
+        input_formats.update(p["input_raw_formats"])
+        input_datatypes.update(p["input_raw_types"])
+        output_formats.update(p["output_raw_formats"])
+        output_datatypes.update(p["output_raw_types"])
 
     doc.write("## Overview\n\n")
     doc.write(f"**Used tags:** {', '.join(f'`{t}`' for t in sorted(tags))}\n\n")
     doc.write(
-        f"**Input formats:** {', '.join(f'`{f}`' for f in sorted(input_formats))}\\\n"
+        f"Every type below links to its entry in the list of "
+        f"[allowed data types and content types]({ALLOWED_TYPES_DOC}).\n\n"
     )
-    doc.write(
-        f"**Output formats:** {', '.join(f'`{f}`' for f in sorted(output_formats))}\n\n"
-    )
-    doc.write(
-        f"**Input datatypes:** {', '.join(f'`{f}`' for f in sorted(input_datatypes))}\\\n"
-    )
-    doc.write(
-        f"**Output datatypes:** {', '.join(f'`{f}`' for f in sorted(output_datatypes))}\n\n"
-    )
+    doc.write(f"**Input formats:** {link_types(input_formats, 'ct')}\\\n")
+    doc.write(f"**Output formats:** {link_types(output_formats, 'ct')}\n\n")
+    doc.write(f"**Input datatypes:** {link_types(input_datatypes, 'dt')}\\\n")
+    doc.write(f"**Output datatypes:** {link_types(output_datatypes, 'dt')}\n\n")
 
 
 def write_plugin(doc, p):

@@ -13,13 +13,16 @@
 # limitations under the License.
 
 """
-This module defines enums for allowed data_types and content_types used in plugin metadata.
-Types needs to be added manually to these Enums.
+This module defines enums for allowed data_types and content_types used inplugin metadata.
 
 The Enums are organized into:
 - Data types, that follow a specific format (namespace/name)
 - Data types, that do not follow a specific format
 - Content types, that should be RFC-compliant.
+
+New types must be added manually to these Enums **and** to the documentation in
+``docs/data-formats/allowed-types.md``. ``tests/test_allowed_types_docs.py``
+fails if the two drift apart.
 """
 
 from enum import Enum
@@ -27,14 +30,15 @@ from enum import Enum
 
 class AllowedDataTypesWithFormat(Enum):
     """
-    Allowed data types of the following format: namespace/name.\\
-    Types, that do not follow this format can be find in :func:`AllowedDataTypesNoFormat`.
+    Allowed data types of the following format: namespace/name.
+    Data types that do not follow this format are listed in ``AllowedDataTypesNoFormat``.
     """
 
     # Standard data types of format namespace/name
     CUSTOM_CLUSTERS = "custom/clusters"
     CUSTOM_HELLO_WORLD_OUTPUT = "custom/hello-world-output"
     CUSTOM_KERNEL_MATRIX = "custom/kernel-matrix"
+    CUSTOM_NISQ_ANALYZER_RESULT = "custom/nisq-analyzer-result"
     CUSTOM_PCA_METADATA = "custom/pca-metadata"
     CUSTOM_PLOT = "custom/plot"
     ENTITY_WILDCARD = "entity/*"
@@ -59,8 +63,8 @@ class AllowedDataTypesWithFormat(Enum):
 
 class AllowedDataTypesNoFormat(Enum):
     """
-    Allowed data types that do not follow a specific format.\\
-    Data types that use the format (namespace/name) can be found in :func:`AllowedDataTypesWithFormat`.
+    Allowed data types that do not follow a specific format.
+    Data types that use the format (namespace/name) are listed in ``AllowedDataTypesWithFormat``.
     """
 
     WILDCARD = "*"
@@ -94,15 +98,3 @@ class AllowedContentTypes(Enum):
     TEXT_PLAIN = "text/plain"
     TEXT_XML = "text/xml"
     TEXT_X_QASM = "text/x-qasm"
-
-
-def is_valid_data_type(value: str) -> bool:
-    """Check if a data_type value is in allowed lists."""
-    return any(e.value == value for e in AllowedDataTypesWithFormat) or any(
-        e.value == value for e in AllowedDataTypesNoFormat
-    )
-
-
-def is_valid_content_type(value: str) -> bool:
-    """Check if a content_type value is in allowed lists."""
-    return any(e.value == value for e in AllowedContentTypes)
