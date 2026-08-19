@@ -75,6 +75,8 @@ def _setup_mock_task() -> ProcessingTask:
         AGGREGATOR_PLUGIN: "http://localhost:5005/plugins/attribute-distance-aggregator/",
         MDS_PLUGIN: "http://localhost:5005/plugins/attribute-distance-mds/",
     }
+
+    db_task.progress_value = 1
     db_task.save(commit=True)
     return db_task
 
