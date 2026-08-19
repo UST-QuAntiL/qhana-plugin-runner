@@ -162,6 +162,9 @@ def start_routing_task(self, db_id: int) -> str:
     none_selected = [attr for attr, option in selections.items() if option == NONE_PLUGIN]
 
     pipeline_queue = []
+    total_plugins = 2
+    # + 1, because the inital start value of progress_value has to be 1
+    # 1 for vector concatenation, which is always executed at the end of the pipeline
 
     if wu_palmer_attributes:
         task_data.add_task_log_entry(
@@ -169,6 +172,7 @@ def start_routing_task(self, db_id: int) -> str:
         )
         task_data.data[f"{WU_PALMER_PLUGIN}_attributes"] = "\n".join(wu_palmer_attributes)
         pipeline_queue.append(WU_PALMER_PLUGIN)
+        total_plugins += 4  # (Wu-Palmer, Transformers, Aggregator, MDS)
 
     if mapping_attributes:
         task_data.add_task_log_entry(
@@ -176,6 +180,7 @@ def start_routing_task(self, db_id: int) -> str:
         )
         task_data.data[f"{MAPPING_PLUGIN}_attributes"] = "\n".join(mapping_attributes)
         pipeline_queue.append(MAPPING_PLUGIN)
+        total_plugins += 3  # (Mapping, Aggregator, MDS)
 
     if one_hot_attributes:
         task_data.add_task_log_entry(
@@ -187,6 +192,11 @@ def start_routing_task(self, db_id: int) -> str:
 
     task_data.data["pipeline_queue"] = pipeline_queue
     task_data.data["current_pipeline"] = None
+
+    task_data.progress_target = total_plugins
+    task_data.progress_value = 1
+    task_data.progress_unit = "Steps"
+
     task_data.save(commit=True)
 
     # Trigger the first pipeline
@@ -328,6 +338,9 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
 
     # PROGRESS PIPELINE
     current_pipeline = task_data.data.get("current_pipeline")
+
+    task_data.progress_value += 1
+    task_data.save(commit=True)
 
     if current_pipeline == WU_PALMER_PLUGIN:
         handle_wu_palmer_progression(task_data, db_id, source_url)
