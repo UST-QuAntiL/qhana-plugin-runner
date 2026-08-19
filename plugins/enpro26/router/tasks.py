@@ -147,6 +147,7 @@ def start_routing_task(self, db_id: int) -> str:
     """
 
     task_data = ProcessingTask.get_by_id(id_=db_id)
+    params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     selections = task_data.data.get("routing_selections", {})
 
@@ -162,9 +163,7 @@ def start_routing_task(self, db_id: int) -> str:
     none_selected = [attr for attr, option in selections.items() if option == NONE_PLUGIN]
 
     pipeline_queue = []
-    total_plugins = 2
-    # + 1, because the inital start value of progress_value has to be 1
-    # 1 for vector concatenation, which is always executed at the end of the pipeline
+    total_plugins = 1 # 1, because the inital start value of progress_value has to be 1
 
     if wu_palmer_attributes:
         task_data.add_task_log_entry(
@@ -190,11 +189,17 @@ def start_routing_task(self, db_id: int) -> str:
     if none_selected:
         task_data.add_task_log_entry(f"None selected attributes skipped: {none_selected}")
 
+    if params.concat_output:
+        total_plugins += 1  # (Vector Concatenation)
+
     task_data.data["pipeline_queue"] = pipeline_queue
     task_data.data["current_pipeline"] = None
 
     task_data.progress_target = total_plugins
-    task_data.progress_value = 1
+    task_data.progress_value = 1 
+    # Set to 1, because 0 did not work. Reason is a bug in UI repo. If the bug is fixed, this can probaply be set to 0 again.
+    # Bug Location: https://github.com/UST-QuAntiL/qhana-ui/blob/8b3a32627cc39f5cd7b061ee6e9ed5a21c5c00dd/src/app/components/timeline-step/timeline-step.component.html
+    
     task_data.progress_unit = "Steps"
 
     task_data.save(commit=True)
