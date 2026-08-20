@@ -506,8 +506,6 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
             error_msg,
             commit=True,
         )
-    
-
 
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id

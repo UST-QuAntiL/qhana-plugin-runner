@@ -410,14 +410,15 @@ def test_handle_webhook_ignores_unrecognized_source():
 
     assert result == "Unrecognized webhook source"
 
+
 def test_handle_webhook_synchronization_guard(monkeypatch):
     """
-    Simulates a race condition by firing 5 simultaneous webhook handlers 
+    Simulates a race condition by firing 5 simultaneous webhook handlers
     for the exact same source URL to prove the atomic database lock holds up.
     """
     db_task = _setup_mock_task()
     mock_url = "http://mock/tasks/wp/stress_test_999/"
-    
+
     db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
     db_task.data[f"{WU_PALMER_PLUGIN}_url"] = mock_url
     db_task.save(commit=True)
@@ -429,15 +430,19 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
             status_code=200,
             json_data={
                 "status": "SUCCESS",
-                "outputs": [{"dataType": "some/datatype", "href": "http://mock/data.zip"}],
+                "outputs": [
+                    {"dataType": "some/datatype", "href": "http://mock/data.zip"}
+                ],
             },
         )
+
     monkeypatch.setattr("requests.get", mock_get)
 
     triggered = []
+
     def mock_apply_async(*args, **kwargs):
         triggered.append("next_step_triggered")
-    
+
     monkeypatch.setattr(
         "router.tasks_pipeline_steps.start_transformers.apply_async", mock_apply_async
     )
@@ -448,12 +453,12 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
     def fire_concurrent_webhook(worker_index):
         with app.app_context():
             return run_task(
-                handle_webhook_task, 
-                db_id=task_id, 
-                source_url=mock_url, 
-                via=f"synch_test_{worker_index}"
+                handle_webhook_task,
+                db_id=task_id,
+                source_url=mock_url,
+                via=f"synch_test_{worker_index}",
             )
-        
+
     # Launch 5 workers simultaneously
     worker_count = 5
     with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
@@ -462,7 +467,11 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
 
     # ASSERTIONS
     # Out of 5 concurrent workers, exactly 1 should win, and 4 should be rejected.
-    assert len(triggered) == 1, f"Expected exactly 1 progression, but got {len(triggered)}!"
-    
+    assert (
+        len(triggered) == 1
+    ), f"Expected exactly 1 progression, but got {len(triggered)}!"
+
     rejected_count = results.count("Sub-task already progressed")
-    assert rejected_count == 4, f"Expected 4 rejected workers, but got {rejected_count}. Results: {results}"
+    assert (
+        rejected_count == 4
+    ), f"Expected 4 rejected workers, but got {rejected_count}. Results: {results}"

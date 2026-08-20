@@ -279,19 +279,16 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
 
     try:
         DB.session.execute(
-            insert(PluginState).values(
-                plugin_id=plugin_id,
-                key=lock_key,
-                value=0
-            )
+            insert(PluginState).values(plugin_id=plugin_id, key=lock_key, value=0)
         )
         DB.session.commit()
         TASK_LOGGER.info(f"DEBUGGING: Lock {lock_key} created.")
     except Exception as e:
         DB.session.rollback()
-        TASK_LOGGER.warning(f"DEBUGGING WARNING: Exception occured during lock creation for {lock_key}: {e}.")
+        TASK_LOGGER.warning(
+            f"DEBUGGING WARNING: Exception occured during lock creation for {lock_key}: {e}."
+        )
 
-    
     DB.session.execute(
         update(PluginState)
         .where(PluginState.plugin_id == plugin_id)
