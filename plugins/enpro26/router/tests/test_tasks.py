@@ -43,7 +43,7 @@ def _setup_mock_task() -> ProcessingTask:
         "taxonomiesZipUrl": "http://mock/tax",
         "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
-        "dimensions": 2,
+        "mdsDimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
@@ -51,6 +51,12 @@ def _setup_mock_task() -> ProcessingTask:
         "concatOutput": False,
         "outputFormat": "csv",
         "includeIntermediateResultsInOutput": False,
+        "reduceDimensions": False,
+        "pcaType": "normal",
+        "pcaDimensions": 1,
+        "solver": "auto",
+        "tol": 0,
+        "iteratedPower": 0,
     }
     db_task = ProcessingTask(
         task_name=start_routing_task.name, parameters=json.dumps(params)
@@ -115,6 +121,7 @@ def test_route_task_queues_and_launches(monkeypatch):
 
 def test_start_wu_palmer_task(monkeypatch):
     db_task = _setup_mock_task()
+    monkeypatch.setattr("router.tasks_helpers.subscribe", lambda **kwargs: True)
 
     # MOCK HTTP CALLS
     def mock_post(url, **kwargs):
@@ -238,6 +245,7 @@ def test_handle_webhook_routing_wu_palmer_progression(
 
 def test_start_mapping_task(monkeypatch):
     db_task = _setup_mock_task()
+    monkeypatch.setattr("router.tasks_helpers.subscribe", lambda **kwargs: True)
 
     def mock_post(url, **kwargs):
         if MAPPING_PLUGIN in url:

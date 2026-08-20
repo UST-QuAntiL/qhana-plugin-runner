@@ -40,7 +40,7 @@ from .schemas import (
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
-    FINALIZE_STEP,
+    FINALIZE_PIPELINE,
     InputParameters,
     InputParametersSchema,
 )
@@ -191,6 +191,7 @@ def start_routing_task(self, db_id: int) -> str:
 
     if params.concat_output:
         total_plugins += 1  # (Vector Concatenation)
+        # TODO add pca
 
     task_data.data["pipeline_queue"] = pipeline_queue
     task_data.data["current_pipeline"] = None
@@ -353,7 +354,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     elif current_pipeline == MAPPING_PLUGIN:
         handle_mapping_progression(task_data, db_id, source_url)
 
-    elif current_pipeline == FINALIZE_STEP:
+    elif current_pipeline == FINALIZE_PIPELINE:
         handle_finalize_progression(task_data, db_id, source_url)
 
     else:

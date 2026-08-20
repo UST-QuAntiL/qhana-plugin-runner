@@ -30,7 +30,7 @@ from .schemas import (
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
-    FINALIZE_STEP,
+    FINALIZE_PIPELINE,
     InputParameters,
     InputParametersSchema,
 )
@@ -82,7 +82,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
             task_data.add_task_log_entry(
                 "Starting Vector concat plugin after all pipelines completed successfully."
             )
-            task_data.data["current_pipeline"] = FINALIZE_STEP
+            task_data.data["current_pipeline"] = FINALIZE_PIPELINE
             task_data.save(commit=True)
 
             start_vector_concat.apply_async(args=[task_data.id])
@@ -350,7 +350,7 @@ def start_mds(self, db_id: int, source_url: str):
 
     payload = {
         "attributeDistancesUrl": attr_dists_url,
-        "dimensions": params.dimensions,
+        "dimensions": params.mds_dimensions,
         "metric": params.metric.name,
         "nInit": params.n_init,
         "maxIter": params.max_iter,
