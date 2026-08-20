@@ -17,7 +17,7 @@ from celery.utils.log import get_task_logger
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_result
@@ -488,6 +488,27 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
         "entity/vector",
         mimetype,
     )
+
+    existing_outputs = TaskFile.get_task_result_files(db_id)
+    contains = set()
+    dublicates = []
+    for file_record in existing_outputs:
+        file_name = file_record.file_name
+        if file_name not in contains:
+            contains.add(file_name)
+        else:
+            dublicates.append(file_name)
+
+    if dublicates:
+        error_msg = f"BUG: Output contains dublicates: {dublicates}."
+        TASK_LOGGER.warning(error_msg)
+        task_data.add_task_log_entry(
+            error_msg,
+            commit=True,
+        )
+    
+
+
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
     )
