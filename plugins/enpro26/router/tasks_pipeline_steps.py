@@ -73,8 +73,27 @@ def launch_next_pipeline(task_data: ProcessingTask):
     queue = task_data.data.get("pipeline_queue", [])
 
     if not queue:
+        # At the end of the queue, check for duplicates. Currently only for logging purposes.
+        existing_outputs = TaskFile.get_task_result_files(task_data.id)
+        contains = set()
+        duplicates = []
+        for file_record in existing_outputs:
+            file_name = file_record.file_name
+            if file_name not in contains:
+                contains.add(file_name)
+            else:
+                duplicates.append(file_name)
+        if duplicates:
+            error_msg = f"BUG: Output contains duplicates: {duplicates}."
+            TASK_LOGGER.warning(error_msg)
+            task_data.add_task_log_entry(
+                error_msg,
+                commit=True,
+            )
+
         # TODO: Add Dimension reduction here
 
+        # Optional vector concatenation if the user requested it
         params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
             task_data.parameters
         )
@@ -488,24 +507,6 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
         "entity/vector",
         mimetype,
     )
-
-    existing_outputs = TaskFile.get_task_result_files(db_id)
-    contains = set()
-    dublicates = []
-    for file_record in existing_outputs:
-        file_name = file_record.file_name
-        if file_name not in contains:
-            contains.add(file_name)
-        else:
-            dublicates.append(file_name)
-
-    if dublicates:
-        error_msg = f"BUG: Output contains dublicates: {dublicates}."
-        TASK_LOGGER.warning(error_msg)
-        task_data.add_task_log_entry(
-            error_msg,
-            commit=True,
-        )
 
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id

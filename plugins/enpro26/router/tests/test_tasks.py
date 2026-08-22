@@ -460,18 +460,18 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
             )
 
     # Launch 5 workers simultaneously
-    worker_count = 5
+    worker_count = 10
     with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
         # executor.map fires all threads at once and collects their return values
         results = list(executor.map(fire_concurrent_webhook, range(worker_count)))
 
     # ASSERTIONS
-    # Out of 5 concurrent workers, exactly 1 should win, and 4 should be rejected.
+    # Out of 10 concurrent workers, exactly 1 should win, and 9 should be rejected.
     assert (
         len(triggered) == 1
     ), f"Expected exactly 1 progression, but got {len(triggered)}!"
 
     rejected_count = results.count("Sub-task already progressed")
     assert (
-        rejected_count == 4
-    ), f"Expected 4 rejected workers, but got {rejected_count}. Results: {results}"
+        rejected_count == 9
+    ), f"Expected 9 rejected workers, but got {rejected_count}. Results: {results}"
