@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 from http import HTTPStatus
 from json import loads
 from typing import Mapping, Optional
@@ -32,6 +33,8 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.tasks import (
+    TASK_DETAILS_CHANGED,
+    TASK_STATUS_CHANGED,
     TASK_STEPS_CHANGED,
     add_step,
     save_task_error,
@@ -332,6 +335,7 @@ class RoutingStepFrontend(MethodView):
                 valid=valid,
                 errors=errors,
                 process=url_for(f"{ROUTER_BLP.name}.RoutingStepView", db_id=db_id),
+                cancel_url=url_for(f"{ROUTER_BLP.name}.CancelRoutingStepView", db_id=db_id),
             )
         )
 
@@ -387,6 +391,34 @@ class RoutingStepView(MethodView):
             url_for("tasks-api.TaskView", task_id=str(db_id)), HTTPStatus.SEE_OTHER
         )
 
+@ROUTER_BLP.route("/<int:db_id>/routing-step-cancel/")
+class CancelRoutingStepView(MethodView):
+    """Endpoint to cancel the routing step and return to the main UI."""
+
+    @ROUTER_BLP.response(HTTPStatus.SEE_OTHER)
+    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    def post(self, db_id: int):
+        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        if db_task is None:
+            msg = f"Could not load task data with id {db_id} to cancel!"
+            TASK_LOGGER.error(msg)
+            raise KeyError(msg)
+
+        db_task.task_status = "CANCELED" # TODO: Switch to CANCELED state when possible
+        db_task.finished_at = datetime.datetime.utcnow()
+        
+        db_task.add_task_log_entry("Plugin execution was canceled by the user during the routing step.")
+        db_task.clear_previous_step()
+        db_task.save(commit=True)
+
+        app = current_app._get_current_object()
+        TASK_STATUS_CHANGED.send(app, task_id=db_id)
+        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+
+        # Redirect directly back to the main MicroFrontend plugin UI
+        return redirect(
+            url_for(f"{ROUTER_BLP.name}.MicroFrontend"), HTTPStatus.SEE_OTHER
+        )
 
 # --- WEBHOOOK ---
 @ROUTER_BLP.route("/<int:db_id>/webhook/")

@@ -15,6 +15,7 @@
 """Module containing endpoints related to task progress and results."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from http import HTTPStatus
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -32,6 +33,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
+from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import (
     ProcessingTask,
@@ -306,4 +308,22 @@ class TaskView(MethodView):
             DB.session.delete(subscriber)
         DB.session.commit()
 
-    # TODO add delete endpoint (and maybe serve result from different endpoint)
+    @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
+    def delete(self, task_id: int):
+        """Cancel the running task."""
+        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=task_id)
+        if task_data is None:
+            abort(HTTPStatus.NOT_FOUND, message="Task not found.")
+
+        if not task_data.is_finished:
+            # 1. Cancel the celery task using the task id from the database entry
+            # Terminate=True forces the worker to stop processing immediately
+            CELERY.control.revoke(str(task_data.id), terminate=True)
+
+            # 2. Set result status to canceled
+            task_data.task_status = "ERROR"
+            task_data.finished_at = datetime.utcnow()
+            task_data.add_task_log_entry("Task was canceled by the user.")
+            task_data.save(commit=True)
+
+        return self.convert_task_data(task_data)
