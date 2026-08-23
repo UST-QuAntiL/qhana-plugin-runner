@@ -20,14 +20,6 @@ from uuid import uuid4
 from celery import chain
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
-from qiskit import QiskitError, QuantumCircuit, execute
-from qiskit.qasm2 import loads as loads2
-from qiskit.qasm3 import QASM3ImporterError
-from qiskit.qasm3 import loads as loads3
-from qiskit.qasm3 import loads as loads3
-from qiskit.result.result import ExperimentResult, Result
-from qiskit_ibm_provider import IBMJob
-from qiskit_ibm_runtime import QiskitRuntimeService
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -36,7 +28,6 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import TASK_STEPS_CHANGED, add_step, save_task_result
 
 from . import QiskitExecutor
-from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
 from .schemas import CircuitParameters, CircuitParameterSchema
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -44,6 +35,16 @@ TASK_LOGGER = get_task_logger(__name__)
 
 @CELERY.task(name=f"{QiskitExecutor.instance.identifier}.start_execution", bind=True)
 def start_execution(self, db_id: int) -> str:
+    # qiskit is imported inside the task so that the plugin module (and with it the
+    # plugin API) can be imported without the plugin requirements being installed
+    from qiskit import QuantumCircuit, execute
+    from qiskit.qasm2 import loads as loads2
+    from qiskit.qasm3 import QASM3ImporterError
+    from qiskit.qasm3 import loads as loads3
+    from qiskit_ibm_provider import IBMJob
+
+    from .backend.qiskit_backends import get_backend_names, get_qiskit_backend
+
     # get parameters
     TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
@@ -161,6 +162,10 @@ class JobNotFinished(Exception):
     max_retries=None,
 )
 def result_watcher(self, db_id: int) -> str:
+    from qiskit import QiskitError
+    from qiskit.result.result import ExperimentResult, Result
+    from qiskit_ibm_runtime import QiskitRuntimeService
+
     # get parameters
     TASK_LOGGER.info(f"Starting new qiskit executor task with db id '{db_id}'")
     db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
