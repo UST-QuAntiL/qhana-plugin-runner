@@ -39,6 +39,7 @@ class AllowedDataTypesWithFormat(Enum):
     CUSTOM_PLOT = "custom/plot"
     ENTITY_WILDCARD = "entity/*"
     ENTITY_ATTRIBUTE_METADATA = "entity/attribute-metadata"
+    ENTITY_DIMENSION_MAPPING = "entity/dimension-mapping"
     ENTITY_LABEL = "entity/label"
     ENTITY_LIST = "entity/list"
     ENTITY_MATRIX = "entity/matrix"
