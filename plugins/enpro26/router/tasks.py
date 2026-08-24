@@ -40,6 +40,7 @@ from .schemas import (
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
+    PCA_PLUGIN,
     FINALIZE_PIPELINE,
     InputParameters,
     InputParametersSchema,
@@ -61,6 +62,7 @@ from .tasks_pipeline_steps import (
     start_mds,
     finalize_pipeline,
     finalize_vector_concat,
+    finalize_pca,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -191,7 +193,8 @@ def start_routing_task(self, db_id: int) -> str:
 
     if params.concat_output:
         total_plugins += 1  # (Vector Concatenation)
-        # TODO add pca
+        if params.reduce_dimensions:
+            total_plugins += 1  # (PCA)
 
     task_data.data["pipeline_queue"] = pipeline_queue
     task_data.data["current_pipeline"] = None
@@ -241,6 +244,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"),
         task_data.data.get(f"{MDS_PLUGIN}_url"),
         task_data.data.get(f"{VECTOR_CONCAT_PLUGIN}_url"),
+        task_data.data.get(f"{PCA_PLUGIN}_url"),
     ]
 
     if not source_url or source_url not in known_urls:
@@ -407,3 +411,5 @@ def handle_finalize_progression(task_data: ProcessingTask, db_id: int, source_ur
         finalize_vector_concat.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
+    elif source_url == task_data.data.get(f"{PCA_PLUGIN}_url"):
+        finalize_pca.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)

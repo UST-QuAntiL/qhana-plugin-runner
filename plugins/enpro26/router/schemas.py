@@ -29,6 +29,7 @@ TRANSFORMERS_PLUGIN = "transformers"
 AGGREGATOR_PLUGIN = "aggregator"
 MDS_PLUGIN = "mds"
 VECTOR_CONCAT_PLUGIN = "vector_concat"
+PCA_PLUGIN = "pca"
 
 FINALIZE_PIPELINE = "finalize"
 
@@ -44,6 +45,7 @@ PIPELINE_PLUGINS = {
     AGGREGATOR_PLUGIN: "attribute-distance-aggregator",
     MDS_PLUGIN: "attribute-distance-mds",
     VECTOR_CONCAT_PLUGIN: "vector-concat",
+    PCA_PLUGIN: "pca",
 }
 
 # Per-attribute pipeline options shown in the routing step.
@@ -115,17 +117,6 @@ class PCATypeEnum(Enum):
     incremental = "incremental"
     sparse = "sparse"
     kernel = "kernel"
-
-
-# This Enum class is copied from the pca plugin.
-# Check the pca plugin for updates
-class KernelEnum(Enum):
-    linear = "linear"
-    poly = "poly"
-    rbf = "rbf"
-    sigmoid = "sigmoid"
-    cosine = "cosine"
-    precomputed = "precomputed"
 
 
 class InputParameters:
@@ -254,15 +245,13 @@ class InputParametersSchema(FrontendFormBaseSchema):
         allow_none=False,
         metadata={
             "label": "Distance Metric",
-            "description": textwrap.dedent(
-                r"""
+            "description": textwrap.dedent(r"""
                 Metric to calculate the distances of the taxanomy mapping:  
                 **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
                 **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
                 **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
                 **Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
-            """
-            ).strip(),
+            """).strip(),
             "input_type": "select",
         },
     )
@@ -458,14 +447,6 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
                 errors[key] = [f"'{value}' is not one of {PIPELINE_OPTIONS}."]
         if errors:
             raise ma.ValidationError(errors)
-        # PCA validation
-        if data:
-            if (
-                data.get("kernel", None) == KernelEnum.precomputed.value
-                and data.get("pca_type", None) == PCATypeEnum.kernel.value
-            ):
-                if data["kernel_url"] is None:
-                    raise ma.ValidationError("Kernel url must not be none.")
 
     @ma.post_load(pass_original=True)
     def add_dynamic_entries(self, data, original_data, **kwargs):
