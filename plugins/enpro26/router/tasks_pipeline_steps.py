@@ -58,6 +58,7 @@ PCA_DEFAULTS = {
     "sparsityAlpha": 1,
     "ridgeAlpha": 0.01,
     "kernel": "linear",
+    "kernelUrl": "",  # the PCA schema requires the key; an empty string is read as None
     "degree": 3,
     "kernelGamma": 0.1,
     "kernelCoef": 1,
@@ -513,7 +514,7 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
     STORE.persist_task_result(
         db_id,
         open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
-        f"final_vector{extension}",
+        f"final_concatenated_vector{extension}",
         "entity/vector",
         mimetype,
     )
@@ -524,14 +525,14 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
 
 # --- AFTER VECTOR CONCAT: PCA (started from finalize_vector_concat) ---
 @CELERY.task(name=f"{Router.instance.identifier}.start_pca", bind=True, base=PipelineTask)
-def start_pca(self, db_id: int, source_url: str):
+def start_pca(self, db_id: int, vector_url: str):
     """
     Initiates the PCA plugin to reduce the dimensions of the concatenated vector.
 
     Args:
         self: The Celery task instance (bound).
         db_id (int): The database ID of the ProcessingTask.
-        source_url (str): URL of the concatenated vector to reduce.
+        vector_url (str): URL of the concatenated vector to reduce.
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
@@ -541,7 +542,7 @@ def start_pca(self, db_id: int, source_url: str):
 
     payload = {
         **PCA_DEFAULTS,
-        "entityPointsUrl": source_url,
+        "entityPointsUrl": vector_url,
         "pcaType": params.pca_type.name,
         "dimensions": params.pca_dimensions,
         "solver": params.solver.name,

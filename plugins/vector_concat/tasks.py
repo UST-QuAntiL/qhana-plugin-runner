@@ -42,7 +42,7 @@ def _load_entities_from_zip(zip_bytes: bytes) -> Iterator[List]:
     detected dynamically from the file name or its content.
     """
     for response in get_file_responses_from_zip(zip_bytes):
-        mimetype = response.headers["Content-Type"]
+        mimetype = get_mimetype(response)
         if not mimetype:
             raise ValueError(f"No Mimetype found for zip file '{response.url}'.")
         if mimetype not in ACCEPTED_CONTENT_TYPES:
