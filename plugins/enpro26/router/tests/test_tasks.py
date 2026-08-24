@@ -413,7 +413,7 @@ def test_handle_webhook_ignores_unrecognized_source():
 
 def test_handle_webhook_synchronization_guard(monkeypatch):
     """
-    Simulates a race condition by firing 5 simultaneous webhook handlers
+    Simulates a race condition by firing 10 simultaneous webhook handlers
     for the exact same source URL to prove the atomic database lock holds up.
     """
     db_task = _setup_mock_task()
@@ -459,7 +459,7 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
                 via=f"synch_test_{worker_index}",
             )
 
-    # Launch 5 workers simultaneously
+    # Launch 10 workers simultaneously
     worker_count = 10
     with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
         # executor.map fires all threads at once and collects their return values

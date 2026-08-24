@@ -22,7 +22,7 @@ from urllib.parse import urljoin
 from zipfile import ZipFile
 
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
@@ -34,6 +34,7 @@ from qhana_plugin_runner.plugin_utils.interop import (
     subscribe,
 )
 from qhana_plugin_runner.requests import get_mimetype, open_url
+from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import TASK_DETAILS_CHANGED, save_task_error
 
 from .schemas import (
@@ -269,3 +270,38 @@ def is_store_mds_output(params: InputParameters) -> bool:
         return params.include_intermediate_results_in_output
     else:
         return True
+
+
+def save_intermediate_results(
+    task_data: ProcessingTask,
+    retries: int,
+    db_id: int,
+    file: bytes,
+    file_name: str,
+    file_type: str,
+    mimetype: str = "application/zip",
+):
+    existing_files = TaskFile.get_task_result_files(db_id)
+    file_exists = any(f.file_name == file_name for f in existing_files)
+
+    if not file_exists:
+        # Normal Execution: File doesn't exist, proceed with saving
+        STORE.persist_task_result(
+            task_db_id=db_id,
+            file_=file,
+            file_name=file_name,
+            file_type=file_type,
+            mimetype=mimetype,
+        )
+        TASK_LOGGER.info(f"Successfully stored intermediate file: {file_name}")
+
+    else:
+        if retries > 0:
+            msg = f"DEBUGGING: File {file_name} exists during retry {retries}. Safe recovery, skipping save."
+            TASK_LOGGER.info(msg)
+            task_data.add_task_log_entry(msg, commit=True)  # TODO: Remove this UI log
+        else:
+            error_msg = f"BUG/RACE CONDITION: Parallel execution detected! File {file_name} already exists on attempt 0."
+            TASK_LOGGER.warning(error_msg)
+            task_data.add_task_log_entry(error_msg, commit=True)
+            # We still skip saving so the database doesn't actually get bloated with duplicates
