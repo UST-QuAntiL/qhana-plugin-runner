@@ -16,22 +16,36 @@
 Tests for plugin metadata type validation.
 
 Verifies that all plugins use allowed data_types and content_types
-as defined in qhana_plugin_runner.plugin_utils.types.
+as defined in tests.allowed_types.
 """
 
-from http import HTTPStatus
 import warnings
+from http import HTTPStatus
 
 import pytest
 
-from qhana_plugin_runner.plugin_utils.types import (
-    is_valid_content_type,
-    is_valid_data_type,
-)
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase
 
+from .allowed_types import (
+    AllowedContentTypes,
+    AllowedDataTypesNoFormat,
+    AllowedDataTypesWithFormat,
+)
 
-def _get_plugin_entry_point(plugin_id, plugin, client) -> getattr:
+
+def _is_valid_data_type(value: str) -> bool:
+    """Check if a data_type value is in allowed lists."""
+    return any(e.value == value for e in AllowedDataTypesWithFormat) or any(
+        e.value == value for e in AllowedDataTypesNoFormat
+    )
+
+
+def _is_valid_content_type(value: str) -> bool:
+    """Check if a content_type value is in allowed lists."""
+    return any(e.value == value for e in AllowedContentTypes)
+
+
+def _get_plugin_entry_point(plugin_id, plugin, client) -> dict | None:
     """
     Validates a plugin's blueprint, fetches its metadata entry point and validates if it contains the input and output data types.
     Returns the metadata entry_point dict if successful, or None if fetching failed.
@@ -102,7 +116,7 @@ def test_all_plugins_use_allowed_data_types(app, client):
             # Check data_input types
             for input_item in entry_point["dataInput"]:
                 data_type = input_item["dataType"]
-                if data_type and not is_valid_data_type(data_type):
+                if data_type and not _is_valid_data_type(data_type):
                     invalid_types.append(
                         {
                             "plugin": plugin_id,
@@ -114,7 +128,7 @@ def test_all_plugins_use_allowed_data_types(app, client):
             # Check data_output types
             for output_item in entry_point["dataOutput"]:
                 data_type = output_item["dataType"]
-                if data_type and not is_valid_data_type(data_type):
+                if data_type and not _is_valid_data_type(data_type):
                     invalid_types.append(
                         {
                             "plugin": plugin_id,
@@ -154,7 +168,7 @@ def test_all_plugins_use_allowed_content_types(app, client):
             # Check data_input content types
             for input_item in entry_point["dataInput"]:
                 for content_type in input_item["contentType"]:
-                    if content_type and not is_valid_content_type(content_type):
+                    if content_type and not _is_valid_content_type(content_type):
                         invalid_types.append(
                             {
                                 "plugin": plugin_id,
@@ -166,7 +180,7 @@ def test_all_plugins_use_allowed_content_types(app, client):
             # Check data_output content types
             for output_item in entry_point["dataOutput"]:
                 for content_type in output_item["contentType"]:
-                    if content_type and not is_valid_content_type(content_type):
+                    if content_type and not _is_valid_content_type(content_type):
                         invalid_types.append(
                             {
                                 "plugin": plugin_id,
