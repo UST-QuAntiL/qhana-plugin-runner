@@ -68,6 +68,11 @@ The regular form of a data type is `namespace/name`.
 : Entities describing properties of attributes of other entities.
   Details: [entity/attribute-metadata](examples/entities.rst#entity-attribute-metadata)
 
+(dt-entity-dimension-mapping)=
+`entity/dimension-mapping`
+: Entities recording the origin of each dimension of an `entity/vector` file.
+  Details: [entity/dimension-mapping](examples/entities.rst#entity-dimension-mapping)
+
 (dt-entity-label)=
 `entity/label`
 : Entities with a single `label` attribute holding a class label.
