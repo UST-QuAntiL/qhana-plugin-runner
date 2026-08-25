@@ -282,6 +282,8 @@ def save_intermediate_results(
     mimetype: str = "application/zip",
 ):
     existing_files = TaskFile.get_task_result_files(db_id)
+
+    # Race condition for file_exists should be handled, by the synchronization check in handle_webhook_task.
     file_exists = any(f.file_name == file_name for f in existing_files)
 
     if not file_exists:
@@ -296,6 +298,9 @@ def save_intermediate_results(
         TASK_LOGGER.info(f"Successfully stored intermediate file: {file_name}")
 
     else:
+        # Check the reason for duplicate. Either parallel execution or the task saved intermediate output, then fails and restarts and wants to save again.
+        # In theory, parallel execution should no longer be possible.
+
         if retries > 0:
             msg = f"DEBUGGING: File {file_name} exists during retry {retries}. Safe recovery, skipping save."
             TASK_LOGGER.info(msg)
@@ -304,4 +309,3 @@ def save_intermediate_results(
             error_msg = f"BUG/RACE CONDITION: Parallel execution detected! File {file_name} already exists on attempt 0."
             TASK_LOGGER.warning(error_msg)
             task_data.add_task_log_entry(error_msg, commit=True)
-            # We still skip saving so the database doesn't actually get bloated with duplicates
