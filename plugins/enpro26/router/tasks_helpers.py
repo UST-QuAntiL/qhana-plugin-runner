@@ -309,3 +309,29 @@ def save_intermediate_results(
             error_msg = f"BUG/RACE CONDITION: Parallel execution detected! File {file_name} already exists on attempt 0."
             TASK_LOGGER.warning(error_msg)
             task_data.add_task_log_entry(error_msg, commit=True)
+
+
+def has_enough_pca_dimensions(
+    task_data: ProcessingTask, params: InputParameters, vector_response: requests.Response
+) -> bool:
+    mimetype = get_mimetype(vector_response)
+    if mimetype is None:
+        return False
+
+    for ent in load_entities(vector_response, mimetype):
+        if isinstance(ent, EntityTupleMixin):
+            attributes = set(type(ent).entity_attributes)
+        else:
+            attributes = set(ent.keys())
+
+        dimensions = len(attributes - {"ID", "href"})
+        has_more_dimensions = dimensions > params.pca_dimensions
+
+        if not has_more_dimensions:
+            info_msg = f"PCA reduction step disabled and skipped, because vector has {dimensions} dimensions, which is not more than requested {params.pca_dimensions}."
+            TASK_LOGGER.info(info_msg)
+            task_data.add_task_log_entry(info_msg, commit=True)
+
+        return has_more_dimensions
+
+    return False

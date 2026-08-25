@@ -42,6 +42,7 @@ from .tasks_helpers import (
     is_store_mds_output,
     run_pipeline_step,
     save_intermediate_results,
+    has_enough_pca_dimensions,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -518,15 +519,18 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
     extension, mimetype = OUTPUT_FORMATS.get(params.output_format, OUTPUT_FORMATS["csv"])
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
-    final_vector = extract_output_url(outputs, "entity/vector")
+    concatenated_vector = extract_output_url(outputs, "entity/vector")
+    concatenated_vector_response = open_url(concatenated_vector, timeout=REQUEST_TIMEOUT)
 
-    if params.reduce_dimensions:
+    if params.reduce_dimensions and has_enough_pca_dimensions(
+        task_data, params, concatenated_vector_response
+    ):
         if params.include_intermediate_results_in_output:
             save_intermediate_results(
                 task_data=task_data,
                 retries=self.request.retries,
                 db_id=db_id,
-                file=open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
+                file=concatenated_vector_response.content,
                 file_name=f"concatenated_vector{extension}",
                 file_type="entity/vector",
                 mimetype=mimetype,
@@ -535,14 +539,14 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
             "Starting PCA plugin to reduce the dimensions of the concatenated vector."
         )
         task_data.save(commit=True)
-        start_pca.apply_async(args=[db_id, final_vector])
+        start_pca.apply_async(args=[db_id, concatenated_vector])
         return
 
     save_intermediate_results(
         task_data=task_data,
         retries=self.request.retries,
         db_id=db_id,
-        file=open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
+        file=concatenated_vector_response.content,
         file_name=f"final_concatenated_vector{extension}",
         file_type="entity/vector",
         mimetype=mimetype,
