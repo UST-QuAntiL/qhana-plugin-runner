@@ -302,7 +302,7 @@ def save_intermediate_results(
         # In theory, parallel execution should no longer be possible.
 
         if retries > 0:
-            msg = f"DEBUGGING: File {file_name} exists during retry {retries}. Safe recovery, skipping save."
+            msg = f"DEBUGGING: File {file_name} exists during retry {retries}. Skipping save."
             TASK_LOGGER.info(msg)
             task_data.add_task_log_entry(msg, commit=True)  # TODO: Remove this UI log
         else:
