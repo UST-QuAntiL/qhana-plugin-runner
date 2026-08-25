@@ -522,12 +522,14 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
 
     if params.reduce_dimensions:
         if params.include_intermediate_results_in_output:
-            STORE.persist_task_result(
-                db_id,
-                open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
-                f"concatenated_vector{extension}",
-                "entity/vector",
-                mimetype,
+            save_intermediate_results(
+                task_data=task_data,
+                retries=self.request.retries,
+                db_id=db_id,
+                file=open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
+                file_name=f"concatenated_vector{extension}",
+                file_type="entity/vector",
+                mimetype=mimetype,
             )
         task_data.add_task_log_entry(
             "Starting PCA plugin to reduce the dimensions of the concatenated vector."
