@@ -5,6 +5,11 @@ on:
     branches: [main,enpro2026-main]
   pull_request:
 
+env:
+  # keep the virtualenv inside the workspace so it can be cached by path
+  POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  PYTHON_VERSION: "3.10"
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -12,13 +17,64 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install Poetry
         run: pipx install poetry
+
+      - name: Restore runner virtualenv
+        id: cache-runner-venv
+        uses: actions/cache/restore@v4
+        with:
+          path: .venv
+          key: venv-runner-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+
       - name: Install dependencies
         run: poetry install --no-interaction --with dev
-      - name: Install plugin dependencies (only plugins with tests)
-        run: poetry run flask install --only-with-tests --skip-runner-dependencies
+
+      - name: Save runner virtualenv
+        if: steps.cache-runner-venv.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .venv
+          key: venv-runner-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+
+      - name: Collect plugin requirements
+        id: plugin-requirements
+        run: |
+          poetry run flask install --dry-run --skip-runner-dependencies > plugin-requirements.raw.txt
+          # plugin import order is not stable, so sort before hashing
+          sort -u plugin-requirements.raw.txt > plugin-requirements.txt
+          echo "hash=$(sha256sum plugin-requirements.txt | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          cat plugin-requirements.txt
+
+      - name: Restore virtualenv with plugin dependencies
+        id: cache-plugin-venv
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .venv
+            qhana_plugin_runner/static/mathjax
+          key: venv-plugins-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
+
+      - name: Install plugin dependencies
+        if: steps.cache-plugin-venv.outputs.cache-hit != 'true'
+        run: |
+          set -o pipefail
+          poetry run flask install --skip-runner-dependencies 2>&1 | tee install.log
+          # the install command reports pip failures without a non zero exit code
+          if grep -q "Installing plugin requirements failed!" install.log; then
+            exit 1
+          fi
+
+      - name: Save virtualenv with plugin dependencies
+        if: steps.cache-plugin-venv.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .venv
+            qhana_plugin_runner/static/mathjax
+          key: venv-plugins-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
+
       - name: Run pytest
         run: poetry run pytest --cov=qhana_plugin_runner --cov-report=html --cov-report=term
       - name: Upload coverage report
