@@ -14,8 +14,8 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install Poetry
@@ -23,7 +23,7 @@ jobs:
 
       - name: Restore runner virtualenv
         id: cache-runner-venv
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .venv
           key: venv-runner-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
@@ -33,7 +33,7 @@ jobs:
 
       - name: Save runner virtualenv
         if: steps.cache-runner-venv.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: .venv
           key: venv-runner-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
@@ -49,30 +49,20 @@ jobs:
 
       - name: Restore virtualenv with plugin dependencies
         id: cache-plugin-venv
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
-          path: |
-            .venv
-            qhana_plugin_runner/static/mathjax
+          path: .venv
           key: venv-plugins-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
 
       - name: Install plugin dependencies
         if: steps.cache-plugin-venv.outputs.cache-hit != 'true'
-        run: |
-          set -o pipefail
-          poetry run flask install --skip-runner-dependencies 2>&1 | tee install.log
-          # the install command reports pip failures without a non zero exit code
-          if grep -q "Installing plugin requirements failed!" install.log; then
-            exit 1
-          fi
+        run: poetry run flask install --skip-runner-dependencies
 
       - name: Save virtualenv with plugin dependencies
         if: steps.cache-plugin-venv.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
-          path: |
-            .venv
-            qhana_plugin_runner/static/mathjax
+          path: .venv
           key: venv-plugins-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}-${{ steps.plugin-requirements.outputs.hash }}
 
       - name: Run pytest
