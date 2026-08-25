@@ -17,7 +17,7 @@ from celery.utils.log import get_task_logger
 from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_result
@@ -41,6 +41,7 @@ from .tasks_helpers import (
     extract_output_url,
     is_store_mds_output,
     run_pipeline_step,
+    save_intermediate_results,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -88,6 +89,26 @@ def launch_next_pipeline(task_data: ProcessingTask):
     queue = task_data.data.get("pipeline_queue", [])
 
     if not queue:
+        # At the end of the queue, check for duplicates. Currently only for logging purposes.
+        existing_outputs = TaskFile.get_task_result_files(task_data.id)
+        contains = set()
+        duplicates = []
+        for file_record in existing_outputs:
+            file_name = file_record.file_name
+            if file_name not in contains:
+                contains.add(file_name)
+            else:
+                duplicates.append(file_name)
+        if duplicates:
+            error_msg = f"BUG: Output contains duplicates: {duplicates}."
+            TASK_LOGGER.warning(error_msg)
+            task_data.add_task_log_entry(
+                error_msg,
+                commit=True,
+            )
+
+        # Optional vector concatenation if the user requested it.
+        # Afterwards, the optional PCA plugin will be executed
         params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
             task_data.parameters
         )
@@ -248,12 +269,13 @@ def start_transformers(self, db_id: int, source_url: str):
     )
 
     if params.include_intermediate_results_in_output:
-        STORE.persist_task_result(
-            db_id,
-            open_url(element_sims_url).content,
-            "wu_palmer_similarities.zip",
-            "relation/element-similarities",
-            "application/zip",
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(element_sims_url).content,
+            file_name="wu_palmer_similarities.zip",
+            file_type="relation/element-similarities",
         )
 
     payload = {
@@ -303,12 +325,13 @@ def start_aggregator(self, db_id: int, source_url: str):
 
     if params.include_intermediate_results_in_output:
         prefix = task_data.data.get("current_pipeline", "unknown")
-        STORE.persist_task_result(
-            db_id,
-            open_url(element_dists_url).content,
-            f"{prefix}_element_distances.zip",
-            "relation/element-distances",
-            "application/zip",
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(element_dists_url).content,
+            file_name=f"{prefix}_element_distances.zip",
+            file_type="relation/element-distances",
         )
 
     payload = {
@@ -353,12 +376,13 @@ def start_mds(self, db_id: int, source_url: str):
 
     if params.include_intermediate_results_in_output:
         prefix = task_data.data.get("current_pipeline", "unknown")
-        STORE.persist_task_result(
-            db_id,
-            open_url(attr_dists_url).content,
-            f"{prefix}_attribute_distances.zip",
-            "relation/attribute-distances",
-            "application/zip",
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(attr_dists_url).content,
+            file_name=f"{prefix}_attribute_distances.zip",
+            file_type="relation/attribute-distances",
         )
 
     payload = {
@@ -410,12 +434,13 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     final_dists_url = extract_output_url(outputs, "entity/vector")
 
     if is_store_mds_output(params):
-        STORE.persist_task_result(
-            db_id,
-            open_url(final_dists_url).content,
-            f"{current_pipeline_name}_mds_vectors.zip",
-            "entity/vector",
-            "application/zip",
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(final_dists_url).content,
+            file_name=f"{current_pipeline_name}_mds_vectors.zip",
+            file_type="entity/vector",
         )
 
     if params.concat_output:
@@ -511,13 +536,16 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
         start_pca.apply_async(args=[db_id, final_vector])
         return
 
-    STORE.persist_task_result(
-        db_id,
-        open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
-        f"final_concatenated_vector{extension}",
-        "entity/vector",
-        mimetype,
+    save_intermediate_results(
+        task_data=task_data,
+        retries=self.request.retries,
+        db_id=db_id,
+        file=open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
+        file_name=f"final_concatenated_vector{extension}",
+        file_type="entity/vector",
+        mimetype=mimetype,
     )
+
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
     )
