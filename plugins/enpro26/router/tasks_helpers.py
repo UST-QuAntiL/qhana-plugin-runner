@@ -314,24 +314,36 @@ def save_intermediate_results(
 def has_enough_pca_dimensions(
     task_data: ProcessingTask, params: InputParameters, vector_response: requests.Response
 ) -> bool:
+    """Checks if vector data has more dimensions than required for PCA reduction.
+    Uses the first entity in the vector response to determine the number of dimensions.
+
+    Args:
+        task_data: Task object used for logging execution details.
+        params: Input parameters containing the target `pca_dimensions`.
+        vector_response: HTTP response containing the raw vector data.
+
+    Returns:
+        True if vector dimensions exceed `params.pca_dimensions`, False otherwise.
+    """
     mimetype = get_mimetype(vector_response)
     if mimetype is None:
         return False
 
-    for ent in load_entities(vector_response, mimetype):
-        if isinstance(ent, EntityTupleMixin):
-            attributes = set(type(ent).entity_attributes)
-        else:
-            attributes = set(ent.keys())
+    first_ent = next(load_entities(vector_response, mimetype), None)
+    if first_ent is None:
+        return False
 
-        dimensions = len(attributes - {"ID", "href"})
-        has_more_dimensions = dimensions > params.pca_dimensions
+    if isinstance(first_ent, EntityTupleMixin):
+        attributes = set(type(first_ent).entity_attributes)
+    else:
+        attributes = set(first_ent.keys())
 
-        if not has_more_dimensions:
-            info_msg = f"PCA reduction step disabled and skipped, because vector has {dimensions} dimensions, which is not more than requested {params.pca_dimensions}."
-            TASK_LOGGER.info(info_msg)
-            task_data.add_task_log_entry(info_msg, commit=True)
+    dimensions = len(attributes - {"ID", "href"})
+    has_more_dimensions = dimensions > params.pca_dimensions
 
-        return has_more_dimensions
+    if not has_more_dimensions:
+        info_msg = f"PCA reduction step disabled and skipped, because vector has {dimensions} dimensions, which is less than requested {params.pca_dimensions}."
+        TASK_LOGGER.info(info_msg)
+        task_data.add_task_log_entry(info_msg, commit=True)
 
-    return False
+    return has_more_dimensions
