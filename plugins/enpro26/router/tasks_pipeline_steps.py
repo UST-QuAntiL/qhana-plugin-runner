@@ -189,7 +189,7 @@ def start_wu_palmer(self, db_id: int):
         "entitiesMetadataUrl": params.entities_metadata_url,
         "taxonomiesZipUrl": params.taxonomies_zip_url,
         "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
-        "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
+        "rootIsPartOfHierarchy": str(params.root_is_part_of_hierarchy).lower(),
     }
 
     run_pipeline_step(
