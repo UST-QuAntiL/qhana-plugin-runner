@@ -127,7 +127,12 @@ def open_url_as_file_like_simple(
 
 def get_mimetype(response: Response, default=None) -> Optional[str]:
     try:
-        return response.headers["Content-Type"]
+        content_type = response.headers["Content-Type"]
+        if content_type:
+            # Parse added, because sending files can lead to sending eg. text/csv; charset=utf-8,
+            # which is not a valid mimetype for our purposes
+            return parse_options_header(content_type)[0]
+        return default
     except KeyError:
         matches = mimetypes.MimeTypes().guess_type(url=response.url)
         if matches and matches[0]:

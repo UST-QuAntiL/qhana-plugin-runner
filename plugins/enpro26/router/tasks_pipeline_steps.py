@@ -30,7 +30,8 @@ from .schemas import (
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
-    FINALIZE_STEP,
+    PCA_PLUGIN,
+    FINALIZE_PIPELINE,
     InputParameters,
     InputParametersSchema,
 )
@@ -41,6 +42,7 @@ from .tasks_helpers import (
     is_store_mds_output,
     run_pipeline_step,
     save_intermediate_results,
+    has_enough_pca_dimensions,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -49,6 +51,20 @@ OUTPUT_FORMATS = {
     "csv": (".csv", "text/csv"),
     "json": (".json", "application/json"),
     "lines": (".jsonl", "application/X-lines+json"),
+}
+
+# Parameters the PCA plugin requires but the router form does not expose.
+# The values mirror the defaults of the PCA micro frontend.
+PCA_DEFAULTS = {
+    "batchSize": 1,
+    "sparsityAlpha": 1,
+    "ridgeAlpha": 0.01,
+    "kernel": "linear",
+    "kernelUrl": "",  # the PCA schema requires the key; an empty string is read as None
+    "degree": 3,
+    "kernelGamma": 0.1,
+    "kernelCoef": 1,
+    "maxItr": 1000,
 }
 
 
@@ -92,9 +108,8 @@ def launch_next_pipeline(task_data: ProcessingTask):
                 commit=True,
             )
 
-        # TODO: Add Dimension reduction here
-
-        # Optional vector concatenation if the user requested it
+        # Optional vector concatenation if the user requested it.
+        # Afterwards, the optional PCA plugin will be executed
         params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
             task_data.parameters
         )
@@ -102,7 +117,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
             task_data.add_task_log_entry(
                 "Starting Vector concat plugin after all pipelines completed successfully."
             )
-            task_data.data["current_pipeline"] = FINALIZE_STEP
+            task_data.data["current_pipeline"] = FINALIZE_PIPELINE
             task_data.save(commit=True)
 
             start_vector_concat.apply_async(args=[task_data.id])
@@ -373,7 +388,7 @@ def start_mds(self, db_id: int, source_url: str):
 
     payload = {
         "attributeDistancesUrl": attr_dists_url,
-        "dimensions": params.dimensions,
+        "dimensions": params.mds_dimensions,
         "metric": params.metric.name,
         "nInit": params.n_init,
         "maxIter": params.max_iter,
@@ -504,18 +519,128 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
     extension, mimetype = OUTPUT_FORMATS.get(params.output_format, OUTPUT_FORMATS["csv"])
 
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
-    final_vector = extract_output_url(outputs, "entity/vector")
+    concatenated_vector = extract_output_url(outputs, "entity/vector")
+    concatenated_vector_response = open_url(concatenated_vector, timeout=REQUEST_TIMEOUT)
+
+    if params.reduce_dimensions and has_enough_pca_dimensions(
+        task_data, params, concatenated_vector_response
+    ):
+        if params.include_intermediate_results_in_output:
+            save_intermediate_results(
+                task_data=task_data,
+                retries=self.request.retries,
+                db_id=db_id,
+                file=concatenated_vector_response.content,
+                file_name=f"concatenated_vector{extension}",
+                file_type="entity/vector",
+                mimetype=mimetype,
+            )
+        task_data.add_task_log_entry(
+            "Starting PCA plugin to reduce the dimensions of the concatenated vector."
+        )
+        task_data.save(commit=True)
+        start_pca.apply_async(args=[db_id, concatenated_vector])
+        return
 
     save_intermediate_results(
         task_data=task_data,
         retries=self.request.retries,
         db_id=db_id,
-        file=open_url(final_vector, timeout=REQUEST_TIMEOUT).content,
-        file_name=f"final_vector{extension}",
+        file=concatenated_vector_response.content,
+        file_name=f"final_concatenated_vector{extension}",
         file_type="entity/vector",
         mimetype=mimetype,
     )
 
     save_task_result.delay(
         "All Pipelines Completed Successfully And Concatenated Vector Created!", db_id
+    )
+
+
+# --- AFTER VECTOR CONCAT: PCA (started from finalize_vector_concat) ---
+@CELERY.task(name=f"{Router.instance.identifier}.start_pca", bind=True, base=PipelineTask)
+def start_pca(self, db_id: int, vector_url: str):
+    """
+    Initiates the PCA plugin to reduce the dimensions of the concatenated vector.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        vector_url (str): URL of the concatenated vector to reduce.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
+
+    payload = {
+        **PCA_DEFAULTS,
+        "entityPointsUrl": vector_url,
+        "pcaType": params.pca_type.name,
+        "dimensions": params.pca_dimensions,
+        "solver": params.solver.name,
+        "tol": params.tol,
+        "iteratedPower": params.iterated_power,
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=PCA_PLUGIN,
+        logging_name="PCA",
+        payload=payload,
+    )
+
+
+# --- AFTER VECTOR CONCAT: finalize PCA ---
+@CELERY.task(
+    name=f"{Router.instance.identifier}.finalize_pca", bind=True, base=PipelineTask
+)
+def finalize_pca(self, db_id: int, source_url: str):
+    """
+    Persists the PCA results and finalizes the task.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+    """
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+
+    reduced_vector = extract_output_url(outputs, "entity/vector")
+    STORE.persist_task_result(
+        db_id,
+        open_url(reduced_vector, timeout=REQUEST_TIMEOUT).content,
+        "final_vector_pca_reduced.csv",
+        "entity/vector",
+        "text/csv",
+    )
+
+    pca_metadata = extract_output_url(outputs, "custom/pca-metadata")
+    STORE.persist_task_result(
+        db_id,
+        open_url(pca_metadata, timeout=REQUEST_TIMEOUT).content,
+        "pca_metadata.json",
+        "custom/pca-metadata",
+        "application/json",
+    )
+
+    # the plot is only produced for outputs with at most three dimensions
+    plot = next((o for o in outputs if o.get("dataType") == "custom/plot"), None)
+    if plot is not None:
+        STORE.persist_task_result(
+            db_id,
+            open_url(plot["href"], timeout=REQUEST_TIMEOUT).content,
+            "pca_plot.html",
+            "custom/plot",
+            "text/html",
+        )
+
+    save_task_result.delay(
+        "All Pipelines Completed Successfully And Dimensions Reduced With PCA!", db_id
     )

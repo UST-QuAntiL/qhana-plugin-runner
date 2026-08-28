@@ -35,11 +35,17 @@ def _payload(**overrides) -> dict:
         "taxonomiesZipUrl": VALID_ZIP,
         "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
-        "dimensions": 2,
+        "mdsDimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
         "missingDataHandling": "mean",
+        "reduceDimensions": False,
+        "pcaType": "normal",
+        "pcaDimensions": 1,
+        "solver": "auto",
+        "tol": 0,
+        "iteratedPower": 0,
     }
     base.update(overrides)
     return base
@@ -49,7 +55,7 @@ def test_valid_payload_loads_successfully():
     result = InputParametersSchema().load(_payload())
     assert isinstance(result, InputParameters)
     assert result.entities_url == VALID_URL
-    assert result.dimensions == 2
+    assert result.mds_dimensions == 2
     assert result.concat_output is False
     assert result.output_format == "csv"
 
