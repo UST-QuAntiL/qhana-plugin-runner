@@ -342,7 +342,7 @@ def has_enough_pca_dimensions(
     has_more_dimensions = dimensions > params.pca_dimensions
 
     if not has_more_dimensions:
-        info_msg = f"PCA reduction step disabled and skipped, because vector has {dimensions} dimensions, which is less than requested {params.pca_dimensions}."
+        info_msg = f"PCA reduction step skipped, because vector has {dimensions} dimensions, which is equal or less than requested {params.pca_dimensions}."
         TASK_LOGGER.info(info_msg)
         task_data.add_task_log_entry(info_msg, commit=True)
 
