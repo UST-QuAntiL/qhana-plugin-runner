@@ -17,8 +17,8 @@
 from logging import INFO
 from pathlib import Path
 
-from dotenv import dotenv_values
 import pytest
+from dotenv import dotenv_values
 from flask import Flask
 from sqlalchemy.pool import StaticPool
 
@@ -63,6 +63,7 @@ DEFAULT_TEST_CONFIG = {
     "PLUGIN_FOLDERS": [
         f for f in dotenv_values(".flaskenv")["PLUGIN_FOLDERS"].split(":") if f
     ],
+    "NISQ_ANALYZER_UI_URL": "http://localhost:4201",
 }
 
 
