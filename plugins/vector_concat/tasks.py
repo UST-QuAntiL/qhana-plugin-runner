@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from json import loads
 from tempfile import SpooledTemporaryFile
-from typing import Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple
 
 from celery.utils.log import get_task_logger
 
@@ -26,7 +27,7 @@ from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
 from qhana_plugin_runner.plugin_utils.zip_utils import get_file_responses_from_zip
-from qhana_plugin_runner.requests import get_mimetype, open_url
+from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
 from . import VectorConcatPlugin
@@ -35,8 +36,39 @@ from .schemas import ACCEPTED_CONTENT_TYPES
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def _load_entities_from_zip(zip_bytes: bytes) -> Iterator[List]:
-    """Yield one entity list per file contained in the zip archive.
+class VectorSource(NamedTuple):
+    name: str
+    url: str
+    zip_member: str | None
+    dimensions: list[str]
+
+
+def _source_dimensions(entities: list[Any]) -> list[str]:
+    if not entities:
+        return []
+
+    first = entities[0]
+
+    if isinstance(first, dict):
+        return sorted(key for key in first if key not in ("ID", "href"))
+
+    fields = list(first._fields)
+    return fields[2:] if "href" in fields else fields[1:]
+
+
+def _load_vector_entities(response, mimetype: str, url: str, zip_member: str | None):
+    raw = list(load_entities(response, mimetype=mimetype))
+    dimensions = _source_dimensions(raw)
+    entities = list(ensure_array(iter(raw), strict=True))
+    name = zip_member if zip_member is not None else retrieve_filename(response)
+
+    return VectorSource(name, url, zip_member, dimensions), entities
+
+
+def _load_entities_from_zip(
+    zip_bytes: bytes, url: str
+) -> Iterator[tuple[VectorSource, list]]:
+    """Yield one source/entity list pair per file contained in the zip archive.
 
     The content of each member may be JSON, JSON lines or CSV; the format is
     detected dynamically from the file name or its content.
@@ -49,12 +81,65 @@ def _load_entities_from_zip(zip_bytes: bytes) -> Iterator[List]:
             raise ValueError(
                 f"Mimetype for zip file '{response.url}' is not one of {ACCEPTED_CONTENT_TYPES}"
             )
-        yield list(
-            ensure_array(
-                load_entities(response, mimetype=mimetype),
-                strict=True,
+        yield _load_vector_entities(response, mimetype, url, response.url)
+
+
+def _load_sources(urls: list[str]) -> tuple[list[VectorSource], list[list]]:
+    """Load every input url, expanding zip archives into their members.
+
+    Returns the sources and their entity lists in concatenation order.
+    """
+    sources = []
+    entities_list = []
+
+    for url in urls:
+        with open_url(url, stream=True) as response:
+            mimetype = get_mimetype(response)
+            if not mimetype:
+                raise ValueError(f"Could not determine mimetype of {url}!")
+            if mimetype == "application/zip":
+                loaded = list(_load_entities_from_zip(response.content, url))
+            else:
+                loaded = [_load_vector_entities(response, mimetype, url, None)]
+
+        for source, entities in loaded:
+            sources.append(source)
+            entities_list.append(entities)
+
+    return sources, entities_list
+
+
+def _build_dimension_mapping(
+    sources: list[VectorSource], dimension_count: int
+) -> list[dict]:
+    """Map every output dimension back to the input file it came from.
+
+    Raises:
+        ValueError: if the mapped columns do not add up to ``dimension_count``.
+    """
+    mapping = []
+
+    for input_index, source in enumerate(sources):
+        for source_dimension in source.dimensions:
+            mapping.append(
+                {
+                    "ID": f"dim{len(mapping)}",
+                    "href": "",
+                    "inputIndex": input_index,
+                    "source": source.name,
+                    "sourceUrl": source.url,
+                    "zipMember": source.zip_member or "",
+                    "sourceDimension": source_dimension,
+                }
             )
+
+    if len(mapping) != dimension_count:
+        raise ValueError(
+            f"Could not map the output dimensions: the input files declare {len(mapping)} "
+            f"columns but the concatenated entities have {dimension_count} dimensions!"
         )
+
+    return mapping
 
 
 @CELERY.task(name=f"{VectorConcatPlugin.instance.identifier}.calculation_task", bind=True)
@@ -73,22 +158,11 @@ def calculation_task(self, db_id: int) -> str:
     output_suffix = params.get("output_suffix", "").strip()
     output_name = f"concatenated_{output_suffix}" if output_suffix else "concatenated"
 
-    entities_list = []
-    for url in urls:
-        with open_url(url, stream=True) as x:
-            mimetype = get_mimetype(x)
-            if not mimetype:
-                raise ValueError(f"Could not determine mimetype of {url}!")
-            if mimetype == "application/zip":
-                entities_list.extend(_load_entities_from_zip(x.content))
-            else:
-                entities = list(
-                    ensure_array(load_entities(x, mimetype=mimetype), strict=True)
-                )
-                entities_list.append(entities)
+    sources, entities_list = _load_sources(urls)
 
     combined = []
-    for entities_tuple in zip(*entities_list, strict=True):
+    dimension_count = 0
+    for entity_index, entities_tuple in enumerate(zip(*entities_list, strict=True)):
         e1 = entities_tuple[0]
         for e in entities_tuple[1:]:
             assert e.ID == e1.ID
@@ -98,9 +172,19 @@ def calculation_task(self, db_id: int) -> str:
         for e in entities_tuple:
             values.extend(e.values)
 
+        if entity_index == 0:
+            dimension_count = len(values)
+        elif len(values) != dimension_count:
+            raise ValueError(
+                f"Entity '{e1.ID}' has {len(values)} dimensions but the first entity "
+                f"has {dimension_count}! All entities must have the same dimensions."
+            )
+
         entity = {"ID": e1.ID, "href": e1.href}
         entity.update({f"dim{i}": v for i, v in enumerate(values)})
         combined.append(entity)
+
+    dimension_mapping = _build_dimension_mapping(sources, dimension_count)
 
     with SpooledTemporaryFile(mode="w") as output:
         if output_format == "json":
@@ -122,10 +206,20 @@ def calculation_task(self, db_id: int) -> str:
                 "application/X-lines+json",
             )
         else:
-            attributes = ["ID", "href"] + [f"dim{i}" for i in range(len(combined[0]) - 2)]
+            attributes = ["ID", "href"] + [f"dim{i}" for i in range(dimension_count)]
             save_entities(combined, output, "text/csv", attributes=attributes)
             STORE.persist_task_result(
                 db_id, output, f"{output_name}.csv", "entity/vector", "text/csv"
             )
+
+    with SpooledTemporaryFile(mode="w") as mapping_output:
+        save_entities(dimension_mapping, mapping_output, "application/json")
+        STORE.persist_task_result(
+            db_id,
+            mapping_output,
+            f"{output_name}_dimension_mapping.json",
+            "entity/dimension-mapping",
+            "application/json",
+        )
 
     return "Result stored in file"
