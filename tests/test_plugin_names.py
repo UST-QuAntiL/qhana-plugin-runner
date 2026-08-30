@@ -19,18 +19,24 @@ the plugin identifier used in REST URLs, blueprint names, and Celery task
 names. Plugin versions must be numeric semantic versioning style versions of
 the form ``vMAJOR[.MINOR[.PATCH]]`` with a required ``v`` prefix and at
 least one nonzero version part.
-
-The tests cover the rules, not the plugins in this repository. Checking every
-plugin requires either all plugin dependencies installed in CI or a static
-scan of the plugin sources, see the follow up issue on repository wide checks.
 """
 
 import pytest
 
-from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
+from qhana_plugin_runner.util.plugins import (
+    QHAnaPluginBase,
+    plugin_identifier,
+)
 
 VALID_NAME = "valid-test-plugin-name"
 VALID_VERSION = "v1.0.0"
+
+
+@pytest.fixture(autouse=True)
+def _discard_test_plugins():
+    yield
+    failed = QHAnaPluginBase.get_failed_plugins()
+    failed[:] = [entry for entry in failed if entry[0].__module__ != __name__]
 
 
 def _registers(name: str, version: str) -> bool:
@@ -166,3 +172,16 @@ def test_plugin_without_name_or_version_is_not_registered(attribute: str):
     mock = type("_MockPlugin", (QHAnaPluginBase,), attributes)
 
     assert not hasattr(mock, "instance")
+
+
+def test_no_plugin_failed_to_load(app):
+    assert QHAnaPluginBase.get_plugins(), "No plugins loaded, check PLUGIN_FOLDERS."
+
+    failed = [
+        f"{cls.__module__}.{cls.__qualname__}: {error}"
+        for cls, error in QHAnaPluginBase.get_failed_plugins()
+    ]
+
+    assert not failed, "Plugin classes that failed to load:\n  " + "\n  ".join(
+        sorted(failed)
+    )
