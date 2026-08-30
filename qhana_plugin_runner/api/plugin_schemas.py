@@ -384,7 +384,7 @@ class PluginMetadataSchema(MaBaseSchema):
             ApiLinkSchema,
             required=False,
             allow_none=False,
-            missing=tuple(),
+            load_default=tuple(),
             metadata={
                 "description": "A list of links to different parts of the plugin API for interacting with this plugin programatically."
             },
@@ -413,4 +413,4 @@ class WebhookParamsSchema(MaBaseSchema):
     """Parameters passed as query params to webhooks subscribed to task updates."""
 
     source = ma.fields.URL(schemes=("http", "https"), required=True, allow_none=False)
-    event = ma.fields.String(allow_none=True, missing=None)
+    event = ma.fields.String(allow_none=True, load_default=None)

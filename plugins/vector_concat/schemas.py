@@ -68,7 +68,7 @@ class VectorConcatSchema(FrontendFormBaseSchema):
         },
     )
     output_format = ma.fields.String(
-        missing="csv",
+        load_default="csv",
         validate=ma.validate.OneOf(("csv", "json", "lines")),
         metadata={
             "label": "Output Format",
@@ -83,7 +83,7 @@ class VectorConcatSchema(FrontendFormBaseSchema):
     )
     output_suffix = ma.fields.String(
         required=False,
-        missing="",
+        load_default="",
         validate=_validate_suffix,
         metadata={
             "label": "Output File Suffix",

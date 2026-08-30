@@ -20,8 +20,9 @@ from http import HTTPStatus
 from typing import Dict
 
 import marshmallow as ma
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec.ext.marshmallow.common import resolve_schema_instance
 from flask import Flask
-from flask.helpers import url_for
 from flask.views import MethodView
 from flask_smorest import Api
 from flask_smorest import Blueprint as SmorestBlueprint
@@ -33,8 +34,46 @@ from .plugins_api import PLUGINS_API
 from .tasks_api import TASKS_API
 from .util import MaBaseSchema
 
+
+def _schema_name_resolver(schema) -> str:
+    """Build a unique OpenAPI component name for a marshmallow schema.
+
+    The apispec default resolver uses the bare class name, which collides
+    both across plugins (``InputParametersSchema`` exists many times) and
+    within one class registered with different modifiers. Qualifying the
+    name with the module and the modifiers keeps component names unique.
+    """
+    instance = resolve_schema_instance(schema)
+    schema_cls = type(instance)
+    name = schema_cls.__name__.removesuffix("Schema")
+    parts = [f"{schema_cls.__module__}.{name}"]
+    if instance.partial:
+        parts.append(
+            "Partial"
+            if instance.partial is True
+            else "Partial-" + "-".join(sorted(instance.partial))
+        )
+    if instance.only:
+        parts.append("Only-" + "-".join(sorted(instance.only)))
+    if instance.exclude:
+        parts.append("Exclude-" + "-".join(sorted(instance.exclude)))
+    if instance.load_only:
+        parts.append("LoadOnly-" + "-".join(sorted(instance.load_only)))
+    if instance.dump_only:
+        parts.append("DumpOnly-" + "-".join(sorted(instance.dump_only)))
+    return "-".join(parts)
+
+
 """A single API instance. All api versions should be blueprints."""
-ROOT_API = Api(spec_kwargs={"title": "QHAna plugin runner api.", "version": "v1"})
+ROOT_API = Api(
+    spec_kwargs={
+        "title": "QHAna plugin runner api.",
+        "version": "v1",
+        "marshmallow_plugin": MarshmallowPlugin(
+            schema_name_resolver=_schema_name_resolver
+        ),
+    }
+)
 
 
 ROOT_API.register_field(EnumField, "string", None)
