@@ -61,6 +61,7 @@ from router.tests.data import (
     TAXONOMIES_URL,
     PluginServer,
     capture_pipeline_step,
+    capture_task_errors,
     make_router_task,
 )
 
@@ -91,6 +92,11 @@ def steps(monkeypatch) -> list:
 
 
 @pytest.fixture
+def task_errors(monkeypatch) -> list:
+    return capture_task_errors(monkeypatch)
+
+
+@pytest.fixture
 def dispatched(monkeypatch) -> list:
     """Record follow-up dispatches instead of running them on the worker."""
     calls = []
@@ -103,7 +109,8 @@ def dispatched(monkeypatch) -> list:
 
     for name in ("start_wu_palmer", "start_mapping", "start_vector_concat", "start_pca"):
         monkeypatch.setattr(
-            f"router.tasks_pipeline_steps.{name}.apply_async", _recorder(name)
+            f"router.tasks_pipeline_steps.{name}",
+            SimpleNamespace(apply_async=_recorder(name)),
         )
 
     monkeypatch.setattr(
@@ -426,7 +433,7 @@ def test_step_hands_the_previous_output_to_the_next_plugin(
     assert stored.mimetype == "application/zip"
 
 
-def test_missing_plugin_output_fails_the_step(server, steps):
+def test_missing_plugin_output_fails_the_step(server, steps, task_errors):
     """The mapping task publishes distances, not the expected similarities."""
     db_task = make_router_task()
 
@@ -436,6 +443,8 @@ def test_missing_plugin_output_fails_the_step(server, steps):
             db_id=db_task.id,
             source_url=server.task_url(MAPPING_PLUGIN),
         )
+
+    assert [error["db_id"] for error in task_errors] == [db_task.id]
 
 
 # --- FINALIZING A SINGLE PIPELINE ---

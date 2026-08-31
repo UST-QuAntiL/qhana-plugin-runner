@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import concurrent.futures
 import threading
 from types import SimpleNamespace
 
 import pytest
+from flask import current_app
 from requests.exceptions import Timeout
 
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from router import tasks as router_tasks
+from router import tasks_pipeline_steps as pipeline_steps
 from router.schemas import (
     AGGREGATOR_PLUGIN,
     FINALIZE_PIPELINE,
@@ -37,6 +41,7 @@ from router.tasks_helpers import CELERY_COUNTDOWN
 from router.tasks_pipeline_steps import start_wu_palmer
 from router.tests.data import (
     PluginServer,
+    capture_task_errors,
     input_file_responses,
     make_router_task,
     mock_open_url,
@@ -46,10 +51,34 @@ from tests.utils import run_task
 
 pytestmark = pytest.mark.usefixtures("celery_worker")
 
+# The tasks the router dispatches, listed per module that looks them up.
+DISPATCHED_TASKS = (
+    (
+        pipeline_steps,
+        ("start_wu_palmer", "start_mapping", "start_vector_concat", "start_pca"),
+    ),
+    (
+        router_tasks,
+        (
+            "start_transformers",
+            "start_aggregator",
+            "start_mds",
+            "finalize_pipeline",
+            "finalize_vector_concat",
+            "finalize_pca",
+        ),
+    ),
+)
+
 
 @pytest.fixture
 def server(monkeypatch) -> PluginServer:
     return PluginServer().install(monkeypatch)
+
+
+@pytest.fixture
+def task_errors(monkeypatch) -> list:
+    return capture_task_errors(monkeypatch)
 
 
 @pytest.fixture
@@ -59,12 +88,19 @@ def inline(monkeypatch):
     Returns the results and errors the router reports through the plugin runner
     tasks, which are stubbed out here because they need a parent task to run in.
     """
-    from celery.app.task import Task as CeleryTask
 
-    def mock_apply_async(self, args=None, kwargs=None, **options):
-        return self.apply(args=args or (), kwargs=kwargs or {})
+    def run_now(task):
+        def apply_async(args=None, kwargs=None, **options):
+            # throw=True surfaces a failing step instead of burying it in a
+            # result that nobody looks at
+            return task.apply(args=args or (), kwargs=kwargs or {}, throw=True)
 
-    monkeypatch.setattr(CeleryTask, "apply_async", mock_apply_async)
+        return apply_async
+
+    for module, task_names in DISPATCHED_TASKS:
+        for name in task_names:
+            task = getattr(module, name)
+            monkeypatch.setattr(module, name, SimpleNamespace(apply_async=run_now(task)))
 
     recorded = SimpleNamespace(results=[], errors=[])
     monkeypatch.setattr(
@@ -256,6 +292,21 @@ def test_webhook_ignores_unknown_sources(server, source_url):
     assert db_task.progress_value == 1
 
 
+def test_webhook_ignores_a_step_that_is_not_awaited(server):
+    """A late watchdog poll for an already finished step must not progress anything."""
+    db_task = make_router_task()
+
+    result = run_task(
+        handle_webhook_task,
+        db_id=db_task.id,
+        source_url=server.task_url(MDS_PLUGIN),
+        via="watchdog",
+    )
+
+    assert result == "Unrecognized webhook source"
+    assert reload(db_task).progress_value == 1
+
+
 def test_webhook_ignores_an_unknown_task(server):
     result = run_task(
         handle_webhook_task,
@@ -279,13 +330,15 @@ def test_webhook_waits_for_a_pending_sub_task(server):
     assert result == "Sub-task still pending"
 
 
-def test_webhook_fails_the_task_when_a_sub_task_failed(server):
+def test_webhook_fails_the_task_when_a_sub_task_failed(server, task_errors):
     url = server.task_url(WU_PALMER_PLUGIN)
     server.statuses[url] = "FAILURE"
     db_task = make_router_task(data={f"{WU_PALMER_PLUGIN}_url": url})
 
     with pytest.raises(RuntimeError, match="Sub-plugin step failed"):
         run_task(handle_webhook_task, db_id=db_task.id, source_url=url, via="webhook")
+
+    assert [error["db_id"] for error in task_errors] == [db_task.id]
 
 
 @pytest.mark.parametrize(
@@ -496,66 +549,32 @@ def test_on_retry_logs_without_app_context():
     assert "Transient error" in reloaded.task_log
 
 
-def test_handle_webhook_ignores_unrecognized_source():
-    """Verifies that an unknown URL is rejected before a network call is made."""
-    db_task = _setup_mock_task()
-
-    # Feed an unknown URL to the webhook
-    result = run_task(
-        handle_webhook_task,
-        db_id=db_task.id,
-        source_url="http://unknown-source",
-        via="webhook",
-    )
-
-    assert result == "Unrecognized webhook source"
-
-
-def test_handle_webhook_synchronization_guard(monkeypatch):
+def test_handle_webhook_synchronization_guard(server, monkeypatch):
     """
     Simulates a race condition by firing 10 simultaneous webhook handlers
     for the exact same source URL to prove the atomic database lock holds up.
     """
-    db_task = _setup_mock_task()
-    mock_url = "http://mock/tasks/wp/stress_test_999/"
-
-    db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
-    db_task.data[f"{WU_PALMER_PLUGIN}_url"] = mock_url
-    db_task.save(commit=True)
-
-    def mock_get(url, **kwargs):
-        return MockResponse(
-            url,
-            "application/json",
-            status_code=200,
-            json_data={
-                "status": "SUCCESS",
-                "outputs": [
-                    {"dataType": "some/datatype", "href": "http://mock/data.zip"}
-                ],
-            },
-        )
-
-    monkeypatch.setattr("requests.get", mock_get)
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(
+        data={"current_pipeline": WU_PALMER_PLUGIN, f"{WU_PALMER_PLUGIN}_url": url}
+    )
+    db_id = db_task.id
 
     triggered = []
-
-    def mock_apply_async(*args, **kwargs):
-        triggered.append("next_step_triggered")
-
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.start_transformers.apply_async", mock_apply_async
+        router_tasks,
+        "start_transformers",
+        SimpleNamespace(apply_async=lambda *args, **kwargs: triggered.append(kwargs)),
     )
 
     app = current_app._get_current_object()
-    task_id = db_task.id
 
     def fire_concurrent_webhook(worker_index):
         with app.app_context():
             return run_task(
                 handle_webhook_task,
-                db_id=task_id,
-                source_url=mock_url,
+                db_id=db_id,
+                source_url=url,
                 via=f"synch_test_{worker_index}",
             )
 
@@ -565,7 +584,6 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
         # executor.map fires all threads at once and collects their return values
         results = list(executor.map(fire_concurrent_webhook, range(worker_count)))
 
-    # ASSERTIONS
     # Out of 10 concurrent workers, exactly 1 should win, and 9 should be rejected.
     assert (
         len(triggered) == 1
@@ -573,5 +591,5 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
 
     rejected_count = results.count("Sub-task already progressed")
     assert (
-        rejected_count == 9
+        rejected_count == worker_count - 1
     ), f"Expected 9 rejected workers, but got {rejected_count}. Results: {results}"

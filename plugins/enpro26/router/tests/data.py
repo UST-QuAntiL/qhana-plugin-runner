@@ -16,6 +16,7 @@
 
 import json
 from itertools import count
+from types import SimpleNamespace
 from typing import Dict, List, Optional
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -370,3 +371,18 @@ def capture_pipeline_step(monkeypatch) -> List[dict]:
         lambda **kwargs: calls.append(kwargs),
     )
     return calls
+
+
+def capture_task_errors(monkeypatch) -> List[dict]:
+    """Record reported task errors instead of handing them to the plugin runner.
+
+    The real ``save_task_error`` calls ``AsyncResult.forget()`` on the failing
+    task, which drops the result from the backend before ``run_task`` can poll
+    it. A test expecting the exception would time out instead.
+    """
+    errors: List[dict] = []
+    monkeypatch.setattr(
+        "router.tasks_helpers.save_task_error",
+        SimpleNamespace(delay=lambda **kwargs: errors.append(kwargs)),
+    )
+    return errors
