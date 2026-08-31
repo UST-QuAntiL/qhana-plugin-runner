@@ -15,6 +15,7 @@
 """Shared test data and stubs for the router plugin tests."""
 
 import json
+from itertools import count
 from typing import Dict, List, Optional
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
@@ -219,6 +220,8 @@ _PLAIN_OUTPUTS = {
     "custom/plot": ("text/html", "<html>plot</html>"),
 }
 
+_SERVER_INSTANCES = count(1)
+
 
 class PluginServer:
     """In-memory stand-in for the sub-plugin HTTP API.
@@ -234,12 +237,17 @@ class PluginServer:
         self.statuses: Dict[str, str] = {}
         self.files: Dict[str, MockResponse] = dict(input_file_responses())
         self._task_urls: Dict[str, str] = {}
+        self._plugin_by_task_url: Dict[str, str] = {}
+        self._counters: Dict[str, int] = {}
+        self._indices: Dict[str, int] = {}
         self._outputs: Dict[str, List[dict]] = {}
+        # The router locks a sub-task url once; a shared test database would
+        # otherwise let one test's lock block the next one.
+        self._instance = next(_SERVER_INSTANCES)
 
-        for index, (key, name) in enumerate(PIPELINE_PLUGINS.items(), start=1):
-            task_url = f"{PLUGIN_BASE}/{name}/tasks/{index}00/"
-            self._task_urls[key] = task_url
-            self.statuses[task_url] = "SUCCESS"
+        for index, key in enumerate(PIPELINE_PLUGINS, start=1):
+            self._indices[key] = index
+            task_url = self._new_task_url(key)
             outputs = []
             for data_type in PLUGIN_OUTPUT_TYPES[key]:
                 slug = data_type.replace("/", "_")
@@ -247,6 +255,18 @@ class PluginServer:
                 outputs.append({"dataType": data_type, "href": href, "name": slug})
                 self.files[href] = self._output_response(href, key, data_type)
             self._outputs[key] = outputs
+
+    def _new_task_url(self, plugin: str) -> str:
+        """Hand out a fresh sub-task url, as a real plugin does per request."""
+        self._counters[plugin] = self._counters.get(plugin, 0) + 1
+        url = (
+            f"{PLUGIN_BASE}/{PIPELINE_PLUGINS[plugin]}/tasks/"
+            f"{self._instance}-{self._indices[plugin]}{self._counters[plugin]:02d}/"
+        )
+        self._task_urls[plugin] = url
+        self._plugin_by_task_url[url] = plugin
+        self.statuses[url] = "SUCCESS"
+        return url
 
     @staticmethod
     def _output_response(href: str, plugin: str, data_type: str) -> MockResponse:
@@ -297,12 +317,12 @@ class PluginServer:
             url,
             "text/html",
             status_code=303,
-            headers={"Location": self._task_urls[plugin]},
+            headers={"Location": self._new_task_url(plugin)},
         )
 
     def _get(self, url, **kwargs):
         if url in self.statuses:
-            plugin = self._plugin_for_url(url)
+            plugin = self._plugin_by_task_url[url]
             status = self.statuses[url]
             return MockResponse(
                 url,
