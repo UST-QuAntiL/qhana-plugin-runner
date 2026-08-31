@@ -133,9 +133,9 @@ def assert_payload_matches_plugin_schema(plugin: str, payload: dict):
     schema = schema_class()
 
     known_keys = {field.data_key for field in schema.fields.values()}
-    assert set(payload) <= known_keys, (
-        f"{plugin} would silently ignore {set(payload) - known_keys}"
-    )
+    assert (
+        set(payload) <= known_keys
+    ), f"{plugin} would silently ignore {set(payload) - known_keys}"
 
     schema_class(unknown=EXCLUDE).load(payload)
 
@@ -254,7 +254,10 @@ def test_mds_payload(server, steps):
 
 
 def test_vector_concat_payload(server, steps):
-    urls = ["http://localhost:5005/files/10/a.zip", "http://localhost:5005/files/11/b.zip"]
+    urls = [
+        "http://localhost:5005/files/10/a.zip",
+        "http://localhost:5005/files/11/b.zip",
+    ]
     db_task = make_router_task(
         concatOutput=True, outputFormat="json", data={"vector_zip_urls": urls}
     )
@@ -300,9 +303,7 @@ def test_pca_payload(server, steps):
 def test_pca_defaults_cover_every_parameter_the_form_omits(app):
     """The PCA schema has no defaults, so the router has to send every field."""
     schema = getattr(import_module("pca.schemas"), "InputParametersSchema")()
-    required = {
-        field.data_key for field in schema.fields.values() if field.required
-    }
+    required = {field.data_key for field in schema.fields.values() if field.required}
     sent_by_router = set(PCA_DEFAULTS) | {
         "entityPointsUrl",
         "pcaType",
@@ -599,9 +600,7 @@ def test_finalize_vector_concat_stores_the_final_vector(
 
 
 def test_finalize_vector_concat_starts_pca_when_requested(server, dispatched):
-    db_task = make_router_task(
-        concatOutput=True, reduceDimensions=True, pcaDimensions=1
-    )
+    db_task = make_router_task(concatOutput=True, reduceDimensions=True, pcaDimensions=1)
 
     run_task(
         finalize_vector_concat,
@@ -633,9 +632,7 @@ def test_finalize_vector_concat_keeps_the_unreduced_vector_on_request(server, di
 
 def test_finalize_vector_concat_skips_pca_without_enough_dimensions(server, dispatched):
     """The stub vector has three dimensions, so reducing to three is pointless."""
-    db_task = make_router_task(
-        concatOutput=True, reduceDimensions=True, pcaDimensions=3
-    )
+    db_task = make_router_task(concatOutput=True, reduceDimensions=True, pcaDimensions=3)
 
     run_task(
         finalize_vector_concat,

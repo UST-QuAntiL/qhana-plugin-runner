@@ -377,4 +377,3 @@ def test_pipeline_options_are_offered_for_every_attribute(client):
     for key, label in PIPELINE_OPTIONS.items():
         assert f'value="{key}"' in body
         assert label in body
-

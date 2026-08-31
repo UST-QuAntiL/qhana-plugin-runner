@@ -151,7 +151,12 @@ ATTRIBUTE_METADATA = [
         "title": "Instrumentation",
         "refTarget": "taxonomies.zip:t_instrumentation.json",
     },
-    {"ID": "composer", "type": "composer", "title": "Composer", "refTarget": "people.csv"},
+    {
+        "ID": "composer",
+        "type": "composer",
+        "title": "Composer",
+        "refTarget": "people.csv",
+    },
     {
         "ID": "missing_tax",
         "type": "missing_tax",
@@ -169,7 +174,12 @@ ATTRIBUTE_METADATA = [
 # ``mapping_raw`` values decide the pipeline recommendation per taxonomy.
 TAXONOMY_MEMBERS = {
     "t_genre.json": json.dumps(
-        {"entities": [{"ID": "g1", "mapping_raw": "1,2"}, {"ID": "g2", "mapping_raw": ""}]}
+        {
+            "entities": [
+                {"ID": "g1", "mapping_raw": "1,2"},
+                {"ID": "g2", "mapping_raw": ""},
+            ]
+        }
     ),
     "t_instrumentation.json": json.dumps(
         {"entities": [{"ID": "i1", "mapping_raw": ""}, {"ID": "i2", "mapping_raw": ""}]}

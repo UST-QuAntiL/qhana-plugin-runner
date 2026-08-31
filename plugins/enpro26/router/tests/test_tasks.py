@@ -234,7 +234,9 @@ def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
     [
         pytest.param("", id="no source"),
         pytest.param("http://localhost:5005/plugins/other/1/", id="foreign plugin"),
-        pytest.param(None, id="sub-task of another pipeline"), # None value is evaluated at runtime in test
+        pytest.param(
+            None, id="sub-task of another pipeline"
+        ),  # None value is evaluated at runtime in test
     ],
 )
 def test_webhook_ignores_unknown_sources(server, source_url):
