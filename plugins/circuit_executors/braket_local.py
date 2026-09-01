@@ -294,7 +294,11 @@ class Braket_LocalSimulator(QHAnaPluginBase):
         return BRAKET_LOCAL_BLP
 
     def get_requirements(self) -> str:
-        return "amazon-braket-sdk~=1.113.0\nqiskit[qasm3-import]~=2.3.0"
+        return (
+            "amazon-braket-sdk~=1.126.2\n"
+            "qiskit-braket-provider~=0.23.2\n"
+            "qiskit[qasm3-import]~=2.3.0"
+        )
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -326,23 +330,20 @@ def postprocess_counts(counts: Dict[str, int], qiskit_circuit) -> Dict[str, int]
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from braket.circuits import Instruction, gates
-    from braket.circuits import Circuit, ResultType
+    from braket.circuits import ResultType
     from braket.devices import LocalSimulator
     from qiskit import QuantumCircuit
     from qiskit.qasm3 import loads as loads3
+    from qiskit_braket_provider.providers.adapter import to_braket
 
-    # Convert QASM code to a Cirq circuit
+    # Parse the circuit with qiskit only. Braket speaks its own OpenQASM
+    # dialect (it names the controlled not gate "cnot" where OpenQASM and
+    # qiskit use "cx"), so handing the same source to Braket.from_ir would
+    # reject any circuit qiskit accepts. Converting the parsed circuit
+    # instead keeps this executor compatible with the OpenQASM the other
+    # circuit executors are given.
     qiskit_circuit: QuantumCircuit = loads3(circuit_qasm)
-
-    circuit_qasm = circuit_qasm.replace("\r\n", "\n")
-
-    # remove stdgates.inc import to avoid FileNotFoundError
-
-    circuit_qasm = circuit_qasm.replace('include "stdgates.inc";', "")
-
-    # Convert the Cirq circuit to a Braket circuit
-    braket_circuit = Circuit.from_ir(circuit_qasm)
+    braket_circuit = to_braket(qiskit_circuit)
 
     shots = execution_options["shots"]
 
@@ -362,9 +363,6 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         # missing measurement instructions
         return metadata, {"": shots}, None
 
-    for i in range(len(qiskit_circuit.qubits)):
-        braket_circuit.add_instruction(Instruction(gates.I(), i))
-
     device = LocalSimulator()
 
     # Start the simulation for counts with time nanosecond
@@ -378,11 +376,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     statevector = None
 
-    # TODO: should be tested for compatibility with other plugins
     if execution_options["statevector"]:
-        # Start the simulation for the state vector
-        state_vector_circuit = braket_circuit.copy()
-        state_vector_circuit.add_result_type(ResultType.StateVector())  # State vector
+        # Braket refuses to add a result type to a circuit that already
+        # measures, so the state vector is taken from the circuit without
+        # its final measurements. That is also the state of interest here,
+        # measuring first would only collapse it.
+        unmeasured_circuit = qiskit_circuit.remove_final_measurements(inplace=False)
+        state_vector_circuit = to_braket(unmeasured_circuit)
+        state_vector_circuit.add_result_type(ResultType.StateVector())
         state_vector_result = device.run(state_vector_circuit, shots=0).result()
         statevector = [state_vector_result.values[0]]
 
