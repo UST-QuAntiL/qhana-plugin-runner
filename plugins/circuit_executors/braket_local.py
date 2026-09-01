@@ -294,7 +294,7 @@ class Braket_LocalSimulator(QHAnaPluginBase):
         return BRAKET_LOCAL_BLP
 
     def get_requirements(self) -> str:
-        return "amazon-braket-sdk~=1.113.0\nqiskit~=2.3.0"
+        return "amazon-braket-sdk~=1.113.0\nqiskit[qasm3-import]~=2.3.0"
 
 
 TASK_LOGGER = get_task_logger(__name__)

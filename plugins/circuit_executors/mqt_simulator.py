@@ -293,22 +293,17 @@ class MqtSimulator(QHAnaPluginBase):
         return MQT_BLP
 
     def get_requirements(self) -> str:
-        return """qiskit~=2.3.0\nmqt.ddsim~=2.2.0"""
+        return """qiskit[qasm3-import]~=2.3.0\nmqt.ddsim~=2.2.0"""
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QiskitError, QuantumCircuit, transpile
+    from qiskit import QuantumCircuit, transpile
     from qiskit.qasm2 import loads as loads2
-
-    try:
-        from qiskit.qasm3 import loads as loads3, QASM3ImporterError
-    except ImportError:  # pragma: no cover - fallback for older qiskit_qasm3_import shims
-        from qiskit.qasm3 import loads as loads3  # type: ignore
-
-        QASM3ImporterError = Exception
+    from qiskit.qasm3 import QASM3ImporterError
+    from qiskit.qasm3 import loads as loads3
 
     from mqt import ddsim
 
@@ -318,7 +313,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     circuit: QuantumCircuit
     try:
         circuit = loads3(circuit_qasm)
-    except (QASM3ImporterError, QiskitError):
+    except QASM3ImporterError:
         circuit = loads2(circuit_qasm)
 
     backend_Qasm = ddsim.DDSIMProvider().get_backend("qasm_simulator")

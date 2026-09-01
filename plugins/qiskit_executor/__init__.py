@@ -47,7 +47,7 @@ class QiskitExecutor(QHAnaPluginBase):
         return QISKIT_EXECUTOR_BLP
 
     def get_requirements(self) -> str:
-        return f"qiskit~={qiskit_version}"
+        return f"qiskit[qasm3-import]~={qiskit_version}"
 
 
 try:

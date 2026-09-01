@@ -294,7 +294,7 @@ class QiskitSimulator(QHAnaPluginBase):
         return QISKIT_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=2.3.0\nqiskit-aer~=0.17.2"
+        return "qiskit[qasm3-import]~=2.3.0\nqiskit-aer~=0.17.2"
 
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -304,13 +304,8 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     from qiskit import QiskitError, QuantumCircuit, transpile
     from qiskit_aer import AerSimulator
     from qiskit.qasm2 import loads as loads2
-
-    try:
-        from qiskit.qasm3 import loads as loads3, QASM3ImporterError
-    except ImportError:  # pragma: no cover - fallback for older qiskit_qasm3_import shims
-        from qiskit.qasm3 import loads as loads3  # type: ignore
-
-        QASM3ImporterError = Exception
+    from qiskit.qasm3 import QASM3ImporterError
+    from qiskit.qasm3 import loads as loads3
     from qiskit.result import Result
 
     backend_counts = AerSimulator()
@@ -320,7 +315,7 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     try:
         circuit = loads3(circuit_qasm)
-    except (QASM3ImporterError, QiskitError):
+    except QASM3ImporterError:
         circuit = loads2(circuit_qasm)
 
     compiled_counts = transpile(circuit, backend_counts)
@@ -335,7 +330,12 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     if execution_options.get("statevector"):
         # only execute if statevector result was requested in the first place
-        compiled_statevector = transpile(circuit, backend_statevector)
+        # AerSimulator only reports a statevector when the circuit asks it to save
+        # one. The removed Aer statevector_simulator backend did this implicitly,
+        # without the explicit instruction the result carries no statevector at all.
+        statevector_circuit = circuit.copy()
+        statevector_circuit.save_statevector()
+        compiled_statevector = transpile(statevector_circuit, backend_statevector)
         result_state: Optional[Result] = backend_statevector.run(
             compiled_statevector
         ).result()
@@ -359,12 +359,13 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
         shots = abs(shots[-1] - shots[0])
     seed = getattr(experiment_result, "seed_simulator", None)
 
-    backend_name = getattr(result_count, "backend_name", None) or getattr(
-        backend_counts, "name", None
-    )
-    backend_version = getattr(result_count, "backend_version", None) or getattr(
-        backend_counts, "backend_version", None
-    )
+    backend_name = getattr(result_count, "backend_name", None)
+    if not backend_name:
+        backend_name = getattr(backend_counts, "name", None)
+
+    backend_version = getattr(result_count, "backend_version", None)
+    if not backend_version:
+        backend_version = getattr(backend_counts, "backend_version", None)
 
     metadata = {
         # trace ids (specific to IBM qiskit jobs)
