@@ -29,6 +29,15 @@ Optional Tags:
 Both, the micro frontend and the processing endpoint accept a `callback` paramater in the query string of the URL.
 This parameter contains a webhook that will be automatically subscribed to all task updates (especially updates to task status and steps).
 
+```{note}
+It is currently undecided whether `callback` is a required part of this interface.
+The qiskit 2 update made it optional in the `hinge_loss`, `neural_network`,
+`ridge_loss`, `scipy_minimizer` and `scipy_minimizer_grad` plugins so they can be
+invoked standalone, but that may weaken the contract these plugins are expected to
+fulfil. This needs to be decided together with the open QNN pull requests, and this
+document updated to state the outcome.
+```
+
 The main interaction is otherwise completely up to the objective function plugin.
 However, the plugin must expose certain steps and task specific links in later parts of the interaction.
 
