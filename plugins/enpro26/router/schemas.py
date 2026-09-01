@@ -342,7 +342,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
     )
 
     output_format = ma.fields.String(
-        missing="csv",
+        load_default="csv",
         validate=ma.validate.OneOf(("csv", "json", "lines")),
         metadata={
             "label": " Output Format",
@@ -401,7 +401,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
 
     tol = ma.fields.Float(
         required=True,
-        allow_None=False,
+        allow_none=False,
         metadata={
             "label": "Error Tolerance",
             "description": "Tolerance (tol) for the stopping condition of arpack and of sparse PCA. \n"
@@ -412,7 +412,7 @@ class InputParametersSchema(FrontendFormBaseSchema):
 
     iterated_power = ma.fields.Integer(
         required=True,
-        allow_None=False,
+        allow_none=False,
         metadata={
             "label": "Iterated Power",
             "description": "This sets the iterated power parameter for the randomized solver. \n"

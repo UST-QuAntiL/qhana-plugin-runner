@@ -59,7 +59,7 @@ class SubscriptionDataSchema(MaBaseSchema):
     event = ma.fields.String(
         required=False,
         allow_none=True,
-        missing=None,
+        load_default=None,
         metadata={"description": "The type of event to subscribe to."},
     )
     webhook_href = ma.fields.Url(

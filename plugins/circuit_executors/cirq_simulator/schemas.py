@@ -22,7 +22,7 @@ class CirqSimulatorParametersSchema(FrontendFormBaseSchema):
     executionOptions = FileUrl(
         required=False,
         allow_none=True,
-        load_missing=None,
+        load_default=None,
         data_input_type="provenance/execution-options",
         data_content_types=["text/csv", "application/json", "application/X-lines+json"],
         metadata={
