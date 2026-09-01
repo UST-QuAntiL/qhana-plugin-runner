@@ -149,8 +149,7 @@ def calculation_task(self, db_id: int) -> str:
     if max_qbits is None:
         max_qbits = 6
 
-    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
-    backend.shots = shots
+    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits, shots)
 
     # entanglement_pattern = entanglement_pattern.get_pattern(n_qbits)
     kernel = kernel_enum.get_kernel(backend, n_qbits, reps, entanglement_pattern)

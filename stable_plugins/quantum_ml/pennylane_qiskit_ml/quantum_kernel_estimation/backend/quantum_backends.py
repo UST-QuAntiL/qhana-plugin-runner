@@ -71,12 +71,18 @@ class QuantumBackends(enum.Enum):
         ibmq_token: str,
         custom_backend_name: str,
         qubit_cnt: int,
+        shots: int,
     ) -> qml.devices.Device:
         if self.name.startswith("aer"):
             # Use local AER backend
             aer_backend_name = self.name[4:]
 
-            return qml.device("qiskit.aer", wires=qubit_cnt, backend=aer_backend_name)
+            return qml.device(
+                "qiskit.aer",
+                wires=qubit_cnt,
+                backend=aer_backend_name,
+                shots=shots,
+            )
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             if IBMProvider is None:
@@ -86,7 +92,11 @@ class QuantumBackends(enum.Enum):
             provider = IBMProvider(token=ibmq_token)
 
             return qml.device(
-                "qiskit.ibmq", wires=qubit_cnt, backend=self.name, provider=provider
+                "qiskit.ibmq",
+                wires=qubit_cnt,
+                backend=self.name,
+                provider=provider,
+                shots=shots,
             )
         elif self.name.startswith("custom_ibmq"):
             if IBMProvider is None:
@@ -100,6 +110,7 @@ class QuantumBackends(enum.Enum):
                 wires=qubit_cnt,
                 backend=custom_backend_name,
                 provider=provider,
+                shots=shots,
             )
         else:
             TASK_LOGGER.error("Unknown pennylane backend specified!")

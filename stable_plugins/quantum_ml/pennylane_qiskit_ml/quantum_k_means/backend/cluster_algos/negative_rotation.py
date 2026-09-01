@@ -87,7 +87,7 @@ class NegativeRotationQuantumKMeans(Clustering):
 
         result = circuit()
         # return probability of measuring |0> and open qasm
-        return [probs[0] for probs in result], circuit.tape.to_openqasm()
+        return [probs[0] for probs in result], qml.to_openqasm(circuit)()
 
     def compute_new_centroid_mapping(
         self, prepped_data: List[float], centroids: List[List[float]]

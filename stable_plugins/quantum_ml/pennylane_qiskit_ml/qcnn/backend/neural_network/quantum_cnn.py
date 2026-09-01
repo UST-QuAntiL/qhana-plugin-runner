@@ -85,7 +85,7 @@ class QuantumCNN(nn.Module, metaclass=ABCMeta):
             subimage[4 * channel + 3] = image[1, 1, channel]
         qnode = self.circuit(subimage)
         qnode.construct([], {})
-        return qnode.qtape.to_openqasm()
+        return qml.to_openqasm(qnode)()
 
     def parameters(self, recurse: bool = True) -> Iterator[nn.Parameter]:
         for name, param in self.named_parameters(recurse=recurse):

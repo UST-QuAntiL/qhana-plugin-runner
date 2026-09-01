@@ -423,7 +423,7 @@ class BasheerHammingQkNN(QkNN):
             measure_wires,
         )
         circuit.construct([], {})
-        return circuit.qtape.to_openqasm()
+        return qml.to_openqasm(circuit)()
 
     def heatmap_meaningful(self) -> bool:
         return False
