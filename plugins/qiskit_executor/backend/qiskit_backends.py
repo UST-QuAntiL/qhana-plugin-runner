@@ -27,11 +27,31 @@ except Exception:
 
 TASK_LOGGER = get_task_logger(__name__)
 
+# channel used when neither QISKIT_IBM_CHANNEL nor IBMQ_CHANNEL is set
+DEFAULT_IBM_CHANNEL = "ibm_quantum"
+
 
 def _runtime_config() -> tuple[str, Optional[str]]:
-    channel = os.environ.get("QISKIT_IBM_CHANNEL") or os.environ.get("IBMQ_CHANNEL")
-    instance = os.environ.get("QISKIT_IBM_INSTANCE") or os.environ.get("IBMQ_INSTANCE")
-    return channel or "ibm_quantum", instance
+    """Return the configured IBM Quantum runtime channel and instance.
+
+    The ``IBMQ_*`` variables are the deprecated spelling of the
+    ``QISKIT_IBM_*`` variables and are only read as a fallback. A variable
+    that is set to an empty string counts as unset, because that is how an
+    option left blank in a ``.env`` file arrives here. The instance is
+    ``None`` when it is not configured, in which case the runtime service
+    picks a default instance.
+    """
+    channel = os.environ.get("QISKIT_IBM_CHANNEL", "")
+    if not channel:
+        channel = os.environ.get("IBMQ_CHANNEL", "")
+    if not channel:
+        channel = DEFAULT_IBM_CHANNEL
+
+    instance = os.environ.get("QISKIT_IBM_INSTANCE", "")
+    if not instance:
+        instance = os.environ.get("IBMQ_INSTANCE", "")
+
+    return channel, instance if instance else None
 
 
 def get_runtime_service(ibmq_token: str) -> Optional[Any]:

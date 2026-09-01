@@ -24,9 +24,7 @@ except ImportError:  # pragma: no cover - optional dependency
     Aer = None
 
 # FIXME: the ibmq_* backends below are unusable with the pinned dependencies.
-# qiskit-ibm-provider is not compatible with qiskit>=2 (superseded by
-# qiskit-ibm-runtime) and pennylane-qiskit dropped its "qiskit.ibmq" device in
-# favour of "qiskit.remote". Porting them needs a tracking issue.
+# qiskit-ibm-provider is not compatible with qiskit>=2
 try:
     from qiskit_ibm_provider import IBMProvider
 except ImportError:  # pragma: no cover - optional dependency
