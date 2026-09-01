@@ -49,11 +49,11 @@ class DiffMethodEnum(Enum):
 
 
 class QuantumNet(nn.Module, metaclass=ABCMeta):
-    def __init__(self, quantum_device: qml.Device):
+    def __init__(self, quantum_device: qml.devices.Device):
         super(QuantumNet, self).__init__()
         self.quantum_device = quantum_device
 
-    def set_quantum_backend(self, quantum_device: qml.Device):
+    def set_quantum_backend(self, quantum_device: qml.devices.Device):
         self.quantum_device = quantum_device
 
     @abstractmethod
@@ -100,7 +100,7 @@ class DressedQuantumNet(QuantumNet):
         input_size: int,
         output_size: int,
         n_qubits: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         q_depth: int,
         weight_init: WeightInitEnum,
         preprocess_layers: List[int],

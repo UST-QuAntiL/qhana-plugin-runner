@@ -33,7 +33,7 @@ class RuanParzenWindow(ParzenWindow):
         train_wires: List[int],
         label_wires: List[int],
         ancilla_wires: List[int],
-        backend: qml.Device,
+        backend: qml.devices.Device,
         unclean_wires: List[int] = None,
     ):
         super(RuanParzenWindow, self).__init__(

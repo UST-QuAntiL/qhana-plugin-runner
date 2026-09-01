@@ -31,7 +31,7 @@ class SimpleQkNN(QkNN):
         train_data: np.ndarray,
         train_labels: np.ndarray,
         k: int,
-        backend: qml.Device,
+        backend: qml.devices.Device,
     ):
         super(SimpleQkNN, self).__init__(train_data, train_labels, k, backend)
 
@@ -71,7 +71,7 @@ class SimpleHammingQkNN(SimpleQkNN):
         idx_wires: List[int],
         train_wires: List[int],
         qam_ancilla_wires: List[int],
-        backend: qml.Device,
+        backend: qml.devices.Device,
         unclean_wires: List[int] = None,
     ):
         super(SimpleHammingQkNN, self).__init__(train_data, train_labels, k, backend)
@@ -193,7 +193,7 @@ class SimpleFidelityQkNN(SimpleQkNN):
         idx_wires: List[int],
         swap_wires: List[int],
         ancilla_wires: List[int],
-        backend: qml.Device,
+        backend: qml.devices.Device,
         unclean_wires=None,
     ):
         super(SimpleFidelityQkNN, self).__init__(train_data, train_labels, k, backend)
@@ -381,7 +381,7 @@ class SimpleAngleQkNN(SimpleQkNN):
         idx_wires: List[int],
         swap_wires: List[int],
         ancilla_wires: List[int],
-        backend: qml.Device,
+        backend: qml.devices.Device,
         unclean_wires=None,
     ):
         super(SimpleAngleQkNN, self).__init__(train_data, train_labels, k, backend)

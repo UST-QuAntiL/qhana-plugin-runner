@@ -16,21 +16,12 @@ from enum import Enum
 
 import pennylane as qml
 
+# FIXME: the ibmq_* backends below are unusable with the pinned dependencies.
+# qiskit-ibm-provider is not compatible with qiskit>=2
 try:
     from qiskit_ibm_provider import IBMProvider
 except ImportError:  # pragma: no cover - optional dependency
     IBMProvider = None
-
-try:
-    from ....pennylane_qiskit_compat import (
-        ensure_qiskit_ibm_provider_compat,
-        pennylane_qiskit_version_override,
-    )
-except ImportError:
-    from pennylane_qiskit_compat import (
-        ensure_qiskit_ibm_provider_compat,
-        pennylane_qiskit_version_override,
-    )
 
 
 class QuantumBackends(Enum):
@@ -53,16 +44,13 @@ class QuantumBackends(Enum):
         custom_backend_name: str,
         qubit_cnt: int,
         shots: int,
-    ) -> qml.Device:
-        if self.name.startswith(("aer", "ibmq", "custom_ibmq")):
-            ensure_qiskit_ibm_provider_compat()
+    ) -> qml.devices.Device:
         if self.name.startswith("aer"):
             # Use local AER backend
             aer_backend_name = self.name[4:]
-            with pennylane_qiskit_version_override():
-                return qml.device(
-                    "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
-                )
+            return qml.device(
+                "qiskit.aer", wires=qubit_cnt, backend=aer_backend_name, shots=shots
+            )
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
             if IBMProvider is None:
@@ -71,14 +59,13 @@ class QuantumBackends(Enum):
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)
 
-            with pennylane_qiskit_version_override():
-                return qml.device(
-                    "qiskit.ibmq",
-                    wires=qubit_cnt,
-                    backend=self.name,
-                    provider=provider,
-                    shots=shots,
-                )
+            return qml.device(
+                "qiskit.ibmq",
+                wires=qubit_cnt,
+                backend=self.name,
+                provider=provider,
+                shots=shots,
+            )
         elif self.name.startswith("custom_ibmq"):
             # Use custom IBMQ backend
             if IBMProvider is None:
@@ -87,14 +74,13 @@ class QuantumBackends(Enum):
                 raise ValueError("IBMQ token is required for IBMQ backends.")
             provider = IBMProvider(token=ibmq_token)
 
-            with pennylane_qiskit_version_override():
-                return qml.device(
-                    "qiskit.ibmq",
-                    wires=qubit_cnt,
-                    backend=custom_backend_name,
-                    provider=provider,
-                    shots=shots,
-                )
+            return qml.device(
+                "qiskit.ibmq",
+                wires=qubit_cnt,
+                backend=custom_backend_name,
+                provider=provider,
+                shots=shots,
+            )
         elif self.name.startswith("pennylane"):
             return qml.device(self.value[10:], wires=qubit_cnt, shots=shots)
         else:

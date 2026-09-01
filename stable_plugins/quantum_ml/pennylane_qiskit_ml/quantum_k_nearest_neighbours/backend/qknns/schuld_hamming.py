@@ -36,7 +36,7 @@ class SchuldQkNN(QkNN):
         train_wires: List[int],
         label_wires: List[int],
         qam_ancilla_wires: List[int],
-        backend: qml.Device,
+        backend: qml.devices.Device,
         unclean_wires: List[int] = None,
     ):
         super(SchuldQkNN, self).__init__(

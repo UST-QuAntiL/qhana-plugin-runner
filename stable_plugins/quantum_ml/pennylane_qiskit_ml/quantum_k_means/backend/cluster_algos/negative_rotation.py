@@ -19,7 +19,7 @@ from typing import List, Tuple
 
 
 class NegativeRotationQuantumKMeans(Clustering):
-    def __init__(self, backend: qml.Device, tol, max_runs):
+    def __init__(self, backend: qml.devices.Device, tol, max_runs):
         super(NegativeRotationQuantumKMeans, self).__init__(backend, tol, max_runs)
         # Number of qbits needed to calculate "distance" between one data point and one centroid
         self.needed_qbits = 1

@@ -9,16 +9,18 @@ The following dependencies are used by these plugins:
 - torch~=2.10.0
 - muid~=0.5.3
 
-## Compatibility
+## Known limitations
 
-`pennylane_qiskit_compat.py` provides two monkey-patches used by the QCNN,
-QNN, hybrid autoencoder, and other pennylane-qiskit plugins on `qiskit>=2`:
+The `ibmq_*` and `custom_ibmq` backends of these plugins do not work with the
+pinned dependency versions and raise an error when selected. They are built on
+`qiskit-ibm-provider` and the `qiskit.ibmq` pennylane device, both of which were
+removed upstream:
 
-- `ensure_qiskit_ibm_provider_compat()` re-creates symbols that
-  `qiskit-ibm-provider` and `qiskit-ibm-runtime` rely on (`ProviderV1`,
-  `BackendV1`, etc.) when those packages have not been updated for
-  `qiskit>=2`.
-- `pennylane_qiskit_version_override()` temporarily overrides
-  `qiskit.__version__` so `pennylane-qiskit` accepts the newer qiskit
-  release while still pinning to a tested range.
+- `qiskit-ibm-provider` is deprecated and not compatible with `qiskit>=2`. It is
+  replaced by `qiskit-ibm-runtime`.
+- `pennylane-qiskit~=0.44.1` no longer registers a `qiskit.ibmq` device. Remote
+  IBM backends are reached through its `qiskit.remote` device instead.
 
+Porting these backends to `qiskit-ibm-runtime` and `qiskit.remote` is out of
+scope for the qiskit 2 update. The local `aer_*` and
+`pennylane_default.qubit` backends are unaffected and work as before.

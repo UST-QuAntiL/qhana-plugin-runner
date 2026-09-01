@@ -65,7 +65,7 @@ class BasheerHammingQkNN(QkNN):
         train_wires: List[int],
         idx_wires: List[int],
         ancilla_wires: List[int],
-        backend: qml.Device,
+        backend: qml.devices.Device,
         exp_itr: int = 10,
         slack: float = 0.0,
         unclean_wires: List[int] = None,
