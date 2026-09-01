@@ -10,6 +10,12 @@ The following dependencies are used by these plugins:
 
 ## Compatibility
 
-`compat.py` (`ensure_qiskit_machine_learning_compat`) monkey-patches
-`qiskit.primitives` so `qiskit-machine-learning` keeps working on `qiskit>=2`.
-It is imported by the SVM, qiskit quantum kernel estimation, and VQC plugins.
+`qiskit-machine-learning~=0.9.0` supports `qiskit>=2` natively, so these plugins
+need no compatibility shims. Earlier revisions of this branch monkey-patched the
+removed qiskit V1 primitives (`qiskit.primitives.Sampler`/`BaseSampler`) back
+into place; that is no longer required and has been removed.
+
+Fidelity kernels are sampled with `BackendSamplerV2` on a local `AerSimulator`
+rather than with qiskit's `StatevectorSampler` reference primitive, which
+simulates the full statevector in python and becomes exponentially slower as the
+qubit count grows.

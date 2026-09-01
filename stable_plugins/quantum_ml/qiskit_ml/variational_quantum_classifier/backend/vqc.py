@@ -25,13 +25,6 @@ from qiskit.circuit.library import (
 )
 from qiskit.qasm2 import dumps as qasm2_dumps
 
-try:
-    from ...compat import ensure_qiskit_machine_learning_compat
-except ImportError:
-    from compat import ensure_qiskit_machine_learning_compat
-
-ensure_qiskit_machine_learning_compat()
-
 from qiskit_machine_learning.optimizers import Optimizer
 from qiskit_machine_learning.algorithms.classifiers import VQC
 
