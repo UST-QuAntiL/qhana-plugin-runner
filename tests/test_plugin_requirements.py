@@ -34,6 +34,9 @@ DEPENDENCY_FOR_MODULE = {
     # present,
     # either installed directly or pulled in by the qasm3-import extra of qiskit
     "qiskit.qasm3": ("qasm3-import", "qiskit_qasm3_import", "qiskit-qasm3-import"),
+    # cirq.contrib holds the OpenQASM parser and only ships with the contrib
+    # extra of cirq-core, which additionally pulls in ply
+    "cirq.contrib": ("contrib", "ply"),
 }
 
 
@@ -116,12 +119,18 @@ def collect_plugin_dependencies() -> list[tuple[Path, set[str], str]]:
     return plugins
 
 
+def imports_module(imports: set[str], module: str) -> bool:
+    """Test whether ``module`` or any of its submodules is imported."""
+    prefix = module + "."
+    return any(i == module or i.startswith(prefix) for i in imports)
+
+
 def assert_dependency_is_declared(module: str):
     """Assert that every plugin importing ``module`` also declares it."""
     expected_names = DEPENDENCY_FOR_MODULE[module]
     offenders = []
     for root, imports, requirements in collect_plugin_dependencies():
-        if module not in imports:
+        if not imports_module(imports, module):
             continue
         if not any(name in requirements for name in expected_names):
             offenders.append(str(root))
@@ -143,6 +152,11 @@ def test_qiskit_aer_users_declare_the_qiskit_aer_dependency():
     assert_dependency_is_declared("qiskit_aer")
 
 
+def test_cirq_contrib_users_declare_the_contrib_extra():
+    """Plugins using the cirq OpenQASM parser must declare the contrib extra."""
+    assert_dependency_is_declared("cirq.contrib")
+
+
 def test_at_least_one_plugin_imports_each_checked_module():
     """Guard the checks above against silently matching no plugin at all.
 
@@ -153,7 +167,9 @@ def test_at_least_one_plugin_imports_each_checked_module():
     for _, imports, _ in collect_plugin_dependencies():
         all_imports.update(imports)
 
-    unused = sorted(set(DEPENDENCY_FOR_MODULE) - all_imports)
+    unused = sorted(
+        m for m in DEPENDENCY_FOR_MODULE if not imports_module(all_imports, m)
+    )
     assert not unused, (
         f"No plugin imports {unused} any more. Either the module was renamed or the "
         f"entry is stale, and the requirement check for it silently passes."

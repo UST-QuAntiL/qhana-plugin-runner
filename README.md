@@ -78,7 +78,8 @@ If you add a dependency or change the version of a dependency inside a specific 
 
 When many plugins are in use, many different dependencies will be installed which can lead to conflicts.
 Then it is necessary to only load a subset of the plugins via the `PLUGIN_FOLDERS` environment variable.
-Single plugins that are loaded by `PLUGIN_FOLDERS` but should not be registered can be excluded via the `DISABLED_PLUGINS` environment variable.
+Single plugins that are found in a `PLUGIN_FOLDERS` folder can be excluded via the `DISABLED_PLUGINS` environment variable.
+Disabled plugins are removed before their API is registered, so they are neither reachable nor listed, and `flask install` does not install their dependencies.
 
 ### Debugging with VSCode
 

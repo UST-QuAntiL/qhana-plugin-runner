@@ -330,9 +330,10 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
 
     if execution_options.get("statevector"):
         # only execute if statevector result was requested in the first place
-        # AerSimulator only reports a statevector when the circuit asks it to save
-        # one. The removed Aer statevector_simulator backend did this implicitly,
-        # without the explicit instruction the result carries no statevector at all.
+        # AerSimulator only reports a statevector when the circuit asks
+        # it to save one. The removed Aer statevector_simulator backend
+        # did this implicitly; without the explicit instruction the
+        # result carries no statevector at all.
         statevector_circuit = circuit.copy()
         statevector_circuit.save_statevector()
         compiled_statevector = transpile(statevector_circuit, backend_statevector)
