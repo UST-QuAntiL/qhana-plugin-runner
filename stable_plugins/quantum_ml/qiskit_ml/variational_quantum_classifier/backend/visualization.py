@@ -277,7 +277,7 @@ def plot_confusion_matrix(
             )
         )
     )
-    fig.update_xaxes(dict(titlefont=dict(size=18), tickfont=dict(size=18)))
-    fig.update_yaxes(dict(titlefont=dict(size=18), tickfont=dict(size=18)))
+    fig.update_xaxes(dict(title=dict(font=dict(size=18)), tickfont=dict(size=18)))
+    fig.update_yaxes(dict(title=dict(font=dict(size=18)), tickfont=dict(size=18)))
 
     return fig
