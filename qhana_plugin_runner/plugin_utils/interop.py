@@ -115,7 +115,9 @@ def _check_result_for_updates(
 
 
 def _check_result_for_cleared_substep(
-    status: Literal["PENDING", "SUCCESS", "FAILURE", "CANCELED"], result, substep: Union[str, int]
+    status: Literal["PENDING", "SUCCESS", "FAILURE", "CANCELED"],
+    result,
+    substep: Union[str, int],
 ) -> Optional[Literal["status", "steps"]]:
     if status in ("SUCCESS", "FAILURE", "CANCELED"):
         return "status"

@@ -20,7 +20,7 @@ from http import HTTPStatus
 from typing import Any, Dict, List, Optional, Sequence
 
 import marshmallow as ma
-from flask import url_for
+from flask import redirect, url_for
 from flask.views import MethodView
 from flask_smorest import abort
 from marshmallow.validate import OneOf
@@ -42,6 +42,7 @@ from qhana_plugin_runner.db.models.tasks import (
     TaskUpdateSubscription,
 )
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import cancel_task
 
 TASKS_API = SmorestBlueprint(
     "tasks-api",
@@ -310,20 +311,22 @@ class TaskView(MethodView):
 
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
     def delete(self, task_id: int):
-        """Cancel the running task."""
-        task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=task_id)
+        """Cancel the running task (Used by Backend)."""
+        task_data = cancel_task(task_id, "Task was canceled by the backend.")
         if task_data is None:
             abort(HTTPStatus.NOT_FOUND, message="Task not found.")
-
-        if not task_data.is_finished:
-            # 1. Cancel the celery task using the task id from the database entry
-            # Terminate=True forces the worker to stop processing immediately
-            CELERY.control.revoke(str(task_data.id), terminate=True)
-
-            # 2. Set result status to canceled
-            task_data.task_status = "ERROR"
-            task_data.finished_at = datetime.utcnow()
-            task_data.add_task_log_entry("Task was canceled by the user.")
-            task_data.save(commit=True)
-
         return self.convert_task_data(task_data)
+
+
+@TASKS_API.route("/<int:task_id>/cancel/")
+class CancelTaskView(MethodView):
+    @TASKS_API.response(HTTPStatus.SEE_OTHER)
+    def post(self, task_id: int):
+        """Cancel the task via HTML form (Used by UI Substeps)."""
+        cancel_task(
+            task_id, "Plugin execution was canceled by the user during a substep."
+        )
+        # Redirect to the main task view to trigger the UI error screen
+        return redirect(
+            url_for("tasks-api.TaskView", task_id=str(task_id)), HTTPStatus.SEE_OTHER
+        )

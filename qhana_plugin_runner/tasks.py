@@ -187,3 +187,28 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     # TODO: maybe clean TaskData entries
 
     result.forget()
+
+
+def cancel_task(db_id: int, log_message: str = "Task was canceled by the user."):
+    """Cancel a substep or a running pipeline."""
+    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
+    if task_data is None:
+        return None
+
+    if not task_data.is_finished:
+        # 1. Safely attempt to revoke the Celery worker (handles Scenario 2)
+        CELERY.control.revoke(str(db_id), terminate=True)
+
+        # 2. Update database state (handles both scenarios)
+        task_data.task_status = "CANCELED"
+        task_data.finished_at = datetime.utcnow()
+        task_data.add_task_log_entry(log_message)
+        task_data.clear_previous_step()
+        task_data.save(commit=True)
+
+        # 3. Fire UI signals
+        app = current_app._get_current_object()
+        TASK_STATUS_CHANGED.send(app, task_id=db_id)
+        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+
+    return task_data
