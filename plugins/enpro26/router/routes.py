@@ -39,6 +39,7 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
+    PIPELINE_FIELD_PREFIX,
     PIPELINE_PLUGINS,
     PIPELINE_OPTIONS,
     InputParametersSchema,
@@ -389,11 +390,10 @@ class RoutingStepView(MethodView):
         # ``parameters``. ``start_routing_task`` reloads ``parameters`` through
         # ``InputParametersSchema`` which would reject the dynamic
         # ``pipeline_<attribute>`` fields.
-        prefix = "pipeline_"
         selections = {
-            key[len(prefix) :]: value
+            key[len(PIPELINE_FIELD_PREFIX) :]: value
             for key, value in arguments.items()
-            if key.startswith(prefix)
+            if key.startswith(PIPELINE_FIELD_PREFIX)
         }
         db_task.data["routing_selections"] = selections
 
