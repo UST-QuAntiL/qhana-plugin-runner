@@ -332,7 +332,6 @@ class RoutingStepFrontend(MethodView):
                 valid=valid,
                 errors=errors,
                 process=url_for(f"{ROUTER_BLP.name}.RoutingStepView", db_id=db_id),
-                cancel_url=url_for("tasks-api.CancelTaskView", task_id=db_id),
             )
         )
 

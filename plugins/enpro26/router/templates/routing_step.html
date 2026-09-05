@@ -85,7 +85,6 @@ limitations under the License.
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}
-        {{ forms.submit("cancel", action=cancel_url)}}
         {% if not errors and valid %}
         <span class="qhana-input-description"> Validation successful!</span>
         {% endif %}

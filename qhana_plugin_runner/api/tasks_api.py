@@ -311,22 +311,8 @@ class TaskView(MethodView):
 
     @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
     def delete(self, task_id: int):
-        """Cancel the running task (Used by Backend)."""
+        """Cancel and delete the running task."""
         task_data = cancel_task(task_id, "Task was canceled by the backend.")
         if task_data is None:
             abort(HTTPStatus.NOT_FOUND, message="Task not found.")
         return self.convert_task_data(task_data)
-
-
-@TASKS_API.route("/<int:task_id>/cancel/")
-class CancelTaskView(MethodView):
-    @TASKS_API.response(HTTPStatus.SEE_OTHER)
-    def post(self, task_id: int):
-        """Cancel the task via HTML form (Used by UI Substeps)."""
-        cancel_task(
-            task_id, "Plugin execution was canceled by the user during a substep."
-        )
-        # Redirect to the main task view to trigger the UI error screen
-        return redirect(
-            url_for("tasks-api.TaskView", task_id=str(task_id)), HTTPStatus.SEE_OTHER
-        )
