@@ -232,6 +232,8 @@ def run_pipeline_step(
 
         task_url = urljoin(plugin_url, response.headers["Location"])
         task_data.data[f"{plugin_name}_url"] = task_url
+        task_data.data["active_subtask_url"] = task_url
+        task_data.save(commit=True)
 
     webhook_url = task_data.data["webhook_url"].replace("localhost", "127.0.0.1")
     monitor_url = webhook_url + ("&" if "?" in webhook_url else "?") + "via=watchdog"

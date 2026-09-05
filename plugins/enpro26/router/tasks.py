@@ -237,6 +237,9 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
 
     task_data = ProcessingTask.get_by_id(db_id)
 
+    if task_data.status != "PENDING":
+        return f"Task with db id '{db_id}' is not pending, but {task_data.status}. Ignoring webhook event."
+
     known_urls = [
         task_data.data.get(f"{WU_PALMER_PLUGIN}_url"),
         task_data.data.get(f"{MAPPING_PLUGIN}_url"),
@@ -319,6 +322,10 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     progressed_via = task_data.data.get("progressed_via", {})
     progressed_via[source_url] = delivery
     task_data.data["progressed_via"] = progressed_via
+
+    # Clear tracker
+    if "active_subtask_url" in task_data.data:
+        del task_data.data["active_subtask_url"]
     task_data.save(commit=True)
 
     # WATCHDOG LOGGING

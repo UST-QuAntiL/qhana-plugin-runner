@@ -15,11 +15,12 @@
 """Module containing endpoints related to task progress and results."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from http import HTTPStatus
 from typing import Any, Dict, List, Optional, Sequence
 
 import marshmallow as ma
-from flask import url_for
+from flask import redirect, url_for
 from flask.views import MethodView
 from flask_smorest import abort
 from marshmallow.validate import OneOf
@@ -32,6 +33,7 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
+from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import (
     ProcessingTask,
@@ -40,6 +42,7 @@ from qhana_plugin_runner.db.models.tasks import (
     TaskUpdateSubscription,
 )
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import cancel_task
 
 TASKS_API = SmorestBlueprint(
     "tasks-api",
@@ -306,4 +309,10 @@ class TaskView(MethodView):
             DB.session.delete(subscriber)
         DB.session.commit()
 
-    # TODO add delete endpoint (and maybe serve result from different endpoint)
+    @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
+    def delete(self, task_id: int):
+        """Cancel and delete the running task."""
+        task_data = cancel_task(task_id, "Task was canceled by the backend.")
+        if task_data is None:
+            abort(HTTPStatus.NOT_FOUND, message="Task not found.")
+        return self.convert_task_data(task_data)
