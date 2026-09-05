@@ -17,7 +17,7 @@ import json
 
 import pytest
 
-from tests.utils import MockResponse, run_plugin_task
+from tests.utils import MockResponse, run_plugin_task_outputs
 
 from vector_concat.tasks import calculation_task
 
@@ -53,6 +53,23 @@ def _read_lines(output):
 _READERS = {"csv": _read_csv, "json": _read_json, "lines": _read_lines}
 
 
+def _run_concat(monkeypatch, responses, params):
+    """Run the task and return its vector and dimension mapping outputs."""
+    outputs = run_plugin_task_outputs(
+        monkeypatch,
+        calculation_task,  # pyright: ignore[reportArgumentType]
+        "vector_concat.tasks",
+        responses,
+        params,
+    )
+
+    by_type = {output.file_type: output for output in outputs}
+    assert len(outputs) == 2
+    assert set(by_type) == {"entity/vector", "entity/dimension-mapping"}
+
+    return by_type["entity/vector"], by_type["entity/dimension-mapping"]
+
+
 @pytest.mark.usefixtures("celery_worker")
 @pytest.mark.parametrize("output_format", ["csv", "json", "lines"])
 def test_concat_two_inputs_per_output_format(monkeypatch, output_format):
@@ -60,10 +77,8 @@ def test_concat_two_inputs_per_output_format(monkeypatch, output_format):
     url_b, response_b = _response("b", output_format)
     responses = {url_a: response_a, url_b: response_b}
 
-    output = run_plugin_task(
+    output, _mapping = _run_concat(
         monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
         responses,
         {"urls": f"{url_a}\n{url_b}", "output_format": output_format},
     )
@@ -88,10 +103,8 @@ def test_concat_mixed_input_formats(monkeypatch):
     url_b, response_b = _response("b", "lines")
     responses = {url_a: response_a, url_b: response_b}
 
-    output = run_plugin_task(
+    output, _mapping = _run_concat(
         monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
         responses,
         {"urls": f"{url_a}\n{url_b}", "output_format": "json"},
     )
@@ -110,10 +123,8 @@ def test_concat_zip_input(monkeypatch, member_format):
     zip_response = MockResponse.from_zip(zip_url, {zip_member: TEST_DATA[zip_member]})
     responses = {url_a: response_a, zip_url: zip_response}
 
-    output = run_plugin_task(
+    output, _mapping = _run_concat(
         monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
         responses,
         {"urls": f"{url_a}\n{zip_url}", "output_format": "json"},
     )
@@ -137,10 +148,8 @@ def test_concat_zip_multiple_members(monkeypatch):
         },
     )
 
-    output = run_plugin_task(
+    output, _mapping = _run_concat(
         monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
         {zip_url: zip_response},
         {"urls": zip_url, "output_format": "json"},
     )
@@ -164,10 +173,8 @@ def test_concat_zip_without_member_extensions_raises(monkeypatch):
     )
 
     with pytest.raises(ValueError, match=r"No Mimetype found for zip file 'first'\."):
-        run_plugin_task(
+        _run_concat(
             monkeypatch,
-            calculation_task,  # pyright: ignore[reportArgumentType]
-            "vector_concat.tasks",
             {zip_url: zip_response},
             {"urls": zip_url, "output_format": "json"},
         )
@@ -180,10 +187,8 @@ def test_output_suffix_appends_to_filename(monkeypatch, output_format):
     url_b, response_b = _response("b", output_format)
     responses = {url_a: response_a, url_b: response_b}
 
-    output = run_plugin_task(
+    output, _mapping = _run_concat(
         monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
         responses,
         {
             "urls": f"{url_a}\n{url_b}",
@@ -199,10 +204,8 @@ def test_output_suffix_appends_to_filename(monkeypatch, output_format):
 def test_empty_output_suffix_keeps_default_filename(monkeypatch):
     url, response = _response("single", "csv")
 
-    output = run_plugin_task(
+    output, _mapping = _run_concat(
         monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
         {url: response},
         {"urls": url, "output_suffix": "   "},
     )
@@ -215,10 +218,8 @@ def test_output_format_defaults_to_csv(monkeypatch):
     """When ``output_format`` is absent the task falls back to CSV output."""
     url, response = _response("single", "csv")
 
-    output = run_plugin_task(
+    output, _mapping = _run_concat(
         monkeypatch,
-        calculation_task,  # pyright: ignore[reportArgumentType]
-        "vector_concat.tasks",
         {url: response},
         {"urls": url},
     )
@@ -238,10 +239,8 @@ def test_mismatched_ids_raise(monkeypatch):
     }
 
     with pytest.raises(AssertionError):
-        run_plugin_task(
+        _run_concat(
             monkeypatch,
-            calculation_task,  # pyright: ignore[reportArgumentType]
-            "vector_concat.tasks",
             responses,
             {"urls": f"{url_a}\n{url_b}", "output_format": "csv"},
         )
@@ -259,13 +258,23 @@ def test_unequal_row_counts_raise(monkeypatch):
     }
 
     with pytest.raises(ValueError):
-        run_plugin_task(
+        _run_concat(
             monkeypatch,
-            calculation_task,  # pyright: ignore[reportArgumentType]
-            "vector_concat.tasks",
             responses,
             {"urls": f"{url_a}\n{url_b}", "output_format": "csv"},
         )
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_ragged_entities_raise(monkeypatch):
+    """Entities of differing width cannot be mapped to a fixed dimension set."""
+    url = "http://example.com/ragged.json"
+    responses = {
+        url: MockResponse(url, "application/json", text=TEST_DATA["ragged.json"])
+    }
+
+    with pytest.raises(ValueError, match=r"Entity 'e2' has 1 dimensions"):
+        _run_concat(monkeypatch, responses, {"urls": url, "output_format": "json"})
 
 
 @pytest.mark.usefixtures("celery_worker")
@@ -273,3 +282,91 @@ def test_missing_db_id_raises(monkeypatch):
     """Task raises ``KeyError`` when no ``ProcessingTask`` row matches the id."""
     with pytest.raises(KeyError, match="Could not load task data"):
         calculation_task.apply_async(kwargs={"db_id": 99999}).get(timeout=30)
+
+
+@pytest.mark.usefixtures("celery_worker")
+@pytest.mark.parametrize("output_format", ["csv", "json", "lines"])
+def test_dimension_mapping_for_plain_inputs(monkeypatch, output_format):
+    """Every output dimension is traced back to its input file and column."""
+    url_a, response_a = _response("a", output_format)
+    url_b, response_b = _response("b", output_format)
+    responses = {url_a: response_a, url_b: response_b}
+
+    _output, mapping_output = _run_concat(
+        monkeypatch,
+        responses,
+        {"urls": f"{url_a}\n{url_b}", "output_format": output_format},
+    )
+
+    assert mapping_output.file_name == "concatenated_dimension_mapping.json"
+    assert mapping_output.file_type == "entity/dimension-mapping"
+    # the mapping is always JSON, independent of the output format
+    assert mapping_output.mimetype == "application/json"
+
+    # the source name is the file name of the input url without its extension
+    name_a = _input_filename("a", output_format).split(".")[0]
+    name_b = _input_filename("b", output_format).split(".")[0]
+
+    mapping = _read_json(mapping_output)
+    assert [
+        (row["ID"], row["inputIndex"], row["source"], row["sourceDimension"])
+        for row in mapping
+    ] == [
+        ("dim0", 0, name_a, "dim0"),
+        ("dim1", 0, name_a, "dim1"),
+        ("dim2", 1, name_b, "dim0"),
+        ("dim3", 1, name_b, "dim1"),
+    ]
+    assert [row["sourceUrl"] for row in mapping] == [url_a, url_a, url_b, url_b]
+    assert all(row["zipMember"] == "" for row in mapping)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_dimension_mapping_records_zip_members(monkeypatch):
+    """Zip members are identified by their name inside the archive."""
+    zip_url = "http://example.com/vectors.zip"
+    zip_response = MockResponse.from_zip(
+        zip_url,
+        {
+            "b.json": TEST_DATA["b.json"],
+            "a.csv": TEST_DATA["a.csv"],
+        },
+    )
+
+    _output, mapping_output = _run_concat(
+        monkeypatch,
+        {zip_url: zip_response},
+        {"urls": zip_url, "output_format": "json"},
+    )
+
+    mapping = _read_json(mapping_output)
+    # members are read in sorted name order, not in archive order
+    assert [
+        (row["ID"], row["inputIndex"], row["source"], row["sourceDimension"])
+        for row in mapping
+    ] == [
+        ("dim0", 0, "a.csv", "dim0"),
+        ("dim1", 0, "a.csv", "dim1"),
+        ("dim2", 1, "b.json", "dim0"),
+        ("dim3", 1, "b.json", "dim1"),
+    ]
+    assert [row["zipMember"] for row in mapping] == [
+        "a.csv",
+        "a.csv",
+        "b.json",
+        "b.json",
+    ]
+    assert all(row["sourceUrl"] == zip_url for row in mapping)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_dimension_mapping_filename_uses_output_suffix(monkeypatch):
+    url, response = _response("single", "csv")
+
+    _output, mapping_output = _run_concat(
+        monkeypatch,
+        {url: response},
+        {"urls": url, "output_suffix": "run42"},
+    )
+
+    assert mapping_output.file_name == "concatenated_run42_dimension_mapping.json"

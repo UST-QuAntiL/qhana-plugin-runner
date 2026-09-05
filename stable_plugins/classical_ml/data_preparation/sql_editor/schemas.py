@@ -36,7 +36,7 @@ class SQLInputSchema(FrontendFormBaseSchema):
         },
     )
     output_data_type = ma.fields.String(
-        missing="entity/list",
+        load_default="entity/list",
         validate=ma.validate.Regexp(r"^[A-Za-z0-9_./*-]+$"),
         metadata={
             "label": "Output Data Type",
@@ -45,7 +45,7 @@ class SQLInputSchema(FrontendFormBaseSchema):
         },
     )
     output_format = ma.fields.String(
-        missing="csv",
+        load_default="csv",
         validate=ma.validate.OneOf(("csv", "json")),
         metadata={
             "label": "Output Format",

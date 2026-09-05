@@ -38,7 +38,7 @@ def test_metadata_endpoint_returns_full_descriptor(client):
 
     assert body["name"] == plugin.name
     assert body["type"] == "processing"
-    assert len(body["entryPoint"]["dataOutput"]) == 5
+    assert len(body["entryPoint"]["dataOutput"]) == 8
 
 
 def test_microfrontend_renders_form_fields(client):
@@ -62,11 +62,17 @@ def test_process_valid_payload_redirects_to_task(client, monkeypatch):
         "taxonomiesZipUrl": "http://example.com/tax.zip",
         "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
-        "dimensions": 2,
+        "mdsDimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
         "missingDataHandling": "mean",
+        "reduceDimensions": False,
+        "pcaType": "normal",
+        "pcaDimensions": 1,
+        "solver": "auto",
+        "tol": 0,
+        "iteratedPower": 0,
     }
 
     resp = client.post(url_for(f"{ROUTER_BLP.name}.ProcessView"), data=valid_payload)

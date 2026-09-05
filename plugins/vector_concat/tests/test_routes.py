@@ -65,7 +65,12 @@ def test_metadata_endpoint_returns_full_descriptor(client):
                 "application/X-lines+json",
             ],
             "required": True,
-        }
+        },
+        {
+            "dataType": "entity/dimension-mapping",
+            "contentType": ["application/json"],
+            "required": True,
+        },
     ]
 
 

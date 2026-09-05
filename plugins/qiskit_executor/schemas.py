@@ -84,7 +84,7 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
     executionOptions = FileUrl(
         required=False,
         allow_none=True,
-        load_missing=None,
+        load_default=None,
         data_input_type="provenance/execution-options",
         data_content_types=["text/csv", "application/json", "application/X-lines+json"],
         metadata={
@@ -96,7 +96,7 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
     shots = NoneOrPositiveInteger(
         required=False,
         allow_none=True,
-        missing=None,
+        load_default=None,
         metadata={
             "label": "Number of Shots",
             "description": """The number of times the quantum circuit gets executed. The higher, the more accurate our 
@@ -107,7 +107,7 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
     ibmqToken = ma.fields.String(
         required=False,
         allow_none=True,
-        missing=None,
+        load_default=None,
         metadata={
             "label": "IBMQ Token",
             "description": "Token for IBMQ (**** indicates that a default IBMQ token is available).",
@@ -117,7 +117,7 @@ class CircuitParameterSchema(FrontendFormBaseSchema):
     backend = ma.fields.String(
         required=False,
         allow_none=True,
-        missing=None,
+        load_default=None,
         metadata={
             "label": "Backend",
             "description": "The quantum computer or simulator that will be used. Leave field empty to select in the next step.",

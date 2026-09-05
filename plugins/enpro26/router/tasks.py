@@ -19,7 +19,7 @@ from io import BytesIO
 from zipfile import ZipFile
 from pathlib import PurePath
 from celery.utils.log import get_task_logger
-from sqlalchemy import update
+from sqlalchemy import update, insert
 from sqlalchemy.exc import SQLAlchemyError
 
 from qhana_plugin_runner.celery import CELERY
@@ -40,7 +40,8 @@ from .schemas import (
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
-    FINALIZE_STEP,
+    PCA_PLUGIN,
+    FINALIZE_PIPELINE,
     InputParameters,
     InputParametersSchema,
 )
@@ -61,6 +62,7 @@ from .tasks_pipeline_steps import (
     start_mds,
     finalize_pipeline,
     finalize_vector_concat,
+    finalize_pca,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -191,6 +193,8 @@ def start_routing_task(self, db_id: int) -> str:
 
     if params.concat_output:
         total_plugins += 1  # (Vector Concatenation)
+        if params.reduce_dimensions:
+            total_plugins += 1  # (PCA)
 
     task_data.data["pipeline_queue"] = pipeline_queue
     task_data.data["current_pipeline"] = None
@@ -243,6 +247,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"),
         task_data.data.get(f"{MDS_PLUGIN}_url"),
         task_data.data.get(f"{VECTOR_CONCAT_PLUGIN}_url"),
+        task_data.data.get(f"{PCA_PLUGIN}_url"),
     ]
 
     if not source_url or source_url not in known_urls:
@@ -276,49 +281,42 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         )
 
     # SNYCHRONIZATION GUARD: ensure that only one process progresses the pipeline for this source URL
-    lock_key = f"router_sync_lock_{db_id}_{source_url}"
+    lock_key = f"router_sync_lock_{source_url}"
     plugin_id = ROUTER_BLP.name
     my_celery_id = self.request.id
 
     try:
-        PluginState.get_value(ROUTER_BLP.name, lock_key)
-        TASK_LOGGER.info(
-            f"DEBUGGING: Lock for {lock_key} already exists. Checking if it's claimed..."
+        DB.session.execute(
+            insert(PluginState).values(plugin_id=plugin_id, key=lock_key, value=0)
         )
-    except KeyError:
-        try:
-            PluginState.set_value(plugin_id=plugin_id, key=lock_key, value=0, commit=True)
-            TASK_LOGGER.info(
-                f"DEBUGGING: Lock for {lock_key} created. Attempting to claim it..."
-            )
-        except SQLAlchemyError:
-            # Another process already created the lock entry, so we can ignore this error.
-            DB.session.rollback()
-            TASK_LOGGER.info(
-                f"DEBUGGING: Lock creation collision for {lock_key} safely caught. Moving to claim step."
-            )
+        DB.session.commit()
+        TASK_LOGGER.info(f"DEBUGGING: Lock {lock_key} created.")
+    except Exception as e:
+        DB.session.rollback()
+        TASK_LOGGER.warning(
+            f"DEBUGGING WARNING: Exception occured during lock creation for {lock_key}: {e}."
+        )
 
-    stmt = (
+    DB.session.execute(
         update(PluginState)
         .where(PluginState.plugin_id == plugin_id)
         .where(PluginState.key == lock_key)
         .where(PluginState.value == 0)
         .values(value=my_celery_id)
     )
-    result = DB.session.execute(stmt)
     DB.session.commit()
 
-    if result.rowcount == 0:
-        # We lost the race. Another process already updated the value from 'unclaimed'.
+    current_value = PluginState.get_value(plugin_id=plugin_id, key=lock_key)
+
+    if current_value != my_celery_id:
         TASK_LOGGER.info(
             f"DEBUGGING: Duplicate completion event for {source_url} safely ignored (via={delivery})."
         )
-
         return "Sub-task already progressed"
-    else:
-        TASK_LOGGER.info(
-            f"DEBUGGING: Lock for {lock_key} claimed by this process. Proceeding with progression."
-        )
+
+    TASK_LOGGER.info(
+        f"DEBUGGING: Lock for {lock_key} claimed by this process. Proceeding with progression."
+    )
 
     # UPDATE JSON
     progressed_via = task_data.data.get("progressed_via", {})
@@ -360,7 +358,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     elif current_pipeline == MAPPING_PLUGIN:
         handle_mapping_progression(task_data, db_id, source_url)
 
-    elif current_pipeline == FINALIZE_STEP:
+    elif current_pipeline == FINALIZE_PIPELINE:
         handle_finalize_progression(task_data, db_id, source_url)
 
     else:
@@ -413,3 +411,5 @@ def handle_finalize_progression(task_data: ProcessingTask, db_id: int, source_ur
         finalize_vector_concat.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
+    elif source_url == task_data.data.get(f"{PCA_PLUGIN}_url"):
+        finalize_pca.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)

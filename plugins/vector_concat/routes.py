@@ -72,7 +72,12 @@ class PluginsView(MethodView):
                             "application/X-lines+json",
                         ],
                         required=True,
-                    )
+                    ),
+                    DataMetadata(
+                        data_type="entity/dimension-mapping",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
                 ],
             ),
             tags=VectorConcatPlugin.instance.tags,

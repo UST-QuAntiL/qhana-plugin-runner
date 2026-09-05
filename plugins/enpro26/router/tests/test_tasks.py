@@ -15,6 +15,9 @@
 import json
 import threading
 
+import concurrent.futures
+from flask import current_app
+
 import pytest
 from requests.exceptions import Timeout
 
@@ -43,7 +46,7 @@ def _setup_mock_task() -> ProcessingTask:
         "taxonomiesZipUrl": "http://mock/tax",
         "distanceMetric": "euclidean",
         "transformer": "linear_inverse",
-        "dimensions": 2,
+        "mdsDimensions": 2,
         "metric": "metric_mds",
         "nInit": 4,
         "maxIter": 300,
@@ -51,6 +54,12 @@ def _setup_mock_task() -> ProcessingTask:
         "concatOutput": False,
         "outputFormat": "csv",
         "includeIntermediateResultsInOutput": False,
+        "reduceDimensions": False,
+        "pcaType": "normal",
+        "pcaDimensions": 1,
+        "solver": "auto",
+        "tol": 0,
+        "iteratedPower": 0,
     }
     db_task = ProcessingTask(
         task_name=start_routing_task.name, parameters=json.dumps(params)
@@ -115,6 +124,7 @@ def test_route_task_queues_and_launches(monkeypatch):
 
 def test_start_wu_palmer_task(monkeypatch):
     db_task = _setup_mock_task()
+    monkeypatch.setattr("router.tasks_helpers.subscribe", lambda **kwargs: True)
 
     # MOCK HTTP CALLS
     def mock_post(url, **kwargs):
@@ -238,6 +248,7 @@ def test_handle_webhook_routing_wu_palmer_progression(
 
 def test_start_mapping_task(monkeypatch):
     db_task = _setup_mock_task()
+    monkeypatch.setattr("router.tasks_helpers.subscribe", lambda **kwargs: True)
 
     def mock_post(url, **kwargs):
         if MAPPING_PLUGIN in url:
@@ -345,7 +356,7 @@ def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
     """Verifies that a bad internal state is caught even if the URL is valid."""
     db_task = _setup_mock_task()
 
-    mock_url = "http://mock/tasks/wp/999/"
+    mock_url = "http://mock/tasks/wp/pipeline_stat_test_999/"
     db_task.data[f"{WU_PALMER_PLUGIN}_url"] = mock_url
 
     db_task.data["current_pipeline"] = "some_unknown_state"
@@ -406,3 +417,69 @@ def test_handle_webhook_ignores_unrecognized_source():
     )
 
     assert result == "Unrecognized webhook source"
+
+
+def test_handle_webhook_synchronization_guard(monkeypatch):
+    """
+    Simulates a race condition by firing 10 simultaneous webhook handlers
+    for the exact same source URL to prove the atomic database lock holds up.
+    """
+    db_task = _setup_mock_task()
+    mock_url = "http://mock/tasks/wp/stress_test_999/"
+
+    db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
+    db_task.data[f"{WU_PALMER_PLUGIN}_url"] = mock_url
+    db_task.save(commit=True)
+
+    def mock_get(url, **kwargs):
+        return MockResponse(
+            url,
+            "application/json",
+            status_code=200,
+            json_data={
+                "status": "SUCCESS",
+                "outputs": [
+                    {"dataType": "some/datatype", "href": "http://mock/data.zip"}
+                ],
+            },
+        )
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+    triggered = []
+
+    def mock_apply_async(*args, **kwargs):
+        triggered.append("next_step_triggered")
+
+    monkeypatch.setattr(
+        "router.tasks_pipeline_steps.start_transformers.apply_async", mock_apply_async
+    )
+
+    app = current_app._get_current_object()
+    task_id = db_task.id
+
+    def fire_concurrent_webhook(worker_index):
+        with app.app_context():
+            return run_task(
+                handle_webhook_task,
+                db_id=task_id,
+                source_url=mock_url,
+                via=f"synch_test_{worker_index}",
+            )
+
+    # Launch 10 workers simultaneously
+    worker_count = 10
+    with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
+        # executor.map fires all threads at once and collects their return values
+        results = list(executor.map(fire_concurrent_webhook, range(worker_count)))
+
+    # ASSERTIONS
+    # Out of 10 concurrent workers, exactly 1 should win, and 9 should be rejected.
+    assert (
+        len(triggered) == 1
+    ), f"Expected exactly 1 progression, but got {len(triggered)}!"
+
+    rejected_count = results.count("Sub-task already progressed")
+    assert (
+        rejected_count == 9
+    ), f"Expected 9 rejected workers, but got {rejected_count}. Results: {results}"

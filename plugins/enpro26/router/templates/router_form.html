@@ -87,5 +87,44 @@ limitations under the License.
             window.requestAnimationFrame(reportContentHeight);
         });
     });
+
+    const concatOutput = document.getElementById("concat_output");
+    const reduceDimensions = document.getElementById("reduce_dimensions");
+    if (concatOutput != null) {
+        const concatSection = concatOutput.closest("details.router-section");
+        const pcaSection = concatSection?.nextElementSibling;
+
+        function openPcaSettings() {
+            if (concatOutput.checked && pcaSection?.matches("details.router-section")) {
+                pcaSection.open = true;
+            }
+        }
+
+        function togglePcaFields() {
+            if (pcaSection == null || reduceDimensions == null) {
+                return;
+            }
+
+            const reduceDimensionsField = reduceDimensions.closest(".qhana-form-field");
+            pcaSection.querySelectorAll(".qhana-form-field").forEach(field => {
+                if (field !== reduceDimensionsField) {
+                    field.hidden = !reduceDimensions.checked;
+                }
+            });
+
+            window.requestAnimationFrame(reportContentHeight);
+        }
+
+        concatOutput.addEventListener("change", () => {
+            if (!concatOutput.checked && reduceDimensions != null) {
+                reduceDimensions.checked = false;
+            }
+            openPcaSettings();
+            togglePcaFields();
+        });
+        reduceDimensions?.addEventListener("change", togglePcaFields);
+        openPcaSettings();
+        togglePcaFields();
+    }
 </script>
 {% endblock script %}

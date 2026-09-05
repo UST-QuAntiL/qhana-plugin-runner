@@ -15,7 +15,7 @@
 import io
 import json
 import zipfile
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import requests
 from celery import Task
@@ -104,7 +104,7 @@ def mock_task_dispatch(monkeypatch):
     monkeypatch.setattr(CeleryTask, "apply_async", _noop)
 
 
-def run_plugin_task(
+def run_plugin_task_outputs(
     monkeypatch,  # TODO can this be typed?
     task: Task,
     plugin_module: str,
@@ -113,13 +113,16 @@ def run_plugin_task(
     *,
     expected_result: str = "Result stored in file",
     timeout: int = 30,
-) -> TaskFile:
+) -> List[TaskFile]:
     """Run a plugin calculation task against in-memory responses.
 
     Persists a ``ProcessingTask`` with ``params``, patches every ``open_url``
     reference the task reaches (the plugin module given by ``plugin_module``,
     the zip reader, and ``requests``) to serve ``url_to_response``, runs the
-    task, and returns the task id.
+    task, and returns all persisted output files.
+
+    Use :py:func:`run_plugin_task` instead when the task produces exactly one
+    output file.
 
     Args:
         task: the (cast) Celery task to run, e.g. a plugin ``calculation_task``.
@@ -148,8 +151,35 @@ def run_plugin_task(
 
     task = ProcessingTask.get_by_id(db_task.id)
     assert task is not None
-    assert len(task.outputs) == 1
-    return task.outputs[0]
+    return list(task.outputs)
+
+
+def run_plugin_task(
+    monkeypatch,  # TODO can this be typed?
+    task: Task,
+    plugin_module: str,
+    url_to_response: Dict[str, MockResponse],
+    params: Union[dict, str],
+    *,
+    expected_result: str = "Result stored in file",
+    timeout: int = 30,
+) -> TaskFile:
+    """Run a plugin calculation task that produces exactly one output file.
+
+    Thin wrapper around :py:func:`run_plugin_task_outputs` that asserts a single
+    output and returns it.
+    """
+    outputs = run_plugin_task_outputs(
+        monkeypatch,
+        task,
+        plugin_module,
+        url_to_response,
+        params,
+        expected_result=expected_result,
+        timeout=timeout,
+    )
+    assert len(outputs) == 1
+    return outputs[0]
 
 
 def assert_sequence_equals(expected: Sequence[Any], actual: Sequence[Any]):
