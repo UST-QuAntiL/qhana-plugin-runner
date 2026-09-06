@@ -84,6 +84,12 @@ class PluginsView(MethodView):
                         required=False,
                         parameter="entityDataUrl",
                     ),
+                    InputDataMetadata(
+                        data_type="entity/dimension-mapping",
+                        content_type=["application/json"],
+                        required=False,
+                        parameter="dimensionMappingUrl",
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
@@ -167,12 +173,18 @@ def get_plot(data: Mapping):
     entity_url = data.get("entity_url", None)
     clusters_url = data.get("clusters_url", None)
     entity_data_url = data.get("entity_data_url", None)
+    dimension_mapping_url = data.get("dimension_mapping_url", None)
     # Only an entity_url is required to generate a plot
     if entity_url is None:
         abort(HTTPStatus.BAD_REQUEST)
     # As the clusters_url can be null, the str method is required
     url_hash = hashlib.sha256(
-        (entity_url + str(clusters_url) + str(entity_data_url)).encode("utf-8")
+        (
+            entity_url
+            + str(clusters_url)
+            + str(entity_data_url)
+            + str(dimension_mapping_url)
+        ).encode("utf-8")
     ).hexdigest()
     plot = DataBlob.get_value(
         ClusterScatterVisualization.instance.identifier, url_hash, None
@@ -185,7 +197,11 @@ def get_plot(data: Mapping):
         ):
             # Add the generate_plot from task.py as an async method
             task_result = generate_plot.s(
-                entity_url, clusters_url, entity_data_url, hash_=url_hash
+                entity_url,
+                clusters_url,
+                entity_data_url,
+                dimension_mapping_url,
+                hash_=url_hash,
             ).apply_async()
             PluginState.set_value(
                 ClusterScatterVisualization.instance.identifier,
@@ -223,10 +239,16 @@ class ProcessView(MethodView):
         entity_url = arguments.get("entity_url", None)
         clusters_url = arguments.get("clusters_url", None)
         entity_data_url = arguments.get("entity_data_url", None)
+        dimension_mapping_url = arguments.get("dimension_mapping_url", None)
         if entity_url is None:
             abort(HTTPStatus.BAD_REQUEST)
         url_hash = hashlib.sha256(
-            (entity_url + str(clusters_url) + str(entity_data_url)).encode("utf-8")
+            (
+                entity_url
+                + str(clusters_url)
+                + str(entity_data_url)
+                + str(dimension_mapping_url)
+            ).encode("utf-8")
         ).hexdigest()
         db_task = ProcessingTask(task_name=process.name)
         db_task.save(commit=True)
@@ -237,6 +259,7 @@ class ProcessView(MethodView):
             entity_url=entity_url,
             clusters_url=clusters_url,
             entity_data_url=entity_data_url,
+            dimension_mapping_url=dimension_mapping_url,
         ) | save_task_result.s(db_id=db_task.id)
         # save errors to db
         task.link_error(save_task_error.s(db_id=db_task.id))

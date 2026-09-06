@@ -169,6 +169,10 @@ Produced by:
 
   * :ref:`vector-concat`
 
+Consumed by:
+
+  * :ref:`cluster-scatter-visualization`
+
 
 Content Types
 -------------

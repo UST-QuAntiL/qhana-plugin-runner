@@ -15,12 +15,13 @@
 
 from json import loads
 from tempfile import SpooledTemporaryFile
-from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple
+from typing import Iterator, NamedTuple, Optional
 
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.dimension_mapping import entity_dimension_names
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_array,
     load_entities,
@@ -43,22 +44,9 @@ class VectorSource(NamedTuple):
     dimensions: list[str]
 
 
-def _source_dimensions(entities: list[Any]) -> list[str]:
-    if not entities:
-        return []
-
-    first = entities[0]
-
-    if isinstance(first, dict):
-        return sorted(key for key in first if key not in ("ID", "href"))
-
-    fields = list(first._fields)
-    return fields[2:] if "href" in fields else fields[1:]
-
-
 def _load_vector_entities(response, mimetype: str, url: str, zip_member: str | None):
     raw = list(load_entities(response, mimetype=mimetype))
-    dimensions = _source_dimensions(raw)
+    dimensions = entity_dimension_names(raw)
     entities = list(ensure_array(iter(raw), strict=True))
     name = zip_member if zip_member is not None else retrieve_filename(response)
 
