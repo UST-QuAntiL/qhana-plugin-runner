@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from json import dumps
 from pathlib import Path
 from tempfile import SpooledTemporaryFile
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Set, Tuple
 
 import muid
 import pandas as pd
@@ -46,13 +47,17 @@ def get_readable_hash(s: str) -> str:
 
 
 def _get_plot(
-    entity_url: str, clusters_url: Optional[str], full_html: bool
+    entity_url: str,
+    clusters_url: Optional[str],
+    entity_data_url: Optional[str],
+    full_html: bool,
 ) -> Tuple[str, str]:
     """Generate a scatter plot from the given url.
 
     Args:
         entity_url (str): the url containing entity coordinates
         clusters_url (str|None): an optional url containing entity cluster labels
+        entity_data_url (str|None): an optional url containing original entity attributes
         full_html (bool): if True, produce a standalone html page, else produce
             an embeddable html snippet.
 
@@ -60,16 +65,17 @@ def _get_plot(
         Tuple[str, str]: html_content, filename
     """
     is_3d = False
-    entities: Dict[str, Dict[str, Union[str, float, int, None]]] = {}
+    entities: Dict[str, Dict[str, Any]] = {}
     with open_url(entity_url) as response:
         mimetype = get_mimetype(response)
         if mimetype is None:
             raise ValueError("Could not determine mimetype.")
         name = retrieve_filename(response)
         for ent in ensure_array(load_entities(response, mimetype=mimetype)):
-            diagram_ent: Dict[str, Union[str, float, int, None]] = {
-                "ID": ent.ID,
-                "name": ent.ID,
+            entity_id = str(ent.ID)
+            diagram_ent: Dict[str, Any] = {
+                "ID": entity_id,
+                "name": entity_id,
             }
             dim = len(ent.values)
             if dim == 0:
@@ -83,7 +89,35 @@ def _get_plot(
                 diagram_ent["z"] = ent.values[2]
                 is_3d = True
             diagram_ent["href"] = ent.href
-            entities[ent.ID] = diagram_ent
+            diagram_ent["attributes"] = {}
+            entities[entity_id] = diagram_ent
+
+    if entity_data_url:
+        with open_url(entity_data_url) as response:
+            mimetype = get_mimetype(response)
+            if mimetype is None:
+                raise ValueError("Could not determine mimetype.")
+            for ent in ensure_dict(load_entities(response, mimetype=mimetype)):
+                entity_id = ent.get("ID")
+                if entity_id is None:
+                    continue
+                diag_ent = entities.get(str(entity_id), None)
+                if diag_ent is None:
+                    continue
+                href = ent.get("href")
+                if href:
+                    diag_ent["href"] = href
+                attributes_dict = diag_ent["attributes"]
+                for key, value in ent.items():
+                    if key in {"ID", "href"}:
+                        continue
+                    if value is None or isinstance(value, (str, float, int, bool)):
+                        attributes_dict[str(key)] = value
+                    else:
+                        try:
+                            attributes_dict[str(key)] = dumps(value, sort_keys=True)
+                        except TypeError:
+                            attributes_dict[str(key)] = str(value)
 
     if clusters_url:
         with open_url(clusters_url) as response:
@@ -92,13 +126,15 @@ def _get_plot(
                 raise ValueError("Could not determine mimetype.")
             label_column = "label"
             for ent in ensure_dict(load_entities(response, mimetype=mimetype)):
-                diag_ent: Optional[Dict[str, Union[str, float, int, None]]] = (
-                    entities.get(ent["ID"], None)
-                )
+                entity_id = ent.get("ID")
+                if entity_id is None:
+                    continue
+                diag_ent = entities.get(str(entity_id), None)
                 if diag_ent is None:
                     continue
-                if ent["href"]:
-                    diag_ent["href"] = ent["href"]
+                href = ent.get("href")
+                if href:
+                    diag_ent["href"] = href
                 if label_column not in ent:
                     entity_columns = list(ent.keys() - {"ID", "href"})
                     if len(entity_columns) != 1:
@@ -109,19 +145,41 @@ def _get_plot(
                 diag_ent["label"] = str(ent[label_column])
 
     ent_list = list(entities.values())
+    attributes: Set[str] = {
+        attr
+        for ent in ent_list
+        for attr in ent.get("attributes", {}).keys()
+        if attr is not None
+    }
+    # Fixed columns for the DataFrame below: identity (ID, name, URL),
+    # plot axes (x, y, z), the cluster label column, and the marker size column.
+    # User-supplied attribute names that collide with any of these are prefixed
+    # with "Entity ".
+    reserved_column_names = {"ID", "name", "URL", "x", "y", "z", "Cluster ID", "size"}
+    attr_to_column_name: Dict[str, str] = {
+        attr: f"Entity {attr}" if attr in reserved_column_names else attr
+        for attr in sorted(attributes)
+    }
 
-    df = pd.DataFrame(
-        {
-            "ID": [e["ID"] for e in ent_list],
-            "name": [e["name"] for e in ent_list],
-            "URL": [e["href"] for e in ent_list],
-            "x": [e["x"] for e in ent_list],
-            "y": [e["y"] for e in ent_list],
-            "z": [e["z"] if is_3d else 0 for e in ent_list],
-            "Cluster ID": [e.get("label", "0") for e in ent_list],
-            "size": [10 for _ in ent_list],
-        }
-    )
+    df_data: Dict[str, Any] = {
+        "ID": [e["ID"] for e in ent_list],
+        "name": [e["name"] for e in ent_list],
+        "URL": [e["href"] for e in ent_list],
+        "x": [e["x"] for e in ent_list],
+        "y": [e["y"] for e in ent_list],
+        "z": [e["z"] if is_3d else 0 for e in ent_list],
+        "Cluster ID": [e.get("label", "0") for e in ent_list],
+        "size": [10 for _ in ent_list],
+    }
+    for attr, column_name in attr_to_column_name.items():
+        df_data[column_name] = [e.get("attributes", {}).get(attr, None) for e in ent_list]
+    df = pd.DataFrame(df_data)
+
+    # The URL is kept in custom_data for the click handler, but not shown in the
+    # hover tooltip
+    hover_data = {"size": False, "URL": False, "z": is_3d}
+    for column_name in attr_to_column_name.values():
+        hover_data[column_name] = True
 
     if is_3d:
         fig = px.scatter_3d(
@@ -133,7 +191,8 @@ def _get_plot(
             hover_name="name",
             color="Cluster ID",
             symbol="Cluster ID",
-            hover_data={"size": False},
+            hover_data=hover_data,
+            custom_data=["URL", "ID"],
         )
     else:
         fig = px.scatter(
@@ -144,24 +203,84 @@ def _get_plot(
             hover_name="name",
             color="Cluster ID",
             symbol="Cluster ID",
-            hover_data={"size": False},
+            hover_data=hover_data,
+            custom_data=["URL", "ID"],
         )
 
-    return fig.to_html(full_html=full_html), Path(name).stem
+    fig.update_layout(clickmode="event+select")
+
+    post_script = """
+const plotElement = document.getElementById('{plot_id}');
+if (plotElement) {
+  const linkContainerId = `${plotElement.id}-entity-link`;
+  let linkContainer = document.getElementById(linkContainerId);
+  if (!linkContainer) {
+    linkContainer = document.createElement('div');
+    linkContainer.id = linkContainerId;
+    linkContainer.style.marginTop = '0.75rem';
+    linkContainer.style.fontSize = '0.9rem';
+    linkContainer.textContent = 'Click a point to show its entity link';
+    plotElement.insertAdjacentElement('afterend', linkContainer);
+  }
+
+  const updateLink = (point) => {
+    const customData = point && point.customdata ? point.customdata : [];
+    const href = typeof customData[0] === 'string' ? customData[0].trim() : '';
+    const entityId = customData[1] || point.hovertext || 'entity';
+
+    linkContainer.replaceChildren();
+    if (!href) {
+      linkContainer.textContent = `Selected entity (${entityId}) has no link`;
+      return;
+    }
+
+    const label = document.createElement('span');
+    label.textContent = `Selected entity (${entityId}): `;
+    const link = document.createElement('a');
+    link.href = href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = href;
+    linkContainer.append(label, link);
+  };
+
+  // The link reflects the selected entity
+  plotElement.on('plotly_click', (eventData) => {
+    const point = eventData && eventData.points && eventData.points[0];
+    if (point) {
+      updateLink(point);
+    }
+  });
+}
+"""
+
+    return fig.to_html(full_html=full_html, post_script=post_script), Path(name).stem
 
 
 @CELERY.task(
     name=f"{ClusterScatterVisualization.instance.identifier}.generate_plot", bind=True
 )
-def generate_plot(self, entity_url: str, clusters_url: Optional[str], hash_: str) -> str:
+def generate_plot(
+    self,
+    entity_url: str,
+    clusters_url: Optional[str],
+    entity_data_url: Optional[str],
+    hash_: str,
+) -> str:
 
     TASK_LOGGER.info(
-        f"Generating plot for entites {entity_url} and clusters {clusters_url}..."
+        "Generating plot for entities %s, clusters %s and entity data %s...",
+        entity_url,
+        clusters_url,
+        entity_data_url,
     )
 
     try:
         diagram, _ = _get_plot(
-            entity_url=entity_url, clusters_url=clusters_url, full_html=False
+            entity_url=entity_url,
+            clusters_url=clusters_url,
+            entity_data_url=entity_data_url,
+            full_html=False,
         )
     except HTTPError:
         DataBlob.set_value(ClusterScatterVisualization.instance.identifier, hash_, b"")
@@ -182,9 +301,18 @@ def generate_plot(self, entity_url: str, clusters_url: Optional[str], hash_: str
 
 
 @CELERY.task(name=f"{ClusterScatterVisualization.instance.identifier}.process", bind=True)
-def process(self, db_id: str, entity_url: str, clusters_url: str) -> str:
+def process(
+    self,
+    db_id: str,
+    entity_url: str,
+    clusters_url: Optional[str],
+    entity_data_url: Optional[str],
+) -> str:
     diagram, name = _get_plot(
-        entity_url=entity_url, clusters_url=clusters_url, full_html=True
+        entity_url=entity_url,
+        clusters_url=clusters_url,
+        entity_data_url=entity_data_url,
+        full_html=True,
     )
 
     # Html needs to be saved as bytes, so it can be stored in a DataBlob

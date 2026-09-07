@@ -181,6 +181,17 @@ class Muse4MusicClient:
     def get_subpart(self, url):
         return self._get_by_url(url)
 
+    def get_all_voices(self) -> List[Any]:
+        self._ensure_logged_in()
+        url = urljoin(self._base_url, "./api/voices/")
+        response = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {self._auth_token}"},
+            timeout=self._timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def get_voices(self, url) -> List[Any]:
         self._ensure_logged_in()
         subpart_url = urljoin(self._base_url, url)

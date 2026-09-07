@@ -19,7 +19,7 @@ from io import TextIOWrapper
 from pathlib import Path
 from subprocess import PIPE, CalledProcessError, run
 from tempfile import TemporaryDirectory
-from typing import cast
+from typing import Optional, cast
 
 import click
 from flask import Blueprint, Flask, current_app
@@ -50,9 +50,17 @@ PLUGIN_COMMAND_LOGGER = "plugins"
     is_flag=True,
     help="Only add the requirements of the plugins together skipping the requirements of the plugin runner.",
 )
+@click.option(
+    "--only-with-tests",
+    default=False,
+    is_flag=True,
+    help="Only install requirements for plugins whose source directory contains test files.",
+)
 @PLUGIN_CLI.command("install")
 @with_appcontext
-def install_plugin_dependencies(dry_run: bool, skip_runner_dependencies: bool):
+def install_plugin_dependencies(
+    dry_run: bool, skip_runner_dependencies: bool, only_with_tests: bool
+):
     """Gather and install all plugin dependencies."""
     with TemporaryDirectory(prefix="qhana") as temp_dir:
         temp_dir = Path(temp_dir)
@@ -61,6 +69,8 @@ def install_plugin_dependencies(dry_run: bool, skip_runner_dependencies: bool):
             if not skip_runner_dependencies:
                 append_runner_dependencies(current_app, requirements)
             for plugin in QHAnaPluginBase.get_plugins().values():
+                if only_with_tests and not _plugin_has_tests(plugin):
+                    continue
                 append_plugin_dependencies(plugin, current_app, requirements)
         if dry_run:
             with requirements_file.open() as r:
@@ -125,3 +135,13 @@ def register_plugin_cli_blueprint(app: Flask):
     """Method to register the plugins CLI blueprint."""
     app.register_blueprint(PLUGIN_CLI_BLP)
     app.logger.info("Registered plugin cli blueprint.")
+
+
+def _plugin_has_tests(plugin: QHAnaPluginBase) -> bool:
+    """Return True if the plugin's source directory contains any test_*.py files."""
+    module = sys.modules.get(type(plugin).__module__)
+    module_file = getattr(module, "__file__", None)
+    if not module_file:
+        return False
+    plugin_dir = Path(module_file).resolve().parent
+    return any(plugin_dir.rglob("test_*.py"))

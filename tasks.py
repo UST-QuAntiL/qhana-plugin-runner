@@ -13,22 +13,21 @@
 # limitations under the License.
 
 from collections import Counter
-from os import environ
+from os import environ, urandom
 from os import execvpe as replace_process
-from os import urandom
 from pathlib import Path
 from re import match
 from shlex import join
 from shutil import copy, copytree
 from typing import List, Optional, cast
 
-from dotenv import load_dotenv, set_key, unset_key
+from dotenv import set_key, unset_key
+from flask.cli import load_dotenv
 from invoke import UnexpectedExit, call, task
 from invoke.context import Context
 from invoke.runners import Result
 
-load_dotenv(".flaskenv")
-load_dotenv(".env")
+load_dotenv()
 
 MODULE_NAME = "qhana_plugin_runner"
 CELERY_WORKER = f"{MODULE_NAME}.celery_worker:CELERY"

@@ -21,21 +21,41 @@ class ClusterScatterInputParametersSchema(FrontendFormBaseSchema):
         required=True,
         allow_none=False,
         data_input_type="entity/vector",
-        data_content_types=["application/json", "application/csv"],
+        data_content_types=["application/json", "text/csv"],
         metadata={
             "label": "Entity Point URL",
             "description": "URL to a json file containing the points.",
             "input_type": "text",
+            "related_to": "clusters_url",
+            "relation": "pre",
         },
     )
     clusters_url = FileUrl(
         required=False,
         allow_none=True,
         data_input_type="entity/label",
-        data_content_types=["application/json", "application/csv"],
+        data_content_types=["application/json", "text/csv"],
         metadata={
             "label": "Cluster URL",
             "description": "URL to a json file containing the cluster labels.",
             "input_type": "text",
+            "related_to": "entity_url",
+            "relation": "post",
+        },
+    )
+    entity_data_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity/*",
+        data_content_types=["application/json", "text/csv"],
+        metadata={
+            "label": "Original Entity Data URL",
+            "description": (
+                "Optional URL to original entity data (same IDs). Additional attributes "
+                "are shown in hover and entity links are exposed when available."
+            ),
+            "input_type": "text",
+            "related_to": "entity_url",
+            "relation": "pre",
         },
     )

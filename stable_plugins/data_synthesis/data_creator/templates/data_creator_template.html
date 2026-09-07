@@ -2,27 +2,36 @@
 
 {% block script %}
 <script>
-    var noise_vis = document.getElementById("noise").parentNode.parentNode;
-    var turns_vis = document.getElementById("turns").parentNode.parentNode;
-    var centers_vis = document.getElementById("centers").parentNode.parentNode;
+    var noise_input = document.getElementById("noise");
+    var turns_input = document.getElementById("turns");
+    var centers_input = document.getElementById("centers");
     var dataset_type = document.getElementById("dataset_type");
 
+    // Must match REQUIRED_FIELDS_BY_TYPE in schemas.py
+    var FIELDS_BY_TYPE = {
+        two_spirals: [noise_input, turns_input],
+        checkerboard: [],
+        blobs: [centers_input],
+        checkerboard_3d: [],
+        blobs_3d: [centers_input],
+    };
+    var ALL_INPUTS = [noise_input, turns_input, centers_input];
+
+    function group(input) { return input.parentNode.parentNode; }
+
     function dataset_type_change() {
-        console.log("data_type_change");
-        noise_vis.style.display = 'none';
-        turns_vis.style.display = 'none';
-        centers_vis.style.display = 'none';
-        if (dataset_type.value === "two_spirals") {
-            noise_vis.style.display = 'block';
-            turns_vis.style.display = 'block';
-        }
-        if (dataset_type.value === "blobs" || dataset_type.value === "blobs_3d") {
-            centers_vis.style.display = 'block';
-        }
+        var relevant = FIELDS_BY_TYPE[dataset_type.value] || [];
+        ALL_INPUTS.forEach(function (input) {
+            var visible = relevant.indexOf(input) !== -1;
+            group(input).style.display = visible ? 'block' : 'none';
+            // Disabled inputs don't get submitted, so irrelevant garbage values
+            // can't trip marshmallow field-level validation.
+            input.disabled = !visible;
+        });
     }
 
     dataset_type.addEventListener("change", dataset_type_change);
-    centers_vis.style.display = 'none';
+    dataset_type_change();
 </script>
 {{ super() }}
 {% endblock script %}

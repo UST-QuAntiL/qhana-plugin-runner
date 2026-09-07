@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from conftests import task_data
 from sqlalchemy_json import TrackedDict, TrackedList
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask

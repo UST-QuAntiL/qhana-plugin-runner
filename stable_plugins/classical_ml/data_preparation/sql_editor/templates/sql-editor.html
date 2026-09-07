@@ -1,0 +1,474 @@
+{% extends "simple_template.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+    textarea#input_sql {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        min-height: 6lh;
+        field-sizing: content;
+    }
+
+    .suggestion-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3em;
+    }
+
+    .suggestion-chip {
+        border-radius: 500px;
+        border: none;
+        padding-block: 0.3em;
+        padding-inline: 0.8em;
+    }
+
+    #sql_preview {
+        max-height: 24rem;
+        overflow: auto;
+        margin-top: 0.5rem;
+    }
+
+    #sql_preview table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    #sql_preview th,
+    #sql_preview td {
+        border: 1px solid #ccc;
+        padding: 0.2em 0.4em;
+        text-align: left;
+        font-size: 0.95em;
+    }
+</style>
+{% endblock head %}
+
+{% block content %}
+<div>
+    <div>
+        <h2>Data Sources</h2>
+        <ul id="data_sources"></ul>
+        <button id="add_data_source" class="qhana-choose-file-button">Select from Experiment</button>
+    </div>
+    <form id="form_sql" action="" method="post" data-target="check" class="qhana-form" enctype="multipart/form-data"
+          data-check-url="{{check}}" data-preview-url="{{preview}}">
+        <div class="qhana-form-field">
+            <label class="qhana-form-label" for="input_sql">SQL Command</label>
+            <div class="qhana-input-wrapper">
+                <textarea class="qhana-form-input" name="sql" id="input_sql" autocomplete="off" aria-describedby="input_sql-description" required spellcheck="false"></textarea>
+            </div>
+            <div id="input_sql-description" class="qhana-input-description">
+                {% set sql_errors = errors.get("sql") if errors else None %}
+                <p id="sql_error" class="qhana-error-message" aria-live="assertive" {% if not sql_errors %}hidden{% endif %}>
+                    {% if sql_errors %}
+                        {% for message in sql_errors %}
+                        <span>{{message}}</span>
+                        {% endfor %}
+                    {% endif %}
+                </p>
+                <p id="sql_success" aria-live="polite" hidden>SQL looks valid.</p>
+                <p>
+                    Execute an SQL Command using the DuckDB SQL Enging.
+                    Consult the <a target="_blank" referrerpolicy="no-referrer" href="https://duckdb.org/docs/stable/sql/introduction#querying-a-table">DuckDB manual</a> for more information.
+                </p>
+            </div>
+            <div class="suggestion-list">
+                <button class="suggestion-chip" data-suggestion="DESCRIBE ">DESCRIBE …</button>
+                <button class="suggestion-chip" data-suggestion="SELECT * FROM ">SELECT</button>
+                <button class="suggestion-chip" data-suggestion="SELECT DISTINKT * FROM ">SELECT DISTINCT</button>
+                <button class="suggestion-chip" data-suggestion="read_csv('http://') AS table_a">read_csv(…)</button>
+                <button class="suggestion-chip" data-suggestion="read_json('http://') AS table_a">read_json(…)</button>
+                <button class="suggestion-chip" data-suggestion="USING SAMPLE 10">SAMPLE</button>
+                <button class="suggestion-chip" data-suggestion="INNER JOIN  ON  = ">JOIN (matching only)</button>
+                <button class="suggestion-chip" data-suggestion="LEFT OUTER JOIN  ON  = ">JOIN (keep left)</button>
+                <button class="suggestion-chip" data-suggestion="WHERE ">WHERE</button>
+                <button class="suggestion-chip" data-suggestion="ORDER BY ">ORDER BY</button>
+                <button class="suggestion-chip" data-suggestion="DESC">DESC</button>
+                <button class="suggestion-chip" data-suggestion="LIMIT 10">LIMIT</button>
+            </div>
+        </div>
+        <div class="qhana-form-field">
+            <label class="qhana-form-label" for="output_format">Output Format</label>
+            <div class="qhana-input-wrapper">
+                <select class="qhana-form-input" name="outputFormat" id="output_format" autocomplete="off">
+                    <option value="csv" {% if values.get("outputFormat", "csv") == "csv" %}selected{% endif %}>CSV</option>
+                    <option value="json" {% if values.get("outputFormat") == "json" %}selected{% endif %}>JSON</option>
+                </select>
+            </div>
+            <div id="output_format-description" class="qhana-input-description">
+                <p>Choose the output format written by the processing task.</p>
+            </div>
+        </div>
+        <div class="qhana-form-field">
+            <label class="qhana-form-label" for="output_data_type">Output Data Type</label>
+            <div class="qhana-input-wrapper">
+                <input
+                    class="qhana-form-input"
+                    type="text"
+                    name="outputDataType"
+                    id="output_data_type"
+                    list="output_data_type_suggestions"
+                    pattern="[A-Za-z0-9_./*-]+"
+                    value="{{ values.get('outputDataType', 'entity/list') }}"
+                    autocomplete="off"
+                    required
+                >
+                <datalist id="output_data_type_suggestions">
+                    <option value="entity/list">
+                    <option value="entity/vector">
+                    <option value="entity/matrix">
+                    <option value="entity/attribute-metadata">
+                    <option value="custom/attribute-similarities">
+                    <option value="custom/attribute-distances">
+                    <option value="custom/entity-distances">
+                    <option value="graph/taxonomy">
+                    <option value="*">
+                </datalist>
+            </div>
+            <div id="output_data_type-description" class="qhana-input-description">
+                <p>
+                    Override the output data type metadata if needed for downstream plugins.
+                    Custom values are allowed.
+                </p>
+            </div>
+        </div>
+        <div class="qhana-form-buttons">
+            <button class="qhana-form-submit" type="submit" data-target="check">check sql</button>
+            <button class="qhana-form-submit" type="submit" data-target="preview">try out</button>
+            <button class="qhana-form-submit" type="submit" data-target="api" formaction="{{process}}">submit</button>
+        </div>
+    </form>
+    <div>
+        <h2>Output Preview</h2>
+        <div id="sql_preview" class="qhana-data-preview qhana-table" hidden></div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block script %}
+{{ super() }}
+
+<script>
+    const sqlError = document.querySelector("#sql_error");
+    const sqlSuccess = document.querySelector("#sql_success");
+    const previewContainer = document.querySelector("#sql_preview");
+
+    function clearStatus() {
+        if (sqlError) {
+            sqlError.textContent = "";
+            sqlError.setAttribute("hidden", "hidden");
+        }
+        if (sqlSuccess) {
+            sqlSuccess.setAttribute("hidden", "hidden");
+        }
+    }
+
+    function showError(message) {
+        if (sqlError) {
+            sqlError.textContent = message;
+            sqlError.removeAttribute("hidden");
+        }
+        if (sqlSuccess) {
+            sqlSuccess.setAttribute("hidden", "hidden");
+        }
+    }
+
+    function showSuccess(message) {
+        if (sqlSuccess) {
+            sqlSuccess.textContent = message;
+            sqlSuccess.removeAttribute("hidden");
+        }
+        if (sqlError) {
+            sqlError.setAttribute("hidden", "hidden");
+        }
+    }
+
+    function clearPreview() {
+        if (!previewContainer) {
+            return;
+        }
+        previewContainer.replaceChildren();
+        previewContainer.setAttribute("hidden", "hidden");
+    }
+
+    function renderPreview(columns, rows, truncated) {
+        if (!previewContainer) {
+            return;
+        }
+        previewContainer.replaceChildren();
+        if (!columns || columns.length === 0) {
+            previewContainer.textContent = "No columns returned.";
+            previewContainer.removeAttribute("hidden");
+            return;
+        }
+        const table = document.createElement("table");
+        const headerRow = document.createElement("tr");
+        columns.forEach(column => {
+            const th = document.createElement("th");
+            th.textContent = column;
+            headerRow.appendChild(th);
+        });
+        table.appendChild(headerRow);
+        rows.forEach(row => {
+            const tr = document.createElement("tr");
+            row.forEach(cell => {
+                const td = document.createElement("td");
+                td.textContent = cell == null ? "" : String(cell);
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        });
+        previewContainer.appendChild(table);
+        if (truncated) {
+            const note = document.createElement("p");
+            note.textContent = `Preview limited to ${rows.length} rows.`;
+            previewContainer.appendChild(note);
+        }
+        previewContainer.removeAttribute("hidden");
+        if (window._qhana_microfrontend_state != null) {
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    function getFirstError(errors) {
+        if (!errors || typeof errors !== "object") {
+            return null;
+        }
+        for (const key of Object.keys(errors)) {
+            const value = errors[key];
+            if (Array.isArray(value) && value.length > 0) {
+                return value[0];
+            }
+            if (typeof value === "string") {
+                return value;
+            }
+            if (value && typeof value === "object") {
+                const nested = getFirstError(value);
+                if (nested) {
+                    return nested;
+                }
+            }
+        }
+        return null;
+    }
+
+    function getErrorMessage(payload) {
+        if (!payload) {
+            return "Request failed.";
+        }
+        if (payload.error) {
+            return payload.error;
+        }
+        const nestedError = getFirstError(payload.errors);
+        if (nestedError) {
+            return nestedError;
+        }
+        if (payload.message) {
+            return payload.message;
+        }
+        return "Request failed.";
+    }
+
+    async function postForm(form, url) {
+        const response = await fetch(url, {
+            method: "POST",
+            body: new FormData(form),
+        });
+        let payload = {};
+        try {
+            payload = await response.json();
+        } catch (err) {
+            payload = {};
+        }
+        if (!response.ok || payload.ok === false) {
+            throw new Error(getErrorMessage(payload));
+        }
+        return payload;
+    }
+
+    async function handleCheck(form) {
+        const url = form.dataset.checkUrl;
+        if (!url) {
+            showError("Check endpoint is not configured.");
+            return;
+        }
+        clearPreview();
+        clearStatus();
+        try {
+            await postForm(form, url);
+            showSuccess("SQL looks valid.");
+        } catch (err) {
+            showError(err.message);
+        }
+    }
+
+    async function handlePreview(form) {
+        const url = form.dataset.previewUrl;
+        if (!url) {
+            showError("Preview endpoint is not configured.");
+            return;
+        }
+        clearStatus();
+        try {
+            const payload = await postForm(form, url);
+            renderPreview(payload.columns, payload.rows, payload.truncated);
+        } catch (err) {
+            clearPreview();
+            showError(err.message);
+        }
+    }
+
+    function customSubmitHandler(event) {
+        const form = event.target;
+        const submitter = event.submitter;
+        const submitTarget = submitter?.getAttribute("data-target") || form.getAttribute("data-target");
+        if (submitTarget === "check") {
+            event.preventDefault();
+            handleCheck(form);
+            return true;
+        }
+        if (submitTarget === "preview") {
+            event.preventDefault();
+            handlePreview(form);
+            return true;
+        }
+        return false; // event not handled, use default handling
+    }
+
+    function onChooseNewDataSource(event) {
+        event.preventDefault();
+        sendMessage({
+            type: "request-data-url",
+            inputKey: "dataSource",
+            acceptedInputType: "*",
+            acceptedContentTypes: ["text/csv", "application/json"],
+        });
+    }
+
+    function onSuggestionClick(event) {
+        event.preventDefault();
+
+        /** @type {HTMLButtonElement} */
+        const button = event.target;
+        const suggestion = button.dataset.suggestion;
+
+        /** @type {HTMLTextAreaElement} */
+        const sqlInput = document.querySelector("textarea#input_sql");
+
+        if (suggestion) {
+            sqlInput.focus();
+            sqlInput.setRangeText(suggestion, sqlInput.selectionStart, sqlInput.selectionEnd, "end");
+        }
+    }
+
+    function onDataUrlResponse(message) {
+        if (message.inputKey !== "dataSource") {
+            return;
+        }
+
+        const exisitngEntries = Array.from(document.querySelectorAll(`ul#data_sources li[data-url]`));
+        if (exisitngEntries.some(li => li.dataset.url === message.href)) {
+            return;  // data source already added
+        }
+
+        const test = {
+            "type": "data-url-response",
+            "inputKey": "",
+            "href": "",
+            "dataType": "entity/list",
+            "contentType": "text/csv",
+            "filename": "test.csv",
+            "version": "v1"
+        }
+        const urlStatement = `'${message.href}'`;
+
+        /** @type {string} */
+        let tableName = message.filename;
+        if (tableName.includes(".")) {
+            tableName = tableName.substring(0, tableName.indexOf("."));
+        }
+        tableName = tableName.replace(/[^a-zA-Z]/g, "");
+
+        let tableStatement;
+        let tableStatementShort;
+        if (message.contentType === "text/csv") {
+            tableStatement = `read_csv(${urlStatement}) AS ${tableName}`;
+            tableStatementShort = "read_csv(…)";
+        } else if (message.contentType === "application/json") {
+            tableStatement = `read_json(${urlStatement}) AS ${tableName}`;
+            tableStatementShort = "read_json(…)";
+        } else {
+            console.log(`Unsupported content type ${message.contentType}.`, message);
+            return;
+        }
+
+        const selectStatement = `SELECT * FROM ${tableStatement}`;
+
+        const container = document.createElement("li");
+        container.dataset.url = message.href;
+        container.dataset.filename = message.filename;
+        container.dataset.version = message.version;
+        container.dataset.dataType = message.dataType;
+        container.dataset.contentType = message.contentType;
+
+        const header = document.createElement("p");
+        container.appendChild(header);
+        header.textContent = `${message.filename} (${message.version}) – ${message.dataType}; ${message.contentType}`;
+
+        const buttonList = document.createElement("div");
+        container.appendChild(buttonList);
+        buttonList.classList.add("suggestion-list");
+
+        const selectBtn = document.createElement("button");
+        buttonList.appendChild(selectBtn);
+        selectBtn.classList.add("suggestion-chip");
+        selectBtn.dataset.suggestion = selectStatement;
+        selectBtn.textContent = "SELECT …";
+        selectBtn.addEventListener("click", onSuggestionClick);
+
+        const tableBtn = document.createElement("button");
+        buttonList.appendChild(tableBtn);
+        tableBtn.classList.add("suggestion-chip");
+        tableBtn.dataset.suggestion = tableStatement;
+        tableBtn.textContent = tableStatementShort;
+        tableBtn.addEventListener("click", onSuggestionClick);
+
+        const urlBtn = document.createElement("button");
+        buttonList.appendChild(urlBtn);
+        urlBtn.classList.add("suggestion-chip");
+        urlBtn.dataset.suggestion = urlStatement;
+        urlBtn.textContent = "'http://…'";
+        urlBtn.addEventListener("click", onSuggestionClick);
+
+        document.querySelector("ul#data_sources").appendChild(container);
+
+        if (window._qhana_microfrontend_state != null) {
+            // height has changed, notify parent
+            monitorHeightChanges(window._qhana_microfrontend_state);
+        }
+    }
+
+    function messageInterceptor(event) {
+        var data = event.data;
+        if ((typeof data !== "string") && (data != null && data.type === "data-url-response")) {
+            onDataUrlResponse(data);
+            return true;
+        }
+        return false; // message event not handled, use default handling
+    }
+
+    if (window._qhana_microfrontend_state != null) {
+        window._qhana_microfrontend_state.formSubmitHandler = customSubmitHandler;
+        window._qhana_microfrontend_state.messageHandler = messageInterceptor;
+    } else {
+        document.querySelector("form#form_sql").addEventListener("submit", customSubmitHandler);
+    }
+
+    document.querySelector("button#add_data_source").addEventListener("click", onChooseNewDataSource);
+
+    document.querySelectorAll("button[data-suggestion]").forEach(button => {
+        button.addEventListener("click", onSuggestionClick);
+    });
+</script>
+
+{% endblock script %}

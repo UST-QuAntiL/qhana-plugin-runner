@@ -1,0 +1,179 @@
+{% import 'forms.html' as forms %}
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <base href="/">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <style>
+        .content {
+            display: flex;
+            flex-direction: column;
+            min-width: 50ch;
+            max-width: max-content;
+            margin-inline: auto;
+            gap: 1em;
+        }
+
+        .content form {
+            min-width: 50ch;
+            width: 80ch;
+        }
+        .content iframe {
+            width: 100%;
+            resize: both;
+        }
+
+        .single-line-form {
+            display: flex;
+            gap: 0.5em;
+            justify-content: space-between;
+        }
+
+        .single-line-form input {
+            flex-grow: 1;
+        }
+        .multi-line-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+            align-items: stretch;
+        }
+
+        .button-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 80ch;
+            gap: 0.5em;
+            margin-block: 0.5em;
+            padding-inline: 0em;
+        }
+
+        textarea#message_input {
+            min-height: 6lh;
+            field-sizing: content;
+        }
+
+        .container {
+            border: 1px solid black;
+            min-height: 1em;
+        }
+
+        .message-log {
+            font: monospace;
+            max-height: 50vh;
+            max-width: 80ch;
+            scrollbar-gutter: both-edges;
+            overflow: auto;
+        }
+        .message-log > pre {
+            margin-block: 0px;
+            padding-inline: 0.5em;
+            width: stretch;
+        }
+        .message-log > :nth-child(even) {
+            background-color: lightgray;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content">
+        <form id="frontend_url" class="single-line-form">
+            <label for="input_url">URL:</label>
+            <input type="url" name="url" id="input_url" list="micro_frontends">
+            <datalist id="micro_frontends">
+                {% for url in micro_frontend_urls %}
+                <option value="{{url}}">{{url}}</option>
+                {% endfor %}
+            </datalist>
+            <button type="submit">load frontend</button>
+        </form>
+
+        <details open>
+            <summary>
+                Messages
+            </summary>
+            <ul class="button-list" id="message_templates">
+                {% for key, message in message_templates.items() %}
+                <li><button data-value="{{message}}">{{key}}</button></li>
+                {% endfor %}
+            </ul>
+            <form id="message_form" class="multi-line-form">
+                <label for="message_input">Message to send:</label>
+                <textarea name="message" id="message_input" autocomplete="off" spellcheck="false"></textarea>
+                <button type="submit">send message</button>
+            </form>
+
+            <p>Message Log:</p>
+            <div class="container">
+                <div class="message-log" id="message_log">
+                </div>
+            </div>
+        </details>
+
+        <iframe id="plugin_iframe" seamless class="frontend-frame" frameborder="1" scroll="no" height="600"
+            sandbox="allow-forms allow-downloads allow-scripts allow-same-origin" allow="fullscreen">
+        </iframe>
+    </div>
+
+    <script>
+        document.querySelector("form#frontend_url").addEventListener("submit", (event) => {
+            event.preventDefault();
+            const url = document.querySelector("input#input_url").value;
+            const iframe = document.querySelector("iframe#plugin_iframe");
+            if (url) {
+                iframe.setAttribute("src", url);
+            } else {
+                iframe.removeAttribute("src");
+            }
+        });
+
+
+        document.querySelector("textarea#message_input").addEventListener("change", (event) => event.target.setCustomValidity(""));
+        document.querySelector("#message_templates").addEventListener("click", (event) => {
+            const data = event.target.dataset.value;
+            if (data) {
+                document.querySelector("textarea#message_input").value = data;
+            }
+        });
+        document.querySelector("form#message_form").addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            /** @type {HTMLTextAreaElement} */
+            const formInput = document.querySelector("textarea#message_input");
+            let message;
+            try {
+                message = JSON.parse(formInput.value.trim());
+                formInput.setCustomValidity("");
+            } catch (err) {
+                console.log(err)
+                formInput.setCustomValidity(err.toString());
+                formInput.reportValidity();
+                return;
+            }
+
+            const log = document.querySelector("#message_log");
+            const logEntry = document.createElement("pre");
+            logEntry.textContent = ">>> " + JSON.stringify(message, undefined, 4);
+            const iframe = document.querySelector("iframe#plugin_iframe");
+            iframe.contentWindow.postMessage(message, this.pluginOrigin ?? "*");
+            log.appendChild(logEntry);
+        });
+
+        window.addEventListener("message", (event) => {
+            const message = JSON.stringify(event.data, undefined, 4);
+            const log = document.querySelector("#message_log");
+            const logEntry = document.createElement("pre");
+            logEntry.textContent = message;
+            log.appendChild(logEntry);
+        });
+    
+    </script>
+
+</body>
+
+</html>
