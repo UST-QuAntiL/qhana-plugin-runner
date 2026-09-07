@@ -158,6 +158,13 @@ def launch_next_pipeline(task_data: ProcessingTask):
         )
         task_data.save(commit=True)
         start_mapping.apply_async(args=[task_data.id])
+    else:
+        # Without a matching starting step the task would stall silently, as no
+        # further webhook can arrive to progress the queue.
+        raise ValueError(
+            f"BUG: No pipeline start step for '{next_pipeline}'. "
+            f"Expected one of {[WU_PALMER_PLUGIN, MAPPING_PLUGIN]}."
+        )
 
 
 """Collection of celery tasks for starting plugins that are substeps of the various pipelines managed by the routing plugin."""
@@ -189,7 +196,7 @@ def start_wu_palmer(self, db_id: int):
         "entitiesMetadataUrl": params.entities_metadata_url,
         "taxonomiesZipUrl": params.taxonomies_zip_url,
         "attributes": task_data.data[f"{WU_PALMER_PLUGIN}_attributes"],
-        "root_is_part_of_hierarchy": str(params.root_is_part_of_hierarchy).lower(),
+        "rootIsPartOfHierarchy": str(params.root_is_part_of_hierarchy).lower(),
     }
 
     run_pipeline_step(
