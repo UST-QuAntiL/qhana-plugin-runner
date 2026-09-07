@@ -115,7 +115,7 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback: CallbackUrl):
+    def get(self, errors, callback: Optional[CallbackUrl] = None):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -135,11 +135,11 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         required=False,
     )
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback: CallbackUrl):
+    def post(self, errors, callback: Optional[CallbackUrl] = None):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback: CallbackUrl):
+    def render(self, data: Mapping, errors: dict, callback: Optional[CallbackUrl]):
         plugin = RidgeLoss.instance
         if plugin is None:
             abort(HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -149,15 +149,18 @@ class HyperparameterSelectionMicroFrontend(MethodView):
         # set default values
         if not data:
             data = {"alpha": 0.1}
+        callback_params = {}
+        if callback and callback.callback:
+            callback_params = callback_schema.dump(callback)
         process_url = url_for(
             f"{RIDGELOSS_BLP.name}.{SetupProcess.__name__}",
             # forward the callback url to the processing endpoint
-            **callback_schema.dump(callback),
+            **callback_params,
         )
         example_values_url = url_for(
             f"{RIDGELOSS_BLP.name}.{HyperparameterSelectionMicroFrontend.__name__}",
             **self.example_inputs,
-            **callback_schema.dump(callback),
+            **callback_params,
         )
 
         help_text = r"""Alpha is the regularization strength. Larger values specify stronger regularization.
@@ -185,11 +188,13 @@ class SetupProcess(MethodView):
 
     @RIDGELOSS_BLP.arguments(HyperparamterInputSchema(unknown=EXCLUDE), location="form")
     @RIDGELOSS_BLP.arguments(
-        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
+        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=False
     )
     @RIDGELOSS_BLP.response(HTTPStatus.SEE_OTHER)
     @RIDGELOSS_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: HyperparamterInputData, callback: CallbackUrl):
+    def post(
+        self, arguments: HyperparamterInputData, callback: Optional[CallbackUrl] = None
+    ):
         """Start the invoked task."""
         # create new db_task
         db_task = ProcessingTask(
@@ -201,15 +206,7 @@ class SetupProcess(MethodView):
         db_task.save()
         DB.session.flush()
 
-        # add callback as webhook subscriber subscribing to all updates
-        subscription = TaskUpdateSubscription(
-            db_task,
-            webhook_href=callback.callback,
-            task_href=url_for(
-                "tasks-api.TaskView", task_id=str(db_task.id), _external=True
-            ),
-            event_type=None,
-        )
+        task_href = url_for("tasks-api.TaskView", task_id=str(db_task.id), _external=True)
 
         weights_link = TaskLink(
             db_task,
@@ -232,7 +229,14 @@ class SetupProcess(MethodView):
         DB.session.add(weights_link)
         DB.session.add(calc_loss_link)
 
-        subscription.save()
+        if callback and callback.callback:
+            subscription = TaskUpdateSubscription(
+                db_task,
+                webhook_href=callback.callback,
+                task_href=task_href,
+                event_type=None,
+            )
+            subscription.save()
 
         db_task.add_next_step(
             href=url_for(

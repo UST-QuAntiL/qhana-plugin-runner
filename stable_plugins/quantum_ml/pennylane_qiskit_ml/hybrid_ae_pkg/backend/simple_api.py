@@ -37,7 +37,7 @@ def pennylane_hybrid_autoencoder(
     embedding_size: int,
     qnn_name: str,
     steps: int,
-    dev: qml.Device,
+    dev: qml.devices.Device,
 ) -> Tuple[np.ndarray, PLHybridAutoencoder, Optimizer, Optimizer]:
     model = PLHybridAutoencoder(input_data.shape[1], q_num, embedding_size, qnn_name, dev)
     c_optim = Adam(model.get_classical_parameters())

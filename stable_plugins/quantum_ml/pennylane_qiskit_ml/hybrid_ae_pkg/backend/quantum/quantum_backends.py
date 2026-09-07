@@ -12,9 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pennylane as qml
 from enum import Enum
-from qiskit import IBMQ
+
+import pennylane as qml
+
+# FIXME: the ibmq_* backends below are unusable with the pinned dependencies.
+# qiskit-ibm-provider is not compatible with qiskit>=2
+try:
+    from qiskit_ibm_provider import IBMProvider
+except ImportError:  # pragma: no cover - optional dependency
+    IBMProvider = None
 
 
 class QuantumBackends(Enum):
@@ -37,7 +44,7 @@ class QuantumBackends(Enum):
         custom_backend_name: str,
         qubit_cnt: int,
         shots: int,
-    ) -> qml.Device:
+    ) -> qml.devices.Device:
         if self.name.startswith("aer"):
             # Use local AER backend
             aer_backend_name = self.name[4:]
@@ -46,7 +53,11 @@ class QuantumBackends(Enum):
             )
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
             return qml.device(
                 "qiskit.ibmq",
@@ -57,7 +68,11 @@ class QuantumBackends(Enum):
             )
         elif self.name.startswith("custom_ibmq"):
             # Use custom IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
             return qml.device(
                 "qiskit.ibmq",

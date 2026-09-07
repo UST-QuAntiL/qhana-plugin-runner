@@ -37,7 +37,7 @@ from qhana_plugin_runner.storage import STORE
 
 import numpy as np
 
-from qiskit.utils import QuantumInstance
+from qiskit.primitives import BackendSamplerV2
 from .backend.vqc import QiskitVQC
 
 from sklearn.metrics import accuracy_score
@@ -203,7 +203,7 @@ def calculation_task(self, db_id: int) -> str:
 
     # Prep backend
     backend = backend.get_qiskit_backend(ibmq_token, custom_backend)
-    backend = QuantumInstance(backend=backend, shots=shots)
+    sampler = BackendSamplerV2(backend=backend, options={"default_shots": shots})
 
     # Prep feature map
     entanglement_pattern_feature_map = entanglement_pattern_feature_map_enum.get_pattern()
@@ -222,7 +222,7 @@ def calculation_task(self, db_id: int) -> str:
     optimizer = optimizer_enum.get_optimizer(maxitr)
 
     # VQC
-    vqc = QiskitVQC(backend, feature_map, vqc_ansatz, optimizer)
+    vqc = QiskitVQC(sampler, feature_map, vqc_ansatz, optimizer)
     vqc.fit(train_points, train_labels)
     predictions = [int_to_label[el] for el in vqc.predict(test_points)]
     output_labels = [

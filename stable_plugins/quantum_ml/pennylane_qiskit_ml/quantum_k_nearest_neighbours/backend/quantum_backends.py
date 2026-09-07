@@ -13,13 +13,23 @@
 # limitations under the License.
 
 import enum
+from typing import Optional
 
 import pennylane as qml
 from celery.utils.log import get_task_logger
-from qiskit import IBMQ
-from qiskit import Aer
 
-from typing import Optional
+try:
+    from qiskit_aer import Aer
+except ImportError:  # pragma: no cover - optional dependency
+    Aer = None
+
+# FIXME: the ibmq_* backends below are unusable with the pinned dependencies.
+# qiskit-ibm-provider is not compatible with qiskit>=2
+try:
+    from qiskit_ibm_provider import IBMProvider
+except ImportError:  # pragma: no cover - optional dependency
+    IBMProvider = None
+
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -47,11 +57,19 @@ class QuantumBackends(enum.Enum):
             return None
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
             backend = provider.get_backend(self.name)
             return backend.configuration().n_qubits
         elif self.name.startswith("custom_ibmq"):
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
             backend = provider.get_backend(custom_backend_name)
             return backend.configuration().n_qubits
 
@@ -60,27 +78,48 @@ class QuantumBackends(enum.Enum):
         ibmq_token: str,
         custom_backend_name: str,
         qubit_cnt: int,
-    ) -> qml.Device:
+        shots: int,
+    ) -> qml.devices.Device:
         if self.name.startswith("aer"):
             # Use local AER backend
+            if Aer is None:
+                raise RuntimeError("qiskit-aer is required for local aer backends.")
             aer_backend_name = self.name[4:]
 
-            return qml.device("qiskit.aer", wires=qubit_cnt, backend=aer_backend_name)
+            return qml.device(
+                "qiskit.aer",
+                wires=qubit_cnt,
+                backend=aer_backend_name,
+                shots=shots,
+            )
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
             return qml.device(
-                "qiskit.ibmq", wires=qubit_cnt, backend=self.name, provider=provider
+                "qiskit.ibmq",
+                wires=qubit_cnt,
+                backend=self.name,
+                provider=provider,
+                shots=shots,
             )
         elif self.name.startswith("custom_ibmq"):
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
 
             return qml.device(
                 "qiskit.ibmq",
                 wires=qubit_cnt,
                 backend=custom_backend_name,
                 provider=provider,
+                shots=shots,
             )
         elif self.name == "pennylane_default":
             return qml.device("default.qubit", wires=qubit_cnt)
@@ -89,14 +128,24 @@ class QuantumBackends(enum.Enum):
 
     def get_qiskit_backend(self, ibmq_token: str, custom_backend_name: str):
         if self.name.startswith("aer"):
+            if Aer is None:
+                raise RuntimeError("qiskit-aer is required for local aer backends.")
             aer_backend_name = self.name[4:]
             return Aer.get_backend(aer_backend_name)
         elif self.name.startswith("ibmq"):
             # Use IBMQ backend
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
             return provider.get_backend(self.name)
         elif self.name.startswith("custom_ibmq"):
-            provider = IBMQ.enable_account(ibmq_token)
+            if IBMProvider is None:
+                raise RuntimeError("qiskit-ibm-provider is required for IBMQ backends.")
+            if not ibmq_token:
+                raise ValueError("IBMQ token is required for IBMQ backends.")
+            provider = IBMProvider(token=ibmq_token)
             return provider.get_backend(custom_backend_name)
         else:
             TASK_LOGGER.error("Unknown qiskit backend specified!")

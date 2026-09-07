@@ -119,7 +119,7 @@ def drop_missing_value(
 ) -> DataFrame:
     """
     First transforms subset from JSON encoded list into a list of strings and then continues with the dropna function of pandas'
-    dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.dropna.html) and
+    dataframes (https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.dropna.html) and
     returns the new dataframe.
     :param df: DataFrame
     :param axis: int
@@ -137,7 +137,7 @@ def drop_missing_value(
 def fill_missing_value(df: DataFrame, fill_value: str, **kwargs) -> DataFrame:
     """
     First transforms fill_value into a number, if possible and then continues with the fillna function of pandas'
-    dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.fillna.html) and
+    dataframes (https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.fillna.html) and
     returns the new dataframe.
     :param df: DataFrame
     :param fill_value: str
@@ -159,7 +159,7 @@ def drop_duplicates(
 ) -> DataFrame:
     """
     First transforms subset from a string into a list of strings and then continues with the drop_duplicates function of
-    pandas' dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.drop_duplicates.html),
+    pandas' dataframes (https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.drop_duplicates.html),
     with the key difference that keep == False is replaced by keep == 'none'. Afterwards, return the new dataframe.
     :param df: DataFrame
     :param subset: str containing the columns separated by commas
@@ -178,7 +178,7 @@ def drop_duplicates(
 
 def sort_values(df: DataFrame, by: str, ascending: bool = False, **kwargs):
     """
-    Executes the sort_values function of pandas' dataframes (https://pandas.pydata.org/pandas-docs/version/1.5.0/reference/api/pandas.DataFrame.sort_values.html)
+    Executes the sort_values function of pandas' dataframes (https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sort_values.html)
      and returns the new dataframe.
     :param df: DataFrame
     :param by: str

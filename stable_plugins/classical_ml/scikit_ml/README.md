@@ -1,7 +1,7 @@
 This folder contains plugins that do classical machine learning with scikit-learn.
 
 The following dependencies are used by these plugins:
-- scikit-learn~=1.1
-- scikit-learn-extra~=0.2.0
-- plotly~=5.18.0
-- pandas~=1.5.0
+- scikit-learn~=1.8.0
+- scikit-learn-extra~=0.3.0
+- plotly~=6.6.0
+- pandas~=2.3.3
