@@ -30,7 +30,7 @@ from marshmallow import EXCLUDE
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.storage import STORE
-from router.schemas import (
+from feature_engineering_pipeline.schemas import (
     AGGREGATOR_PLUGIN,
     FINALIZE_PIPELINE,
     MAPPING_PLUGIN,
@@ -40,7 +40,7 @@ from router.schemas import (
     VECTOR_CONCAT_PLUGIN,
     WU_PALMER_PLUGIN,
 )
-from router.tasks_pipeline_steps import (
+from feature_engineering_pipeline.tasks_pipeline_steps import (
     OUTPUT_FORMATS,
     PCA_DEFAULTS,
     finalize_pca,
@@ -55,7 +55,7 @@ from router.tasks_pipeline_steps import (
     start_vector_concat,
     start_wu_palmer,
 )
-from router.tests.data import (
+from feature_engineering_pipeline.tests.data import (
     ENTITIES_URL,
     METADATA_URL,
     TAXONOMIES_URL,
@@ -109,12 +109,12 @@ def dispatched(monkeypatch) -> list:
 
     for name in ("start_wu_palmer", "start_mapping", "start_vector_concat", "start_pca"):
         monkeypatch.setattr(
-            f"router.tasks_pipeline_steps.{name}",
+            f"feature_engineering_pipeline.tasks_pipeline_steps.{name}",
             SimpleNamespace(apply_async=_recorder(name)),
         )
 
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.save_task_result",
+        "feature_engineering_pipeline.tasks_pipeline_steps.save_task_result",
         SimpleNamespace(
             delay=lambda *args: calls.append(("save_task_result", list(args)))
         ),
