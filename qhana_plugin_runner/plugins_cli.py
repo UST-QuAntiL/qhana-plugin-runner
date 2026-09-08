@@ -96,9 +96,10 @@ def install_plugin_dependencies(
                 stdout=sys.stdout,
                 stderr=sys.stderr,
             )
-        except CalledProcessError:
-            click.echo("Installing plugin requirements failed!")
-            return
+        except CalledProcessError as err:
+            raise click.ClickException(
+                f"Installing plugin requirements failed (pip exited with {err.returncode})!"
+            )
         click.echo("Successfully installed all plugin requirements.")
 
         if not dry_run:

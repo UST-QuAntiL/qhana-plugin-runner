@@ -129,6 +129,47 @@ The entities should be interpreted as attribute metadata entities describing pro
 .. seealso:: :ref:`data-formats/data-loader-formats:attribute metadata`
 
 
+entity/dimension-mapping
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Records where each dimension of an ``entity/vector`` file came from, so the link to the original input is preserved when plugins such as :ref:`vector-concat` merge several vector files and renumber their dimensions.
+The entities are listed one per output dimension, ordered by dimension index, with the ``ID`` naming the output dimension the entity describes.
+
++--------------------+---------------------------------------------------------------------+
+| attribute          | description                                                         |
++====================+=====================================================================+
+| ``ID``             | name of the output dimension, e.g. ``dim5``                         |
++--------------------+---------------------------------------------------------------------+
+| ``inputIndex``     | 0-based position of the input file in the plugin's input order      |
++--------------------+---------------------------------------------------------------------+
+| ``source``         | name of the input file the dimension came from                      |
++--------------------+---------------------------------------------------------------------+
+| ``sourceUrl``      | url of the input file (the url of the archive for zipped inputs)    |
++--------------------+---------------------------------------------------------------------+
+| ``zipMember``      | name of the file inside the archive, empty for unzipped inputs      |
++--------------------+---------------------------------------------------------------------+
+| ``sourceDimension``| name of the column in the input file                                |
++--------------------+---------------------------------------------------------------------+
+
+.. code-block:: json
+
+    [
+        {"ID": "dim0", "href": "", "inputIndex": 0, "source": "color.json",
+         "sourceUrl": "http://localhost:5005/files/17/download/vectors.zip",
+         "zipMember": "color.json", "sourceDimension": "dim0"},
+        {"ID": "dim1", "href": "", "inputIndex": 0, "source": "color.json",
+         "sourceUrl": "http://localhost:5005/files/17/download/vectors.zip",
+         "zipMember": "color.json", "sourceDimension": "dim1"},
+        {"ID": "dim2", "href": "", "inputIndex": 1, "source": "shape.json",
+         "sourceUrl": "http://localhost:5005/files/17/download/vectors.zip",
+         "zipMember": "shape.json", "sourceDimension": "dim0"}
+    ]
+
+Produced by:
+
+  * :ref:`vector-concat`
+
+
 Content Types
 -------------
 

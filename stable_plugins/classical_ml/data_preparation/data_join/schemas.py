@@ -59,7 +59,7 @@ class DataJoinFinishJoinParametersSchema(FrontendFormBaseSchema):
 
 
 class DataJoinAttrSelectParametersSchema(FrontendFormBaseSchema):
-    base = ma.fields.List(ma.fields.String(), default=tuple())
+    base = ma.fields.List(ma.fields.String(), dump_default=tuple())
 
     @ma.validates_schema(pass_original=True)
     def validate_entries(self, data, original_data, **kwargs):

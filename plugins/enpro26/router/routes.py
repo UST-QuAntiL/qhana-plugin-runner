@@ -39,11 +39,14 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
+    PIPELINE_FIELD_PREFIX,
     PIPELINE_PLUGINS,
     PIPELINE_OPTIONS,
     InputParametersSchema,
     MetricEnum,
+    PCATypeEnum,
     RoutingStepParametersSchema,
+    SolverEnum,
 )
 from .tasks import (
     handle_webhook_task,
@@ -68,10 +71,22 @@ INPUT_FIELD_GROUPS = (
     ("Transformer Settings", ("transformer",), False),
     (
         "MDS Settings",
-        ("dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
+        ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
         False,
     ),
     ("Vector Concatenation Settings", ("concat_output", "output_format"), True),
+    (
+        "PCA Settings",
+        (
+            "reduce_dimensions",
+            "pca_type",
+            "pca_dimensions",
+            "solver",
+            "tol",
+            "iterated_power",
+        ),
+        False,
+    ),
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -169,6 +184,22 @@ class PluginsView(MethodView):
                         ],
                         required=True,
                     ),
+                    # PCA output (optional final output after vector concat)
+                    DataMetadata(
+                        data_type="custom/plot",
+                        content_type=["text/html"],
+                        required=False,
+                    ),
+                    DataMetadata(
+                        data_type="custom/pca-metadata",
+                        content_type=["application/json"],
+                        required=True,
+                    ),
+                    DataMetadata(
+                        data_type="entity/vector",
+                        content_type=["text/csv"],
+                        required=True,
+                    ),
                 ],
             ),
             tags=Router.instance.tags,
@@ -211,10 +242,15 @@ class MicroFrontend(MethodView):
         fields = InputParametersSchema().fields
 
         default_values = {
-            fields["dimensions"].data_key: 2,
+            fields["mds_dimensions"].data_key: 2,
             fields["metric"].data_key: MetricEnum.metric_mds,
             fields["n_init"].data_key: 4,
             fields["max_iter"].data_key: 300,
+            fields["pca_type"].data_key: PCATypeEnum.normal,
+            fields["pca_dimensions"].data_key: 1,
+            fields["solver"].data_key: SolverEnum.auto,
+            fields["tol"].data_key: 0,
+            fields["iterated_power"].data_key: 0,
         }
 
         default_values.update(data_dict)
@@ -354,11 +390,10 @@ class RoutingStepView(MethodView):
         # ``parameters``. ``start_routing_task`` reloads ``parameters`` through
         # ``InputParametersSchema`` which would reject the dynamic
         # ``pipeline_<attribute>`` fields.
-        prefix = "pipeline_"
         selections = {
-            key[len(prefix) :]: value
+            key[len(PIPELINE_FIELD_PREFIX) :]: value
             for key, value in arguments.items()
-            if key.startswith(prefix)
+            if key.startswith(PIPELINE_FIELD_PREFIX)
         }
         db_task.data["routing_selections"] = selections
 

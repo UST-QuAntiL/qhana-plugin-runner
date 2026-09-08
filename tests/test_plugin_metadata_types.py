@@ -19,7 +19,6 @@ Verifies that all plugins use allowed data_types and content_types
 as defined in tests.allowed_types.
 """
 
-import warnings
 from http import HTTPStatus
 
 import pytest
@@ -47,39 +46,40 @@ def _is_valid_content_type(value: str) -> bool:
 
 def _get_plugin_entry_point(plugin_id, plugin, client) -> dict | None:
     """
-    Validates a plugin's blueprint, fetches its metadata entry point and validates if it contains the input and output data types.
-    Returns the metadata entry_point dict if successful, or None if fetching failed.
+    Validates a plugin's blueprint, fetches its metadata entry point and validates if it
+    contains the input and output data types. Returns the metadata entry_point dict if
+    successful, or None if the plugin has no API to validate.
+    Raises AssertionError if a plugin with an API(``plugin.has_api=True``) is broken.
     """
+    if not plugin.has_api:
+        # Not every registered plugin is a QHAna plugin with its own API (e.g. the
+        # minio-storage plugin only provides a storage backend).
+        # ``has_api`` is set by ``register_plugins`` once ``get_api_blueprint`` is
+        # confirmed to succeed.
+        return None
+
     try:
         blueprint = plugin.get_api_blueprint()
         if not blueprint or not blueprint.deferred_functions:
-            warnings.warn(
-                UserWarning(
-                    f"Blueprint of plugin {plugin_id} should not be undefined or should have deferred functions."
-                )
+            raise AssertionError(
+                f"Blueprint of plugin {plugin_id} should not be undefined or should have deferred functions."
             )
-            return None
     except NotImplementedError:
-        warnings.warn(UserWarning(f"Plugin {plugin_id} has no Blueprint API."))
-        return None
+        raise AssertionError(
+            f"Plugin {plugin_id} has has_api=True but get_api_blueprint() raised NotImplementedError."
+        )
 
     try:
         response = client.get(f"/plugins/{plugin.identifier}/")
-    except Exception:
-        warnings.warn(
-            UserWarning(
-                f"Response of default route of plugin {plugin_id} (get metadata) crashed."
-            )
+    except Exception as err:
+        raise AssertionError(
+            f"Response of default route of plugin {plugin_id} (get metadata) crashed: {err}"
         )
-        return None
 
     if response.status_code != HTTPStatus.OK:
-        warnings.warn(
-            UserWarning(
-                f"Response of default route of plugin {plugin_id} (get metadata) did not return HTTP status code 200."
-            )
+        raise AssertionError(
+            f"Response of default route of plugin {plugin_id} (get metadata) did not return HTTP status code 200."
         )
-        return None
 
     metadata = response.get_json()
     assert metadata, f"Metadata for plugin {plugin_id} is empty or invalid."
@@ -111,7 +111,7 @@ def test_all_plugins_use_allowed_data_types(app, client):
         for plugin_id, plugin in plugins.items():
             entry_point = _get_plugin_entry_point(plugin_id, plugin, client)
             if not entry_point:
-                continue  # Fetching the metadata entry point failed
+                continue  # Plugin has no API to validate
 
             # Check data_input types
             for input_item in entry_point["dataInput"]:
@@ -163,7 +163,7 @@ def test_all_plugins_use_allowed_content_types(app, client):
         for plugin_id, plugin in plugins.items():
             entry_point = _get_plugin_entry_point(plugin_id, plugin, client)
             if not entry_point:
-                continue  # Fetching the metadata entry point failed
+                continue  # Plugin has no API to validate
 
             # Check data_input content types
             for input_item in entry_point["dataInput"]:

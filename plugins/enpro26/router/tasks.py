@@ -40,7 +40,8 @@ from .schemas import (
     AGGREGATOR_PLUGIN,
     MDS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
-    FINALIZE_STEP,
+    PCA_PLUGIN,
+    FINALIZE_PIPELINE,
     InputParameters,
     InputParametersSchema,
 )
@@ -61,6 +62,7 @@ from .tasks_pipeline_steps import (
     start_mds,
     finalize_pipeline,
     finalize_vector_concat,
+    finalize_pca,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -191,6 +193,8 @@ def start_routing_task(self, db_id: int) -> str:
 
     if params.concat_output:
         total_plugins += 1  # (Vector Concatenation)
+        if params.reduce_dimensions:
+            total_plugins += 1  # (PCA)
 
     task_data.data["pipeline_queue"] = pipeline_queue
     task_data.data["current_pipeline"] = None
@@ -233,6 +237,11 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
 
     task_data = ProcessingTask.get_by_id(db_id)
 
+    # The webhook endpoint is unauthenticated, so a bogus event must never fail the task.
+    if task_data is None:
+        TASK_LOGGER.warning(f"Ignored webhook for the unknown task {db_id}.")
+        return "Unknown task"
+
     known_urls = [
         task_data.data.get(f"{WU_PALMER_PLUGIN}_url"),
         task_data.data.get(f"{MAPPING_PLUGIN}_url"),
@@ -240,9 +249,15 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"),
         task_data.data.get(f"{MDS_PLUGIN}_url"),
         task_data.data.get(f"{VECTOR_CONCAT_PLUGIN}_url"),
+        task_data.data.get(f"{PCA_PLUGIN}_url"),
     ]
 
     if not source_url or source_url not in known_urls:
+        # A late watchdog poll for an already finished pipeline can land here during
+        # normal runs, because launch_next_pipeline drops the step urls.
+        TASK_LOGGER.warning(
+            f"Ignored webhook for task {db_id} from an unknown source: {source_url!r}."
+        )
         return "Unrecognized webhook source"
 
     delivery = via or "webhook"
@@ -346,7 +361,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     elif current_pipeline == MAPPING_PLUGIN:
         handle_mapping_progression(task_data, db_id, source_url)
 
-    elif current_pipeline == FINALIZE_STEP:
+    elif current_pipeline == FINALIZE_PIPELINE:
         handle_finalize_progression(task_data, db_id, source_url)
 
     else:
@@ -399,3 +414,5 @@ def handle_finalize_progression(task_data: ProcessingTask, db_id: int, source_ur
         finalize_vector_concat.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
+    elif source_url == task_data.data.get(f"{PCA_PLUGIN}_url"):
+        finalize_pca.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)

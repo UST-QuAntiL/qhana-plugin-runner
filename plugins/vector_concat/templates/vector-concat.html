@@ -123,7 +123,7 @@ limitations under the License.
         <div class="qhana-input-wrapper">
             <select class="qhana-form-input" name="outputFormat" id="output_format" autocomplete="off">
                 {% set options = schema.fields.output_format.metadata.get("options", {}) %}
-                {% set current_val = values.get("outputFormat", schema.fields.output_format.missing) %}
+                {% set current_val = values.get("outputFormat", schema.fields.output_format.load_default) %}
 
                 {% for val, label in options.items() %}
                 <option value="{{ val }}" {% if current_val==val %}selected{% endif %}>

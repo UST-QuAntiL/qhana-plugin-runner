@@ -17,7 +17,7 @@ import sys
 import traceback
 from importlib import import_module
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional, Union
+from typing import ClassVar, Dict, List, Optional, Tuple, Union
 
 from flask import Flask
 from flask.blueprints import Blueprint
@@ -77,6 +77,7 @@ class QHAnaPluginBase:
 
     __app__: Optional[Flask] = None
     __plugins__: Dict[str, "QHAnaPluginBase"] = {}
+    __failed_plugins__: List[Tuple[type, Exception]] = []
 
     def __init_subclass__(cls) -> None:
         try:
@@ -102,6 +103,7 @@ class QHAnaPluginBase:
             QHAnaPluginBase.__plugins__[plugin.identifier] = plugin
             cls.instance = plugin
         except Exception as err:
+            QHAnaPluginBase.__failed_plugins__.append((cls, err))
             if QHAnaPluginBase.__app__:
                 QHAnaPluginBase.__app__.logger.warning(
                     f"Could not load the plugin class {cls}!", exc_info=err
@@ -122,6 +124,17 @@ class QHAnaPluginBase:
     @staticmethod
     def get_plugins() -> Dict[str, "QHAnaPluginBase"]:
         return QHAnaPluginBase.__plugins__
+
+    @staticmethod
+    def get_failed_plugins() -> List[Tuple[type, Exception]]:
+        """Get the plugin classes that could not be loaded, with their errors.
+
+        A plugin class that fails the checks in ``__init_subclass__`` (an
+        invalid name or version, or an error raised by the constructor) is
+        dropped with a log message only. This list makes those failures
+        available to callers, for example to fail a test in CI.
+        """
+        return QHAnaPluginBase.__failed_plugins__
 
     @cached_property
     def identifier(self) -> str:

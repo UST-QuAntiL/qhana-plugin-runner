@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "router"
-__version__ = "v0.1.5"
+__version__ = "v0.1.6"
 _identifier = plugin_identifier(_plugin_name, __version__)
 _description = (  # TODO
     "Routes entities and separates tree from non-tree taxonomies. "
