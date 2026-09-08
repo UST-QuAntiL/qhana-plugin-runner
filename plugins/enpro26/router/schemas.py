@@ -78,15 +78,6 @@ class TransformersEnum(Enum):
     square_inverse = "Square Inverse"
 
 
-# This Enum class is copied from the aggregator plugin.
-# Check the aggregator plugin for updates
-class AggregatorsEnum(Enum):
-    mean = "Mean"
-    median = "Median"
-    max = "Max"
-    min = "Min"
-
-
 # This Enum class is copied from the mds plugin.
 # Check the mds plugin for updates
 class MetricEnum(Enum):
@@ -366,6 +357,9 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
 
+    # The parameters from here are required, but only used if ``reduce_dimensions`` is True.
+    # Should be changed probably.
+
     pca_type = EnumField(
         PCATypeEnum,
         required=True,
@@ -421,6 +415,17 @@ class InputParametersSchema(FrontendFormBaseSchema):
         },
     )
 
+    @ma.validates_schema
+    def validate_pca_requires_concat(self, data, **kwargs):
+        # PCA only ever runs on the concatenated vector, so reducing without
+        # concatenating would silently skip the whole PCA step.
+        if data.get("reduce_dimensions") and not data.get("concat_output"):
+            raise ma.ValidationError(
+                "Dimension reduction runs on the concatenated vector, "
+                "so 'Concat output' has to be enabled as well.",
+                self.fields["reduce_dimensions"].data_key,
+            )
+
     @post_load
     def make_input_params(self, data, **kwargs) -> InputParameters:
         return InputParameters(**data)
@@ -446,9 +451,18 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
                 continue
             value = original_data[key]
             if value and value not in PIPELINE_OPTIONS.keys():
-                errors[key] = [f"'{value}' is not one of {PIPELINE_OPTIONS}."]
+                errors[key] = [f"'{value}' is not one of {list(PIPELINE_OPTIONS)}."]
         if errors:
             raise ma.ValidationError(errors)
+
+        # The partial loads of the micro frontend legitimately see an empty form.
+        if self.partial:
+            return
+        if not any(value and value != NONE_PLUGIN for value in original_data.values()):
+            raise ma.ValidationError(
+                "Select a pipeline for at least one attribute, "
+                "otherwise there is nothing to compute."
+            )
 
     @ma.post_load(pass_original=True)
     def add_dynamic_entries(self, data, original_data, **kwargs):

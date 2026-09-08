@@ -12,373 +12,518 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-import threading
-
 import concurrent.futures
-from flask import current_app
+import threading
+from types import SimpleNamespace
 
 import pytest
+from flask import current_app
 from requests.exceptions import Timeout
 
 from qhana_plugin_runner.db import DB
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from router.tasks import handle_webhook_task, start_routing_task
-from router.tasks_pipeline_steps import start_wu_palmer, start_mapping
-from router.tasks_helpers import CELERY_COUNTDOWN
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from router import tasks as router_tasks
+from router import tasks_pipeline_steps as pipeline_steps
 from router.schemas import (
-    WU_PALMER_PLUGIN,
-    MAPPING_PLUGIN,
-    TRANSFORMERS_PLUGIN,
     AGGREGATOR_PLUGIN,
+    FINALIZE_PIPELINE,
+    MAPPING_PLUGIN,
     MDS_PLUGIN,
+    NONE_PLUGIN,
+    ONE_HOT_PLUGIN,
+    PCA_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
+    WU_PALMER_PLUGIN,
+)
+from router.tasks import handle_webhook_task, preprocessing_task, start_routing_task
+from router.tasks_helpers import CELERY_COUNTDOWN
+from router.tasks_pipeline_steps import start_wu_palmer
+from router.tests.data import (
+    PluginServer,
+    capture_task_errors,
+    input_file_responses,
+    make_router_task,
+    mock_open_url,
 )
 
-from tests.utils import MockResponse, run_task
+from tests.utils import run_task
 
 pytestmark = pytest.mark.usefixtures("celery_worker")
 
-
-def _setup_mock_task() -> ProcessingTask:
-    params = {
-        "entitiesUrl": "http://mock/entities",
-        "entitiesMetadataUrl": "http://mock/meta",
-        "taxonomiesZipUrl": "http://mock/tax",
-        "distanceMetric": "euclidean",
-        "transformer": "linear_inverse",
-        "mdsDimensions": 2,
-        "metric": "metric_mds",
-        "nInit": 4,
-        "maxIter": 300,
-        "missingDataHandling": "mean",
-        "concatOutput": False,
-        "outputFormat": "csv",
-        "includeIntermediateResultsInOutput": False,
-        "reduceDimensions": False,
-        "pcaType": "normal",
-        "pcaDimensions": 1,
-        "solver": "auto",
-        "tol": 0,
-        "iteratedPower": 0,
-    }
-    db_task = ProcessingTask(
-        task_name=start_routing_task.name, parameters=json.dumps(params)
-    )
-    db_task.data["webhook_url"] = "http://my-router/webhook"
-
-    db_task.data["routing_selections"] = {
-        "attr1": WU_PALMER_PLUGIN,
-        "attr2": MAPPING_PLUGIN,
-    }
-
-    db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] = "attr1"
-    db_task.data[f"{MAPPING_PLUGIN}_attributes"] = "attr2"
-
-    db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
-    db_task.data["pipeline_queue"] = [WU_PALMER_PLUGIN, MAPPING_PLUGIN]
-
-    db_task.data["plugin_urls"] = {
-        WU_PALMER_PLUGIN: "http://localhost:5005/plugins/wu-palmer/",
-        MAPPING_PLUGIN: "http://localhost:5005/plugins/mapping-distances/",
-        TRANSFORMERS_PLUGIN: "http://localhost:5005/plugins/element_sim-to-element_dist-transformers/",
-        AGGREGATOR_PLUGIN: "http://localhost:5005/plugins/attribute-distance-aggregator/",
-        MDS_PLUGIN: "http://localhost:5005/plugins/attribute-distance-mds/",
-    }
-
-    db_task.progress_value = 1
-    db_task.save(commit=True)
-    return db_task
+# The tasks the router dispatches, listed per module that looks them up.
+DISPATCHED_TASKS = (
+    (
+        pipeline_steps,
+        ("start_wu_palmer", "start_mapping", "start_vector_concat", "start_pca"),
+    ),
+    (
+        router_tasks,
+        (
+            "start_transformers",
+            "start_aggregator",
+            "start_mds",
+            "finalize_pipeline",
+            "finalize_vector_concat",
+            "finalize_pca",
+        ),
+    ),
+)
 
 
-def test_route_task_queues_and_launches(monkeypatch):
-    db_task = _setup_mock_task()
+@pytest.fixture
+def server(monkeypatch) -> PluginServer:
+    return PluginServer().install(monkeypatch)
 
-    # Clear out the pre-populated states so we can verify the task builds them correctly
-    db_task.data.pop("current_pipeline", None)
-    db_task.data.pop("pipeline_queue", None)
-    db_task.data.pop(f"{WU_PALMER_PLUGIN}_attributes", None)
-    db_task.data.pop(f"{MAPPING_PLUGIN}_attributes", None)
-    db_task.save(commit=True)
 
-    # route_task should build the queue and call start_wu_palmer.apply_async
-    triggered = []
+@pytest.fixture
+def task_errors(monkeypatch) -> list:
+    return capture_task_errors(monkeypatch)
 
-    def mock_apply_async(*args, **kwargs):
-        triggered.append("wu_palmer_started")
 
+@pytest.fixture
+def inline(monkeypatch):
+    """Run every dispatched task immediately instead of waiting out its countdown.
+
+    Returns the results and errors the router reports through the plugin runner
+    tasks, which are stubbed out here because they need a parent task to run in.
+    """
+
+    def run_now(task):
+        def apply_async(args=None, kwargs=None, **options):
+            # throw=True surfaces a failing step instead of burying it in a
+            # result that nobody looks at
+            return task.apply(args=args or (), kwargs=kwargs or {}, throw=True)
+
+        return apply_async
+
+    for module, task_names in DISPATCHED_TASKS:
+        for name in task_names:
+            task = getattr(module, name)
+            monkeypatch.setattr(module, name, SimpleNamespace(apply_async=run_now(task)))
+
+    recorded = SimpleNamespace(results=[], errors=[])
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.start_wu_palmer.apply_async", mock_apply_async
+        "router.tasks_pipeline_steps.save_task_result",
+        SimpleNamespace(delay=lambda message, db_id: recorded.results.append(message)),
+    )
+    monkeypatch.setattr(
+        "router.tasks_helpers.save_task_error",
+        SimpleNamespace(delay=lambda **kwargs: recorded.errors.append(kwargs)),
+    )
+    return recorded
+
+
+def run_inline(task, *args):
+    return task.apply(args=list(args)).get()
+
+
+def reload(db_task: ProcessingTask) -> ProcessingTask:
+    DB.session.expire_all()
+    return ProcessingTask.get_by_id(db_task.id)
+
+
+def stored_file_names(db_task: ProcessingTask) -> set:
+    DB.session.expire_all()
+    return {file.file_name for file in TaskFile.get_task_result_files(db_task.id)}
+
+
+def complete_sub_task(db_task: ProcessingTask, plugin: str, via: str = "webhook"):
+    """Deliver the completion event the sub-plugin would send to the webhook."""
+    source_url = reload(db_task).data[f"{plugin}_url"]
+    return run_inline(handle_webhook_task, db_task.id, source_url, via)
+
+
+# --- PREPROCESSING ---
+
+
+def test_preprocessing_finds_the_taxonomy_attributes(monkeypatch):
+    mock_open_url(monkeypatch, input_file_responses())
+    db_task = make_router_task()
+
+    result = run_task(preprocessing_task, db_id=db_task.id)
+
+    assert result == "Found 2 taxonomy attribute(s)."
+    assert set(reload(db_task).data["taxonomy_attributes"]) == {
+        "genre",
+        "instrumentation",
+    }
+
+
+def test_preprocessing_recommends_a_pipeline_per_attribute(monkeypatch):
+    """Only taxonomies that carry mapping data can be routed to the mapping plugin."""
+    mock_open_url(monkeypatch, input_file_responses())
+    db_task = make_router_task()
+
+    run_task(preprocessing_task, db_id=db_task.id)
+
+    assert reload(db_task).data["recommendations"] == {
+        "genre": MAPPING_PLUGIN,
+        "instrumentation": WU_PALMER_PLUGIN,
+    }
+
+
+def test_preprocessing_skips_attributes_without_a_usable_taxonomy(monkeypatch):
+    """``composer`` refers to a plain file and ``missing_tax`` is not in the zip."""
+    mock_open_url(monkeypatch, input_file_responses())
+    db_task = make_router_task()
+
+    run_task(preprocessing_task, db_id=db_task.id)
+
+    attributes = reload(db_task).data["taxonomy_attributes"]
+    assert "composer" not in attributes
+    assert "missing_tax" not in attributes
+    assert "not_in_entities" not in attributes
+
+
+# --- ROUTING ---
+
+
+@pytest.mark.parametrize(
+    "selections,overrides,expected_pipelines,expected_target",
+    [
+        ({"a": WU_PALMER_PLUGIN}, {}, [WU_PALMER_PLUGIN], 5),
+        ({"a": MAPPING_PLUGIN}, {}, [MAPPING_PLUGIN], 4),
+        (
+            {"a": WU_PALMER_PLUGIN, "b": MAPPING_PLUGIN},
+            {},
+            [WU_PALMER_PLUGIN, MAPPING_PLUGIN],
+            8,
+        ),
+        ({"a": WU_PALMER_PLUGIN}, {"concatOutput": True}, [WU_PALMER_PLUGIN], 6),
+        (
+            {"a": WU_PALMER_PLUGIN},
+            {"concatOutput": True, "reduceDimensions": True},
+            [WU_PALMER_PLUGIN],
+            7,
+        ),
+    ],
+)
+def test_routing_task_counts_every_plugin_it_will_run(
+    monkeypatch, selections, overrides, expected_pipelines, expected_target
+):
+    launched = []
+    for name in ("start_wu_palmer", "start_mapping"):
+        monkeypatch.setattr(
+            f"router.tasks_pipeline_steps.{name}.apply_async",
+            lambda *args, name=name, **kwargs: launched.append(name),
+        )
+    db_task = make_router_task(selections=selections, **overrides)
+
+    result = run_task(start_routing_task, db_id=db_task.id)
+
+    assert result == "Routing task started and pipeline queued."
+    db_task = reload(db_task)
+    # the first pipeline of the queue is started right away
+    assert [
+        db_task.data["current_pipeline"],
+        *db_task.data["pipeline_queue"],
+    ] == expected_pipelines
+    assert db_task.progress_target == expected_target
+    assert db_task.progress_value == 1
+    assert db_task.progress_unit == "Steps"
+    assert launched == [f"start_{expected_pipelines[0]}"]
+
+
+def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
+    monkeypatch.setattr(
+        "router.tasks_pipeline_steps.start_wu_palmer.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={
+            "g1": WU_PALMER_PLUGIN,
+            "m1": MAPPING_PLUGIN,
+            "g2": WU_PALMER_PLUGIN,
+            "skipped": NONE_PLUGIN,
+        }
     )
 
-    # Execute Step 1 Routing
     run_task(start_routing_task, db_id=db_task.id)
 
-    db_task = ProcessingTask.get_by_id(db_task.id)
-
-    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "attr1"
-    assert db_task.data[f"{MAPPING_PLUGIN}_attributes"] == "attr2"
-    assert db_task.data["current_pipeline"] == WU_PALMER_PLUGIN
-    assert db_task.data["pipeline_queue"] == [MAPPING_PLUGIN]
-    assert len(triggered) == 1
+    data = reload(db_task).data
+    assert data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng2"
+    assert data[f"{MAPPING_PLUGIN}_attributes"] == "m1"
 
 
-def test_start_wu_palmer_task(monkeypatch):
-    db_task = _setup_mock_task()
-    monkeypatch.setattr("router.tasks_helpers.subscribe", lambda **kwargs: True)
-
-    # MOCK HTTP CALLS
-    def mock_post(url, **kwargs):
-        if "wu-palmer" in url:
-            # Mock the redirect location from Wu-Palmer creation
-            return MockResponse(
-                url,
-                "text/html",
-                status_code=303,
-                headers={
-                    "Location": "http://localhost:5005/plugins/wu-palmer@v0-2-1/tasks/999/"
-                },
-            )
-        if "subscribe" in url:
-            # Mock the subscription success
-            return MockResponse(url, "application/zip", status_code=200)
-        raise ValueError(f"Unexpected POST to {url}")
-
-    def mock_get(url, **kwargs):
-        if "/tasks/999/" in url:
-            # Mock the Wu-Palmer status check for subscription
-            return MockResponse(
-                url,
-                "application/zip",
-                status_code=200,
-                json_data={
-                    "status": "PENDING",
-                    "links": [{"type": "subscribe", "href": "http://mock/subscribe"}],
-                },
-            )
-        raise ValueError(f"Unexpected GET to {url}")
-
-    monkeypatch.setattr("requests.post", mock_post)
-    monkeypatch.setattr("requests.get", mock_get)
-    # Resolve the process endpoint from the stored metadata url without HTTP.
+def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
     monkeypatch.setattr(
-        "router.tasks_helpers.get_plugin_endpoint", lambda base: base + "process/"
+        "router.tasks_pipeline_steps.start_wu_palmer.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={"a": WU_PALMER_PLUGIN, "hot": ONE_HOT_PLUGIN, "skip": NONE_PLUGIN}
     )
 
-    # Execute Step 1
-    run_task(start_wu_palmer, db_id=db_task.id)
+    run_task(start_routing_task, db_id=db_task.id)
 
-    # Verify State Machine
-    db_task = ProcessingTask.get_by_id(db_task.id)
-    assert (
-        db_task.data[f"{WU_PALMER_PLUGIN}_url"]
-        == "http://localhost:5005/plugins/wu-palmer@v0-2-1/tasks/999/"
-    )
+    task_log = reload(db_task).task_log
+    assert "One-Hot encoding not yet supported" in task_log
+    assert "None selected attributes skipped: ['skip']" in task_log
+
+
+# --- WEBHOOK STATE MACHINE ---
 
 
 @pytest.mark.parametrize(
-    "source_key, mock_url, next_task_path",
+    "source_url",
     [
-        (
-            f"{WU_PALMER_PLUGIN}_url",
-            "http://mock/tasks/wp/999/",
-            "router.tasks_pipeline_steps.start_transformers.apply_async",
-        ),
-        (
-            f"{TRANSFORMERS_PLUGIN}_url",
-            "http://mock/tasks/tr/999/",
-            "router.tasks_pipeline_steps.start_aggregator.apply_async",
-        ),
-        (
-            f"{AGGREGATOR_PLUGIN}_url",
-            "http://mock/tasks/ag/999/",
-            "router.tasks_pipeline_steps.start_mds.apply_async",
-        ),
-        (
-            f"{MDS_PLUGIN}_url",
-            "http://mock/tasks/mds/999/",
-            "router.tasks_pipeline_steps.finalize_pipeline.apply_async",
-        ),
+        pytest.param("", id="no source"),
+        pytest.param("http://localhost:5005/plugins/other/1/", id="foreign plugin"),
+        pytest.param(
+            None, id="sub-task of another pipeline"
+        ),  # None value is evaluated at runtime in test
     ],
 )
-def test_handle_webhook_routing_wu_palmer_progression(
-    monkeypatch, source_key, mock_url, next_task_path
-):
-    """
-    Tests that the webhook traffic cop successfully routes a SUCCESS status
-    for the Wu-Palmer pipeline state to the correct subsequent task.
-    """
-    db_task = _setup_mock_task()
-    db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
-    db_task.data[source_key] = mock_url
-    db_task.save(commit=True)
-
-    # Mock the Webhook payload returning SUCCESS
-    def mock_get(url, **kwargs):
-        return MockResponse(
-            url,
-            "application/zip",
-            status_code=200,
-            json_data={
-                "status": "SUCCESS",
-                "outputs": [
-                    {
-                        "dataType": "some/datatype",
-                        "href": "http://mock/data.zip",
-                    }
-                ],
-            },
-        )
-
-    # Mock the trigger to the next step so it doesn't actually run in this test
-    triggered = []
-
-    def mock_apply_async(*args, **kwargs):
-        if kwargs.get("countdown") == CELERY_COUNTDOWN:
-            triggered.append("next_step_triggered")
-
-    monkeypatch.setattr("requests.get", mock_get)
-    monkeypatch.setattr(next_task_path, mock_apply_async)
-
-    # Simulate webhook hitting the traffic cop
-    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook")
-
-    assert len(triggered) == 1
-    assert triggered[0] == "next_step_triggered"
-
-
-def test_start_mapping_task(monkeypatch):
-    db_task = _setup_mock_task()
-    monkeypatch.setattr("router.tasks_helpers.subscribe", lambda **kwargs: True)
-
-    def mock_post(url, **kwargs):
-        if MAPPING_PLUGIN in url:
-            return MockResponse(
-                url,
-                "text/html",
-                status_code=303,
-                headers={
-                    "Location": "http://localhost:5005/plugins/mapping-distances@v0-1-0/tasks/888/"
-                },
-            )
-        if "subscribe" in url:
-            return MockResponse(url, "application/zip", status_code=200)
-        raise ValueError(f"Unexpected POST to {url}")
-
-    def mock_get(url, **kwargs):
-        if "/tasks/888/" in url:
-            return MockResponse(
-                url,
-                "application/zip",
-                status_code=200,
-                json_data={
-                    "status": "PENDING",
-                    "links": [{"type": "subscribe", "href": "http://mock/subscribe"}],
-                },
-            )
-        raise ValueError(f"Unexpected GET to {url}")
-
-    monkeypatch.setattr("requests.post", mock_post)
-    monkeypatch.setattr("requests.get", mock_get)
-    monkeypatch.setattr(
-        "router.tasks_helpers.get_plugin_endpoint", lambda base: base + "process/"
-    )
-
-    run_task(start_mapping, db_id=db_task.id)
-
-    db_task = ProcessingTask.get_by_id(db_task.id)
-    assert (
-        db_task.data[f"{MAPPING_PLUGIN}_url"]
-        == "http://localhost:5005/plugins/mapping-distances@v0-1-0/tasks/888/"
-    )
-
-
-@pytest.mark.parametrize(
-    "source_key, mock_url, next_task_path",
-    [
-        (
-            f"{MAPPING_PLUGIN}_url",
-            "http://mock/tasks/map/888/",
-            "router.tasks_pipeline_steps.start_aggregator.apply_async",
-        ),
-        (
-            f"{AGGREGATOR_PLUGIN}_url",
-            "http://mock/tasks/ag/888/",
-            "router.tasks_pipeline_steps.start_mds.apply_async",
-        ),
-        (
-            f"{MDS_PLUGIN}_url",
-            "http://mock/tasks/mds/888/",
-            "router.tasks_pipeline_steps.finalize_pipeline.apply_async",
-        ),
-    ],
-)
-def test_handle_webhook_routing_mapping_progression(
-    monkeypatch, source_key, mock_url, next_task_path
-):
-    """
-    Tests that the webhook traffic cop successfully routes a SUCCESS status
-    for the Mapping pipeline state to the correct subsequent task.
-    """
-    db_task = _setup_mock_task()
-    db_task.data["current_pipeline"] = MAPPING_PLUGIN
-    db_task.data[source_key] = mock_url
-    db_task.save(commit=True)
-
-    def mock_get(url, **kwargs):
-        return MockResponse(
-            url,
-            "application/zip",
-            status_code=200,
-            json_data={
-                "status": "SUCCESS",
-                "outputs": [
-                    {"dataType": "some/datatype", "href": "http://mock/data.zip"}
-                ],
-            },
-        )
-
-    triggered = []
-
-    def mock_apply_async(*args, **kwargs):
-        if kwargs.get("countdown") == CELERY_COUNTDOWN:
-            triggered.append("next_step_triggered")
-
-    monkeypatch.setattr("requests.get", mock_get)
-    monkeypatch.setattr(next_task_path, mock_apply_async)
-
-    run_task(handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook")
-
-    assert len(triggered) == 1
-    assert triggered[0] == "next_step_triggered"
-
-
-def test_handle_webhook_ignores_unrecognized_pipeline_state(monkeypatch):
-    """Verifies that a bad internal state is caught even if the URL is valid."""
-    db_task = _setup_mock_task()
-
-    mock_url = "http://mock/tasks/wp/pipeline_stat_test_999/"
-    db_task.data[f"{WU_PALMER_PLUGIN}_url"] = mock_url
-
-    db_task.data["current_pipeline"] = "some_unknown_state"
-    db_task.save(commit=True)
-
-    def mock_get(url, **kwargs):
-        return MockResponse(
-            url, "application/json", status_code=200, json_data={"status": "SUCCESS"}
-        )
-
-    monkeypatch.setattr("requests.get", mock_get)
+def test_webhook_ignores_unknown_sources(server, source_url):
+    """The webhook endpoint is unauthenticated, so a bogus event must not fail the task."""
+    db_task = make_router_task()
+    if source_url is None:
+        # a url of a step that is not awaited right now
+        source_url = server.task_url(MDS_PLUGIN)
 
     result = run_task(
-        handle_webhook_task, db_id=db_task.id, source_url=mock_url, via="webhook"
+        handle_webhook_task, db_id=db_task.id, source_url=source_url, via="webhook"
+    )
+
+    assert result == "Unrecognized webhook source"
+    db_task = reload(db_task)
+    assert db_task.task_status != "FAILURE"
+    assert db_task.progress_value == 1
+
+
+def test_webhook_ignores_a_step_that_is_not_awaited(server):
+    """A late watchdog poll for an already finished step must not progress anything."""
+    db_task = make_router_task()
+
+    result = run_task(
+        handle_webhook_task,
+        db_id=db_task.id,
+        source_url=server.task_url(MDS_PLUGIN),
+        via="watchdog",
+    )
+
+    assert result == "Unrecognized webhook source"
+    assert reload(db_task).progress_value == 1
+
+
+def test_webhook_ignores_an_unknown_task(server):
+    result = run_task(
+        handle_webhook_task,
+        db_id=999999,
+        source_url="http://localhost:5005/plugins/wu-palmer/tasks/1/",
+        via="webhook",
+    )
+
+    assert result == "Unknown task"
+
+
+def test_webhook_waits_for_a_pending_sub_task(server):
+    url = server.task_url(WU_PALMER_PLUGIN)
+    server.statuses[url] = "PENDING"
+    db_task = make_router_task(data={f"{WU_PALMER_PLUGIN}_url": url})
+
+    result = run_task(
+        handle_webhook_task, db_id=db_task.id, source_url=url, via="webhook"
+    )
+
+    assert result == "Sub-task still pending"
+
+
+def test_webhook_fails_the_task_when_a_sub_task_failed(server, task_errors):
+    url = server.task_url(WU_PALMER_PLUGIN)
+    server.statuses[url] = "FAILURE"
+    db_task = make_router_task(data={f"{WU_PALMER_PLUGIN}_url": url})
+
+    with pytest.raises(RuntimeError, match="Sub-plugin step failed"):
+        run_task(handle_webhook_task, db_id=db_task.id, source_url=url, via="webhook")
+
+    assert [error["db_id"] for error in task_errors] == [db_task.id]
+
+
+@pytest.mark.parametrize(
+    "via,expected_delivery,seen",
+    [
+        ("webhook", "webhook", True),
+        (None, "webhook", True),
+        ("watchdog", "watchdog", False),
+    ],
+)
+def test_webhook_records_how_the_event_arrived(
+    server, inline, via, expected_delivery, seen
+):
+    """Only a real webhook delivery proves the event arrived at all."""
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(data={f"{WU_PALMER_PLUGIN}_url": url})
+
+    run_inline(handle_webhook_task, db_task.id, url, via)
+
+    data = reload(db_task).data
+    assert (url in data.get("webhook_seen", {})) is seen
+    assert data["progressed_via"] == {url: expected_delivery}
+
+
+@pytest.mark.parametrize("via", ["webhook", "watchdog"])
+def test_webhook_advances_the_progress(server, inline, via):
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(data={f"{WU_PALMER_PLUGIN}_url": url})
+
+    run_inline(handle_webhook_task, db_task.id, url, via)
+
+    assert reload(db_task).progress_value == 2
+
+
+def test_webhook_progresses_a_sub_task_only_once(server, inline):
+    """The watchdog and the webhook may report the same completion event."""
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(data={f"{WU_PALMER_PLUGIN}_url": url})
+    run_inline(handle_webhook_task, db_task.id, url, "webhook")
+
+    result = run_inline(handle_webhook_task, db_task.id, url, "watchdog")
+
+    assert result == "Sub-task already progressed"
+    assert reload(db_task).progress_value == 2
+
+
+def test_watchdog_reports_a_lost_webhook_event(server, inline):
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(data={f"{WU_PALMER_PLUGIN}_url": url})
+
+    run_inline(handle_webhook_task, db_task.id, url, "watchdog")
+
+    assert "recovered the lost completion event" in reload(db_task).task_log
+
+
+def test_watchdog_reports_overtaking_a_slow_webhook_handler(server, inline):
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(
+        data={
+            f"{WU_PALMER_PLUGIN}_url": url,
+            "webhook_seen": {url: "2026-01-01T00:00:00+00:00"},
+        }
+    )
+
+    run_inline(handle_webhook_task, db_task.id, url, "watchdog")
+
+    assert "but its handler was still retrying" in reload(db_task).task_log
+
+
+@pytest.mark.parametrize(
+    "pipeline,source_plugin,next_task",
+    [
+        (WU_PALMER_PLUGIN, WU_PALMER_PLUGIN, "start_transformers"),
+        (WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, "start_aggregator"),
+        (WU_PALMER_PLUGIN, AGGREGATOR_PLUGIN, "start_mds"),
+        (WU_PALMER_PLUGIN, MDS_PLUGIN, "finalize_pipeline"),
+        (MAPPING_PLUGIN, MAPPING_PLUGIN, "start_aggregator"),
+        (MAPPING_PLUGIN, AGGREGATOR_PLUGIN, "start_mds"),
+        (MAPPING_PLUGIN, MDS_PLUGIN, "finalize_pipeline"),
+        (FINALIZE_PIPELINE, VECTOR_CONCAT_PLUGIN, "finalize_vector_concat"),
+        (FINALIZE_PIPELINE, PCA_PLUGIN, "finalize_pca"),
+    ],
+)
+def test_webhook_triggers_the_next_step_of_the_pipeline(
+    monkeypatch, server, pipeline, source_plugin, next_task
+):
+    url = server.task_url(source_plugin)
+    db_task = make_router_task(
+        data={f"{source_plugin}_url": url, "current_pipeline": pipeline}
+    )
+
+    triggered = []
+    monkeypatch.setattr(
+        f"router.tasks_pipeline_steps.{next_task}.apply_async",
+        lambda args=None, **kwargs: triggered.append((list(args), kwargs)),
+    )
+
+    run_task(handle_webhook_task, db_id=db_task.id, source_url=url, via="webhook")
+
+    assert triggered == [([db_task.id, url], {"countdown": CELERY_COUNTDOWN})]
+
+
+def test_webhook_rejects_an_unknown_pipeline_state(server):
+    """Verifies that a bad internal state is caught even if the URL is valid."""
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(
+        data={f"{WU_PALMER_PLUGIN}_url": url, "current_pipeline": "some_unknown_state"}
+    )
+
+    result = run_task(
+        handle_webhook_task, db_id=db_task.id, source_url=url, via="webhook"
     )
 
     assert result == "Unrecognized pipeline state"
 
 
+# --- FULL RUNS ---
+
+
+def test_full_run_through_both_pipelines(server, inline):
+    """Drives the complete state machine with the events the sub-plugins send."""
+    db_task = make_router_task(
+        selections={"attr1": WU_PALMER_PLUGIN, "attr2": MAPPING_PLUGIN}
+    )
+
+    run_inline(start_routing_task, db_task.id)
+    for plugin in (WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
+        complete_sub_task(db_task, plugin)
+    for plugin in (MAPPING_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
+        complete_sub_task(db_task, plugin)
+
+    assert inline.errors == []
+    assert inline.results == ["All Pipelines Completed Successfully!"]
+    assert stored_file_names(db_task) == {
+        f"{WU_PALMER_PLUGIN}_mds_vectors.zip",
+        f"{MAPPING_PLUGIN}_mds_vectors.zip",
+    }
+    db_task = reload(db_task)
+    assert db_task.progress_value == db_task.progress_target == 8
+    assert db_task.data["pipeline_queue"] == []
+
+
+def test_full_run_with_concatenation_and_pca(server, inline):
+    db_task = make_router_task(
+        selections={"attr1": WU_PALMER_PLUGIN},
+        concatOutput=True,
+        reduceDimensions=True,
+        pcaDimensions=1,
+    )
+
+    run_inline(start_routing_task, db_task.id)
+    for plugin in (WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
+        complete_sub_task(db_task, plugin)
+    complete_sub_task(db_task, VECTOR_CONCAT_PLUGIN)
+    complete_sub_task(db_task, PCA_PLUGIN)
+
+    assert inline.errors == []
+    assert inline.results == [
+        "All Pipelines Completed Successfully And Dimensions Reduced With PCA!"
+    ]
+    assert stored_file_names(db_task) == {
+        "final_vector_pca_reduced.csv",
+        "pca_metadata.json",
+        "pca_plot.html",
+    }
+
+
+def test_full_run_stops_after_the_concatenation_without_pca(server, inline):
+    db_task = make_router_task(selections={"attr1": WU_PALMER_PLUGIN}, concatOutput=True)
+
+    run_inline(start_routing_task, db_task.id)
+    for plugin in (WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
+        complete_sub_task(db_task, plugin)
+    complete_sub_task(db_task, VECTOR_CONCAT_PLUGIN)
+
+    assert inline.errors == []
+    assert inline.results == [
+        "All Pipelines Completed Successfully And Concatenated Vector Created!"
+    ]
+    assert stored_file_names(db_task) == {"final_concatenated_vector.csv"}
+
+
 def test_on_retry_logs_without_app_context():
     """Celery calls ``on_retry`` outside of the task body, i.e. without an app context."""
-    db_task = _setup_mock_task()
+    db_task = make_router_task()
     # read before the thread starts, the expired attribute would need a session to reload
     db_id = db_task.id
 
@@ -404,66 +549,32 @@ def test_on_retry_logs_without_app_context():
     assert "Transient error" in reloaded.task_log
 
 
-def test_handle_webhook_ignores_unrecognized_source():
-    """Verifies that an unknown URL is rejected before a network call is made."""
-    db_task = _setup_mock_task()
-
-    # Feed an unknown URL to the webhook
-    result = run_task(
-        handle_webhook_task,
-        db_id=db_task.id,
-        source_url="http://unknown-source",
-        via="webhook",
-    )
-
-    assert result == "Unrecognized webhook source"
-
-
-def test_handle_webhook_synchronization_guard(monkeypatch):
+def test_handle_webhook_synchronization_guard(server, monkeypatch):
     """
     Simulates a race condition by firing 10 simultaneous webhook handlers
     for the exact same source URL to prove the atomic database lock holds up.
     """
-    db_task = _setup_mock_task()
-    mock_url = "http://mock/tasks/wp/stress_test_999/"
-
-    db_task.data["current_pipeline"] = WU_PALMER_PLUGIN
-    db_task.data[f"{WU_PALMER_PLUGIN}_url"] = mock_url
-    db_task.save(commit=True)
-
-    def mock_get(url, **kwargs):
-        return MockResponse(
-            url,
-            "application/json",
-            status_code=200,
-            json_data={
-                "status": "SUCCESS",
-                "outputs": [
-                    {"dataType": "some/datatype", "href": "http://mock/data.zip"}
-                ],
-            },
-        )
-
-    monkeypatch.setattr("requests.get", mock_get)
+    url = server.task_url(WU_PALMER_PLUGIN)
+    db_task = make_router_task(
+        data={"current_pipeline": WU_PALMER_PLUGIN, f"{WU_PALMER_PLUGIN}_url": url}
+    )
+    db_id = db_task.id
 
     triggered = []
-
-    def mock_apply_async(*args, **kwargs):
-        triggered.append("next_step_triggered")
-
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.start_transformers.apply_async", mock_apply_async
+        router_tasks,
+        "start_transformers",
+        SimpleNamespace(apply_async=lambda *args, **kwargs: triggered.append(kwargs)),
     )
 
     app = current_app._get_current_object()
-    task_id = db_task.id
 
     def fire_concurrent_webhook(worker_index):
         with app.app_context():
             return run_task(
                 handle_webhook_task,
-                db_id=task_id,
-                source_url=mock_url,
+                db_id=db_id,
+                source_url=url,
                 via=f"synch_test_{worker_index}",
             )
 
@@ -473,7 +584,6 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
         # executor.map fires all threads at once and collects their return values
         results = list(executor.map(fire_concurrent_webhook, range(worker_count)))
 
-    # ASSERTIONS
     # Out of 10 concurrent workers, exactly 1 should win, and 9 should be rejected.
     assert (
         len(triggered) == 1
@@ -481,5 +591,5 @@ def test_handle_webhook_synchronization_guard(monkeypatch):
 
     rejected_count = results.count("Sub-task already progressed")
     assert (
-        rejected_count == 9
+        rejected_count == worker_count - 1
     ), f"Expected 9 rejected workers, but got {rejected_count}. Results: {results}"
