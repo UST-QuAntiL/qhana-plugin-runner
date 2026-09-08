@@ -1,7 +1,7 @@
 # Wu-Palmer Pipeline
 
 ```{note}
-This page documents the **legacy Wu-Palmer pipeline**. A new Wu-Palmer pipeline will be created in the new {ref}`Router plugin <router>` and will use slightly different plugin steps.
+This page documents the **legacy Wu-Palmer pipeline**. A new Wu-Palmer pipeline will be created in the new {ref}`Feature Engineering Pipeline plugin <feature-engineering-pipeline>` and will use slightly different plugin steps.
 
 For a concrete example using the MUSE dataset, see [Using the Mini MUSE dataset](https://qhana.readthedocs.io/en/latest/muse.html#using-the-mini-muse-dataset).
 ```

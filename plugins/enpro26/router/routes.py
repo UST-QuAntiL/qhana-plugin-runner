@@ -113,7 +113,7 @@ class PluginsView(MethodView):
     @ROUTER_BLP.require_jwt("jwt", optional=True)
     def get(self):
         return PluginMetadata(
-            title="Router",
+            title="Feature Engineering Pipeline",
             description=Router.instance.description,
             name=Router.instance.name,
             version=Router.instance.version,
