@@ -14,18 +14,16 @@
 
 """Module containing celery tasks."""
 
+import requests
+
 from datetime import datetime
 from typing import Optional
-
-import urllib.request
 
 from blinker import Namespace
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
 
-from qhana_plugin_runner import requests
-from qhana_plugin_runner import requests
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 # make sure that celery tasks in plugin utils are always loaded
@@ -193,48 +191,56 @@ def save_task_error(self, failing_task_id: str, db_id: int):
     result.forget()
 
 
-@CELERY.task(name=f"{_name}.cascade_cancel", ignore_result=True)
-def cascade_and_revoke_celery_task(active_subtask_url: str, db_id: int):
-    TASK_LOGGER.info(f"Starting background cancellation sequence for task db_id: {db_id}")
+@CELERY.task(name=f"{_name}.cancel_task_and_cascade", ignore_result=True)
+def cancel_task_and_cascade(active_subtask_url: str, task_id: int):
+    """
+    Background task to terminate a Celery worker and optionally cascade cancellation.
+
+    Cascading cancellation means to forward the cancellation request to other ongoing 
+    background tasks or external services (e.g., a sub-plugin or an external API). 
+    If an `active_subtask_url` is provided, this function sends an HTTP 
+    DELETE request with a `?cancel=true` query parameter to that URL. 
+    
+    Note for Plugin Developers: If the plugin you are developing has sub-plugins or 
+    external services that are suppose to cancel when the main plugin cancels, you 
+    need to implement the cancellation logic in those services. 
+
+    Args:
+        active_subtask_url: The URL of the sub-plugin/task to cascade the cancellation to.
+        celery_task_id: The specific Celery task ID (NOT the database ID) to revoke.
+    """
+    TASK_LOGGER.debug(f"Starting background cancellation sequence for task db_id: {task_id}")
 
     if active_subtask_url:
+        separator = "&" if "?" in active_subtask_url else "?"
+        target_url = f"{active_subtask_url}{separator}cancel=true"
+
         try:
-            TASK_LOGGER.info(
-                f"Subtask detected. Attempting to cascade HTTP DELETE to sub-task URL: {active_subtask_url}"
-            )
-            req = urllib.request.Request(active_subtask_url, method="DELETE")
-            urllib.request.urlopen(req, timeout=10)
-            TASK_LOGGER.info(
-                f"Successfully cascaded cancellation to {active_subtask_url}"
-            )
+            req = requests.Request(target_url, method="DELETE")
+            requests.urlopen(req, timeout=10)
         except Exception as e:
             TASK_LOGGER.warning(
                 f"Failed to cascade cancellation to {active_subtask_url}: {e}"
             )
 
-    TASK_LOGGER.info(f"Attempting to cancel celery worker for task {db_id}")
     try:
-        CELERY.control.revoke(str(db_id), terminate=True)
-        TASK_LOGGER.info(f"Successfully issued cancel signal to Celery worker {db_id}")
+        CELERY.control.revoke(str(task_id), terminate=True)
     except Exception as e:
         TASK_LOGGER.error(
-            f"Failed to revoke Celery worker {db_id}. Error: {e}", exc_info=True
+            f"Failed to revoke Celery worker {task_id}. Error: {e}", exc_info=True
         )
 
 
-def cancel_task(db_id: int, log_message: str = "Task was canceled by the user."):
+def cancel_task(task_id: int, log_message: str = "Task was canceled by the user."):
     """Cancel a substep or a running pipeline."""
-    TASK_LOGGER.info(f"DEBUGGING: Canceling task with db id '{db_id}'")
 
-    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=db_id)
+    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=task_id)
     if task_data is None:
         return None
 
     if not task_data.is_finished:
-        # Cascade cancel to sub-plugin
         active_subtask_url = task_data.data.get("active_subtask_url")
-
-        cascade_and_revoke_celery_task.delay(active_subtask_url, db_id)
+        cancel_task_and_cascade.delay(active_subtask_url, task_id)
 
         task_data.task_status = "CANCELED"
         task_data.finished_at = datetime.utcnow()
@@ -244,6 +250,6 @@ def cancel_task(db_id: int, log_message: str = "Task was canceled by the user.")
         task_data.save(commit=True)
 
         app = current_app._get_current_object()
-        TASK_STATUS_CHANGED.send(app, task_id=db_id)
-        TASK_DETAILS_CHANGED.send(app, task_id=db_id)
+        TASK_STATUS_CHANGED.send(app, task_id=task_id)
+        TASK_DETAILS_CHANGED.send(app, task_id=task_id)
     return task_data

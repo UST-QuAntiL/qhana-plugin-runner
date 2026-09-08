@@ -65,7 +65,7 @@ class ProcessingTask:
         progress_start (float): progress start value.
         progress_target (float): progress target value.
         progress_unit (str): progress unit (default: "%").
-        task_status (Optional[str], optional): the status string of the plugin execution, can only be ``PENDING``, ``SUCCESS``, ``ERROR``or ``CANCELED``.
+        task_status (Optional[str], optional): the status string of the plugin execution, can only be ``PENDING``, ``SUCCESS``, ``ERROR``, or ``CANCELED``.
         task_log (str): the task log, task metadata or the error of the finished task. All data results should be file outputs of the task!
         outputs (List[TaskFile], optional): the output data (files) of the task
     """

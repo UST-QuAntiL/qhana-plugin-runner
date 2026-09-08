@@ -15,12 +15,11 @@
 """Module containing endpoints related to task progress and results."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from http import HTTPStatus
 from typing import Any, Dict, List, Optional, Sequence
 
 import marshmallow as ma
-from flask import redirect, url_for
+from flask import url_for
 from flask.views import MethodView
 from flask_smorest import abort
 from marshmallow.validate import OneOf
@@ -33,7 +32,6 @@ from qhana_plugin_runner.api.plugin_schemas import (
 )
 from qhana_plugin_runner.api.util import MaBaseSchema
 from qhana_plugin_runner.api.util import SecurityBlueprint as SmorestBlueprint
-from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import (
     ProcessingTask,
@@ -56,7 +54,7 @@ class SubscriptionDataSchema(MaBaseSchema):
     command = ma.fields.String(
         required=True,
         allow_none=True,
-        validate=OneOf(("subscribe", "unsubscribe")),
+        validate=OneOf(("subscribe", "unsubscribe", "cancel")),
         metadata={"description": "Whether to subscribe or unsubscribe."},
     )
     event = ma.fields.String(
@@ -272,6 +270,8 @@ class TaskView(MethodView):
                 self.subscribe(task_data, command)
             case "unsubscribe":
                 self.unsubscribe(task_data, command)
+            case "cancel":
+                cancel_task(task_id=task_id, log_message="Task was canceled via the backend API request.")
             case cmd:
                 abort(
                     HTTPStatus.BAD_REQUEST, message=f"Command '{cmd}' is not supported!"
@@ -308,11 +308,3 @@ class TaskView(MethodView):
         for subscriber in subscriptions:
             DB.session.delete(subscriber)
         DB.session.commit()
-
-    @TASKS_API.response(HTTPStatus.OK, TaskStatusSchema())
-    def delete(self, task_id: int):
-        """Cancel and delete the running task."""
-        task_data = cancel_task(task_id, "Task was canceled by the backend.")
-        if task_data is None:
-            abort(HTTPStatus.NOT_FOUND, message="Task not found.")
-        return self.convert_task_data(task_data)
