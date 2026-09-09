@@ -196,20 +196,29 @@ def cancel_task_and_cascade(active_subtask_url: str, task_id: int):
     """
     Background task to terminate a Celery worker and optionally cascade cancellation.
 
-    Cascading cancellation means to forward the cancellation request to other ongoing 
-    background tasks or external services (e.g., a sub-plugin or an external API). 
-    If an `active_subtask_url` is provided, this function sends an HTTP 
-    DELETE request with a `?cancel=true` query parameter to that URL. 
-    
-    Note for Plugin Developers: If the plugin you are developing has sub-plugins or 
-    external services that are suppose to cancel when the main plugin cancels, you 
-    need to implement the cancellation logic in those services. 
+    Cascading cancellation means to forward the cancellation request to other ongoing
+    background tasks or external services (e.g., a sub-plugin or an external API).
+    If an `active_subtask_url` is provided, this function sends an HTTP
+    DELETE request with a `?cancel=true` query parameter to that URL.
+
+    Note for Plugin Developers:
+    1. Implementation Required: If the plugin you are developing has sub-plugins
+       or external services that are supposed to cancel when the main plugin
+       cancels, you need to implement the cancellation logic in those services.
+    2. Asynchronous Race Conditions: Because network calls and worker terminations
+       take time, a cancellation might occur exactly as a worker is spawning a new
+       sub-task, before the new `active_subtask_url` is saved to the database. To
+       prevent "ghost executions" from continuing a canceled pipeline, always verify
+       that the main task's status is still `PENDING` inside your webhook handlers
+       and before starting any new processing steps.
 
     Args:
         active_subtask_url: The URL of the sub-plugin/task to cascade the cancellation to.
-        celery_task_id: The specific Celery task ID (NOT the database ID) to revoke.
+        task_id: The specific Celery task ID (NOT the database ID) to revoke.
     """
-    TASK_LOGGER.debug(f"Starting background cancellation sequence for task db_id: {task_id}")
+    TASK_LOGGER.debug(
+        f"Starting background cancellation sequence for task db_id: {task_id}"
+    )
 
     if active_subtask_url:
         separator = "&" if "?" in active_subtask_url else "?"

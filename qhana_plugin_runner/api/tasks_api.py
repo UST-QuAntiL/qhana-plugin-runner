@@ -271,7 +271,10 @@ class TaskView(MethodView):
             case "unsubscribe":
                 self.unsubscribe(task_data, command)
             case "cancel":
-                cancel_task(task_id=task_id, log_message="Task was canceled via the backend API request.")
+                cancel_task(
+                    task_id=task_id,
+                    log_message="Task was canceled via the backend API request.",
+                )
             case cmd:
                 abort(
                     HTTPStatus.BAD_REQUEST, message=f"Command '{cmd}' is not supported!"

@@ -236,15 +236,15 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
-  
+
     # The webhook endpoint is unauthenticated, so a bogus event must never fail the task.
     if task_data is None:
         TASK_LOGGER.warning(f"Ignored webhook for the unknown task {db_id}.")
         return "Unknown task"
-      
+
     if task_data.status != "PENDING":
         return f"Task with db id '{db_id}' is not pending, but {task_data.status}. Ignoring webhook event."
-    
+
     known_urls = [
         task_data.data.get(f"{WU_PALMER_PLUGIN}_url"),
         task_data.data.get(f"{MAPPING_PLUGIN}_url"),
