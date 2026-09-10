@@ -64,10 +64,21 @@ class SubscriptionDataSchema(MaBaseSchema):
         metadata={"description": "The type of event to subscribe to."},
     )
     webhook_href = ma.fields.Url(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={"description": "The URL of the wbhook subscribing to these events."},
     )
+
+    @ma.validates_schema
+    def validate_webhook(self, data, **kwargs):
+        """Validate that webhook_href is provided for subscribe and unsubscribe commands."""
+        if data.get("command") in ["subscribe", "unsubscribe"] and not data.get(
+            "webhook_href"
+        ):
+            raise ma.ValidationError(
+                "webhook_href is required for subscribe and unsubscribe commands.",
+                field_name="webhook_href",
+            )
 
 
 @dataclass
