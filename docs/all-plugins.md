@@ -1529,7 +1529,7 @@ Integrate REST APIs as plugins.
 ### Router (@v0.1.5)
 
 processing – preprocessing, routing\
-*Path:* {file}`plugins/enpro26/router/__init__.py`
+*Path:* {file}`plugins/feature_engineering_pipeline/__init__.py`
 
 Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music data and provides different routing options for the entities and taxonomies.
 

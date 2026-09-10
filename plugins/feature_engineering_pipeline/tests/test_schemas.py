@@ -18,8 +18,8 @@ from importlib import import_module
 import pytest
 from marshmallow import EXCLUDE, ValidationError
 
-from router.routes import INPUT_FIELD_GROUPS
-from router.schemas import (
+from feature_engineering_pipeline.routes import INPUT_FIELD_GROUPS
+from feature_engineering_pipeline.schemas import (
     MAPPING_PLUGIN,
     NONE_PLUGIN,
     ONE_HOT_PLUGIN,
@@ -37,7 +37,11 @@ from router.schemas import (
     SolverEnum,
     TransformersEnum,
 )
-from router.tests.data import ENTITIES_URL, TAXONOMIES_URL, router_payload
+from feature_engineering_pipeline.tests.data import (
+    ENTITIES_URL,
+    TAXONOMIES_URL,
+    router_payload,
+)
 
 
 def _frontend_schema(schema_class):

@@ -210,6 +210,8 @@ def run_pipeline_step(
     * The POST is skipped if the sub-task was already started for this step
       (``<plugin>_url`` already stored), so a retry never spawns a duplicate
       sub-task ("started twice").
+    * The sub-task url is committed before the subscription is registered,
+      because ``handle_webhook_task`` drops events for unknown urls.
     * Webhook subscription is the fast path, but a polling watchdog
       (``monitor_result``) is always armed as well, so a lost event cannot leave
       the pipeline stuck in ``PENDING``. Both deliver the same completion event;
@@ -233,6 +235,10 @@ def run_pipeline_step(
         task_url = urljoin(plugin_url, response.headers["Location"])
         task_data.data[f"{plugin_name}_url"] = task_url
         task_data.data["active_subtask_url"] = task_url
+        
+        # commit before subscribing: handle_webhook_task drops events whose url
+        # is not stored yet, so an event arriving during the subscribe request
+        # would otherwise be lost
         task_data.save(commit=True)
 
     webhook_url = task_data.data["webhook_url"].replace("localhost", "127.0.0.1")

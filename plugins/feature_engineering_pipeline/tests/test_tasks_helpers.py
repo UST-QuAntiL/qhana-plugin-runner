@@ -22,8 +22,12 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
-from router.schemas import MAPPING_PLUGIN, MDS_PLUGIN, WU_PALMER_PLUGIN
-from router.tasks_helpers import (
+from feature_engineering_pipeline.schemas import (
+    MAPPING_PLUGIN,
+    MDS_PLUGIN,
+    WU_PALMER_PLUGIN,
+)
+from feature_engineering_pipeline.tasks_helpers import (
     CELERY_COUNTDOWN,
     PipelineTask,
     calculate_recommendations,
@@ -38,8 +42,8 @@ from router.tasks_helpers import (
     save_intermediate_results,
     taxonomy_ref,
 )
-from router.tasks_pipeline_steps import start_wu_palmer
-from router.tests.data import (
+from feature_engineering_pipeline.tasks_pipeline_steps import start_wu_palmer
+from feature_engineering_pipeline.tests.data import (
     ENTITIES_URL,
     PLUGIN_URLS,
     TAXONOMY_MEMBERS,
@@ -88,7 +92,8 @@ def test_extract_output_url_raises_for_unknown_data_type():
 
 def test_plugin_process_url_resolves_from_stored_metadata_url(monkeypatch):
     monkeypatch.setattr(
-        "router.tasks_helpers.get_plugin_endpoint", lambda url: url + "process/"
+        "feature_engineering_pipeline.tasks_helpers.get_plugin_endpoint",
+        lambda url: url + "process/",
     )
     db_task = make_router_task()
 
@@ -305,7 +310,7 @@ def test_run_pipeline_step_continues_when_subscription_raises(monkeypatch):
     def _boom(**kwargs):
         raise ConnectionError("no route to host")
 
-    monkeypatch.setattr("router.tasks_helpers.subscribe", _boom)
+    monkeypatch.setattr("feature_engineering_pipeline.tasks_helpers.subscribe", _boom)
 
     run_pipeline_step(db_task.id, db_task, WU_PALMER_PLUGIN, "Wu-Palmer", {})
 
@@ -347,7 +352,7 @@ def test_get_db_id_reads_the_task_arguments(args, kwargs, expected):
 def test_on_failure_reports_the_error_to_the_processing_task(monkeypatch):
     recorded = []
     monkeypatch.setattr(
-        "router.tasks_helpers.save_task_error",
+        "feature_engineering_pipeline.tasks_helpers.save_task_error",
         SimpleNamespace(delay=lambda **kwargs: recorded.append(kwargs)),
     )
 
@@ -360,7 +365,7 @@ def test_on_failure_reports_the_error_to_the_processing_task(monkeypatch):
 def test_on_failure_without_db_id_does_not_report_an_unknown_task(monkeypatch):
     recorded = []
     monkeypatch.setattr(
-        "router.tasks_helpers.save_task_error",
+        "feature_engineering_pipeline.tasks_helpers.save_task_error",
         SimpleNamespace(delay=lambda **kwargs: recorded.append(kwargs)),
     )
 

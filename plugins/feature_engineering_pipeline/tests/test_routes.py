@@ -22,9 +22,9 @@ from requests.exceptions import Timeout
 
 from qhana_plugin_runner.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-from router import tasks as router_tasks
-from router import tasks_pipeline_steps as pipeline_steps
-from router.schemas import (
+from feature_engineering_pipeline import tasks as router_tasks
+from feature_engineering_pipeline import tasks_pipeline_steps as pipeline_steps
+from feature_engineering_pipeline.schemas import (
     AGGREGATOR_PLUGIN,
     FINALIZE_PIPELINE,
     MAPPING_PLUGIN,
@@ -36,10 +36,14 @@ from router.schemas import (
     VECTOR_CONCAT_PLUGIN,
     WU_PALMER_PLUGIN,
 )
-from router.tasks import handle_webhook_task, preprocessing_task, start_routing_task
-from router.tasks_helpers import CELERY_COUNTDOWN
-from router.tasks_pipeline_steps import start_wu_palmer
-from router.tests.data import (
+from feature_engineering_pipeline.tasks import (
+    handle_webhook_task,
+    preprocessing_task,
+    start_routing_task,
+)
+from feature_engineering_pipeline.tasks_helpers import CELERY_COUNTDOWN
+from feature_engineering_pipeline.tasks_pipeline_steps import start_wu_palmer
+from feature_engineering_pipeline.tests.data import (
     PluginServer,
     capture_task_errors,
     input_file_responses,
@@ -104,11 +108,11 @@ def inline(monkeypatch):
 
     recorded = SimpleNamespace(results=[], errors=[])
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.save_task_result",
+        "feature_engineering_pipeline.tasks_pipeline_steps.save_task_result",
         SimpleNamespace(delay=lambda message, db_id: recorded.results.append(message)),
     )
     monkeypatch.setattr(
-        "router.tasks_helpers.save_task_error",
+        "feature_engineering_pipeline.tasks_helpers.save_task_error",
         SimpleNamespace(delay=lambda **kwargs: recorded.errors.append(kwargs)),
     )
     return recorded
@@ -205,7 +209,7 @@ def test_routing_task_counts_every_plugin_it_will_run(
     launched = []
     for name in ("start_wu_palmer", "start_mapping"):
         monkeypatch.setattr(
-            f"router.tasks_pipeline_steps.{name}.apply_async",
+            f"feature_engineering_pipeline.tasks_pipeline_steps.{name}.apply_async",
             lambda *args, name=name, **kwargs: launched.append(name),
         )
     db_task = make_router_task(selections=selections, **overrides)
@@ -227,7 +231,7 @@ def test_routing_task_counts_every_plugin_it_will_run(
 
 def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.start_wu_palmer.apply_async",
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
         lambda *args, **kwargs: None,
     )
     db_task = make_router_task(
@@ -248,7 +252,7 @@ def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
 
 def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.start_wu_palmer.apply_async",
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
         lambda *args, **kwargs: None,
     )
     db_task = make_router_task(
@@ -432,7 +436,7 @@ def test_webhook_triggers_the_next_step_of_the_pipeline(
 
     triggered = []
     monkeypatch.setattr(
-        f"router.tasks_pipeline_steps.{next_task}.apply_async",
+        f"feature_engineering_pipeline.tasks_pipeline_steps.{next_task}.apply_async",
         lambda args=None, **kwargs: triggered.append((list(args), kwargs)),
     )
 

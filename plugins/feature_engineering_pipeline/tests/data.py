@@ -20,7 +20,7 @@ from types import SimpleNamespace
 from typing import Dict, List, Optional
 
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from router.schemas import (
+from feature_engineering_pipeline.schemas import (
     AGGREGATOR_PLUGIN,
     MAPPING_PLUGIN,
     MDS_PLUGIN,
@@ -32,7 +32,7 @@ from router.schemas import (
     InputParameters,
     InputParametersSchema,
 )
-from router.tasks import start_routing_task
+from feature_engineering_pipeline.tasks import start_routing_task
 
 from tests.utils import MockResponse
 
@@ -206,7 +206,11 @@ def mock_open_url(monkeypatch, responses: Dict[str, MockResponse]):
         assert url in responses, f"Unexpected open_url for {url}"
         return responses[url]
 
-    for module in ("router.tasks", "router.tasks_helpers", "router.tasks_pipeline_steps"):
+    for module in (
+        "feature_engineering_pipeline.tasks",
+        "feature_engineering_pipeline.tasks_helpers",
+        "feature_engineering_pipeline.tasks_pipeline_steps",
+    ):
         monkeypatch.setattr(f"{module}.open_url", _open_url)
     return _open_url
 
@@ -354,9 +358,12 @@ class PluginServer:
 
     def install(self, monkeypatch):
         monkeypatch.setattr(
-            "router.tasks_helpers.get_plugin_endpoint", lambda url: url + "process/"
+            "feature_engineering_pipeline.tasks_helpers.get_plugin_endpoint",
+            lambda url: url + "process/",
         )
-        monkeypatch.setattr("router.tasks_helpers.subscribe", self._subscribe)
+        monkeypatch.setattr(
+            "feature_engineering_pipeline.tasks_helpers.subscribe", self._subscribe
+        )
         monkeypatch.setattr("requests.post", self._post)
         monkeypatch.setattr("requests.get", self._get)
         mock_open_url(monkeypatch, self.files)
@@ -367,7 +374,7 @@ def capture_pipeline_step(monkeypatch) -> List[dict]:
     """Replace ``run_pipeline_step`` and record the kwargs of every call."""
     calls: List[dict] = []
     monkeypatch.setattr(
-        "router.tasks_pipeline_steps.run_pipeline_step",
+        "feature_engineering_pipeline.tasks_pipeline_steps.run_pipeline_step",
         lambda **kwargs: calls.append(kwargs),
     )
     return calls
@@ -382,7 +389,7 @@ def capture_task_errors(monkeypatch) -> List[dict]:
     """
     errors: List[dict] = []
     monkeypatch.setattr(
-        "router.tasks_helpers.save_task_error",
+        "feature_engineering_pipeline.tasks_helpers.save_task_error",
         SimpleNamespace(delay=lambda **kwargs: errors.append(kwargs)),
     )
     return errors
