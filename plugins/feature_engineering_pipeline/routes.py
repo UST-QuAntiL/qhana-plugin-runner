@@ -39,9 +39,10 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
+    NUMERIC_OPTIONS,
     PIPELINE_FIELD_PREFIX,
-    PIPELINE_PLUGINS,
     PIPELINE_OPTIONS,
+    PIPELINE_PLUGINS,
     InputParametersSchema,
     MetricEnum,
     PCATypeEnum,
@@ -351,6 +352,7 @@ class RoutingStepFrontend(MethodView):
             raise KeyError(msg)
 
         attributes = db_task.data.get("taxonomy_attributes", [])
+        numeric_attributes = db_task.data.get("numeric_attributes", [])
         recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
 
@@ -361,8 +363,10 @@ class RoutingStepFrontend(MethodView):
                 version=Router.instance.version,
                 schema=RoutingStepParametersSchema(),
                 attributes=attributes,
+                numeric_attributes=numeric_attributes,
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
+                numeric_options=NUMERIC_OPTIONS,
                 input_params=input_params,
                 values=data,
                 valid=valid,

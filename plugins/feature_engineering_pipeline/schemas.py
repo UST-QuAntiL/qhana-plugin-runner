@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import textwrap
+from enum import Enum
 
 import marshmallow as ma
 from marshmallow import post_load
@@ -30,6 +30,8 @@ AGGREGATOR_PLUGIN = "aggregator"
 MDS_PLUGIN = "mds"
 VECTOR_CONCAT_PLUGIN = "vector_concat"
 PCA_PLUGIN = "pca"
+
+FEATURE_VECTOR = "feature_vector"
 
 FINALIZE_PIPELINE = "finalize"
 
@@ -54,6 +56,12 @@ PIPELINE_OPTIONS = {
     WU_PALMER_PLUGIN: "Wu-Palmer",
     ONE_HOT_PLUGIN: "One-Hot",
     MAPPING_PLUGIN: "Mapping",
+}
+
+NUMERIC_OPTIONS = {
+    NONE_PLUGIN: "None",
+    FEATURE_VECTOR: "Feature Vector",
+    MAPPING_PLUGIN: "Mapping Distances",
 }
 
 PIPELINE_FIELD_PREFIX = "pipeline_"

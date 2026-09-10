@@ -58,11 +58,12 @@ limitations under the License.
         </dl>
     </fieldset>
     {% endif %}
+
     <p>Assign each taxonomy attribute to a pipeline path:</p>
     {% call forms.render_form(target="microfrontend") %}
     {% if attributes %}
     <fieldset>
-        <legend>Attributes</legend>
+        <legend>Taxonomy Attributes</legend>
         {%- for attr in attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
         {%- set recommended = recommendations.get(attr) -%}
@@ -82,6 +83,31 @@ limitations under the License.
     {% else %}
     <p>No taxonomy attributes were found in the provided metadata.</p>
     {% endif %}
+
+    <p>Assign each numeric attribute to a pipeline path:</p>
+    {% if numeric_attributes %}
+    <fieldset>
+        <legend>Numeric Attributes</legend>
+        {%- for attr in numeric_attributes -%}
+        {%- set field_name = "pipeline_" + attr -%}
+        {%- set recommended = recommendations.get(attr) -%}
+        <div class="attribute-row">
+            <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
+            <select class="qhana-form-input" name="{{field_name}}" id="{{field_name}}" autocomplete="off">
+                {%- for key, display_name in numeric_options.items() -%}
+                <option value="{{key}}" {% if key==values.get(field_name) %}selected{% endif %}>
+                    <!--If there exists a recomendation, indicate the recomended options-->
+                    {{display_name}} {% if recommended and key == recommended %}(Recommended){% endif %}
+                </option>
+                {%- endfor -%}
+            </select>
+        </div>
+        {%- endfor -%}
+    </fieldset>
+    {% else %}
+    <p>No numeric attributes were found in the provided metadata.</p>
+    {% endif %}
+
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}

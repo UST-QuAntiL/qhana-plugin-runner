@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from sqlite3 import IntegrityError
-
-import requests
 from datetime import datetime, timezone
 from io import BytesIO
-from zipfile import ZipFile
 from pathlib import PurePath
+from sqlite3 import IntegrityError
+from zipfile import ZipFile
+
+import requests
 from celery.utils.log import get_task_logger
-from sqlalchemy import update, insert
+from sqlalchemy import insert, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from qhana_plugin_runner.celery import CELERY
@@ -30,18 +30,18 @@ from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
-from . import Router, ROUTER_BLP
+from . import ROUTER_BLP, Router
 from .schemas import (
-    NONE_PLUGIN,
-    WU_PALMER_PLUGIN,
-    MAPPING_PLUGIN,
-    ONE_HOT_PLUGIN,
-    TRANSFORMERS_PLUGIN,
     AGGREGATOR_PLUGIN,
-    MDS_PLUGIN,
-    VECTOR_CONCAT_PLUGIN,
-    PCA_PLUGIN,
     FINALIZE_PIPELINE,
+    MAPPING_PLUGIN,
+    MDS_PLUGIN,
+    NONE_PLUGIN,
+    ONE_HOT_PLUGIN,
+    PCA_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
+    WU_PALMER_PLUGIN,
     InputParameters,
     InputParametersSchema,
 )
@@ -49,20 +49,20 @@ from .tasks_helpers import (
     CELERY_COUNTDOWN,
     REQUEST_TIMEOUT,
     PipelineTask,
-    load_task,
+    calculate_recommendations,
     load_entity_attributes,
+    load_task,
     log_task_event,
     taxonomy_ref,
-    calculate_recommendations,
 )
 from .tasks_pipeline_steps import (
-    launch_next_pipeline,
-    start_transformers,
-    start_aggregator,
-    start_mds,
+    finalize_pca,
     finalize_pipeline,
     finalize_vector_concat,
-    finalize_pca,
+    launch_next_pipeline,
+    start_aggregator,
+    start_mds,
+    start_transformers,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -96,6 +96,7 @@ def preprocessing_task(self, db_id: int) -> str:
     available_taxonomies = set(taxonomies_zip.namelist())
 
     taxonomy_attributes = []
+    numeric_attributes = []
     recommendations = {}
 
     with open_url(params.entities_metadata_url) as response:
@@ -103,7 +104,13 @@ def preprocessing_task(self, db_id: int) -> str:
         for element in load_entities(response, mimetype):
             metadata = AttributeMetadata.from_dict(element)
             if metadata.ID not in entity_attributes:
+                # TODO: print warning here
                 continue
+
+            if metadata.description == "number":
+                numeric_attributes.append(metadata.ID)
+                continue
+
             ref = taxonomy_ref(metadata)
             if ref:
                 tax_filename = PurePath(ref).name
@@ -124,12 +131,14 @@ def preprocessing_task(self, db_id: int) -> str:
                         taxonomies_zip, matched_zip_path
                     )
 
-    TASK_LOGGER.info(
-        f"DEBUGGING: Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "
-        f"taxonomy in the zip: {taxonomy_attributes}"
+    TASK_LOGGER.debug(
+        f"Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "
+        f"taxonomy in the zip: {taxonomy_attributes}.\n"
+        f"Found {len(numeric_attributes)} numeric attribute(s)."
     )
 
     task_data.data["taxonomy_attributes"] = taxonomy_attributes
+    task_data.data["numeric_attributes"] = numeric_attributes
     task_data.data["recommendations"] = recommendations
     task_data.save(commit=True)
 
