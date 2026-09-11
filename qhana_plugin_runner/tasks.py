@@ -225,15 +225,19 @@ def cancel_task_and_cascade(active_subtask_url: str, task_id: int):
         target_url = f"{active_subtask_url}{separator}cancel=true"
 
         try:
-            req = requests.Request(target_url, method="DELETE")
-            requests.urlopen(req, timeout=10)
+            with requests.Request(target_url, method="DELETE") as req:
+                requests.urlopen(req, timeout=10)
         except Exception as e:
             TASK_LOGGER.warning(
                 f"Failed to cascade cancellation to {active_subtask_url}: {e}"
             )
 
     try:
-        CELERY.control.revoke(str(task_id), terminate=True)
+        # task_id is the database ID and not the celery task ID. In order to make this work, the celery task ID must be stored in association to the database id.
+        # TODO: Implement a mapping between database IDs and Celery task IDs to enable proper revocation of tasks.
+        #
+        # Old code: CELERY.control.revoke(str(task_id), terminate=True)
+        pass
     except Exception as e:
         TASK_LOGGER.error(
             f"Failed to revoke Celery worker {task_id}. Error: {e}", exc_info=True
