@@ -79,7 +79,7 @@ def call_plugin_endpoint(
 
 def get_task_result_no_wait(
     result_url: str,
-) -> Tuple[Literal["PENDING", "SUCCESS", "FAILURE"], Any]:
+) -> Tuple[Literal["PENDING", "SUCCESS", "FAILURE", "CANCELED"], Any]:
     """Get the task result with a minimal timeout.
 
     Args:
@@ -91,7 +91,7 @@ def get_task_result_no_wait(
     with open_url(result_url, timeout=3) as result:
         result_data = result.json()
         status = result_data.get("status")
-        if status in ("PENDING", "SUCCESS", "FAILURE"):
+        if status in ("PENDING", "SUCCESS", "FAILURE", "CANCELED"):
             return status, result_data
         else:
             return "FAILURE", result_data
@@ -102,9 +102,9 @@ class ResultUnchangedError(Exception):
 
 
 def _check_result_for_updates(
-    status: Literal["PENDING", "SUCCESS", "FAILURE"], result
+    status: Literal["PENDING", "SUCCESS", "FAILURE", "CANCELED"], result
 ) -> Optional[Literal["status", "steps"]]:
-    if status in ("SUCCESS", "FAILURE"):
+    if status in ("SUCCESS", "FAILURE", "CANCELED"):
         return "status"
 
     steps = result.get("steps", [])
@@ -115,9 +115,11 @@ def _check_result_for_updates(
 
 
 def _check_result_for_cleared_substep(
-    status: Literal["PENDING", "SUCCESS", "FAILURE"], result, substep: Union[str, int]
+    status: Literal["PENDING", "SUCCESS", "FAILURE", "CANCELED"],
+    result,
+    substep: Union[str, int],
 ) -> Optional[Literal["status", "steps"]]:
-    if status in ("SUCCESS", "FAILURE"):
+    if status in ("SUCCESS", "FAILURE", "CANCELED"):
         return "status"
 
     steps: List[dict] = result.get("steps", [])
@@ -148,7 +150,7 @@ def _subscribe_for_events(
     subscribe_url: str,
     webhook_url: str,
     events: Union[Literal["all"], Sequence[str]] = "all",
-) -> Tuple[Literal["PENDING", "SUCCESS", "FAILURE"], Any]:
+) -> Tuple[Literal["PENDING", "SUCCESS", "FAILURE", "CANCELED"], Any]:
     result_data = None
     if events == "all":
         events = [None]
@@ -161,7 +163,7 @@ def _subscribe_for_events(
             result.raise_for_status()
             result_data = result.json()
     status = result_data.get("status") if result_data else "FAILURE"
-    if status in ("PENDING", "SUCCESS", "FAILURE"):
+    if status in ("PENDING", "SUCCESS", "FAILURE", "CANCELED"):
         return status, result_data
     else:
         return "FAILURE", result_data
