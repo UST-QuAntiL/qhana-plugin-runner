@@ -244,16 +244,13 @@ def cancel_task_and_cascade(active_subtask_url: str, task_id: int):
         )
 
 
-def cancel_task(task_id: int, log_message: str = "Task was canceled by the user."):
+def cancel_task(
+    task_data: ProcessingTask, log_message: str = "Task was canceled by the user."
+):
     """Cancel a substep or a running pipeline."""
-
-    task_data: ProcessingTask = ProcessingTask.get_by_id(id_=task_id)
-    if task_data is None:
-        return None
-
     if not task_data.is_finished:
         active_subtask_url = task_data.data.get("active_subtask_url")
-        cancel_task_and_cascade.delay(active_subtask_url, task_id)
+        cancel_task_and_cascade.delay(active_subtask_url, task_data.id)
 
         task_data.task_status = "CANCELED"
         task_data.finished_at = datetime.utcnow()
@@ -263,6 +260,6 @@ def cancel_task(task_id: int, log_message: str = "Task was canceled by the user.
         task_data.save(commit=True)
 
         app = current_app._get_current_object()
-        TASK_STATUS_CHANGED.send(app, task_id=task_id)
-        TASK_DETAILS_CHANGED.send(app, task_id=task_id)
+        TASK_STATUS_CHANGED.send(app, task_id=task_data.id)
+        TASK_DETAILS_CHANGED.send(app, task_id=task_data.id)
     return task_data
