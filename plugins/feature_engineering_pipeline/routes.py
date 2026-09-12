@@ -39,7 +39,6 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
-    NUMERIC_OPTIONS,
     PIPELINE_FIELD_PREFIX,
     PIPELINE_OPTIONS,
     PIPELINE_PLUGINS,
@@ -366,7 +365,6 @@ class RoutingStepFrontend(MethodView):
                 numeric_attributes=numeric_attributes,
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
-                numeric_options=NUMERIC_OPTIONS,
                 input_params=input_params,
                 values=data,
                 valid=valid,

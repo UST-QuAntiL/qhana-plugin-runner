@@ -28,6 +28,14 @@ limitations under the License.
         min-width: 12rem;
     }
 
+    .numeric-attribute {
+        display: flex;
+        align-items: center;
+        column-gap: 0.5rem;
+        width: fit-content;
+        margin-bottom: 0.5rem;
+    }
+
     .input-params {
         margin-bottom: 1rem;
     }
@@ -84,24 +92,18 @@ limitations under the License.
     <p>No taxonomy attributes were found in the provided metadata.</p>
     {% endif %}
 
-    <p>Assign each numeric attribute to a pipeline path:</p>
+    <p>Select the numeric attributes to include:</p>
     {% if numeric_attributes %}
     <fieldset>
         <legend>Numeric Attributes</legend>
+        <!--An unchecked checkbox is not submitted, so the attribute is excluded.-->
         {%- for attr in numeric_attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
-        {%- set recommended = recommendations.get(attr) -%}
-        <div class="attribute-row">
-            <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
-            <select class="qhana-form-input" name="{{field_name}}" id="{{field_name}}" autocomplete="off">
-                {%- for key, display_name in numeric_options.items() -%}
-                <option value="{{key}}" {% if key==values.get(field_name) %}selected{% endif %}>
-                    <!--If there exists a recomendation, indicate the recomended options-->
-                    {{display_name}} {% if recommended and key == recommended %}(Recommended){% endif %}
-                </option>
-                {%- endfor -%}
-            </select>
-        </div>
+        <label class="numeric-attribute" for="{{field_name}}">
+            <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
+                autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
+            {{attr}}
+        </label>
         {%- endfor -%}
     </fieldset>
     {% else %}
