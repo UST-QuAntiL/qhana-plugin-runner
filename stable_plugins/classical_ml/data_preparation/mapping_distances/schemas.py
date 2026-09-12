@@ -28,6 +28,9 @@ class DistanceMetricEnum(Enum):
     cosine = "Cosine"
 
 
+NUMERIC_TYPES = {"number", "integer", "int", "float", "double"}
+
+
 @dataclass
 class InputParameters:
     entities_url: str

@@ -33,10 +33,14 @@ from qhana_plugin_runner.requests import get_mimetype, open_url
 from . import ROUTER_BLP, Router
 from .schemas import (
     AGGREGATOR_PLUGIN,
+    FEATURE_VECTOR,
     FINALIZE_PIPELINE,
+    INCLUDE_NUMERIC,
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NONE_PLUGIN,
+    NUMERIC_MAPPING_PIPELINE,
+    NUMERIC_TYPES,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     TRANSFORMERS_PLUGIN,
@@ -97,6 +101,7 @@ def preprocessing_task(self, db_id: int) -> str:
 
     taxonomy_attributes = []
     numeric_attributes = []
+    multi_valued_numeric_attributes = []
     recommendations = {}
 
     with open_url(params.entities_metadata_url) as response:
@@ -107,8 +112,10 @@ def preprocessing_task(self, db_id: int) -> str:
                 # TODO: print warning here
                 continue
 
-            if metadata.description == "number":
+            if metadata.description in NUMERIC_TYPES:
                 numeric_attributes.append(metadata.ID)
+                if metadata.multiple:
+                    multi_valued_numeric_attributes.append(metadata.ID)
                 continue
 
             ref = taxonomy_ref(metadata)
@@ -139,6 +146,7 @@ def preprocessing_task(self, db_id: int) -> str:
 
     task_data.data["taxonomy_attributes"] = taxonomy_attributes
     task_data.data["numeric_attributes"] = numeric_attributes
+    task_data.data["multi_valued_numeric_attributes"] = multi_valued_numeric_attributes
     task_data.data["recommendations"] = recommendations
     task_data.save(commit=True)
 
@@ -146,6 +154,21 @@ def preprocessing_task(self, db_id: int) -> str:
 
 
 # --- Initial Routing Task Launcher ---
+def _validate_numeric_selections(selections: dict, numeric_attributes: set):
+    """Reject selections that do not fit the attribute type.
+
+    The schema cannot check this, it does not know the attribute types.
+    """
+    for attr, option in selections.items():
+        if option == INCLUDE_NUMERIC and attr not in numeric_attributes:
+            raise ValueError(f"'{attr}' is not a numeric attribute.")
+        if attr in numeric_attributes and option not in (INCLUDE_NUMERIC, NONE_PLUGIN):
+            raise ValueError(
+                f"The numeric attribute '{attr}' cannot run the pipeline '{option}'. "
+                "Numeric attributes are only included or skipped."
+            )
+
+
 @CELERY.task(name=f"{Router.instance.identifier}.start_routing_task", bind=True)
 def start_routing_task(self, db_id: int) -> str:
     """
@@ -155,12 +178,19 @@ def start_routing_task(self, db_id: int) -> str:
     Mapping, One-Hot, or None). It saves these groupings into the task data,
     generates a sequential queue of pipelines to execute, and calls
     `launch_next_pipeline` to begin execution.
+
+    An included numeric attribute is routed by its metadata: multi-valued
+    attributes run the numeric mapping pipeline, single-valued attributes are
+    appended to the feature vector directly.
     """
 
     task_data = ProcessingTask.get_by_id(id_=db_id)
     params: InputParameters = InputParametersSchema().loads(task_data.parameters)
 
     selections = task_data.data.get("routing_selections", {})
+    numeric_attributes = set(task_data.data.get("numeric_attributes", []))
+    multi_valued = set(task_data.data.get("multi_valued_numeric_attributes", []))
+    _validate_numeric_selections(selections, numeric_attributes)
 
     wu_palmer_attributes = [
         attr for attr, option in selections.items() if option == WU_PALMER_PLUGIN
@@ -168,11 +198,22 @@ def start_routing_task(self, db_id: int) -> str:
     mapping_attributes = [
         attr for attr, option in selections.items() if option == MAPPING_PLUGIN
     ]
+    numeric_mapping_attributes = [
+        attr
+        for attr, option in selections.items()
+        if option == INCLUDE_NUMERIC and attr in multi_valued
+    ]
+    feature_vector_attributes = [
+        attr
+        for attr, option in selections.items()
+        if option == INCLUDE_NUMERIC and attr not in multi_valued
+    ]
     one_hot_attributes = [
         attr for attr, option in selections.items() if option == ONE_HOT_PLUGIN
     ]
     none_selected = [attr for attr, option in selections.items() if option == NONE_PLUGIN]
 
+    # The queue order is the dimension order of the concatenated vector.
     pipeline_queue = []
     total_plugins = 1  # 1, because the inital start value of progress_value has to be 1
 
@@ -191,6 +232,28 @@ def start_routing_task(self, db_id: int) -> str:
         task_data.data[f"{MAPPING_PLUGIN}_attributes"] = "\n".join(mapping_attributes)
         pipeline_queue.append(MAPPING_PLUGIN)
         total_plugins += 3  # (Mapping, Aggregator, MDS)
+
+    if numeric_mapping_attributes:
+        task_data.add_task_log_entry(
+            "Queued numeric mapping pipeline for multi-valued numeric attributes: "
+            f"{numeric_mapping_attributes}"
+        )
+        task_data.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"] = "\n".join(
+            numeric_mapping_attributes
+        )
+        pipeline_queue.append(NUMERIC_MAPPING_PIPELINE)
+        total_plugins += 3  # (Mapping, Aggregator, MDS)
+
+    if feature_vector_attributes:
+        task_data.add_task_log_entry(
+            "Queued feature vector for single-valued numeric attributes: "
+            f"{feature_vector_attributes}"
+        )
+        task_data.data[f"{FEATURE_VECTOR}_attributes"] = "\n".join(
+            feature_vector_attributes
+        )
+        pipeline_queue.append(FEATURE_VECTOR)
+        total_plugins += 1  # (feature vector)
 
     if one_hot_attributes:
         task_data.add_task_log_entry(
@@ -368,6 +431,9 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
         handle_wu_palmer_progression(task_data, db_id, source_url)
 
     elif current_pipeline == MAPPING_PLUGIN:
+        handle_mapping_progression(task_data, db_id, source_url)
+
+    elif current_pipeline == NUMERIC_MAPPING_PIPELINE:
         handle_mapping_progression(task_data, db_id, source_url)
 
     elif current_pipeline == FINALIZE_PIPELINE:

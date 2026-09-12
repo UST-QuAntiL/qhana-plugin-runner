@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-
 from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "feature-engineering-pipeline"
-__version__ = "v0.1.6"
+__version__ = "v0.1.7"
 _identifier = plugin_identifier(_plugin_name, __version__)
 _description = (  # TODO
     "Routes entities and separates tree from non-tree taxonomies. "
@@ -41,7 +39,7 @@ class Router(QHAnaPluginBase):
     description = _description
     tags = ["preprocessing", "routing"]
 
-    def __init__(self, app: Optional[Flask]) -> None:
+    def __init__(self, app: Flask | None) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):

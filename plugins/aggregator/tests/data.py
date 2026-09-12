@@ -55,3 +55,29 @@ EXPECTED = {
         }
     ),
 }
+
+NUMERIC_TEST_DATA = {
+    "attribute_metadata.json": r'[{"ID":"age","type":"age","title":"","description":"number","multiple":false,"ordered":false,"separator":";","refTarget":null},{"ID":"scores","type":"scores","title":"","description":"integer","multiple":true,"ordered":true,"separator":";","refTarget":null}]',
+    "entities.json": r'[{"ID":"e1","age":10.0,"scores":[1,2,3]},{"ID":"e2","age":20.0,"scores":[4,5,6]},{"ID":"e3","age":10.0,"scores":[1,2,3]}]',
+    "element-distances": {
+        "age.json": r'[{"source":"[10.0]","target":"[10.0]","distance":0.0},{"source":"[10.0]","target":"[20.0]","distance":10.0},{"source":"[20.0]","target":"[20.0]","distance":0.0}]',
+        "scores.json": r'[{"source":"[1.0, 2.0, 3.0]","target":"[1.0, 2.0, 3.0]","distance":0.0},{"source":"[1.0, 2.0, 3.0]","target":"[4.0, 5.0, 6.0]","distance":5.196152422706632},{"source":"[4.0, 5.0, 6.0]","target":"[4.0, 5.0, 6.0]","distance":0.0}]',
+    },
+}
+
+NUMERIC_EXPECTED = {
+    "age.json": _distances(
+        {
+            ("e1", "e2"): 10.0,
+            ("e1", "e3"): 0.0,
+            ("e2", "e3"): 10.0,
+        }
+    ),
+    "scores.json": _distances(
+        {
+            ("e1", "e2"): 5.196152422706632,
+            ("e1", "e3"): 0.0,
+            ("e2", "e3"): 5.196152422706632,
+        }
+    ),
+}
