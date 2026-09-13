@@ -26,10 +26,13 @@ from feature_engineering_pipeline import tasks as router_tasks
 from feature_engineering_pipeline import tasks_pipeline_steps as pipeline_steps
 from feature_engineering_pipeline.schemas import (
     AGGREGATOR_PLUGIN,
+    FEATURE_VECTOR,
     FINALIZE_PIPELINE,
+    INCLUDE_NUMERIC,
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NONE_PLUGIN,
+    NUMERIC_MAPPING_PIPELINE,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     TRANSFORMERS_PLUGIN,
@@ -55,11 +58,19 @@ from tests.utils import run_task
 
 pytestmark = pytest.mark.usefixtures("celery_worker")
 
+# The task that starts each pipeline of the queue.
+START_TASKS = {
+    WU_PALMER_PLUGIN: "start_wu_palmer",
+    MAPPING_PLUGIN: "start_mapping",
+    NUMERIC_MAPPING_PIPELINE: "start_numeric_distances",
+    FEATURE_VECTOR: "build_numeric_feature_vector",
+}
+
 # The tasks the router dispatches, listed per module that looks them up.
 DISPATCHED_TASKS = (
     (
         pipeline_steps,
-        ("start_wu_palmer", "start_mapping", "start_vector_concat", "start_pca"),
+        (*START_TASKS.values(), "start_vector_concat", "start_pca"),
     ),
     (
         router_tasks,
@@ -180,6 +191,21 @@ def test_preprocessing_skips_attributes_without_a_usable_taxonomy(monkeypatch):
     assert "not_in_entities" not in attributes
 
 
+def test_preprocessing_finds_the_numeric_attributes(monkeypatch):
+    """``year`` is a ``number``, ``beats`` a multi-valued ``integer``."""
+    mock_open_url(monkeypatch, input_file_responses())
+    db_task = make_router_task(
+        data={"numeric_attributes": [], "multi_valued_numeric_attributes": []}
+    )
+
+    run_task(preprocessing_task, db_id=db_task.id)
+
+    data = reload(db_task).data
+    assert data["numeric_attributes"] == ["year", "beats"]
+    assert data["multi_valued_numeric_attributes"] == ["beats"]
+    assert "year" not in data["taxonomy_attributes"]
+
+
 # --- ROUTING ---
 
 
@@ -201,13 +227,27 @@ def test_preprocessing_skips_attributes_without_a_usable_taxonomy(monkeypatch):
             [WU_PALMER_PLUGIN],
             7,
         ),
+        ({"year": INCLUDE_NUMERIC}, {}, [FEATURE_VECTOR], 2),
+        ({"beats": INCLUDE_NUMERIC}, {}, [NUMERIC_MAPPING_PIPELINE], 4),
+        # the queue order does not depend on the order of the selections
+        (
+            {
+                "year": INCLUDE_NUMERIC,
+                "a": WU_PALMER_PLUGIN,
+                "beats": INCLUDE_NUMERIC,
+                "b": MAPPING_PLUGIN,
+            },
+            {},
+            [WU_PALMER_PLUGIN, MAPPING_PLUGIN, NUMERIC_MAPPING_PIPELINE, FEATURE_VECTOR],
+            12,
+        ),
     ],
 )
 def test_routing_task_counts_every_plugin_it_will_run(
     monkeypatch, selections, overrides, expected_pipelines, expected_target
 ):
     launched = []
-    for name in ("start_wu_palmer", "start_mapping"):
+    for name in START_TASKS.values():
         monkeypatch.setattr(
             f"feature_engineering_pipeline.tasks_pipeline_steps.{name}.apply_async",
             lambda *args, name=name, **kwargs: launched.append(name),
@@ -226,7 +266,7 @@ def test_routing_task_counts_every_plugin_it_will_run(
     assert db_task.progress_target == expected_target
     assert db_task.progress_value == 1
     assert db_task.progress_unit == "Steps"
-    assert launched == [f"start_{expected_pipelines[0]}"]
+    assert launched == [START_TASKS[expected_pipelines[0]]]
 
 
 def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
@@ -248,6 +288,47 @@ def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
     data = reload(db_task).data
     assert data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng2"
     assert data[f"{MAPPING_PLUGIN}_attributes"] == "m1"
+
+
+def test_routing_task_routes_numeric_attributes_by_their_metadata(monkeypatch):
+    """Multi-valued attributes run the numeric mapping, the others join the vector."""
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_numeric_distances.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={"year": INCLUDE_NUMERIC, "beats": INCLUDE_NUMERIC}
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    assert db_task.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"] == "beats"
+    assert db_task.data[f"{FEATURE_VECTOR}_attributes"] == "year"
+    assert "numeric mapping pipeline for multi-valued numeric attributes: ['beats']" in (
+        db_task.task_log
+    )
+    assert "feature vector for single-valued numeric attributes: ['year']" in (
+        db_task.task_log
+    )
+
+
+@pytest.mark.parametrize(
+    "selections,match",
+    [
+        ({"genre": INCLUDE_NUMERIC}, "'genre' is not a numeric attribute"),
+        ({"year": WU_PALMER_PLUGIN}, "'year' cannot run the pipeline 'wu_palmer'"),
+        ({"beats": MAPPING_PLUGIN}, "'beats' cannot run the pipeline 'mapping'"),
+    ],
+)
+def test_routing_task_rejects_a_pipeline_that_does_not_fit_the_attribute(
+    selections, match
+):
+    """The schema accepts any option, the attribute types are only known here."""
+    db_task = make_router_task(selections=selections)
+
+    with pytest.raises(ValueError, match=match):
+        run_task(start_routing_task, db_id=db_task.id)
 
 
 def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
@@ -422,6 +503,7 @@ def test_watchdog_reports_overtaking_a_slow_webhook_handler(server, inline):
         (MAPPING_PLUGIN, MAPPING_PLUGIN, "start_aggregator"),
         (MAPPING_PLUGIN, AGGREGATOR_PLUGIN, "start_mds"),
         (MAPPING_PLUGIN, MDS_PLUGIN, "finalize_pipeline"),
+        (NUMERIC_MAPPING_PIPELINE, MDS_PLUGIN, "finalize_pipeline"),
         (FINALIZE_PIPELINE, VECTOR_CONCAT_PLUGIN, "finalize_vector_concat"),
         (FINALIZE_PIPELINE, PCA_PLUGIN, "finalize_pca"),
     ],
@@ -508,6 +590,46 @@ def test_full_run_with_concatenation_and_pca(server, inline):
         "pca_metadata.json",
         "pca_plot.html",
     }
+
+
+def test_full_run_with_numeric_attributes_and_concatenation(server, inline):
+    """The numeric pipelines run inside the worker and feed the concatenation."""
+    db_task = make_router_task(
+        selections={
+            "attr1": WU_PALMER_PLUGIN,
+            "beats": INCLUDE_NUMERIC,
+            "year": INCLUDE_NUMERIC,
+        },
+        concatOutput=True,
+    )
+
+    run_inline(start_routing_task, db_task.id)
+    for plugin in (WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
+        complete_sub_task(db_task, plugin)
+    # numeric mapping: same chain as taxonomy mapping
+    for plugin in (MAPPING_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
+        complete_sub_task(db_task, plugin)
+    # the feature vector step starts the concatenation without any webhook
+    complete_sub_task(db_task, VECTOR_CONCAT_PLUGIN)
+
+    assert inline.errors == []
+    assert inline.results == [
+        "All Pipelines Completed Successfully And Concatenated Vector Created!"
+    ]
+    assert stored_file_names(db_task) == {"final_concatenated_vector.csv"}
+
+    db_task = reload(db_task)
+    mds_vectors = server.output_url(MDS_PLUGIN, "entity/vector")
+    feature_vectors = db_task.data["generated_files"][
+        f"{FEATURE_VECTOR}_numeric_vectors.zip"
+    ]
+    assert "/files/" in feature_vectors
+    # the queue order is the dimension order of the concatenated vector
+    assert server.payload(VECTOR_CONCAT_PLUGIN)["urls"] == "\n".join(
+        [mds_vectors, mds_vectors, feature_vectors]
+    )
+    assert db_task.progress_value == db_task.progress_target == 10
+    assert db_task.data["pipeline_queue"] == []
 
 
 def test_full_run_stops_after_the_concatenation_without_pca(server, inline):

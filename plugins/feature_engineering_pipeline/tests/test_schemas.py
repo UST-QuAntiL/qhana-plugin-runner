@@ -20,6 +20,7 @@ from marshmallow import EXCLUDE, ValidationError
 
 from feature_engineering_pipeline.routes import INPUT_FIELD_GROUPS
 from feature_engineering_pipeline.schemas import (
+    INCLUDE_NUMERIC,
     MAPPING_PLUGIN,
     NONE_PLUGIN,
     ONE_HOT_PLUGIN,
@@ -222,6 +223,21 @@ def test_routing_step_accepts_every_offered_option(option):
         {"pipeline_genre": option, "pipeline_instrumentation": WU_PALMER_PLUGIN}
     )
     assert result["pipeline_genre"] == option
+
+
+def test_routing_step_accepts_a_checked_numeric_attribute():
+    result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
+        {"pipeline_year": INCLUDE_NUMERIC, "pipeline_genre": WU_PALMER_PLUGIN}
+    )
+    assert result["pipeline_year"] == INCLUDE_NUMERIC
+
+
+def test_routing_step_accepts_a_numeric_attribute_as_the_only_selection():
+    """A checked numeric attribute counts as a selection."""
+    result = RoutingStepParametersSchema(unknown=EXCLUDE).load(
+        {"pipeline_genre": NONE_PLUGIN, "pipeline_year": INCLUDE_NUMERIC}
+    )
+    assert result == {"pipeline_genre": NONE_PLUGIN, "pipeline_year": INCLUDE_NUMERIC}
 
 
 def test_routing_step_rejects_unknown_field():

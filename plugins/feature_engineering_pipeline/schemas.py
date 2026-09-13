@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import textwrap
+from enum import Enum
 
 import marshmallow as ma
 from marshmallow import post_load
@@ -30,6 +30,9 @@ AGGREGATOR_PLUGIN = "aggregator"
 MDS_PLUGIN = "mds"
 VECTOR_CONCAT_PLUGIN = "vector_concat"
 PCA_PLUGIN = "pca"
+
+FEATURE_VECTOR = "feature_vector"
+NUMERIC_MAPPING_PIPELINE = "numeric_mapping"
 
 FINALIZE_PIPELINE = "finalize"
 
@@ -55,6 +58,14 @@ PIPELINE_OPTIONS = {
     ONE_HOT_PLUGIN: "One-Hot",
     MAPPING_PLUGIN: "Mapping",
 }
+
+# Value submitted by a checked numeric attribute checkbox in the routing step.
+# The server picks the pipeline from the attribute metadata.
+INCLUDE_NUMERIC = "numeric"
+
+# Attribute data types (``AttributeMetadata.description``) that are treated as
+# numeric. These are the numeric keys of ``DESERIALIZER_MAP``.
+NUMERIC_TYPES = {"number", "integer", "int", "float", "double"}
 
 PIPELINE_FIELD_PREFIX = "pipeline_"
 
@@ -434,13 +445,15 @@ class InputParametersSchema(FrontendFormBaseSchema):
 class RoutingStepParametersSchema(FrontendFormBaseSchema):
     """Second step schema.
 
-    The form renders one dropdown per taxonomy attribute with the field name
-    ``pipeline_<attribute>``. The attributes are only known at runtime, so the
-    fields are accepted dynamically instead of being declared statically.
+    The form renders one dropdown per taxonomy attribute and one checkbox per
+    numeric attribute, both with the field name ``pipeline_<attribute>``. The
+    attributes are only known at runtime, so the fields are accepted dynamically
+    instead of being declared statically.
     """
 
     @ma.validates_schema(pass_original=True)
     def validate_entries(self, data, original_data, **kwargs):
+        allowed_values = [*PIPELINE_OPTIONS, INCLUDE_NUMERIC]
         errors = {}
         for key in original_data:
             if not key.startswith(PIPELINE_FIELD_PREFIX):
@@ -450,17 +463,18 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
                 ]
                 continue
             value = original_data[key]
-            if value and value not in PIPELINE_OPTIONS.keys():
-                errors[key] = [f"'{value}' is not one of {list(PIPELINE_OPTIONS)}."]
+            if value and value not in allowed_values:
+                errors[key] = [f"'{value}' is not one of {allowed_values}."]
         if errors:
             raise ma.ValidationError(errors)
 
         # The partial loads of the micro frontend legitimately see an empty form.
         if self.partial:
             return
+        # A checked numeric attribute counts as a selection.
         if not any(value and value != NONE_PLUGIN for value in original_data.values()):
             raise ma.ValidationError(
-                "Select a pipeline for at least one attribute, "
+                "Select a pipeline or a numeric attribute for at least one attribute, "
                 "otherwise there is nothing to compute."
             )
 

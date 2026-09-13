@@ -20,7 +20,7 @@ import pytest
 from tests.utils import MockResponse, run_plugin_task
 
 from ..tasks import calculation_task
-from .data import EXPECTED, TEST_DATA
+from .data import EXPECTED, NUMERIC_EXPECTED, NUMERIC_TEST_DATA, TEST_DATA
 
 _MIMETYPES = {
     "csv": "text/csv",
@@ -79,11 +79,9 @@ def _run_aggregator(
     )
 
 
-def _assert_matches_expected(output):
+def _assert_matches_expected(output, expected_files=EXPECTED):
     assert output.file_type == "relation/attribute-distances"
     assert output.mimetype == "application/zip"
-
-    expected_files = EXPECTED
 
     with zipfile.ZipFile(output.file_storage_data) as archive:
         assert sorted(info.filename for info in archive.filelist) == sorted(
@@ -140,6 +138,44 @@ def test_aggregator_fails_on_non_numeric_element_distance(monkeypatch, bad_dista
 
     with pytest.raises(ValueError, match="is not a number"):
         _run_aggregator(monkeypatch, "json", element_distances)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_aggregator_numeric_attributes(monkeypatch):
+    """Numeric attributes are looked up directly, not via Sym Max Mean."""
+    entities_url = "http://example.com/entities.json"
+    metadata_url = "http://example.com/attribute_metadata.json"
+    distances_url = "http://example.com/element_distances.zip"
+
+    responses = {
+        entities_url: MockResponse(
+            entities_url,
+            "application/json",
+            text=NUMERIC_TEST_DATA["entities.json"],
+            headers={"X-Attribute-Metadata": metadata_url},
+        ),
+        metadata_url: MockResponse(
+            metadata_url,
+            "application/json",
+            text=NUMERIC_TEST_DATA["attribute_metadata.json"],
+        ),
+        distances_url: MockResponse.from_zip(
+            distances_url, NUMERIC_TEST_DATA["element-distances"]
+        ),
+    }
+
+    output = run_plugin_task(
+        monkeypatch,
+        calculation_task,  # pyright: ignore[reportArgumentType]
+        "aggregator.tasks",
+        responses,
+        {
+            "entitiesUrl": entities_url,
+            "elementDistancesUrl": distances_url,
+        },
+    )
+
+    _assert_matches_expected(output, NUMERIC_EXPECTED)
 
 
 @pytest.mark.usefixtures("celery_worker")

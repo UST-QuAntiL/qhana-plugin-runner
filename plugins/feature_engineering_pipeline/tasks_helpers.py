@@ -17,7 +17,7 @@ import requests
 from requests.exceptions import ConnectionError, Timeout
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
-from typing import Optional
+from typing import IO, Optional
 from urllib.parse import urljoin
 from zipfile import ZipFile
 
@@ -26,6 +26,7 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
+    ensure_dict,
     load_entities,
 )
 from qhana_plugin_runner.plugin_utils.interop import (
@@ -168,6 +169,70 @@ def load_entity_attributes(entities_url: str) -> set:
     return attributes
 
 
+def load_entities_with_metadata(
+    params: InputParameters,
+) -> tuple[list[dict], dict[str, AttributeMetadata]]:
+    """Load the entities (in file order) and the attribute metadata of a run.
+
+    The entity values are not deserialized through the metadata. The numeric
+    pipelines parse the raw values themselves (see ``numeric_attributes``).
+    """
+    with open_url(params.entities_metadata_url) as response:
+        metadata = {
+            element["ID"]: AttributeMetadata.from_dict(element)
+            for element in ensure_dict(load_entities(response, get_mimetype(response)))
+        }
+    with open_url(params.entities_url) as response:
+        entities = list(ensure_dict(load_entities(response, get_mimetype(response))))
+    return entities, metadata
+
+
+def task_file_url(task_data: ProcessingTask, file_info: TaskFile) -> str:
+    """External url of a task file, usable from inside a worker task.
+
+    ``LocalFileStore.get_task_file_url`` calls ``url_for(_external=True)``.
+    The worker has an app context but no request context and ``SERVER_NAME``
+    is unset, so the host is taken from the ``base_url`` recorded by the
+    routing step.
+    """
+    with current_app.test_request_context(base_url=task_data.data.get("base_url")):
+        return STORE.get_task_file_url(file_info, external=True)
+
+
+def persist_generated_file(
+    task_data: ProcessingTask,
+    retries: int,
+    file: IO | bytes,
+    file_name: str,
+    file_type: str,
+    as_result: bool,
+) -> str:
+    """Store a file the router generated itself and return its external url.
+
+    With ``as_result`` the file is a task result, otherwise a temporary file
+    that only the following pipeline steps read. A retry reuses the url of the
+    first attempt instead of writing a second file.
+    """
+    generated = task_data.data.get("generated_files", {})
+    if file_name in generated:
+        return generated[file_name]
+
+    if as_result:
+        file_info = save_intermediate_results(
+            task_data, retries, task_data.id, file, file_name, file_type
+        )
+    else:
+        file_info = STORE.persist_task_temp_file(
+            task_data.id, file, file_name, mimetype="application/zip"
+        )
+
+    url = task_file_url(task_data, file_info)
+    generated[file_name] = url
+    task_data.data["generated_files"] = generated
+    task_data.save(commit=True)
+    return url
+
+
 def calculate_recommendations(taxonomies_zip: ZipFile, zip_path: str) -> str:
     """
     Determines the optimal pipeline recommendation for a given taxonomy file.
@@ -282,19 +347,20 @@ def save_intermediate_results(
     task_data: ProcessingTask,
     retries: int,
     db_id: int,
-    file: bytes,
+    file: IO | bytes,
     file_name: str,
     file_type: str,
     mimetype: str = "application/zip",
-):
+) -> TaskFile:
+    """Store a result file once and return its record, also for a duplicate."""
     existing_files = TaskFile.get_task_result_files(db_id)
 
     # Race condition for file_exists should be handled, by the synchronization check in handle_webhook_task.
-    file_exists = any(f.file_name == file_name for f in existing_files)
+    existing = next((f for f in existing_files if f.file_name == file_name), None)
 
-    if not file_exists:
+    if existing is None:
         # Normal Execution: File doesn't exist, proceed with saving
-        STORE.persist_task_result(
+        file_info = STORE.persist_task_result(
             task_db_id=db_id,
             file_=file,
             file_name=file_name,
@@ -302,19 +368,20 @@ def save_intermediate_results(
             mimetype=mimetype,
         )
         TASK_LOGGER.info(f"Successfully stored intermediate file: {file_name}")
+        return file_info
 
+    # Check the reason for duplicate. Either parallel execution or the task saved intermediate output, then fails and restarts and wants to save again.
+    # In theory, parallel execution should no longer be possible.
+
+    if retries > 0:
+        msg = f"DEBUGGING: File {file_name} exists during retry {retries}. Skipping save."
+        TASK_LOGGER.info(msg)
+        task_data.add_task_log_entry(msg, commit=True)  # TODO: Remove this UI log
     else:
-        # Check the reason for duplicate. Either parallel execution or the task saved intermediate output, then fails and restarts and wants to save again.
-        # In theory, parallel execution should no longer be possible.
-
-        if retries > 0:
-            msg = f"DEBUGGING: File {file_name} exists during retry {retries}. Skipping save."
-            TASK_LOGGER.info(msg)
-            task_data.add_task_log_entry(msg, commit=True)  # TODO: Remove this UI log
-        else:
-            error_msg = f"BUG/RACE CONDITION: Parallel execution detected! File {file_name} already exists on attempt 0."
-            TASK_LOGGER.warning(error_msg)
-            task_data.add_task_log_entry(error_msg, commit=True)
+        error_msg = f"BUG/RACE CONDITION: Parallel execution detected! File {file_name} already exists on attempt 0."
+        TASK_LOGGER.warning(error_msg)
+        task_data.add_task_log_entry(error_msg, commit=True)
+    return existing
 
 
 def has_enough_pca_dimensions(

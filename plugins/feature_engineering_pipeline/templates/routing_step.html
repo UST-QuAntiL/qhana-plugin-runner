@@ -28,6 +28,14 @@ limitations under the License.
         min-width: 12rem;
     }
 
+    .numeric-attribute {
+        display: flex;
+        align-items: center;
+        column-gap: 0.5rem;
+        width: fit-content;
+        margin-bottom: 0.5rem;
+    }
+
     .input-params {
         margin-bottom: 1rem;
     }
@@ -58,11 +66,12 @@ limitations under the License.
         </dl>
     </fieldset>
     {% endif %}
+
     <p>Assign each taxonomy attribute to a pipeline path:</p>
     {% call forms.render_form(target="microfrontend") %}
     {% if attributes %}
     <fieldset>
-        <legend>Attributes</legend>
+        <legend>Taxonomy Attributes</legend>
         {%- for attr in attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
         {%- set recommended = recommendations.get(attr) -%}
@@ -82,6 +91,25 @@ limitations under the License.
     {% else %}
     <p>No taxonomy attributes were found in the provided metadata.</p>
     {% endif %}
+
+    <p>Select the numeric attributes to include:</p>
+    {% if numeric_attributes %}
+    <fieldset>
+        <legend>Numeric Attributes</legend>
+        <!--An unchecked checkbox is not submitted, so the attribute is excluded.-->
+        {%- for attr in numeric_attributes -%}
+        {%- set field_name = "pipeline_" + attr -%}
+        <label class="numeric-attribute" for="{{field_name}}">
+            <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
+                autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
+            {{attr}}
+        </label>
+        {%- endfor -%}
+    </fieldset>
+    {% else %}
+    <p>No numeric attributes were found in the provided metadata.</p>
+    {% endif %}
+
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend")}}
         {{ forms.submit("submit", action=process)}}

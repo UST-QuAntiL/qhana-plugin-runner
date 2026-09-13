@@ -15,47 +15,50 @@
 import itertools
 import json
 import math
+import sys
 from io import StringIO
 from pathlib import Path
-import sys
 from tempfile import SpooledTemporaryFile
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Any, Tuple
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
 from scipy.spatial import distance
 
-from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
-
-from .schemas import InputParametersSchema, InputParameters, DistanceMetricEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import (
     AttributeMetadata,
-    tuple_deserializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
 from . import MappingDistances
+from .schemas import (
+    NUMERIC_TYPES,
+    DistanceMetricEnum,
+    InputParameters,
+    InputParametersSchema,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
 def _load_input_parameters(
     db_id: int,
-) -> Tuple[str, str, str, List[str], DistanceMetricEnum]:
+) -> Tuple[str, str, str, list[str], DistanceMetricEnum]:
     """Load and parse the task input parameters from the database."""
     TASK_LOGGER.info(
         f"Starting new Mapping to Distances calculation task with db id '{db_id}'"
     )
-    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+    task_data: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -79,7 +82,7 @@ def _load_input_parameters(
 
     attributes_raw: str = params.attributes
     TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes_raw}'")
-    attributes: List[str] = [
+    attributes: list[str] = [
         attr.strip() for attr in attributes_raw.splitlines() if attr.strip()
     ]
 
@@ -117,8 +120,8 @@ def _extract_tax_name(attrib_meta: AttributeMetadata) -> str:
 
 
 def _get_element_list(
-    entity: Dict[str, Any], attribute: str, metadata: AttributeMetadata
-) -> List[str]:
+    entity: dict[str, Any], attribute: str, metadata: AttributeMetadata
+) -> list[str]:
     """Extracts taxonomy element IDs from an entity attribute field."""
     val = entity.get(attribute)
     if val is None:
@@ -136,7 +139,96 @@ def _get_element_list(
     return [str(val)]
 
 
-def _is_empty_or_nan(vector: List[float]) -> bool:
+def _parse_numeric_value(raw: Any) -> float | None:
+    """Parses a raw entity value into a float.
+
+    Returns ``None`` if the value is missing, blank, ``nan``, or cannot be parsed as a
+    float.
+    """
+    if raw is None:
+        return None
+    if isinstance(raw, (int, float)):
+        return None if isinstance(raw, float) and math.isnan(raw) else float(raw)
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        if not stripped or stripped.lower() == "nan":
+            return None
+        try:
+            return float(stripped)
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_numeric_vector(
+    entity: dict[str, Any], attribute: str, attrib_meta: AttributeMetadata
+) -> list[float] | None:
+    """Parses a numeric entity attribute field into a vector of floats.
+
+    A single-valued attribute gives a one-element vector. A multi-valued attribute
+    gives one element per value, in the order given by the (already deserialized)
+    entity value.
+
+    Returns ``None`` if the entity has no usable value for the attribute (missing,
+    empty, or containing an unparsable value).
+    """
+    val = entity.get(attribute)
+    if val is None:
+        return None
+
+    if attrib_meta.multiple:
+        if isinstance(val, (set, list, dict)) and not val:
+            return None
+        if isinstance(val, (set, list)):
+            raw_values = list(val)
+        elif isinstance(val, str):
+            raw_values = (
+                val.split(attrib_meta.separator) if attrib_meta.separator else [val]
+            )
+        else:
+            raw_values = [val]
+
+        vector = [_parse_numeric_value(v) for v in raw_values]
+        if not vector or any(v is None for v in vector):
+            return None
+        return vector
+
+    value = _parse_numeric_value(val)
+    return None if value is None else [value]
+
+
+def _numeric_element_map(
+    entities: list[dict[str, Any]], attribute: str, attrib_meta: AttributeMetadata
+) -> dict[str, list[float]]:
+    """Builds a map from a stable element key to its parsed numeric vector.
+
+    Mirrors the taxonomy ``tax_map`` structure (element id -> coordinate vector), but
+    elements are the distinct parsed values (or value vectors) instead of taxonomy
+    element IDs.
+    """
+    element_map: dict[str, list[float]] = {}
+    for entity in entities:
+        vector = _parse_numeric_vector(entity, attribute, attrib_meta)
+        if vector is None:
+            continue
+        element_map[json.dumps(vector)] = vector
+    return element_map
+
+
+def _get_numeric_element_list(
+    entity: dict[str, Any], attribute: str, attrib_meta: AttributeMetadata
+) -> list[str]:
+    """Extracts the numeric element key for an entity attribute field.
+
+    Mirrors :func:`_get_element_list`'s signature and return type, but returns at most
+    one key, since one entity contributes exactly one numeric element (a single value,
+    or a positional value vector for multi-valued attributes).
+    """
+    vector = _parse_numeric_vector(entity, attribute, attrib_meta)
+    return [] if vector is None else [json.dumps(vector)]
+
+
+def _is_empty_or_nan(vector: list[float]) -> bool:
     """Return ``True`` when a mapping vector is empty or contains any NaN values."""
 
     if not vector:
@@ -145,7 +237,7 @@ def _is_empty_or_nan(vector: List[float]) -> bool:
 
 
 def _calculate_vector_distance(
-    v1: List[float], v2: List[float], metric: DistanceMetricEnum
+    v1: list[float], v2: list[float], metric: DistanceMetricEnum
 ) -> float:
     """
     Calculates the distance between two coordinate vectors based on the selected metric.
@@ -218,9 +310,9 @@ def calculation_task(self, db_id: int) -> str:
             ensure_dict(load_entities(entities_data, mimetype), entities_metadata)
         )
 
-    taxonomy_mappings: Dict[str, Dict[str, List[float]]] = {}
+    taxonomy_mappings: dict[str, dict[str, list[float]]] = {}
     for zipped_file, file_name in get_files_from_zip_url(taxonomies_zip_url, mode="t"):
-        tax_json: Dict = json.load(zipped_file)
+        tax_json: dict = json.load(zipped_file)
         tax_name = file_name[:-5] if file_name.endswith(".json") else file_name
 
         # Build map: item_id -> numerical vector coordinates
@@ -237,12 +329,24 @@ def calculation_task(self, db_id: int) -> str:
             element_distances = []
 
             attrib_meta = entities_metadata.get(attribute)
-            tax_name = _extract_tax_name(attrib_meta)
-            tax_map = taxonomy_mappings.get(tax_name, {})
+            is_numeric = (
+                attrib_meta is not None and attrib_meta.description in NUMERIC_TYPES
+            )
+
+            if is_numeric:
+                tax_map = _numeric_element_map(entities, attribute, attrib_meta)
+            else:
+                tax_name = _extract_tax_name(attrib_meta)
+                tax_map = taxonomy_mappings.get(tax_name, {})
 
             unique_elements = set()
             for entitiy in entities:
-                entity_names = _get_element_list(entitiy, attribute, attrib_meta)
+                if is_numeric:
+                    entity_names = _get_numeric_element_list(
+                        entitiy, attribute, attrib_meta
+                    )
+                else:
+                    entity_names = _get_element_list(entitiy, attribute, attrib_meta)
                 unique_elements.update(entity_names)
 
             elements = sorted(list(unique_elements))

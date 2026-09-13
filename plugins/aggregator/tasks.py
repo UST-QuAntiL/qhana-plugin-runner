@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import json
+import math
 from io import StringIO
 from itertools import combinations
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
@@ -39,8 +40,65 @@ from . import AttributeAggregator
 
 TASK_LOGGER = get_task_logger(__name__)
 
+# Attribute data types (``AttributeMetadata.description``) treated as numeric.
+NUMERIC_TYPES = {"number", "integer", "int", "float", "double"}
 
-def _load_entities(entities_url: str) -> List[dict]:
+
+def _parse_numeric_value(raw: Any) -> Optional[float]:
+    """Parse a raw value into a float, or ``None`` if missing/unparseable."""
+    if raw is None:
+        return None
+    if isinstance(raw, (int, float)):
+        return None if isinstance(raw, float) and math.isnan(raw) else float(raw)
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        if not stripped or stripped.lower() == "nan":
+            return None
+        try:
+            return float(stripped)
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_numeric_vector(
+    entity: dict, attribute: str, attrib_meta: AttributeMetadata
+) -> Optional[List[float]]:
+    """Parse a numeric attribute field into a vector, mirroring mapping_distances.
+
+    Returns ``None`` if the entity has no usable value for the attribute.
+    """
+    val = entity.get(attribute)
+    if val is None:
+        return None
+
+    if attrib_meta.multiple:
+        if isinstance(val, (set, list, dict)) and not val:
+            return None
+        if isinstance(val, (set, list)):
+            raw_values = list(val)
+        elif isinstance(val, str):
+            raw_values = (
+                val.split(attrib_meta.separator) if attrib_meta.separator else [val]
+            )
+        else:
+            raw_values = [val]
+
+        vector = [_parse_numeric_value(v) for v in raw_values]
+        if not vector or any(v is None for v in vector):
+            return None
+        return vector
+
+    value = _parse_numeric_value(val)
+    return None if value is None else [value]
+
+
+def _numeric_element_key(vector: List[float]) -> str:
+    """Build the same stable string key mapping_distances uses for a vector."""
+    return json.dumps(vector)
+
+
+def _load_entities(entities_url: str) -> Tuple[List[dict], Dict[str, AttributeMetadata]]:
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
         attribute_metadata: dict[str, AttributeMetadata] = {}
@@ -67,7 +125,7 @@ def _load_entities(entities_url: str) -> List[dict]:
             ensure_dict(load_entities(entities_data, mimetype), attribute_metadata)
         )
 
-    return entities
+    return entities, attribute_metadata
 
 
 def _load_element_distances(
@@ -160,6 +218,27 @@ def _attribute_distance(
     return (avg1 + avg2) / 2.0
 
 
+def _numeric_attribute_distance(
+    ent1: dict,
+    ent2: dict,
+    attribute: str,
+    attrib_meta: AttributeMetadata,
+    element_distances: Dict[Tuple[str, str], float],
+) -> Optional[float]:
+    """Look up a numeric attribute's element distance directly, no Sym Max Mean.
+
+    A numeric attribute's value is one element for the whole entity, not a
+    set of elements like a categorical multi-valued attribute.
+    """
+    v1 = _parse_numeric_vector(ent1, attribute, attrib_meta)
+    v2 = _parse_numeric_vector(ent2, attribute, attrib_meta)
+    if v1 is None or v2 is None:
+        return None
+    return _lookup_element_distance(
+        element_distances, _numeric_element_key(v1), _numeric_element_key(v2), attribute
+    )
+
+
 @CELERY.task(
     name=f"{AttributeAggregator.instance.identifier}.calculation_task", bind=True
 )
@@ -178,18 +257,27 @@ def calculation_task(self, db_id: int) -> str:
     entities_url = params["entitiesUrl"]
     element_distances_url = params["elementDistancesUrl"]
 
-    entities = _load_entities(entities_url)
+    entities, attribute_metadata = _load_entities(entities_url)
     element_distances_by_attributes = _load_element_distances(element_distances_url)
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     zip_file = ZipFile(tmp_zip_file, "w")
 
     for attribute, element_distances in element_distances_by_attributes.items():
+        attrib_meta = attribute_metadata.get(attribute)
+        is_numeric = attrib_meta is not None and attrib_meta.description in NUMERIC_TYPES
+
         attribute_distances = [
             {
                 "source": ent1["ID"],
                 "target": ent2["ID"],
-                "distance": _attribute_distance(ent1, ent2, attribute, element_distances),
+                "distance": (
+                    _numeric_attribute_distance(
+                        ent1, ent2, attribute, attrib_meta, element_distances
+                    )
+                    if is_numeric
+                    else _attribute_distance(ent1, ent2, attribute, element_distances)
+                ),
             }
             for ent1, ent2 in combinations(entities, 2)
         ]
