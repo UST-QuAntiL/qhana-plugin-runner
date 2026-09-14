@@ -54,7 +54,19 @@ from .tasks import (
     start_routing_task,
 )
 
-# Sections of the micro frontend: (title, field names, expanded by default).
+# Sections of the pipeline settings: (title, field names). The micro frontend renders
+# them once and the routing step renders them once per taxonomy attribute.
+PIPELINE_SETTINGS_GROUPS = (
+    ("Wu-Palmer Settings", ("root_is_part_of_hierarchy",)),
+    ("Mapping Settings", ("distance_metric",)),
+    ("Transformer Settings", ("transformer",)),
+    (
+        "MDS Settings",
+        ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
+    ),
+)
+
+# Sections of the micro frontend: (title, field names).
 INPUT_FIELD_GROUPS = (
     (
         "Basic Data",
@@ -64,17 +76,9 @@ INPUT_FIELD_GROUPS = (
             "taxonomies_zip_url",
             "include_intermediate_results_in_output",
         ),
-        True,
     ),
-    ("Wu-Palmer Settings", ("root_is_part_of_hierarchy",), False),
-    ("Mapping Settings", ("distance_metric",), False),
-    ("Transformer Settings", ("transformer",), False),
-    (
-        "MDS Settings",
-        ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
-        False,
-    ),
-    ("Vector Concatenation Settings", ("concat_output", "output_format"), True),
+    *PIPELINE_SETTINGS_GROUPS,
+    ("Vector Concatenation Settings", ("concat_output", "output_format")),
     (
         "PCA Settings",
         (
@@ -85,7 +89,6 @@ INPUT_FIELD_GROUPS = (
             "tol",
             "iterated_power",
         ),
-        False,
     ),
 )
 
@@ -93,6 +96,14 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 # --- HELPER FUNCTION FOR UIs ---
+def field_groups(groups: tuple[tuple[str, tuple[str, ...]], ...]) -> list[dict]:
+    """Return the template sections for ``(title, field names)`` pairs."""
+    return [
+        {"title": title, "schema": InputParametersSchema(only=field_names)}
+        for title, field_names in groups
+    ]
+
+
 def render_step(schema, data, errors, process_url):
     return Response(
         render_template(
@@ -256,21 +267,12 @@ class MicroFrontend(MethodView):
         default_values.update(data_dict)
         data_dict = default_values
 
-        groups = [
-            {
-                "title": title,
-                "expanded": expanded,
-                "schema": InputParametersSchema(only=field_names),
-            }
-            for title, field_names, expanded in INPUT_FIELD_GROUPS
-        ]
-
         return Response(
             render_template(
                 "router_form.html",
                 name=Router.instance.name,
                 version=Router.instance.version,
-                groups=groups,
+                groups=field_groups(INPUT_FIELD_GROUPS),
                 values=data_dict,
                 valid=valid,
                 errors=errors,
@@ -365,6 +367,7 @@ class RoutingStepFrontend(MethodView):
                 numeric_attributes=numeric_attributes,
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
+                settings_groups=field_groups(PIPELINE_SETTINGS_GROUPS),
                 input_params=input_params,
                 values=data,
                 valid=valid,

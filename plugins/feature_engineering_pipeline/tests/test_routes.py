@@ -173,7 +173,7 @@ def test_microfrontend_renders_every_field_group(client):
     resp = client.get(url_for(f"{ROUTER_BLP.name}.MicroFrontend"))
     body = resp.get_data(as_text=True)
 
-    for title, _field_names, _expanded in INPUT_FIELD_GROUPS:
+    for title, _field_names in INPUT_FIELD_GROUPS:
         assert title in body
 
 
@@ -236,6 +236,27 @@ def test_routing_step_frontend_shows_the_inputs_of_the_first_step(client):
     )
 
     assert "http://example.com/step-one.csv" in body
+
+
+def test_routing_step_frontend_renders_the_pipeline_settings_per_attribute(client):
+    """Each attribute gets its own copy of the step 1 settings, prefilled and not submitted."""
+    schema = InputParametersSchema()
+    db_task = ProcessingTask(
+        task_name="router_test",
+        parameters=schema.dumps(schema.load(router_payload(distanceMetric="cosine"))),
+    )
+    db_task.data["taxonomy_attributes"] = ["instrumentation", "genre"]
+    db_task.save(commit=True)
+
+    body = client.get(_path("RoutingStepFrontend", db_id=db_task.id)).get_data(
+        as_text=True
+    )
+
+    for attr in ("instrumentation", "genre"):
+        assert f'id="pipeline_{attr}__distance_metric"' in body
+    assert 'name="distanceMetric"' not in body
+    assert 'value="cosine" selected' in body
+    assert schema.fields["transformer"].metadata["description"] in body
 
 
 def test_routing_step_frontend_without_attributes(client):

@@ -15,43 +15,18 @@ limitations under the License.
 -->
 
 {% extends "simple_template.html" %}
+{% import "pipeline_settings_section.html" as components %}
 
 {% block head %}
 {{ super() }}
-<style>
-    .router-section {
-        border: 1px solid rgba(128, 128, 128, 0.4);
-        border-radius: 8px;
-        padding: 0.4em 0.8em;
-        margin-bottom: 0.8em;
-    }
-
-    .router-section>summary {
-        font-weight: bold;
-        font-size: 1.05em;
-        padding: 0.4em 0;
-        cursor: pointer;
-    }
-
-    .router-section[open]>summary {
-        border-bottom: 1px solid rgba(128, 128, 128, 0.25);
-        margin-bottom: 0.6em;
-    }
-
-    .router-section .qhana-form-field:first-of-type {
-        margin-top: 0;
-    }
-</style>
+{{ components.settings_section_styles() }}
 {% endblock head %}
 
 {% block content %}
 <div class="qhana-microfrontend">
     {% call forms.render_form(target="microfrontend") %}
     {% for group in groups %}
-    <details class="router-section" {% if group.expanded %}open{% endif %}>
-        <summary>{{ group.title }}</summary>
-        {{ forms.render_fields(group.schema, values=values, errors=errors) }}
-    </details>
+    {{ components.settings_section(group.title, group.schema, values=values, errors=errors, expanded=true) }}
     {% endfor %}
     <div class="qhana-form-buttons">
         {{ forms.submit("validate", target="microfrontend") }}
@@ -63,39 +38,17 @@ limitations under the License.
 
 {% block script %}
 {{ super() }}
+{{ components.settings_section_script() }}
 
 <script>
-    // the shared height monitor measures the document element, which never shrinks below the
-    // iframe height, so collapsing a section needs an explicitly measured content height
-    function reportContentHeight() {
-        const bodyStyle = window.getComputedStyle(document.body);
-        const height = Math.ceil(
-            document.body.getBoundingClientRect().height
-            + parseFloat(bodyStyle.marginTop)
-            + parseFloat(bodyStyle.marginBottom)
-        );
-        const state = window._qhana_microfrontend_state;
-        if (state != null) {
-            state.height = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
-        }
-        sendMessage({ type: "ui-resize", height: height });
-    }
-
-    // resize the window if a section is toggled
-    document.querySelectorAll("details.router-section").forEach(section => {
-        section.addEventListener("toggle", () => {
-            window.requestAnimationFrame(reportContentHeight);
-        });
-    });
-
     const concatOutput = document.getElementById("concat_output");
     const reduceDimensions = document.getElementById("reduce_dimensions");
     if (concatOutput != null) {
-        const concatSection = concatOutput.closest("details.router-section");
+        const concatSection = concatOutput.closest("details.settings-section");
         const pcaSection = concatSection?.nextElementSibling;
 
         function openPcaSettings() {
-            if (concatOutput.checked && pcaSection?.matches("details.router-section")) {
+            if (concatOutput.checked && pcaSection?.matches("details.settings-section")) {
                 pcaSection.open = true;
             }
         }

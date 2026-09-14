@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 {% extends "simple_template.html" %}
+{% import "pipeline_settings_section.html" as components %}
 {% block head %}
 {{ super() }}
+{{ components.settings_section_styles() }}
 <style>
     .attribute-row {
         display: flex;
@@ -48,6 +50,38 @@ limitations under the License.
         margin: 0 0 0.5rem 0;
         word-break: break-all;
     }
+
+    .attribute-block {
+        margin-bottom: 0.5rem;
+    }
+
+    .attribute-block .attribute-row {
+        margin-bottom: 0;
+    }
+
+    .attribute-settings-button {
+        flex-shrink: 0;
+        margin-inline-start: auto;
+        padding: 0.3em 0.7em;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .attribute-settings-button::after {
+        content: " \25BE";
+    }
+
+    .attribute-settings-button[aria-expanded="true"]::after {
+        content: " \25B4";
+    }
+
+    .attribute-settings {
+        margin: 0.4rem 0 0.8rem 0;
+    }
+
+    .attribute-settings .settings-section:last-child {
+        margin-bottom: 0;
+    }
 </style>
 {% endblock head %}
 
@@ -72,19 +106,35 @@ limitations under the License.
     {% if attributes %}
     <fieldset>
         <legend>Taxonomy Attributes</legend>
+        <!--
+        The settings fields are rendered without a `name` attribute, so they are not submitted with the form yet.
+        The backend does not accept per-attribute settings fields (see RoutingStepParametersSchema.validate_entries).
+        The fields are prefilled with the settings from step 1.
+        -->
         {%- for attr in attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
+        {%- set settings_id = field_name + "__settings" -%}
         {%- set recommended = recommendations.get(attr) -%}
-        <div class="attribute-row">
-            <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
-            <select class="qhana-form-input" name="{{field_name}}" id="{{field_name}}" autocomplete="off">
-                {%- for key, display_name in pipeline_options.items() -%}
-                <option value="{{key}}" {% if key==values.get(field_name) %}selected{% endif %}>
-                    <!--If there exists a recomendation, indicate the recomended options-->
-                    {{display_name}} {% if recommended and key == recommended %}(Recommended){% endif %}
-                </option>
+        <div class="attribute-block">
+            <div class="attribute-row">
+                <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
+                <select class="qhana-form-input" name="{{field_name}}" id="{{field_name}}" autocomplete="off">
+                    {%- for key, display_name in pipeline_options.items() -%}
+                    <option value="{{key}}" {% if key==values.get(field_name) %}selected{% endif %}>
+                        <!--If there exists a recomendation, indicate the recomended options-->
+                        {{display_name}} {% if recommended and key == recommended %}(Recommended){% endif %}
+                    </option>
+                    {%- endfor -%}
+                </select>
+                <button type="button" class="attribute-settings-button" aria-expanded="false"
+                    aria-controls="{{settings_id}}"><span aria-hidden="true">&#9881;</span> Settings</button>
+            </div>
+            <div class="attribute-settings" id="{{settings_id}}" hidden>
+                {%- for group in settings_groups -%}
+                {{ components.settings_section(group.title, group.schema, values=input_params,
+                id_prefix=field_name ~ "__", include_names=false) }}
                 {%- endfor -%}
-            </select>
+            </div>
         </div>
         {%- endfor -%}
     </fieldset>
@@ -120,3 +170,24 @@ limitations under the License.
     {% endcall %}
 </div>
 {% endblock content %}
+
+{% block script %}
+{{ super() }}
+{{ components.settings_section_script() }}
+
+<script>
+    document.querySelectorAll(".attribute-block").forEach(block => {
+        const button = block.querySelector("button.attribute-settings-button");
+        const panel = block.querySelector(".attribute-settings");
+        if (button == null || panel == null) {
+            return;
+        }
+
+        button.addEventListener("click", () => {
+            panel.hidden = !panel.hidden;
+            button.setAttribute("aria-expanded", String(!panel.hidden));
+            window.requestAnimationFrame(reportContentHeight);
+        });
+    });
+</script>
+{% endblock script %}
