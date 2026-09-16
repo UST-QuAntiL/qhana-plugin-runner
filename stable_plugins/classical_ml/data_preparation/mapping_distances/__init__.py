@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import textwrap
-from typing import ClassVar, Optional
+from typing import Optional
 
 from flask import Blueprint, Flask
 
@@ -21,7 +21,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _name = "mapping-distances"
-_version = "v0.1.0"
+_version = "v0.2.0"
 _identifier = plugin_identifier(_name, _version)
 
 
@@ -37,22 +37,26 @@ class MappingDistances(QHAnaPluginBase):
     version = _version
     description = textwrap.dedent(
         r"""
-    A plugin to create pairwise element distances for taxanomy mappings.
+    A plugin to create pairwise element distances for taxanomy mappings and numeric attributes.
     \
-    Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.  
-    Returns the max float value if the vectors are empty, i.e. no mapping is assigned.  
-    Throws an error if the mapping vectors do not have the same size.  
+    Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.
+    Returns the max float value if the vectors are empty, i.e. no mapping is assigned.
+    Throws an error if the taxonomy mapping vectors do not have the same size.
+    \
+    Numeric attributes (attribute metadata description `number`, `integer`, `int`, `float` or `double`) need no taxonomy.
+    Each distinct value (or list of values) is one element and is used directly as its mapping vector.
+    A multi-valued numeric attribute gives one vector per entity, with one dimension per value.
+    Vectors with fewer values than the longest vector are padded with zeros.
+    Entities without a valid numeric value are skipped.
     \
     Different available metrics:
-    **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
-    **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
-    **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
+    **Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$\
+    **Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$\
+    **Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$\
     **Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
 """
     ).strip()
     tags = ["preprocessing", "distance-calculation"]
-
-    instance: ClassVar["MappingDistances"]
 
     _blueprint: Optional[Blueprint] = None
 
@@ -69,6 +73,6 @@ class MappingDistances(QHAnaPluginBase):
 try:
     from . import routes  # noqa: F401,E402
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing the routes will fail,
+    # because the dependencies are not installed yet.
     pass

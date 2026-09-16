@@ -19,7 +19,7 @@ import sys
 from io import StringIO
 from pathlib import Path
 from tempfile import SpooledTemporaryFile
-from typing import Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
@@ -42,7 +42,6 @@ from qhana_plugin_runner.storage import STORE
 
 from . import MappingDistances
 from .schemas import (
-    NUMERIC_TYPES,
     DistanceMetricEnum,
     InputParameters,
     InputParametersSchema,
@@ -50,15 +49,17 @@ from .schemas import (
 
 TASK_LOGGER = get_task_logger(__name__)
 
+NUMERIC_TYPES = {"number", "integer", "int", "float", "double"}
+
 
 def _load_input_parameters(
     db_id: int,
-) -> Tuple[str, str, str, list[str], DistanceMetricEnum]:
+) -> Tuple[str, str, str, List[str], DistanceMetricEnum]:
     """Load and parse the task input parameters from the database."""
     TASK_LOGGER.info(
         f"Starting new Mapping to Distances calculation task with db id '{db_id}'"
     )
-    task_data: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
+    task_data: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
 
     if task_data is None:
         msg = f"Could not load task data with id {db_id} to read parameters!"
@@ -82,7 +83,7 @@ def _load_input_parameters(
 
     attributes_raw: str = params.attributes
     TASK_LOGGER.info(f"Loaded input parameters from db: attributes='{attributes_raw}'")
-    attributes: list[str] = [
+    attributes: List[str] = [
         attr.strip() for attr in attributes_raw.splitlines() if attr.strip()
     ]
 
@@ -120,8 +121,8 @@ def _extract_tax_name(attrib_meta: AttributeMetadata) -> str:
 
 
 def _get_element_list(
-    entity: dict[str, Any], attribute: str, metadata: AttributeMetadata
-) -> list[str]:
+    entity: Dict[str, Any], attribute: str, metadata: AttributeMetadata
+) -> List[str]:
     """Extracts taxonomy element IDs from an entity attribute field."""
     val = entity.get(attribute)
     if val is None:
@@ -142,8 +143,8 @@ def _get_element_list(
 def _parse_numeric_value(raw: Any) -> float | None:
     """Parses a raw entity value into a float.
 
-    Returns ``None`` if the value is missing, blank, ``nan``, or cannot be parsed as a
-    float.
+    Returns ``None`` if the value is missing, blank, ``nan``, or cannot be
+    parsed as a float.
     """
     if raw is None:
         return None
@@ -165,12 +166,12 @@ def _parse_numeric_vector(
 ) -> list[float] | None:
     """Parses a numeric entity attribute field into a vector of floats.
 
-    A single-valued attribute gives a one-element vector. A multi-valued attribute
-    gives one element per value, in the order given by the (already deserialized)
-    entity value.
+    A single-valued attribute gives a one-element vector. A multi-valued
+    attribute gives one element per value, in the order given by the
+    (already deserialized) entity value.
 
-    Returns ``None`` if the entity has no usable value for the attribute (missing,
-    empty, or containing an unparsable value).
+    Returns ``None`` if the entity has no usable value for the attribute
+    (missing, empty, or containing an unparsable value).
     """
     val = entity.get(attribute)
     if val is None:
@@ -197,14 +198,37 @@ def _parse_numeric_vector(
     return None if value is None else [value]
 
 
+def _pad_to_common_dimension(
+    element_map: dict[str, list[float]],
+) -> dict[str, list[float]]:
+    """Pads all vectors of an element map with zeros to the longest length.
+
+    Distance metrics require vectors of equal length, but a dataset may assign
+    mappings of different lengths to the elements of one attribute. Padding
+    here keeps the plugin independent of the dataset importer.
+
+    A map where every vector is empty keeps the empty vectors, so that
+    :func:`_is_empty_or_nan` still reports the missing mappings.
+    """
+    dimension = max((len(vector) for vector in element_map.values()), default=0)
+    return {
+        key: vector + [0.0] * (dimension - len(vector))
+        for key, vector in element_map.items()
+    }
+
+
 def _numeric_element_map(
     entities: list[dict[str, Any]], attribute: str, attrib_meta: AttributeMetadata
 ) -> dict[str, list[float]]:
     """Builds a map from a stable element key to its parsed numeric vector.
 
-    Mirrors the taxonomy ``tax_map`` structure (element id -> coordinate vector), but
-    elements are the distinct parsed values (or value vectors) instead of taxonomy
-    element IDs.
+    Mirrors the taxonomy ``tax_map`` structure (element id -> coordinate vector)
+    , but elements are the distinct parsed values (or value vectors) instead of
+    taxonomy element IDs.
+
+    Vectors are padded by :func:`_pad_to_common_dimension`. The keys keep the
+    unpadded vector, so consumers such as the aggregator can derive them from
+    the entity values.
     """
     element_map: dict[str, list[float]] = {}
     for entity in entities:
@@ -212,7 +236,8 @@ def _numeric_element_map(
         if vector is None:
             continue
         element_map[json.dumps(vector)] = vector
-    return element_map
+
+    return _pad_to_common_dimension(element_map)
 
 
 def _get_numeric_element_list(
@@ -220,15 +245,15 @@ def _get_numeric_element_list(
 ) -> list[str]:
     """Extracts the numeric element key for an entity attribute field.
 
-    Mirrors :func:`_get_element_list`'s signature and return type, but returns at most
-    one key, since one entity contributes exactly one numeric element (a single value,
-    or a positional value vector for multi-valued attributes).
+    Mirrors :func:`_get_element_list`'s signature and return type, but returns
+    at most one key, since one entity contributes exactly one numeric element
+    (a single value, or a positional value vector for multi-valued attributes).
     """
     vector = _parse_numeric_vector(entity, attribute, attrib_meta)
     return [] if vector is None else [json.dumps(vector)]
 
 
-def _is_empty_or_nan(vector: list[float]) -> bool:
+def _is_empty_or_nan(vector: List[float]) -> bool:
     """Return ``True`` when a mapping vector is empty or contains any NaN values."""
 
     if not vector:
@@ -237,7 +262,7 @@ def _is_empty_or_nan(vector: list[float]) -> bool:
 
 
 def _calculate_vector_distance(
-    v1: list[float], v2: list[float], metric: DistanceMetricEnum
+    v1: List[float], v2: List[float], metric: DistanceMetricEnum
 ) -> float:
     """
     Calculates the distance between two coordinate vectors based on the selected metric.
@@ -310,9 +335,9 @@ def calculation_task(self, db_id: int) -> str:
             ensure_dict(load_entities(entities_data, mimetype), entities_metadata)
         )
 
-    taxonomy_mappings: dict[str, dict[str, list[float]]] = {}
+    taxonomy_mappings: Dict[str, Dict[str, List[float]]] = {}
     for zipped_file, file_name in get_files_from_zip_url(taxonomies_zip_url, mode="t"):
-        tax_json: dict = json.load(zipped_file)
+        tax_json: Dict = json.load(zipped_file)
         tax_name = file_name[:-5] if file_name.endswith(".json") else file_name
 
         # Build map: item_id -> numerical vector coordinates
@@ -321,7 +346,7 @@ def calculation_task(self, db_id: int) -> str:
             mapping_vector = ent_node.get("mapping", [])
             item_map[ent_node["ID"]] = [float(x) for x in mapping_vector]
 
-        taxonomy_mappings[tax_name] = item_map
+        taxonomy_mappings[tax_name] = _pad_to_common_dimension(item_map)
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     with ZipFile(tmp_zip_file, "w") as zip_file:

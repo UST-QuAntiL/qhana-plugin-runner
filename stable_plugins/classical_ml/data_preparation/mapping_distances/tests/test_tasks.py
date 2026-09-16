@@ -350,6 +350,69 @@ def test_calculation_task_multiple_attributes(tmp_path):
     assert color_distances[("blue", "red")] == pytest.approx(math.sqrt(2))
 
 
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_taxonomy_mappings_length_mismatch_padded(tmp_path):
+    """Taxonomy mappings shorter than the longest one are padded with zeros, so
+    datasets that export mappings of different lengths can be processed."""
+    taxonomy = {
+        "entities": [
+            {"ID": "red", "mapping": [1.0, 2.0]},
+            {"ID": "blue", "mapping": [1.0, 2.0, 3.0]},
+            {"ID": "green", "mapping": [4.0]},
+        ]
+    }
+    taxonomies_zip_url = _write_taxonomy_zip(
+        tmp_path / "taxonomies.zip", {"color": taxonomy}
+    )
+
+    metadata = [
+        {
+            "ID": "color",
+            "type": "color",
+            "title": "",
+            "description": "ref",
+            "multiple": False,
+            "ordered": False,
+            "separator": ";",
+            "refTarget": "taxonomies.zip:color.json",
+        }
+    ]
+    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
+
+    entities = [
+        {"ID": "e1", "href": "", "color": "red"},
+        {"ID": "e2", "href": "", "color": "blue"},
+        {"ID": "e3", "href": "", "color": "green"},
+    ]
+    entities_url = _write_json(tmp_path / "entities.json", entities)
+
+    params = InputParameters(
+        entities_url=entities_url,
+        entities_metadata_url=entities_metadata_url,
+        taxonomies_zip_url=taxonomies_zip_url,
+        attributes="color",
+        distance_metric=DistanceMetricEnum.euclidean,
+    )
+    db_id = _enqueue_processing_task(params)
+
+    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
+
+    DB.session.expire_all()
+    task = ProcessingTask.get_by_id(db_id)
+    assert task is not None
+
+    distances = {
+        (entry["source"], entry["target"]): entry["distance"]
+        for entry in _read_result_zip(task)["color.json"]
+    }
+    assert len(distances) == 9
+    # "red" is compared as [1, 2, 0] and "green" as [4, 0, 0].
+    assert distances[("red", "blue")] == pytest.approx(3.0)
+    assert distances[("red", "green")] == pytest.approx(math.sqrt(13))
+    assert distances[("green", "blue")] == pytest.approx(math.sqrt(22))
+    assert distances[("green", "green")] == pytest.approx(0.0)
+
+
 def _numeric_metadata(attr_id: str, description: str, multiple: bool = False) -> dict:
     """Metadata for a numeric attribute (no ``refTarget``, no taxonomy involved)."""
     return {
@@ -509,9 +572,10 @@ def test_calculation_task_numeric_multi_valued_missing_value_excluded(tmp_path):
 
 
 @pytest.mark.usefixtures("celery_worker")
-def test_calculation_task_numeric_multi_valued_length_mismatch_raises(tmp_path):
-    """Two multi-valued numeric elements of different length raise a ``ValueError``,
-    just as mismatched taxonomy mapping vectors do."""
+def test_calculation_task_numeric_multi_valued_length_mismatch_padded(tmp_path):
+    """Multi-valued numeric elements shorter than the longest one are padded
+    with zeros, like the taxonomy mappings. The element keys keep the unpadded
+    values."""
     taxonomies_zip_url = _write_taxonomy_zip(tmp_path / "taxonomies.zip", {})
 
     metadata = [_numeric_metadata("scores", "integer", multiple=True)]
@@ -520,6 +584,7 @@ def test_calculation_task_numeric_multi_valued_length_mismatch_raises(tmp_path):
     entities = [
         {"ID": "e1", "href": "", "scores": [1, 2]},
         {"ID": "e2", "href": "", "scores": [1, 2, 3]},
+        {"ID": "e3", "href": "", "scores": [4]},
     ]
     entities_url = _write_json(tmp_path / "entities.json", entities)
 
@@ -532,9 +597,25 @@ def test_calculation_task_numeric_multi_valued_length_mismatch_raises(tmp_path):
     )
     db_id = _enqueue_processing_task(params)
 
-    async_result = calculation_task.apply_async(kwargs={"db_id": db_id})
-    with pytest.raises(ValueError, match="not have the same length"):
-        async_result.get(timeout=30)
+    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
+
+    DB.session.expire_all()
+    task = ProcessingTask.get_by_id(db_id)
+    assert task is not None
+
+    distances = {
+        (
+            tuple(_decode_numeric_key(entry["source"])),
+            tuple(_decode_numeric_key(entry["target"])),
+        ): entry["distance"]
+        for entry in _read_result_zip(task)["scores.json"]
+    }
+    assert len(distances) == 9
+    # [1, 2] is compared as [1, 2, 0] and [4] as [4, 0, 0].
+    assert distances[((1.0, 2.0), (1.0, 2.0, 3.0))] == pytest.approx(3.0)
+    assert distances[((1.0, 2.0), (4.0,))] == pytest.approx(math.sqrt(13))
+    assert distances[((4.0,), (1.0, 2.0, 3.0))] == pytest.approx(math.sqrt(22))
+    assert distances[((4.0,), (4.0,))] == pytest.approx(0.0)
 
 
 @pytest.mark.usefixtures("celery_worker")
