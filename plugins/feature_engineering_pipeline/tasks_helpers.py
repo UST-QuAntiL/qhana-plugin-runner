@@ -17,6 +17,7 @@ import requests
 from requests.exceptions import ConnectionError, Timeout
 from celery.utils.log import get_task_logger
 from flask.globals import current_app
+from marshmallow import EXCLUDE
 from typing import IO, Optional
 from urllib.parse import urljoin
 from zipfile import ZipFile
@@ -42,6 +43,7 @@ from .schemas import (
     WU_PALMER_PLUGIN,
     MAPPING_PLUGIN,
     InputParameters,
+    InputParametersSchema,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -130,6 +132,23 @@ def plugin_process_url(task_data: ProcessingTask, plugin: str) -> str:
     the plugin's processing endpoint.
     """
     return get_plugin_endpoint(task_data.data["plugin_urls"][plugin])
+
+
+def load_params(task_data: ProcessingTask) -> InputParameters:
+    """Return the input parameters that apply to the running pipeline group.
+
+    A group carries the settings it overrides, see ``start_routing_task``.
+    """
+    parameters = json.loads(task_data.parameters or "{}")
+    parameters.update(task_data.data.get("current_settings", {}))
+    return InputParametersSchema(unknown=EXCLUDE).load(parameters)
+
+
+def pipeline_label(task_data: ProcessingTask) -> str:
+    """Return the label of the running pipeline group, used in its result file names."""
+    return task_data.data.get("current_pipeline_label") or task_data.data.get(
+        "current_pipeline", "unknown"
+    )
 
 
 def load_task(db_id: int) -> ProcessingTask:

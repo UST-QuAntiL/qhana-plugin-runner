@@ -173,7 +173,7 @@ def test_microfrontend_renders_every_field_group(client):
     resp = client.get(url_for(f"{ROUTER_BLP.name}.MicroFrontend"))
     body = resp.get_data(as_text=True)
 
-    for title, _field_names in INPUT_FIELD_GROUPS:
+    for _key, title, _field_names in INPUT_FIELD_GROUPS:
         assert title in body
 
 
@@ -238,25 +238,120 @@ def test_routing_step_frontend_shows_the_inputs_of_the_first_step(client):
     assert "http://example.com/step-one.csv" in body
 
 
-def test_routing_step_frontend_renders_the_pipeline_settings_per_attribute(client):
-    """Each attribute gets its own copy of the step 1 settings, prefilled and not submitted."""
+def _settings_task(**payload_overrides) -> ProcessingTask:
+    """A task waiting in the routing step, with the parameters of the first step.
+
+    ``hc__grundton`` is an attribute name that contains the separator between the
+    attribute and its settings.
+    """
     schema = InputParametersSchema()
     db_task = ProcessingTask(
         task_name="router_test",
-        parameters=schema.dumps(schema.load(router_payload(distanceMetric="cosine"))),
+        parameters=schema.dumps(schema.load(router_payload(**payload_overrides))),
     )
-    db_task.data["taxonomy_attributes"] = ["instrumentation", "genre"]
+    db_task.data["taxonomy_attributes"] = ["hc__grundton", "genre"]
     db_task.save(commit=True)
+    return db_task
+
+
+def _tag(body: str, field_id: str) -> str:
+    """The markup of the input or select element with the given id."""
+    return body[body.index(f'id="{field_id}"') :].split(">")[0]
+
+
+def test_routing_step_frontend_renders_the_pipeline_settings_per_attribute(client):
+    """Each attribute gets its own copy of the settings of the first step, prefilled."""
+    db_task = _settings_task(distanceMetric="cosine")
 
     body = client.get(_path("RoutingStepFrontend", db_id=db_task.id)).get_data(
         as_text=True
     )
 
-    for attr in ("instrumentation", "genre"):
-        assert f'id="pipeline_{attr}__distance_metric"' in body
+    for attr in ("hc__grundton", "genre"):
+        assert f'name="pipeline_{attr}__distanceMetric"' in body
+    # the settings are submitted per attribute, not once for the whole run
     assert 'name="distanceMetric"' not in body
-    assert 'value="cosine" selected' in body
-    assert schema.fields["transformer"].metadata["description"] in body
+    assert body.count('value="cosine" selected') == 2
+
+
+def test_routing_step_frontend_keeps_the_submitted_settings(client):
+    """A second render shows what was submitted, not the settings of the first step."""
+    db_task = _settings_task(distanceMetric="cosine", rootIsPartOfHierarchy=True)
+
+    body = client.post(
+        _path("RoutingStepFrontend", db_id=db_task.id),
+        data={
+            "pipeline_genre": WU_PALMER_PLUGIN,
+            "pipeline_genre__distanceMetric": "manhatten",
+        },
+    ).get_data(as_text=True)
+
+    genre = body[body.index('id="pipeline_genre__distance_metric"') :]
+    assert 'value="manhatten" selected' in genre.split("</select>")[0]
+    # the checkbox of the submitted block was unchecked, the untouched attribute
+    # keeps the value of the first step
+    assert "checked" not in _tag(body, "pipeline_genre__root_is_part_of_hierarchy")
+    assert "checked" in _tag(body, "pipeline_hc__grundton__root_is_part_of_hierarchy")
+
+
+def test_routing_step_stores_the_settings_of_every_attribute(client, monkeypatch):
+    mock_task_dispatch(monkeypatch)
+    db_task = _settings_task(rootIsPartOfHierarchy=True)
+
+    resp = client.post(
+        _path("RoutingStepView", db_id=db_task.id),
+        data={
+            "pipeline_genre": MAPPING_PLUGIN,
+            "pipeline_genre__distanceMetric": "cosine",
+            "pipeline_genre__mdsDimensions": "3",
+            "pipeline_hc__grundton": WU_PALMER_PLUGIN,
+            "pipeline_hc__grundton__rootIsPartOfHierarchy": "true",
+        },
+    )
+
+    assert resp.status_code == HTTPStatus.SEE_OTHER
+    data = ProcessingTask.get_by_id(db_task.id).data
+    assert data["routing_selections"] == {
+        "genre": MAPPING_PLUGIN,
+        "hc__grundton": WU_PALMER_PLUGIN,
+    }
+    # an unchecked checkbox is not submitted at all, so it reads as False
+    assert data["attribute_settings"] == {
+        "genre": {
+            "rootIsPartOfHierarchy": False,
+            "distanceMetric": "cosine",
+            "mdsDimensions": 3,
+        },
+        "hc__grundton": {"rootIsPartOfHierarchy": True},
+    }
+
+
+@pytest.mark.parametrize(
+    "field,value,message",
+    [
+        ("mdsDimensions", "0", "Must be greater than or equal to 1."),
+        # a name that does not end in a known setting is read as an attribute name
+        (
+            "unknownSetting",
+            "1",
+            f"'1' is not one of {[*PIPELINE_OPTIONS, INCLUDE_NUMERIC]}.",
+        ),
+    ],
+)
+def test_routing_step_rejects_invalid_settings(
+    client, monkeypatch, field, value, message
+):
+    mock_task_dispatch(monkeypatch)
+    db_task = _settings_task()
+
+    resp = client.post(
+        _path("RoutingStepView", db_id=db_task.id),
+        data={"pipeline_genre": WU_PALMER_PLUGIN, f"pipeline_genre__{field}": value},
+    )
+
+    assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert resp.get_json()["errors"]["form"][f"pipeline_genre__{field}"] == [message]
+    assert "attribute_settings" not in ProcessingTask.get_by_id(db_task.id).data
 
 
 def test_routing_step_frontend_without_attributes(client):

@@ -55,32 +55,65 @@ limitations under the License.
         margin-bottom: 0.5rem;
     }
 
-    .attribute-block .attribute-row {
+    .attribute-block>.attribute-row {
         margin-bottom: 0;
+        padding: 0.4rem 0.8rem;
+        border: 1px solid transparent;
+    }
+
+    .attribute-row .qhana-form-input {
+        flex: 0 1 15rem;
+        margin-inline-start: auto;
     }
 
     .attribute-settings-button {
         flex-shrink: 0;
-        margin-inline-start: auto;
-        padding: 0.3em 0.7em;
+        align-self: stretch;
+        padding-block: 0;
+        padding-inline: 0.7em;
         white-space: nowrap;
         cursor: pointer;
+        color: inherit;
+        font: inherit;
+        border: 1px solid rgba(var(--line, 128, 128, 128), 0.5);
+        border-radius: 6px;
+        background-color: rgba(var(--line, 128, 128, 128), 0.08);
+    }
+
+    .attribute-settings-button:hover {
+        background-color: rgba(var(--line, 128, 128, 128), 0.16);
     }
 
     .attribute-settings-button::after {
         content: " \25BE";
     }
 
+    .attribute-settings-button[aria-expanded="true"] {
+        border-color: rgba(var(--line, 128, 128, 128), 0.7);
+        background-color: rgba(var(--line, 128, 128, 128), 0.24);
+    }
+
     .attribute-settings-button[aria-expanded="true"]::after {
         content: " \25B4";
     }
 
+    .attribute-block:has(.attribute-settings:not([hidden]))>.attribute-row {
+        border-color: rgba(var(--line, 128, 128, 128), 0.4);
+        border-bottom-color: transparent;
+        border-radius: 8px 8px 0 0;
+        background-color: rgba(var(--line, 128, 128, 128), 0.12);
+    }
+
     .attribute-settings {
-        margin: 0.4rem 0 0.8rem 0;
+        border: 1px solid rgba(var(--line, 128, 128, 128), 0.4);
+        border-radius: 0 0 8px 8px;
+        padding: 0.8rem 0.8rem 0.4rem 0.8rem;
+        margin-bottom: 0.8rem;
+        background-color: rgba(var(--line, 128, 128, 128), 0.06);
     }
 
     .attribute-settings .settings-section:last-child {
-        margin-bottom: 0;
+        margin-bottom: 0.4rem;
     }
 </style>
 {% endblock head %}
@@ -106,11 +139,8 @@ limitations under the License.
     {% if attributes %}
     <fieldset>
         <legend>Taxonomy Attributes</legend>
-        <!--
-        The settings fields are rendered without a `name` attribute, so they are not submitted with the form yet.
-        The backend does not accept per-attribute settings fields (see RoutingStepParametersSchema.validate_entries).
-        The fields are prefilled with the settings from step 1.
-        -->
+        {# The settings fields are submitted as `pipeline_<attribute>__<setting>` and are prefilled with
+        the settings of the first step (see RoutingStepParametersSchema). #}
         {%- for attr in attributes -%}
         {%- set field_name = "pipeline_" + attr -%}
         {%- set settings_id = field_name + "__settings" -%}
@@ -131,8 +161,9 @@ limitations under the License.
             </div>
             <div class="attribute-settings" id="{{settings_id}}" hidden>
                 {%- for group in settings_groups -%}
-                {{ components.settings_section(group.title, group.schema, values=input_params,
-                id_prefix=field_name ~ "__", include_names=false) }}
+                {{ components.settings_section(group.title, group.schema, values=settings_values.get(attr,
+                input_params), errors=settings_errors.get(attr, {}), expanded=(group.key in
+                expanded_groups.get(attr, ())), id_prefix=field_name ~ "__", name_prefix=field_name ~ "__") }}
                 {%- endfor -%}
             </div>
         </div>

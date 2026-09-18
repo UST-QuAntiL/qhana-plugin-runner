@@ -13,19 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 #}
-{#
-Collapsible settings sections shared by the micro frontend and the routing step.
-
-Import this file with `{% import "pipeline_settings_section.html" as components %}`, call
-`settings_section_styles()` in the `head` block and `settings_section_script()` in the `script`
-block after `{{ super() }}`.
-#}
 {% import 'forms.html' as forms %}
 
 {% macro settings_section_styles() -%}
 <style>
     .settings-section {
-        border: 1px solid rgba(128, 128, 128, 0.4);
+        border: 1px solid rgba(var(--line, 128, 128, 128), 0.4);
         border-radius: 8px;
         padding: 0.4em 0.8em;
         margin-bottom: 0.8em;
@@ -39,7 +32,7 @@ block after `{{ super() }}`.
     }
 
     .settings-section[open]>summary {
-        border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+        border-bottom: 1px solid rgba(var(--line, 128, 128, 128), 0.25);
         margin-bottom: 0.6em;
     }
 
@@ -51,20 +44,15 @@ block after `{{ super() }}`.
 
 {#
 Render the fields of `schema` with their labels and descriptions inside a collapsible section.
-`id_prefix` and `include_names` are passed to `forms.render_fields`.
+`id_prefix` and `name_prefix` are passed to `forms.render_fields`.
 #}
-{% macro settings_section(title, schema, values=dict(), errors=dict(), expanded=false, id_prefix="",
-include_names=true) -%}
+{% macro settings_section(title, schema, values=dict(), errors=dict(), expanded=false, id_prefix="", name_prefix="") -%}
 <details class="settings-section" {% if expanded %}open{% endif %}>
     <summary>{{ title }}</summary>
-    {{ forms.render_fields(schema, values=values, errors=errors, id_prefix=id_prefix, include_names=include_names) }}
+    {{ forms.render_fields(schema, values=values, errors=errors, id_prefix=id_prefix, name_prefix=name_prefix) }}
 </details>
 {%- endmacro %}
 
-{#
-Define `reportContentHeight()` for the page scripts and report the height when a section is toggled.
-The script uses `sendMessage` from microfrontend.js.
-#}
 {% macro settings_section_script() -%}
 <script>
     // the shared height monitor measures the document element, which never shrinks below the

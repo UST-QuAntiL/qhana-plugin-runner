@@ -39,14 +39,20 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
-    PIPELINE_FIELD_PREFIX,
+    PCA_PLUGIN,
     PIPELINE_OPTIONS,
     PIPELINE_PLUGINS,
+    PIPELINE_SETTINGS_GROUPS,
+    VECTOR_CONCAT_PLUGIN,
     InputParametersSchema,
     MetricEnum,
     PCATypeEnum,
     RoutingStepParametersSchema,
     SolverEnum,
+    expanded_settings_groups,
+    load_settings,
+    merge_settings,
+    split_routing_fields,
 )
 from .tasks import (
     handle_webhook_task,
@@ -54,21 +60,10 @@ from .tasks import (
     start_routing_task,
 )
 
-# Sections of the pipeline settings: (title, field names). The micro frontend renders
-# them once and the routing step renders them once per taxonomy attribute.
-PIPELINE_SETTINGS_GROUPS = (
-    ("Wu-Palmer Settings", ("root_is_part_of_hierarchy",)),
-    ("Mapping Settings", ("distance_metric",)),
-    ("Transformer Settings", ("transformer",)),
-    (
-        "MDS Settings",
-        ("mds_dimensions", "metric", "n_init", "max_iter", "missing_data_handling"),
-    ),
-)
-
-# Sections of the micro frontend: (title, field names).
+# Sections of the micro frontend: (key, title, field names).
 INPUT_FIELD_GROUPS = (
     (
+        "basic_data",
         "Basic Data",
         (
             "entities_url",
@@ -78,8 +73,13 @@ INPUT_FIELD_GROUPS = (
         ),
     ),
     *PIPELINE_SETTINGS_GROUPS,
-    ("Vector Concatenation Settings", ("concat_output", "output_format")),
     (
+        VECTOR_CONCAT_PLUGIN,
+        "Vector Concatenation Settings",
+        ("concat_output", "output_format"),
+    ),
+    (
+        PCA_PLUGIN,
         "PCA Settings",
         (
             "reduce_dimensions",
@@ -96,11 +96,11 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 # --- HELPER FUNCTION FOR UIs ---
-def field_groups(groups: tuple[tuple[str, tuple[str, ...]], ...]) -> list[dict]:
-    """Return the template sections for ``(title, field names)`` pairs."""
+def field_groups(groups: tuple[tuple[str, str, tuple[str, ...]], ...]) -> list[dict]:
+    """Return the template sections for ``(key, title, field names)`` triples."""
     return [
-        {"title": title, "schema": InputParametersSchema(only=field_names)}
-        for title, field_names in groups
+        {"key": key, "title": title, "schema": InputParametersSchema(only=field_names)}
+        for key, title, field_names in groups
     ]
 
 
@@ -357,6 +357,18 @@ class RoutingStepFrontend(MethodView):
         recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
 
+        _, submitted_settings = split_routing_fields(data)
+        settings_values = {
+            attribute: merge_settings(input_params, submitted_settings.get(attribute, {}))
+            for attribute in attributes
+        }
+        _, settings_errors = split_routing_fields(errors)
+
+        expanded_groups = {
+            attribute: expanded_settings_groups(recommendations.get(attribute))
+            for attribute in attributes
+        }
+
         return Response(
             render_template(
                 "routing_step.html",
@@ -368,7 +380,10 @@ class RoutingStepFrontend(MethodView):
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
                 settings_groups=field_groups(PIPELINE_SETTINGS_GROUPS),
+                expanded_groups=expanded_groups,
                 input_params=input_params,
+                settings_values=settings_values,
+                settings_errors=settings_errors,
                 values=data,
                 valid=valid,
                 errors=errors,
@@ -395,12 +410,11 @@ class RoutingStepView(MethodView):
         # ``parameters``. ``start_routing_task`` reloads ``parameters`` through
         # ``InputParametersSchema`` which would reject the dynamic
         # ``pipeline_<attribute>`` fields.
-        selections = {
-            key[len(PIPELINE_FIELD_PREFIX) :]: value
-            for key, value in arguments.items()
-            if key.startswith(PIPELINE_FIELD_PREFIX)
-        }
+        selections, submitted_settings = split_routing_fields(arguments)
         db_task.data["routing_selections"] = selections
+        db_task.data["attribute_settings"] = {
+            attribute: load_settings(raw) for attribute, raw in submitted_settings.items()
+        }
 
         db_task.data["webhook_url"] = url_for(
             f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True

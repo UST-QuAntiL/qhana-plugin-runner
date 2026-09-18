@@ -13,6 +13,7 @@
 # limitations under the License.
 from datetime import datetime, timezone
 from io import BytesIO
+from json import loads
 from pathlib import PurePath
 from sqlite3 import IntegrityError
 from zipfile import ZipFile
@@ -43,6 +44,7 @@ from .schemas import (
     NUMERIC_TYPES,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
+    PIPELINE_SETTINGS_KEYS,
     TRANSFORMERS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
     WU_PALMER_PLUGIN,
@@ -154,6 +156,25 @@ def preprocessing_task(self, db_id: int) -> str:
 
 
 # --- Initial Routing Task Launcher ---
+
+# Number of plugin runs one pipeline group needs, for the progress of the whole task.
+PIPELINE_STEP_COUNTS = {
+    WU_PALMER_PLUGIN: 4,  # Wu-Palmer, Transformers, Aggregator, MDS
+    MAPPING_PLUGIN: 3,  # Mapping, Aggregator, MDS
+    NUMERIC_MAPPING_PIPELINE: 3,  # Mapping, Aggregator, MDS
+    FEATURE_VECTOR: 1,
+}
+
+PIPELINE_LOG_NAMES = {
+    WU_PALMER_PLUGIN: "Wu-Palmer pipeline for attributes",
+    MAPPING_PLUGIN: "distances mapping pipeline for attributes",
+    NUMERIC_MAPPING_PIPELINE: (
+        "numeric mapping pipeline for multi-valued numeric attributes"
+    ),
+    FEATURE_VECTOR: "feature vector for single-valued numeric attributes",
+}
+
+
 def _validate_numeric_selections(selections: dict, numeric_attributes: set):
     """Reject selections that do not fit the attribute type.
 
@@ -167,6 +188,36 @@ def _validate_numeric_selections(selections: dict, numeric_attributes: set):
                 f"The numeric attribute '{attr}' cannot run the pipeline '{option}'. "
                 "Numeric attributes are only included or skipped."
             )
+
+
+def _pipeline_groups(
+    pipeline: str, attributes: list, base_settings: dict, attribute_settings: dict
+) -> list:
+    """Split the attributes of one pipeline into runs with identical settings.
+
+    The aggregator and the MDS step combine all attributes of a run into a single
+    result, so attributes that disagree on a setting of that pipeline have to run
+    separately. A group records only the settings that differ from the first step, and
+    a label that keeps the result files of the groups apart.
+    """
+    keys = PIPELINE_SETTINGS_KEYS.get(pipeline, ())
+    by_settings: dict = {}
+    for attribute in attributes:
+        settings = {
+            key: value
+            for key, value in attribute_settings.get(attribute, {}).items()
+            if key in keys and value != base_settings.get(key)
+        }
+        group = by_settings.setdefault(
+            tuple(sorted(settings.items())),
+            {"pipeline": pipeline, "attributes": [], "settings": settings},
+        )
+        group["attributes"].append(attribute)
+
+    groups = list(by_settings.values())
+    for number, group in enumerate(groups, start=1):
+        group["label"] = pipeline if len(groups) == 1 else f"{pipeline}_{number}"
+    return groups
 
 
 @CELERY.task(name=f"{Router.instance.identifier}.start_routing_task", bind=True)
@@ -213,47 +264,29 @@ def start_routing_task(self, db_id: int) -> str:
     ]
     none_selected = [attr for attr, option in selections.items() if option == NONE_PLUGIN]
 
+    base_settings = loads(task_data.parameters or "{}")
+    attribute_settings = task_data.data.get("attribute_settings", {})
+
     # The queue order is the dimension order of the concatenated vector.
-    pipeline_queue = []
+    pipeline_queue: list = []
     total_plugins = 1  # 1, because the inital start value of progress_value has to be 1
 
-    if wu_palmer_attributes:
-        task_data.add_task_log_entry(
-            f"Queued Wu-Palmer pipeline for attributes: {wu_palmer_attributes}"
-        )
-        task_data.data[f"{WU_PALMER_PLUGIN}_attributes"] = "\n".join(wu_palmer_attributes)
-        pipeline_queue.append(WU_PALMER_PLUGIN)
-        total_plugins += 4  # (Wu-Palmer, Transformers, Aggregator, MDS)
-
-    if mapping_attributes:
-        task_data.add_task_log_entry(
-            f"Queued distances mapping pipeline for attributes: {mapping_attributes}"
-        )
-        task_data.data[f"{MAPPING_PLUGIN}_attributes"] = "\n".join(mapping_attributes)
-        pipeline_queue.append(MAPPING_PLUGIN)
-        total_plugins += 3  # (Mapping, Aggregator, MDS)
-
-    if numeric_mapping_attributes:
-        task_data.add_task_log_entry(
-            "Queued numeric mapping pipeline for multi-valued numeric attributes: "
-            f"{numeric_mapping_attributes}"
-        )
-        task_data.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"] = "\n".join(
-            numeric_mapping_attributes
-        )
-        pipeline_queue.append(NUMERIC_MAPPING_PIPELINE)
-        total_plugins += 3  # (Mapping, Aggregator, MDS)
-
-    if feature_vector_attributes:
-        task_data.add_task_log_entry(
-            "Queued feature vector for single-valued numeric attributes: "
-            f"{feature_vector_attributes}"
-        )
-        task_data.data[f"{FEATURE_VECTOR}_attributes"] = "\n".join(
-            feature_vector_attributes
-        )
-        pipeline_queue.append(FEATURE_VECTOR)
-        total_plugins += 1  # (feature vector)
+    for pipeline, attributes in (
+        (WU_PALMER_PLUGIN, wu_palmer_attributes),
+        (MAPPING_PLUGIN, mapping_attributes),
+        (NUMERIC_MAPPING_PIPELINE, numeric_mapping_attributes),
+        (FEATURE_VECTOR, feature_vector_attributes),
+    ):
+        if not attributes:
+            continue
+        groups = _pipeline_groups(pipeline, attributes, base_settings, attribute_settings)
+        for group in groups:
+            message = f"Queued {PIPELINE_LOG_NAMES[pipeline]}: {group['attributes']}"
+            if group["settings"]:
+                message += f" with the attribute settings {group['settings']}"
+            task_data.add_task_log_entry(message)
+        pipeline_queue.extend(groups)
+        total_plugins += PIPELINE_STEP_COUNTS[pipeline] * len(groups)
 
     if one_hot_attributes:
         task_data.add_task_log_entry(

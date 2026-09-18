@@ -70,6 +70,7 @@ from feature_engineering_pipeline.tests.data import (
     capture_pipeline_step,
     capture_task_errors,
     make_router_task,
+    pipeline_group,
 )
 
 from tests.utils import MockResponse, run_task
@@ -223,6 +224,18 @@ def test_mapping_payload(server, steps):
         "distanceMetric": "cosine",
     }
     assert_payload_matches_plugin_schema(MAPPING_PLUGIN, payload)
+
+
+def test_payload_uses_the_settings_of_the_running_group(server, steps):
+    """The routing step can override the settings of the first step per attribute."""
+    db_task = make_router_task(
+        rootIsPartOfHierarchy=False,
+        data={"current_settings": {"rootIsPartOfHierarchy": True}},
+    )
+
+    run_task(start_wu_palmer, db_id=db_task.id)
+
+    assert payload_for(steps, WU_PALMER_PLUGIN)["rootIsPartOfHierarchy"] == "true"
 
 
 def test_transformers_payload(server, steps):
@@ -601,6 +614,50 @@ def test_finalize_pipeline_stores_the_mds_vectors(server, dispatched):
     assert stored.file_type == "entity/vector"
 
 
+def test_finalize_pipeline_names_the_mds_vectors_after_the_group(server, dispatched):
+    """Groups of the same pipeline must not overwrite each other's results."""
+    db_task = make_router_task(
+        data={
+            "current_pipeline": WU_PALMER_PLUGIN,
+            "current_pipeline_label": f"{WU_PALMER_PLUGIN}_2",
+        }
+    )
+
+    run_task(finalize_pipeline, db_id=db_task.id, source_url=server.task_url(MDS_PLUGIN))
+
+    assert f"{WU_PALMER_PLUGIN}_2_mds_vectors.zip" in stored_files(db_task)
+
+
+def test_launch_next_pipeline_applies_the_settings_of_the_group(dispatched):
+    group = pipeline_group(
+        WU_PALMER_PLUGIN, ["g1", "g2"], {"transformer": "square_inverse"}, "wu_palmer_2"
+    )
+    db_task = make_router_task(data={"pipeline_queue": [group]})
+
+    launch_next_pipeline(db_task)
+
+    assert db_task.data["current_settings"] == {"transformer": "square_inverse"}
+    assert db_task.data["current_pipeline_label"] == "wu_palmer_2"
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "g1\ng2"
+
+
+def test_launch_next_pipeline_drops_the_group_settings_at_the_end(dispatched):
+    """Vector concatenation and PCA are not part of a pipeline group."""
+    db_task = make_router_task(
+        concatOutput=True,
+        data={
+            "pipeline_queue": [],
+            "current_settings": {"mdsDimensions": 5},
+            "current_pipeline_label": "wu_palmer_2",
+        },
+    )
+
+    launch_next_pipeline(db_task)
+
+    assert "current_settings" not in db_task.data
+    assert "current_pipeline_label" not in db_task.data
+
+
 def test_finalize_pipeline_skips_the_mds_vectors_when_concatenating(server, dispatched):
     """With concatenation the MDS vectors are only an intermediate result."""
     db_task = make_router_task(
@@ -627,7 +684,9 @@ def test_finalize_pipeline_collects_the_vector_urls_for_the_concatenation(
 
 
 def test_finalize_pipeline_starts_the_next_pipeline(server, dispatched):
-    db_task = make_router_task(data={"pipeline_queue": [MAPPING_PLUGIN]})
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group(MAPPING_PLUGIN, ["attr2"])]}
+    )
 
     run_task(finalize_pipeline, db_id=db_task.id, source_url=server.task_url(MDS_PLUGIN))
 
@@ -640,13 +699,21 @@ def test_finalize_pipeline_starts_the_next_pipeline(server, dispatched):
 
 def test_launch_next_pipeline_pops_the_queue(dispatched):
     db_task = make_router_task(
-        data={"pipeline_queue": [WU_PALMER_PLUGIN, MAPPING_PLUGIN]}
+        data={
+            "pipeline_queue": [
+                pipeline_group(WU_PALMER_PLUGIN, ["attr1"]),
+                pipeline_group(MAPPING_PLUGIN, ["attr2"]),
+            ]
+        }
     )
 
     launch_next_pipeline(db_task)
 
     assert db_task.data["current_pipeline"] == WU_PALMER_PLUGIN
-    assert db_task.data["pipeline_queue"] == [MAPPING_PLUGIN]
+    assert db_task.data[f"{WU_PALMER_PLUGIN}_attributes"] == "attr1"
+    assert [group["pipeline"] for group in db_task.data["pipeline_queue"]] == [
+        MAPPING_PLUGIN
+    ]
     assert ("start_wu_palmer", [db_task.id]) in dispatched
 
 
@@ -665,7 +732,7 @@ def test_launch_next_pipeline_resets_the_reused_step_urls(dispatched):
     stale["generated_files"] = {"old.zip": "http://localhost/old.zip"}
     db_task = make_router_task(
         data={
-            "pipeline_queue": [MAPPING_PLUGIN],
+            "pipeline_queue": [pipeline_group(MAPPING_PLUGIN, ["attr2"])],
             "progressed_via": {"a": "webhook"},
             "webhook_seen": {"a": "2026-01-01"},
             **stale,
@@ -689,7 +756,9 @@ def test_launch_next_pipeline_resets_the_reused_step_urls(dispatched):
 def test_launch_next_pipeline_starts_the_numeric_pipelines(
     dispatched, pipeline, start_task
 ):
-    db_task = make_router_task(data={"pipeline_queue": [pipeline]})
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group(pipeline, ["attr1"])]}
+    )
 
     launch_next_pipeline(db_task)
 
@@ -699,7 +768,9 @@ def test_launch_next_pipeline_starts_the_numeric_pipelines(
 
 def test_launch_next_pipeline_rejects_a_pipeline_without_a_start_step(dispatched):
     """Without a start step no webhook can arrive, so the task would stall silently."""
-    db_task = make_router_task(data={"pipeline_queue": ["one_hot"]})
+    db_task = make_router_task(
+        data={"pipeline_queue": [pipeline_group("one_hot", ["attr1"])]}
+    )
 
     with pytest.raises(ValueError, match="No pipeline start step for 'one_hot'"):
         launch_next_pipeline(db_task)

@@ -96,6 +96,21 @@ NUMERIC_ATTRIBUTES = ["year", "beats"]
 MULTI_VALUED_NUMERIC_ATTRIBUTES = ["beats"]
 
 
+def pipeline_group(
+    pipeline: str,
+    attributes: List[str],
+    settings: Optional[dict] = None,
+    label: Optional[str] = None,
+) -> dict:
+    """One entry of the pipeline queue, as ``start_routing_task`` writes it."""
+    return {
+        "pipeline": pipeline,
+        "attributes": list(attributes),
+        "settings": dict(settings or {}),
+        "label": label or pipeline,
+    }
+
+
 def make_router_task(
     *,
     selections: Optional[dict] = None,
@@ -131,14 +146,14 @@ def make_router_task(
         ],
         FEATURE_VECTOR: [a for a in numeric if a not in MULTI_VALUED_NUMERIC_ATTRIBUTES],
     }
-    queue: List[str] = []
+    queue: List[dict] = []
     for plugin, attributes in grouped.items():
         if attributes:
             db_task.data[f"{plugin}_attributes"] = "\n".join(attributes)
-            queue.append(plugin)
+            queue.append(pipeline_group(plugin, attributes))
 
     db_task.data["pipeline_queue"] = queue
-    db_task.data["current_pipeline"] = queue[0] if queue else None
+    db_task.data["current_pipeline"] = queue[0]["pipeline"] if queue else None
     db_task.progress_value = 1
 
     if data:
