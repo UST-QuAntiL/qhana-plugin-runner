@@ -49,6 +49,8 @@ _ATTR_MAPPING_DE = dict([pair[::-1] for pair in _ATTR_MAPPING])
 CONSIDERED_TRUE: Set[str] = {"1", "true", "t", "yes", "y", "on"}
 CONSIDERED_FALSE: Set[str] = {"0", "false", "f", "no", "n", "off", "null", "nil", "none"}
 
+NUMERIC_TYPES: Set[str] = {"number", "integer", "int", "float", "double"}
+
 
 @dataclass
 class AttributeMetadata:

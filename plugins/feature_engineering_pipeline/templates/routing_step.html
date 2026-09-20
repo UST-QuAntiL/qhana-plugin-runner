@@ -28,12 +28,32 @@ limitations under the License.
         min-width: 12rem;
     }
 
-    .numeric-attribute {
-        display: flex;
+    .numeric-attributes {
+        display: grid;
+        grid-template-columns: max-content max-content auto;
         align-items: center;
-        column-gap: 0.5rem;
+        column-gap: 1rem;
+        row-gap: 0.5rem;
         width: fit-content;
+    }
+
+    .value-count {
+        font-size: 0.85em;
+        opacity: 0.75;
+        white-space: nowrap;
+    }
+
+    .numeric-description {
         margin-bottom: 0.5rem;
+    }
+
+    .numeric-attribute {
+        display: contents;
+    }
+
+    .numeric-attribute input {
+        justify-self: start;
+        margin: 0;
     }
 
     .input-params {
@@ -92,19 +112,24 @@ limitations under the License.
     <p>No taxonomy attributes were found in the provided metadata.</p>
     {% endif %}
 
-    <p>Select the numeric attributes to include:</p>
+    <p class="numeric-description">Select the numeric attributes to include. A single-valued
+        attribute is normalized and appended directly to the output feature vector. A multi-valued
+        attribute is turned into a feature vector by the distances mapping, the attribute distance
+        aggregator and MDS.</p>
     {% if numeric_attributes %}
     <fieldset>
         <legend>Numeric Attributes</legend>
-        <!--An unchecked checkbox is not submitted, so the attribute is excluded.-->
-        {%- for attr in numeric_attributes -%}
-        {%- set field_name = "pipeline_" + attr -%}
-        <label class="numeric-attribute" for="{{field_name}}">
-            <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
-                autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
-            {{attr}}
-        </label>
-        {%- endfor -%}
+        <div class="numeric-attributes">
+            {%- for attr in numeric_attributes -%}
+            {%- set field_name = "pipeline_" + attr -%}
+            <label class="numeric-attribute" for="{{field_name}}">
+                <span class="attribute-name">{{attr}}</span>
+                <span class="value-count">{% if attr in multi_valued_numeric %}multi-valued{% else %}single-valued{% endif %}</span>
+                <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
+                    autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
+            </label>
+            {%- endfor -%}
+        </div>
     </fieldset>
     {% else %}
     <p>No numeric attributes were found in the provided metadata.</p>

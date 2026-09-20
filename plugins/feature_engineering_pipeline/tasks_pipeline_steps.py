@@ -18,24 +18,27 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.requests import open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_result
 
 from . import Router
-from .numeric_attributes import collect_values, entities_zip, normalized_column
+from .numeric_attributes import (
+    collect_values,
+    entities_zip,
+    require_complete_column,
+)
 from .schemas import (
-    WU_PALMER_PLUGIN,
-    MAPPING_PLUGIN,
-    NUMERIC_MAPPING_PIPELINE,
-    FEATURE_VECTOR,
-    TRANSFORMERS_PLUGIN,
     AGGREGATOR_PLUGIN,
-    MDS_PLUGIN,
-    VECTOR_CONCAT_PLUGIN,
-    PCA_PLUGIN,
+    FEATURE_VECTOR,
     FINALIZE_PIPELINE,
+    MAPPING_PLUGIN,
+    MDS_PLUGIN,
+    NUMERIC_MAPPING_PIPELINE,
+    PCA_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
+    WU_PALMER_PLUGIN,
     InputParameters,
     InputParametersSchema,
 )
@@ -43,12 +46,12 @@ from .tasks_helpers import (
     REQUEST_TIMEOUT,
     PipelineTask,
     extract_output_url,
+    has_enough_pca_dimensions,
     is_store_mds_output,
     load_entities_with_metadata,
     persist_generated_file,
     run_pipeline_step,
     save_intermediate_results,
-    has_enough_pca_dimensions,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -434,17 +437,6 @@ def start_mds(self, db_id: int, source_url: str):
 
 
 # --- NUMERIC ATTRIBUTES ---
-def _numeric_attribute_metadata(
-    metadata: dict[str, AttributeMetadata], attribute: str
-) -> AttributeMetadata:
-    try:
-        return metadata[attribute]
-    except KeyError:
-        raise ValueError(
-            f"The attribute metadata has no entry for the attribute '{attribute}'."
-        ) from None
-
-
 @CELERY.task(
     name=f"{Router.instance.identifier}.start_numeric_distances",
     bind=True,
@@ -491,17 +483,12 @@ def build_numeric_feature_vector(self, db_id: int):
     """
     Writes the single-valued numeric attributes as one-dimensional vectors.
 
-    Missing values are replaced with the mean of the attribute and the values
-    are scaled to [0, 1]. The output has the layout of the MDS output, so the
-    vector concatenation handles it like an MDS result. No sub-plugin is
-    involved, the next pipeline is started directly.
-
     Args:
         self: The Celery task instance (bound).
         db_id (int): The database ID of the ProcessingTask.
 
     Raises:
-        ValueError: If an attribute has no value for any entity.
+        ValueError: If an attribute has no value for an entity.
     """
 
     task_data = ProcessingTask.get_by_id(db_id)
@@ -509,21 +496,14 @@ def build_numeric_feature_vector(self, db_id: int):
         task_data.parameters or "{}"
     )
     attributes = task_data.data[f"{FEATURE_VECTOR}_attributes"].splitlines()
-    entities, metadata = load_entities_with_metadata(params)
+    entities, _ = load_entities_with_metadata(params)
 
     members = {}
     for attribute in attributes:
-        values = collect_values(
-            entities, attribute, _numeric_attribute_metadata(metadata, attribute)
+        values = collect_values(entities, attribute)
+        column = require_complete_column(
+            [entity["ID"] for entity in entities], values, attribute
         )
-        try:
-            column = normalized_column(values)
-        except ValueError:
-            raise ValueError(
-                f"The attribute '{attribute}' has no numeric value for any entity."
-            ) from None
-        # ``href`` is empty like in the MDS output. Vector concat requires
-        # identical ids and hrefs across all inputs.
         members[attribute] = [
             {"ID": entity["ID"], "href": "", "dim0": value}
             for entity, value in zip(entities, column)

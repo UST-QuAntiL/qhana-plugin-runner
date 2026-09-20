@@ -13,19 +13,21 @@
 # limitations under the License.
 
 import json
-import math
 from io import StringIO
 from itertools import combinations
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+from qhana_plugin_runner.plugin_utils.attributes import (
+    NUMERIC_TYPES,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
@@ -39,63 +41,6 @@ from qhana_plugin_runner.storage import STORE
 from . import AttributeAggregator
 
 TASK_LOGGER = get_task_logger(__name__)
-
-# Attribute data types (``AttributeMetadata.description``) treated as numeric.
-NUMERIC_TYPES = {"number", "integer", "int", "float", "double"}
-
-
-def _parse_numeric_value(raw: Any) -> Optional[float]:
-    """Parse a raw value into a float, or ``None`` if missing/unparseable."""
-    if raw is None:
-        return None
-    if isinstance(raw, (int, float)):
-        return None if isinstance(raw, float) and math.isnan(raw) else float(raw)
-    if isinstance(raw, str):
-        stripped = raw.strip()
-        if not stripped or stripped.lower() == "nan":
-            return None
-        try:
-            return float(stripped)
-        except ValueError:
-            return None
-    return None
-
-
-def _parse_numeric_vector(
-    entity: dict, attribute: str, attrib_meta: AttributeMetadata
-) -> Optional[List[float]]:
-    """Parse a numeric attribute field into a vector, mirroring mapping_distances.
-
-    Returns ``None`` if the entity has no usable value for the attribute.
-    """
-    val = entity.get(attribute)
-    if val is None:
-        return None
-
-    if attrib_meta.multiple:
-        if isinstance(val, (set, list, dict)) and not val:
-            return None
-        if isinstance(val, (set, list)):
-            raw_values = list(val)
-        elif isinstance(val, str):
-            raw_values = (
-                val.split(attrib_meta.separator) if attrib_meta.separator else [val]
-            )
-        else:
-            raw_values = [val]
-
-        vector = [_parse_numeric_value(v) for v in raw_values]
-        if not vector or any(v is None for v in vector):
-            return None
-        return vector
-
-    value = _parse_numeric_value(val)
-    return None if value is None else [value]
-
-
-def _numeric_element_key(vector: List[float]) -> str:
-    """Build the same stable string key mapping_distances uses for a vector."""
-    return json.dumps(vector)
 
 
 def _load_entities(entities_url: str) -> Tuple[List[dict], Dict[str, AttributeMetadata]]:
@@ -169,7 +114,21 @@ def _lookup_element_distance(
         )
 
 
-def _attribute_values(entity: dict, attribute: str) -> list:
+def _numeric_element_keys(elem_dists: Dict[Tuple[str, str], float]) -> Set[str]:
+    keys: Set[str] = set()
+    for source, target in elem_dists:
+        keys.add(source)
+        keys.add(target)
+    return keys
+
+
+def _attribute_values(
+    entity: dict, attribute: str, numeric_elements: Optional[Set[str]]
+) -> list:
+    if numeric_elements is not None:
+        entity_id = entity["ID"]
+        return [entity_id] if entity_id in numeric_elements else []
+
     values = entity.get(attribute)
 
     if values is None or values == "":
@@ -186,12 +145,13 @@ def _attribute_distance(
     ent2: dict,
     attribute: str,
     element_distances: Dict[Tuple[str, str], float],
+    numeric_elements: Optional[Set[str]] = None,
 ) -> Optional[float]:
     """Aggregate element distances to an attribute distance with Sym Max Mean.
     adopted from (stable_plugins/classical_ml/data_preparation/sym_max_mean)
     """
-    values1 = _attribute_values(ent1, attribute)
-    values2 = _attribute_values(ent2, attribute)
+    values1 = _attribute_values(ent1, attribute, numeric_elements)
+    values2 = _attribute_values(ent2, attribute, numeric_elements)
 
     if not values1 or not values2:
         return None
@@ -216,27 +176,6 @@ def _attribute_distance(
     avg2 = sum2 / len(values2)
 
     return (avg1 + avg2) / 2.0
-
-
-def _numeric_attribute_distance(
-    ent1: dict,
-    ent2: dict,
-    attribute: str,
-    attrib_meta: AttributeMetadata,
-    element_distances: Dict[Tuple[str, str], float],
-) -> Optional[float]:
-    """Look up a numeric attribute's element distance directly, no Sym Max Mean.
-
-    A numeric attribute's value is one element for the whole entity, not a
-    set of elements like a categorical multi-valued attribute.
-    """
-    v1 = _parse_numeric_vector(ent1, attribute, attrib_meta)
-    v2 = _parse_numeric_vector(ent2, attribute, attrib_meta)
-    if v1 is None or v2 is None:
-        return None
-    return _lookup_element_distance(
-        element_distances, _numeric_element_key(v1), _numeric_element_key(v2), attribute
-    )
 
 
 @CELERY.task(
@@ -266,17 +205,16 @@ def calculation_task(self, db_id: int) -> str:
     for attribute, element_distances in element_distances_by_attributes.items():
         attrib_meta = attribute_metadata.get(attribute)
         is_numeric = attrib_meta is not None and attrib_meta.description in NUMERIC_TYPES
+        numeric_elements = (
+            _numeric_element_keys(element_distances) if is_numeric else None
+        )
 
         attribute_distances = [
             {
                 "source": ent1["ID"],
                 "target": ent2["ID"],
-                "distance": (
-                    _numeric_attribute_distance(
-                        ent1, ent2, attribute, attrib_meta, element_distances
-                    )
-                    if is_numeric
-                    else _attribute_distance(ent1, ent2, attribute, element_distances)
+                "distance": _attribute_distance(
+                    ent1, ent2, attribute, element_distances, numeric_elements
                 ),
             }
             for ent1, ent2 in combinations(entities, 2)

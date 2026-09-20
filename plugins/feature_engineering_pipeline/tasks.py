@@ -26,7 +26,10 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
-from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+from qhana_plugin_runner.plugin_utils.attributes import (
+    NUMERIC_TYPES,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
@@ -40,7 +43,6 @@ from .schemas import (
     MDS_PLUGIN,
     NONE_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
-    NUMERIC_TYPES,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     TRANSFORMERS_PLUGIN,

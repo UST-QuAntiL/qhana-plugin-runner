@@ -19,8 +19,8 @@ import pytest
 
 from tests.utils import MockResponse, run_plugin_task
 
-from ..tasks import calculation_task
 from .data import EXPECTED, NUMERIC_EXPECTED, NUMERIC_TEST_DATA, TEST_DATA
+from ..tasks import calculation_task
 
 _MIMETYPES = {
     "csv": "text/csv",
@@ -142,7 +142,6 @@ def test_aggregator_fails_on_non_numeric_element_distance(monkeypatch, bad_dista
 
 @pytest.mark.usefixtures("celery_worker")
 def test_aggregator_numeric_attributes(monkeypatch):
-    """Numeric attributes are looked up directly, not via Sym Max Mean."""
     entities_url = "http://example.com/entities.json"
     metadata_url = "http://example.com/attribute_metadata.json"
     distances_url = "http://example.com/element_distances.zip"

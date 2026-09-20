@@ -153,11 +153,12 @@ def make_router_task(
 # ``missing_tax`` references a taxonomy that is absent from the zip and
 # ``composer`` references a plain file, so both must be skipped by the
 # preprocessing task. ``year`` is a single-valued and ``beats`` a multi-valued
-# numeric attribute, each with one missing value.
+# numeric attribute. ``beats`` has one missing value, ``year`` must have a value
+# for every entity.
 ENTITIES_CSV = (
     "ID,href,genre,instrumentation,composer,missing_tax,year,beats\n"
     "e1,,g1,i1,c1,m1,1800,1;2;3\n"
-    "e2,,g2,i2,c2,m2,,4;5;6\n"
+    "e2,,g2,i2,c2,m2,1850,4;5;6\n"
     "e3,,g1,i2,c1,m1,1900,\n"
 )
 

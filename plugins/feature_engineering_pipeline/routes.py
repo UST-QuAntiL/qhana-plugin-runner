@@ -352,6 +352,9 @@ class RoutingStepFrontend(MethodView):
 
         attributes = db_task.data.get("taxonomy_attributes", [])
         numeric_attributes = db_task.data.get("numeric_attributes", [])
+        multi_valued_numeric = set(
+            db_task.data.get("multi_valued_numeric_attributes", [])
+        )
         recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
 
@@ -363,6 +366,7 @@ class RoutingStepFrontend(MethodView):
                 schema=RoutingStepParametersSchema(),
                 attributes=attributes,
                 numeric_attributes=numeric_attributes,
+                multi_valued_numeric=multi_valued_numeric,
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
                 input_params=input_params,

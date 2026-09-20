@@ -497,10 +497,9 @@ def test_missing_plugin_output_fails_the_step(server, steps, task_errors):
 FEATURE_VECTOR_FILE = f"{FEATURE_VECTOR}_numeric_vectors.zip"
 
 
-def test_build_numeric_feature_vector_writes_normalized_and_imputed_values(
+def test_build_numeric_feature_vector_writes_one_dimension_per_attribute(
     server, dispatched
 ):
-    """``year`` is 1800, missing and 1900, so the middle entity gets the mean."""
     db_task = make_router_task(
         selections={"year": INCLUDE_NUMERIC}, data={"pipeline_queue": []}
     )
@@ -510,9 +509,9 @@ def test_build_numeric_feature_vector_writes_normalized_and_imputed_values(
     stored = stored_files(db_task)[FEATURE_VECTOR_FILE]
     assert stored.file_type == "entity/vector"
     assert zip_member(stored, "year.json") == [
-        {"ID": "e1", "href": "", "dim0": 0.0},
-        {"ID": "e2", "href": "", "dim0": 0.5},
-        {"ID": "e3", "href": "", "dim0": 1.0},
+        {"ID": "e1", "href": "", "dim0": 1800.0},
+        {"ID": "e2", "href": "", "dim0": 1850.0},
+        {"ID": "e3", "href": "", "dim0": 1900.0},
     ]
     assert reload(db_task).progress_value == 2
     assert (
@@ -555,15 +554,15 @@ def test_build_numeric_feature_vector_keeps_the_vectors_as_intermediate_result(
     assert FEATURE_VECTOR_FILE in stored_files(db_task)
 
 
-def test_build_numeric_feature_vector_rejects_an_attribute_without_values(
+def test_build_numeric_feature_vector_rejects_an_entity_without_a_value(
     server, dispatched, task_errors
 ):
     server.files[ENTITIES_URL] = MockResponse(
-        ENTITIES_URL, "text/csv", text="ID,href,year,beats\ne1,,,\ne2,,,\n"
+        ENTITIES_URL, "text/csv", text="ID,href,year,beats\ne1,,1800,\ne2,,,\n"
     )
     db_task = make_router_task(selections={"year": INCLUDE_NUMERIC})
 
-    with pytest.raises(ValueError, match="'year' has no numeric value"):
+    with pytest.raises(ValueError, match="'year' has no numeric value .* 'e2'"):
         run_task(build_numeric_feature_vector, db_id=db_task.id)
 
     assert [error["db_id"] for error in task_errors] == [db_task.id]

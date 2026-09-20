@@ -21,7 +21,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _name = "mapping-distances"
-_version = "v0.2.0"
+_version = "v0.3.0"
 _identifier = plugin_identifier(_name, _version)
 
 
@@ -44,7 +44,8 @@ class MappingDistances(QHAnaPluginBase):
     Throws an error if the taxonomy mapping vectors do not have the same size.
     \
     Numeric attributes (attribute metadata description `number`, `integer`, `int`, `float` or `double`) need no taxonomy.
-    Each distinct value (or list of values) is one element and is used directly as its mapping vector.
+    The value (or list of values) of an entity is one element and is used directly as its mapping vector.
+    Such an element is identified by the entity ID, not by a taxonomy element name.
     A multi-valued numeric attribute gives one vector per entity, with one dimension per value.
     Vectors with fewer values than the longest vector are padded with zeros.
     Entities without a valid numeric value are skipped.

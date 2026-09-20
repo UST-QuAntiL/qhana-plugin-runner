@@ -42,8 +42,6 @@ from mapping_distances.tasks import (
     _get_element_list,
     _is_empty_or_nan,
     _load_input_parameters,
-    _numeric_element_map,
-    _pad_to_common_dimension,
 )
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 
@@ -128,73 +126,6 @@ class TestGetElementList:
 
     def test_non_string_scalar_is_stringified(self):
         assert _get_element_list({"color": 42}, "color", _meta()) == ["42"]
-
-
-# ---------------------------------------------------------------------------
-# pad_to_common_dimension
-# ---------------------------------------------------------------------------
-
-
-class TestPadToCommonDimension:
-    def test_shorter_vectors_are_padded_with_zeros(self):
-        assert _pad_to_common_dimension(
-            {"a": [1.0, 2.0], "b": [3.0, 4.0, 5.0], "c": [6.0]}
-        ) == {
-            "a": [1.0, 2.0, 0.0],
-            "b": [3.0, 4.0, 5.0],
-            "c": [6.0, 0.0, 0.0],
-        }
-
-    def test_equal_length_vectors_are_unchanged(self):
-        assert _pad_to_common_dimension({"a": [1.0], "b": [2.0]}) == {
-            "a": [1.0],
-            "b": [2.0],
-        }
-
-    def test_empty_vectors_are_padded_alongside_mapped_ones(self):
-        assert _pad_to_common_dimension({"a": [], "b": [1.0, 2.0]}) == {
-            "a": [0.0, 0.0],
-            "b": [1.0, 2.0],
-        }
-
-    def test_all_empty_vectors_stay_empty(self):
-        assert _pad_to_common_dimension({"a": [], "b": []}) == {"a": [], "b": []}
-
-    def test_empty_map(self):
-        assert _pad_to_common_dimension({}) == {}
-
-
-# ---------------------------------------------------------------------------
-# numeric_element_map
-# ---------------------------------------------------------------------------
-
-
-class TestNumericElementMap:
-    def test_shorter_vectors_are_padded_with_zeros(self):
-        meta = _meta(ID="scores", multiple=True, separator=";")
-        entities = [
-            {"scores": [1, 2]},
-            {"scores": "3;4;5"},
-            {"scores": [6]},
-            {"scores": None},
-        ]
-        assert _numeric_element_map(entities, "scores", meta) == {
-            "[1.0, 2.0]": [1.0, 2.0, 0.0],
-            "[3.0, 4.0, 5.0]": [3.0, 4.0, 5.0],
-            "[6.0]": [6.0, 0.0, 0.0],
-        }
-
-    def test_single_valued_vectors_are_unchanged(self):
-        meta = _meta(ID="age")
-        entities = [{"age": 10}, {"age": "20"}]
-        assert _numeric_element_map(entities, "age", meta) == {
-            "[10.0]": [10.0],
-            "[20.0]": [20.0],
-        }
-
-    def test_no_values_returns_empty(self):
-        meta = _meta(ID="scores", multiple=True, separator=";")
-        assert _numeric_element_map([{"scores": None}], "scores", meta) == {}
 
 
 # ---------------------------------------------------------------------------

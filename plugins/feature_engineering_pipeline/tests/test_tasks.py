@@ -17,11 +17,6 @@ import threading
 from types import SimpleNamespace
 
 import pytest
-from flask import current_app
-from requests.exceptions import Timeout
-
-from qhana_plugin_runner.db import DB
-from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from feature_engineering_pipeline import tasks as router_tasks
 from feature_engineering_pipeline import tasks_pipeline_steps as pipeline_steps
 from feature_engineering_pipeline.schemas import (
@@ -53,7 +48,11 @@ from feature_engineering_pipeline.tests.data import (
     make_router_task,
     mock_open_url,
 )
+from flask import current_app
+from requests.exceptions import Timeout
 
+from qhana_plugin_runner.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from tests.utils import run_task
 
 pytestmark = pytest.mark.usefixtures("celery_worker")
@@ -192,7 +191,6 @@ def test_preprocessing_skips_attributes_without_a_usable_taxonomy(monkeypatch):
 
 
 def test_preprocessing_finds_the_numeric_attributes(monkeypatch):
-    """``year`` is a ``number``, ``beats`` a multi-valued ``integer``."""
     mock_open_url(monkeypatch, input_file_responses())
     db_task = make_router_task(
         data={"numeric_attributes": [], "multi_valued_numeric_attributes": []}
@@ -291,7 +289,6 @@ def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
 
 
 def test_routing_task_routes_numeric_attributes_by_their_metadata(monkeypatch):
-    """Multi-valued attributes run the numeric mapping, the others join the vector."""
     monkeypatch.setattr(
         "feature_engineering_pipeline.tasks_pipeline_steps.start_numeric_distances.apply_async",
         lambda *args, **kwargs: None,
@@ -593,7 +590,6 @@ def test_full_run_with_concatenation_and_pca(server, inline):
 
 
 def test_full_run_with_numeric_attributes_and_concatenation(server, inline):
-    """The numeric pipelines run inside the worker and feed the concatenation."""
     db_task = make_router_task(
         selections={
             "attr1": WU_PALMER_PLUGIN,
@@ -606,10 +602,8 @@ def test_full_run_with_numeric_attributes_and_concatenation(server, inline):
     run_inline(start_routing_task, db_task.id)
     for plugin in (WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
         complete_sub_task(db_task, plugin)
-    # numeric mapping: same chain as taxonomy mapping
     for plugin in (MAPPING_PLUGIN, AGGREGATOR_PLUGIN, MDS_PLUGIN):
         complete_sub_task(db_task, plugin)
-    # the feature vector step starts the concatenation without any webhook
     complete_sub_task(db_task, VECTOR_CONCAT_PLUGIN)
 
     assert inline.errors == []
@@ -624,7 +618,6 @@ def test_full_run_with_numeric_attributes_and_concatenation(server, inline):
         f"{FEATURE_VECTOR}_numeric_vectors.zip"
     ]
     assert "/files/" in feature_vectors
-    # the queue order is the dimension order of the concatenated vector
     assert server.payload(VECTOR_CONCAT_PLUGIN)["urls"] == "\n".join(
         [mds_vectors, mds_vectors, feature_vectors]
     )

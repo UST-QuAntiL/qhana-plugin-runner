@@ -30,22 +30,20 @@ import json
 import math
 import sys
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple, cast
 from zipfile import ZipFile
 
 import pytest
 from celery.app.task import Task
-from typing import cast
+from mapping_distances.tasks import calculation_task as _calculation_task_fn
 
+from qhana_plugin_runner.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from stable_plugins.classical_ml.data_preparation.mapping_distances.schemas import (
     DistanceMetricEnum,
     InputParameters,
     InputParametersSchema,
 )
-from mapping_distances.tasks import (
-    calculation_task as _calculation_task_fn,
-)
-from qhana_plugin_runner.db import DB
-from qhana_plugin_runner.db.models.tasks import ProcessingTask
 
 # ``@CELERY.task`` returns a ``Task`` instance at runtime, but the decorator's
 # return type is inferred as the wrapped function. Cast once so static analysis
@@ -64,7 +62,7 @@ def _write_json(path: Path, payload) -> str:
     return path.as_uri()
 
 
-def _write_taxonomy_zip(path: Path, taxonomies: dict[str, dict]) -> str:
+def _write_taxonomy_zip(path: Path, taxonomies: Dict[str, dict]) -> str:
     """Write taxonomies as a zip of JSON files and return a ``file://`` URL.
 
     ``taxonomies`` maps a file name (without ``.json``) to the taxonomy
@@ -86,14 +84,14 @@ def _enqueue_processing_task(params: InputParameters) -> int:
     return db_task.id
 
 
-def _read_result_zip(task: ProcessingTask) -> dict[str, list[dict]]:
+def _read_result_zip(task: ProcessingTask) -> Dict[str, List[dict]]:
     """Read the single zip output and return a mapping ``file name -> entities``."""
     assert len(task.outputs) == 1
     output = task.outputs[0]
     assert output.file_type == "relation/element-distances"
     assert output.mimetype == "application/zip"
 
-    contents: dict[str, list[dict]] = {}
+    contents: Dict[str, List[dict]] = {}
     with ZipFile(output.file_storage_data, "r") as zip_file:
         for name in zip_file.namelist():
             with zip_file.open(name) as inner:
@@ -351,343 +349,6 @@ def test_calculation_task_multiple_attributes(tmp_path):
 
 
 @pytest.mark.usefixtures("celery_worker")
-def test_calculation_task_taxonomy_mappings_length_mismatch_padded(tmp_path):
-    """Taxonomy mappings shorter than the longest one are padded with zeros, so
-    datasets that export mappings of different lengths can be processed."""
-    taxonomy = {
-        "entities": [
-            {"ID": "red", "mapping": [1.0, 2.0]},
-            {"ID": "blue", "mapping": [1.0, 2.0, 3.0]},
-            {"ID": "green", "mapping": [4.0]},
-        ]
-    }
-    taxonomies_zip_url = _write_taxonomy_zip(
-        tmp_path / "taxonomies.zip", {"color": taxonomy}
-    )
-
-    metadata = [
-        {
-            "ID": "color",
-            "type": "color",
-            "title": "",
-            "description": "ref",
-            "multiple": False,
-            "ordered": False,
-            "separator": ";",
-            "refTarget": "taxonomies.zip:color.json",
-        }
-    ]
-    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
-
-    entities = [
-        {"ID": "e1", "href": "", "color": "red"},
-        {"ID": "e2", "href": "", "color": "blue"},
-        {"ID": "e3", "href": "", "color": "green"},
-    ]
-    entities_url = _write_json(tmp_path / "entities.json", entities)
-
-    params = InputParameters(
-        entities_url=entities_url,
-        entities_metadata_url=entities_metadata_url,
-        taxonomies_zip_url=taxonomies_zip_url,
-        attributes="color",
-        distance_metric=DistanceMetricEnum.euclidean,
-    )
-    db_id = _enqueue_processing_task(params)
-
-    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
-
-    DB.session.expire_all()
-    task = ProcessingTask.get_by_id(db_id)
-    assert task is not None
-
-    distances = {
-        (entry["source"], entry["target"]): entry["distance"]
-        for entry in _read_result_zip(task)["color.json"]
-    }
-    assert len(distances) == 9
-    # "red" is compared as [1, 2, 0] and "green" as [4, 0, 0].
-    assert distances[("red", "blue")] == pytest.approx(3.0)
-    assert distances[("red", "green")] == pytest.approx(math.sqrt(13))
-    assert distances[("green", "blue")] == pytest.approx(math.sqrt(22))
-    assert distances[("green", "green")] == pytest.approx(0.0)
-
-
-def _numeric_metadata(attr_id: str, description: str, multiple: bool = False) -> dict:
-    """Metadata for a numeric attribute (no ``refTarget``, no taxonomy involved)."""
-    return {
-        "ID": attr_id,
-        "type": attr_id,
-        "title": "",
-        "description": description,
-        "multiple": multiple,
-        "ordered": multiple,
-        "separator": ";",
-        "refTarget": None,
-    }
-
-
-def _decode_numeric_key(key: str) -> list[float]:
-    """Decode a numeric element key (``json.dumps`` of the parsed vector) back to floats."""
-    return json.loads(key)
-
-
-@pytest.mark.usefixtures("celery_worker")
-def test_calculation_task_numeric_single_valued(tmp_path):
-    """Distances between single-valued numeric elements match plain float differences."""
-    taxonomies_zip_url = _write_taxonomy_zip(tmp_path / "taxonomies.zip", {})
-
-    metadata = [_numeric_metadata("age", "number")]
-    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
-
-    entities = [
-        {"ID": "e1", "href": "", "age": 10.0},
-        {"ID": "e2", "href": "", "age": 20.0},
-        {"ID": "e3", "href": "", "age": 10.0},
-    ]
-    entities_url = _write_json(tmp_path / "entities.json", entities)
-
-    params = InputParameters(
-        entities_url=entities_url,
-        entities_metadata_url=entities_metadata_url,
-        taxonomies_zip_url=taxonomies_zip_url,
-        attributes="age",
-        distance_metric=DistanceMetricEnum.euclidean,
-    )
-    db_id = _enqueue_processing_task(params)
-
-    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
-
-    DB.session.expire_all()
-    task = ProcessingTask.get_by_id(db_id)
-    assert task is not None
-
-    contents = _read_result_zip(task)
-    assert set(contents) == {"age.json"}
-
-    distances = {
-        (
-            tuple(_decode_numeric_key(entry["source"])),
-            tuple(_decode_numeric_key(entry["target"])),
-        ): entry["distance"]
-        for entry in contents["age.json"]
-    }
-
-    # Only two distinct ages appear (10.0 twice, 20.0 once).
-    assert set(distances) == {
-        ((10.0,), (10.0,)),
-        ((10.0,), (20.0,)),
-        ((20.0,), (10.0,)),
-        ((20.0,), (20.0,)),
-    }
-    assert distances[((10.0,), (10.0,))] == pytest.approx(0.0)
-    assert distances[((10.0,), (20.0,))] == pytest.approx(10.0)
-    assert distances[((20.0,), (10.0,))] == pytest.approx(10.0)
-
-
-@pytest.mark.usefixtures("celery_worker")
-def test_calculation_task_numeric_multi_valued(tmp_path):
-    """Distance between two multi-valued numeric elements is the vector distance."""
-    taxonomies_zip_url = _write_taxonomy_zip(tmp_path / "taxonomies.zip", {})
-
-    metadata = [_numeric_metadata("scores", "integer", multiple=True)]
-    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
-
-    entities = [
-        {"ID": "e1", "href": "", "scores": [1, 2, 3]},
-        {"ID": "e2", "href": "", "scores": [4, 5, 6]},
-    ]
-    entities_url = _write_json(tmp_path / "entities.json", entities)
-
-    params = InputParameters(
-        entities_url=entities_url,
-        entities_metadata_url=entities_metadata_url,
-        taxonomies_zip_url=taxonomies_zip_url,
-        attributes="scores",
-        distance_metric=DistanceMetricEnum.euclidean,
-    )
-    db_id = _enqueue_processing_task(params)
-
-    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
-
-    DB.session.expire_all()
-    task = ProcessingTask.get_by_id(db_id)
-    assert task is not None
-
-    distances = {
-        (
-            tuple(_decode_numeric_key(entry["source"])),
-            tuple(_decode_numeric_key(entry["target"])),
-        ): entry["distance"]
-        for entry in _read_result_zip(task)["scores.json"]
-    }
-    assert distances[((1.0, 2.0, 3.0), (4.0, 5.0, 6.0))] == pytest.approx(math.sqrt(27))
-    assert distances[((1.0, 2.0, 3.0), (1.0, 2.0, 3.0))] == pytest.approx(0.0)
-
-
-@pytest.mark.usefixtures("celery_worker")
-def test_calculation_task_numeric_multi_valued_missing_value_excluded(tmp_path):
-    """An entity with no value for a multi-valued numeric attribute contributes no
-    element, so the length mismatch with valid elements never surfaces."""
-    taxonomies_zip_url = _write_taxonomy_zip(tmp_path / "taxonomies.zip", {})
-
-    metadata = [_numeric_metadata("scores", "integer", multiple=True)]
-    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
-
-    entities = [
-        {"ID": "e1", "href": "", "scores": [1, 2]},
-        {"ID": "e2", "href": "", "scores": None},
-        {"ID": "e3", "href": "", "scores": [3, 4]},
-    ]
-    entities_url = _write_json(tmp_path / "entities.json", entities)
-
-    params = InputParameters(
-        entities_url=entities_url,
-        entities_metadata_url=entities_metadata_url,
-        taxonomies_zip_url=taxonomies_zip_url,
-        attributes="scores",
-        distance_metric=DistanceMetricEnum.euclidean,
-    )
-    db_id = _enqueue_processing_task(params)
-
-    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
-
-    DB.session.expire_all()
-    task = ProcessingTask.get_by_id(db_id)
-    assert task is not None
-
-    distances = {
-        (
-            tuple(_decode_numeric_key(entry["source"])),
-            tuple(_decode_numeric_key(entry["target"])),
-        ): entry["distance"]
-        for entry in _read_result_zip(task)["scores.json"]
-    }
-    assert set(distances) == {
-        ((1.0, 2.0), (1.0, 2.0)),
-        ((1.0, 2.0), (3.0, 4.0)),
-        ((3.0, 4.0), (1.0, 2.0)),
-        ((3.0, 4.0), (3.0, 4.0)),
-    }
-
-
-@pytest.mark.usefixtures("celery_worker")
-def test_calculation_task_numeric_multi_valued_length_mismatch_padded(tmp_path):
-    """Multi-valued numeric elements shorter than the longest one are padded
-    with zeros, like the taxonomy mappings. The element keys keep the unpadded
-    values."""
-    taxonomies_zip_url = _write_taxonomy_zip(tmp_path / "taxonomies.zip", {})
-
-    metadata = [_numeric_metadata("scores", "integer", multiple=True)]
-    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
-
-    entities = [
-        {"ID": "e1", "href": "", "scores": [1, 2]},
-        {"ID": "e2", "href": "", "scores": [1, 2, 3]},
-        {"ID": "e3", "href": "", "scores": [4]},
-    ]
-    entities_url = _write_json(tmp_path / "entities.json", entities)
-
-    params = InputParameters(
-        entities_url=entities_url,
-        entities_metadata_url=entities_metadata_url,
-        taxonomies_zip_url=taxonomies_zip_url,
-        attributes="scores",
-        distance_metric=DistanceMetricEnum.euclidean,
-    )
-    db_id = _enqueue_processing_task(params)
-
-    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
-
-    DB.session.expire_all()
-    task = ProcessingTask.get_by_id(db_id)
-    assert task is not None
-
-    distances = {
-        (
-            tuple(_decode_numeric_key(entry["source"])),
-            tuple(_decode_numeric_key(entry["target"])),
-        ): entry["distance"]
-        for entry in _read_result_zip(task)["scores.json"]
-    }
-    assert len(distances) == 9
-    # [1, 2] is compared as [1, 2, 0] and [4] as [4, 0, 0].
-    assert distances[((1.0, 2.0), (1.0, 2.0, 3.0))] == pytest.approx(3.0)
-    assert distances[((1.0, 2.0), (4.0,))] == pytest.approx(math.sqrt(13))
-    assert distances[((4.0,), (1.0, 2.0, 3.0))] == pytest.approx(math.sqrt(22))
-    assert distances[((4.0,), (4.0,))] == pytest.approx(0.0)
-
-
-@pytest.mark.usefixtures("celery_worker")
-def test_calculation_task_mixed_taxonomy_and_numeric_attributes(tmp_path):
-    """A taxonomy attribute and a numeric attribute are computed independently in the
-    same run."""
-    color_tax = {
-        "entities": [
-            {"ID": "red", "mapping": [1.0, 0.0]},
-            {"ID": "blue", "mapping": [0.0, 1.0]},
-        ]
-    }
-    taxonomies_zip_url = _write_taxonomy_zip(
-        tmp_path / "taxonomies.zip", {"color": color_tax}
-    )
-
-    metadata = [
-        {
-            "ID": "color",
-            "type": "color",
-            "title": "",
-            "description": "ref",
-            "multiple": False,
-            "ordered": False,
-            "separator": ";",
-            "refTarget": "taxonomies.zip:color.json",
-        },
-        _numeric_metadata("age", "number"),
-    ]
-    entities_metadata_url = _write_json(tmp_path / "metadata.json", metadata)
-
-    entities = [
-        {"ID": "e1", "href": "", "color": "red", "age": 10.0},
-        {"ID": "e2", "href": "", "color": "blue", "age": 20.0},
-    ]
-    entities_url = _write_json(tmp_path / "entities.json", entities)
-
-    params = InputParameters(
-        entities_url=entities_url,
-        entities_metadata_url=entities_metadata_url,
-        taxonomies_zip_url=taxonomies_zip_url,
-        attributes="color\nage",
-        distance_metric=DistanceMetricEnum.euclidean,
-    )
-    db_id = _enqueue_processing_task(params)
-
-    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
-
-    DB.session.expire_all()
-    task = ProcessingTask.get_by_id(db_id)
-    assert task is not None
-
-    contents = _read_result_zip(task)
-    assert set(contents) == {"color.json", "age.json"}
-
-    color_distances = {
-        (entry["source"], entry["target"]): entry["distance"]
-        for entry in contents["color.json"]
-    }
-    assert color_distances[("red", "blue")] == pytest.approx(math.sqrt(2))
-
-    age_distances = {
-        (
-            tuple(_decode_numeric_key(entry["source"])),
-            tuple(_decode_numeric_key(entry["target"])),
-        ): entry["distance"]
-        for entry in contents["age.json"]
-    }
-    assert age_distances[((10.0,), (20.0,))] == pytest.approx(10.0)
-
-
-@pytest.mark.usefixtures("celery_worker")
 def test_calculation_task_missing_db_id_raises():
     """Task raises ``KeyError`` when no ``ProcessingTask`` row matches the id."""
     async_result = calculation_task.apply_async(kwargs={"db_id": 999999})
@@ -720,3 +381,151 @@ def test_calculation_task_flags_invalid_mapping_vectors(tmp_path):
     assert distances[("blue", "red")] == sys.float_info.max
     # The valid self-pair is computed normally.
     assert distances[("red", "red")] == pytest.approx(0.0)
+
+
+def _ref_metadata(attribute: str) -> dict:
+    """Metadata for a taxonomy attribute referencing ``<attribute>.json``."""
+    return {
+        "ID": attribute,
+        "type": attribute,
+        "title": "",
+        "description": "ref",
+        "multiple": False,
+        "ordered": False,
+        "separator": ";",
+        "refTarget": f"taxonomies.zip:{attribute}.json",
+    }
+
+
+def _numeric_metadata(
+    attribute: str, description: str = "number", multiple: bool = False
+) -> dict:
+    return {
+        "ID": attribute,
+        "type": attribute,
+        "title": "",
+        "description": description,
+        "multiple": multiple,
+        "ordered": multiple,
+        "separator": ";",
+        "refTarget": None,
+    }
+
+
+def _run_task(
+    tmp_path: Path,
+    entities: List[dict],
+    metadata: List[dict],
+    taxonomies: Optional[Dict[str, dict]] = None,
+) -> ProcessingTask:
+    params = InputParameters(
+        entities_url=_write_json(tmp_path / "entities.json", entities),
+        entities_metadata_url=_write_json(tmp_path / "metadata.json", metadata),
+        taxonomies_zip_url=_write_taxonomy_zip(
+            tmp_path / "taxonomies.zip", taxonomies or {}
+        ),
+        attributes="\n".join(attribute["ID"] for attribute in metadata),
+        distance_metric=DistanceMetricEnum.euclidean,
+    )
+    db_id = _enqueue_processing_task(params)
+
+    calculation_task.apply_async(kwargs={"db_id": db_id}).get(timeout=30)
+
+    DB.session.expire_all()
+    task = ProcessingTask.get_by_id(db_id)
+    assert task is not None
+    return task
+
+
+def _distances(task: ProcessingTask, file_name: str) -> Dict[Tuple[str, str], float]:
+    return {
+        (entry["source"], entry["target"]): entry["distance"]
+        for entry in _read_result_zip(task)[file_name]
+    }
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_taxonomy_mappings_length_mismatch_padded(tmp_path):
+    taxonomy = {
+        "entities": [
+            {"ID": "red", "mapping": [1.0, 2.0]},
+            {"ID": "blue", "mapping": [1.0, 2.0, 3.0]},
+            {"ID": "green", "mapping": [4.0]},
+        ]
+    }
+    entities = [
+        {"ID": "e1", "href": "", "color": "red"},
+        {"ID": "e2", "href": "", "color": "blue"},
+        {"ID": "e3", "href": "", "color": "green"},
+    ]
+
+    task = _run_task(tmp_path, entities, [_ref_metadata("color")], {"color": taxonomy})
+
+    distances = _distances(task, "color.json")
+    assert len(distances) == 9
+    assert distances[("red", "blue")] == pytest.approx(3.0)
+    assert distances[("red", "green")] == pytest.approx(math.sqrt(13))
+    assert distances[("green", "blue")] == pytest.approx(math.sqrt(22))
+    assert distances[("green", "green")] == pytest.approx(0.0)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_numeric_elements_keyed_by_entity_id(tmp_path):
+    entities = [
+        {"ID": "e1", "href": "", "age": 10.0},
+        {"ID": "e2", "href": "", "age": 20.0},
+        {"ID": "e3", "href": "", "age": 10.0},
+    ]
+
+    task = _run_task(tmp_path, entities, [_numeric_metadata("age")])
+
+    distances = _distances(task, "age.json")
+    assert set(distances) == {
+        (first, second) for first in ("e1", "e2", "e3") for second in ("e1", "e2", "e3")
+    }
+    assert distances[("e1", "e3")] == pytest.approx(0.0)
+    assert distances[("e1", "e2")] == pytest.approx(10.0)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_numeric_multi_valued_padded_and_missing_skipped(tmp_path):
+    entities = [
+        {"ID": "e1", "href": "", "scores": [1, 2]},
+        {"ID": "e2", "href": "", "scores": [1, 2, 3]},
+        {"ID": "e3", "href": "", "scores": [4]},
+        {"ID": "e4", "href": "", "scores": None},
+    ]
+    metadata = [_numeric_metadata("scores", "integer", multiple=True)]
+
+    task = _run_task(tmp_path, entities, metadata)
+
+    distances = _distances(task, "scores.json")
+    # e4 contributes no element, leaving a 3x3 matrix.
+    assert len(distances) == 9
+    assert not any("e4" in pair for pair in distances)
+    # e1 ([1, 2]) is compared as [1, 2, 0] and e3 ([4]) as [4, 0, 0].
+    assert distances[("e1", "e2")] == pytest.approx(3.0)
+    assert distances[("e1", "e3")] == pytest.approx(math.sqrt(13))
+    assert distances[("e3", "e2")] == pytest.approx(math.sqrt(22))
+    assert distances[("e3", "e3")] == pytest.approx(0.0)
+
+
+@pytest.mark.usefixtures("celery_worker")
+def test_calculation_task_mixed_taxonomy_and_numeric_attributes(tmp_path):
+    color_tax = {
+        "entities": [
+            {"ID": "red", "mapping": [1.0, 0.0]},
+            {"ID": "blue", "mapping": [0.0, 1.0]},
+        ]
+    }
+    entities = [
+        {"ID": "e1", "href": "", "color": "red", "age": 10.0},
+        {"ID": "e2", "href": "", "color": "blue", "age": 20.0},
+    ]
+    metadata = [_ref_metadata("color"), _numeric_metadata("age")]
+
+    task = _run_task(tmp_path, entities, metadata, {"color": color_tax})
+
+    assert set(_read_result_zip(task)) == {"color.json", "age.json"}
+    assert _distances(task, "color.json")[("red", "blue")] == pytest.approx(math.sqrt(2))
+    assert _distances(task, "age.json")[("e1", "e2")] == pytest.approx(10.0)

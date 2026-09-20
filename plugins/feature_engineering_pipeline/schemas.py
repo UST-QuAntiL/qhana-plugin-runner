@@ -63,10 +63,6 @@ PIPELINE_OPTIONS = {
 # The server picks the pipeline from the attribute metadata.
 INCLUDE_NUMERIC = "numeric"
 
-# Attribute data types (``AttributeMetadata.description``) that are treated as
-# numeric. These are the numeric keys of ``DESERIALIZER_MAP``.
-NUMERIC_TYPES = {"number", "integer", "int", "float", "double"}
-
 PIPELINE_FIELD_PREFIX = "pipeline_"
 
 
