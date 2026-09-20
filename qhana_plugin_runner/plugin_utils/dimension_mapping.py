@@ -24,7 +24,6 @@ contains one entity per output dimension, with the name of the dimension in
 See :ref:`data-formats/examples/entities:entity/dimension-mapping`.
 """
 
-from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
@@ -64,36 +63,20 @@ def entity_dimension_names(entities: Sequence[Any]) -> List[str]:
     return fields[2:] if "href" in fields else fields[1:]
 
 
-def _source_key(mapping_entity: Mapping[str, Any]) -> tuple:
-    return (
-        mapping_entity.get("source"),
-        mapping_entity.get("sourceUrl"),
-        mapping_entity.get("zipMember"),
-    )
-
-
-def _label(mapping_entity: Mapping[str, Any], is_only_dimension: bool) -> Optional[str]:
+def _label(mapping_entity: Mapping[str, Any]) -> Optional[str]:
     """Build the display label of a single dimension mapping entity.
 
-    The source file name is stripped of its extension so that dimensions
-    coming from a zip member (``"color.json"``) are labelled like dimensions
-    coming from a plain url (``"color"``). The source dimension is appended to
-    keep the labels unique when a source contributes more than one dimension.
+    The label is the name of the source feature. The source file name is
+    stripped of its extension so that dimensions coming from a zip member
+    (``"color.json"``) are labelled like dimensions coming from a plain url
+    (``"color"``). Every dimension of a multi dimensional source therefore
+    carries the same label.
     """
     source = str(mapping_entity.get("source") or "").strip()
     if not source:
         return None
 
-    name = Path(source).stem or source
-
-    if is_only_dimension:
-        return name
-
-    source_dimension = str(mapping_entity.get("sourceDimension") or "").strip()
-    if not source_dimension:
-        return name
-
-    return f"{name} ({source_dimension})"
+    return Path(source).stem or source
 
 
 def dimension_mapping_labels(mapping_entities: Sequence[Any]) -> Dict[str, str]:
@@ -105,14 +88,12 @@ def dimension_mapping_labels(mapping_entities: Sequence[Any]) -> Dict[str, str]:
     Returns:
         Dict[str, str]: a mapping from dimension name (``"dim0"``) to its label
     """
-    dimensions_per_source = Counter(_source_key(entity) for entity in mapping_entities)
-
     labels: Dict[str, str] = {}
     for entity in mapping_entities:
         dimension = str(entity.get("ID") or "").strip()
         if not dimension:
             continue
-        label = _label(entity, dimensions_per_source[_source_key(entity)] == 1)
+        label = _label(entity)
         if label:
             labels[dimension] = label
 

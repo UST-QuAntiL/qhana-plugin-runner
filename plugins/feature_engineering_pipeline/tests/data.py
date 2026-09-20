@@ -226,13 +226,20 @@ PLUGIN_OUTPUT_TYPES = {
     TRANSFORMERS_PLUGIN: ("relation/element-distances",),
     AGGREGATOR_PLUGIN: ("relation/attribute-distances",),
     MDS_PLUGIN: ("entity/vector",),
-    VECTOR_CONCAT_PLUGIN: ("entity/vector",),
+    VECTOR_CONCAT_PLUGIN: ("entity/vector", "entity/dimension-mapping"),
     PCA_PLUGIN: ("entity/vector", "custom/pca-metadata", "custom/plot"),
 }
+
+DIMENSION_MAPPING_JSON = (
+    '[{"ID": "dim0", "href": "", "inputIndex": 0, "source": "attr1.json", '
+    '"sourceUrl": "http://example.com/vectors.zip", "zipMember": "attr1.json", '
+    '"sourceDimension": "dim0"}]'
+)
 
 _PLAIN_OUTPUTS = {
     "custom/pca-metadata": ("application/json", '{"explained_variance": [0.9]}'),
     "custom/plot": ("text/html", "<html>plot</html>"),
+    "entity/dimension-mapping": ("application/json", DIMENSION_MAPPING_JSON),
 }
 
 _SERVER_INSTANCES = count(1)

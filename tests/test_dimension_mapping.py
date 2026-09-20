@@ -52,7 +52,7 @@ def _serve(monkeypatch, mapping):
     )
 
 
-def test_label_includes_source_dimension_for_multi_dimensional_sources():
+def test_every_dimension_of_a_source_shares_the_feature_name():
     labels = dimension_mapping_labels(
         [
             _mapping_entity("dim0", "color", "dim0", url="color-url"),
@@ -62,13 +62,13 @@ def test_label_includes_source_dimension_for_multi_dimensional_sources():
     )
 
     assert labels == {
-        "dim0": "color (dim0)",
-        "dim1": "color (dim1)",
+        "dim0": "color",
+        "dim1": "color",
         "dim2": "shape",
     }
 
 
-def test_label_keeps_original_column_names():
+def test_label_ignores_the_source_column_name():
     labels = dimension_mapping_labels(
         [
             _mapping_entity("dim0", "points", "x"),
@@ -76,7 +76,7 @@ def test_label_keeps_original_column_names():
         ]
     )
 
-    assert labels == {"dim0": "points (x)", "dim1": "points (y)"}
+    assert labels == {"dim0": "points", "dim1": "points"}
 
 
 def test_zip_members_and_plain_urls_yield_the_same_name():
@@ -86,17 +86,6 @@ def test_zip_members_and_plain_urls_yield_the_same_name():
     from_url = dimension_mapping_labels([_mapping_entity("dim0", "color", "dim0")])
 
     assert from_zip == from_url == {"dim0": "color"}
-
-
-def test_sources_are_distinguished_by_url_and_zip_member():
-    labels = dimension_mapping_labels(
-        [
-            _mapping_entity("dim0", "color", "dim0", url="first"),
-            _mapping_entity("dim1", "color", "dim0", url="second"),
-        ]
-    )
-
-    assert labels == {"dim0": "color", "dim1": "color"}
 
 
 @pytest.mark.parametrize("source", [None, "", "  "])
@@ -115,7 +104,7 @@ def test_entities_without_a_dimension_name_are_skipped():
     assert dimension_mapping_labels([_mapping_entity("", "color", "dim0")]) == {}
 
 
-def test_missing_source_dimension_falls_back_to_the_source_name():
+def test_a_missing_source_dimension_does_not_change_the_label():
     labels = dimension_mapping_labels(
         [
             _mapping_entity("dim0", "color", ""),
@@ -123,7 +112,7 @@ def test_missing_source_dimension_falls_back_to_the_source_name():
         ]
     )
 
-    assert labels == {"dim0": "color", "dim1": "color (dim1)"}
+    assert labels == {"dim0": "color", "dim1": "color"}
 
 
 def test_dimension_labels_fall_back_to_the_dimension_name():
@@ -146,8 +135,8 @@ def test_load_dimension_mapping_reads_the_file(monkeypatch):
     )
 
     assert load_dimension_mapping(MAPPING_URL) == {
-        "dim0": "color (dim0)",
-        "dim1": "color (dim1)",
+        "dim0": "color",
+        "dim1": "color",
         "dim2": "shape",
     }
 
@@ -231,7 +220,7 @@ def test_load_dimension_mapping_reads_the_vector_concat_output_verbatim(monkeypa
     _serve(monkeypatch, payload)
 
     assert load_dimension_mapping(MAPPING_URL) == {
-        "dim0": "color (dim0)",
-        "dim1": "color (dim1)",
+        "dim0": "color",
+        "dim1": "color",
         "dim2": "shape",
     }

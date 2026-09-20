@@ -27,6 +27,7 @@ from flask.templating import render_template
 from flask.views import MethodView
 from flask.wrappers import Response
 from marshmallow import EXCLUDE
+from requests.exceptions import HTTPError
 
 from qhana_plugin_runner.api.plugin_schemas import (
     DataMetadata,
@@ -43,12 +44,13 @@ from qhana_plugin_runner.api.util import (
 )
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
+from qhana_plugin_runner.plugin_utils.dimension_mapping import load_dimension_mapping
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_error, save_task_result
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "csv-visualization"
-__version__ = "v0.1.1"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -69,6 +71,23 @@ class CsvInputParametersSchema(FrontendFormBaseSchema):
         metadata={
             "label": "CSV File",
             "description": "The URL to a CSV file.",
+        },
+    )
+    dimension_mapping_url = FileUrl(
+        required=False,
+        allow_none=True,
+        data_input_type="entity/dimension-mapping",
+        data_content_types=["application/json"],
+        metadata={
+            "label": "Dimension Mapping URL",
+            "description": (
+                "Optional URL to a dimension mapping file describing where the "
+                "dimensions of a vector file came from. The preview then names the "
+                "feature every dimension column belongs to."
+            ),
+            "related_to": "data",
+            "relation": "pre",
+            "related_include_self": True,
         },
     )
 
@@ -100,7 +119,13 @@ class PluginsView(MethodView):
                         content_type=["text/csv"],
                         parameter="data",
                         required=True,
-                    )
+                    ),
+                    InputDataMetadata(
+                        data_type="entity/dimension-mapping",
+                        content_type=["application/json"],
+                        parameter="dimensionMappingUrl",
+                        required=False,
+                    ),
                 ],
                 data_output=[
                     DataMetadata(
@@ -167,11 +192,36 @@ class MicroFrontend(MethodView):
                 values=data,
                 errors=errors,
                 process=url_for(f"{CSV_BLP.name}.ProcessView"),
+                dimension_labels_url=url_for(f"{CSV_BLP.name}.get_dimension_labels"),
                 example_values=url_for(
                     f"{CSV_BLP.name}.MicroFrontend", **self.example_inputs
                 ),
             )
         )
+
+
+@CSV_BLP.route("/dimension-labels/")
+@CSV_BLP.response(HTTPStatus.OK, description="Feature name of every dimension.")
+@CSV_BLP.arguments(
+    CsvInputParametersSchema(partial=True, unknown=EXCLUDE),
+    location="query",
+    required=True,
+)
+@CSV_BLP.require_jwt("jwt", optional=True)
+def get_dimension_labels(data: Mapping):
+    """Name the feature every dimension of a dimension mapping file came from.
+
+    The micro frontend calls this when a dimension mapping is selected and
+    labels the columns of the preview table with the returned names.
+    """
+    dimension_mapping_url = data.get("dimension_mapping_url", None)
+    if not dimension_mapping_url:
+        return Response(dumps({}), mimetype="application/json")
+    try:
+        labels = load_dimension_mapping(dimension_mapping_url)
+    except (HTTPError, ValueError):
+        abort(HTTPStatus.BAD_REQUEST, "Invalid dimension mapping URL!")
+    return Response(dumps(labels), mimetype="application/json")
 
 
 # FIXME implement a real csv visualization processing task (maybe csv to html conversion?)

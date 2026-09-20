@@ -98,12 +98,16 @@ def _axis_titles(html: str) -> dict:
     }
 
 
-def test_axes_keep_their_default_titles_without_a_mapping(responses):
+def test_axes_name_their_dimension_without_a_mapping(responses):
     _serve(responses, ENTITY_URL, ENTITIES_3D)
 
     html, _name = _get_plot(ENTITY_URL, None, None, None, full_html=False)
 
-    assert _axis_titles(html) == {"x": "x", "y": "y", "z": "z"}
+    assert _axis_titles(html) == {
+        "x": "x - dim0",
+        "y": "y - dim1",
+        "z": "z - dim2",
+    }
 
 
 def test_axes_are_labelled_with_the_feature_names(responses):
@@ -113,9 +117,9 @@ def test_axes_are_labelled_with_the_feature_names(responses):
     html, _name = _get_plot(ENTITY_URL, None, None, MAPPING_URL, full_html=False)
 
     assert _axis_titles(html) == {
-        "x": "color (dim0)",
-        "y": "color (dim1)",
-        "z": "shape",
+        "x": "x - color (dim0)",
+        "y": "y - color (dim1)",
+        "z": "z - shape (dim2)",
     }
 
 
@@ -130,8 +134,8 @@ def test_two_dimensional_plots_are_labelled(responses):
     html, _name = _get_plot(ENTITY_URL, None, None, MAPPING_URL, full_html=False)
 
     titles = _axis_titles(html)
-    assert titles["x"] == "color (dim0)"
-    assert titles["y"] == "color (dim1)"
+    assert titles["x"] == "x - color (dim0)"
+    assert titles["y"] == "y - color (dim1)"
 
 
 def test_constant_axis_of_one_dimensional_plots_keeps_its_default_title(responses):
@@ -141,17 +145,21 @@ def test_constant_axis_of_one_dimensional_plots_keeps_its_default_title(response
     html, _name = _get_plot(ENTITY_URL, None, None, MAPPING_URL, full_html=False)
 
     titles = _axis_titles(html)
-    assert titles["x"] == "color"
+    assert titles["x"] == "x - color (dim0)"
     assert titles["y"] == "y"
 
 
-def test_dimensions_without_a_mapping_entry_keep_their_default_titles(responses):
+def test_dimensions_without_a_mapping_entry_keep_their_dimension_name(responses):
     _serve(responses, ENTITY_URL, ENTITIES_3D)
     _serve(responses, MAPPING_URL, MAPPING_3D[:1])
 
     html, _name = _get_plot(ENTITY_URL, None, None, MAPPING_URL, full_html=False)
 
-    assert _axis_titles(html) == {"x": "color", "y": "y", "z": "z"}
+    assert _axis_titles(html) == {
+        "x": "x - color (dim0)",
+        "y": "y - dim1",
+        "z": "z - dim2",
+    }
 
 
 def test_labels_follow_the_dimension_names_past_the_ninth_dimension(responses):
@@ -179,7 +187,7 @@ def test_labels_follow_the_dimension_names_past_the_ninth_dimension(responses):
     html, _name = _get_plot(ENTITY_URL, None, None, MAPPING_URL, full_html=False)
 
     assert _axis_titles(html) == {
-        "x": "feature0",
-        "y": "feature1",
-        "z": "feature10",
+        "x": "x - feature0 (dim0)",
+        "y": "y - feature1 (dim1)",
+        "z": "z - feature10 (dim10)",
     }

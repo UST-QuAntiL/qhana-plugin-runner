@@ -187,17 +187,21 @@ def _get_plot(
 
     # Renaming the axes instead of the dataframe columns keeps the reserved column
     # names above (and the click handler below) working unchanged.
+    # Only the first three dimensions are plotted, so every axis title names the
+    # dimension it shows.
     labels_by_dimension = load_dimension_mapping(dimension_mapping_url)
     axis_labels: Dict[str, str] = {}
-    if labels_by_dimension:
-        for axis, index in (("x", 0), ("y", 1), ("z", 2)):
-            # A plot of one-dimensional points uses a constant y axis, which has no
-            # matching dimension name.
-            if index >= len(dimension_names):
-                continue
-            dimension_name = dimension_names[index]
-            if dimension_name in labels_by_dimension:
-                axis_labels[axis] = labels_by_dimension[dimension_name]
+    for axis, index in (("x", 0), ("y", 1), ("z", 2)):
+        # A plot of one-dimensional points uses a constant y axis, which has no
+        # matching dimension name.
+        if index >= len(dimension_names):
+            continue
+        dimension_name = dimension_names[index]
+        label = labels_by_dimension.get(dimension_name)
+        if label:
+            axis_labels[axis] = f"{axis} - {label} ({dimension_name})"
+        else:
+            axis_labels[axis] = f"{axis} - {dimension_name}"
 
     if is_3d:
         fig = px.scatter_3d(
