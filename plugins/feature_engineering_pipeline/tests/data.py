@@ -27,6 +27,7 @@ from feature_engineering_pipeline.schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
+    ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     PIPELINE_PLUGINS,
     TRANSFORMERS_PLUGIN,
@@ -141,6 +142,7 @@ def make_router_task(
     grouped = {
         WU_PALMER_PLUGIN: [a for a, opt in selections.items() if opt == WU_PALMER_PLUGIN],
         MAPPING_PLUGIN: [a for a, opt in selections.items() if opt == MAPPING_PLUGIN],
+        ONE_HOT_PLUGIN: [a for a, opt in selections.items() if opt == ONE_HOT_PLUGIN],
         NUMERIC_MAPPING_PIPELINE: [
             a for a in numeric if a in MULTI_VALUED_NUMERIC_ATTRIBUTES
         ],
@@ -270,6 +272,7 @@ VECTOR_CSV = "ID,dim0,dim1,dim2\nent1,1.0,2.0,3.0\nent2,4.0,5.0,6.0\n"
 PLUGIN_OUTPUT_TYPES = {
     WU_PALMER_PLUGIN: ("relation/element-similarities",),
     MAPPING_PLUGIN: ("relation/element-distances",),
+    ONE_HOT_PLUGIN: ("entity/vector",),
     TRANSFORMERS_PLUGIN: ("relation/element-distances",),
     AGGREGATOR_PLUGIN: ("relation/attribute-distances",),
     MDS_PLUGIN: ("entity/vector",),
@@ -335,7 +338,11 @@ class PluginServer:
         if data_type in _PLAIN_OUTPUTS:
             content_type, text = _PLAIN_OUTPUTS[data_type]
             return MockResponse(href, content_type, text=text)
-        if data_type == "entity/vector" and plugin in (VECTOR_CONCAT_PLUGIN, PCA_PLUGIN):
+        if data_type == "entity/vector" and plugin in (
+            ONE_HOT_PLUGIN,
+            VECTOR_CONCAT_PLUGIN,
+            PCA_PLUGIN,
+        ):
             return MockResponse(href, "text/csv", text=VECTOR_CSV)
         return MockResponse.from_zip(href, {"attr1.json": "{}"})
 

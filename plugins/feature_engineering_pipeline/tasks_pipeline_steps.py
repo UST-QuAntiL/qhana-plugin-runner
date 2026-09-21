@@ -38,6 +38,7 @@ from .schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
+    ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     TRANSFORMERS_PLUGIN,
     VECTOR_CONCAT_PLUGIN,
@@ -156,6 +157,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
     for reused_step in (
         WU_PALMER_PLUGIN,
         MAPPING_PLUGIN,
+        ONE_HOT_PLUGIN,
         TRANSFORMERS_PLUGIN,
         AGGREGATOR_PLUGIN,
         MDS_PLUGIN,
@@ -180,6 +182,12 @@ def launch_next_pipeline(task_data: ProcessingTask):
         )
         task_data.save(commit=True)
         start_mapping.apply_async(args=[task_data.id])
+    elif next_pipeline == ONE_HOT_PLUGIN:
+        task_data.add_task_log_entry(
+            "Starting One-Hot Pipeline. Includes: One-Hot Encoding"
+        )
+        task_data.save(commit=True)
+        start_one_hot.apply_async(args=[task_data.id])
     elif next_pipeline == NUMERIC_MAPPING_PIPELINE:
         task_data.add_task_log_entry(
             "Starting Numeric Mapping Pipeline. Includes: Mapping Distances, "
@@ -198,7 +206,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
         # further webhook can arrive to progress the queue.
         raise ValueError(
             f"BUG: No pipeline start step for '{next_pipeline}'. Expected one of "
-            f"{[WU_PALMER_PLUGIN, MAPPING_PLUGIN, NUMERIC_MAPPING_PIPELINE, FEATURE_VECTOR]}."
+            f"{[WU_PALMER_PLUGIN, MAPPING_PLUGIN, ONE_HOT_PLUGIN, NUMERIC_MAPPING_PIPELINE, FEATURE_VECTOR]}."
         )
 
 
@@ -277,6 +285,42 @@ def start_mapping(self, db_id: int):
         task_data=task_data,
         plugin_name=MAPPING_PLUGIN,
         logging_name="Mapping Distances",
+        payload=payload,
+    )
+
+
+# --- ONE-HOT TASK ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_one_hot",
+    bind=True,
+    base=PipelineTask,
+)
+def start_one_hot(self, db_id: int):
+    """
+    Initiates the one-hot encoding plugin, the only step of the one-hot pipeline.
+
+    The plugin encodes the taxonomy values of the attributes directly as a
+    feature vector, so neither the aggregator nor MDS follows.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{ONE_HOT_PLUGIN}_attributes"],
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=ONE_HOT_PLUGIN,
+        logging_name="One-Hot Encoding",
         payload=payload,
     )
 
@@ -582,6 +626,54 @@ def finalize_pipeline(self, db_id: int, source_url: str):
         task_data.save(commit=True)
 
     # trigger next pipeline
+    launch_next_pipeline(task_data)
+
+
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_one_hot",
+    bind=True,
+    base=PipelineTask,
+)
+def finalize_one_hot(self, db_id: int, source_url: str):
+    """
+    Finalizes the one-hot pipeline after the encoding plugin finished.
+
+    The one-hot plugin writes the feature vectors as a single csv file instead of
+    the zip the MDS pipelines produce, so the vectors are stored and handed to the
+    concatenation under their own name.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+        source_url (str): The URL of the completed previous task to fetch outputs from.
+
+    Raises:
+        ValueError: If the required 'entity/vector' output is missing.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = load_params(task_data)
+
+    outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
+    vectors_url = extract_output_url(outputs, "entity/vector")
+
+    if should_store_mds_output(params):
+        save_intermediate_results(
+            task_data=task_data,
+            retries=self.request.retries,
+            db_id=db_id,
+            file=open_url(vectors_url).content,
+            file_name=f"{pipeline_label(task_data)}_vectors.csv",
+            file_type="entity/vector",
+            mimetype="text/csv",
+        )
+
+    if params.concat_output:
+        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+        vector_zip_urls.append(vectors_url)
+        task_data.data["vector_zip_urls"] = vector_zip_urls
+        task_data.save(commit=True)
+
     launch_next_pipeline(task_data)
 
 

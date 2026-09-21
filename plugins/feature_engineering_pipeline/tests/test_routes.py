@@ -250,7 +250,7 @@ def test_routing_task_groups_the_attributes_per_pipeline(monkeypatch):
     assert data[f"{MAPPING_PLUGIN}_attributes"] == "m1"
 
 
-def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
+def test_routing_task_reports_the_queued_and_skipped_attributes(monkeypatch):
     monkeypatch.setattr(
         "feature_engineering_pipeline.tasks_pipeline_steps.start_wu_palmer.apply_async",
         lambda *args, **kwargs: None,
@@ -262,7 +262,7 @@ def test_routing_task_reports_unsupported_and_skipped_attributes(monkeypatch):
     run_task(start_routing_task, db_id=db_task.id)
 
     task_log = reload(db_task).task_log
-    assert "One-Hot encoding not yet supported" in task_log
+    assert "one-hot encoding pipeline for attributes: ['hot']" in task_log
     assert "None selected attributes skipped: ['skip']" in task_log
 
 

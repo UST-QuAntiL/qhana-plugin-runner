@@ -45,6 +45,7 @@ FINALIZE_PIPELINE = "finalize"
 PIPELINE_PLUGINS = {
     WU_PALMER_PLUGIN: "wu-palmer",
     MAPPING_PLUGIN: "mapping-distances",
+    ONE_HOT_PLUGIN: "one-hot-encoding",
     TRANSFORMERS_PLUGIN: "element_sim-to-element_dist-transformers",
     AGGREGATOR_PLUGIN: "attribute-distance-aggregator",
     MDS_PLUGIN: "attribute-distance-mds",

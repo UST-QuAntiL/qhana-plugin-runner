@@ -64,6 +64,7 @@ from .tasks_helpers import (
     taxonomy_ref,
 )
 from .tasks_pipeline_steps import (
+    finalize_one_hot,
     finalize_pca,
     finalize_pipeline,
     finalize_vector_concat,
@@ -174,6 +175,7 @@ def preprocessing_task(self, db_id: int) -> str:
 PIPELINE_STEP_COUNTS = {
     WU_PALMER_PLUGIN: 4,  # Wu-Palmer, Transformers, Aggregator, MDS
     MAPPING_PLUGIN: 3,  # Mapping, Aggregator, MDS
+    ONE_HOT_PLUGIN: 1,  # One-Hot Encoding
     NUMERIC_MAPPING_PIPELINE: 3,  # Mapping, Aggregator, MDS
     FEATURE_VECTOR: 1,
 }
@@ -181,6 +183,7 @@ PIPELINE_STEP_COUNTS = {
 PIPELINE_LOG_NAMES = {
     WU_PALMER_PLUGIN: "Wu-Palmer pipeline for attributes",
     MAPPING_PLUGIN: "distances mapping pipeline for attributes",
+    ONE_HOT_PLUGIN: "one-hot encoding pipeline for attributes",
     NUMERIC_MAPPING_PIPELINE: (
         "numeric mapping pipeline for multi-valued numeric attributes"
     ),
@@ -289,6 +292,7 @@ def start_routing_task(self, db_id: int) -> str:
     for pipeline, attributes in (
         (WU_PALMER_PLUGIN, wu_palmer_attributes),
         (MAPPING_PLUGIN, mapping_attributes),
+        (ONE_HOT_PLUGIN, one_hot_attributes),
         (NUMERIC_MAPPING_PIPELINE, numeric_mapping_attributes),
         (FEATURE_VECTOR, feature_vector_attributes),
     ):
@@ -302,11 +306,6 @@ def start_routing_task(self, db_id: int) -> str:
             task_data.add_task_log_entry(message)
         pipeline_queue.extend(groups)
         total_plugins += PIPELINE_STEP_COUNTS[pipeline] * len(groups)
-
-    if one_hot_attributes:
-        task_data.add_task_log_entry(
-            f"One-Hot encoding not yet supported. Selected One-Hot for attributes: {one_hot_attributes}"
-        )
 
     if none_selected:
         task_data.add_task_log_entry(f"None selected attributes skipped: {none_selected}")
@@ -368,6 +367,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     known_urls = [
         task_data.data.get(f"{WU_PALMER_PLUGIN}_url"),
         task_data.data.get(f"{MAPPING_PLUGIN}_url"),
+        task_data.data.get(f"{ONE_HOT_PLUGIN}_url"),
         task_data.data.get(f"{TRANSFORMERS_PLUGIN}_url"),
         task_data.data.get(f"{AGGREGATOR_PLUGIN}_url"),
         task_data.data.get(f"{MDS_PLUGIN}_url"),
@@ -488,6 +488,9 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
     elif current_pipeline == MAPPING_PLUGIN:
         handle_mapping_progression(task_data, db_id, source_url)
 
+    elif current_pipeline == ONE_HOT_PLUGIN:
+        handle_one_hot_progression(task_data, db_id, source_url)
+
     elif current_pipeline == NUMERIC_MAPPING_PIPELINE:
         handle_mapping_progression(task_data, db_id, source_url)
 
@@ -532,6 +535,16 @@ def handle_mapping_progression(task_data: ProcessingTask, db_id: int, source_url
         finalize_pipeline.apply_async(
             args=[db_id, source_url], countdown=CELERY_COUNTDOWN
         )
+
+
+def handle_one_hot_progression(task_data: ProcessingTask, db_id: int, source_url: str):
+    """
+    Handle progression of the one-hot pipeline. The encoding plugin is the only
+    step, so its completion finalizes the pipeline.
+    """
+
+    if source_url == task_data.data.get(f"{ONE_HOT_PLUGIN}_url"):
+        finalize_one_hot.apply_async(args=[db_id, source_url], countdown=CELERY_COUNTDOWN)
 
 
 def handle_finalize_progression(task_data: ProcessingTask, db_id: int, source_url: str):
