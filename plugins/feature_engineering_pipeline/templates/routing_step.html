@@ -30,16 +30,10 @@ limitations under the License.
         min-width: 12rem;
     }
 
-    .numeric-attributes {
-        display: grid;
-        grid-template-columns: max-content max-content auto;
-        align-items: center;
-        column-gap: 1rem;
-        row-gap: 0.5rem;
-        width: fit-content;
-    }
-
-    .value-count {
+    .attribute-row .value-count {
+        min-width: 7rem;
+        margin-inline-start: auto;
+        text-align: end;
         font-size: 0.85em;
         opacity: 0.75;
         white-space: nowrap;
@@ -49,13 +43,20 @@ limitations under the License.
         margin-bottom: 0.5rem;
     }
 
-    .numeric-attribute {
-        display: contents;
+    .attribute-row .numeric-include {
+        display: flex;
+        align-items: center;
+        column-gap: 0.4rem;
+        cursor: pointer;
     }
 
-    .numeric-attribute input {
-        justify-self: start;
+    .attribute-row .numeric-include input {
         margin: 0;
+    }
+
+    .no-settings {
+        margin: 0.2rem 0 0.6rem 0;
+        opacity: 0.75;
     }
 
     .input-params {
@@ -88,8 +89,7 @@ limitations under the License.
 
     .attribute-settings-button {
         flex-shrink: 0;
-        align-self: stretch;
-        padding-block: 0;
+        padding-block: 0.3em;
         padding-inline: 0.7em;
         white-space: nowrap;
         cursor: pointer;
@@ -200,17 +200,38 @@ limitations under the License.
     {% if numeric_attributes %}
     <fieldset>
         <legend>Numeric Attributes</legend>
-        <div class="numeric-attributes">
-            {%- for attr in numeric_attributes -%}
-            {%- set field_name = "pipeline_" + attr -%}
-            <label class="numeric-attribute" for="{{field_name}}">
-                <span class="attribute-name">{{attr}}</span>
-                <span class="value-count">{% if attr in multi_valued_numeric %}multi-valued{% else %}single-valued{% endif %}</span>
-                <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
-                    autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
-            </label>
-            {%- endfor -%}
+        {# A multi-valued attribute carries its own copy of the mapping and MDS settings,
+        submitted as `pipeline_<attribute>__<setting>` like the taxonomy attributes. #}
+        {%- for attr in numeric_attributes -%}
+        {%- set field_name = "pipeline_" + attr -%}
+        {%- set settings_id = field_name + "__settings" -%}
+        {%- set multi_valued = attr in multi_valued_numeric -%}
+        <div class="attribute-block">
+            <div class="attribute-row">
+                <label class="attribute-name" for="{{field_name}}">{{attr}}</label>
+                <span class="value-count">{% if multi_valued %}multi-valued{% else %}single-valued{% endif %}</span>
+                <label class="numeric-include">
+                    <input type="checkbox" name="{{field_name}}" id="{{field_name}}" value="numeric"
+                        autocomplete="off" {% if values.get(field_name) == "numeric" %}checked{% endif %}>
+                    Include
+                </label>
+                <button type="button" class="attribute-settings-button" aria-expanded="false"
+                    aria-controls="{{settings_id}}"><span aria-hidden="true">&#9881;</span> Settings</button>
+            </div>
+            <div class="attribute-settings" id="{{settings_id}}" hidden>
+                {%- if multi_valued -%}
+                {%- for group in numeric_settings_groups -%}
+                {{ components.settings_section(group.title, group.schema, values=settings_values.get(attr,
+                input_params), errors=settings_errors.get(attr, {}), expanded=(group.key in
+                expanded_groups.get(attr, ())), id_prefix=field_name ~ "__", name_prefix=field_name ~ "__") }}
+                {%- endfor -%}
+                {%- else -%}
+                <p class="no-settings">A single-valued attribute is appended to the feature vector
+                    without a plugin, so it has no settings yet.</p>
+                {%- endif -%}
+            </div>
         </div>
+        {%- endfor -%}
     </fieldset>
     {% else %}
     <p>No numeric attributes were found in the provided metadata.</p>

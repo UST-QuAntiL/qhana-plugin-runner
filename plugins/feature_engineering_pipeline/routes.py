@@ -39,6 +39,8 @@ from qhana_plugin_runner.tasks import (
 
 from . import ROUTER_BLP, Router
 from .schemas import (
+    MAPPING_PLUGIN,
+    NUMERIC_SETTINGS_GROUPS,
     PCA_PLUGIN,
     PIPELINE_OPTIONS,
     PIPELINE_PLUGINS,
@@ -360,16 +362,31 @@ class RoutingStepFrontend(MethodView):
         recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
 
+        # A multi-valued numeric attribute runs the distances mapping, so it carries
+        # the settings of that pipeline. A single-valued one has no settings yet.
+        multi_valued_attributes = [
+            attribute
+            for attribute in numeric_attributes
+            if attribute in multi_valued_numeric
+        ]
+
         _, submitted_settings = split_routing_fields(data)
         settings_values = {
             attribute: merge_settings(input_params, submitted_settings.get(attribute, {}))
-            for attribute in attributes
+            for attribute in (*attributes, *multi_valued_attributes)
         }
         _, settings_errors = split_routing_fields(errors)
 
         expanded_groups = {
-            attribute: expanded_settings_groups(recommendations.get(attribute))
-            for attribute in attributes
+            **{
+                attribute: expanded_settings_groups(recommendations.get(attribute))
+                for attribute in attributes
+            },
+            # The numeric pipeline is fixed, so its sections open like a recommendation.
+            **{
+                attribute: expanded_settings_groups(MAPPING_PLUGIN)
+                for attribute in multi_valued_attributes
+            },
         }
 
         return Response(
@@ -384,6 +401,7 @@ class RoutingStepFrontend(MethodView):
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
                 settings_groups=field_groups(PIPELINE_SETTINGS_GROUPS),
+                numeric_settings_groups=field_groups(NUMERIC_SETTINGS_GROUPS),
                 expanded_groups=expanded_groups,
                 input_params=input_params,
                 settings_values=settings_values,

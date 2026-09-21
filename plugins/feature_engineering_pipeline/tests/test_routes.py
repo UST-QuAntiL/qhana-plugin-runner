@@ -506,7 +506,10 @@ def _numeric_task() -> ProcessingTask:
 
 
 def _checkbox(body: str, attribute: str) -> str:
-    match = re.search(rf'<input type="checkbox" name="pipeline_{attribute}"[^>]*>', body)
+    match = re.search(
+        rf'<input[^>]*type="checkbox"[^>]*name="pipeline_{re.escape(attribute)}"[^>]*>',
+        body,
+    )
     assert match, f"no checkbox for {attribute}"
     return match.group(0)
 
@@ -530,6 +533,94 @@ def test_routing_step_frontend_restores_the_checked_numeric_attributes(client):
 
     assert "checked" in _checkbox(body, "year")
     assert "checked" not in _checkbox(body, "beats")
+
+
+def _numeric_settings_task(**payload_overrides) -> ProcessingTask:
+    """A task in the routing step with a single-valued and a multi-valued attribute."""
+    schema = InputParametersSchema()
+    db_task = ProcessingTask(
+        task_name="router_test",
+        parameters=schema.dumps(schema.load(router_payload(**payload_overrides))),
+    )
+    db_task.data["taxonomy_attributes"] = []
+    db_task.data["numeric_attributes"] = ["year", "beats"]
+    db_task.data["multi_valued_numeric_attributes"] = ["beats"]
+    db_task.save(commit=True)
+    return db_task
+
+
+def test_routing_step_frontend_renders_the_settings_of_a_multi_valued_attribute(client):
+    """A multi-valued numeric attribute runs the mapping, so it needs its settings."""
+    db_task = _numeric_settings_task(distanceMetric="cosine", mdsDimensions=3)
+
+    body = client.get(_path("RoutingStepFrontend", db_id=db_task.id)).get_data(
+        as_text=True
+    )
+
+    for setting in ("distanceMetric", "mdsDimensions", "metric"):
+        assert f'name="pipeline_beats__{setting}"' in body
+    assert 'value="cosine" selected' in body
+    assert 'value="3"' in _tag(body, "pipeline_beats__mds_dimensions")
+
+
+@pytest.mark.parametrize(
+    "setting",
+    ["distanceMetric", "mdsDimensions", "rootIsPartOfHierarchy", "transformer"],
+)
+def test_routing_step_frontend_renders_no_settings_for_a_single_valued_attribute(
+    client, setting
+):
+    """A single-valued numeric attribute is appended to the vector without a plugin."""
+    body = client.get(
+        _path("RoutingStepFrontend", db_id=_numeric_settings_task().id)
+    ).get_data(as_text=True)
+
+    assert f'name="pipeline_year__{setting}"' not in body
+
+
+def test_routing_step_frontend_renders_a_settings_panel_per_numeric_attribute(client):
+    """The panel of a single-valued attribute is a placeholder until it has settings."""
+    body = client.get(
+        _path("RoutingStepFrontend", db_id=_numeric_settings_task().id)
+    ).get_data(as_text=True)
+
+    for attribute in ("year", "beats"):
+        assert f'aria-controls="pipeline_{attribute}__settings"' in body
+    placeholder = body[body.index('id="pipeline_year__settings"') :]
+    assert "no settings yet" in placeholder.split("</div>")[0]
+
+
+@pytest.mark.parametrize(
+    "setting", ["rootIsPartOfHierarchy", "transformer"], ids=["wu_palmer", "transformer"]
+)
+def test_routing_step_frontend_omits_the_unused_settings_of_a_numeric_attribute(
+    client, setting
+):
+    """Neither Wu-Palmer nor the transformer runs in the numeric mapping pipeline."""
+    body = client.get(
+        _path("RoutingStepFrontend", db_id=_numeric_settings_task().id)
+    ).get_data(as_text=True)
+
+    assert f'name="pipeline_beats__{setting}"' not in body
+
+
+def test_routing_step_stores_the_settings_of_a_numeric_attribute(client, monkeypatch):
+    mock_task_dispatch(monkeypatch)
+    db_task = _numeric_settings_task()
+
+    resp = client.post(
+        _path("RoutingStepView", db_id=db_task.id),
+        data={
+            "pipeline_beats": INCLUDE_NUMERIC,
+            "pipeline_beats__distanceMetric": "cosine",
+            "pipeline_beats__mdsDimensions": "3",
+        },
+    )
+
+    assert resp.status_code == HTTPStatus.SEE_OTHER
+    data = ProcessingTask.get_by_id(db_task.id).data
+    assert data["attribute_settings"]["beats"]["distanceMetric"] == "cosine"
+    assert data["attribute_settings"]["beats"]["mdsDimensions"] == 3
 
 
 def test_routing_step_accepts_a_numeric_attribute_as_the_only_selection(

@@ -466,6 +466,15 @@ PIPELINE_SETTINGS_GROUPS = (
 
 _SETTINGS_GROUP_FIELDS = {key: fields for key, _, fields in PIPELINE_SETTINGS_GROUPS}
 
+# The sections a multi-valued numeric attribute can override. It always runs the
+# distances mapping, the aggregator and MDS, so the Wu-Palmer and the transformer
+# section do not apply to it. A single-valued numeric attribute has no settings.
+NUMERIC_SETTINGS_GROUPS = tuple(
+    group
+    for group in PIPELINE_SETTINGS_GROUPS
+    if group[0] in (MAPPING_PLUGIN, MDS_PLUGIN)
+)
+
 # The additional sections the routing step expands for a recommended pipeline. The
 # MDS section is always expanded, the transformer only runs in the Wu-Palmer pipeline.
 _RECOMMENDED_SETTINGS_GROUPS = {
@@ -496,6 +505,7 @@ def _form_keys(*group_keys: str) -> tuple[str, ...]:
 PIPELINE_SETTINGS_KEYS = {
     WU_PALMER_PLUGIN: _form_keys(WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, MDS_PLUGIN),
     MAPPING_PLUGIN: _form_keys(MAPPING_PLUGIN, MDS_PLUGIN),
+    NUMERIC_MAPPING_PIPELINE: _form_keys(MAPPING_PLUGIN, MDS_PLUGIN),
 }
 
 SETTINGS_KEYS = frozenset(field.data_key for field in _SETTINGS_FIELDS.values())

@@ -47,6 +47,7 @@ from feature_engineering_pipeline.tests.data import (
     input_file_responses,
     make_router_task,
     mock_open_url,
+    pipeline_group,
 )
 from flask import current_app
 from requests.exceptions import Timeout
@@ -374,6 +375,55 @@ def test_routing_task_routes_numeric_attributes_by_their_metadata(monkeypatch):
     assert "feature vector for single-valued numeric attributes: ['year']" in (
         db_task.task_log
     )
+
+
+def test_routing_task_splits_the_numeric_mapping_by_the_attribute_settings(monkeypatch):
+    """A multi-valued numeric attribute carries the settings of its mapping pipeline."""
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.start_numeric_distances.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={"beats": INCLUDE_NUMERIC, "bars": INCLUDE_NUMERIC},
+        data={
+            "numeric_attributes": ["beats", "bars"],
+            "multi_valued_numeric_attributes": ["beats", "bars"],
+            "attribute_settings": {"bars": {"distanceMetric": "cosine"}},
+        },
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    assert db_task.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"] == "beats"
+    assert db_task.data["pipeline_queue"] == [
+        pipeline_group(
+            NUMERIC_MAPPING_PIPELINE,
+            ["bars"],
+            {"distanceMetric": "cosine"},
+            f"{NUMERIC_MAPPING_PIPELINE}_2",
+        )
+    ]
+    # both groups run the mapping, the aggregator and MDS
+    assert db_task.progress_target == 7
+
+
+def test_routing_task_ignores_settings_of_a_single_valued_attribute(monkeypatch):
+    """Nothing is configurable yet for an attribute that skips the plugins."""
+    monkeypatch.setattr(
+        "feature_engineering_pipeline.tasks_pipeline_steps.build_numeric_feature_vector.apply_async",
+        lambda *args, **kwargs: None,
+    )
+    db_task = make_router_task(
+        selections={"year": INCLUDE_NUMERIC},
+        data={"attribute_settings": {"year": {"mdsDimensions": 3}}},
+    )
+
+    run_task(start_routing_task, db_id=db_task.id)
+
+    db_task = reload(db_task)
+    assert db_task.data["pipeline_queue"] == []
+    assert db_task.data["current_settings"] == {}
 
 
 @pytest.mark.parametrize(
