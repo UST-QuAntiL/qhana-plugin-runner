@@ -109,6 +109,7 @@ def preprocessing_task(self, db_id: int) -> str:
     numeric_attributes = []
     multi_valued_numeric_attributes = []
     unused_attributes = []
+    unmatched_taxonomy_refs = {}
     recommendations = {}
 
     with open_url(params.entities_metadata_url) as response:
@@ -144,11 +145,20 @@ def preprocessing_task(self, db_id: int) -> str:
                     recommendations[metadata.ID] = calculate_recommendations(
                         taxonomies_zip, matched_zip_path
                     )
+                else:
+                    unmatched_taxonomy_refs[metadata.ID] = ref
 
     if unused_attributes:
         TASK_LOGGER.warning(
             f"Skipped {len(unused_attributes)} attribute(s) described in the metadata "
             f"file but absent from the entities file: {unused_attributes}."
+        )
+
+    if unmatched_taxonomy_refs:
+        TASK_LOGGER.warning(
+            f"Skipped {len(unmatched_taxonomy_refs)} attribute(s) whose referenced "
+            f"taxonomy file is missing from the taxonomies zip: "
+            f"{unmatched_taxonomy_refs}. The zip contains {sorted(available_taxonomies)}."
         )
 
     TASK_LOGGER.debug(
