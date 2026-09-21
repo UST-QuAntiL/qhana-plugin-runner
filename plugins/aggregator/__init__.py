@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import textwrap
 from typing import Optional
 
 from flask.app import Flask
@@ -20,7 +21,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "attribute-distance-aggregator"
-__version__ = "v0.1.1"
+__version__ = "v0.2.0"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -34,9 +35,21 @@ AGGREGATOR_BLP = SecurityBlueprint(
 class AttributeAggregator(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
-    description = (
-        "Aggregates element distances to attribute distances for a list of entities."
-    )
+    description = textwrap.dedent(
+        r"""
+    Aggregates element distances to attribute distances for a list of entities.
+    \
+    For a taxonomy attribute the elements of an entity are its attribute values, and the
+    attribute distance is the Sym Max Mean of the element distances between the two entities.
+    \
+    A numeric attribute (attribute metadata description `number`, `integer`, `int`, `float`
+    or `double`) has one element per entity, keyed by the entity ID, as produced by the
+    mapping distances plugin. Sym Max Mean over the two single elements returns their
+    element distance unchanged.
+    \
+    A pair where one entity has no element for the attribute gets the distance `null`.
+    """
+    ).strip()
     tags = ["preprocessing", "distance-calculation"]
 
     def __init__(self, app: Optional[Flask]) -> None:

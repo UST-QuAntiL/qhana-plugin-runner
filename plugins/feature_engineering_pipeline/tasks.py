@@ -27,7 +27,10 @@ from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.db import DB
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.db.models.virtual_plugins import PluginState
-from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+from qhana_plugin_runner.plugin_utils.attributes import (
+    NUMERIC_TYPES,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
@@ -41,7 +44,6 @@ from .schemas import (
     MDS_PLUGIN,
     NONE_PLUGIN,
     NUMERIC_MAPPING_PIPELINE,
-    NUMERIC_TYPES,
     ONE_HOT_PLUGIN,
     PCA_PLUGIN,
     PIPELINE_SETTINGS_KEYS,
@@ -104,6 +106,7 @@ def preprocessing_task(self, db_id: int) -> str:
     taxonomy_attributes = []
     numeric_attributes = []
     multi_valued_numeric_attributes = []
+    unused_attributes = []
     recommendations = {}
 
     with open_url(params.entities_metadata_url) as response:
@@ -111,7 +114,7 @@ def preprocessing_task(self, db_id: int) -> str:
         for element in load_entities(response, mimetype):
             metadata = AttributeMetadata.from_dict(element)
             if metadata.ID not in entity_attributes:
-                # TODO: print warning here
+                unused_attributes.append(metadata.ID)
                 continue
 
             if metadata.description in NUMERIC_TYPES:
@@ -139,6 +142,12 @@ def preprocessing_task(self, db_id: int) -> str:
                     recommendations[metadata.ID] = calculate_recommendations(
                         taxonomies_zip, matched_zip_path
                     )
+
+    if unused_attributes:
+        TASK_LOGGER.warning(
+            f"Skipped {len(unused_attributes)} attribute(s) described in the metadata "
+            f"file but absent from the entities file: {unused_attributes}."
+        )
 
     TASK_LOGGER.debug(
         f"Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "

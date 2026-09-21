@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 from flask import Flask
 
 from qhana_plugin_runner.api.util import SecurityBlueprint
@@ -39,7 +41,7 @@ class Router(QHAnaPluginBase):
     description = _description
     tags = ["preprocessing", "routing"]
 
-    def __init__(self, app: Flask | None) -> None:
+    def __init__(self, app: Optional[Flask]) -> None:
         super().__init__(app)
 
     def get_api_blueprint(self):
