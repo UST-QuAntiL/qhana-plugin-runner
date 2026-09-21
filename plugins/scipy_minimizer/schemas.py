@@ -14,6 +14,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
 import marshmallow as ma
 
@@ -23,11 +24,11 @@ from qhana_plugin_runner.api.util import FrontendFormBaseSchema, MaBaseSchema, F
 
 @dataclass
 class CallbackUrl:
-    callback: str
+    callback: Optional[str] = None
 
 
 class CallbackUrlSchema(MaBaseSchema):
-    callback = ma.fields.URL(required=True, allow_none=False)
+    callback = ma.fields.URL(required=False, allow_none=True, load_default=None)
 
     @ma.post_load
     def make_object(self, data, **kwargs):

@@ -47,11 +47,11 @@ class DiffMethodEnum(Enum):
 
 
 class QuantumCNN(nn.Module, metaclass=ABCMeta):
-    def __init__(self, quantum_device: qml.Device):
+    def __init__(self, quantum_device: qml.devices.Device):
         super(QuantumCNN, self).__init__()
         self.quantum_device = quantum_device
 
-    def set_quantum_backend(self, quantum_device: qml.Device):
+    def set_quantum_backend(self, quantum_device: qml.devices.Device):
         self.quantum_device = quantum_device
 
     def quanv(self, image: Tensor) -> Tensor:
@@ -85,7 +85,7 @@ class QuantumCNN(nn.Module, metaclass=ABCMeta):
             subimage[4 * channel + 3] = image[1, 1, channel]
         qnode = self.circuit(subimage)
         qnode.construct([], {})
-        return qnode.qtape.to_openqasm()
+        return qml.to_openqasm(qnode)()
 
     def parameters(self, recurse: bool = True) -> Iterator[nn.Parameter]:
         for name, param in self.named_parameters(recurse=recurse):
@@ -104,7 +104,7 @@ class QCNN1(QuantumCNN):
         self,
         n_qubits: int,
         num_layers: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
         single_q_params: bool = False,
@@ -201,7 +201,7 @@ class QCNN2(QuantumCNN):
         self,
         n_qubits: int,
         num_layers: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
         single_q_params: bool = False,
@@ -299,7 +299,7 @@ class QCNN3(QuantumCNN):
         self,
         n_qubits: int,
         num_layers: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
         single_q_params: bool = False,
@@ -400,7 +400,7 @@ class QCNN4(QuantumCNN):
         self,
         n_qubits: int,
         num_layers: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
         single_q_params: bool = False,
@@ -499,7 +499,7 @@ class QCNN5(QuantumCNN):
         self,
         n_qubits: int,
         num_layers: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
         single_q_params: bool = False,
@@ -610,7 +610,7 @@ class QCNN6(QuantumCNN):
         self,
         n_qubits: int,
         num_layers: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
         single_q_params: bool = False,
@@ -708,7 +708,7 @@ class QCNN7(QuantumCNN):
         self,
         n_qubits: int,
         num_layers: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         weight_init: WeightInitEnum,
         diff_method: DiffMethodEnum,
         single_q_params: bool = False,

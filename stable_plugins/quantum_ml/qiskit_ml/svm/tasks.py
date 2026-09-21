@@ -136,6 +136,7 @@ def calculation_task(self, db_id: int) -> str:
             reps=reps,
             entanglement_pattern=entanglement_pattern.get_pattern(),
             data_map_func=data_maps_enum.get_data_mapping(),
+            shots=shots,
         )
     else:
         kernel_kwargs = dict()

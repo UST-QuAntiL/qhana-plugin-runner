@@ -114,7 +114,7 @@ class MinimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @SCIPY_MINIMIZER_GRAD_BLP.require_jwt("jwt", optional=True)
-    def get(self, errors, callback: CallbackUrl):
+    def get(self, errors, callback: Optional[CallbackUrl] = None):
         """Return the micro frontend."""
         return self.render(request.args, errors, callback)
 
@@ -135,26 +135,29 @@ class MinimizerSetupMicroFrontend(MethodView):
         required=False,
     )
     @SCIPY_MINIMIZER_GRAD_BLP.require_jwt("jwt", optional=True)
-    def post(self, errors, callback: CallbackUrl):
+    def post(self, errors, callback: Optional[CallbackUrl] = None):
         """Return the micro frontend with prerendered inputs."""
         return self.render(request.form, errors, callback)
 
-    def render(self, data: Mapping, errors: dict, callback: CallbackUrl):
+    def render(self, data: Mapping, errors: dict, callback: Optional[CallbackUrl]):
         schema = MinimizerSetupTaskInputSchema()
         callback_schema = CallbackUrlSchema()
 
         if not data:
             data = self.example_inputs
 
+        callback_params = {}
+        if callback and callback.callback:
+            callback_params = callback_schema.dump(callback)
         process_url = url_for(
             f"{SCIPY_MINIMIZER_GRAD_BLP.name}.{MinimizerSetupProcessStep.__name__}",
-            **callback_schema.dump(callback),
+            **callback_params,
         )
 
         example_url = url_for(
             f"{SCIPY_MINIMIZER_GRAD_BLP.name}.{MinimizerSetupMicroFrontend.__name__}",
             **self.example_inputs,
-            **callback_schema.dump(callback),
+            **callback_params,
         )
         return Response(
             render_template(
@@ -178,11 +181,15 @@ class MinimizerSetupProcessStep(MethodView):
         MinimizerSetupTaskInputSchema(unknown=EXCLUDE), location="form"
     )
     @SCIPY_MINIMIZER_GRAD_BLP.arguments(
-        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=True
+        CallbackUrlSchema(unknown=EXCLUDE), location="query", required=False
     )
     @SCIPY_MINIMIZER_GRAD_BLP.response(HTTPStatus.OK, MinimizerTaskResponseSchema())
     @SCIPY_MINIMIZER_GRAD_BLP.require_jwt("jwt", optional=True)
-    def post(self, arguments: MinimizerSetupTaskInputData, callback: CallbackUrl):
+    def post(
+        self,
+        arguments: MinimizerSetupTaskInputData,
+        callback: Optional[CallbackUrl] = None,
+    ):
         """Start the demo task."""
         db_task = ProcessingTask(
             task_name="minimizer_task",
@@ -192,17 +199,16 @@ class MinimizerSetupProcessStep(MethodView):
         db_task.save()
         DB.session.flush()
 
-        # add callback as webhook subscriber subscribing to all updates
-        subscription = TaskUpdateSubscription(
-            db_task,
-            webhook_href=callback.callback,
-            task_href=url_for(
-                "tasks-api.TaskView", task_id=str(db_task.id), _external=True
-            ),
-            event_type=None,
-        )
-
-        subscription.save()
+        if callback and callback.callback:
+            subscription = TaskUpdateSubscription(
+                db_task,
+                webhook_href=callback.callback,
+                task_href=url_for(
+                    "tasks-api.TaskView", task_id=str(db_task.id), _external=True
+                ),
+                event_type=None,
+            )
+            subscription.save()
 
         db_task.add_next_step(
             href=url_for(

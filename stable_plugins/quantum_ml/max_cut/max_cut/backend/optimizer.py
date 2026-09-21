@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from enum import Enum
-from qiskit.algorithms.optimizers import (
+
+from qiskit_algorithms.optimizers import (
     ADAM,
     AQGD,
     CG,

@@ -50,6 +50,7 @@ class ProductionConfig(SQLAchemyProductionConfig, SmorestProductionConfig):
     FILE_STORE_ROOT_PATH = "files"
 
     PLUGIN_REGISTRY_URL: Optional[str] = None
+    DISABLED_PLUGINS: Sequence[str] = []
 
     # URL rewrite rules are (pattern, replacement) pairs that are applied
     # in order to URLs opened with qhana_plugin_runner.requests.open_url

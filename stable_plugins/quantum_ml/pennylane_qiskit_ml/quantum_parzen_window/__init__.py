@@ -36,14 +36,22 @@ class QParzenWindow(QHAnaPluginBase):
     name = _plugin_name
     version = __version__
     description = (
-        "This plugin implements a quantum parzen window. A parzen window labels an unlabeled data point via a majority "
-        "vote of all labeled points that are at most a certain distance away from the unlabeled point."
+        "This plugin implements a quantum parzen window. A parzen window labels "
+        "an unlabeled data point via a majority vote of all labeled points that "
+        "are at most a certain distance away from the unlabeled point."
         "The Plugin implements the algorithm by Ruan et al. [0].\n\n"
-        "The entity points should be saved in the [entity/vector](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-vector) format "
-        "and labels in the [entity/label](https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/entities.html#entity-label) format. "
-        "Both may be stored in either a csv or a json file. Both can be generated with the ``data-creator`` plugin.\n"
+        "The entity points should be saved in the [entity/vector](https://"
+        "qhana-plugin-runner.readthedocs.io/en/latest/data-formats/examples/"
+        "entities.html#entity-vector) format and labels in the [entity/label]"
+        "(https://qhana-plugin-runner.readthedocs.io/en/latest/data-formats/"
+        "examples/entities.html#entity-label) format. Both may be stored in "
+        "either a csv or a json file. Both can be generated with the "
+        "``data-creator`` plugin.\n"
         "Source:\n"
-        "[0] [Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for K-Nearest Neighbors Classification Based on the Metric of Hamming Distance. Int J Theor Phys 56, 3496–3507 (2017).](https://doi.org/10.1007/s10773-017-3514-4)\n"
+        "[0] [Ruan, Y., Xue, X., Liu, H. et al. Quantum Algorithm for "
+        "K-Nearest Neighbors Classification Based on the Metric of Hamming "
+        "Distance. Int J Theor Phys 56, 3496–3507 (2017).](https://doi.org/"
+        "10.1007/s10773-017-3514-4)\n"
     )
     tags = ["QML", "classification", "supervised-learning", "quantum"]
 
@@ -54,14 +62,22 @@ class QParzenWindow(QHAnaPluginBase):
         return QParzenWindow_BLP
 
     def get_requirements(self) -> str:
-        return "pennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\nmuid~=0.5.3\nautoray<0.8"
+        return (
+            "qiskit~=2.3.0\n"
+            "qiskit-aer~=0.17.2\n"
+            "pennylane~=0.44.0\n"
+            "pennylane-qiskit~=0.44.1\n"
+            "scikit-learn~=1.8.0\n"
+            "muid~=0.5.3\n"
+            "autoray~=0.8.2"
+        )
 
 
 try:
-    # It is important to import the routes **after** COSTUME_LOADER_BLP and CostumeLoader are defined, because they are
-    # accessed as soon as the routes are imported.
-    from . import routes
+    # Import routes after the blueprint and plugin are defined because they are
+    # accessed as soon as routes are imported.
+    from . import routes  # noqa: F401
 except ImportError:
-    # When running `poetry run flask install`, importing the routes will fail, because the dependencies are not
-    # installed yet.
+    # When running `poetry run flask install`, importing routes fails
+    # because dependencies are not installed yet.
     pass

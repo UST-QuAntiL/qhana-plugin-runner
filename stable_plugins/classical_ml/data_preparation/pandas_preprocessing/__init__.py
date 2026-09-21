@@ -47,7 +47,7 @@ class PDPreprocessing(QHAnaPluginBase):
         return PDPreprocessing_BLP
 
     def get_requirements(self) -> str:
-        return "pandas~=1.5.0"
+        return "pandas~=2.3.3"
 
 
 try:

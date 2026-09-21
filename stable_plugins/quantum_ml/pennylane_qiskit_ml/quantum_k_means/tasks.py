@@ -140,8 +140,7 @@ def calculation_task(self, db_id: int) -> str:
     max_qbits = backend.get_max_num_qbits(ibmq_token, custom_backend)
     if max_qbits is None:
         max_qbits = 6
-    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits)
-    backend.shots = shots
+    backend = backend.get_pennylane_backend(ibmq_token, custom_backend, max_qbits, shots)
 
     cluster_algo = variant.get_cluster_algo(backend, tol, max_runs)
 

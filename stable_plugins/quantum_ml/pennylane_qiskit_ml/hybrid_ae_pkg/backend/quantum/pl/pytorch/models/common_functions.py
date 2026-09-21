@@ -20,7 +20,7 @@ from ... import qnn1, qnn2, qnn3
 
 
 def create_qlayer(
-    constructor_func: Callable, q_num: int, dev: qml.Device
+    constructor_func: Callable, q_num: int, dev: qml.devices.Device
 ) -> qml.qnn.TorchLayer:
     """
     Input of the created quantum layer should be in the range [0, pi]. The output will be in the range [-1, 1] if the

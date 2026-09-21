@@ -47,7 +47,7 @@ class DataCreator(QHAnaPluginBase):
         return DataCreator_BLP
 
     def get_requirements(self) -> str:
-        return "numpy~=1.13\nscikit-learn~=1.1"
+        return "numpy~=2.4.3\nscikit-learn~=1.8.0"
 
 
 try:

@@ -14,8 +14,8 @@
 
 import os
 from tempfile import SpooledTemporaryFile
-
 from typing import Optional, List
+from urllib.parse import urlparse
 
 from celery.utils.log import get_task_logger
 
@@ -71,10 +71,21 @@ def get_entity_generator(entity_points_url: str):
     """
     file_ = open_url(entity_points_url)
     file_.encoding = "utf-8"
-    file_type = file_.headers["Content-Type"]
+    file_type = _normalize_entity_mimetype(entity_points_url, file_)
     entities_generator = load_entities(file_, mimetype=file_type)
     entities_generator = ensure_dict(entities_generator)
     return entities_generator
+
+
+def _normalize_entity_mimetype(entity_points_url: str, response) -> str:
+    file_type = response.headers.get("Content-Type", "")
+    if file_type.startswith("text/plain"):
+        path = urlparse(entity_points_url).path.lower()
+        if path.endswith(".json"):
+            return "application/json"
+        if path.endswith(".csv"):
+            return "text/csv"
+    return file_type
 
 
 def get_indices_and_point_arr(entity_points_url: str) -> (dict, List[List[float]]):
@@ -146,12 +157,13 @@ def calculation_task(self, db_id: int) -> str:
     id_to_idx_y, points_arr_y = get_indices_and_point_arr(entity_points_url2)
 
     backend = backend.get_qiskit_backend(ibmq_token, custom_backend)
-    backend.shots = shots
 
     entanglement_pattern = entanglement_pattern.get_pattern()
     paulis = paulis.replace(" ", "").split(",")
 
-    kernel = kernel_enum.get_kernel(backend, n_qbits, paulis, reps, entanglement_pattern)
+    kernel = kernel_enum.get_kernel(
+        backend, n_qbits, paulis, reps, entanglement_pattern, shots
+    )
     # kernel_matrix is size len(points_arr_y) x len(points_arr_x)
     kernel_matrix = kernel.evaluate(x_vec=points_arr_x, y_vec=points_arr_y).T
     TASK_LOGGER.info(f"kernel_matrix.shape = {kernel_matrix.shape}")

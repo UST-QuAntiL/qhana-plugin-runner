@@ -49,11 +49,11 @@ class DiffMethodEnum(Enum):
 
 
 class QuantumNet(nn.Module, metaclass=ABCMeta):
-    def __init__(self, quantum_device: qml.Device):
+    def __init__(self, quantum_device: qml.devices.Device):
         super(QuantumNet, self).__init__()
         self.quantum_device = quantum_device
 
-    def set_quantum_backend(self, quantum_device: qml.Device):
+    def set_quantum_backend(self, quantum_device: qml.devices.Device):
         self.quantum_device = quantum_device
 
     @abstractmethod
@@ -100,7 +100,7 @@ class DressedQuantumNet(QuantumNet):
         input_size: int,
         output_size: int,
         n_qubits: int,
-        quantum_device: qml.Device,
+        quantum_device: qml.devices.Device,
         q_depth: int,
         weight_init: WeightInitEnum,
         preprocess_layers: List[int],
@@ -196,7 +196,10 @@ class DressedQuantumNet(QuantumNet):
         # Apply the quantum circuit to each element of the batch and append to q_out
         q_out = torch.Tensor(input_features.shape[0], self.n_qubits)
         for idx, elem in enumerate(q_in):
-            q_out_elem = self.q_net(elem, self.q_params).float().unsqueeze(0)
+            q_out_elem = self.q_net(elem, self.q_params)
+            if not isinstance(q_out_elem, torch.Tensor):
+                q_out_elem = torch.tensor(q_out_elem, dtype=torch.float32)
+            q_out_elem = q_out_elem.float().unsqueeze(0)
             q_out[idx] = q_out_elem
 
         # two-dimensional prediction from the postprocessing layer
@@ -216,4 +219,4 @@ class DressedQuantumNet(QuantumNet):
         x = torch.rand(self.n_qubits) * 2 * torch.pi
         circuit = self.q_net
         circuit.construct([], {"q_input_features": x, "q_weights_flat": self.q_params})
-        return circuit.qtape.to_openqasm()
+        return qml.to_openqasm(circuit)()

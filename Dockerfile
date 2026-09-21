@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.14
 
 LABEL org.opencontainers.image.source="https://github.com/UST-QuAntiL/qhana-plugin-runner"
 

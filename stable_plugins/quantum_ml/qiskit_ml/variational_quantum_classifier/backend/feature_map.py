@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from qiskit.circuit import QuantumCircuit
 from qiskit.circuit.library import ZZFeatureMap, PauliFeatureMap, ZFeatureMap
 import enum
 from typing import List
@@ -30,6 +31,18 @@ class FeatureMapEnum(enum.Enum):
     z_feature_map = "Z Kernel"
     zz_feature_map = "ZZ Kernel"
     pauli_feature_map = "Pauli Kernel"
+
+    def _decompose_feature_map(self, circuit: QuantumCircuit) -> QuantumCircuit:
+        # Decompose blueprint feature maps so backends don't see custom instructions.
+        for _ in range(3):
+            if any(
+                inst.operation.name.lower().endswith("featuremap")
+                for inst in circuit.data
+            ):
+                circuit = circuit.decompose()
+            else:
+                break
+        return circuit
 
     def get_featuremap(
         self, n_qbits: int, paulis: List[str], reps: int, entanglement_pattern: str
@@ -55,4 +68,4 @@ class FeatureMapEnum(enum.Enum):
         else:
             raise ValueError("Unkown feature map!")
 
-        return feature_map
+        return self._decompose_feature_map(feature_map)

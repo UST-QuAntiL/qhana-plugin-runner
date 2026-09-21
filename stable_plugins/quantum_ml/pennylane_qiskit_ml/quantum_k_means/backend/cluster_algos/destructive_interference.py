@@ -19,7 +19,7 @@ from typing import List, Tuple
 
 
 class DestructiveInterferenceQuantumKMeans(Clustering):
-    def __init__(self, backend: qml.Device, tol, max_runs):
+    def __init__(self, backend: qml.devices.Device, tol, max_runs):
         super(DestructiveInterferenceQuantumKMeans, self).__init__(backend, tol, max_runs)
         # Number of qbits needed to calculate "distance" between one data point and one centroid
         self.needed_qbits = 2
@@ -94,7 +94,7 @@ class DestructiveInterferenceQuantumKMeans(Clustering):
 
         result = circuit()
         # Probability of measuring |1> and open qasm
-        return [probs[1] for probs in result], circuit.tape.to_openqasm()
+        return [probs[1] for probs in result], qml.to_openqasm(circuit)()
 
     def compute_new_centroid_mapping(
         self, prepped_data: List[float], centroids: List[List[float]]

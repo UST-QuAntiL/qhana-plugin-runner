@@ -19,7 +19,7 @@ from typing import List, Tuple
 
 
 class NegativeRotationQuantumKMeans(Clustering):
-    def __init__(self, backend: qml.Device, tol, max_runs):
+    def __init__(self, backend: qml.devices.Device, tol, max_runs):
         super(NegativeRotationQuantumKMeans, self).__init__(backend, tol, max_runs)
         # Number of qbits needed to calculate "distance" between one data point and one centroid
         self.needed_qbits = 1
@@ -87,7 +87,7 @@ class NegativeRotationQuantumKMeans(Clustering):
 
         result = circuit()
         # return probability of measuring |0> and open qasm
-        return [probs[0] for probs in result], circuit.tape.to_openqasm()
+        return [probs[0] for probs in result], qml.to_openqasm(circuit)()
 
     def compute_new_centroid_mapping(
         self, prepped_data: List[float], centroids: List[List[float]]

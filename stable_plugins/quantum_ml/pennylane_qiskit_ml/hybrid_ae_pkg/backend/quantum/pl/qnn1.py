@@ -32,7 +32,7 @@ def constructor(q_num: int) -> Tuple[Callable, int]:
     def circuit(inputs: np.tensor, weights: np.tensor) -> List[np.tensor]:
         # angle encoding of the input
         for i in range(q_num):
-            qml.RX(inputs[i], wires=i)
+            qml.RX(inputs[..., i], wires=i)
 
         idx = 0  # current index for the weights
 

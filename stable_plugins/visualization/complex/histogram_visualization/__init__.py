@@ -51,7 +51,13 @@ class HistogramVisualization(QHAnaPluginBase):
         return VIS_BLP
 
     def get_requirements(self) -> str:
-        return "pylatexenc~=2.10\nkaleido~=0.2.1\n"
+        return (
+            "pylatexenc~=2.10\n"
+            "kaleido~=1.2.0\n"
+            "muid~=0.5.3\n"
+            "pandas~=2.3.3\n"
+            "plotly~=6.6.0"
+        )
 
 
 try:

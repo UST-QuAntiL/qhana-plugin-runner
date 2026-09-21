@@ -294,20 +294,22 @@ class QiskitSimulator(QHAnaPluginBase):
         return QISKIT_BLP
 
     def get_requirements(self) -> str:
-        return "qiskit~=0.43"
+        return "qiskit[qasm3-import]~=2.3.0\nqiskit-aer~=0.17.2"
 
 
 TASK_LOGGER = get_task_logger(__name__)
 
 
 def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, int]]):
-    from qiskit import QiskitError, QuantumCircuit, execute, Aer
+    from qiskit import QiskitError, QuantumCircuit, transpile
+    from qiskit_aer import AerSimulator
     from qiskit.qasm2 import loads as loads2
-    from qiskit.qasm3 import loads as loads3, QASM3ImporterError
-    from qiskit.result.result import ExperimentResult, Result
+    from qiskit.qasm3 import QASM3ImporterError
+    from qiskit.qasm3 import loads as loads3
+    from qiskit.result import Result
 
-    backend_counts = Aer.get_backend("qasm_simulator")
-    backend_statevector = Aer.get_backend("statevector_simulator")
+    backend_counts = AerSimulator()
+    backend_statevector = AerSimulator(method="statevector")
 
     circuit: QuantumCircuit
 
@@ -316,53 +318,69 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     except QASM3ImporterError:
         circuit = loads2(circuit_qasm)
 
-    result_count: Result = execute(
-        circuit, backend_counts, shots=execution_options["shots"]
+    compiled_counts = transpile(circuit, backend_counts)
+    result_count: Result = backend_counts.run(
+        compiled_counts, shots=execution_options["shots"]
     ).result()
 
     if not result_count.success:
-        from qiskit.visualization.circuit.circuit_visualization import (
-            _text_circuit_drawer,
-        )
-
-        drawn_circuit = str(_text_circuit_drawer(circuit, encoding="utf-8"))
+        drawn_circuit = str(circuit.draw(output="text"))
         TASK_LOGGER.warning("Failed to simulate circuit.\n" + drawn_circuit)
         raise ValueError("Circuit could not be simulated!", result_count)
 
     if execution_options.get("statevector"):
         # only execute if statevector result was requested in the first place
-        result_state: Optional[Result] = execute(circuit, backend_statevector).result()
+        # AerSimulator only reports a statevector when the circuit asks
+        # it to save one. The removed Aer statevector_simulator backend
+        # did this implicitly; without the explicit instruction the
+        # result carries no statevector at all.
+        statevector_circuit = circuit.copy()
+        statevector_circuit.save_statevector()
+        compiled_statevector = transpile(statevector_circuit, backend_statevector)
+        result_state: Optional[Result] = backend_statevector.run(
+            compiled_statevector
+        ).result()
         if result_state and not result_state.success:
             result_state = None
     else:
         result_state = None
 
-    experiment_result: ExperimentResult = result_count.results[0]
-    extra_metadata = result_count.metadata
+    experiment_result = result_count.results[0]
+    extra_metadata = getattr(result_count, "metadata", None)
+    if not extra_metadata:
+        extra_metadata = {}
 
-    time_taken = result_count.time_taken
+    time_taken = getattr(result_count, "time_taken", 0)
     time_taken_execute = extra_metadata.get("time_taken_execute", time_taken)
-    shots = experiment_result.shots
+    shots = getattr(experiment_result, "shots", execution_options["shots"])
     if isinstance(shots, tuple):
         assert (
             len(shots) == 2
         ), "If untrue, check with qiskit documentation what has changed!"
         shots = abs(shots[-1] - shots[0])
-    seed = experiment_result.seed_simulator
+    seed = getattr(experiment_result, "seed_simulator", None)
+
+    backend_name = getattr(result_count, "backend_name", None)
+    if not backend_name:
+        backend_name = getattr(backend_counts, "name", None)
+
+    backend_version = getattr(result_count, "backend_version", None)
+    if not backend_version:
+        backend_version = getattr(backend_counts, "backend_version", None)
 
     metadata = {
         # trace ids (specific to IBM qiskit jobs)
-        "jobId": result_count.job_id,
-        "qobjId": result_count.qobj_id,
+        "jobId": getattr(result_count, "job_id", None),
+        "qobjId": getattr(result_count, "qobj_id", None),
         # QPU/Simulator information
         "qpuType": "simulator",
         "qpuVendor": "IBM",
-        "qpuName": result_count.backend_name,
-        "qpuVersion": result_count.backend_version,
+        "qpuName": backend_name,
+        "qpuVersion": backend_version,
         "seed": seed,  # only for simulators
         "shots": shots,
         # Time information
-        "date": result_count.date,
+        "date": getattr(result_count, "date", None),
         "timeTaken": time_taken,  # total job time
         "timeTakenIdle": 0,  # idle/waiting time
         "timeTakenQpu": time_taken,  # total qpu time
@@ -371,7 +389,14 @@ def simulate_circuit(circuit_qasm: str, execution_options: Dict[str, Union[str, 
     }
 
     # If no measurements set shots to an empty key
-    if result_count.results[0].metadata["num_clbits"] == 0:
+    num_clbits = None
+    try:
+        num_clbits = experiment_result.metadata.get("num_clbits")
+    except AttributeError:
+        num_clbits = None
+    if num_clbits is None:
+        num_clbits = circuit.num_clbits
+    if num_clbits == 0:
         counts = {"": experiment_result.shots}
     else:
         try:

@@ -16,7 +16,10 @@ import enum
 from abc import abstractmethod, ABCMeta
 from celery.utils.log import get_task_logger
 
-from pennylane import Device
+try:
+    from pennylane import Device
+except ImportError:
+    from pennylane.devices import Device
 from typing import List, Tuple
 import numpy as np
 
