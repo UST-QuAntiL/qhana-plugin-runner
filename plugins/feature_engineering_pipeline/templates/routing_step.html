@@ -23,22 +23,27 @@ limitations under the License.
         column-gap: 1rem;
         margin-bottom: 0.5rem;
     }
-
     .attribute-row .attribute-name {
         min-width: 12rem;
     }
-
     .input-params {
         margin-bottom: 1rem;
     }
-
     .input-params dt {
         font-weight: bold;
     }
-
     .input-params dd {
         margin: 0 0 0.5rem 0;
         word-break: break-all;
+    }
+    .pipeline-descriptions {
+        margin-bottom: 1rem;
+    }
+    .pipeline-descriptions dt {
+        font-weight: bold;
+    }
+    .pipeline-descriptions dd {
+        margin: 0 0 0.5rem 0;
     }
 </style>
 {% endblock head %}
@@ -59,6 +64,21 @@ limitations under the License.
     </fieldset>
     {% endif %}
     <p>Assign each taxonomy attribute to a pipeline path:</p>
+
+    <fieldset class="pipeline-descriptions">
+        <legend>Pipeline descriptions</legend>
+        <dl>
+            <dt>None</dt>
+            <dd>Skip this attribute. It will not be processed by a pipeline.</dd>
+            <dt>Wu-Palmer</dt>
+            <dd>Calculates similarities between attribute values based on their positions in the taxonomy hierarchy.</dd>
+            <dt>One-Hot</dt>
+            <dd>Encodes categorical attribute values as binary vectors. This pipeline is not supported yet.</dd>
+            <dt>Mapping</dt>
+            <dd>Calculates distances between mapped taxonomy values using the configured distance metric.</dd>
+        </dl>
+    </fieldset>
+
     {% call forms.render_form(target="microfrontend") %}
     {% if attributes %}
     <fieldset>
