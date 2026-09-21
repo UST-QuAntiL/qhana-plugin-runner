@@ -12,16 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import sys
+import traceback
 from importlib import import_module
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional, Union
+from typing import ClassVar, Dict, List, Optional, Tuple, Union
 
 from flask import Flask
 from flask.blueprints import Blueprint
 from packaging.version import InvalidVersion, Version
 from packaging.version import parse as parse_version
 from werkzeug.utils import cached_property
+
+_PLUGIN_NAME_REGEX = re.compile(r"[a-z][a-zA-Z0-9_-]*")
+
+
+def _is_valid_plugin_name(name: str) -> bool:
+    """Check that a plugin name starts with a lowercase letter and contains only
+    letters, digits, hyphens, and underscores."""
+    return bool(_PLUGIN_NAME_REGEX.fullmatch(name))
+
+
+_PLUGIN_VERSION_REGEX = re.compile(
+    r"""
+    v
+    (?P<major>\d+)
+    (?:\.(?P<minor>\d+)
+        (?:\.(?P<patch>\d+))?
+    )?
+    """,
+    re.VERBOSE,
+)
+
+
+def _is_valid_plugin_version(version: str) -> bool:
+    """Check that a plugin version is a numeric semantic versioning style
+    version of the form ``vMAJOR[.MINOR[.PATCH]]``. The ``v`` prefix is
+    required. At least one version part must be nonzero."""
+    # fullmatch instead of match, ``$`` would also match before a trailing newline
+    match = _PLUGIN_VERSION_REGEX.fullmatch(version)
+    if not match:
+        return False
+    return any(
+        part is not None and int(part) != 0
+        for part in match.group("major", "minor", "patch")
+    )
 
 
 def plugin_identifier(name: str, version: str):
@@ -41,6 +77,7 @@ class QHAnaPluginBase:
 
     __app__: Optional[Flask] = None
     __plugins__: Dict[str, "QHAnaPluginBase"] = {}
+    __failed_plugins__: List[Tuple[type, Exception]] = []
 
     def __init_subclass__(cls) -> None:
         try:
@@ -49,16 +86,31 @@ class QHAnaPluginBase:
                 raise ValueError("A plugin must specify a URL-safe! name.")
             if not plugin.version:
                 raise ValueError("A plugin must specify a version.")
+            if not _is_valid_plugin_name(plugin.name):
+                raise ValueError(
+                    f"The plugin name '{plugin.name}' is invalid. Plugin names must "
+                    f"match the regular expression '{_PLUGIN_NAME_REGEX.pattern}'."
+                )
+            if not _is_valid_plugin_version(plugin.version):
+                raise ValueError(
+                    f"The plugin version '{plugin.version}' of the plugin "
+                    f"'{plugin.name}' is invalid. Plugin versions must be "
+                    "semantic versioning style versions of the form "
+                    "'vMAJOR[.MINOR[.PATCH]]' with a leading 'v' prefix "
+                    "and at least one nonzero version part."
+                )
             # TODO better vetting/error checking
             QHAnaPluginBase.__plugins__[plugin.identifier] = plugin
             cls.instance = plugin
-        except Exception:
+        except Exception as err:
+            QHAnaPluginBase.__failed_plugins__.append((cls, err))
             if QHAnaPluginBase.__app__:
-                QHAnaPluginBase.__app__.logger.info(
-                    f"Could not load the plugin class {cls}!"
+                QHAnaPluginBase.__app__.logger.warning(
+                    f"Could not load the plugin class {cls}!", exc_info=err
                 )
             else:
-                print(f"Could not load plugin class {cls}!")
+                print(f"Could not load plugin class {cls}!", file=sys.stderr)
+                traceback.print_exc()
 
     def __init__(self, app: Optional[Flask]) -> None:
         super().__init__()
@@ -72,6 +124,17 @@ class QHAnaPluginBase:
     @staticmethod
     def get_plugins() -> Dict[str, "QHAnaPluginBase"]:
         return QHAnaPluginBase.__plugins__
+
+    @staticmethod
+    def get_failed_plugins() -> List[Tuple[type, Exception]]:
+        """Get the plugin classes that could not be loaded, with their errors.
+
+        A plugin class that fails the checks in ``__init_subclass__`` (an
+        invalid name or version, or an error raised by the constructor) is
+        dropped with a log message only. This list makes those failures
+        available to callers, for example to fail a test in CI.
+        """
+        return QHAnaPluginBase.__failed_plugins__
 
     @cached_property
     def identifier(self) -> str:
@@ -238,6 +301,10 @@ def _load_plugins_from_folder(
 
     for child in folder.iterdir():
         if child.name.startswith("."):
+            continue
+        if child.is_file() and child.name.startswith("test_"):
+            continue
+        if child.is_dir() and child.name in {"test", "tests"}:
             continue
         if child.is_file():
             _try_load_plugin_file(app, child)

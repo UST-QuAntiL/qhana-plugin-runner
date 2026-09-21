@@ -119,6 +119,29 @@ files = [
 dev = ["freezegun (>=1.0,<2.0)", "pytest (>=6.0)", "pytest-cov"]
 
 [[package]]
+name = "beautifulsoup4"
+version = "4.15.0"
+description = "Screen-scraping library"
+optional = false
+python-versions = ">=3.7.0"
+groups = ["dev"]
+files = [
+    {file = "beautifulsoup4-4.15.0-py3-none-any.whl", hash = "sha256:d6f88de62e1d4e38ecb1077eb9724cd0eff29d2a08ca16a401e9b9e93f117cf9"},
+    {file = "beautifulsoup4-4.15.0.tar.gz", hash = "sha256:288e3ca7d54b06f2ac191970bc275c1939cb46d450b255bf6718b04aa37ab4f7"},
+]
+
+[package.dependencies]
+soupsieve = ">=1.6.1"
+typing-extensions = ">=4.0.0"
+
+[package.extras]
+cchardet = ["cchardet"]
+chardet = ["chardet"]
+charset-normalizer = ["charset-normalizer"]
+html5lib = ["html5lib"]
+lxml = ["lxml"]
+
+[[package]]
 name = "billiard"
 version = "4.2.0"
 description = "Python multiprocessing fork with improvements and bugfixes"
@@ -439,6 +462,17 @@ files = [
 markers = {main = "platform_system == \"Windows\"", dev = "platform_system == \"Windows\" or sys_platform == \"win32\""}
 
 [[package]]
+name = "contexttimer"
+version = "0.3.3"
+description = "A timer context manager measuring the clock wall time of the code block it contains."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "contexttimer-0.3.3.tar.gz", hash = "sha256:35a1efd389af3f1ca509f33ff23e17d98b66c8fde5ba2a4eb8a8b7fa456598a5"},
+]
+
+[[package]]
 name = "coverage"
 version = "7.13.5"
 description = "Code coverage measurement for Python"
@@ -715,14 +749,14 @@ dotenv = ["python-dotenv"]
 
 [[package]]
 name = "flask-babel"
-version = "3.1.0"
+version = "4.0.0"
 description = "Adds i18n/l10n support for Flask applications."
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = ">=3.8,<4.0"
 groups = ["main"]
 files = [
-    {file = "flask_babel-3.1.0-py3-none-any.whl", hash = "sha256:deb3ee272d5adf97f5974ed09ab501243d63e7fb4a047501a00de4bd4aca4830"},
-    {file = "flask_babel-3.1.0.tar.gz", hash = "sha256:be015772c5d7f046f3b99c508dcf618636eb93d21b713b356db79f3e79f69f39"},
+    {file = "flask_babel-4.0.0-py3-none-any.whl", hash = "sha256:638194cf91f8b301380f36d70e2034c77ee25b98cb5d80a1626820df9a6d4625"},
+    {file = "flask_babel-4.0.0.tar.gz", hash = "sha256:dbeab4027a3f4a87678a11686496e98e1492eb793cbdd77ab50f4e9a2602a593"},
 ]
 
 [package.dependencies]
@@ -1324,6 +1358,21 @@ files = [
     {file = "mistune-2.0.5-py2.py3-none-any.whl", hash = "sha256:bad7f5d431886fcbaf5f758118ecff70d31f75231b34024a1341120340a65ce8"},
     {file = "mistune-2.0.5.tar.gz", hash = "sha256:0246113cb2492db875c6be56974a7c893333bf26cd92891c85f63151cee09d34"},
 ]
+
+[[package]]
+name = "muid"
+version = "0.5.3"
+description = "Memorable Unique Identifier"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "muid-0.5.3-py3-none-any.whl", hash = "sha256:164da2e8e33bc5e57bde6b879dd80963788e98ce93a82b2d3b33c6485a90e56b"},
+    {file = "muid-0.5.3.tar.gz", hash = "sha256:707bb649aa7c82745f64d25d91b532aacf0e468fe04421c19e268a2c9f856f24"},
+]
+
+[package.dependencies]
+contexttimer = "*"
 
 [[package]]
 name = "mypy-extensions"
@@ -2056,6 +2105,18 @@ files = [
 ]
 
 [[package]]
+name = "soupsieve"
+version = "2.9.1"
+description = "A modern CSS selector implementation for Beautiful Soup."
+optional = false
+python-versions = ">=3.10"
+groups = ["dev"]
+files = [
+    {file = "soupsieve-2.9.1-py3-none-any.whl", hash = "sha256:4f4477399246b7a0c720a88ca2454b11cd6bb9ae4c9d170140786e916776c14c"},
+    {file = "soupsieve-2.9.1.tar.gz", hash = "sha256:c33e6605bbc71dd628b00c632d58ae607c22bade247e52553928f83bbb75b4ba"},
+]
+
+[[package]]
 name = "sphinx"
 version = "6.2.1"
 description = "Python documentation generator"
@@ -2578,4 +2639,4 @@ pymysql = ["PyMySQL"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "1fb7ca7363860a6c8518644909ac693b24dae10b64020903531bbedca860c02c"
+content-hash = "f0a9283c91412a650ed4ecc9a2b6f91a39259fecbf859f96c2d2417a682f24a5"

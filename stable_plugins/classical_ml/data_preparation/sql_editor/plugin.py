@@ -6,7 +6,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _name = "sql-editor"
-_version = "v0.1.0"
+_version = "v0.1.1"
 
 
 SQL_BLP = SecurityBlueprint(

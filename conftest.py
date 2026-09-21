@@ -17,8 +17,8 @@
 from logging import INFO
 from pathlib import Path
 
-from dotenv import dotenv_values
 import pytest
+from dotenv import dotenv_values
 from flask import Flask
 from sqlalchemy.pool import StaticPool
 
@@ -63,6 +63,7 @@ DEFAULT_TEST_CONFIG = {
     "PLUGIN_FOLDERS": [
         f for f in dotenv_values(".flaskenv")["PLUGIN_FOLDERS"].split(":") if f
     ],
+    "NISQ_ANALYZER_UI_URL": "http://localhost:4201",
 }
 
 
@@ -126,10 +127,20 @@ def celery_worker(broker_app):
     """
     from celery.contrib.testing.worker import start_worker
 
-    with start_worker(  # pyright: ignore[reportGeneralTypeIssues]
-        CELERY,
-        pool="solo",
-        perform_ping_check=False,
-        shutdown_timeout=10,
-    ) as worker:
-        yield worker
+    # The ``memory://`` broker and ``cache+memory://`` result backend are
+    # process-global and shared across every module's worker. Route-level
+    # tests that call ``apply_async`` without a running worker leave messages
+    # in that shared queue. Purge before starting so this worker does not run
+    # foreign tasks against its own in-memory database, and purge afterwards so
+    # this module's leftovers do not reach a later module's worker.
+    CELERY.control.purge()
+    try:
+        with start_worker(  # pyright: ignore[reportGeneralTypeIssues]
+            CELERY,
+            pool="solo",
+            perform_ping_check=False,
+            shutdown_timeout=10,
+        ) as worker:
+            yield worker
+    finally:
+        CELERY.control.purge()

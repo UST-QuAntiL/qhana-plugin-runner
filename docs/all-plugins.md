@@ -8,16 +8,16 @@
 * - Plugin
   - Type
   - Tags
-* - [Aggregators (@v0.2.1)](#distance-aggregator)
+* - [Aggregators (@v0.2.2)](#distance-aggregator)
 
-    distance-aggregator@v0-2-1
+    distance-aggregator@v0-2-2
   - processing
   - distance-calculation
 
     preprocessing
-* - [AmazonBraket_LocalSimulator (@v1.0.0)](#AmazonBraket_LocalSimulator)
+* - [Amazon Braket Local Simulator (@v1.0.1)](#amazonBraket_localSimulator)
 
-    AmazonBraket_LocalSimulator@v1-0-0
+    amazonBraket_localSimulator@v1-0-1
   - processing
   - braket_local
 
@@ -28,6 +28,22 @@
     qasm-3
 
     qc-simulator
+* - [Attribute Distance Aggregator (@v0.1.1)](#attribute-distance-aggregator)
+
+    attribute-distance-aggregator@v0-1-1
+  - processing
+  - distance-calculation
+
+    preprocessing
+* - [Attribute similarities to attribute distances transformers (@v0.2.3)](#attr-sim-to-attr-dist-transformers)
+
+    attr-sim-to-attr-dist-transformers@v0-2-3
+  - processing
+  - distance-calculation
+
+    preprocessing
+
+    similarity-calculation
 * - [Classical k Means (@v0.1.1)](#classical-k-means)
 
     classical-k-means@v0-1-1
@@ -46,18 +62,18 @@
     classical
 
     clustering
-* - [Clustered Scatter Plot Visualization (@v1.0.0)](#Clustered Scatter Plot Visualization)
+* - [Clustered Scatter Plot Visualization (@v1.0.2)](#cluster-scatter-visualization)
 
-    Clustered Scatter Plot Visualization@v1-0-0
+    cluster-scatter-visualization@v1-0-2
   - visualization
   - cluster
 
     scatter
 
     visualization
-* - [Confusion Matrix Visualization (@v1.0.0)](#Confusion Matrix Visualization)
+* - [Confusion Matrix Visualization (@v1.0.2)](#confusion-matrix)
 
-    Confusion Matrix Visualization@v1-0-0
+    confusion-matrix@v1-0-2
   - visualization
   - cluster
 
@@ -87,6 +103,15 @@
     camunda-engine
 
     workflow
+* - [Element similarities to element distances transformers (@v0.0.1)](#element_sim-to-element_dist-transformers)
+
+    element_sim-to-element_dist-transformers@v0-0-1
+  - processing
+  - distance-calculation
+
+    preprocessing
+
+    similarity-calculation
 * - [Entity loader/filter (@v0.2.1)](#entity-filter)
 
     entity-filter@v0-2-1
@@ -96,18 +121,18 @@
     preprocessing
 
     sample
-* - [Histogram Visualization (@v1.0.1)](#Histogram Visualization)
+* - [Histogram Visualization (@v1.0.3)](#histogram-visualization)
 
-    Histogram Visualization@v1-0-1
+    histogram-visualization@v1-0-3
   - visualization
   - histogram
 
     non-default
 
     visualization
-* - [Hybrid Autoencoder (@v0.2.1)](#hybrid-autoencoder)
+* - [Hybrid Autoencoder (@v0.2.2)](#hybrid-autoencoder)
 
-    hybrid-autoencoder@v0-2-1
+    hybrid-autoencoder@v0-2-2
   - processing
   - QML
 
@@ -116,9 +141,9 @@
     preprocessing
 
     quantum
-* - [LCM (@v0.0.0)](#low-code-modeler)
+* - [LCM (@v0.0.1)](#low-code-modeler)
 
-    low-code-modeler@v0-0-0
+    low-code-modeler@v0-0-1
   - interaction
   - low-code-modeler
 * - [MUSE4Music Loader (@v1.0.0)](#muse-for-music-loader)
@@ -146,9 +171,20 @@
     clustering
 
     quantum
-* - [Multidimensional Scaling (MDS) (@v0.2.1)](#mds)
+* - [Multidimensional Scaling (MDS) (@v0.2.3)](#mds)
 
-    mds@v0-2-1
+    mds@v0-2-3
+  - processing
+  - distance-calculation
+
+    embedding
+
+    feature-engineering
+
+    preprocessing
+* - [Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)](#attribute-distance-mds)
+
+    attribute-distance-mds@v0-1-0
   - processing
   - distance-calculation
 
@@ -166,9 +202,9 @@
     feature-extraction
 
     music
-* - [One-Hot Encoding (@v0.2.1)](#one-hot-encoding)
+* - [One-Hot Encoding (@v0.2.4)](#one-hot-encoding)
 
-    one-hot-encoding@v0-2-1
+    one-hot-encoding@v0-2-4
   - processing
   - encoding
 
@@ -218,9 +254,9 @@
     qc-executor
 
     qiskit
-* - [Qiskit Quantum Kernel Estimation (@v0.2.1)](#qiskit-quantum-kernel-estimation)
+* - [Qiskit Quantum Kernel Estimation (@v0.2.2)](#qiskit-quantum-kernel-estimation)
 
-    qiskit-quantum-kernel-estimation@v0-2-1
+    qiskit-quantum-kernel-estimation@v0-2-2
   - processing
   - QML
 
@@ -240,9 +276,9 @@
     neural-network
 
     quantum
-* - [Quantum Kernel Estimation (@v0.2.1)](#quantum-kernel-estimation)
+* - [Quantum Kernel Estimation (@v0.2.2)](#quantum-kernel-estimation)
 
-    quantum-kernel-estimation@v0-2-1
+    quantum-kernel-estimation@v0-2-2
   - processing
   - QML
 
@@ -251,9 +287,9 @@
     mapping
 
     quantum
-* - [Quantum Neutral Network (QNN) (@v0.1.1)](#qnn)
+* - [Quantum Neutral Network (QNN) (@v0.1.2)](#qnn)
 
-    qnn@v0-1-1
+    qnn@v0-1-2
   - processing
   - QML
 
@@ -264,9 +300,9 @@
     neural-network
 
     quantum
-* - [Quantum Parzen Window (@v0.2.1)](#quantum-parzen-window)
+* - [Quantum Parzen Window (@v0.2.2)](#quantum-parzen-window)
 
-    quantum-parzen-window@v0-2-1
+    quantum-parzen-window@v0-2-2
   - processing
   - QML
 
@@ -275,18 +311,18 @@
     quantum
 
     supervised-learning
-* - [Quantum Variational Classifier (@v0.1.1)](#vqc)
+* - [Quantum Variational Classifier (@v0.1.2)](#vqc)
 
-    vqc@v0-1-1
+    vqc@v0-1-2
   - processing
   - QML
 
     classification
 
     quantum
-* - [Quantum k Nearest Neighbours (@v0.2.1)](#quantum-k-nearest-neighbours)
+* - [Quantum k Nearest Neighbours (@v0.2.2)](#quantum-k-nearest-neighbours)
 
-    quantum-k-nearest-neighbours@v0-2-1
+    quantum-k-nearest-neighbours@v0-2-2
   - processing
   - QML
 
@@ -309,9 +345,16 @@
     rest-connector@v0-1-0
   - interaction
   - rest
-* - [SQL Editor (@v0.1.0)](#sql-editor)
+* - [Router (@v0.1.5)](#router)
 
-    sql-editor@v0-1-0
+    router@v0-1-5
+  - processing
+  - preprocessing
+
+    routing
+* - [SQL Editor (@v0.1.1)](#sql-editor)
+
+    sql-editor@v0-1-1
   - processing
   - data-cleaning
 
@@ -333,9 +376,9 @@
     postgresql
 
     sql
-* - [SVM (@v0.1.1)](#svm)
+* - [SVM (@v0.1.2)](#svm)
 
-    svm@v0-1-1
+    svm@v0-1-2
   - processing
   - ML
 
@@ -364,29 +407,34 @@
     minimizer
 
     optimization
-* - [Similarities to distances transformers (@v0.2.1)](#sim-to-dist-transformers)
+* - [Sym Max Mean attribute comparer (@v0.1.7)](#sym-max-mean)
 
-    sim-to-dist-transformers@v0-2-1
+    sym-max-mean@v0-1-7
+  - processing
+  - preprocessing
+
+    similarity-calculation
+* - [Taxanomy mapping to distances (@v0.1.0)](#mapping-distances)
+
+    mapping-distances@v0-1-0
   - processing
   - distance-calculation
 
     preprocessing
+* - [Time tanh similarities (@v0.2.2)](#time-tanh)
 
-    similarity-calculation
-* - [Sym Max Mean attribute comparer (@v0.1.2)](#sym-max-mean)
-
-    sym-max-mean@v0-1-2
+    time-tanh@v0-2-2
   - processing
   - preprocessing
 
     similarity-calculation
-* - [Time tanh similarities (@v0.2.1)](#time-tanh)
+* - [Vector concationation plugin (@v0.1.3)](#vector-concat)
 
-    time-tanh@v0-2-1
+    vector-concat@v0-1-3
   - processing
   - preprocessing
 
-    similarity-calculation
+    vector
 * - [Workflow Editor (@v0.1.0)](#workflow-editor)
 
     workflow-editor@v0-1-0
@@ -405,16 +453,16 @@
     camunda-engine
 
     workflow
-* - [Wu Palmer similarities (@v0.2.1)](#wu-palmer)
+* - [Wu Palmer similarities (@v0.2.5)](#wu-palmer)
 
-    wu-palmer@v0-2-1
+    wu-palmer@v0-2-5
   - processing
   - preprocessing
 
     similarity-calculation
-* - [ZX-Calculus Visualization (@v1.0.1)](#ZX-Calculus Visualization)
+* - [ZX-Calculus Visualization (@v1.0.3)](#zxcalculus)
 
-    ZX-Calculus Visualization@v1-0-1
+    zxcalculus@v1-0-3
   - visualization
   - circuit
 
@@ -423,9 +471,9 @@
     visualization
 
     zxcalculus
-* - [Zip merger (@v0.2.0)](#zip-merger)
+* - [Zip merger (@v0.2.1)](#zip-merger)
 
-    zip-merger@v0-2-0
+    zip-merger@v0-2-1
   - processing
   - utility
 * - [circuit-demo (@v1.0.1)](#circuit-demo)
@@ -450,9 +498,9 @@
     qasm-2
 
     qc-simulator
-* - [csv-to-json (@v0.1.0)](#csv-to-json)
+* - [csv-to-json (@v0.1.1)](#csv-to-json)
 
-    csv-to-json@v0-1-0
+    csv-to-json@v0-1-1
   - conversion
   - conversion
 
@@ -501,9 +549,9 @@
   - objective-function
 
     optimization
-* - [json-to-csv (@v0.1.0)](#json-to-csv)
+* - [json-to-csv (@v0.1.1)](#json-to-csv)
 
-    json-to-csv@v0-1-0
+    json-to-csv@v0-1-1
   - conversion
   - conversion
 
@@ -614,18 +662,20 @@
 
 ## Overview
 
-**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `visualization`, `workflow`, `zxcalculus`
+**Used tags:** `ML`, `MUSE`, `MUSE4Music`, `QML`, `bpmn`, `braket_local`, `camunda`, `camunda-engine`, `circuit`, `circuit-demo`, `circuit-executor`, `cirq`, `classical`, `classification`, `cluster`, `clustering`, `confusion-matrix`, `conversion`, `csv`, `data-annotation`, `data-cleaning`, `data-loading`, `data-preparation`, `data-synthesizing`, `demo`, `distance-calculation`, `duckdb`, `embedding`, `encoding`, `feature-engineering`, `feature-extraction`, `filter`, `gradient`, `hello-world`, `histogram`, `join`, `json`, `kernel`, `low-code-modeler`, `manual`, `mapping`, `mariadb`, `minimizer`, `mqt`, `multistep`, `music`, `mysql`, `neural-network`, `nisq-analyzer`, `non-default`, `objective-function`, `one-hot-encoding`, `optimization`, `pennylane`, `postgresql`, `preprocessing`, `pytket_qulacsBackend`, `qasm`, `qasm-2`, `qasm-3`, `qc-executor`, `qc-simulator`, `qiskit`, `quantme`, `quantum`, `rest`, `routing`, `sample`, `scatter`, `similarity-calculation`, `sql`, `supervised-learning`, `utility`, `vector`, `visualization`, `workflow`, `zxcalculus`
 
-**Input formats:** `application/X-lines+json`, `application/json`, `application/octet-stream`, `application/vnd.recordare.musicxml+xml`, `application/xml`, `application/zip`, `audio/midi`, `audio/x-midi`, `text/csv`, `text/x-qasm`, `text/xml`\
-**Output formats:** `*/*`, `application/json`, `application/qasm`, `application/zip`, `image/svg+xml`, `text/csv`, `text/html`, `text/plain`, `text/x-qasm`
+Every type below links to its entry in the list of [allowed data types and content types](data-formats/allowed-types.md).
 
-**Input datatypes:** `*/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/element-similarities`, `custom/entity-distances`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/matrix`, `entity/shaped_vector`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `provenance/execution-options`\
-**Output datatypes:** `*/*`, `circuit/*`, `custom/attribute-distances`, `custom/attribute-similarities`, `custom/clusters`, `custom/element-similarities`, `custom/entity-distances`, `custom/hello-world-output`, `custom/kernel-matrix`, `custom/nisq-analyzer-result`, `custom/pca-metadata`, `custom/plot`, `entity/*`, `entity/attribute-metadata`, `entity/label`, `entity/list`, `entity/vector`, `executable/circuit`, `graph/taxonomy`, `image/html`, `plot/*`, `provenance/execution-options`, `provenance/trace`, `qnn-weights/*`, `representative-circuit/*`, `table/html`, `txt/*`, `vqc-metadata/*`
+**Input formats:** [`application/X-lines+json`](#ct-application-x-lines-json), [`application/json`](#ct-application-json), [`application/octet-stream`](#ct-application-octet-stream), [`application/vnd.recordare.musicxml+xml`](#ct-application-vnd-recordare-musicxml-xml), [`application/xml`](#ct-application-xml), [`application/zip`](#ct-application-zip), [`audio/midi`](#ct-audio-midi), [`audio/x-midi`](#ct-audio-x-midi), [`text/csv`](#ct-text-csv), [`text/x-qasm`](#ct-text-x-qasm), [`text/xml`](#ct-text-xml)\
+**Output formats:** [`*`](#ct-wildcard), [`application/X-lines+json`](#ct-application-x-lines-json), [`application/json`](#ct-application-json), [`application/qasm`](#ct-application-qasm), [`application/zip`](#ct-application-zip), [`image/svg+xml`](#ct-image-svg-xml), [`text/csv`](#ct-text-csv), [`text/html`](#ct-text-html), [`text/plain`](#ct-text-plain), [`text/x-qasm`](#ct-text-x-qasm)
+
+**Input datatypes:** [`*`](#dt-wildcard), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/matrix`](#dt-entity-matrix), [`entity/shaped_vector`](#dt-entity-shaped-vector), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`provenance/execution-options`](#dt-provenance-execution-options), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances)\
+**Output datatypes:** [`*`](#dt-wildcard), [`circuit`](#dt-circuit), [`custom/clusters`](#dt-custom-clusters), [`custom/hello-world-output`](#dt-custom-hello-world-output), [`custom/kernel-matrix`](#dt-custom-kernel-matrix), [`custom/nisq-analyzer-result`](#dt-custom-nisq-analyzer-result), [`custom/pca-metadata`](#dt-custom-pca-metadata), [`custom/plot`](#dt-custom-plot), [`entity/*`](#dt-entity-wildcard), [`entity/attribute-metadata`](#dt-entity-attribute-metadata), [`entity/label`](#dt-entity-label), [`entity/list`](#dt-entity-list), [`entity/vector`](#dt-entity-vector), [`executable/circuit`](#dt-executable-circuit), [`graph/taxonomy`](#dt-graph-taxonomy), [`image/html`](#dt-image-html), [`plot`](#dt-plot), [`provenance/execution-options`](#dt-provenance-execution-options), [`provenance/trace`](#dt-provenance-trace), [`qnn-weights`](#dt-qnn-weights), [`relation/attribute-distances`](#dt-relation-attribute-distances), [`relation/attribute-similarities`](#dt-relation-attribute-similarities), [`relation/element-distances`](#dt-relation-element-distances), [`relation/element-similarities`](#dt-relation-element-similarities), [`relation/entity-distances`](#dt-relation-entity-distances), [`representative-circuit`](#dt-representative-circuit), [`table/html`](#dt-table-html), [`txt`](#dt-txt), [`vqc-metadata`](#dt-vqc-metadata)
 
 ## Plugins
 
 (distance-aggregator)=
-### Aggregators (@v0.2.1)
+### Aggregators (@v0.2.2)
 
 processing – distance-calculation, preprocessing\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/aggregators.py`
@@ -636,18 +686,18 @@ Aggregates attribute distances to entity distances.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|custom/attribute-distances|application/zip|✓|
+|relation/attribute-distances|application/zip|✓|
 
 
 **Outputs:**
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|custom/entity-distances|application/zip|✓|
+|relation/entity-distances|application/json|✓|
 
 
-(AmazonBraket_LocalSimulator)=
-### AmazonBraket_LocalSimulator (@v1.0.0)
+(amazonBraket_localSimulator)=
+### Amazon Braket Local Simulator (@v1.0.1)
 
 processing – braket_local, circuit-executor, qasm, qasm-3, qc-simulator\
 *Path:* {file}`plugins/circuit_executors/braket_local.py`
@@ -670,6 +720,51 @@ Allows execution of quantum circuits using a simulator packaged with braket_loca
 |entity/vector|application/json|╳|
 |provenance/trace|application/json|✓|
 |provenance/execution-options|application/json|✓|
+
+
+(attribute-distance-aggregator)=
+### Attribute Distance Aggregator (@v0.1.1)
+
+processing – distance-calculation, preprocessing\
+*Path:* {file}`plugins/aggregator/__init__.py`
+
+Aggregates element distances to attribute distances for a list of entities.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|relation/element-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/attribute-distances|application/zip|✓|
+
+
+(attr-sim-to-attr-dist-transformers)=
+### Attribute similarities to attribute distances transformers (@v0.2.3)
+
+processing – distance-calculation, preprocessing, similarity-calculation\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/transformers.py`
+
+Transforms attribute similarities to attribute distances.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/attribute-similarities|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/attribute-distances|application/zip|✓|
 
 
 (classical-k-means)=
@@ -720,8 +815,8 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 |plot/*|text/html|╳|
 
 
-(Clustered Scatter Plot Visualization)=
-### Clustered Scatter Plot Visualization (@v1.0.0)
+(cluster-scatter-visualization)=
+### Clustered Scatter Plot Visualization (@v1.0.2)
 
 visualization – cluster, scatter, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/cluster_scatter_visualization/__init__.py`
@@ -744,8 +839,8 @@ A visualization plugin that creates a scatter plot using the provided data. When
 |image/html|text/html|✓|
 
 
-(Confusion Matrix Visualization)=
-### Confusion Matrix Visualization (@v1.0.0)
+(confusion-matrix)=
+### Confusion Matrix Visualization (@v1.0.2)
 
 visualization – cluster, confusion-matrix, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/confusion_matrix/__init__.py`
@@ -810,6 +905,28 @@ processing – bpmn, camunda-engine, workflow\
 
 Deploys a BPMN workflow to Camunda and exposes it as a plugin.
 
+(element_sim-to-element_dist-transformers)=
+### Element similarities to element distances transformers (@v0.0.1)
+
+processing – distance-calculation, preprocessing, similarity-calculation\
+*Path:* {file}`plugins/transformer/__init__.py`
+
+Transforms element similarities to element distances.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/element-similarities|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/element-distances|application/zip|✓|
+
+
 (entity-filter)=
 ### Entity loader/filter (@v0.2.1)
 
@@ -832,8 +949,8 @@ Loads and filters entities from a file that contains a list of entities.
 |entity/list|application/json, text/csv|✓|
 
 
-(Histogram Visualization)=
-### Histogram Visualization (@v1.0.1)
+(histogram-visualization)=
+### Histogram Visualization (@v1.0.3)
 
 visualization – histogram, non-default, visualization\
 *Path:* {file}`stable_plugins/visualization/complex/histogram_visualization/__init__.py`
@@ -855,7 +972,7 @@ A visualization plugin for creating Historgrams using the counts of different la
 
 
 (hybrid-autoencoder)=
-### Hybrid Autoencoder (@v0.2.1)
+### Hybrid Autoencoder (@v0.2.2)
 
 processing – QML, feature-engineering, preprocessing, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/pennylane_qiskit_ml/hybrid_ae_pkg/__init__.py`
@@ -881,7 +998,7 @@ The entity points should be saved in the [entity/vector](https://qhana-plugin-ru
 
 
 (low-code-modeler)=
-### LCM (@v0.0.0)
+### LCM (@v0.0.1)
 
 interaction – low-code-modeler\
 *Path:* {file}`plugins/low_code_modeler/plugin.py`
@@ -951,18 +1068,18 @@ Clusters data with the max cut algorithm
 
 
 (mds)=
-### Multidimensional Scaling (MDS) (@v0.2.1)
+### Multidimensional Scaling (MDS) (@v0.2.3)
 
 processing – distance-calculation, embedding, feature-engineering, preprocessing\
-*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds.py`
+*Path:* {file}`stable_plugins/classical_ml/scikit_ml/mds/__init__.py`
 
-Converts distance values (distance matrix) to points in a space.
+Converts distance values (distance matrix) to points in a space. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
 
 **Inputs:**
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|custom/entity-distances|application/json|✓|
+|relation/entity-distances|application/json|✓|
 
 
 **Outputs:**
@@ -970,6 +1087,28 @@ Converts distance values (distance matrix) to points in a space.
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
 |entity/vector|application/json|✓|
+
+
+(attribute-distance-mds)=
+### Multidimensional Scaling (MDS) on Attribute Distances (@v0.1.0)
+
+processing – distance-calculation, embedding, feature-engineering, preprocessing\
+*Path:* {file}`plugins/attribute_mds/__init__.py`
+
+Embeds entities into a vector space with multidimensional scaling, producing a zip file with one embedding per attribute from precomputed attribute distances. For nonmetric MDS, distances of exactly 0 are replaced with a small positive value below the smallest positive distance because scikit-learn treats them as missing values.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|relation/attribute-distances|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|application/zip|✓|
 
 
 (music-feature-extractor)=
@@ -998,10 +1137,10 @@ Extracts stable feature vectors from MusicXML, MXL, and MIDI sources. The vector
 
 
 (one-hot-encoding)=
-### One-Hot Encoding (@v0.2.1)
+### One-Hot Encoding (@v0.2.4)
 
 processing – encoding, one-hot-encoding, preprocessing\
-*Path:* {file}`stable_plugins/classical_ml/data_preparation/one-hot_encoding.py`
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/one_hot_encoding/__init__.py`
 
 Converts Data to One-Hot Encodings
 
@@ -1009,9 +1148,9 @@ Converts Data to One-Hot Encodings
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/list|application/json|✓|
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
 |graph/taxonomy|application/zip|✓|
-|entity/attribute-metadata|application/json|✓|
 
 
 **Outputs:**
@@ -1136,7 +1275,7 @@ Allows execution of quantum circuits using IBM Quantum backends.
 
 
 (qiskit-quantum-kernel-estimation)=
-### Qiskit Quantum Kernel Estimation (@v0.2.1)
+### Qiskit Quantum Kernel Estimation (@v0.2.2)
 
 processing – QML, kernel, mapping, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/qiskit_quantum_kernel_estimation/__init__.py`
@@ -1192,7 +1331,7 @@ Labels data with the help of a quantum convolutional neural network
 
 
 (quantum-kernel-estimation)=
-### Quantum Kernel Estimation (@v0.2.1)
+### Quantum Kernel Estimation (@v0.2.2)
 
 processing – QML, kernel, mapping, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/pennylane_qiskit_ml/quantum_kernel_estimation/__init__.py`
@@ -1221,7 +1360,7 @@ Source:
 
 
 (qnn)=
-### Quantum Neutral Network (QNN) (@v0.1.1)
+### Quantum Neutral Network (QNN) (@v0.1.2)
 
 processing – QML, classical, classification, neural-network, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/pennylane_qiskit_ml/qnn/__init__.py`
@@ -1250,7 +1389,7 @@ Simple QNN with variable number of variational quantum layers
 
 
 (quantum-parzen-window)=
-### Quantum Parzen Window (@v0.2.1)
+### Quantum Parzen Window (@v0.2.2)
 
 processing – QML, classification, quantum, supervised-learning\
 *Path:* {file}`stable_plugins/quantum_ml/pennylane_qiskit_ml/quantum_parzen_window/__init__.py`
@@ -1283,7 +1422,7 @@ Source:
 
 
 (vqc)=
-### Quantum Variational Classifier (@v0.1.1)
+### Quantum Variational Classifier (@v0.1.2)
 
 processing – QML, classification, quantum\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/variational_quantum_classifier/__init__.py`
@@ -1317,7 +1456,7 @@ Source:
 
 
 (quantum-k-nearest-neighbours)=
-### Quantum k Nearest Neighbours (@v0.2.1)
+### Quantum k Nearest Neighbours (@v0.2.2)
 
 processing – QML, clustering, quantum, supervised-learning\
 *Path:* {file}`stable_plugins/quantum_ml/pennylane_qiskit_ml/quantum_k_nearest_neighbours/__init__.py`
@@ -1386,8 +1525,36 @@ interaction – rest\
 
 Integrate REST APIs as plugins.
 
+(router)=
+### Router (@v0.1.5)
+
+processing – preprocessing, routing\
+*Path:* {file}`plugins/feature_engineering_pipeline/__init__.py`
+
+Routes entities and separates tree from non-tree taxonomies. Takes Muse4Music data and provides different routing options for the entities and taxonomies.
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
+|graph/taxonomy|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/element-similarities|application/zip|✓|
+|relation/element-distances|application/zip|✓|
+|relation/attribute-distances|application/zip|✓|
+|entity/vector|application/zip|✓|
+|entity/vector|text/csv, application/json, application/X-lines+json|✓|
+
+
 (sql-editor)=
-### SQL Editor (@v0.1.0)
+### SQL Editor (@v0.1.1)
 
 processing – data-cleaning, duckdb, preprocessing, sql\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/sql_editor/plugin.py`
@@ -1424,7 +1591,7 @@ Allows to manage sql databases and use them as a source.
 
 
 (svm)=
-### SVM (@v0.1.1)
+### SVM (@v0.1.2)
 
 processing – ML, QML, classical, classification, quantum, supervised-learning\
 *Path:* {file}`stable_plugins/quantum_ml/qiskit_ml/svm/__init__.py`
@@ -1493,33 +1660,11 @@ This plugin provides an API to minimize a given objective function with scipy.op
 |txt/*|text/plain|✓|
 
 
-(sim-to-dist-transformers)=
-### Similarities to distances transformers (@v0.2.1)
-
-processing – distance-calculation, preprocessing, similarity-calculation\
-*Path:* {file}`stable_plugins/classical_ml/data_preparation/transformers.py`
-
-Transforms similarities to distances.
-
-**Inputs:**
-
-| Data Type | Content Type | Required |
-|-----------|--------------| :------: |
-|custom/attribute-similarities|application/zip|✓|
-
-
-**Outputs:**
-
-| Data Type | Content Type | Always |
-|-----------|--------------| :----: |
-|custom/attribute-distances|application/zip|✓|
-
-
 (sym-max-mean)=
-### Sym Max Mean attribute comparer (@v0.1.2)
+### Sym Max Mean attribute comparer (@v0.1.7)
 
 processing – preprocessing, similarity-calculation\
-*Path:* {file}`stable_plugins/classical_ml/data_preparation/sym_max_mean.py`
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/sym_max_mean/__init__.py`
 
 Compares attributes and returns similarity values.
 
@@ -1527,19 +1672,53 @@ Compares attributes and returns similarity values.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/list|application/json, text/csv|✓|
-|custom/element-similarities|application/zip|✓|
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|relation/element-similarities|application/zip|✓|
 
 
 **Outputs:**
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|custom/attribute-similarities|application/zip|✓|
+|relation/attribute-similarities|application/zip|✓|
+
+
+(mapping-distances)=
+### Taxanomy mapping to distances (@v0.1.0)
+
+processing – distance-calculation, preprocessing\
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/mapping_distances/__init__.py`
+
+A plugin to create pairwise element distances for taxanomy mappings.
+\
+Returns the distance between all attribute mappings that are in the entity dataset according to a selected distance metric.  
+Returns the max float value if the vectors are empty, i.e. no mapping is assigned.  
+Throws an error if the mapping vectors do not have the same size.  
+\
+Different available metrics:
+**Euclidean Distance:** Length of vector (L2 norm) between two vectors: $||a-b|| = \sqrt{\sum\limits_{i} (a_i - b_i)^2}$  
+**Manhattan Distance:** Sum of distances on each vector axis: $\sum\limits_{i} |a_i - b_i|$  
+**Chebyshev Distance:** Maximum distance on one axis: $\max(|a_1 - b_1|, \dots, |a_n - b_n|)$  
+**Cosine Distance:** 1 - angle between two vectors (value in [0, 2]): $1 - \cos(\theta) = 1 - \frac{a \cdot b}{||a||\cdot||b||}$
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
+|graph/taxonomy|application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|relation/element-distances|application/zip|✓|
 
 
 (time-tanh)=
-### Time tanh similarities (@v0.2.1)
+### Time tanh similarities (@v0.2.2)
 
 processing – preprocessing, similarity-calculation\
 *Path:* {file}`stable_plugins/classical_ml/data_preparation/time_tanh.py`
@@ -1557,7 +1736,29 @@ Compares elements and returns similarity values.
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|custom/element-similarities|application/zip|✓|
+|relation/element-similarities|application/zip|✓|
+
+
+(vector-concat)=
+### Vector concationation plugin (@v0.1.3)
+
+processing – preprocessing, vector\
+*Path:* {file}`plugins/vector_concat/__init__.py`
+
+Concatinate multiple entity/vector files into one
+
+**Inputs:**
+
+| Data Type | Content Type | Required |
+|-----------|--------------| :------: |
+|entity/vector|text/csv, application/json, application/X-lines+json, application/zip|✓|
+
+
+**Outputs:**
+
+| Data Type | Content Type | Always |
+|-----------|--------------| :----: |
+|entity/vector|text/csv, application/json, application/X-lines+json|✓|
 
 
 (workflow-editor)=
@@ -1577,10 +1778,10 @@ interaction – bpmn, camunda-engine, workflow\
 Manage workflows deployed in Camunda.
 
 (wu-palmer)=
-### Wu Palmer similarities (@v0.2.1)
+### Wu Palmer similarities (@v0.2.5)
 
 processing – preprocessing, similarity-calculation\
-*Path:* {file}`stable_plugins/classical_ml/data_preparation/wu_palmer.py`
+*Path:* {file}`stable_plugins/classical_ml/data_preparation/wu_palmer/__init__.py`
 
 Compares elements and returns similarity values.
 
@@ -1588,8 +1789,8 @@ Compares elements and returns similarity values.
 
 | Data Type | Content Type | Required |
 |-----------|--------------| :------: |
-|entity/list|application/json|✓|
-|entity/attribute-metadata|application/json|✓|
+|entity/list|application/json, application/X-lines+json, text/csv|✓|
+|entity/attribute-metadata|application/json, application/X-lines+json, text/csv|✓|
 |graph/taxonomy|application/zip|✓|
 
 
@@ -1597,11 +1798,11 @@ Compares elements and returns similarity values.
 
 | Data Type | Content Type | Always |
 |-----------|--------------| :----: |
-|custom/element-similarities|application/zip|✓|
+|relation/element-similarities|application/zip|✓|
 
 
-(ZX-Calculus Visualization)=
-### ZX-Calculus Visualization (@v1.0.1)
+(zxcalculus)=
+### ZX-Calculus Visualization (@v1.0.3)
 
 visualization – circuit, non-default, visualization, zxcalculus\
 *Path:* {file}`stable_plugins/visualization/complex/zxcalculus/__init__.py`
@@ -1623,7 +1824,7 @@ A visualization plugin that visualizes a provided OpenQASM circuit in the ZX-Cal
 
 
 (zip-merger)=
-### Zip merger (@v0.2.0)
+### Zip merger (@v0.2.1)
 
 processing – utility\
 *Path:* {file}`stable_plugins/file_utils/zip_merger.py`
@@ -1688,10 +1889,10 @@ Allows execution of quantum circuits using a simulator packaged with cirq.
 
 
 (csv-to-json)=
-### csv-to-json (@v0.1.0)
+### csv-to-json (@v0.1.1)
 
 conversion – conversion, csv, json\
-*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+*Path:* {file}`stable_plugins/file_utils/entity_conversion/__init__.py`
 
 Convert CSV files to JSON.
 
@@ -1807,10 +2008,10 @@ Hinge Loss objective-function plugin.
 
 
 (json-to-csv)=
-### json-to-csv (@v0.1.0)
+### json-to-csv (@v0.1.1)
 
 conversion – conversion, csv, json\
-*Path:* {file}`stable_plugins/file_utils/entity_conversion.py`
+*Path:* {file}`stable_plugins/file_utils/entity_conversion/__init__.py`
 
 Convert JSON files to CSV.
 

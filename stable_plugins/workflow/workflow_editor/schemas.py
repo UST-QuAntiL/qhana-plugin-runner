@@ -24,22 +24,28 @@ class WorkflowSchema(MaBaseSchema):
     name = ma.fields.String()
     date = ma.fields.AwareDateTime()
     autosave = ma.fields.Bool(
-        required=False, missing=False, description="If this save was an autosave."
+        required=False,
+        load_default=False,
+        metadata={"description": "If this save was an autosave."},
     )
     workflow_id = ma.fields.String()
 
 
 class WorkflowSaveParamsSchema(MaBaseSchema):
     autosave = ma.fields.Bool(
-        required=False, missing=False, description="Set this to true for autosaves."
+        required=False,
+        load_default=False,
+        metadata={"description": "Set this to true for autosaves."},
     )
     deploy = ma.fields.String(
         required=False,
-        missing="",
+        load_default="",
         validate=OneOf(choices=("", "workflow", "plugin", "ui-template")),
-        description=(
-            "Set to 'plugin' to save and deploy workflow as a QHAna plugin. "
-            "Set to 'workflow' to save and deploy workflow to camunda only. "
-            "Set to 'ui-template' to turn the wokflow into a UI Templatefor QHAna."
-        ),
+        metadata={
+            "description": (
+                "Set to 'plugin' to save and deploy workflow as a QHAna plugin. "
+                "Set to 'workflow' to save and deploy workflow to camunda only. "
+                "Set to 'ui-template' to turn the wokflow into a UI Templatefor QHAna."
+            )
+        },
     )

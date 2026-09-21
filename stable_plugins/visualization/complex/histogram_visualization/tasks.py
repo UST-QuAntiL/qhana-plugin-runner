@@ -16,7 +16,6 @@ from tempfile import SpooledTemporaryFile
 from typing import Tuple
 from pathlib import Path
 
-import muid
 import pandas as pd
 import plotly.express as px
 from celery.utils.log import get_task_logger
@@ -31,10 +30,6 @@ from qhana_plugin_runner.storage import STORE
 from . import HistogramVisualization
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 def get_diagram(data_url: str, full_html: bool) -> Tuple[str, str]:

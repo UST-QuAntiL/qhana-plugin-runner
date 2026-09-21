@@ -18,6 +18,7 @@ A collection of data (serialization) formats used by QHAna plugins to exchange d
 .. toctree::
     :name: formats-toc
 
+    allowed-types
     data-model
     data-loader-formats
     recipes

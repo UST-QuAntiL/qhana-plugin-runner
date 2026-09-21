@@ -41,6 +41,8 @@ from typing import (
 )
 from unicodedata import category, normalize
 
+from .attributes import AttributeMetadata, tuple_deserializer
+
 
 class EntityTupleMixin:
     """A mixin class to provide entity metadata (e.g. attribute names) and
@@ -180,19 +182,37 @@ register_dialect("default", DefaultDialect)
 
 def ensure_dict(
     items: Iterable[Union[Dict[str, Any], NamedTuple]],
+    attribute_metadata: Optional[Dict[str, AttributeMetadata]] = None,
 ) -> Generator[Dict[str, Any], None, None]:
     """Ensure that all entities in an iterable are dicts.
 
+    If ``attribute_metadata`` is given, tuple entities (as produced by
+    :py:func:`load_entities` for csv files) are deserialized into typed values
+    with :py:func:`~qhana_plugin_runner.plugin_utils.attributes.tuple_deserializer`
+    before being converted to dicts.
+    Attributes without a metadata entry keep their raw string values.
+
     Args:
         items (Iterable[Union[Dict[str, Any], NamedTuple]]): the input iterable
+        attribute_metadata (Optional[Dict[str, AttributeMetadata]], optional): attribute
+            metadata used to deserialize tuple entity values. Defaults to None.
 
     Yields:
         Generator[Dict[str, Any], None, None]: the output iterable
     """
+    deserializer = None
     for item in items:
         if isinstance(item, dict):
             yield item
+            continue
         elif isinstance(item, EntityTupleMixin):
+            if attribute_metadata is not None:
+                if deserializer is None:
+                    attrs = type(item).entity_attributes
+                    deserializer = tuple_deserializer(
+                        attrs, attribute_metadata, tuple_=type(item)._make
+                    )
+                item = deserializer(item)
             yield item.as_dict()
         else:
             yield item._asdict()
@@ -414,11 +434,16 @@ def save_entities(
         ValueError: For unknown mimetypes
     """
     if mimetype == "application/json":
-        dump(list(ensure_dict(entities)), file_, separators=(",", ":"))
+        dump(
+            list(ensure_dict(entities)),
+            file_,
+            separators=(",", ":"),
+            default=_json_encoder_default,
+        )
         file_.write("\n")
     elif mimetype == "application/X-lines+json":
         for entity in ensure_dict(entities):
-            file_.write(f"{dumps(entity)}\n")
+            file_.write(f"{dumps(entity, default=_json_encoder_default)}\n")
     elif mimetype == "text/csv":
         if attributes is None:
             raise ValueError(
@@ -431,3 +456,9 @@ def save_entities(
         csv_writer.writerows(ensure_tuple(entities, tuple_=tuple_))
     else:
         raise ValueError(f"Saving entities to {mimetype} files is not implemented!")
+
+
+def _json_encoder_default(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError

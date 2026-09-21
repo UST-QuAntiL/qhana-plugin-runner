@@ -20,7 +20,7 @@ from qhana_plugin_runner.api.util import SecurityBlueprint
 from qhana_plugin_runner.util.plugins import QHAnaPluginBase, plugin_identifier
 
 _plugin_name = "qnn"
-__version__ = "v0.1.1"
+__version__ = "v0.1.2"
 _identifier = plugin_identifier(_plugin_name, __version__)
 
 
@@ -52,7 +52,7 @@ class QNN(QHAnaPluginBase):
         return QNN_BLP
 
     def get_requirements(self) -> str:
-        return "matplotlib~=3.5.1\nqiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\ntorch~=2.0.1\nmuid~=0.5.3\nautoray<0.8"
+        return "matplotlib~=3.5.1\nqiskit~=0.43\npennylane<=0.36.0\npennylane-qiskit<=0.36.0\nscikit-learn~=1.1\ntorch~=2.0.1\nautoray<0.8"
 
 
 try:

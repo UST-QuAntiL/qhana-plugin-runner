@@ -36,6 +36,7 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.requests import retrieve_filename
 
 import numpy as np
@@ -58,14 +59,8 @@ from .backend.datasets import OneHotDataset
 from .backend.train_and_test import train
 from .backend.visualize import plot_data, plot_confusion_matrix
 
-import muid
-
 
 TASK_LOGGER = get_task_logger(__name__)
-
-
-def get_readable_hash(s: str) -> str:
-    return muid.pretty(muid.bhash(s.encode("utf-8")), k1=6, k2=5).replace(" ", "-")
 
 
 @CELERY.task(name=f"{QNN.instance.identifier}.calculation_task", bind=True)
