@@ -33,7 +33,7 @@ from qhana_plugin_runner.plugin_utils.attributes import (
 from qhana_plugin_runner.plugin_utils.entity_marshalling import load_entities
 from qhana_plugin_runner.requests import get_mimetype, open_url
 
-from . import ROUTER_BLP, Router
+from . import FEATURE_ENGINEERING_PIPELINE_BLP, FeatureEngineeringPipeline
 from .schemas import (
     AGGREGATOR_PLUGIN,
     FEATURE_VECTOR,
@@ -75,7 +75,9 @@ TASK_LOGGER = get_task_logger(__name__)
 
 
 # --- Step 1: discover taxonomy attributes for the routing step ---
-@CELERY.task(name=f"{Router.instance.identifier}.preprocessing_task", bind=True)
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.preprocessing_task", bind=True
+)
 def preprocessing_task(self, db_id: int) -> str:
     """
     Discovers taxonomy attributes to populate the dynamic routing step UI.
@@ -86,7 +88,9 @@ def preprocessing_task(self, db_id: int) -> str:
     (e.g., Mapping vs. Wu-Palmer) for the frontend.
     """
 
-    TASK_LOGGER.info(f"Starting router preprocessing with db id '{db_id}'")
+    TASK_LOGGER.info(
+        f"Starting Feature Engineering Pipeline preprocessing with db id '{db_id}'"
+    )
     task_data = load_task(db_id)
 
     params: InputParameters = InputParametersSchema().loads(task_data.parameters)
@@ -178,7 +182,9 @@ def _validate_numeric_selections(selections: dict, numeric_attributes: set):
             )
 
 
-@CELERY.task(name=f"{Router.instance.identifier}.start_routing_task", bind=True)
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_routing_task", bind=True
+)
 def start_routing_task(self, db_id: int) -> str:
     """
     Translates user attribute selections into an execution queue and starts the first pipeline.
@@ -295,7 +301,7 @@ def start_routing_task(self, db_id: int) -> str:
 
 
 @CELERY.task(
-    name=f"{Router.instance.identifier}.handle_webhook_task",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.handle_webhook_task",
     bind=True,
     base=PipelineTask,
 )
@@ -373,7 +379,7 @@ def handle_webhook_task(self, db_id: int, source_url: str, via: str):
 
     # SNYCHRONIZATION GUARD: ensure that only one process progresses the pipeline for this source URL
     lock_key = f"router_sync_lock_{source_url}"
-    plugin_id = ROUTER_BLP.name
+    plugin_id = FEATURE_ENGINEERING_PIPELINE_BLP.name
     my_celery_id = self.request.id
 
     try:

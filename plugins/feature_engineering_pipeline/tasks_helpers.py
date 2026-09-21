@@ -51,7 +51,7 @@ REQUEST_TIMEOUT = 10
 
 
 class PipelineTask(CELERY.Task):
-    """Base task for router pipeline steps with centralized error handling.
+    """Base task for Feature Engineering Pipeline pipeline steps with centralized error handling.
 
     Transient network errors (dropped connections, timeouts) are retried
     automatically with exponential backoff. Any other exception fails the task

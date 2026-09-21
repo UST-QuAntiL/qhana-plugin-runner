@@ -26,7 +26,7 @@ from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_result
 
-from . import Router
+from . import FeatureEngineeringPipeline
 from .numeric_attributes import (
     collect_values,
     entities_zip,
@@ -198,7 +198,9 @@ def launch_next_pipeline(task_data: ProcessingTask):
 
 # --- WU-PALMER TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_wu_palmer", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_wu_palmer",
+    bind=True,
+    base=PipelineTask,
 )
 def start_wu_palmer(self, db_id: int):
     """
@@ -236,7 +238,9 @@ def start_wu_palmer(self, db_id: int):
 
 # --- MAPPING TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_mapping", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_mapping",
+    bind=True,
+    base=PipelineTask,
 )
 def start_mapping(self, db_id: int):
     """
@@ -274,7 +278,7 @@ def start_mapping(self, db_id: int):
 
 # --- TRANSFORMER TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_transformers",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_transformers",
     bind=True,
     base=PipelineTask,
 )
@@ -329,7 +333,7 @@ def start_transformers(self, db_id: int, source_url: str):
 
 # --- AGGREGATOR TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_aggregator",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_aggregator",
     bind=True,
     base=PipelineTask,
 )
@@ -383,7 +387,11 @@ def start_aggregator(self, db_id: int, source_url: str):
 
 
 # --- MDS TASK ---
-@CELERY.task(name=f"{Router.instance.identifier}.start_mds", bind=True, base=PipelineTask)
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_mds",
+    bind=True,
+    base=PipelineTask,
+)
 def start_mds(self, db_id: int, source_url: str):
     """
     Initiates the attribute-distance-mds plugin.
@@ -437,7 +445,7 @@ def start_mds(self, db_id: int, source_url: str):
 
 # --- NUMERIC ATTRIBUTES ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_numeric_distances",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_numeric_distances",
     bind=True,
     base=PipelineTask,
 )
@@ -474,7 +482,7 @@ def start_numeric_distances(self, db_id: int):
 
 
 @CELERY.task(
-    name=f"{Router.instance.identifier}.build_numeric_feature_vector",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.build_numeric_feature_vector",
     bind=True,
     base=PipelineTask,
 )
@@ -534,7 +542,9 @@ def build_numeric_feature_vector(self, db_id: int):
 
 # --- END OF PIPELINE ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_pipeline",
+    bind=True,
+    base=PipelineTask,
 )
 def finalize_pipeline(self, db_id: int, source_url: str):
     """
@@ -584,7 +594,9 @@ def finalize_pipeline(self, db_id: int, source_url: str):
 
 # --- AFTER ALL PIPELINES: Vector concat ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_vector_concat", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_vector_concat",
+    bind=True,
+    base=PipelineTask,
 )
 def start_vector_concat(self, db_id: int):
     """
@@ -623,7 +635,7 @@ def start_vector_concat(self, db_id: int):
 
 # --- AFTER ALL PIPELINES: finalize vector concat ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_vector_concat",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_vector_concat",
     bind=True,
     base=PipelineTask,
 )
@@ -686,7 +698,11 @@ def finalize_vector_concat(self, db_id: int, source_url: str):
 
 
 # --- AFTER VECTOR CONCAT: PCA (started from finalize_vector_concat) ---
-@CELERY.task(name=f"{Router.instance.identifier}.start_pca", bind=True, base=PipelineTask)
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_pca",
+    bind=True,
+    base=PipelineTask,
+)
 def start_pca(self, db_id: int, vector_url: str):
     """
     Initiates the PCA plugin to reduce the dimensions of the concatenated vector.
@@ -723,7 +739,9 @@ def start_pca(self, db_id: int, vector_url: str):
 
 # --- AFTER VECTOR CONCAT: finalize PCA ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_pca", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_pca",
+    bind=True,
+    base=PipelineTask,
 )
 def finalize_pca(self, db_id: int, source_url: str):
     """
