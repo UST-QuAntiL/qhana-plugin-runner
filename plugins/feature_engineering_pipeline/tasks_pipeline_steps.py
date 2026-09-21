@@ -18,7 +18,11 @@ from marshmallow import EXCLUDE
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ensure_dict,
+    load_entities,
+)
+from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_result
 
@@ -47,8 +51,7 @@ from .tasks_helpers import (
     PipelineTask,
     extract_output_url,
     has_enough_pca_dimensions,
-    is_store_mds_output,
-    load_entities_with_metadata,
+    should_store_mds_output,
     persist_generated_file,
     run_pipeline_step,
     save_intermediate_results,
@@ -380,17 +383,6 @@ def start_aggregator(self, db_id: int, source_url: str):
 
 
 # --- MDS TASK ---
-def mds_payload(params: InputParameters, attr_dists_url: str) -> dict:
-    return {
-        "attributeDistancesUrl": attr_dists_url,
-        "dimensions": params.mds_dimensions,
-        "metric": params.metric.name,
-        "nInit": params.n_init,
-        "maxIter": params.max_iter,
-        "missingDataHandling": params.missing_data_handling.name,
-    }
-
-
 @CELERY.task(name=f"{Router.instance.identifier}.start_mds", bind=True, base=PipelineTask)
 def start_mds(self, db_id: int, source_url: str):
     """
@@ -432,7 +424,14 @@ def start_mds(self, db_id: int, source_url: str):
         task_data=task_data,
         plugin_name=MDS_PLUGIN,
         logging_name="MDS",
-        payload=mds_payload(params, attr_dists_url),
+        payload={
+            "attributeDistancesUrl": attr_dists_url,
+            "dimensions": params.mds_dimensions,
+            "metric": params.metric.name,
+            "nInit": params.n_init,
+            "maxIter": params.max_iter,
+            "missingDataHandling": params.missing_data_handling.name,
+        },
     )
 
 
@@ -496,7 +495,8 @@ def build_numeric_feature_vector(self, db_id: int):
         task_data.parameters or "{}"
     )
     attributes = task_data.data[f"{FEATURE_VECTOR}_attributes"].splitlines()
-    entities, _ = load_entities_with_metadata(params)
+    with open_url(params.entities_url) as response:
+        entities = list(ensure_dict(load_entities(response, get_mimetype(response))))
 
     members = {}
     for attribute in attributes:
@@ -517,7 +517,7 @@ def build_numeric_feature_vector(self, db_id: int):
         entities_zip(members),
         file_name,
         "entity/vector",
-        as_result=is_store_mds_output(params),
+        as_result=should_store_mds_output(params),
     )
 
     if params.concat_output:
@@ -562,7 +562,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_dists_url = extract_output_url(outputs, "entity/vector")
 
-    if is_store_mds_output(params):
+    if should_store_mds_output(params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,

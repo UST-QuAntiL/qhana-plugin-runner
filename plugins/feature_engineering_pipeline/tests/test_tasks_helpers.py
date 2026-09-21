@@ -28,16 +28,13 @@ from feature_engineering_pipeline.tasks_helpers import (
     calculate_recommendations,
     extract_output_url,
     has_enough_pca_dimensions,
-    is_store_mds_output,
-    load_entities_with_metadata,
     load_entity_attributes,
     load_task,
     log_task_event,
-    persist_generated_file,
     plugin_process_url,
     run_pipeline_step,
     save_intermediate_results,
-    task_file_url,
+    should_store_mds_output,
     taxonomy_ref,
 )
 from feature_engineering_pipeline.tasks_pipeline_steps import start_wu_palmer
@@ -193,13 +190,13 @@ def test_calculate_recommendations_falls_back_for_unreadable_taxonomies():
         (True, True, True),
     ],
 )
-def test_is_store_mds_output(concat_output, include_intermediate, expected):
+def test_should_store_mds_output(concat_output, include_intermediate, expected):
     """Without concatenation the MDS vectors are the only result of the run."""
     params = router_params(
         concatOutput=concat_output,
         includeIntermediateResultsInOutput=include_intermediate,
     )
-    assert is_store_mds_output(params) is expected
+    assert should_store_mds_output(params) is expected
 
 
 def test_save_intermediate_results_persists_the_file():

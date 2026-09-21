@@ -414,7 +414,7 @@ class RoutingStepView(MethodView):
             key: url_for("plugins-api.PluginView", plugin=name, _external=True)
             for key, name in PIPELINE_PLUGINS.items()
         }
-        # The numeric pipelines build file urls in the worker (see task_file_url).
+        # The numeric pipelines build file urls in the worker (see persist_generated_file).
         db_task.data["base_url"] = request.url_root
         db_task.clear_previous_step()
         db_task.save(commit=True)

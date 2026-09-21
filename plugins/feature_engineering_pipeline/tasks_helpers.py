@@ -13,20 +13,20 @@
 # limitations under the License.
 
 import json
-import requests
-from requests.exceptions import ConnectionError, Timeout
-from celery.utils.log import get_task_logger
-from flask.globals import current_app
 from typing import IO, Optional
 from urllib.parse import urljoin
 from zipfile import ZipFile
+
+import requests
+from celery.utils.log import get_task_logger
+from flask.globals import current_app
+from requests.exceptions import ConnectionError, Timeout
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     EntityTupleMixin,
-    ensure_dict,
     load_entities,
 )
 from qhana_plugin_runner.plugin_utils.interop import (
@@ -39,8 +39,8 @@ from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import TASK_DETAILS_CHANGED, save_task_error
 
 from .schemas import (
-    WU_PALMER_PLUGIN,
     MAPPING_PLUGIN,
+    WU_PALMER_PLUGIN,
     InputParameters,
 )
 
@@ -169,36 +169,6 @@ def load_entity_attributes(entities_url: str) -> set:
     return attributes
 
 
-def load_entities_with_metadata(
-    params: InputParameters,
-) -> tuple[list[dict], dict[str, AttributeMetadata]]:
-    """Load the entities (in file order) and the attribute metadata of a run.
-
-    The entity values are not deserialized through the metadata. The numeric
-    pipelines parse the raw values themselves (see ``numeric_attributes``).
-    """
-    with open_url(params.entities_metadata_url) as response:
-        metadata = {
-            element["ID"]: AttributeMetadata.from_dict(element)
-            for element in ensure_dict(load_entities(response, get_mimetype(response)))
-        }
-    with open_url(params.entities_url) as response:
-        entities = list(ensure_dict(load_entities(response, get_mimetype(response))))
-    return entities, metadata
-
-
-def task_file_url(task_data: ProcessingTask, file_info: TaskFile) -> str:
-    """External url of a task file, usable from inside a worker task.
-
-    ``LocalFileStore.get_task_file_url`` calls ``url_for(_external=True)``.
-    The worker has an app context but no request context and ``SERVER_NAME``
-    is unset, so the host is taken from the ``base_url`` recorded by the
-    routing step.
-    """
-    with current_app.test_request_context(base_url=task_data.data.get("base_url")):
-        return STORE.get_task_file_url(file_info, external=True)
-
-
 def persist_generated_file(
     task_data: ProcessingTask,
     retries: int,
@@ -226,7 +196,8 @@ def persist_generated_file(
             task_data.id, file, file_name, mimetype="application/zip"
         )
 
-    url = task_file_url(task_data, file_info)
+    with current_app.test_request_context(base_url=task_data.data.get("base_url")):
+        url = STORE.get_task_file_url(file_info, external=True)
     generated[file_name] = url
     task_data.data["generated_files"] = generated
     task_data.save(commit=True)
@@ -332,7 +303,7 @@ def run_pipeline_step(
         )
 
 
-def is_store_mds_output(params: InputParameters) -> bool:
+def should_store_mds_output(params: InputParameters) -> bool:
     """
     Returns true if the MDS output should be stored or
     the output should be concatenated and the intermediate results shall be included.

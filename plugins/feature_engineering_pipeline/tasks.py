@@ -104,6 +104,7 @@ def preprocessing_task(self, db_id: int) -> str:
     taxonomy_attributes = []
     numeric_attributes = []
     multi_valued_numeric_attributes = []
+    unused_attributes = []
     recommendations = {}
 
     with open_url(params.entities_metadata_url) as response:
@@ -111,7 +112,7 @@ def preprocessing_task(self, db_id: int) -> str:
         for element in load_entities(response, mimetype):
             metadata = AttributeMetadata.from_dict(element)
             if metadata.ID not in entity_attributes:
-                # TODO: print warning here
+                unused_attributes.append(metadata.ID)
                 continue
 
             if metadata.description in NUMERIC_TYPES:
@@ -139,6 +140,12 @@ def preprocessing_task(self, db_id: int) -> str:
                     recommendations[metadata.ID] = calculate_recommendations(
                         taxonomies_zip, matched_zip_path
                     )
+
+    if unused_attributes:
+        TASK_LOGGER.warning(
+            f"Skipped {len(unused_attributes)} attribute(s) described in the metadata "
+            f"file but absent from the entities file: {unused_attributes}."
+        )
 
     TASK_LOGGER.debug(
         f"Found {len(taxonomy_attributes)} taxonomy attribute(s) with a matching "
