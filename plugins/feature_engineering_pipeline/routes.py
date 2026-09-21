@@ -14,7 +14,7 @@
 
 from http import HTTPStatus
 from json import loads
-from typing import Mapping, Optional
+from typing import Mapping
 
 from celery.canvas import chain
 from celery.utils.log import get_task_logger
@@ -40,8 +40,8 @@ from qhana_plugin_runner.tasks import (
 from . import ROUTER_BLP, Router
 from .schemas import (
     PIPELINE_FIELD_PREFIX,
-    PIPELINE_PLUGINS,
     PIPELINE_OPTIONS,
+    PIPELINE_PLUGINS,
     InputParametersSchema,
     MetricEnum,
     PCATypeEnum,
@@ -344,13 +344,17 @@ class RoutingStepFrontend(MethodView):
         return self.render(request.form, db_id, errors, not errors)
 
     def render(self, data: Mapping, db_id: int, errors: dict, valid: bool):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
             raise KeyError(msg)
 
         attributes = db_task.data.get("taxonomy_attributes", [])
+        numeric_attributes = db_task.data.get("numeric_attributes", [])
+        multi_valued_numeric = set(
+            db_task.data.get("multi_valued_numeric_attributes", [])
+        )
         recommendations = db_task.data.get("recommendations", {})
         input_params = loads(db_task.parameters or "{}")
 
@@ -361,6 +365,8 @@ class RoutingStepFrontend(MethodView):
                 version=Router.instance.version,
                 schema=RoutingStepParametersSchema(),
                 attributes=attributes,
+                numeric_attributes=numeric_attributes,
+                multi_valued_numeric=multi_valued_numeric,
                 recommendations=recommendations,
                 pipeline_options=PIPELINE_OPTIONS,
                 input_params=input_params,
@@ -380,7 +386,7 @@ class RoutingStepView(MethodView):
     @ROUTER_BLP.response(HTTPStatus.SEE_OTHER)
     @ROUTER_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
-        db_task: Optional[ProcessingTask] = ProcessingTask.get_by_id(id_=db_id)
+        db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
             msg = f"Could not load task data with id {db_id} to read parameters!"
             TASK_LOGGER.error(msg)
@@ -408,6 +414,8 @@ class RoutingStepView(MethodView):
             key: url_for("plugins-api.PluginView", plugin=name, _external=True)
             for key, name in PIPELINE_PLUGINS.items()
         }
+        # The numeric pipelines build file urls in the worker (see persist_generated_file).
+        db_task.data["base_url"] = request.url_root
         db_task.clear_previous_step()
         db_task.save(commit=True)
 

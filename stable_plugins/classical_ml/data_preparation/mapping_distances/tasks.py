@@ -15,35 +15,38 @@
 import itertools
 import json
 import math
+import sys
 from io import StringIO
 from pathlib import Path
-import sys
 from tempfile import SpooledTemporaryFile
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
 from scipy.spatial import distance
 
-from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
-
-from .schemas import InputParametersSchema, InputParameters, DistanceMetricEnum
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
 from qhana_plugin_runner.plugin_utils.attributes import (
+    NUMERIC_TYPES,
     AttributeMetadata,
-    tuple_deserializer,
 )
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
     save_entities,
 )
+from qhana_plugin_runner.plugin_utils.hashing import get_readable_hash
 from qhana_plugin_runner.plugin_utils.zip_utils import get_files_from_zip_url
 from qhana_plugin_runner.requests import get_mimetype, open_url, retrieve_filename
 from qhana_plugin_runner.storage import STORE
 
 from . import MappingDistances
+from .schemas import (
+    DistanceMetricEnum,
+    InputParameters,
+    InputParametersSchema,
+)
 
 TASK_LOGGER = get_task_logger(__name__)
 
@@ -134,6 +137,80 @@ def _get_element_list(
             ]
         return [val.strip()] if val.strip() else []
     return [str(val)]
+
+
+def _parse_numeric_value(raw: Any) -> float | None:
+    if raw is None:
+        return None
+    if isinstance(raw, (int, float)):
+        return None if isinstance(raw, float) and math.isnan(raw) else float(raw)
+    if isinstance(raw, str):
+        stripped = raw.strip()
+        if not stripped or stripped.lower() == "nan":
+            return None
+        try:
+            return float(stripped)
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_numeric_vector(
+    entity: dict[str, Any], attribute: str, attrib_meta: AttributeMetadata
+) -> list[float] | None:
+    val = entity.get(attribute)
+    if val is None:
+        return None
+
+    if attrib_meta.multiple:
+        if isinstance(val, (set, list, dict)) and not val:
+            return None
+        if isinstance(val, (set, list)):
+            raw_values = list(val)
+        elif isinstance(val, str):
+            raw_values = (
+                val.split(attrib_meta.separator) if attrib_meta.separator else [val]
+            )
+        else:
+            raw_values = [val]
+
+        vector = [_parse_numeric_value(v) for v in raw_values]
+        if not vector or any(v is None for v in vector):
+            return None
+        return vector
+
+    value = _parse_numeric_value(val)
+    return None if value is None else [value]
+
+
+def _pad_to_common_dimension(
+    element_map: dict[str, list[float]],
+) -> dict[str, list[float]]:
+    dimension = max((len(vector) for vector in element_map.values()), default=0)
+    return {
+        key: vector + [0.0] * (dimension - len(vector))
+        for key, vector in element_map.items()
+    }
+
+
+def _numeric_element_map(
+    entities: list[dict[str, Any]], attribute: str, attrib_meta: AttributeMetadata
+) -> dict[str, list[float]]:
+    element_map: dict[str, list[float]] = {}
+    for entity in entities:
+        vector = _parse_numeric_vector(entity, attribute, attrib_meta)
+        if vector is None:
+            continue
+        element_map[entity["ID"]] = vector
+
+    return _pad_to_common_dimension(element_map)
+
+
+def _get_numeric_element_list(
+    entity: dict[str, Any], attribute: str, attrib_meta: AttributeMetadata
+) -> list[str]:
+    vector = _parse_numeric_vector(entity, attribute, attrib_meta)
+    return [] if vector is None else [entity["ID"]]
 
 
 def _is_empty_or_nan(vector: List[float]) -> bool:
@@ -229,7 +306,7 @@ def calculation_task(self, db_id: int) -> str:
             mapping_vector = ent_node.get("mapping", [])
             item_map[ent_node["ID"]] = [float(x) for x in mapping_vector]
 
-        taxonomy_mappings[tax_name] = item_map
+        taxonomy_mappings[tax_name] = _pad_to_common_dimension(item_map)
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     with ZipFile(tmp_zip_file, "w") as zip_file:
@@ -237,18 +314,35 @@ def calculation_task(self, db_id: int) -> str:
             element_distances = []
 
             attrib_meta = entities_metadata.get(attribute)
-            tax_name = _extract_tax_name(attrib_meta)
-            tax_map = taxonomy_mappings.get(tax_name, {})
+            if attrib_meta is None:
+                msg = f"No metadata found for attribute '{attribute}'"
+                TASK_LOGGER.error(msg)
+                raise ValueError(msg)
+
+            is_numeric = attrib_meta.description in NUMERIC_TYPES
+
+            if is_numeric:
+                element_vector_map = _numeric_element_map(
+                    entities, attribute, attrib_meta
+                )
+            else:
+                tax_name = _extract_tax_name(attrib_meta)
+                element_vector_map = taxonomy_mappings.get(tax_name, {})
 
             unique_elements = set()
             for entitiy in entities:
-                entity_names = _get_element_list(entitiy, attribute, attrib_meta)
+                if is_numeric:
+                    entity_names = _get_numeric_element_list(
+                        entitiy, attribute, attrib_meta
+                    )
+                else:
+                    entity_names = _get_element_list(entitiy, attribute, attrib_meta)
                 unique_elements.update(entity_names)
 
             elements = sorted(list(unique_elements))
             for e1, e2 in itertools.product(elements, repeat=2):
-                v1 = tax_map[e1]
-                v2 = tax_map[e2]
+                v1 = element_vector_map[e1]
+                v2 = element_vector_map[e2]
 
                 try:
                     dist = _calculate_vector_distance(v1, v2, distance_metric)
