@@ -228,7 +228,7 @@ def cancel_task_and_cascade(active_subtask_url: str, task_id: int):
             req = requests.Request(target_url, method="DELETE")
             with requests.urlopen(req, timeout=10) as response:
                 pass
-                        
+
         except Exception as e:
             TASK_LOGGER.warning(
                 f"Failed to cascade cancellation to {active_subtask_url}: {e}"
