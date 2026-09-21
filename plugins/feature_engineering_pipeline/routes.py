@@ -37,7 +37,7 @@ from qhana_plugin_runner.tasks import (
     save_task_error,
 )
 
-from . import ROUTER_BLP, Router
+from . import FEATURE_ENGINEERING_PIPELINE_BLP, FeatureEngineeringPipeline
 from .schemas import (
     MAPPING_PLUGIN,
     NUMERIC_SETTINGS_GROUPS,
@@ -110,8 +110,8 @@ def render_step(schema, data, errors, process_url):
     return Response(
         render_template(
             "simple_template.html",
-            name=Router.instance.name,
-            version=Router.instance.version,
+            name=FeatureEngineeringPipeline.instance.name,
+            version=FeatureEngineeringPipeline.instance.version,
             schema=schema,
             values=data,
             errors=errors,
@@ -120,20 +120,24 @@ def render_step(schema, data, errors, process_url):
     )
 
 
-@ROUTER_BLP.route("/")
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/")
 class PluginsView(MethodView):
-    @ROUTER_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
-    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.OK, PluginMetadataSchema())
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
     def get(self):
         return PluginMetadata(
             title="Feature Engineering Pipeline",
-            description=Router.instance.description,
-            name=Router.instance.name,
-            version=Router.instance.version,
+            description=FeatureEngineeringPipeline.instance.description,
+            name=FeatureEngineeringPipeline.instance.name,
+            version=FeatureEngineeringPipeline.instance.version,
             type=PluginType.processing,
             entry_point=EntryPoint(
-                href=url_for(f"{ROUTER_BLP.name}.{ProcessView.__name__}"),
-                ui_href=url_for(f"{ROUTER_BLP.name}.{MicroFrontend.__name__}"),
+                href=url_for(
+                    f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.{ProcessView.__name__}"
+                ),
+                ui_href=url_for(
+                    f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.{MicroFrontend.__name__}"
+                ),
                 data_input=[
                     InputDataMetadata(
                         data_type="entity/list",
@@ -215,37 +219,39 @@ class PluginsView(MethodView):
                     ),
                 ],
             ),
-            tags=Router.instance.tags,
+            tags=FeatureEngineeringPipeline.instance.tags,
         )
 
 
-@ROUTER_BLP.route("/ui/")
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/ui/")
 class MicroFrontend(MethodView):
-    """Micro frontend for the router plugin."""
+    """Micro frontend for the Feature Engineering Pipeline plugin."""
 
-    @ROUTER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the router plugin."
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline plugin.",
     )
-    @ROUTER_BLP.arguments(
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
     )
-    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
     def get(self, errors):
         return self.render(data=request.args, errors=errors, valid=not errors)
 
-    @ROUTER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the router plugin."
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline  plugin.",
     )
-    @ROUTER_BLP.arguments(
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
         InputParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
     )
-    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
     def post(self, errors):
         """Return the micro frontend with prerendered inputs."""
         return self.render(data=request.form, errors=errors, valid=not errors)
@@ -272,22 +278,24 @@ class MicroFrontend(MethodView):
         return Response(
             render_template(
                 "router_form.html",
-                name=Router.instance.name,
-                version=Router.instance.version,
+                name=FeatureEngineeringPipeline.instance.name,
+                version=FeatureEngineeringPipeline.instance.version,
                 groups=field_groups(INPUT_FIELD_GROUPS),
                 values=data_dict,
                 valid=valid,
                 errors=errors,
-                process=url_for(f"{ROUTER_BLP.name}.ProcessView"),
+                process=url_for(f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.ProcessView"),
             )
         )
 
 
-@ROUTER_BLP.route("/process/")
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/process/")
 class ProcessView(MethodView):
-    @ROUTER_BLP.arguments(InputParametersSchema(unknown=EXCLUDE), location="form")
-    @ROUTER_BLP.response(HTTPStatus.SEE_OTHER)
-    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        InputParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.SEE_OTHER)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments):
         """Discover the taxonomy attributes and queue the routing step."""
         db_task = ProcessingTask(
@@ -298,10 +306,14 @@ class ProcessView(MethodView):
 
         step_id = "routing-step"
         href = url_for(
-            f"{ROUTER_BLP.name}.RoutingStepView", db_id=db_task.id, _external=True
+            f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.RoutingStepView",
+            db_id=db_task.id,
+            _external=True,
         )
         ui_href = url_for(
-            f"{ROUTER_BLP.name}.RoutingStepFrontend", db_id=db_task.id, _external=True
+            f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.RoutingStepFrontend",
+            db_id=db_task.id,
+            _external=True,
         )
 
         task: chain = preprocessing_task.s(db_id=db_task.id) | add_step.s(
@@ -315,35 +327,37 @@ class ProcessView(MethodView):
         )
 
 
-@ROUTER_BLP.route("/<int:db_id>/routing-step-ui/")
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/<int:db_id>/routing-step-ui/")
 class RoutingStepFrontend(MethodView):
     """Micro frontend for the routing step (one pipeline dropdown per attribute)."""
 
-    @ROUTER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the router routing step."
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline routing step.",
     )
-    @ROUTER_BLP.arguments(
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
         RoutingStepParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="query",
         required=False,
     )
-    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
     def get(self, errors, db_id: int):
         return self.render(request.args, db_id, errors, False)
 
-    @ROUTER_BLP.html_response(
-        HTTPStatus.OK, description="Micro frontend of the router routing step."
+    @FEATURE_ENGINEERING_PIPELINE_BLP.html_response(
+        HTTPStatus.OK,
+        description="Micro frontend of the Feature Engineering Pipeline routing step.",
     )
-    @ROUTER_BLP.arguments(
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
         RoutingStepParametersSchema(
             partial=True, unknown=EXCLUDE, validate_errors_as_result=True
         ),
         location="form",
         required=False,
     )
-    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
     def post(self, errors, db_id: int):
         return self.render(request.form, db_id, errors, not errors)
 
@@ -364,7 +378,7 @@ class RoutingStepFrontend(MethodView):
 
         # A multi-valued numeric attribute runs the distances mapping, so it carries
         # the settings of that pipeline. A single-valued one has no settings yet.
-        multi_valued_attributes = [
+        multi_valued_numeric_attributes = [
             attribute
             for attribute in numeric_attributes
             if attribute in multi_valued_numeric
@@ -373,7 +387,7 @@ class RoutingStepFrontend(MethodView):
         _, submitted_settings = split_routing_fields(data)
         settings_values = {
             attribute: merge_settings(input_params, submitted_settings.get(attribute, {}))
-            for attribute in (*attributes, *multi_valued_attributes)
+            for attribute in (*attributes, *multi_valued_numeric_attributes)
         }
         _, settings_errors = split_routing_fields(errors)
 
@@ -385,15 +399,15 @@ class RoutingStepFrontend(MethodView):
             # The numeric pipeline is fixed, so its sections open like a recommendation.
             **{
                 attribute: expanded_settings_groups(MAPPING_PLUGIN)
-                for attribute in multi_valued_attributes
+                for attribute in multi_valued_numeric_attributes
             },
         }
 
         return Response(
             render_template(
                 "routing_step.html",
-                name=Router.instance.name,
-                version=Router.instance.version,
+                name=FeatureEngineeringPipeline.instance.name,
+                version=FeatureEngineeringPipeline.instance.version,
                 schema=RoutingStepParametersSchema(),
                 attributes=attributes,
                 numeric_attributes=numeric_attributes,
@@ -409,18 +423,23 @@ class RoutingStepFrontend(MethodView):
                 values=data,
                 valid=valid,
                 errors=errors,
-                process=url_for(f"{ROUTER_BLP.name}.RoutingStepView", db_id=db_id),
+                process=url_for(
+                    f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.RoutingStepView",
+                    db_id=db_id,
+                ),
             )
         )
 
 
-@ROUTER_BLP.route("/<int:db_id>/routing-step-process/")
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/<int:db_id>/routing-step-process/")
 class RoutingStepView(MethodView):
     """Record the per-attribute routing and launch the Wu-Palmer pipeline."""
 
-    @ROUTER_BLP.arguments(RoutingStepParametersSchema(unknown=EXCLUDE), location="form")
-    @ROUTER_BLP.response(HTTPStatus.SEE_OTHER)
-    @ROUTER_BLP.require_jwt("jwt", optional=True)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.arguments(
+        RoutingStepParametersSchema(unknown=EXCLUDE), location="form"
+    )
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.SEE_OTHER)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.require_jwt("jwt", optional=True)
     def post(self, arguments, db_id: int):
         db_task: ProcessingTask | None = ProcessingTask.get_by_id(id_=db_id)
         if db_task is None:
@@ -439,7 +458,9 @@ class RoutingStepView(MethodView):
         }
 
         db_task.data["webhook_url"] = url_for(
-            f"{ROUTER_BLP.name}.WebhookView", db_id=db_task.id, _external=True
+            f"{FEATURE_ENGINEERING_PIPELINE_BLP.name}.WebhookView",
+            db_id=db_task.id,
+            _external=True,
         )
 
         # Resolve the pipeline plugin metadata urls here, where the request
@@ -467,7 +488,7 @@ class RoutingStepView(MethodView):
 
 
 # --- WEBHOOOK ---
-@ROUTER_BLP.route("/<int:db_id>/webhook/")
+@FEATURE_ENGINEERING_PIPELINE_BLP.route("/<int:db_id>/webhook/")
 class WebhookView(MethodView):
     """
     Receives and processes state update webhooks from executed sub-plugins.
@@ -476,7 +497,7 @@ class WebhookView(MethodView):
     It triggers the `handle_webhook_task` to progress the next step.
     """
 
-    @ROUTER_BLP.response(HTTPStatus.OK)
+    @FEATURE_ENGINEERING_PIPELINE_BLP.response(HTTPStatus.OK)
     def post(self, db_id: int):
         source_url = request.args.get("source")
         event = request.args.get("event")

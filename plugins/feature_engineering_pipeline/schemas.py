@@ -449,10 +449,6 @@ class InputParametersSchema(PipelineSettingsSchema):
         return InputParameters(**data)
 
 
-# Sections of the pipeline settings: (key, title, field names). The micro
-# frontend renders them once for the whole run, the routing step renders them
-# once per taxonomy attribute. The key identifies the section for the expansion
-# rules below.
 PIPELINE_SETTINGS_GROUPS = (
     (TRANSFORMERS_PLUGIN, "Transformer Settings", ("transformer",)),
     (WU_PALMER_PLUGIN, "Wu-Palmer Settings", ("root_is_part_of_hierarchy",)),
@@ -466,17 +462,12 @@ PIPELINE_SETTINGS_GROUPS = (
 
 _SETTINGS_GROUP_FIELDS = {key: fields for key, _, fields in PIPELINE_SETTINGS_GROUPS}
 
-# The sections a multi-valued numeric attribute can override. It always runs the
-# distances mapping, the aggregator and MDS, so the Wu-Palmer and the transformer
-# section do not apply to it. A single-valued numeric attribute has no settings.
 NUMERIC_SETTINGS_GROUPS = tuple(
     group
     for group in PIPELINE_SETTINGS_GROUPS
     if group[0] in (MAPPING_PLUGIN, MDS_PLUGIN)
 )
 
-# The additional sections the routing step expands for a recommended pipeline. The
-# MDS section is always expanded, the transformer only runs in the Wu-Palmer pipeline.
 _RECOMMENDED_SETTINGS_GROUPS = {
     WU_PALMER_PLUGIN: (TRANSFORMERS_PLUGIN, WU_PALMER_PLUGIN),
     MAPPING_PLUGIN: (MAPPING_PLUGIN,),
@@ -499,9 +490,6 @@ def _form_keys(*group_keys: str) -> tuple[str, ...]:
     )
 
 
-# The settings that change the result of a pipeline, as form keys. Attributes that
-# disagree on one of them cannot share a plugin run, because the aggregator and the
-# MDS step combine all attributes of a run into one result.
 PIPELINE_SETTINGS_KEYS = {
     WU_PALMER_PLUGIN: _form_keys(WU_PALMER_PLUGIN, TRANSFORMERS_PLUGIN, MDS_PLUGIN),
     MAPPING_PLUGIN: _form_keys(MAPPING_PLUGIN, MDS_PLUGIN),
@@ -546,11 +534,6 @@ def _with_unchecked_boxes(raw: Mapping) -> dict:
     # An unchecked checkbox is not submitted at all, so a boolean missing from a
     # submitted block is a deselected one.
     return {**{key: False for key in BOOLEAN_SETTINGS_KEYS}, **raw}
-
-
-def settings_errors(raw: Mapping) -> dict:
-    """Return the validation errors of one settings block, keyed by form key."""
-    return PipelineSettingsSchema(partial=True).validate(dict(raw))
 
 
 def load_settings(raw: Mapping) -> dict:
@@ -604,7 +587,9 @@ class RoutingStepParametersSchema(FrontendFormBaseSchema):
                 ]
         for attribute, raw in settings.items():
             prefix = f"{PIPELINE_FIELD_PREFIX}{attribute}{SETTINGS_FIELD_SEPARATOR}"
-            for key, messages in settings_errors(raw).items():
+            for key, messages in (
+                PipelineSettingsSchema(partial=True).validate(raw).items()
+            ):
                 errors[prefix + key] = messages
 
         if errors:

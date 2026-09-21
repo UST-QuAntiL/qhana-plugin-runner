@@ -53,7 +53,7 @@ REQUEST_TIMEOUT = 10
 
 
 class PipelineTask(CELERY.Task):
-    """Base task for router pipeline steps with centralized error handling.
+    """Base task for Feature Engineering Pipeline pipeline steps with centralized error handling.
 
     Transient network errors (dropped connections, timeouts) are retried
     automatically with exponential backoff. Any other exception fails the task
@@ -73,6 +73,24 @@ class PipelineTask(CELERY.Task):
         if args:
             return args[0]
         return None
+
+    def __call__(self, *args, **kwargs):
+        """Intercept task execution to check for cancellation."""
+
+        with self.app.flask_app.app_context():
+            db_id = self._get_db_id(args, kwargs)
+
+            if db_id is not None:
+                task_data = ProcessingTask.get_by_id(db_id)
+
+                if task_data and task_data.status == "CANCELED":
+                    TASK_LOGGER.warning(
+                        f"Execution of '{self.name}' (db_id={db_id}) aborted: "
+                        "The pipeline was CANCELED."
+                    )
+                    return None
+
+        return super().__call__(*args, **kwargs)
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
         db_id = self._get_db_id(args, kwargs)
@@ -289,6 +307,8 @@ def run_pipeline_step(
 
         task_url = urljoin(plugin_url, response.headers["Location"])
         task_data.data[f"{plugin_name}_url"] = task_url
+        task_data.data["active_subtask_url"] = task_url
+
         # commit before subscribing: handle_webhook_task drops events whose url
         # is not stored yet, so an event arriving during the subscribe request
         # would otherwise be lost
