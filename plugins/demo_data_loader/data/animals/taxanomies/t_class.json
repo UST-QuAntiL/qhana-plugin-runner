@@ -1,0 +1,214 @@
+{
+    "GRAPH_ID": "t_class",
+    "type": "tree",
+    "ref-target": "taxonomies.zip",
+    "entities": [
+        {
+            "ID": "t_class_root",
+            "tax_item_name": "Animal",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_vertebrate",
+            "tax_item_name": "Vertebrate",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_invertebrate",
+            "tax_item_name": "Invertebrate",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_mammal",
+            "tax_item_name": "Mammal",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_bird",
+            "tax_item_name": "Bird",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_fish",
+            "tax_item_name": "Fish",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_ungulate",
+            "tax_item_name": "Ungulate",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_ruminant",
+            "tax_item_name": "Ruminant",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_suid",
+            "tax_item_name": "Suid",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_carnivore",
+            "tax_item_name": "Carnivore",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_bigcat",
+            "tax_item_name": "Big cat",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_canine",
+            "tax_item_name": "Canine",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_marine_mammal",
+            "tax_item_name": "Marine mammal",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_bird_of_prey",
+            "tax_item_name": "Bird of prey",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_songbird",
+            "tax_item_name": "Songbird",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_parrot",
+            "tax_item_name": "Parrot",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_cartilaginous_fish",
+            "tax_item_name": "Cartilaginous fish",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_bony_fish",
+            "tax_item_name": "Bony fish",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        },
+        {
+            "ID": "t_class_mollusc",
+            "tax_item_name": "Mollusc",
+            "description": "",
+            "mapping": [],
+            "mapping_raw": ""
+        }
+    ],
+    "relations": [
+        {
+            "source": "t_class_root",
+            "target": "t_class_vertebrate"
+        },
+        {
+            "source": "t_class_root",
+            "target": "t_class_invertebrate"
+        },
+        {
+            "source": "t_class_vertebrate",
+            "target": "t_class_mammal"
+        },
+        {
+            "source": "t_class_vertebrate",
+            "target": "t_class_bird"
+        },
+        {
+            "source": "t_class_vertebrate",
+            "target": "t_class_fish"
+        },
+        {
+            "source": "t_class_mammal",
+            "target": "t_class_ungulate"
+        },
+        {
+            "source": "t_class_mammal",
+            "target": "t_class_carnivore"
+        },
+        {
+            "source": "t_class_mammal",
+            "target": "t_class_marine_mammal"
+        },
+        {
+            "source": "t_class_ungulate",
+            "target": "t_class_ruminant"
+        },
+        {
+            "source": "t_class_ungulate",
+            "target": "t_class_suid"
+        },
+        {
+            "source": "t_class_carnivore",
+            "target": "t_class_bigcat"
+        },
+        {
+            "source": "t_class_carnivore",
+            "target": "t_class_canine"
+        },
+        {
+            "source": "t_class_bird",
+            "target": "t_class_bird_of_prey"
+        },
+        {
+            "source": "t_class_bird",
+            "target": "t_class_songbird"
+        },
+        {
+            "source": "t_class_bird",
+            "target": "t_class_parrot"
+        },
+        {
+            "source": "t_class_fish",
+            "target": "t_class_cartilaginous_fish"
+        },
+        {
+            "source": "t_class_fish",
+            "target": "t_class_bony_fish"
+        },
+        {
+            "source": "t_class_invertebrate",
+            "target": "t_class_mollusc"
+        }
+    ]
+}
