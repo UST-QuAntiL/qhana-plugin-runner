@@ -121,9 +121,9 @@ def test_dimension_labels_name_the_feature_of_every_dimension(
 
     assert resp.status_code == HTTPStatus.OK
     assert resp.get_json() == {
-        "dim0": "color",
-        "dim1": "color",
-        "dim2": "shape",
+        "dim0": "color (dim0)",
+        "dim1": "color (dim1)",
+        "dim2": "shape (dim0)",
     }
 
 

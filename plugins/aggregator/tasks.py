@@ -17,14 +17,17 @@ from io import StringIO
 from itertools import combinations
 from pathlib import PurePath
 from tempfile import SpooledTemporaryFile
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from zipfile import ZipFile
 
 from celery.utils.log import get_task_logger
 
 from qhana_plugin_runner.celery import CELERY
 from qhana_plugin_runner.db.models.tasks import ProcessingTask
-from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+from qhana_plugin_runner.plugin_utils.attributes import (
+    NUMERIC_TYPES,
+    AttributeMetadata,
+)
 from qhana_plugin_runner.plugin_utils.entity_marshalling import (
     ensure_dict,
     load_entities,
@@ -40,7 +43,7 @@ from . import AttributeAggregator
 TASK_LOGGER = get_task_logger(__name__)
 
 
-def _load_entities(entities_url: str) -> List[dict]:
+def _load_entities(entities_url: str) -> Tuple[List[dict], Dict[str, AttributeMetadata]]:
     with open_url(entities_url) as entities_data:
         mimetype = get_mimetype(entities_data)
         attribute_metadata: dict[str, AttributeMetadata] = {}
@@ -67,7 +70,7 @@ def _load_entities(entities_url: str) -> List[dict]:
             ensure_dict(load_entities(entities_data, mimetype), attribute_metadata)
         )
 
-    return entities
+    return entities, attribute_metadata
 
 
 def _load_element_distances(
@@ -111,7 +114,21 @@ def _lookup_element_distance(
         )
 
 
-def _attribute_values(entity: dict, attribute: str) -> list:
+def _numeric_element_keys(elem_dists: Dict[Tuple[str, str], float]) -> Set[str]:
+    keys: Set[str] = set()
+    for source, target in elem_dists:
+        keys.add(source)
+        keys.add(target)
+    return keys
+
+
+def _attribute_values(
+    entity: dict, attribute: str, numeric_elements: Optional[Set[str]]
+) -> list:
+    if numeric_elements is not None:
+        entity_id = entity["ID"]
+        return [entity_id] if entity_id in numeric_elements else []
+
     values = entity.get(attribute)
 
     if values is None or values == "":
@@ -128,12 +145,13 @@ def _attribute_distance(
     ent2: dict,
     attribute: str,
     element_distances: Dict[Tuple[str, str], float],
+    numeric_elements: Optional[Set[str]] = None,
 ) -> Optional[float]:
     """Aggregate element distances to an attribute distance with Sym Max Mean.
     adopted from (stable_plugins/classical_ml/data_preparation/sym_max_mean)
     """
-    values1 = _attribute_values(ent1, attribute)
-    values2 = _attribute_values(ent2, attribute)
+    values1 = _attribute_values(ent1, attribute, numeric_elements)
+    values2 = _attribute_values(ent2, attribute, numeric_elements)
 
     if not values1 or not values2:
         return None
@@ -178,18 +196,26 @@ def calculation_task(self, db_id: int) -> str:
     entities_url = params["entitiesUrl"]
     element_distances_url = params["elementDistancesUrl"]
 
-    entities = _load_entities(entities_url)
+    entities, attribute_metadata = _load_entities(entities_url)
     element_distances_by_attributes = _load_element_distances(element_distances_url)
 
     tmp_zip_file = SpooledTemporaryFile(mode="wb")
     zip_file = ZipFile(tmp_zip_file, "w")
 
     for attribute, element_distances in element_distances_by_attributes.items():
+        attrib_meta = attribute_metadata.get(attribute)
+        is_numeric = attrib_meta is not None and attrib_meta.description in NUMERIC_TYPES
+        numeric_elements = (
+            _numeric_element_keys(element_distances) if is_numeric else None
+        )
+
         attribute_distances = [
             {
                 "source": ent1["ID"],
                 "target": ent2["ID"],
-                "distance": _attribute_distance(ent1, ent2, attribute, element_distances),
+                "distance": _attribute_distance(
+                    ent1, ent2, attribute, element_distances, numeric_elements
+                ),
             }
             for ent1, ent2 in combinations(entities, 2)
         ]

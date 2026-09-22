@@ -17,11 +17,6 @@ from io import BytesIO
 from types import SimpleNamespace
 
 import pytest
-from requests.exceptions import ConnectionError, HTTPError, Timeout
-
-from qhana_plugin_runner.db import DB
-from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
-from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
 from feature_engineering_pipeline.schemas import (
     MAPPING_PLUGIN,
     MDS_PLUGIN,
@@ -33,13 +28,13 @@ from feature_engineering_pipeline.tasks_helpers import (
     calculate_recommendations,
     extract_output_url,
     has_enough_pca_dimensions,
-    is_store_mds_output,
     load_entity_attributes,
     load_task,
     log_task_event,
     plugin_process_url,
     run_pipeline_step,
     save_intermediate_results,
+    should_store_mds_output,
     taxonomy_ref,
 )
 from feature_engineering_pipeline.tasks_pipeline_steps import start_wu_palmer
@@ -53,7 +48,13 @@ from feature_engineering_pipeline.tests.data import (
     mock_open_url,
     router_params,
 )
+from flask import current_app
+from requests.exceptions import ConnectionError, HTTPError, Timeout
 
+from qhana_plugin_runner.db import DB
+from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
+from qhana_plugin_runner.plugin_utils.attributes import AttributeMetadata
+from qhana_plugin_runner.storage import STORE
 from tests.utils import MockResponse
 
 # The helpers touch the database, the file store and ``current_app``, so they
@@ -155,6 +156,8 @@ def test_load_entity_attributes_reads_the_csv_header(monkeypatch):
         "instrumentation",
         "composer",
         "missing_tax",
+        "year",
+        "beats",
     }
 
 
@@ -187,19 +190,19 @@ def test_calculate_recommendations_falls_back_for_unreadable_taxonomies():
         (True, True, True),
     ],
 )
-def test_is_store_mds_output(concat_output, include_intermediate, expected):
+def test_should_store_mds_output(concat_output, include_intermediate, expected):
     """Without concatenation the MDS vectors are the only result of the run."""
     params = router_params(
         concatOutput=concat_output,
         includeIntermediateResultsInOutput=include_intermediate,
     )
-    assert is_store_mds_output(params) is expected
+    assert should_store_mds_output(params) is expected
 
 
 def test_save_intermediate_results_persists_the_file():
     db_task = make_router_task()
 
-    save_intermediate_results(
+    returned = save_intermediate_results(
         db_task, 0, db_task.id, b"payload", "result.zip", "relation/element-distances"
     )
 
@@ -210,15 +213,21 @@ def test_save_intermediate_results_persists_the_file():
     ]
     assert stored.file_type == "relation/element-distances"
     assert stored.mimetype == "application/zip"
+    assert returned.id == stored.id
 
 
 def test_save_intermediate_results_skips_duplicates_on_retry():
     db_task = make_router_task()
-    save_intermediate_results(db_task, 0, db_task.id, b"a", "retry.zip", "custom/data")
+    first = save_intermediate_results(
+        db_task, 0, db_task.id, b"a", "retry.zip", "custom/data"
+    )
 
-    save_intermediate_results(db_task, 1, db_task.id, b"a", "retry.zip", "custom/data")
+    second = save_intermediate_results(
+        db_task, 1, db_task.id, b"a", "retry.zip", "custom/data"
+    )
 
     assert len(TaskFile.get_task_result_files(db_task.id)) == 1
+    assert second.id == first.id
     assert "Skipping save" in _log_of(db_task)
 
 

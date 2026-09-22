@@ -63,27 +63,44 @@ def entity_dimension_names(entities: Sequence[Any]) -> List[str]:
     return fields[2:] if "href" in fields else fields[1:]
 
 
-def _label(mapping_entity: Mapping[str, Any]) -> Optional[str]:
+def _label(
+    mapping_entity: Mapping[str, Any], include_source_dimension: bool = False
+) -> Optional[str]:
     """Build the display label of a single dimension mapping entity.
 
     The label is the name of the source feature. The source file name is
     stripped of its extension so that dimensions coming from a zip member
     (``"color.json"``) are labelled like dimensions coming from a plain url
     (``"color"``). Every dimension of a multi dimensional source therefore
-    carries the same label.
+    carries the same label, unless ``include_source_dimension`` appends the
+    column the dimension had in the source file (``"color (dim1)"``).
     """
     source = str(mapping_entity.get("source") or "").strip()
     if not source:
         return None
 
-    return Path(source).stem or source
+    label = Path(source).stem or source
+    if not include_source_dimension:
+        return label
+
+    source_dimension = str(mapping_entity.get("sourceDimension") or "").strip()
+    if not source_dimension:
+        return label
+
+    return f"{label} ({source_dimension})"
 
 
-def dimension_mapping_labels(mapping_entities: Sequence[Any]) -> Dict[str, str]:
+def dimension_mapping_labels(
+    mapping_entities: Sequence[Any], include_source_dimension: bool = False
+) -> Dict[str, str]:
     """Build the dimension labels from loaded dimension mapping entities.
 
     Args:
         mapping_entities (Sequence[Any]): the mapping entities as dicts
+        include_source_dimension (bool): append the column the dimension had in
+            the source file to the feature name, e.g. ``"color (dim1)"``. Use
+            this where the labels have to tell the dimensions of one multi
+            dimensional feature apart.
 
     Returns:
         Dict[str, str]: a mapping from dimension name (``"dim0"``) to its label
@@ -93,18 +110,22 @@ def dimension_mapping_labels(mapping_entities: Sequence[Any]) -> Dict[str, str]:
         dimension = str(entity.get("ID") or "").strip()
         if not dimension:
             continue
-        label = _label(entity)
+        label = _label(entity, include_source_dimension)
         if label:
             labels[dimension] = label
 
     return labels
 
 
-def load_dimension_mapping(url: Optional[str]) -> Dict[str, str]:
+def load_dimension_mapping(
+    url: Optional[str], include_source_dimension: bool = False
+) -> Dict[str, str]:
     """Load an ``entity/dimension-mapping`` file and build the dimension labels.
 
     Args:
         url (Optional[str]): the url of the dimension mapping file
+        include_source_dimension (bool): append the column the dimension had in
+            the source file to the feature name, e.g. ``"color (dim1)"``
 
     Returns:
         Dict[str, str]: a mapping from dimension name (``"dim0"``) to its
@@ -120,7 +141,7 @@ def load_dimension_mapping(url: Optional[str]) -> Dict[str, str]:
             raise ValueError("Could not determine mimetype of the dimension mapping.")
         mapping_entities = list(ensure_dict(load_entities(response, mimetype=mimetype)))
 
-    return dimension_mapping_labels(mapping_entities)
+    return dimension_mapping_labels(mapping_entities, include_source_dimension)
 
 
 def dimension_labels(names: Sequence[str], labels: Mapping[str, str]) -> List[str]:

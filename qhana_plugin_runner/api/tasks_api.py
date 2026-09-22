@@ -40,6 +40,7 @@ from qhana_plugin_runner.db.models.tasks import (
     TaskUpdateSubscription,
 )
 from qhana_plugin_runner.storage import STORE
+from qhana_plugin_runner.tasks import cancel_task
 
 TASKS_API = SmorestBlueprint(
     "tasks-api",
@@ -53,7 +54,7 @@ class SubscriptionDataSchema(MaBaseSchema):
     command = ma.fields.String(
         required=True,
         allow_none=True,
-        validate=OneOf(("subscribe", "unsubscribe")),
+        validate=OneOf(("subscribe", "unsubscribe", "cancel")),
         metadata={"description": "Whether to subscribe or unsubscribe."},
     )
     event = ma.fields.String(
@@ -63,10 +64,21 @@ class SubscriptionDataSchema(MaBaseSchema):
         metadata={"description": "The type of event to subscribe to."},
     )
     webhook_href = ma.fields.Url(
-        required=True,
-        allow_none=False,
+        required=False,
+        allow_none=True,
         metadata={"description": "The URL of the wbhook subscribing to these events."},
     )
+
+    @ma.validates_schema
+    def validate_webhook(self, data, **kwargs):
+        """Validate that webhook_href is provided for subscribe and unsubscribe commands."""
+        if data.get("command") in ["subscribe", "unsubscribe"] and not data.get(
+            "webhook_href"
+        ):
+            raise ma.ValidationError(
+                "webhook_href is required for subscribe and unsubscribe commands.",
+                field_name="webhook_href",
+            )
 
 
 @dataclass
@@ -269,6 +281,8 @@ class TaskView(MethodView):
                 self.subscribe(task_data, command)
             case "unsubscribe":
                 self.unsubscribe(task_data, command)
+            case "cancel":
+                cancel_task(task_data=task_data)
             case cmd:
                 abort(
                     HTTPStatus.BAD_REQUEST, message=f"Command '{cmd}' is not supported!"
@@ -305,5 +319,3 @@ class TaskView(MethodView):
         for subscriber in subscriptions:
             DB.session.delete(subscriber)
         DB.session.commit()
-
-    # TODO add delete endpoint (and maybe serve result from different endpoint)

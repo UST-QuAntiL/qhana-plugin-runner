@@ -83,7 +83,8 @@ class CsvInputParametersSchema(FrontendFormBaseSchema):
             "description": (
                 "Optional URL to a dimension mapping file describing where the "
                 "dimensions of a vector file came from. The preview then names the "
-                "feature every dimension column belongs to."
+                "feature every dimension column belongs to, followed by the column "
+                "the dimension had in the input vector."
             ),
             "related_to": "data",
             "relation": "pre",
@@ -212,13 +213,17 @@ def get_dimension_labels(data: Mapping):
     """Name the feature every dimension of a dimension mapping file came from.
 
     The micro frontend calls this when a dimension mapping is selected and
-    labels the columns of the preview table with the returned names.
+    labels the columns of the preview table with the returned names. Each name
+    ends with the column the dimension had in the input vector, so the
+    dimensions of one multi dimensional feature stay distinguishable.
     """
     dimension_mapping_url = data.get("dimension_mapping_url", None)
     if not dimension_mapping_url:
         return Response(dumps({}), mimetype="application/json")
     try:
-        labels = load_dimension_mapping(dimension_mapping_url)
+        labels = load_dimension_mapping(
+            dimension_mapping_url, include_source_dimension=True
+        )
     except (HTTPError, ValueError):
         abort(HTTPStatus.BAD_REQUEST, "Invalid dimension mapping URL!")
     return Response(dumps(labels), mimetype="application/json")

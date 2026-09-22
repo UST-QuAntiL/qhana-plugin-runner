@@ -21,20 +21,31 @@ from qhana_plugin_runner.db.models.tasks import ProcessingTask, TaskFile
 from qhana_plugin_runner.plugin_utils.dimension_mapping import (
     DIMENSION_MAPPING_DATA_TYPE,
 )
-from qhana_plugin_runner.requests import open_url
+from qhana_plugin_runner.plugin_utils.entity_marshalling import (
+    ensure_dict,
+    load_entities,
+)
+from qhana_plugin_runner.requests import get_mimetype, open_url
 from qhana_plugin_runner.storage import STORE
 from qhana_plugin_runner.tasks import save_task_result
 
-from . import Router
+from . import FeatureEngineeringPipeline
+from .numeric_attributes import (
+    collect_values,
+    entities_zip,
+    require_complete_column,
+)
 from .schemas import (
-    WU_PALMER_PLUGIN,
-    MAPPING_PLUGIN,
-    TRANSFORMERS_PLUGIN,
     AGGREGATOR_PLUGIN,
-    MDS_PLUGIN,
-    VECTOR_CONCAT_PLUGIN,
-    PCA_PLUGIN,
+    FEATURE_VECTOR,
     FINALIZE_PIPELINE,
+    MAPPING_PLUGIN,
+    MDS_PLUGIN,
+    NUMERIC_MAPPING_PIPELINE,
+    PCA_PLUGIN,
+    TRANSFORMERS_PLUGIN,
+    VECTOR_CONCAT_PLUGIN,
+    WU_PALMER_PLUGIN,
     InputParameters,
     InputParametersSchema,
 )
@@ -42,10 +53,11 @@ from .tasks_helpers import (
     REQUEST_TIMEOUT,
     PipelineTask,
     extract_output_url,
-    is_store_mds_output,
+    has_enough_pca_dimensions,
+    should_store_mds_output,
+    persist_generated_file,
     run_pipeline_step,
     save_intermediate_results,
-    has_enough_pca_dimensions,
 )
 
 TASK_LOGGER = get_task_logger(__name__)
@@ -72,6 +84,22 @@ PCA_DEFAULTS = {
 
 
 # --- PIPELINE ORCHESTRATION ---
+def _log_duplicate_outputs(task_data: ProcessingTask):
+    """Report result files stored twice. Only for logging purposes."""
+    contains = set()
+    duplicates = []
+    for file_record in TaskFile.get_task_result_files(task_data.id):
+        file_name = file_record.file_name
+        if file_name not in contains:
+            contains.add(file_name)
+        else:
+            duplicates.append(file_name)
+    if duplicates:
+        error_msg = f"BUG: Output contains duplicates: {duplicates}."
+        TASK_LOGGER.warning(error_msg)
+        task_data.add_task_log_entry(error_msg, commit=True)
+
+
 def launch_next_pipeline(task_data: ProcessingTask):
     """
     Orchestrates the execution of pending pipelines within the routing queue.
@@ -93,23 +121,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
     queue = task_data.data.get("pipeline_queue", [])
 
     if not queue:
-        # At the end of the queue, check for duplicates. Currently only for logging purposes.
-        existing_outputs = TaskFile.get_task_result_files(task_data.id)
-        contains = set()
-        duplicates = []
-        for file_record in existing_outputs:
-            file_name = file_record.file_name
-            if file_name not in contains:
-                contains.add(file_name)
-            else:
-                duplicates.append(file_name)
-        if duplicates:
-            error_msg = f"BUG: Output contains duplicates: {duplicates}."
-            TASK_LOGGER.warning(error_msg)
-            task_data.add_task_log_entry(
-                error_msg,
-                commit=True,
-            )
+        _log_duplicate_outputs(task_data)
 
         # Optional vector concatenation if the user requested it.
         # Afterwards, the optional PCA plugin will be executed
@@ -143,6 +155,7 @@ def launch_next_pipeline(task_data: ProcessingTask):
         MDS_PLUGIN,
     ):
         task_data.data.pop(f"{reused_step}_url", None)
+    task_data.data.pop("generated_files", None)
 
     # Reset the tracking of webhook events and progress for the new pipeline
     task_data.data["progressed_via"] = {}
@@ -161,12 +174,25 @@ def launch_next_pipeline(task_data: ProcessingTask):
         )
         task_data.save(commit=True)
         start_mapping.apply_async(args=[task_data.id])
+    elif next_pipeline == NUMERIC_MAPPING_PIPELINE:
+        task_data.add_task_log_entry(
+            "Starting Numeric Mapping Pipeline. Includes: Mapping Distances, "
+            "Aggregator, MDS"
+        )
+        task_data.save(commit=True)
+        start_numeric_distances.apply_async(args=[task_data.id])
+    elif next_pipeline == FEATURE_VECTOR:
+        task_data.add_task_log_entry(
+            "Adding the single-valued numeric attributes to the feature vector."
+        )
+        task_data.save(commit=True)
+        build_numeric_feature_vector.apply_async(args=[task_data.id])
     else:
         # Without a matching starting step the task would stall silently, as no
         # further webhook can arrive to progress the queue.
         raise ValueError(
-            f"BUG: No pipeline start step for '{next_pipeline}'. "
-            f"Expected one of {[WU_PALMER_PLUGIN, MAPPING_PLUGIN]}."
+            f"BUG: No pipeline start step for '{next_pipeline}'. Expected one of "
+            f"{[WU_PALMER_PLUGIN, MAPPING_PLUGIN, NUMERIC_MAPPING_PIPELINE, FEATURE_VECTOR]}."
         )
 
 
@@ -175,7 +201,9 @@ def launch_next_pipeline(task_data: ProcessingTask):
 
 # --- WU-PALMER TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_wu_palmer", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_wu_palmer",
+    bind=True,
+    base=PipelineTask,
 )
 def start_wu_palmer(self, db_id: int):
     """
@@ -213,7 +241,9 @@ def start_wu_palmer(self, db_id: int):
 
 # --- MAPPING TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_mapping", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_mapping",
+    bind=True,
+    base=PipelineTask,
 )
 def start_mapping(self, db_id: int):
     """
@@ -251,7 +281,7 @@ def start_mapping(self, db_id: int):
 
 # --- TRANSFORMER TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_transformers",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_transformers",
     bind=True,
     base=PipelineTask,
 )
@@ -306,7 +336,7 @@ def start_transformers(self, db_id: int, source_url: str):
 
 # --- AGGREGATOR TASK ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_aggregator",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_aggregator",
     bind=True,
     base=PipelineTask,
 )
@@ -360,7 +390,11 @@ def start_aggregator(self, db_id: int, source_url: str):
 
 
 # --- MDS TASK ---
-@CELERY.task(name=f"{Router.instance.identifier}.start_mds", bind=True, base=PipelineTask)
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_mds",
+    bind=True,
+    base=PipelineTask,
+)
 def start_mds(self, db_id: int, source_url: str):
     """
     Initiates the attribute-distance-mds plugin.
@@ -396,27 +430,124 @@ def start_mds(self, db_id: int, source_url: str):
             file_type="relation/attribute-distances",
         )
 
-    payload = {
-        "attributeDistancesUrl": attr_dists_url,
-        "dimensions": params.mds_dimensions,
-        "metric": params.metric.name,
-        "nInit": params.n_init,
-        "maxIter": params.max_iter,
-        "missingDataHandling": params.missing_data_handling.name,
-    }
-
     run_pipeline_step(
         db_id=db_id,
         task_data=task_data,
         plugin_name=MDS_PLUGIN,
         logging_name="MDS",
+        payload={
+            "attributeDistancesUrl": attr_dists_url,
+            "dimensions": params.mds_dimensions,
+            "metric": params.metric.name,
+            "nInit": params.n_init,
+            "maxIter": params.max_iter,
+            "missingDataHandling": params.missing_data_handling.name,
+        },
+    )
+
+
+# --- NUMERIC ATTRIBUTES ---
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_numeric_distances",
+    bind=True,
+    base=PipelineTask,
+)
+def start_numeric_distances(self, db_id: int):
+    """
+    Initiates the Mapping plugin for the multi-valued numeric attributes, the
+    same way ``start_mapping`` does for taxonomy attributes. Aggregator and
+    MDS follow next, as in the taxonomy mapping pipeline.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters
+    )
+    payload = {
+        "entitiesUrl": params.entities_url,
+        "entitiesMetadataUrl": params.entities_metadata_url,
+        "taxonomiesZipUrl": params.taxonomies_zip_url,
+        "attributes": task_data.data[f"{NUMERIC_MAPPING_PIPELINE}_attributes"],
+        "distanceMetric": params.distance_metric.name,
+    }
+
+    run_pipeline_step(
+        db_id=db_id,
+        task_data=task_data,
+        plugin_name=MAPPING_PLUGIN,
+        logging_name="Mapping Distances (numeric)",
         payload=payload,
     )
 
 
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.build_numeric_feature_vector",
+    bind=True,
+    base=PipelineTask,
+)
+def build_numeric_feature_vector(self, db_id: int):
+    """
+    Writes the single-valued numeric attributes as one-dimensional vectors.
+
+    Args:
+        self: The Celery task instance (bound).
+        db_id (int): The database ID of the ProcessingTask.
+
+    Raises:
+        ValueError: If an attribute has no value for an entity.
+    """
+
+    task_data = ProcessingTask.get_by_id(db_id)
+    params: InputParameters = InputParametersSchema(unknown=EXCLUDE).loads(
+        task_data.parameters or "{}"
+    )
+    attributes = task_data.data[f"{FEATURE_VECTOR}_attributes"].splitlines()
+    with open_url(params.entities_url) as response:
+        entities = list(ensure_dict(load_entities(response, get_mimetype(response))))
+
+    members = {}
+    for attribute in attributes:
+        values = collect_values(entities, attribute)
+        column = require_complete_column(
+            [entity["ID"] for entity in entities], values, attribute
+        )
+        members[attribute] = [
+            {"ID": entity["ID"], "href": "", "dim0": value}
+            for entity, value in zip(entities, column)
+        ]
+
+    file_name = f"{FEATURE_VECTOR}_numeric_vectors.zip"
+    first_attempt = file_name not in task_data.data.get("generated_files", {})
+    vectors_url = persist_generated_file(
+        task_data,
+        self.request.retries,
+        entities_zip(members),
+        file_name,
+        "entity/vector",
+        as_result=should_store_mds_output(params),
+    )
+
+    if params.concat_output:
+        vector_zip_urls = task_data.data.get("vector_zip_urls", [])
+        if vectors_url not in vector_zip_urls:
+            vector_zip_urls.append(vectors_url)
+        task_data.data["vector_zip_urls"] = vector_zip_urls
+    if first_attempt:
+        task_data.progress_value += 1
+    task_data.save(commit=True)
+
+    launch_next_pipeline(task_data)
+
+
 # --- END OF PIPELINE ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_pipeline", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_pipeline",
+    bind=True,
+    base=PipelineTask,
 )
 def finalize_pipeline(self, db_id: int, source_url: str):
     """
@@ -444,7 +575,7 @@ def finalize_pipeline(self, db_id: int, source_url: str):
     outputs = requests.get(source_url, timeout=REQUEST_TIMEOUT).json().get("outputs", [])
     final_dists_url = extract_output_url(outputs, "entity/vector")
 
-    if is_store_mds_output(params):
+    if should_store_mds_output(params):
         save_intermediate_results(
             task_data=task_data,
             retries=self.request.retries,
@@ -466,7 +597,9 @@ def finalize_pipeline(self, db_id: int, source_url: str):
 
 # --- AFTER ALL PIPELINES: Vector concat ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.start_vector_concat", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_vector_concat",
+    bind=True,
+    base=PipelineTask,
 )
 def start_vector_concat(self, db_id: int):
     """
@@ -505,7 +638,7 @@ def start_vector_concat(self, db_id: int):
 
 # --- AFTER ALL PIPELINES: finalize vector concat ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_vector_concat",
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_vector_concat",
     bind=True,
     base=PipelineTask,
 )
@@ -623,7 +756,11 @@ def save_dimension_mapping(
 
 
 # --- AFTER VECTOR CONCAT: PCA (started from finalize_vector_concat) ---
-@CELERY.task(name=f"{Router.instance.identifier}.start_pca", bind=True, base=PipelineTask)
+@CELERY.task(
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.start_pca",
+    bind=True,
+    base=PipelineTask,
+)
 def start_pca(self, db_id: int, vector_url: str):
     """
     Initiates the PCA plugin to reduce the dimensions of the concatenated vector.
@@ -660,7 +797,9 @@ def start_pca(self, db_id: int, vector_url: str):
 
 # --- AFTER VECTOR CONCAT: finalize PCA ---
 @CELERY.task(
-    name=f"{Router.instance.identifier}.finalize_pca", bind=True, base=PipelineTask
+    name=f"{FeatureEngineeringPipeline.instance.identifier}.finalize_pca",
+    bind=True,
+    base=PipelineTask,
 )
 def finalize_pca(self, db_id: int, source_url: str):
     """
